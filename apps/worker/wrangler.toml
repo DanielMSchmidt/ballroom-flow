@@ -3,14 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
 
-# D1: local tests use an in-memory SQLite (database_id is ignored locally).
-# Replace database_id after `wrangler d1 create ballroom-flow` (see PROVISIONING.md).
-[[d1_databases]]
-binding = "DB"
-database_name = "ballroom-flow"
-database_id = "00000000-0000-0000-0000-000000000000"
-migrations_dir = "migrations"
-
 # Serve the built SPA from the same Worker. API routes run worker-first;
 # everything else falls back to index.html (client-side routing).
 [assets]
@@ -18,5 +10,43 @@ directory = "../web/dist"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*"]
 
+# --- Default config: local `wrangler dev` + the vitest-pool-workers tests.
+# Miniflare uses a local SQLite file and ignores database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "ballroom-flow-dev"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# --- Staging (deployed from the `development` branch).
 [env.staging]
+name = "ballroom-flow-staging"
+
+[env.staging.assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# Bindings are NOT inherited by named environments — redeclare per env.
+# Replace database_id after `wrangler d1 create ballroom-flow-staging`.
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "ballroom-flow-staging"
+database_id = "REPLACE_WITH_STAGING_D1_ID"
+migrations_dir = "migrations"
+
+# --- Production (deployed from the `main` branch).
 [env.production]
+name = "ballroom-flow-production"
+
+[env.production.assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# Replace database_id after `wrangler d1 create ballroom-flow-production`.
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "ballroom-flow-production"
+database_id = "REPLACE_WITH_PRODUCTION_D1_ID"
+migrations_dir = "migrations"

@@ -36,11 +36,41 @@ Copy the returned `database_id` into `apps/worker/wrangler.toml` (replacing the
 all-zeros placeholder). Repeat / bind per environment as needed. Migrations are
 applied from `apps/worker/migrations/` (created in Milestone 2).
 
-## 3. GitHub (CI deploy — added in Milestone 8)
+## 3. Deployment pipeline & branch workflow
 
-When the deploy workflow lands, add repo secrets:
-- `CLOUDFLARE_API_TOKEN` (Workers + D1 edit scope)
-- `CLOUDFLARE_ACCOUNT_ID`
+**Branch model:** `development` → **staging**, `main` → **production**. Feature
+branches PR into `development`. The deploy workflow (`.github/workflows/deploy.yml`)
+runs on push to either branch: it re-runs CI checks, applies D1 migrations to the
+remote DB, then `wrangler deploy`s to the matching environment.
+
+**One-time setup:**
+
+1. **Create the two D1 databases** (needs `wrangler login` or a token):
+   ```
+   cd apps/worker
+   wrangler d1 create ballroom-flow-staging
+   wrangler d1 create ballroom-flow-production
+   ```
+   Paste each returned `database_id` into `wrangler.toml` (replacing the
+   `REPLACE_WITH_*_D1_ID` placeholders).
+
+2. **Create a Cloudflare API token** (Workers Scripts: Edit + D1: Edit + Account
+   read) at <https://dash.cloudflare.com/profile/api-tokens>.
+
+3. **Add GitHub Actions secrets**, scoped to the `staging` and `production`
+   GitHub Environments (Settings → Environments) so production can have a
+   protection/approval rule:
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+   ```
+   gh secret set CLOUDFLARE_API_TOKEN  --env staging
+   gh secret set CLOUDFLARE_ACCOUNT_ID --env staging
+   gh secret set CLOUDFLARE_API_TOKEN  --env production
+   gh secret set CLOUDFLARE_ACCOUNT_ID --env production
+   ```
+
+4. Set `CLERK_SECRET_KEY` as a Wrangler secret per env (see §1) so deployed
+   Workers can verify tokens.
 
 ## 4. Sentry (error monitoring — wired in Milestone 8)
 
