@@ -1,0 +1,59 @@
+# Provisioning — accounts & secrets
+
+The codebase builds, typechecks, lints, and passes its test suite **without any
+external accounts** (the Worker tests run on local `workerd`; Clerk auth is
+gated on env vars and tested only on its negative path). To run the app for
+real and to deploy, complete the steps below. None of these block development
+of the pure domain core (Milestone 1).
+
+## 1. Clerk (authentication)
+
+1. Create a Clerk application at <https://dashboard.clerk.com>. Enable **Google**
+   sign-in and **passkeys**.
+2. **Frontend key** — copy the **Publishable Key** into `apps/web/.env.local`:
+   ```
+   VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+   ```
+3. **Worker verification key** — set the **Secret Key** as a Wrangler secret
+   (per environment):
+   ```
+   cd apps/worker
+   wrangler secret put CLERK_SECRET_KEY               # default/dev
+   wrangler secret put CLERK_SECRET_KEY --env staging
+   wrangler secret put CLERK_SECRET_KEY --env production
+   ```
+   (Optionally set `CLERK_JWT_KEY` to the instance PEM for fully networkless
+   verification — see `apps/worker/src/auth/index.ts`.)
+
+## 2. Cloudflare (hosting + D1)
+
+```
+cd apps/worker
+wrangler login
+wrangler d1 create ballroom-flow
+```
+Copy the returned `database_id` into `apps/worker/wrangler.toml` (replacing the
+all-zeros placeholder). Repeat / bind per environment as needed. Migrations are
+applied from `apps/worker/migrations/` (created in Milestone 2).
+
+## 3. GitHub (CI deploy — added in Milestone 8)
+
+When the deploy workflow lands, add repo secrets:
+- `CLOUDFLARE_API_TOKEN` (Workers + D1 edit scope)
+- `CLOUDFLARE_ACCOUNT_ID`
+
+## 4. Sentry (error monitoring — wired in Milestone 8)
+
+Create a Sentry project; set the DSN for the web SDK (`VITE_SENTRY_DSN`) and the
+Worker (`SENTRY_DSN` secret). Until then, Cloudflare **Tail Workers** is the
+zero-setup fallback for server logs.
+
+## Local development
+
+Two terminals:
+```
+pnpm --filter worker dev     # Worker API on http://localhost:8787
+pnpm --filter web dev        # SPA on http://localhost:5173 (proxies /api → :8787)
+```
+Without `VITE_CLERK_PUBLISHABLE_KEY`, the SPA renders a "set your Clerk key"
+first-run notice instead of the sign-in flow.
