@@ -11,7 +11,12 @@ database_name = "ballroom-flow"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
-# SPA static assets are wired in Task 0.4 once apps/web builds to dist.
+# Serve the built SPA from the same Worker. API routes run worker-first;
+# everything else falls back to index.html (client-side routing).
+[assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [env.staging]
 [env.production]
