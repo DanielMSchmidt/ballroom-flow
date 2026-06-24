@@ -1,0 +1,17 @@
+name = "ballroom-flow"
+main = "src/index.ts"
+compatibility_date = "2025-09-06"
+compatibility_flags = ["nodejs_compat"]
+
+# D1: local tests use an in-memory SQLite (database_id is ignored locally).
+# Replace database_id after `wrangler d1 create ballroom-flow` (see PROVISIONING.md).
+[[d1_databases]]
+binding = "DB"
+database_name = "ballroom-flow"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# SPA static assets are wired in Task 0.4 once apps/web builds to dist.
+
+[env.staging]
+[env.production]

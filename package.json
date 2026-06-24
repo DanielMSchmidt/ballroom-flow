@@ -16,5 +16,14 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",
     "typescript": "^6.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "@cloudflare/workerd-darwin-64",
+      "@cloudflare/workerd-darwin-arm64",
+      "wrangler"
+    ]
   }
 }
