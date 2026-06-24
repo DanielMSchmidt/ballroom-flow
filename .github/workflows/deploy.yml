@@ -40,10 +40,18 @@ jobs:
 
       # Apply D1 schema migrations to the remote DB before deploying the code
       # that depends on them. No-op until Milestone 2 adds migrations.
+      - name: Skip deploy notice (no Cloudflare token configured)
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice::CLOUDFLARE_API_TOKEN not set for the '${{ steps.target.outputs.name }}' environment — skipping migrate + deploy. See PROVISIONING.md."
+
+      # Apply D1 schema migrations to the remote DB before deploying the code
+      # that depends on them. No-op until Milestone 2 adds migrations.
       - name: Apply D1 migrations
+        if: env.CLOUDFLARE_API_TOKEN != ''
         working-directory: apps/worker
         run: pnpm exec wrangler d1 migrations apply DB --env ${{ steps.target.outputs.name }} --remote
 
       - name: Deploy Worker + assets
+        if: env.CLOUDFLARE_API_TOKEN != ''
         working-directory: apps/worker
         run: pnpm exec wrangler deploy --env ${{ steps.target.outputs.name }}

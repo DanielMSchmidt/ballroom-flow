@@ -1,9 +1,9 @@
 name: CI
 
+# Pushes to development/main are gated by the deploy workflow (which runs the
+# same checks before deploying). CI covers pull requests.
 on:
   pull_request:
-  push:
-    branches: [main]
 
 jobs:
   verify:
