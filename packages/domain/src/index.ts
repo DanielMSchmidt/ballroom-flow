@@ -2,6 +2,27 @@
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCES, type DanceId, type DanceMeta } from "./dances";
+export { buildFigureDoc, readFigure, softDeleteAttribute } from "./doc-figure";
+export { addSection, buildRoutineDoc, readRoutine, softDeleteSection } from "./doc-routine";
+export type {
+  Alignment,
+  Anchor,
+  Annotation,
+  AnnotationKind,
+  Attribute,
+  DocHandle,
+  DocScope,
+  FigureDoc,
+  FigureSource,
+  FigureType,
+  Overlay,
+  Placement,
+  ReadOptions,
+  Reply,
+  Role,
+  RoutineDoc,
+  Section,
+} from "./doc-types";
 export { newId } from "./ids";
 export { barsForFigure, countLabel, countToBar } from "./timing";
 export {
