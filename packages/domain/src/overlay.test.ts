@@ -114,13 +114,14 @@ describe("US-006 Overlay resolution resolve(base, overlay)", () => {
     // only name overlaid. Downstream (US-008 COW) must stamp the variant's own
     // identity; resolve gives effective CONTENT, not variant identity.
     const { resolve } = await importDomain();
-    const eff = resolve(FEATHER_FOXTROT, makeOverlay({ rename: "My Feather" }));
+    const overlay = makeOverlay({ rename: "My Feather" });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
     expect(eff.id).toBe(FEATHER_FOXTROT.id);
     expect(eff.scope).toBe(FEATHER_FOXTROT.scope);
     expect(eff.ownerId).toBe(FEATHER_FOXTROT.ownerId);
     expect(eff.figureType).toBe(FEATHER_FOXTROT.figureType);
     expect(eff.dance).toBe(FEATHER_FOXTROT.dance);
-    expect(eff.name).toBe("My Feather"); // name follows the overlay
+    expect(eff.name).toBe(overlay.rename); // name comes from the overlay, not the base
   });
 
   it("preserves base attribute order, with additions appended after", async () => {
