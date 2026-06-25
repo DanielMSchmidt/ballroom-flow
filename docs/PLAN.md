@@ -13,7 +13,7 @@ Three sources are **retained for detail this plan does not reproduce in full** (
 
 **Guiding principle:** *quality and maintainability over feature count.* The owner has deliberately chosen the CRDT foundation — *more* upfront architecture — precisely to avoid a later rewrite; everything else stays YAGNI.
 
-> **Two consequences of the CRDT decision worth confirming (§12):** (1) a per-routine CRDT synced live wants a **Durable Object**, which requires **Workers Paid (~$5/mo)** — no longer the pure $0 free tier. (2) A CRDT's **native per-user undo** (e.g. Yjs `UndoManager`) likely **replaces the bespoke op-log/footprint undo** from earlier drafts — building that op-log would be the exact "redo it later" we're avoiding. Both are reflected below and flagged in §12.
+> **Workers Paid is now in place** (the owner upgraded), so the plan leans on the paid tier's capabilities where they *simplify* the design, not just add features: **SQLite-backed Durable Objects** (each routine DO persists its own CRDT — D1 drops to a pure index), **DO alarms** (debounced snapshots + invite expiry), **Hibernatable WebSockets** (idle sync stays cheap), **Smart Placement**, and **Analytics Engine** (first-party product metrics). Higher CPU and the lifted 100k/day request cap remove constraints the earlier draft tiptoed around. One open call remains (§12): **Q-UNDO** — a CRDT's **native per-user undo** (Yjs `UndoManager`) replaces the bespoke op-log/footprint machinery from earlier drafts; confirm we don't want the "can't undo — others built on this" refusal UX.
 
 ---
 
@@ -55,7 +55,7 @@ A small-N collaboration tool, not a social network or studio LMS.
 
 1. **Cloudflare-hosted** end to end.
 2. **No self-run auth** — managed identity provider with a generous free tier.
-3. **Cheap** — hobby scale stays low; a future **pro plan** monetizes (§1.6). *(The CRDT/Durable-Object foundation moves the floor from $0 to ~$5/mo Workers Paid — Q-CRDT.)*
+3. **Cheap** — now on **Workers Paid (~$5/mo base)**; the design uses the *included* paid capabilities (SQLite-backed DOs, alarms, Hibernatable WebSockets, Smart Placement, Analytics Engine) so usage stays low at hobby scale; a future **pro plan** monetizes (§1.6).
 4. **Performant** on mobile.
 5. **PWA is the priority** (installable; no native app in v1).
 6. **Quality & maintainability over feature count** — apply YAGNI (the CRDT foundation is the one deliberate exception, chosen to avoid a rewrite).
@@ -84,7 +84,7 @@ A **free tier** and a later **pro plan**. v1 enforces a quota — **free account
 
 ## 2. Domain Model
 
-The canonical state of a routine is a **CRDT document** (recommended: **Yjs** — `Y.Map`/`Y.Array` give the ordered, nested structure here; Q-CRDT). Around it, **D1** holds the global index (users, memberships, routine metadata, invites, snapshots). The *shapes* below describe the logical model; §6 explains how they split across the CRDT doc and D1.
+The canonical state of a routine is a **CRDT document** (recommended: **Yjs** — `Y.Map`/`Y.Array` give the ordered, nested structure here; Q-CRDT-LIB) **persisted in its routine's SQLite-backed Durable Object**. Around it, **D1** holds a pure cross-routine index (users, memberships, routine metadata/list-projection, invites) — no CRDT blobs. The *shapes* below describe the logical model; §6 explains how they split across the DO and D1.
 
 ### 2.1 Conventions
 
@@ -145,9 +145,9 @@ LibraryFigure (static reference, per Dance; default attributes) ──▶ instan
 ATTRIBUTE_REGISTRY (standard kinds, bundle) ∪ user-defined kinds (in doc) = the merged registry
 ```
 
-### 2.4 Storage placement (CRDT doc + D1 index)
-- **CRDT document per routine (Yjs, recommended):** the editable body — sections, figures, attributes, annotations + replies, user-defined kinds. Held authoritatively in a **Durable Object** (one per routine) which is also the **sync + permission boundary** (§6). Change history + per-user undo are native to the CRDT.
-- **D1 (Drizzle):** the global index — users, memberships, routine metadata (title/dance/owner/plan), invite tokens, and **periodic snapshots** of each CRDT doc (for the routine list, search, export, and cold-start load).
+### 2.4 Storage placement (DO SQLite is the per-routine source of truth; D1 is the index)
+- **CRDT document per routine (Yjs, recommended):** the editable body — sections, figures, attributes, annotations + replies, user-defined kinds. Held authoritatively in a **SQLite-backed Durable Object** (one per routine): the Yjs update log + a current snapshot persist in the **DO's own SQLite** (transactional, up to 10 GB), so the DO is **self-contained** — no "serialize the whole doc to D1" path. The DO is also the **sync + permission boundary** (§6). Change history + per-user undo are native to the CRDT. A **DO alarm** debounces snapshot/compaction writes and handles invite expiry.
+- **D1 (Drizzle) — a pure cross-routine index:** users, memberships, routine metadata (title/dance/owner/plan, a small list/search projection), invite tokens. **No CRDT blobs in D1** — listing/search read the projection, and a routine's body loads from its DO. The DO projects a thin index row to D1 on its snapshot alarm.
 - **Client bundle:** dances, library figures, the **standard** attribute kinds. Versioned by `schemaVersion`.
 
 ---
@@ -248,7 +248,7 @@ Optional `entryAlignment`/`exitAlignment` — qualifier (`facing`/`backing`/`poi
 | `viewer` | Read only. |
 | `owner` (an editor) | Editor rights **+** delete the routine. |
 
-Enforcement is at the **CRDT sync boundary** (the Durable Object), not by rejecting individual CRDT cells (§6) — the critique-sync warning that post-hoc cell rejection is incoherent with a CRDT is resolved by gating the *connection/update stream*: the DO authenticates the sync, checks Membership/role from D1, and only accepts structure updates from editors / annotation updates from commenters+ / nothing from viewers. (Splitting the doc into a `structure` and an `annotations` sub-doc so a commenter can write the latter but not the former is the recommended mechanism — Q-CRDT.)
+Enforcement is at the **CRDT sync boundary** (the Durable Object), not by rejecting individual CRDT cells (§6) — the critique-sync warning that post-hoc cell rejection is incoherent with a CRDT is resolved by gating the *connection/update stream*: the DO authenticates the sync, checks Membership/role from D1, and only accepts structure updates from editors / annotation updates from commenters+ / nothing from viewers. (Splitting the doc into a `structure` and an `annotations` sub-doc so a commenter can write the latter but not the former is the recommended mechanism — Q-CRDT-LIB.)
 
 ### 5.3 Fork & variants (deferred onto the CRDT foundation)
 Fork is integral but, per the owner, **postponed because the CRDT solves it cleanly later** — building it twice is the thing to avoid. Two grains, both deferred from v1: **routine fork** (`forkedFromRoutineId` lineage) and **figure variant** (`baseFigureId` + inherit-later-additions). The v1 data model reserves both seams so neither needs a migration; the offline/merge machinery a true fork wants is the same CRDT machinery, added once.
@@ -266,38 +266,39 @@ An `editor` generates a signed, expiring **invite token** (link); redeeming it (
 
 ## 6. Architecture
 
-A **CRDT document per routine** is the canonical editable state, hosted in a **Durable Object** that is also the sync + permission boundary. **D1** is the global index. Online-first; offline/fork are additive later.
+A **CRDT document per routine** is the canonical editable state, hosted in a **SQLite-backed Durable Object** that persists it and is the sync + permission boundary. **D1** is a pure cross-routine index. Online-first; offline/fork are additive later. **Smart Placement** co-locates the Worker near D1; **Analytics Engine** captures first-party product metrics.
 
 ```
 [ React 19 + Vite PWA ]   (vite-plugin-pwa: installable shell)
    • Clerk client (session JWT)
    • Yjs doc (in-memory) bound to UI via the store/ seam; UndoManager (per-user undo)
-        │  WebSocket sync (Yjs updates)            ▲ REST/RPC for list, auth, invites, snapshots
+        │  WebSocket sync (Yjs updates)            ▲ REST/RPC for list, auth, invites, quota
         ▼                                          │
-[ Worker + Durable Object ]
-   • Worker (Hono): Clerk JWT verify, routine list/search, invites, quota, snapshot read/export   → D1
-   • Durable Object (one per routine): holds the authoritative Yjs doc; authenticates each sync
-     connection (Clerk JWT) + checks Membership/role; accepts editor structure updates /
-     commenter annotation updates / viewer read-only; persists doc + periodic snapshots
-        │
-        ▼
-[ D1 (Drizzle) ]  users, memberships, routine metadata, invites, CRDT snapshots
-        (R2 for media → v1.1)
+[ Worker + Durable Object ]   (Smart Placement; Analytics Engine binding)
+   • Worker (Hono): Clerk JWT verify, routine list/search, invites, quota, export   → D1 index
+   • Durable Object (one per routine, SQLite-backed): authoritative Yjs doc persisted in its own
+     SQLite; authenticates each sync connection (Clerk JWT) + checks Membership/role; accepts editor
+     structure updates / commenter annotation updates / viewer read-only; Hibernatable WebSockets;
+     a DO alarm debounces snapshot/compaction + invite expiry, and projects a thin index row → D1
+        │                                                   │
+        ▼                                                   ▼
+[ D1 (Drizzle) ]  index only: users,            [ Queues → v1.1: media, billing webhooks, email ]
+  memberships, routine metadata, invites                (R2 for media → v1.1)
 ```
 
 ### 6.1 Module boundaries (pnpm workspaces)
 `contract → domain`; `web → contract, domain`; `worker → contract, domain`.
 - **`packages/domain/`** — pure TS, no network: the **ATTRIBUTE_REGISTRY** + merge; **float-count timing & per-role bars**; sortKey/order helpers; the **CRDT document schema** (the Yjs `Y.Map`/`Y.Array` shape for routine→sections→figures→attributes→annotations, + typed read/mutate helpers); **CRDT convergence invariants**; Zod schemas; the migration ladder. Yjs runs in-memory so all of this is unit/property-testable with no I/O.
-- **`apps/worker/`** — Hono routes (list/search/invite/quota/snapshot/export), Clerk middleware (behind `auth/`), the **Durable Object** (`routine-do.ts`: Yjs host, sync transport, **permission enforcement at the connection/update boundary**, snapshotting), Drizzle/D1.
+- **`apps/worker/`** — Hono routes (list/search/invite/quota/export), Clerk middleware (behind `auth/`), the **SQLite-backed Durable Object** (`routine-do.ts`: Yjs host, persistence in DO SQLite, sync transport over Hibernatable WebSockets, **permission enforcement at the connection/update boundary**, an **alarm** for debounced snapshot/compaction + invite expiry + D1 index projection), Drizzle/D1 index, an **Analytics Engine** write helper.
 - **`apps/web/store/` (client repository seam)** — the only place that touches the Yjs doc + sync provider; presents typed reactive-read + mutate + `UndoManager` to components. Components never import Yjs or the RPC client directly. Swapping the sync provider (adding offline persistence later) happens here.
 - **`apps/web/`** — presentational React; service worker for installability.
 - **`packages/contract/`** — Zod schemas + Hono RPC `typeof app` (for the REST surface) + the shared CRDT-doc type.
 
 ### 6.2 Data flow
 1. Clerk JWT.
-2. **Reads/edits of a routine** open a sync connection to its Durable Object; the DO verifies the JWT + role, then streams Yjs updates both ways. Local edits apply optimistically and merge.
-3. **List/search/invite/quota/export** are plain Hono RPC over D1 (no DO needed).
-4. The DO **snapshots** the doc to D1 periodically and on idle (for list/search/export/cold-start).
+2. **Reads/edits of a routine** open a sync connection to its Durable Object; the DO verifies the JWT + role, then streams Yjs updates both ways. Local edits apply optimistically and merge. The DO persists updates to its own SQLite as they arrive.
+3. **List/search/invite/quota** are plain Hono RPC over the D1 index (no DO needed). **Export** loads the routine from its DO.
+4. The DO sets an **alarm** after edits settle to **compact/snapshot** in its SQLite and **project a thin index row** (title/dance/updatedAt) to D1 — keeping list/search cheap without putting the doc in D1.
 
 ### 6.3 File structure (reflecting the CRDT foundation)
 ```
@@ -307,9 +308,9 @@ packages/domain/src/
   convergence.ts  # pure invariants used by property tests
   schemas.ts      # Zod, derived from the merged registry
 apps/worker/src/
-  index.ts auth/ routes/ (list, invite, quota, snapshot, export)
-  routine-do.ts   # Durable Object: Yjs host + sync transport + permission boundary + snapshots
-  db/schema.ts repo/ permissions.ts (authorizeConnection + quota)
+  index.ts auth/ routes/ (list, invite, quota, export)
+  routine-do.ts   # SQLite-backed Durable Object: Yjs host + persistence + sync + permission boundary + alarm(snapshot/expiry/index)
+  db/schema.ts repo/ permissions.ts (authorizeConnection + quota) analytics.ts
 apps/web/src/
   store/          # Yjs doc + sync provider + UndoManager behind a typed seam
   components/ (per screen) lib/ (rpc, sentry) sw.ts
@@ -319,13 +320,13 @@ apps/web/src/
 
 ## 7. Non-Functional Requirements
 
-- **Performance:** mobile-first; app shell interactive < ~2s on mid-range/3G. Routine list/search from D1 snapshots (indexed; `EXPLAIN QUERY PLAN` in CI). A routine opens via one sync handshake; the doc loads from the DO (warm) or a D1 snapshot (cold).
+- **Performance:** mobile-first; app shell interactive < ~2s on mid-range/3G. Routine list/search from the D1 index (indexed; `EXPLAIN QUERY PLAN` in CI). A routine opens via one sync handshake; the doc loads from its DO's SQLite. **Smart Placement** co-locates the Worker near D1. Higher paid-tier CPU + the lifted 100k/day request cap remove limits on export/migration/snapshot and chatty sync.
 - **Connectivity:** online-first (sync requires the DO). The shell loads offline (installable PWA); a clear "you're offline" state for data. Offline *editing* (local CRDT persistence, sync-on-reconnect) is the next increment — additive, not a rewrite.
-- **Cost:** hobby scale stays cheap, but the **Durable Object requires Workers Paid (~$5/mo)** (DOs aren't on the free plan); **Hibernatable WebSockets** keep idle sync near-free. D1 + Clerk free tiers cover the rest. The **pro plan** monetizes beyond the free cap. *(This $0→~$5 shift is a direct consequence of the CRDT decision — Q-CRDT.)*
+- **Cost:** on **Workers Paid (~$5/mo base)** — already in place. **SQLite-backed DOs** persist per-routine state without extra storage cost; **Hibernatable WebSockets** keep idle sync near-free; D1 holds only a small index; Clerk free tier covers auth. The **pro plan** monetizes beyond the free cap.
 - **Accessibility:** WCAG AA — color never the sole signal; ≥44px targets; keyboard/SR navigable; reduced-motion.
 - **Browser/PWA:** evergreen mobile + desktop; installable.
-- **Data ownership:** JSON **export AND import** (structure + attributes + annotations) from a snapshot; `schemaVersion` envelope + migration ladder; unknown attribute values survive round-trip.
-- **Ops:** Sentry (+ `@sentry/cloudflare`); staging + prod; CI runs the test layers + EXPLAIN check.
+- **Data ownership:** JSON **export AND import** (structure + attributes + annotations) loaded from the routine's DO; `schemaVersion` envelope + migration ladder; unknown attribute values survive round-trip.
+- **Ops:** Sentry (+ `@sentry/cloudflare`) for errors; **Analytics Engine** for first-party product metrics (dance/attribute usage); staging + prod; CI runs the test layers + EXPLAIN check.
 
 ---
 
@@ -357,12 +358,16 @@ apps/web/src/
 | D20 | Annotations | **Unified annotation** (note/lesson/practice); v1 anchors = **point + figure**; query/variant deferred — confirmed. |
 | D21 | Plans/quota | **Free cap = 3 owned routines**; pro + billing deferred — confirmed. |
 | **D22 Δ** | **Custom attribute kinds** | **Creation UI in v1** (routine-scoped; account-level reuse later) — confirmed. |
-| **D23 Δ** | **Persistence topology** | **Durable Object hosts the per-routine Yjs doc** (sync + permission boundary); **D1** holds index + snapshots. Requires **Workers Paid (~$5/mo)** — Q-CRDT. |
+| **D23 Δ** | **Persistence topology** | **SQLite-backed Durable Object hosts + persists the per-routine Yjs doc** (sync + permission boundary; DO SQLite is the source of truth); **D1** holds a pure cross-routine index only. On **Workers Paid** (in place). |
+| **D24** | **Snapshot/cleanup** | **DO alarms** debounce snapshot/compaction in DO SQLite, expire invites, and project a thin index row to D1 (off the request path). |
+| **D25** | **Edge placement** | **Smart Placement** on the Worker (one config flag) to sit near D1. |
+| **D26** | **Product analytics** | **Analytics Engine** (first-party, near-free) for usage metrics, alongside Sentry for errors. |
+| **D27** | **Async backbone (v1.1)** | **Cloudflare Queues** reserved for v1.1 media processing and later billing webhooks / email invites — not built in v1. |
 
 ### Global constraints (every task inherits)
 - **TypeScript strict;** no `any` without justification.
-- **Cloudflare runtime:** Worker + **Durable Object** (per-routine CRDT host) + D1 + Static Assets. WebSocket sync (Hibernatable). R2 → v1.1.
-- **Canonical routine state is the CRDT doc;** D1 holds the index + snapshots. **No bespoke op-log.**
+- **Cloudflare runtime:** Worker (Smart Placement) + **SQLite-backed Durable Object** (per-routine CRDT host + persistence) + D1 (index) + Static Assets. Hibernatable WebSocket sync; Analytics Engine for metrics. Queues/R2 → v1.1.
+- **Canonical routine state is the CRDT doc in the DO's SQLite;** D1 holds a pure index. **No bespoke op-log; no CRDT blobs in D1.**
 - **All ids are client-generated ULIDs; soft-delete only.**
 - **Permission enforcement is at the sync boundary (the DO)** + on the REST surface — never by post-hoc CRDT cell rejection.
 - **Attribute vocabulary lives in the merged ATTRIBUTE_REGISTRY** (standard + user-defined).
@@ -394,23 +399,23 @@ Phased: M0–M1 detailed (the walking skeleton — the attribute/CRDT notation m
 
 ### Data model (M2)
 
+**D1 — index only** (the routine body lives in its DO's SQLite, not here):
+
 ```mermaid
 erDiagram
     User ||--o{ Membership : has
     Routine ||--o{ Membership : grants
     Routine ||--o{ Invite : has
-    Routine ||--o{ Snapshot : "snapshotted as"
     User { text id PK "ULID"; text clerkSub UK; text displayName; text identityColor; text plan "free|pro" }
     Membership { text id PK; text routineId FK; text userId FK; text role "viewer|commenter|editor"; int createdAt; int deletedAt }
-    Routine { text id PK; text title; text dance; text ownerId FK; text forkedFromRoutineId "nullable (seam)"; text templateOf "nullable"; int schemaVersion; int createdAt; int updatedAt; int deletedAt }
+    Routine { text id PK; text title; text dance; text ownerId FK; text forkedFromRoutineId "nullable (seam)"; text templateOf "nullable"; int schemaVersion; int updatedAt; int deletedAt; "← thin list/search projection, updated by the DO alarm" }
     Invite { text id PK; text routineId FK; text role; int expiresAt; int redeemedAt "nullable" }
-    Snapshot { text routineId FK; blob ydoc "Yjs state vector/update"; int updatedAt; text indexedTitle; text indexedDance }
 ```
 
-> **CRDT document (Yjs, per routine — not D1 rows):** `Y.Map` routine-body → `Y.Array` sections → `Y.Array` figures → `Y.Array` attributes `{kind,count,role?,value}`; `Y.Array` annotations (+ anchors + replies); `Y.Map` user-defined kinds. **Reference data (bundle):** dances, library figures, standard attribute kinds. The DO is the authority; D1 `Snapshot` is a derived projection for list/search/export/cold-start.
+> **CRDT document (Yjs, per routine — persisted in the DO's own SQLite, not D1):** `Y.Map` routine-body → `Y.Array` sections → `Y.Array` figures → `Y.Array` attributes `{kind,count,role?,value}`; `Y.Array` annotations (+ anchors + replies); `Y.Map` user-defined kinds. The DO stores the Yjs update log + a compacted snapshot in SQLite. **Reference data (bundle):** dances, library figures, standard attribute kinds. The D1 `Routine` row is a derived projection (title/dance/updatedAt) for list/search only.
 
 ### Sync + permission flow
-Open routine → client connects to the routine's DO → DO verifies Clerk JWT + looks up Membership/role in D1 → DO streams Yjs updates (read-only for viewers; structure-writable for editors; annotation-writable for commenters+) → local `UndoManager` provides per-user undo → DO snapshots to D1 periodically.
+Open routine → client connects to the routine's DO → DO verifies Clerk JWT + looks up Membership/role in D1 → DO streams Yjs updates (read-only for viewers; structure-writable for editors; annotation-writable for commenters+) and persists incoming updates to its SQLite → local `UndoManager` provides per-user undo → after edits settle, a **DO alarm** compacts the snapshot and projects the index row to D1.
 
 ---
 
@@ -449,13 +454,13 @@ All in `packages/domain` — pure, TDD, unit + property tests. **Proves the attr
 ---
 
 ### Milestones 2–9 (outline — each becomes its own detailed plan)
-- **M2 — Persistence + sync + notation CRUD.** DO hosts the Yjs doc; WebSocket sync (Hibernatable); permission at the connection/update boundary; D1 index + snapshotting; `store/` seam; Assemble/Timeline/Attribute-Editor. Tests: two-client convergence over the real DO; permission (editor/commenter/viewer) at the boundary; snapshot round-trip; core authoring E2E.
+- **M2 — Persistence + sync + notation CRUD.** SQLite-backed DO hosts + **persists** the Yjs doc in its own SQLite; WebSocket sync (Hibernatable); permission at the connection/update boundary; **DO alarm** compacts snapshots + projects the D1 index row; `store/` seam; Assemble/Timeline/Attribute-Editor. Tests: two-client convergence over the real DO; permission (editor/commenter/viewer) at the boundary; DO-SQLite persistence + reload; alarm-driven index projection; core authoring E2E.
 - **M3 — Auth, membership, permissions & quota.** User mapping; onboarding; Membership; `authorizeConnection`; **quota on create**; invite issue/redeem; Share. Tests: connection authorization truth table + forged-connection rejection; quota enforcement; invite lifecycle.
 - **M4 — Undo/redo UX.** Wire UndoManager; toasts; optional diverged message. Tests: per-user undo across two live clients (E2E).
 - **M5 — Annotations.** Unified annotation + replies; anchors (point + figure); timeline + journal. Tests: anchor integrity; commenter-can-annotate; merge of concurrent annotations.
 - **M6 — Custom attribute kinds.** Creation UI; propagation to editor/lanes/info; validation; kinds sync via the doc. Tests: a new kind appears for all clients; validates.
 - **M7 — Lanes + sample/template + search.** Registry-derived Lanes; sample + template; search over snapshots.
-- **M8 — Export / import + ops.** schemaVersion'd round-trip from snapshots + migration ladder; Sentry; EXPLAIN gate; staging/prod.
+- **M8 — Export / import + ops.** schemaVersion'd round-trip (export loads from the DO) + migration ladder; Sentry + **Analytics Engine** metrics; EXPLAIN gate on the D1 index; staging/prod; Smart Placement enabled.
 - **M9 — PWA + a11y + cross-browser.**
 
 ---
@@ -476,7 +481,7 @@ Quality and a detailed testing plan are a non-negotiable owner requirement. **Th
 
 ### 10.2 Layer ownership
 - **Unit / property (pure `domain/`, in-memory Yjs):** float-count timing & per-role bars; **CRDT convergence/commutativity/idempotence** over random shuffled/partitioned edit sequences (fast-check); **per-user `UndoManager`** (undo affects only own changes; remote edit preserved; redo cursor); document-schema helpers + soft-delete; registry/Zod (`NFR`/`H`/`⅛` valid; Tango omits rise; position single vs body-action multi; `CBP→CBMP`; unknown-value passthrough-on-read vs reject-on-write; **user-defined kind merges & validates**; count fraction mapping per Q-D3); migration ladder.
-- **Worker / DO / D1 (`vitest-pool-workers`):** **two simulated clients converge** through the real DO; **permission at the boundary** — editor structure update accepted, commenter structure update rejected / annotation accepted, viewer read-only, non-member connection rejected, forged connection rejected; **quota** (4th owned routine on free → rejected with upsell); invite issue/redeem/expiry; **snapshotting** (DO → D1 projection round-trips; list/search read the snapshot); export/import; **EXPLAIN QUERY PLAN** on list/search/membership/quota-count → index, no SCAN.
+- **Worker / DO / D1 (`vitest-pool-workers`):** **two simulated clients converge** through the real DO; **permission at the boundary** — editor structure update accepted, commenter structure update rejected / annotation accepted, viewer read-only, non-member connection rejected, forged connection rejected; **quota** (4th owned routine on free → rejected with upsell); invite issue/redeem/expiry; **DO SQLite persistence** (doc survives DO eviction/reload) + **alarm-driven** snapshot compaction and D1 index-row projection; export loads from the DO; **EXPLAIN QUERY PLAN** on list/search/membership/quota-count → index, no SCAN.
 - **Component (browser mode + Testing Library + axe):** attribute editor (chips from merged registry; re-tap clears; Tango hides rise; **a newly-created user-defined kind appears**); timeline role flip; Lanes across counts; section rename + preset quick-fills; annotation create from timeline + journal with the point/figure anchor picker; empty states; viewer/commenter affordance gating; toasts incl. "Undone" + quota upsell.
 - **E2E (Playwright):** full authoring journey (create → section → figure → place attributes → switch role); **two live browser contexts editing the same routine converge** (the CRDT replacement for the old LWW test); per-user undo across two clients; permission (viewer/commenter blocked; **forged sync connection rejected by the DO**); **quota** (free cap blocks the 4th, upsell shown); invite redemption; annotation (point + figure); export→import; PWA install/app-shell-offline; tab nav.
 - **Contract:** compile-time `typeof app` + shared CRDT-doc type (drift fails `tsc`); runtime Zod both ends; schema-drift CI gate.
@@ -522,10 +527,11 @@ The PR review resolved the prior keystones. Remaining items are sub-decisions op
 - ✅ **Sections** → user-named + optional preset quick-fills; **alignment-per-figure is enough**, no floor concept (D18).
 - ✅ **Plans/quota** → free cap **3 owned routines**; billing deferred (D21).
 - ✅ **Fork** → **do it with CRDTs** so it isn't rebuilt; **build the CRDT foundation now**, online-first, fork/offline mechanics later (D12/D13).
+- ✅ **Cost / topology (Q-CRDT)** → **Workers Paid is in place.** Adopt **SQLite-backed DOs** (DO SQLite = per-routine source of truth; D1 = index only), **DO alarms** (snapshot/compaction + invite expiry + index projection), **Hibernatable WebSockets**, **Smart Placement**, **Analytics Engine** (D23–D26). **Queues reserved for v1.1** (D27).
 
-### ★ New sub-decisions opened by the CRDT choice
-- **★ Q-CRDT — CRDT library & topology.** Recommendation: **Yjs** (mature ordered-list CRDT; strong Cloudflare-DO ecosystem) hosted in a **Durable Object per routine** (the sync + permission boundary), with **D1 snapshots** for list/search/export. **Consequence to confirm:** DOs require **Workers Paid (~$5/mo)** — accept the $0→~$5 floor? Alternative (cheaper, more limiting): store/merge Yjs updates in D1 from the Worker with polling, no DO — but loses live multi-client sync. Sub-question: split the doc into `structure` + `annotations` sub-docs so commenters can write annotations but not structure?
+### ★ Remaining open
 - **★ Q-UNDO — Undo machinery.** Recommendation: use the CRDT's **native `UndoManager`** (per-user undo, merges correctly) and **drop the bespoke op-log/footprint-undoability** from earlier drafts. Confirm we don't need the "can't undo — others built on this" *refusal* semantics (the CRDT just merges); a soft "your change was superseded" message can layer on if wanted.
+- **Q-CRDT-LIB — Library + doc split (low-risk).** Recommendation: **Yjs**. Sub-question: split each routine doc into `structure` + `annotations` sub-docs so a commenter can write annotations but not structure (clean permission boundary), or keep one doc and gate by update type?
 - **Q-OFFLINE-NEXT — Sequencing.** Online-first now; when does offline *editing* (local Yjs persistence + sync-on-reconnect) land — v1.1, or later? (Cheap once the foundation exists.)
 
 ### Carried-over confirms
@@ -561,4 +567,4 @@ Not in v1. Annotations carry `media[]`; UI shows "coming soon". When built (v1.1
 
 ---
 
-*End of plan (v3, CRDT foundation). The product model (attributes, sections, annotations, roles, quota) is settled; the remaining open items (Q-CRDT topology/cost, Q-UNDO) are flagged in §12. M0 stands up the CRDT/DO skeleton; M1 proves the notation + CRDT model in-memory; M2 makes it real over the Durable Object.*
+*End of plan (v3, CRDT foundation on Workers Paid). The product model (attributes, sections, annotations, roles, quota) and the paid-tier topology (SQLite-backed DOs + alarms, Hibernatable WebSockets, Smart Placement, Analytics Engine) are settled; the remaining open items (Q-UNDO, Q-CRDT-LIB) are flagged in §12. M0 stands up the CRDT/DO skeleton; M1 proves the notation + CRDT model in-memory; M2 makes it real and persistent over the Durable Object.*
