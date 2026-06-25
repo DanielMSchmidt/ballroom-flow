@@ -13,7 +13,7 @@ import { importDomain } from "./__fixtures__";
 // assertion below passes, then remove `.skip`.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-001 ULID id generation", () => {
+describe("US-001 ULID id generation", () => {
   it("generates a valid 26-char Crockford-base32 ULID", async () => {
     // Intent: every entity id is a syntactically valid ULID.
     // Scenario: the system mints one id (no user, no network).
@@ -47,5 +47,27 @@ describe.skip("US-001 ULID id generation", () => {
     const a = Array.from({ length: 5000 }, () => newId());
     const b = Array.from({ length: 5000 }, () => newId());
     expect(new Set([...a, ...b]).size).toBe(a.length + b.length);
+  });
+
+  // ── Extra edge cases (in the spirit of US-001, beyond the listed ACs) ──
+
+  it("excludes the ambiguous Crockford letters I, L, O, U", async () => {
+    // Intent: guard the charset directly — the AC-1 regex permits the alphabet,
+    // here we assert the ambiguous letters never appear across many ids.
+    const { newId } = await importDomain();
+    const all = Array.from({ length: 2000 }, () => newId()).join("");
+    expect(all).not.toMatch(/[ILOU]/);
+  });
+
+  it("increments strictly even when many ids share a millisecond", async () => {
+    // Intent: monotonicity is *strict* (no duplicates), not merely non-decreasing.
+    // A tight loop mostly lands in the same millisecond, so this exercises the
+    // monotonic-factory's random-increment path, not just the time prefix.
+    const { newId } = await importDomain();
+    const ids = Array.from({ length: 1000 }, () => newId());
+    for (let i = 1; i < ids.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: indices are in range.
+      expect(ids[i]! > ids[i - 1]!).toBe(true);
+    }
   });
 });
