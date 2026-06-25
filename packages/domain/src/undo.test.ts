@@ -137,4 +137,35 @@ describe("US-010 History-based per-user undo", () => {
     expect(once.counts.two).toBe(2);
     expect(once.counts.one).toBe(1);
   });
+
+  // ── STRING fields (the counts-map model above only exercised numbers) ──
+
+  it("restores the prior STRING value on undo (not '')", async () => {
+    // Regression: Automerge 3 stores string fields as text sequences, so reverting
+    // a whole-string change (e.g. a section/routine rename) emits put("") +
+    // splice(insert before-value) — NOT a single `put`. The inverse must
+    // reconstruct the string; an earlier bug applied only the `put` and left the
+    // field "". The numeric counts-map tests above could never catch this.
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    let doc = A.from<{ title: string }>({ title: "Intro" }, ACTOR_A);
+    doc = A.change(doc, (d) => (d.title = "Verse"));
+    const undone = undoLastChange(doc, ACTOR_A);
+    expect(undone.title).toBe("Intro"); // restored, NOT ""
+  });
+
+  it("restores A's string on undo while preserving B's concurrent disjoint string edit", async () => {
+    // String-field revert composes with merge: A's rename is reverted to the
+    // prior string while B's concurrent edit to a different field survives.
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    type Doc = { title: string; note: string };
+    const base = A.from<Doc>({ title: "Intro", note: "" }, ACTOR_A);
+    const aEdit = A.change(A.clone(base, { actor: ACTOR_A }), (d) => (d.title = "Verse"));
+    const bEdit = A.change(A.clone(base, { actor: ACTOR_B }), (d) => (d.note = "B-note"));
+    const merged = A.merge(A.merge(A.init<Doc>(), A.clone(aEdit)), A.clone(bEdit));
+    const undone = undoLastChange(merged, ACTOR_A);
+    expect(undone.title).toBe("Intro"); // A's string restored (not "")
+    expect(undone.note).toBe("B-note"); // B's concurrent edit survives
+  });
 });

@@ -74,11 +74,28 @@ function applyInverse<T>(doc: A.Doc<T>, patches: A.Patch[], message: string): A.
             target.splice(key, 0, ...patch.values);
           }
           break;
-        case "splice":
-          if (typeof key === "number" && typeof target === "object") {
-            // text splice — not used by the v1 document graph; ignore.
+        case "splice": {
+          // Automerge 3 stores string fields as text sequences, so reverting a
+          // whole-string field change (e.g. a section rename) emits put("") +
+          // splice(insert the before-value) — NOT a single `put`. Replaying only
+          // the `put` would leave the field empty (the original undo bug). Apply
+          // the text splice by reconstructing the string on its PARENT object.
+          // (v1 assigns string fields wholesale; this also handles partial splices.)
+          if (typeof key === "number" && typeof patch.value === "string") {
+            const field = patch.path.at(-2);
+            let parent: unknown = draft;
+            for (const prop of patch.path.slice(0, -2)) {
+              if (parent == null || typeof parent !== "object") break;
+              parent = (parent as Record<string | number, unknown>)[prop];
+            }
+            if (parent != null && typeof parent === "object" && field !== undefined) {
+              const obj = parent as Record<string | number, unknown>;
+              const cur = typeof obj[field] === "string" ? (obj[field] as string) : "";
+              obj[field] = cur.slice(0, key) + patch.value + cur.slice(key);
+            }
           }
           break;
+        }
         case "inc": {
           const counter = target as Record<string | number, number>;
           counter[key] = (counter[key] ?? 0) + patch.value;
