@@ -16,5 +16,21 @@ pre-commit:
     typecheck:
       run: pnpm -r typecheck
 
+# Block direct pushes to protected branches. This is a fast LOCAL pre-flight;
+# GitHub branch protection enforces the same rule on the remote (the real guard).
+# If you ever need to bypass intentionally, `git push --no-verify` skips this hook
+# (it will NOT bypass the remote protection).
+pre-push:
+  commands:
+    protect-branches:
+      run: |
+        branch="$(git rev-parse --abbrev-ref HEAD)"
+        case "$branch" in
+          main|development)
+            echo "✋ Direct pushes to '$branch' are blocked — branch off and open a PR."
+            exit 1
+            ;;
+        esac
+
 # `pnpm lint` / `pnpm -r typecheck` / `pnpm -r test` still gate every PR in CI;
 # the hook is a fast local pre-flight, not a replacement for CI.
