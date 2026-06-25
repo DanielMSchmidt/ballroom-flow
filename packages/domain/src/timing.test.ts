@@ -73,6 +73,15 @@ describe("US-004 Float-count timing", () => {
     expect(countLabel(2.4999998)).toBe("2&");
   });
 
+  it("renders off-grid fractions without leaking float noise", async () => {
+    // Intent: a fraction that doesn't snap to the spec'd 1/8 grid (.6/.9 sit
+    // between grid points) stays visible as beat+fraction, but is rounded to 3
+    // decimals so binary-float noise doesn't reach the label.
+    const { countLabel } = await importDomain();
+    expect(countLabel(3.6)).toBe("3+0.6"); // not "3+0.6000000000000001"
+    expect(countLabel(3.9)).toBe("3+0.9"); // not "3+0.8999999999999999"
+  });
+
   it("keeps within-phrase counts in phrase 1", async () => {
     // Intent: counts inside the first phrase don't wrap.
     const { countToBar } = await importDomain();
