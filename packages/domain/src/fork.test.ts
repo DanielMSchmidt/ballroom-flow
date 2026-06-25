@@ -18,7 +18,7 @@ import {
 // dynamic import, skipped.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-007 Choreo fork (clone)", () => {
+describe("US-007 Choreo fork (clone)", () => {
   it("clones a routine to a new id, frozen, with forkedFromRef provenance", async () => {
     // Intent: "make it your own" → independent owned copy with lineage.
     // Arrange: the sample routine doc owned by the coach.
@@ -57,6 +57,42 @@ describe.skip("US-007 Choreo fork (clone)", () => {
     const fork = cloneRoutine(buildRoutineDoc(SAMPLE_ROUTINE), { byUser: SAMPLE_STUDENT });
     const refs = readRoutine(fork).sections.flatMap((s) => s.placements.map((p) => p.figureRef));
     expect(refs).toContain(FEATHER_FOXTROT.id);
+  });
+
+  // ── Extra edge cases (in the spirit of US-007, beyond the listed ACs) ──
+
+  it("copies the arrangement (section names + placement order) into the clone", async () => {
+    // Intent: a fork reproduces the origin's arrangement exactly, just owned anew.
+    const { buildRoutineDoc, cloneRoutine, readRoutine } = await importDomain();
+    const fork = cloneRoutine(buildRoutineDoc(SAMPLE_ROUTINE), { byUser: SAMPLE_STUDENT });
+    const read = readRoutine(fork);
+    expect(read.sections.map((s) => s.name)).toEqual(SAMPLE_ROUTINE.sections.map((s) => s.name));
+    expect(read.sections[0]?.placements.map((p) => p.figureRef)).toEqual(
+      SAMPLE_ROUTINE.sections[0]?.placements.map((p) => p.figureRef),
+    );
+  });
+
+  it("is independent both ways: editing the clone does not affect the origin", async () => {
+    // Intent: the freeze is structural — the clone is its own doc, so a change to
+    // the clone leaves the origin untouched (the converse of the frozen-from-origin
+    // test).
+    const { buildRoutineDoc, cloneRoutine, addSection, readRoutine } = await importDomain();
+    const origin = buildRoutineDoc(SAMPLE_ROUTINE);
+    let fork = cloneRoutine(origin, { byUser: SAMPLE_STUDENT });
+    const originBefore = readRoutine(origin).sections.length;
+    fork = addSection(fork, { name: "My Coda" });
+    expect(readRoutine(origin).sections.length).toBe(originBefore);
+    expect(readRoutine(fork).sections.length).toBe(originBefore + 1);
+  });
+
+  it("mints a fresh ULID id and does not inherit templateOf", async () => {
+    // Intent: the clone is an owned routine, not a template; id is a valid ULID.
+    const { buildRoutineDoc, cloneRoutine, readRoutine } = await importDomain();
+    const read = readRoutine(
+      cloneRoutine(buildRoutineDoc(SAMPLE_ROUTINE), { byUser: SAMPLE_STUDENT }),
+    );
+    expect(read.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(read.templateOf).toBeFalsy();
   });
 });
 
