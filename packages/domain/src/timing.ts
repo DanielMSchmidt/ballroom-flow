@@ -29,7 +29,7 @@ const EIGHTH = 0.125;
  * Render a float count as a conventional ballroom label, e.g. 3.25 → "3e",
  * 3 → "3". The whole part is the beat; the fraction is the sub-beat suffix.
  * Unrecognized fractions (outside the spec'd 1/8 grid) fall back to the whole
- * beat plus the raw fraction (e.g. "3+0.2") so nothing is silently dropped.
+ * beat plus the fraction (e.g. "3+0.2") so nothing is silently dropped.
  */
 export function countLabel(count: number): string {
   const whole = Math.floor(count);
@@ -39,8 +39,11 @@ export function countLabel(count: number): string {
   const snapped = Math.round(fraction / EIGHTH) * EIGHTH;
   const suffix = FRACTION_LABELS[String(snapped)];
   if (suffix) return `${whole}${suffix}`;
-  // Off-grid / unspecified fraction: keep it visible rather than rounding away.
-  return `${whole}+${fraction}`;
+  // Off-grid / unspecified fraction: keep it visible rather than rounding away,
+  // but round to 3 decimals so float noise (e.g. 0.20000000000000018) doesn't
+  // leak into the label. Trim trailing zeros so the display stays compact.
+  const trimmed = Number.parseFloat(fraction.toFixed(3));
+  return `${whole}+${trimmed}`;
 }
 
 /**
@@ -49,7 +52,7 @@ export function countLabel(count: number): string {
  * to the nearest 1/8 and check the residual is within float tolerance. This is
  * the "valid timing position" rule the strict write schema enforces (US-012):
  * a count must sit on a real sub-beat, but it may exceed `phraseBeats` (figures
- * span multiple phrases — see `countToBar`).
+ * span multiple phrases — see `countToPhrase`).
  */
 export function isOnEighthGrid(count: number): boolean {
   const snapped = Math.round(count / EIGHTH) * EIGHTH;
@@ -59,30 +62,35 @@ export function isOnEighthGrid(count: number): boolean {
 /**
  * Locate a 1-indexed count within the dance's counted phrase. The phrase length
  * is the dance's `phraseBeats` (Waltz/Viennese 6, rest 8); counts beyond it wrap
- * to the next phrase. `bar` is the 1-indexed phrase number, `countInBar` the
- * 1-indexed position within it. E.g. Waltz count 7 → { bar: 2, countInBar: 1 }.
+ * to the next phrase. `phrase` is the 1-indexed phrase number, `countInPhrase`
+ * the 1-indexed position within it. E.g. Waltz count 7 → { phrase: 2,
+ * countInPhrase: 1 }.
  *
- * (The field is named `bar` to match the consuming contract; it counts in
- * phrase-length cycles, which is what "modulo phrase" in the AC specifies.)
+ * (The returned position counts in phrase-length cycles — what "modulo phrase"
+ * in the AC specifies. The `phrase` field was renamed from `bar`, which was a
+ * misnomer: it indexes phrases, not musical bars.)
  */
-export function countToBar(count: number, dance: DanceId): { bar: number; countInBar: number } {
+export function countToPhrase(
+  count: number,
+  dance: DanceId,
+): { phrase: number; countInPhrase: number } {
   const { phraseBeats } = DANCES[dance];
   const beat = Math.floor(count); // whole-beat position; fractions stay within a beat
   const zeroBased = beat - 1;
   return {
-    bar: Math.floor(zeroBased / phraseBeats) + 1,
-    countInBar: (((zeroBased % phraseBeats) + phraseBeats) % phraseBeats) + 1,
+    phrase: Math.floor(zeroBased / phraseBeats) + 1,
+    countInPhrase: (((zeroBased % phraseBeats) + phraseBeats) % phraseBeats) + 1,
   };
 }
 
 /**
- * Compute how many phrases (bars) a figure spans, given the counts its
- * attributes land on. Derived from the largest count, so it honors the role's
- * latest attribute when called per role (the caller passes that role's counts).
- * An empty figure spans 1 phrase.
+ * Compute how many phrases a figure spans, given the counts its attributes land
+ * on. Derived from the largest count, so it honors the role's latest attribute
+ * when called per role (the caller passes that role's counts). An empty figure
+ * spans 1 phrase.
  */
 export function barsForFigure(counts: number[], dance: DanceId): number {
   if (counts.length === 0) return 1;
   const maxCount = Math.max(...counts);
-  return countToBar(maxCount, dance).bar;
+  return countToPhrase(maxCount, dance).phrase;
 }

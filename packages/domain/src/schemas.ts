@@ -65,8 +65,8 @@ export function parseAttributeRead(input: unknown): Attribute {
  *   • When `ctx.dance` is given, `count` must be a VALID TIMING POSITION:
  *     `count ≥ 1` AND on the 1/8-note grid (the e/&/a/i subdivisions, US-004).
  *     It may EXCEED `phraseBeats` — figures span multiple phrases (§2.5 "modulo
- *     the counted phrase"; `countToBar` wraps counts ≥ phraseBeats into later
- *     bars, `barsForFigure` computes multi-phrase spans). So the "meter's valid
+ *     the counted phrase"; `countToPhrase` wraps counts ≥ phraseBeats into later
+ *     phrases, `barsForFigure` computes multi-phrase spans). So the "meter's valid
  *     range" governs the sub-beat grid + positivity, NOT an absolute phrase cap.
  *
  * UNIFORM ERROR CONTRACT: every failure — structural, invalid value, or invalid

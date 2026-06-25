@@ -22,7 +22,7 @@
 | US-001 🦴 | ULID id generation | M1 | system/developer | — | Client-generated, monotonic, sortable ULIDs for every entity id. |
 | US-002 🦴 | Dance metadata registry | M1 | system/developer | — | `DANCES` exposes time-sig, beats/bar, phrase beats, travelling for the 5 Standard dances. |
 | US-003 🦴 | ATTRIBUTE_REGISTRY + merge | M1 | system/developer | US-002 | Standard kinds + user-defined kinds merge; Tango omits rise; CBP→CBMP; single vs multi cardinality. |
-| US-004 🦴 | Float-count timing | M1 | system/developer | US-002 | `countLabel`/`countToBar`/`barsForFigure` render e/&/a + i-subdivisions modulo phrase. |
+| US-004 🦴 | Float-count timing | M1 | system/developer | US-002 | `countLabel`/`countToPhrase`/`barsForFigure` render e/&/a + i-subdivisions modulo phrase. |
 | US-005 🦴 | Routine + figure document schemas | M1 | system/developer | US-001,US-003 | Build/read routine & figure Automerge docs (sections, placements, attributes, annotations); soft-delete flips. |
 | US-006 🦴 | Overlay resolution `resolve(base,overlay)` | M1 | system/developer | US-005 | base − tombstones + overrides + additions + rename, resolved live so base additions flow up. |
 | US-007 🦴 | Choreo fork (clone) | M1 | system/developer | US-005 | `cloneRoutine` → new id, frozen, `forkedFromRef` provenance, no pull from origin. |
@@ -142,7 +142,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 - **Milestone:** M1 · **Source:** §2.5, §9 1.4, Q-D3 · **Depends-on:** US-002 · **Type:** system/developer
 - **Acceptance:**
   - `countLabel`: `3.25`→"3e", `3.5`→"3&", `3.75`→"3a", `3.125`→"3ia", `3.375`→"3ai".
-  - `countToBar` interprets counts modulo the dance's phrase (Waltz/Viennese 1–6; rest 1–8).
+  - `countToPhrase` interprets counts modulo the dance's phrase (Waltz/Viennese 1–6; rest 1–8).
   - `barsForFigure` computes per role.
   - Fractions follow `e`=.25, `&`=.5, `a`=.75 (not the earlier swapped draft).
 - **Tests (unskip when done):** `packages/domain/src/timing.test.ts`

@@ -6,7 +6,7 @@ import { importDomain } from "./__fixtures__";
 // PLAN §2.5, Q-D3, §10.2 invariant: "float-count timing; count fraction
 // e/&/a". Counts render in conventional ballroom notation modulo the phrase.
 //
-// Product helpers `countLabel`/`countToBar`/`barsForFigure` (timing.ts, M1 §9
+// Product helpers `countLabel`/`countToPhrase`/`barsForFigure` (timing.ts, M1 §9
 // 1.4) don't exist yet → dynamic import, skipped. RED→GREEN: implement them so
 // the exact mappings below hold (note: e=.25, &=.5, a=.75 — corrected from the
 // earlier swapped draft).
@@ -36,13 +36,13 @@ describe("US-004 Float-count timing", () => {
 
   it("interprets counts modulo the dance phrase (Waltz 1–6, Foxtrot 1–8)", async () => {
     // Intent: counts wrap modulo the dance's counted phrase length.
-    // Arrange: import countToBar. Act: map a count past the phrase end.
-    // Assert: in Waltz (phrase 6) count 7 → bar 2 count 1; in Foxtrot (phrase 8)
-    //   count 9 → bar 2 count 1.
+    // Arrange: import countToPhrase. Act: map a count past the phrase end.
+    // Assert: in Waltz (phrase 6) count 7 → phrase 2 count 1; in Foxtrot (phrase
+    //   8) count 9 → phrase 2 count 1.
     // Covers AC-2 (modulo phrase) — §10.2 "modulo phrase".
-    const { countToBar } = await importDomain();
-    expect(countToBar(7, "waltz")).toMatchObject({ bar: 2, countInBar: 1 });
-    expect(countToBar(9, "foxtrot")).toMatchObject({ bar: 2, countInBar: 1 });
+    const { countToPhrase } = await importDomain();
+    expect(countToPhrase(7, "waltz")).toMatchObject({ phrase: 2, countInPhrase: 1 });
+    expect(countToPhrase(9, "foxtrot")).toMatchObject({ phrase: 2, countInPhrase: 1 });
   });
 
   it("computes bars for a figure per role", async () => {
@@ -73,12 +73,21 @@ describe("US-004 Float-count timing", () => {
     expect(countLabel(2.4999998)).toBe("2&");
   });
 
+  it("renders off-grid fractions without leaking float noise", async () => {
+    // Intent: a fraction that doesn't snap to the spec'd 1/8 grid (.6/.9 sit
+    // between grid points) stays visible as beat+fraction, but is rounded to 3
+    // decimals so binary-float noise doesn't reach the label.
+    const { countLabel } = await importDomain();
+    expect(countLabel(3.6)).toBe("3+0.6"); // not "3+0.6000000000000001"
+    expect(countLabel(3.9)).toBe("3+0.9"); // not "3+0.8999999999999999"
+  });
+
   it("keeps within-phrase counts in phrase 1", async () => {
     // Intent: counts inside the first phrase don't wrap.
-    const { countToBar } = await importDomain();
-    expect(countToBar(1, "waltz")).toMatchObject({ bar: 1, countInBar: 1 });
-    expect(countToBar(6, "waltz")).toMatchObject({ bar: 1, countInBar: 6 });
-    expect(countToBar(8, "foxtrot")).toMatchObject({ bar: 1, countInBar: 8 });
+    const { countToPhrase } = await importDomain();
+    expect(countToPhrase(1, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 1 });
+    expect(countToPhrase(6, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 6 });
+    expect(countToPhrase(8, "foxtrot")).toMatchObject({ phrase: 1, countInPhrase: 8 });
   });
 
   it("spans more phrases as a figure's counts extend past the phrase", async () => {
