@@ -32,7 +32,7 @@ run_worker_first = ["/api/*"]
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "ballroom-flow-staging"
-database_id = "REPLACE_WITH_STAGING_D1_ID"
+database_id = "ad9ea4d2-3687-411d-a664-a938dc91b541"
 migrations_dir = "migrations"
 
 # --- Production (deployed from the `main` branch).
@@ -48,5 +48,5 @@ run_worker_first = ["/api/*"]
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "ballroom-flow-production"
-database_id = "REPLACE_WITH_PRODUCTION_D1_ID"
+database_id = "55ba153e-a24e-4cf6-8579-213b236abae5"
 migrations_dir = "migrations"
