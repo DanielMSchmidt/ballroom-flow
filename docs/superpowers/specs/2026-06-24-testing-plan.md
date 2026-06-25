@@ -1,6 +1,6 @@
 # Ballroom Flow — Detailed Testing Plan
 
-> **Note:** the testing strategy is now part of the consolidated [`docs/PLAN.md`](../../PLAN.md) (§10). This document is **retained as a detail annex** for its verbatim per-screen Prototype Feature Coverage Matrix (§2), which PLAN.md summarises to its high-risk rows. Where this document refers to "the design spec" (since removed), read [`docs/PLAN.md`](../../PLAN.md).
+> **⚠️ Predates the v2 redesign.** The testing strategy now lives in [`docs/PLAN.md`](../../PLAN.md) (§10), and the **v2 owner-review pass changed the model underneath this document**: typed step-slots → **attributes on a float-count timeline** (extensible kinds); two leader/follower charts → **per-attribute role**; sides (long/short/corner, auto-named) → **user-named sections**; couple + coach roles → **classic viewer/commenter/editor + owner**; save-a-copy → **fork + figure variants**; separate threads/journal → **unified annotations with polymorphic + query anchors**; plus **plans/quota**. This document is **retained only as a per-screen *surface* checklist** (the wireframe inventory is still valid); any row tied to two-chart, coach, side auto-naming, or typed slots is **superseded by PLAN.md §10** and will be re-pinned once the v2 keystones (Q-FORK / Q-ATTR / Q-ANNO) settle. Where it says "the design spec" (removed), read [`docs/PLAN.md`](../../PLAN.md).
 
 **Status:** Draft for review — v1
 **Date:** 2026-06-24
