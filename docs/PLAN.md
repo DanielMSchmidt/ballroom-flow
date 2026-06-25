@@ -1,6 +1,6 @@
 # Ballroom Flow — Master Plan
 
-**Status:** Draft for review — **v4.2 (full-syllabus global library + co-member figure-family notes, 2026-06-25)**
+**Status:** Draft for review — **v4.3 (frozen choreo forks, corrected count fractions, M0.5 architecture spike, 2026-06-25)**
 **Date:** 2026-06-25
 
 This is the single source of truth for Ballroom Flow. It consolidates the original design/implementation/testing/open-questions docs, then folds in successive owner reviews on PR #9. The latest decision is the foundational one: **full fork/inheritance is in v1** — at both the **choreography** and **figure** level — and to support it correctly the data layer is an **Automerge document graph**, not a single per-routine CRDT. The owner deliberately took on this complexity now to make the storage choice right and avoid a later rewrite.
@@ -13,7 +13,7 @@ Three sources are **retained for detail this plan does not reproduce in full** (
 
 **Guiding principle:** *quality and maintainability over feature count.* Fork/inheritance is the one place the owner has chosen *more* upfront complexity, on purpose — everything else stays YAGNI.
 
-> **What's new in v4 (the fork decision and its consequences):** The data model is a **graph of Automerge documents** — reusable **figure documents** (edit once, the change flows into every routine that references it) and **routine documents** (sections + ordered figure *placements* + annotations). A **choreo fork** is an Automerge `clone` (shared history → can merge/pull from origin). A **figure variant** is a figure doc that references a base and stores only an **overlay** (overrides + dropped-step tombstones + additions + rename), resolved live so base edits flow up. **Editing any non-owned figure is auto copy-on-write** → it spawns an account variant you own; forks **auto-pull** upstream. The **global library is application-scoped**, variants/notes **account-scoped**. Figures carry a **cross-dance `figureType`** family identity so a note can target *this Feather* or *every Feather across dances*. The foundation's cost: **Automerge has no Cloudflare-blessed server** (we build the automerge-repo storage + network adapters on SQLite-backed Durable Objects, one DO per document) and **per-user undo is history-based, not turnkey** (accepted). All reflected below.
+> **What's new in v4 (the fork decision and its consequences):** The data model is a **graph of Automerge documents** — reusable **figure documents** (edit once, the change flows into every routine that references it) and **routine documents** (sections + ordered figure *placements* + annotations). A **choreo fork** is an Automerge `clone` that is **frozen at fork time** (independent of its origin — "make it your own"; lineage kept for provenance). A **figure variant** is a figure doc that references a base and stores only an **overlay** (overrides + dropped-step tombstones + additions + rename), resolved live so base edits flow up. **Editing any non-owned figure is auto copy-on-write** → it spawns an account variant you own. **Figures auto-update** across the routines that reference them; **choreo forks do not** (only figures flow, not origin-routine changes). The **global library is application-scoped**, variants/notes **account-scoped**. Figures carry a **cross-dance `figureType`** family identity so a note can target *this Feather* or *every Feather across dances*. The foundation's cost: **Automerge has no Cloudflare-blessed server** (we build the automerge-repo storage + network adapters on SQLite-backed Durable Objects, one DO per document) and **per-user undo is history-based, not turnkey** (accepted). All reflected below.
 
 ---
 
@@ -106,11 +106,11 @@ The system is a **graph of Automerge documents**, each hosted in its own Durable
 - **Annotations** (§2.6) scoped to this routine.
 
 ### 2.4 Fork & copy-on-write (the unifying rule — see §5.2)
-- **Choreo fork** = Automerge **`clone`** of the routine doc → new doc id, **shared history** (so it can pull/merge from origin). Referenced figure docs are, by default, **still shared** (updates flow). 
+- **Choreo fork** = Automerge **`clone`** of the routine doc → new doc id, **frozen at fork time** (independent of its origin — it does **not** pull origin changes); `forkedFromRef` is kept for **provenance only**. Referenced figure docs are, by default, **still shared** (library updates to those figures flow in, until you diverge a figure via copy-on-write).
 - **Editing a referenced figure from inside a routine you don't own the figure in is copy-on-write:** it spawns a **variant** (a new figure doc with `baseFigureRef` = the shared figure) owned by the editor, and the placement re-points to the variant. This unifies "make it your own / copy all info" with "info flows up": you only diverge where you actually edit; everything else keeps inheriting.
 
 ### 2.5 Attribute *(the notation unit)*
-`{ id, kind (`step`|`sway`|`turn`|`rise`|`position`|… user-defined), count (float, relative to figure start), role (`leader`|`follower`|null=both), value (typed by kind), deletedAt }`. A "step" is the `step`-kind attribute (carries footwork). **Float-count timing** is interpreted modulo the dance's counted phrase (Waltz/Viennese 1–6; rest 1–8); the fraction renders as **`a`=.25, `&`=.5, `e`=.75**, `i` for 1/8s (`ia`=.125, `ai`=.375) — *[confirm], inverts the common "1 e & a" order (Q-D3)*.
+`{ id, kind (`step`|`sway`|`turn`|`rise`|`position`|… user-defined), count (float, relative to figure start), role (`leader`|`follower`|null=both), value (typed by kind), deletedAt }`. A "step" is the `step`-kind attribute (carries footwork). **Float-count timing** is interpreted modulo the dance's counted phrase (Waltz/Viennese 1–6; rest 1–8); the fraction renders as **`e`=.25, `&`=.5, `a`=.75** (the conventional "1 **e** & **a** 2" count), with `i` for 1/8-note subdivisions (`ia`=.125, `ai`=.375).
 
 ### 2.6 Annotation *(unifies Thread/Comment + Journal)*
 `{ id, authorId, kind (`note`|`lesson`|`practice`), text, tags[], createdAt, media[] (v1.1), deletedAt }` with **anchors[]** and ordered **Replies** (author-only delete). v1 anchor types:
@@ -138,7 +138,7 @@ Automerge graph (one doc per DO):
   RoutineDoc ──* Annotation ──* Reply ;  anchor ──▶ { point | figure }            (routine-scoped)
   FigureDoc  ──* Attribute { kind, count(float), role?, value } ; { figureType, dance, scope }
   FigureDoc(account variant) ──(baseFigureRef)──▶ FigureDoc(global)  [overlay: overrides/tombstones/additions/rename]
-  RoutineDoc(fork) ──(forkedFromRef, shared history)──▶ RoutineDoc(origin)
+  RoutineDoc(fork) ──(forkedFromRef: provenance only — frozen, no pull)──▶ RoutineDoc(origin)
   AccountDoc ──* Annotation ; anchor ──▶ figureType{ family, danceScope: dance|all }   (account-scoped, cross-dance)
 
 Scopes:  application = global library (FigureDocs, app-owned) ;  account = variants + figureType notes ;  routine = placements + routine notes
@@ -167,7 +167,7 @@ Standard kinds (v1): **`step`** (footwork `HT`/`T`/`TH`/`heel_pull`/`H`, + free-
 | Reorder | sections, placements (within a section), attributes (by count). |
 | Attribute add/edit/remove | place/edit/remove on a figure's count timeline; switch role inline. |
 | **Custom attribute kinds** | **v1** — create/edit user-defined kinds. |
-| **Fork — choreo** | **v1** — clone a routine ("make it your own"); lineage kept; can pull/merge from origin. |
+| **Fork — choreo** | **v1** — clone a routine ("make it your own"); **frozen** from origin (no pull); lineage kept for provenance. |
 | **Fork — figure (variant)** | **v1** — fork a figure into a variant that inherits the base and stores overrides; **copy-on-write** when editing a shared figure inside a routine. |
 | **Figure library** | **v1** — reusable figures; editing one flows into every routine referencing it. |
 | **Undo / redo** | **v1** — per-user, history-based (§5.4). |
@@ -204,7 +204,7 @@ Membership is **per document** — a routine doc and a figure doc are shared ind
 **Annotation visibility:** routine annotations are visible to all members of that routine. **`figureType` annotations (option 2)** are owned in the author's account doc but **visible to co-members of any shared routine where the figure appears**: when the client renders routine R for viewer U, it queries the **FigureTypeNoteIndex** for notes by `members(R)` whose `figureType`/`danceScope` match a figure in R, and loads them — co-membership of R authorizes that scoped cross-account read. A viewer never browses another user's account doc wholesale; only family-notes relevant to a shared routine surface.
 
 ### 5.2 Fork & inheritance (the v1 centerpiece)
-- **Choreo fork ("make it your own"):** Automerge `clone` of the routine doc → new owned doc, `forkedFromRef` set, **shared history**. **Upstream changes auto-pull** (Q-FORK-UX): a fork stays live with its origin by default (background merge), rather than an explicit review-and-merge step — Automerge merges cleanly, and the small collaboration scale makes silent convergence the least-surprising behavior. Referenced figure docs stay **shared by reference** (updates flow) until diverged.
+- **Choreo fork ("make it your own"):** Automerge `clone` of the routine doc → new owned doc, **frozen at fork time** (Q-FORK-UX): it does **not** pull changes from its origin — "your own" means independent. `forkedFromRef` is kept for **provenance/lineage display only**. (Referenced figure docs are still the live shared library figures, so *figure-level* improvements flow in until you diverge one via copy-on-write — only the routine **arrangement** is frozen, not the library figures it points at.)
 - **Figure variant ("info flows up, store overrides"):** a figure doc with `baseFigureRef` + overlay (overrides/tombstones/additions/rename), resolved live against the base (§2.2). Base edits to non-overridden steps flow up.
 - **Copy-on-write = auto-variant (Q-COW-TRIGGER):** editing **any figure you don't own** (a global-library figure, or someone else's shared figure) **automatically** spawns an account-scoped variant you own and re-points the placement — no prompt. Editing **your own** figure edits it in place (flowing to all your routines that use it). One rule covers "copy all info," "flows up," and "don't disturb others."
 - **Scopes & safety:** global-library figures are app-owned (never edited by users → always auto-variant); account figures are edited only by their owner (others auto-variant). This is how the shared/global library stays safe while everyone can still tweak freely.
@@ -303,7 +303,7 @@ apps/web/src/
 | D8 | D1 index ORM | **Drizzle** + drizzle-kit; tests use `applyD1Migrations()`. |
 | **D6 Δ** | Client data layer | **automerge-repo** (multi-document) behind the `store/` seam; TanStack Query for the REST list surface. |
 | **D13 Δ** | CRDT engine & shape | **Automerge** + a **document graph** (figure docs + routine docs), chosen for cross-routine inheritance + fork/merge/history. |
-| **D12 Δ** | Fork | **In v1, full** — choreo fork (clone + lineage, **auto-pull** upstream), figure variants (overlay), **copy-on-write = auto-variant** for any non-owned figure. |
+| **D12 Δ** | Fork | **In v1, full** — choreo fork (clone, **frozen** from origin; lineage = provenance only), figure variants (overlay), **copy-on-write = auto-variant** for any non-owned figure. **Figures auto-update across routines; choreo forks do not pull.** |
 | **D14 Δ** | Undo | **History-based per-user undo** (inverse of the user's last change); no op-log; richer refusal UX not required (Q-UNDO). |
 | **D10 Δ** | Sync | **automerge-repo network adapter over Hibernatable WebSockets**, one connection per document; REST for list/invite/quota/export. |
 | **D23 Δ** | Persistence topology | **One SQLite-backed Durable Object per document** (routine + figure docs); the DO is the automerge-repo storage host + sync + permission boundary. **D1 = index/registry only.** We build the automerge-repo **Cloudflare storage + network adapters ourselves** (no blessed lib). |
@@ -343,10 +343,11 @@ Fork/inheritance is in v1, so the document-graph, overlay resolution, and the DI
 | M | Milestone | Deliverable |
 |---|---|---|
 | **0** | **Foundation** | Monorepo; `domain`+`contract`; CI; Worker + **a SQLite-backed Durable Object scaffold hosting an Automerge doc over a WebSocket** (echo a change between two clients); Clerk session; D1 index migration. **Detailed below.** |
+| **0.5** | **Architecture spike (throwaway, ahead of time)** | **De-risk the single biggest unknown before committing the plan:** prove the **automerge-repo ↔ Cloudflare** adapters end-to-end — two clients sync an Automerge doc through a per-doc SQLite-backed DO, it **persists + rehydrates after eviction/reconnect**, a **permission check at the sync boundary** rejects a non-member, and convergence holds across a simulated partition. **Output = a go/no-go + learnings**, not shippable code. **Detailed below.** |
 | **1** | **Domain core (walking skeleton)** | Pure `domain/`: ATTRIBUTE_REGISTRY (+merge), dances, float-count timing, the **routine + figure document schemas**, **overlay resolution** (`resolve(base,overlay)`), **fork (clone) + copy-on-write**, **Automerge convergence** property tests, **history-based per-user undo**, Zod. In-memory, no network. **Detailed below.** |
 | **2** | DO + multi-doc sync + persistence | The **automerge-repo storage adapter (DO SQLite)** + **network adapter (WS)**; per-document DO; client repo loads a routine doc + referenced figure docs; **permission at the DO boundary**; alarm compaction + D1 index projection; `store/` seam + Assemble/Timeline/Attribute-Editor. |
 | **3** | Auth, membership (per doc), permissions & quota | Clerk onboarding; per-document Membership + `authorizeConnection`; quota on routine create; invite issue/redeem; Share. |
-| **4** | **Fork & inheritance UX** | Choreo fork (clone + lineage + **auto-pull**); figure variants (overlay) + **auto-variant** copy-on-write; **application-global library** + account variants; figure library screen; "used in N routines". (Library *content* = the parallel workstream below.) |
+| **4** | **Fork & inheritance UX** | Choreo fork (clone, **frozen** + provenance); figure variants (overlay) + **auto-variant** copy-on-write; **figure auto-update** across routines; **application-global library** + account variants; figure library screen; "used in N routines". (Library *content* = the parallel workstream below.) |
 | **5** | Undo/redo UX | History-based per-user undo wired to UI; "Undone" toast; soft superseded hint. |
 | **6** | Annotations (incl. cross-dance) | Unified annotation + replies; anchors **point + figure + `figureType`** (per-dance / all-dances, account doc); **co-member visibility** via the FigureTypeNoteIndex (option 2); timeline + journal. |
 | **7** | Custom attribute kinds + Lanes + sample/template + search | Create user-defined kinds; Lanes; sample + template; routine/figure search over the index. |
@@ -357,7 +358,7 @@ Fork/inheritance is in v1, so the document-graph, overlay resolution, and the DI
 ### Content workstream — the full-syllabus global library (Q-LIBSEED)
 Seeding a **full Standard syllabus** (ISTD, all 5 dances) into the global library is a **major, accuracy-sensitive content effort** that runs **parallel to engineering**, not a code task:
 - **Source & system:** one syllabus system (**ISTD**, per Q-D8), enumerated as `figureType` families × the dances each appears in, with each (family×dance) figure's attributes (steps/footwork/sway/turn/rise/position/alignment).
-- **Accuracy is the risk:** "a notation tool that gets the notation wrong is worse than a blank notebook" — every seeded figure needs **coach/dancer validation** (ties to Q-D4, still pending the coach). 
+- **Accuracy matters, but isn't a launch blocker (owner):** start from the **current best-effort values** (the `[confirm]` vocabulary stubs) and **refine with real testers** rather than gating on the coach up front. Because vocabulary is data (the ATTRIBUTE_REGISTRY + seed docs), corrections during testing are config edits, not code changes.
 - **Recommended phasing (within the "full" goal):** ship a **validated core** (the most-used figures per dance) at launch, then expand to the full syllabus on a rolling basis — so a notation error never blocks release and the library grows verified. Seed data is versioned by `schemaVersion` and authored as global FigureDocs.
 
 ### Data model (D1 index — documents live in their DOs)
@@ -387,12 +388,24 @@ Open routine → repo connects to the routine doc's DO (JWT + role check) → re
 
 **M0 exit:** repo boots; CI green; verified call round-trips; two clients converge an Automerge change through a real DO; D1 binding present.
 
+### Task Detail — Milestone 0.5: Architecture spike (throwaway, ahead of the build)
+**Purpose:** the riskiest, least-proven part of this plan is the **DIY automerge-repo ↔ Cloudflare integration** (there's no blessed library). Before trusting the M2 milestone, prove it works — or learn early that it doesn't. This is a **timeboxed, throwaway** spike (a branch/sandbox, not production code); its deliverable is a **go/no-go decision + a short findings note** that feeds the real M2/M3 design.
+
+- [ ] **S1 — Storage adapter (DO SQLite).** Implement a minimal automerge-repo **StorageAdapter** backed by a SQLite-backed Durable Object; persist an Automerge doc's incremental changes; **evict the DO and reconnect → the doc rehydrates** intact.
+- [ ] **S2 — Network adapter (WebSocket).** Implement a minimal **NetworkAdapter** so a browser automerge-repo syncs with the DO over a (Hibernatable) WebSocket; **two clients converge** a change; confirm hibernation/wake doesn't drop state.
+- [ ] **S3 — Permission boundary.** Gate the sync connection: the DO checks a (mocked) membership/role before accepting changes; a **non-member connection is rejected**, an editor's change is accepted, a viewer is read-only.
+- [ ] **S4 — Partition/convergence sanity.** Two clients edit while "offline," then reconnect → **converge** with no lost edits; a duplicate change is idempotent.
+- [ ] **S5 — Multi-doc reference.** A client opens two docs (a "routine" referencing a "figure") and syncs both through their separate DOs — confirms the per-document topology and connection fan-out are workable.
+- [ ] **S6 — Findings + go/no-go.** Write a short note: does the approach hold? rough latency/cost per DO; any sharp edges (hibernation, large-doc compaction, WS limits); adjustments for M2/M3. **If no-go**, reconsider topology (e.g. fewer docs, or a single-routine-doc fallback) *before* building.
+
+**M0.5 exit:** a working throwaway proving sync + persistence + rehydration + a permission boundary + multi-doc references on Cloudflare, **or** a documented reason to adjust the architecture — decided before M1/M2 build on it.
+
 ### Task Detail — Milestone 1: Domain Core (walking skeleton)
 Pure `domain/`, in-memory Automerge, TDD. **Proves the document graph, overlay inheritance, fork/copy-on-write, convergence, and undo with no network.**
 #### 1.1 ULID ids → commit.
 #### 1.2 Dance metadata (`DANCES`) → commit.
 #### 1.3 ATTRIBUTE_REGISTRY (+merge) — Tango omits `rise`; `step` has `H`; `turn` has `eighth_L`; `rise` has `NFR`; position single vs body-action multi; `CBP→CBMP`; a user-defined kind merges → commit.
-#### 1.4 Float-count timing — `countLabel`/`countToBar` (`3.5`→"3&", `3.25`→"3a", `3.75`→"3e", `3.125`→"3ia", `3.375`→"3ai"; per Q-D3); `barsForFigure` per role → commit.
+#### 1.4 Float-count timing — `countLabel`/`countToBar` (`3.25`→"3e", `3.5`→"3&", `3.75`→"3a", `3.125`→"3ia", `3.375`→"3ai"); `barsForFigure` per role → commit.
 #### 1.5 Document schemas (`doc-routine.ts`, `doc-figure.ts`) — build/read routine + figure Automerge docs (sections, placements w/ figureRef, attributes, annotations); typed helpers; soft-delete flips → commit.
 #### 1.6 Overlay resolution (`overlay.ts`) — `resolve(base, overlay)`: base − tombstones + overrides + additions; **base additions flow up**; overrides win; rename applies; pure/deterministic → commit.
 #### 1.7 Fork + copy-on-write (`fork.ts`) — `cloneRoutine(doc)` (new id, shared history, `forkedFromRef`); `copyOnWrite(placement, sharedFigure, byUser)` → new variant doc with `baseFigureRef` + empty overlay, placement re-pointed → commit.
@@ -416,10 +429,10 @@ Quality and a detailed testing plan are a non-negotiable owner requirement. The 
 Push correctness down the pyramid (document schemas, overlay resolution, fork/copy-on-write, convergence, history-based undo, registry/Zod are pure `domain/` with in-memory Automerge — exhaustive + property-based); test the **DO + multi-doc sync + per-doc permission** in `workerd` via `@cloudflare/vitest-pool-workers`; contract types-first + Zod; E2E for journeys + cross-process invariants (incl. two clients converging, and fork/inheritance flows); trace every surface; color never the only signal.
 
 ### 10.2 Layer ownership
-- **Unit / property (pure `domain/`, in-memory Automerge):** float-count timing; **overlay resolution** (inherit/override/tombstone/addition/rename; base-addition flow-up); **fork clone + copy-on-write** (new ids, lineage, placement re-point, no disturbance to the shared base); **`figureType` annotation resolution** (an `all`-dances note matches a figure of that family in *any* dance; a `this-dance` note matches only its dance; variants inherit `figureType`); **Automerge convergence/commutativity/idempotence** (fast-check, shuffled/partitioned changes incl. across forks); **history-based per-user undo** (own-change inverse; remote edit preserved; redo); registry/Zod (`NFR`/`H`/`⅛`; Tango omits rise; position vs body-action; `CBP→CBMP`; unknown passthrough-on-read vs reject-on-write; user-defined kind merges; count fraction per Q-D3); migration ladder.
+- **Unit / property (pure `domain/`, in-memory Automerge):** float-count timing; **overlay resolution** (inherit/override/tombstone/addition/rename; base-addition flow-up); **fork clone + copy-on-write** (new ids, lineage, placement re-point, no disturbance to the shared base); **`figureType` annotation resolution** (an `all`-dances note matches a figure of that family in *any* dance; a `this-dance` note matches only its dance; variants inherit `figureType`); **Automerge convergence/commutativity/idempotence** (fast-check, shuffled/partitioned changes incl. across forks); **history-based per-user undo** (own-change inverse; remote edit preserved; redo); registry/Zod (`NFR`/`H`/`⅛`; Tango omits rise; position vs body-action; `CBP→CBMP`; unknown passthrough-on-read vs reject-on-write; user-defined kind merges; count fraction `e`/`&`/`a`); migration ladder.
 - **Worker / DO / D1 (`vitest-pool-workers`):** **two clients converge** through a real per-document DO; a routine that **references a figure doc syncs both**; **permission per document at the boundary** — editor/commenter/viewer/non-member/forged-connection on a routine doc *and* on a figure doc; **copy-on-write** when editing a shared figure without rights; **quota** (4th owned routine → upsell); invite lifecycle; DO **SQLite persistence** (doc survives eviction/reload) + alarm compaction + D1 index projection; export loads routine + referenced figures; **EXPLAIN QUERY PLAN** on index/registry/membership/quota queries.
 - **Component (browser + Testing Library + axe):** attribute editor (registry-derived; Tango hides rise; new user-defined kind appears); timeline role flip; Lanes; section rename; **figure library** screen (variant badge, "used in N"); **fork/variant** affordances + copy-on-write prompt; annotation create (point/figure); viewer/commenter gating; toasts incl. "Undone"/quota/"copied as your variant".
-- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → lineage kept → an upstream change auto-pulls in**; **edit your own shared figure → flows into a second routine**; **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); **note visibility (option 2)** — a coach's family-note surfaces for a **co-member** on a shared routine's matching figure, but **not** for a non-member (FigureTypeNoteIndex + co-membership gate); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; export→import (with referenced figures); PWA install/app-shell-offline; nav.
+- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → frozen/independent** (an edit to the *origin routine* does **not** appear in the fork); **edit your own shared figure → flows into a second routine** (figure auto-update); **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); **note visibility (option 2)** — a coach's family-note surfaces for a **co-member** on a shared routine's matching figure, but **not** for a non-member (FigureTypeNoteIndex + co-membership gate); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; export→import (with referenced figures); PWA install/app-shell-offline; nav.
 - **Contract:** `typeof app` + shared doc-shape types (drift fails `tsc`); runtime Zod; schema-drift CI gate.
 
 ### 10.3 Tooling, CI, fixtures
@@ -440,7 +453,7 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 - **Syllabus-system attribution**, amalgamations as a first-class entity, precede/follow validation.
 - **Themes/backdrop settings**, fine-grained per-member access editing, **native app wrapper.**
 
-> Fork (choreo + figure), the global figure library, inheritance, and **cross-dance `figureType` annotations** are **in v1** (no longer deferred). Fork behavior is resolved: **auto-pull** upstream + **auto-variant** copy-on-write. Only **predicate** query anchors ("all rising steps") remain deferred — identity-based `figureType` anchors ship in v1.
+> Fork (choreo + figure), the global figure library, inheritance, and **cross-dance `figureType` annotations** are **in v1** (no longer deferred). Fork behavior is resolved: **figures auto-update** across routines; **choreo forks are frozen** from their origin (independent copy); **auto-variant** copy-on-write. Only **predicate** query anchors ("all rising steps") remain deferred — identity-based `figureType` anchors ship in v1.
 
 ---
 
@@ -456,17 +469,20 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 - ✅ **Fork scope** → **cross-routine, full power, in v1**: shared figure library + variants (overlay/copy-on-write) + choreo fork with lineage/merge (D12).
 - ✅ **CRDT engine/topology (Q-CRDT-LIB)** → **Automerge + automerge-repo, document graph, one DO per document**, with **DIY Cloudflare storage/network adapters**. Cost (~$5/mo Workers Paid) accepted; SQLite-backed DOs + alarms + Hibernatable WS + Smart Placement + Analytics Engine adopted (D6/D13/D23–D26).
 - ✅ **Q-UNDO** → history-based per-user undo, scope = "undo my last change in the doc I'm editing"; no cross-doc COW undo; soft superseded hint, no hard refusal. **Acceptable** (D14).
-- ✅ **Q-FORK-UX** → **auto-pull**: forks track origin and shared figures update live (background merge), no explicit review-and-merge surface in v1 (D12).
+- ✅ **Q-FORK-UX** → **figures auto-update** across routines (library improvements flow live); **choreo forks are frozen** at fork time (no pull from origin; `forkedFromRef` = provenance only) (D12).
 - ✅ **Q-COW-TRIGGER** → **auto-variant**: editing any non-owned figure silently creates an account-scoped variant; editing your own edits in place (D12).
 - ✅ **Q-FIGLIB** → **application-scoped global library + account-scoped variants** (D28). Editing a global figure → auto-variant.
 - ✅ **Cross-dance figures (new)** → a **`figureType`** family spans dances; **figure-level + cross-dance `figureType` annotations are in v1**, scoped *this-dance* or *all-dances*, owned account-scoped (D29).
 - ✅ **Q-FIGNOTE-VIS** → **option 2**: a `figureType` note is owned in your account doc but **visible to co-members of shared routines where the figure appears** (FigureTypeNoteIndex + co-membership gate). Adds a scoped cross-account read path (§2.7, §5.1) (D29).
-- ✅ **Q-LIBSEED** → **full Standard syllabus (ISTD)**, all 5 dances, as a parallel **content workstream** (§9), validated by the coach, recommended phased (validated core → full) (D30).
+- ✅ **Q-LIBSEED** → **full Standard syllabus (ISTD)**, all 5 dances, as a parallel **content workstream** (§9); seed **best-effort values now, refine with testers** (not blocked on the coach); recommended phased (core → full) (D30).
+- ✅ **Q-D4** → **proceed with the current `[confirm]` vocabulary** (`closed`/`promenade`/`wing`; `CBM`/`CBMP`; "CBP"→CBMP); **adjust the values during testing** with real users. Since vocabulary is data, no code change is needed to revise it.
 
 ### ★ Remaining open
-- **★ Q-D4 — Body position + body-action vocabulary (pending the owner's coach).** Also now **gates the content workstream** — seeding syllabus figures needs validated technique values. Confirm `closed`/`promenade`/`wing`, `CBM`/`CBMP`, "CBP"→CBMP.
-- **Q-D3** — count fraction mapping (inverts "1 e & a"); **Q-M1/2/3** — media (v1.1); **Q-SC1/2** — Latin/American target versions.
+- ✅ **Q-D3** → count fractions are the conventional **`e`=.25, `&`=.5, `a`=.75** ("1 e & a"); `i`-subdivisions `ia`=.125/`ai`=.375. (Earlier draft had `e`/`a` swapped — corrected.)
+- **Deferrable, not blocking:** **Q-M1/2/3** — media (v1.1); **Q-SC1/2** — Latin/American target versions.
 - **Settled infra:** Clerk boundary clean (D9); color collisions tolerated.
+
+*No open items block the build — the product model, storage foundation, and notation are settled; vocabulary values refine with testers (Q-D4/Q-LIBSEED).*
 
 ---
 
@@ -492,4 +508,4 @@ Not in v1. Annotations carry `media[]`; UI "coming soon". When built: R2 presign
 
 ---
 
-*End of plan (v4, Automerge document graph + full fork in v1). The product model and the storage foundation are settled; the open items (Q-UNDO ergonomics, Q-FORK-UX merge granularity, Q-COW-TRIGGER, Q-FIGLIB) are fork/UX refinements, not architecture. M0 stands up an Automerge DO; M1 proves the document graph + overlay + fork + convergence in-memory; M2 builds the DIY automerge-repo Cloudflare adapters — the highest-risk piece — early.*
+*End of plan (v4.3, Automerge document graph + full fork in v1). The product model, storage foundation, and notation are settled — no open item blocks the build (vocabulary values refine with testers). The sequence: **M0** stands up the stack; **M0.5** is a throwaway spike that de-risks the DIY automerge-repo↔Cloudflare adapters *before* the plan depends on them; **M1** proves the document graph + overlay + fork + convergence in-memory; **M2** builds the real adapters. The honest watch-items remain the M0.5 adapter risk, per-document DO fan-out, and the full-syllabus content effort.*
