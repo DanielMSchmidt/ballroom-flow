@@ -119,6 +119,14 @@ function invertChange<T>(doc: A.Doc<T>, target: ChangeMeta, message: string): A.
  * last change by the actor that is NOT itself an undo, so a pending undo isn't
  * undone again (that would be the multi-level walk-back v1 doesn't do). No-op if
  * the actor has no such change.
+ *
+ * CONCURRENCY / SUPERSEDE (§5.4/Q-UNDO, tracked #73): the inverse replays the
+ * cell's pre-change state, so undoing a write to a cell ANOTHER actor concurrently
+ * also wrote will RESTORE the pre-change state and thereby SUPERSEDE that
+ * concurrent value (e.g. A and B both set `x`; A's undo clears `x`, dropping B's
+ * value). A disjoint concurrent edit (different cell) is untouched and survives.
+ * This is the accepted Q-UNDO "superseded" case — the CRDT merges, there is no
+ * hard refusal; US-038's UI shows a soft "superseded" hint precisely here.
  */
 export function undoLastChange<T>(doc: A.Doc<T>, actorId: string): A.Doc<T> {
   const mine = changesByActor(doc, actorId);

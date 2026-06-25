@@ -58,6 +58,24 @@ describe("US-010 History-based per-user undo", () => {
     expect(undone.counts.b).toBe(2);
   });
 
+  it("undo of a same-cell edit supersedes a concurrent write (Q-UNDO 'superseded' case)", async () => {
+    // Intent: pin the documented same-cell concurrency behavior (Staff Finding B,
+    // tracked #73). When A and B concurrently write the SAME cell and A undoes,
+    // A's inverse restores the cell's pre-A state (absent) — which SUPERSEDES B's
+    // concurrent value. This is the Q-UNDO "superseded" case (§5.4: CRDT merges,
+    // no hard refusal, a soft superseded hint at most — US-038 warns here). It is
+    // the accepted v1 behavior, asserted here so it's explicit, not silent.
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    const base = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    const aEdit = A.change(A.clone(base, { actor: ACTOR_A }), (d) => (d.counts.x = 1));
+    const bEdit = A.change(A.clone(base, { actor: ACTOR_B }), (d) => (d.counts.x = 99));
+    const merged = A.merge(A.merge(A.init<CountsDoc>(), A.clone(aEdit)), A.clone(bEdit));
+    expect(merged.counts.x).toBe(99); // LWW winner before undo
+    const undone = undoLastChange(merged, ACTOR_A);
+    expect(undone.counts.x).toBeUndefined(); // A's undo supersedes B's concurrent write
+  });
+
   it("redo re-applies the undone change", async () => {
     // Intent: redo restores the undone change (redo = invert the pending undo).
     // Arrange: a doc (actor A) with one change. Act: undo it, then redo.
