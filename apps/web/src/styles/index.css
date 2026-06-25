@@ -1,0 +1,252 @@
+/**
+ * Ballroom Flow — global stylesheet entry.
+ * =================================================================
+ * Order matters:
+ *   1. self-hosted fonts (offline-friendly for the PWA — no CDN)
+ *   2. design tokens (the --bf-* CSS variables)
+ *   3. Tailwind v4 (its @theme maps a subset of tokens to utilities)
+ *   4. base reset + global element styles + keyframes
+ */
+
+/* 1. Fonts — Inconsolata (mono UI) + Caveat (handwritten notes). */
+@import "@fontsource/inconsolata/400.css";
+@import "@fontsource/inconsolata/500.css";
+@import "@fontsource/inconsolata/600.css";
+@import "@fontsource/inconsolata/700.css";
+@import "@fontsource/caveat/500.css";
+@import "@fontsource/caveat/600.css";
+@import "@fontsource/caveat/700.css";
+
+/* 2. Tokens. */
+@import "./tokens.css";
+
+/* 3. Tailwind v4. */
+@import "tailwindcss";
+
+/* -----------------------------------------------------------------
+ * 4a. @theme — expose tokens to Tailwind as utilities.
+ * This lets components use e.g. `text-ink`, `bg-surface`,
+ * `rounded-lg`, `text-kind-rise` while the values stay token-driven.
+ * We intentionally map only the subset used as utilities; the full
+ * token set is always available via `var(--bf-*)`.
+ * --------------------------------------------------------------- */
+@theme {
+  /* fonts */
+  --font-ui: var(--bf-font-ui);
+  --font-note: var(--bf-font-note);
+
+  /* surfaces + ink as Tailwind colors */
+  --color-backdrop: var(--bf-backdrop);
+  --color-backdrop-charcoal: var(--bf-backdrop-charcoal);
+  --color-surface: var(--bf-surface);
+  --color-surface-raised: var(--bf-surface-raised);
+  --color-surface-sunken: var(--bf-surface-sunken);
+  --color-surface-muted: var(--bf-surface-muted);
+  --color-surface-inverse: var(--bf-surface-inverse);
+
+  --color-border-default: var(--bf-border);
+  --color-border-strong: var(--bf-border-strong);
+  --color-border-subtle: var(--bf-border-subtle);
+
+  --color-ink: var(--bf-ink);
+  --color-ink-secondary: var(--bf-ink-secondary);
+  --color-ink-muted: var(--bf-ink-muted);
+  --color-ink-faint: var(--bf-ink-faint);
+  --color-ink-inverse: var(--bf-ink-inverse);
+
+  --color-accent: var(--bf-accent);
+  --color-accent-ink: var(--bf-accent-ink);
+  --color-accent-tint: var(--bf-accent-tint);
+  --color-accent-border: var(--bf-accent-border);
+
+  /* attribute kinds */
+  --color-kind-step: var(--bf-kind-step);
+  --color-kind-step-ink: var(--bf-kind-step-ink);
+  --color-kind-step-tint: var(--bf-kind-step-tint);
+  --color-kind-rise: var(--bf-kind-rise);
+  --color-kind-rise-ink: var(--bf-kind-rise-ink);
+  --color-kind-rise-tint: var(--bf-kind-rise-tint);
+  --color-kind-position: var(--bf-kind-position);
+  --color-kind-position-ink: var(--bf-kind-position-ink);
+  --color-kind-position-tint: var(--bf-kind-position-tint);
+  --color-kind-sway: var(--bf-kind-sway);
+  --color-kind-sway-ink: var(--bf-kind-sway-ink);
+  --color-kind-sway-tint: var(--bf-kind-sway-tint);
+  --color-kind-turn: var(--bf-kind-turn);
+  --color-kind-turn-ink: var(--bf-kind-turn-ink);
+  --color-kind-turn-tint: var(--bf-kind-turn-tint);
+
+  /* status */
+  --color-success: var(--bf-success);
+  --color-success-ink: var(--bf-success-ink);
+  --color-success-tint: var(--bf-success-tint);
+  --color-warning: var(--bf-warning);
+  --color-warning-ink: var(--bf-warning-ink);
+  --color-warning-tint: var(--bf-warning-tint);
+  --color-danger: var(--bf-danger);
+  --color-danger-ink: var(--bf-danger-ink);
+  --color-danger-tint: var(--bf-danger-tint);
+  --color-info: var(--bf-info);
+  --color-info-ink: var(--bf-info-ink);
+  --color-info-tint: var(--bf-info-tint);
+  --color-offline: var(--bf-offline);
+  --color-offline-ink: var(--bf-offline-ink);
+  --color-offline-tint: var(--bf-offline-tint);
+
+  /* radii */
+  --radius-sm: var(--bf-radius-sm);
+  --radius-md: var(--bf-radius-md);
+  --radius-lg: var(--bf-radius-lg);
+  --radius-xl: var(--bf-radius-xl);
+  --radius-pill: var(--bf-radius-pill);
+
+  /* shadows */
+  --shadow-xs: var(--bf-shadow-xs);
+  --shadow-sm: var(--bf-shadow-sm);
+  --shadow-md: var(--bf-shadow-md);
+
+  /* breakpoints (mobile-first; default is phone ~394px). The `lg`
+     breakpoint is where we adapt to an intentional desktop column. */
+  --breakpoint-sm: 30rem; /* 480 */
+  --breakpoint-md: 48rem; /* 768 */
+  --breakpoint-lg: 64rem; /* 1024 — desktop adapted layout */
+}
+
+/* -----------------------------------------------------------------
+ * 4b. Base reset + global element styles.
+ * --------------------------------------------------------------- */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bf-backdrop);
+    color: var(--bf-ink);
+    font-family: var(--bf-font-ui);
+    font-size: var(--bf-text-base);
+    line-height: var(--bf-leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* honor iOS safe areas at the app frame */
+    min-height: 100dvh;
+  }
+
+  /* Visible, consistent focus ring for keyboard users (#7). Uses
+     :focus-visible so pointer interaction stays quiet. */
+  :focus-visible {
+    outline: 2px solid var(--bf-accent);
+    outline-offset: 2px;
+    border-radius: var(--bf-radius-sm);
+  }
+
+  /* Inputs/buttons inherit the mono UI face by default. */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* Hide decorative scrollbars on scroll containers using .bf-scroll. */
+  .bf-scroll {
+    scrollbar-width: none;
+  }
+  .bf-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Visually-hidden helper for accessible names (#8). */
+  .bf-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Reduced-motion: kill transitions/animations globally as a
+     safety net beyond the token-gated ones (#9). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* -----------------------------------------------------------------
+ * 4c. Keyframes (motion-gated by the global reduced-motion rule).
+ * --------------------------------------------------------------- */
+@keyframes bf-screen-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bf-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes bf-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bf-skeleton {
+  0% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
