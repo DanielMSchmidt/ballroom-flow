@@ -19,6 +19,23 @@ import type { Env } from "./index";
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp = { op: "addSection"; name: string } & Record<string, unknown>;
 
+/** Order-independent equality of two Automerge head sets (same logical state). */
+function headsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedB = [...b].sort();
+  return [...a].sort().every((h, i) => h === sortedB[i]);
+}
+
+/**
+ * A fresh per-connection Automerge actor id. Actor ids MUST be hex strings, so
+ * we render 16 random bytes as hex (not a UUID with dashes, which Automerge
+ * rejects).
+ */
+function newActorId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /**
  * The empty routine shape a freshly-created routine DO starts from. Identity
  * fields (id/ownerId/title/dance) are placeholders until `setMetadata` (US-016)
@@ -117,10 +134,39 @@ export class DocDO extends DurableObject<Env> {
       return new Uint8Array();
     }
     this.persist(changes);
+    // An RPC edit also propagates to any live WebSocket clients of this doc.
+    this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
     // representative payload. The FULL set is what's persisted (and, in US-015,
     // synced) — so a future multi-change op loses nothing.
     return changes[changes.length - 1] as Uint8Array;
+  }
+
+  /**
+   * Apply raw Automerge change bytes from a peer (US-015 sync). Idempotent: a
+   * duplicate change leaves the doc's heads unchanged, so we persist + broadcast
+   * only when the change actually advances the doc (CRDT idempotence on the
+   * wire). Returns true when the change was new.
+   */
+  async applyRawChange(change: Uint8Array): Promise<boolean> {
+    return this.ingestChange(change, null);
+  }
+
+  /**
+   * Apply one incoming change to the in-memory doc; persist + relay it only if
+   * it advanced the doc (new change). `from` is the socket the change arrived on
+   * (excluded from the broadcast); null for RPC/relay-to-all.
+   */
+  private ingestChange(change: Uint8Array, from: WebSocket | null): boolean {
+    const before = this.getDoc();
+    const beforeHeads = A.getHeads(before);
+    const [after] = A.applyChanges(before, [change as A.Change]);
+    this.doc = after;
+    // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
+    if (headsEqual(beforeHeads, A.getHeads(after))) return false;
+    this.persist([change as A.Change]);
+    this.broadcast([change as A.Change], from);
+    return true;
   }
 
   /** Map a high-level op onto a domain mutation. Unknown ops are a no-op change. */
@@ -136,6 +182,80 @@ export class DocDO extends DurableObject<Env> {
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
     return readRoutine(this.getDoc());
+  }
+
+  // ── US-015: live WebSocket sync (custom Automerge change-sync, D13) ─────────
+
+  /**
+   * WebSocket entrypoint. Upgrades the request to a Hibernatable WebSocket the
+   * runtime owns (so the DO can hibernate while idle and wake on a message
+   * WITHOUT dropping state — state lives in SQLite). On connect we replay the
+   * full change log to the new client so it catches up, then it exchanges
+   * incremental changes via `webSocketMessage`.
+   */
+  override async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("expected websocket upgrade", { status: 426 });
+    }
+    const pair = new WebSocketPair();
+    const [client, server] = [pair[0], pair[1]];
+
+    // Per-connection Automerge actor id (#107/#70). Client-authored changes
+    // already carry the client's own actor; we still tag the SERVER socket with
+    // a stable per-connection actor so any DO-side mutation on behalf of this
+    // connection is attributed to it, never the DO's own actor (which would
+    // break per-user undo). Survives hibernation via the socket attachment.
+    server.serializeAttachment({ actor: newActorId() });
+
+    // Accept as a Hibernatable WebSocket (handlers are DO methods, so they
+    // survive hibernation — unlike addEventListener closures).
+    this.ctx.acceptWebSocket(server);
+
+    // Catch the new client up with the full current state (all changes so far).
+    const snapshot = A.getAllChanges(this.getDoc());
+    for (const change of snapshot) server.send(change as Uint8Array);
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /**
+   * A change arrived from a connected client. Binary frames are raw Automerge
+   * change bytes; apply (idempotently) and relay to the OTHER clients so all
+   * connections converge.
+   */
+  async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
+    if (typeof message === "string") return; // sync frames are binary; ignore text
+    this.ingestChange(new Uint8Array(message), ws);
+  }
+
+  /** A client disconnected — close the server side cleanly. */
+  async webSocketClose(ws: WebSocket, code: number, _reason: string): Promise<void> {
+    try {
+      ws.close(code);
+    } catch {
+      // already closing/closed — nothing to do.
+    }
+  }
+
+  /**
+   * Relay change bytes to every connected client except `from` (the socket the
+   * change arrived on). Uses the Hibernation API's `getWebSockets()` so it works
+   * even after the DO has hibernated and woken.
+   */
+  private broadcast(changes: A.Change[], from: WebSocket | null): void {
+    const sockets = this.ctx.getWebSockets();
+    if (sockets.length === 0) return;
+    for (const change of changes) {
+      const bytes = change as Uint8Array;
+      for (const ws of sockets) {
+        if (ws === from) continue;
+        try {
+          ws.send(bytes);
+        } catch {
+          // a closing socket can't receive — skip it.
+        }
+      }
+    }
   }
 
   /**
