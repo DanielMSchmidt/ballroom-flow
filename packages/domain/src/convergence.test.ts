@@ -26,7 +26,7 @@ interface CountsDoc {
   counts: Record<string, number>;
 }
 
-describe.skip("US-009 Automerge convergence invariants", () => {
+describe("US-009 Automerge convergence invariants", () => {
   it("converges regardless of edit order (commutative) — property", async () => {
     // Intent: shuffled independent changes converge to one doc (commutativity).
     // Multi-actor scenario: a sequence of independent attribute writes.
