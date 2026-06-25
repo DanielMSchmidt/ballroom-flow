@@ -229,6 +229,13 @@ export class DocDO extends DurableObject<Env> {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket upgrade", { status: 426 });
     }
+    // The Worker route forwards the doc's name (the idFromName key) — the DO
+    // can't recover it from `ctx.id` (US-016). Remember it so the alarm can
+    // project the D1 registry row keyed by doName even if `setMetadata` is never
+    // called for a connect-only doc.
+    const doName = request.headers.get("x-doc-name");
+    if (doName) this.rememberDoName(doName);
+
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
@@ -254,10 +261,34 @@ export class DocDO extends DurableObject<Env> {
    * A change arrived from a connected client. Binary frames are raw Automerge
    * change bytes; apply (idempotently) and relay to the OTHER clients so all
    * connections converge.
+   *
+   * The connect route is OPEN until US-021, so frames are untrusted: a malformed
+   * frame (not valid Automerge change bytes) must NOT crash the handler or take
+   * down the DO — we DROP it (Automerge `applyChanges` throws "Invalid magic
+   * bytes" on garbage). A typed WS envelope with explicit error replies is #117.
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    await this.ingestChange(new Uint8Array(message), ws);
+    try {
+      await this.ingestChange(new Uint8Array(message), ws);
+    } catch {
+      // Malformed/unapplyable frame — drop it; other clients + the doc are
+      // unaffected. (Closing the socket with 1003 "unsupported data" is a
+      // reasonable hardening once the typed envelope #117 distinguishes frames.)
+    }
+  }
+
+  /**
+   * Persist the document's DO name (the idFromName key) into doc_meta if not
+   * already recorded, so the alarm's D1 projection is keyed correctly. Upsert
+   * only sets `doName`; `setMetadata` fills the rest of the index fields.
+   */
+  private rememberDoName(doName: string): void {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO doc_meta (id, doName, type) VALUES (0, ?, 'routine')
+       ON CONFLICT(id) DO UPDATE SET doName = COALESCE(doc_meta.doName, excluded.doName)`,
+      doName,
+    );
   }
 
   /** A client disconnected — close the server side cleanly. */

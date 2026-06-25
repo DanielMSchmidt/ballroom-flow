@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
@@ -154,6 +154,39 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     const after = await stub.getSnapshot();
     expect(after).toEqual(before);
     // The duplicate must NOT append a second row for the same change.
+    expect(await stub.debugChangeRowCount()).toBe(rowsBefore);
+  });
+
+  it("drops a malformed WS frame without crashing the handler (open route is untrusted)", async () => {
+    // Intent: the connect route is OPEN until US-021, so frames are untrusted —
+    //   a garbage frame (not valid Automerge change bytes) must be DROPPED, not
+    //   crash webSocketMessage / take down the DO. Automerge's applyChanges
+    //   throws "Invalid magic bytes" on garbage; webSocketMessage swallows it.
+    // Arrange: a DO with a real applied change. Act: deliver garbage bytes via
+    //   webSocketMessage directly. Assert: it doesn't throw AND the doc is intact.
+    const realDocs = env.DOC_DO;
+    const id = realDocs.idFromName(uniqueDocName("routine"));
+    const stub = realDocs.get(id) as unknown as DocStub;
+    await stub.applyChange({ op: "addSection", name: "Keep" });
+    const before = await stub.getSnapshot();
+    const rowsBefore = await stub.debugChangeRowCount();
+
+    // Call the DO's webSocketMessage with garbage bytes (no real socket needed —
+    // broadcast no-ops with no connected sockets). Must resolve, not reject.
+    await runInDurableObject(
+      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (instance) => {
+        await expect(
+          instance.webSocketMessage(
+            {} as unknown as WebSocket,
+            new Uint8Array([9, 9, 9, 9]).buffer,
+          ),
+        ).resolves.toBeUndefined();
+      },
+    );
+
+    // The garbage frame changed nothing.
+    expect(await stub.getSnapshot()).toEqual(before);
     expect(await stub.debugChangeRowCount()).toBe(rowsBefore);
   });
 });
