@@ -27,6 +27,8 @@ export interface DocStub {
   getSnapshot(): Promise<DocSnapshot>;
   /** Set the D1-projected metadata (title/dance/owner/figureType). */
   setMetadata(meta: Record<string, unknown>): Promise<void>;
+  /** Test hook: drop the in-memory doc + re-run cold-load (simulates eviction). */
+  reloadForTest(): Promise<void>;
   /** Test hook: run the alarm body synchronously. */
   runAlarmForTest(): Promise<void>;
   /** Test hook: bytes currently persisted (for compaction assertions). */

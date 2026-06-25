@@ -96,6 +96,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@automerge/automerge':
+        specifier: ^3.2.6
+        version: 3.2.6
+      '@ballroom/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@clerk/backend':
         specifier: ^3.8.3
         version: 3.8.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
