@@ -158,18 +158,27 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
   });
 });
 
-describe.skip("US-016 DO alarm: compaction + D1 index projection + invite expiry", () => {
+describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", () => {
   it("compacts persisted history on the alarm (off the request path)", async () => {
-    // Intent: the alarm compacts incremental changes into a fresh snapshot.
+    // Intent: the alarm compacts the incremental change log into a single
+    //   snapshot, bounding the log (replay-on-connect cost) without losing state.
     // Arrange: a DO with many incremental changes. Act: run the alarm. Assert: the
-    //   persisted byte size shrinks (or change-count resets), doc unchanged.
+    //   change log is folded into the snapshot — far fewer change rows after — and
+    //   the doc is unchanged.
     // Covers US-016 AC-1 (compaction) + AC-4 (off request path).
     const { stub } = freshDoc("routine");
     for (let i = 0; i < 20; i++) await stub.applyChange({ op: "addSection", name: `S${i}` });
-    const before = await stub.debugPersistedSize();
+    const rowsBefore = await stub.debugChangeRowCount();
+    const before = await stub.getSnapshot();
+
     await stub.runAlarmForTest();
-    const after = await stub.debugPersistedSize();
-    expect(after).toBeLessThanOrEqual(before);
+
+    const rowsAfter = await stub.debugChangeRowCount();
+    expect(rowsAfter).toBeLessThan(rowsBefore); // change log folded into the snapshot
+    expect(rowsAfter).toBe(0); // fully compacted
+    // State survives compaction — even through a forced cold-load from the snapshot.
+    await stub.reloadForTest();
+    expect(await stub.getSnapshot()).toEqual(before);
   });
 
   it("projects a thin registry row to D1 on the alarm", async () => {
@@ -179,7 +188,14 @@ describe.skip("US-016 DO alarm: compaction + D1 index projection + invite expiry
     //   document_registry row exists in D1 reflecting the metadata.
     // Covers US-016 AC-2 (D1 index projection).
     const { name, stub } = freshDoc("routine");
-    await stub.setMetadata({ title: "Projected", dance: "foxtrot", ownerId: "user_x" });
+    // doName is the DO's idFromName key; the DO can't recover it from ctx.id, so
+    // the caller supplies it (it's the registry's #50 doId-scoped key).
+    await stub.setMetadata({
+      doName: name,
+      title: "Projected",
+      dance: "foxtrot",
+      ownerId: "user_x",
+    });
     await stub.runAlarmForTest();
     const row = await env.DB.prepare("SELECT title, dance FROM document_registry WHERE doName = ?")
       .bind(name)
@@ -189,11 +205,22 @@ describe.skip("US-016 DO alarm: compaction + D1 index projection + invite expiry
 
   it("expires due invites on the alarm", async () => {
     // Intent: expired invites are reaped off the request path.
-    // Arrange: an invite row with expiresAt in the past. Act: run the alarm.
-    // Assert: the invite is no longer redeemable (marked/removed).
-    // Covers US-016 AC-3 (invite expiry).
+    // Arrange: an open invite whose expiresAt is in the past. Act: run the alarm.
+    // Assert: the invite is marked redeemed (no longer redeemable).
+    // Covers US-016 AC-3 (invite expiry sweep — invite rows populated in M3/US-023).
     const { stub } = freshDoc("routine");
+    const inviteId = `inv-${crypto.randomUUID()}`;
+    await env.DB.prepare(
+      "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, NULL)",
+    )
+      .bind(inviteId, "doc-x", "editor", Date.now() - 1000)
+      .run();
+
     await stub.runAlarmForTest();
-    expect(true).toBe(true); // refined against the M2 invite table semantics
+
+    const row = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
+      .bind(inviteId)
+      .first<{ redeemedAt: number | null }>();
+    expect(row?.redeemedAt).not.toBeNull(); // the due invite was reaped
   });
 });
