@@ -3,13 +3,7 @@
 **Date:** 2026-06-25 · **Verdict: GO** ✅
 **Goal:** before committing the v4.x plan, prove the riskiest, least-proven piece — running **Automerge** as a CRDT inside **Cloudflare Durable Objects + SQLite**, with sync + persistence + a permission boundary.
 
-The throwaway spike lives in `apps/worker/spike/` (a SQLite-backed `RoutineDO` hosting an Automerge doc) and runs against the **real workerd + DO + SQLite runtime** via `@cloudflare/vitest-pool-workers`. Reproduce:
-
-```
-cd apps/worker
-pnpm exec vitest run --config vitest.spike.config.ts        # S1–S5 + smoke (6 tests)
-pnpm exec wrangler deploy --dry-run -c wrangler.spike.toml   # bundling + size
-```
+The spike was a SQLite-backed `RoutineDO` hosting an Automerge doc, run against the **real workerd + DO + SQLite runtime** via `@cloudflare/vitest-pool-workers`. **The throwaway code (`apps/worker/spike/`, `wrangler.spike.toml`, `vitest.spike.config.ts`) has been removed** now that it served its go/no-go purpose — this document is the durable record. (Git history at commit `0f2059b` on the PR branch preserves the exact spike if it ever needs re-running; M1/M2 will re-introduce Automerge as production code.)
 
 ## What was proven (all green on the real runtime)
 

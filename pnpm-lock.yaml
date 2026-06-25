@@ -51,9 +51,6 @@ importers:
 
   apps/worker:
     dependencies:
-      '@automerge/automerge':
-        specifier: ^3.2.6
-        version: 3.2.6
       '@clerk/backend':
         specifier: ^3.8.3
         version: 3.8.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -112,9 +109,6 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       ajv: '>=8'
-
-  '@automerge/automerge@3.2.6':
-    resolution: {integrity: sha512-9/GXXfYYWNVGpnbRrGQzTNU4fWZ3XaEMeEg0OrpK4pvlQSpkmUBoirEb/4TMK6BwMysZGV5Yeneq3wwc7RNGfg==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -3744,8 +3738,6 @@ snapshots:
       ajv: 8.20.0
       jsonpointer: 5.0.1
       leven: 3.1.0
-
-  '@automerge/automerge@3.2.6': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
