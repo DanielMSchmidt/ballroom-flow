@@ -80,7 +80,10 @@ export class DocDO extends DurableObject<Env> {
     return doc;
   }
 
-  /** Append one or more raw change blobs to the SQLite change log. */
+  /**
+   * Append one or more raw change blobs to the SQLite change log. An Automerge
+   * `Change` is an opaque branded `Uint8Array`, hence the casts below.
+   */
   private persist(changes: A.Change[]): void {
     for (const change of changes) {
       // Store the raw bytes; Cloudflare's SQLite accepts an ArrayBuffer BLOB.
@@ -124,5 +127,17 @@ export class DocDO extends DurableObject<Env> {
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
     return readRoutine(this.getDoc());
+  }
+
+  /**
+   * Test-only: drop the in-memory doc and rebuild it from SQLite, simulating a
+   * post-eviction cold instance. vitest-pool-workers keeps a DO warm between RPC
+   * calls, so without this the AC-2 rehydration path (`getDoc`'s SQLite replay)
+   * is never exercised by a test. Production eviction does the same thing for
+   * free — a fresh instance starts with `doc === null`.
+   */
+  async reloadForTest(): Promise<void> {
+    this.doc = null;
+    this.getDoc();
   }
 }

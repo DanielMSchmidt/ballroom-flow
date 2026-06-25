@@ -38,17 +38,28 @@ describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
   it("persists incremental changes to DO SQLite and rehydrates after eviction", async () => {
     // Intent: the DO keeps the doc in memory + persists INCREMENTAL changes; a
     //   cold DO (post-eviction) rebuilds the same doc from SQLite (M0.5 S1).
-    // Scenario: one client writes a change; the DO is evicted; a new stub for the
-    //   SAME id must cold-load from SQLite.
-    // Arrange: a unique routine DO; apply a change. Act: get a fresh stub for the
-    //   same id and read the doc back. Assert: rehydrated doc has the change.
+    // Scenario: one client writes a change; the DO is EVICTED; the next access
+    //   must cold-load from SQLite — not read a still-warm in-memory doc.
+    // Arrange: a unique routine DO; apply a change. Act: force a real eviction
+    //   (drop the in-memory doc) so the next read goes through getDoc's SQLite
+    //   replay branch; then read the doc back. Assert: rehydrated doc has the change.
     // Covers US-014 AC-1 (incremental persist) + AC-2 (rehydrate) — §10.2 "SQLite persistence".
-    const name = uniqueDocName("routine");
-    const id = docs.idFromName(name);
-    const change = await docs.get(id).applyChange({ op: "addSection", name: "Intro" });
-    const doc = await docs.get(id).getSnapshot(); // a fresh stub → cold-load path
+    //
+    // NB: vitest-pool-workers keeps the DO warm between two `.get(id)` calls, so a
+    // plain re-get would read `this.doc` and never exercise rehydration. The DO's
+    // `reloadForTest()` hook drops the in-memory doc and re-runs the cold-load, so
+    // the assertion below genuinely goes through the SQLite-replay branch.
+    const stub = docs.get(docs.idFromName(uniqueDocName("routine")));
+
+    const change = await stub.applyChange({ op: "addSection", name: "Intro" });
+    expect(change.byteLength).toBeGreaterThan(0); // a real incremental change, not an empty no-op
+
+    // Simulate eviction: drop the in-memory doc so the next read MUST rehydrate
+    // from SQLite (A.applyChanges(A.init(), changes)) rather than read warm state.
+    await stub.reloadForTest();
+
+    const doc = await stub.getSnapshot(); // forced through the SQLite cold-load path
     expect((doc.sections ?? []).map((s) => s.name)).toContain("Intro");
-    expect(change).toBeTruthy();
   });
 
   it("gives routine docs and figure docs each their own DO", async () => {
