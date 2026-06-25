@@ -19,6 +19,13 @@ import type { Env } from "./index";
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp = { op: "addSection"; name: string } & Record<string, unknown>;
 
+/**
+ * Compact once the incremental change log grows past this many rows. Bounds both
+ * the log size and the US-015 replay-on-connect cost (which scans the whole log
+ * on every WS connect) for a write-heavy doc that never sets metadata.
+ */
+const COMPACT_THRESHOLD = 64;
+
 /** Order-independent equality of two Automerge head sets (same logical state). */
 function headsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -157,6 +164,7 @@ export class DocDO extends DurableObject<Env> {
       return new Uint8Array();
     }
     this.persist(changes);
+    await this.maybeScheduleCompaction();
     // An RPC edit also propagates to any live WebSocket clients of this doc.
     this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
@@ -180,7 +188,7 @@ export class DocDO extends DurableObject<Env> {
    * it advanced the doc (new change). `from` is the socket the change arrived on
    * (excluded from the broadcast); null for RPC/relay-to-all.
    */
-  private ingestChange(change: Uint8Array, from: WebSocket | null): boolean {
+  private async ingestChange(change: Uint8Array, from: WebSocket | null): Promise<boolean> {
     const before = this.getDoc();
     const beforeHeads = A.getHeads(before);
     const [after] = A.applyChanges(before, [change as A.Change]);
@@ -188,6 +196,7 @@ export class DocDO extends DurableObject<Env> {
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change as A.Change]);
+    await this.maybeScheduleCompaction();
     this.broadcast([change as A.Change], from);
     return true;
   }
@@ -248,7 +257,7 @@ export class DocDO extends DurableObject<Env> {
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    this.ingestChange(new Uint8Array(message), ws);
+    await this.ingestChange(new Uint8Array(message), ws);
   }
 
   /** A client disconnected — close the server side cleanly. */
@@ -351,6 +360,23 @@ export class DocDO extends DurableObject<Env> {
   /** Test hook: run the alarm body synchronously (no real timer). */
   async runAlarmForTest(): Promise<void> {
     await this.alarm();
+  }
+
+  /**
+   * Schedule a compaction alarm once the change log grows past the threshold —
+   * so a write-heavy doc that never sets metadata still gets compacted (Staff
+   * review #125: edits must trigger compaction, not just `setMetadata`). The
+   * alarm is COALESCED: we only arm one if none is already pending, so a burst
+   * of edits schedules a single tick, not one per edit.
+   */
+  private async maybeScheduleCompaction(): Promise<void> {
+    const rows = this.ctx.storage.sql
+      .exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes")
+      .one().n;
+    if (rows < COMPACT_THRESHOLD) return;
+    const pending = await this.ctx.storage.getAlarm();
+    if (pending !== null) return; // an alarm is already scheduled — coalesce.
+    await this.ctx.storage.setAlarm(Date.now());
   }
 
   /**

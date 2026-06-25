@@ -181,6 +181,27 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
     expect(await stub.getSnapshot()).toEqual(before);
   });
 
+  it("auto-compacts a write-heavy doc that never sets metadata (edits schedule the alarm)", async () => {
+    // Intent: a write-heavy doc that never calls setMetadata must STILL get
+    //   compacted — edits schedule a coalesced alarm past the change-log
+    //   threshold (Staff review #125: the under-compaction direction). Without
+    //   this, the log grows unbounded and US-015 replay-on-connect scans it all.
+    // Arrange/Act: edit far past the COMPACT_THRESHOLD (64), with NO setMetadata.
+    // Assert: the change log stayed BOUNDED — the edit-scheduled alarm fired and
+    //   compacted it (workerd runs the scheduled alarm), so the log is well under
+    //   the number of edits. A pre-#125 build (compaction only on setMetadata)
+    //   would hold ~71 rows here.
+    // Covers the #125 under-compaction fix folded into the US-016 review loop.
+    const { stub } = freshDoc("routine");
+    for (let i = 0; i < 70; i++) await stub.applyChange({ op: "addSection", name: `E${i}` });
+    expect(await stub.debugChangeRowCount()).toBeLessThan(70); // auto-compacted, log bounded
+    // State is intact through the auto-compaction (and a forced cold-load).
+    const snap = await stub.getSnapshot();
+    expect((snap.sections ?? []).length).toBe(70);
+    await stub.reloadForTest();
+    expect((await stub.getSnapshot()).sections?.length).toBe(70);
+  });
+
   it("projects a thin registry row to D1 on the alarm", async () => {
     // Intent: the alarm writes title/dance/owner/updatedAt/figureType to D1 so
     //   list/search work WITHOUT reading CRDT content.
