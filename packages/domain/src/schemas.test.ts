@@ -10,7 +10,7 @@ import { importDomain } from "./__fixtures__";
 // RED→GREEN: export `zAttributeRead`/`zAttributeWrite` (or read/write parsers).
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-012 Zod schemas (lenient read / strict write)", () => {
+describe("US-012 Zod schemas (lenient read / strict write)", () => {
   it("passes an unknown attribute value on READ (forward compatible)", async () => {
     // Intent: a future/unknown value survives a read (no data loss).
     // Arrange: an attribute with kind:"step", value:"FUTURE_FOOTWORK".
@@ -58,5 +58,40 @@ describe.skip("US-012 Zod schemas (lenient read / strict write)", () => {
     const { parseAttributeRead } = await importDomain();
     const parsed = parseAttributeRead({ id: "a1", kind: "bodyActions", count: 1, value: "CBP" });
     expect(parsed.value).toBe("CBMP");
+  });
+
+  // ── Extra edge cases (in the spirit of US-012, beyond the listed ACs) ──
+
+  it("accepts a known registry value on write (the happy path)", async () => {
+    // Intent: the strict write schema lets valid vocabulary through.
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite({ id: "a1", kind: "step", count: 1, value: "HT" });
+    expect(ok.value).toBe("HT");
+  });
+
+  it("accepts a count within the meter's phrase on write", async () => {
+    // Intent: a count inside the dance phrase is valid (counterpart to the range test).
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite(
+      { id: "a1", kind: "step", count: 5.5, value: "HT" },
+      { dance: "waltz" }, // phrase 1–6: 5.5 is in range
+    );
+    expect(ok.count).toBe(5.5);
+  });
+
+  it("normalizes CBP→CBMP on write, then accepts it (alias is a known value)", async () => {
+    // Intent: the alias normalizes before the strict enum check, so writing the
+    // alias of a known value succeeds (and is stored canonical).
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite({ id: "a1", kind: "bodyActions", count: 1, value: "CBP" });
+    expect(ok.value).toBe("CBMP");
+  });
+
+  it("does not enum-restrict an unknown (user-defined) kind on write", async () => {
+    // Intent: a kind not in this registry copy (future custom kind) isn't value-
+    // restricted here — its values are validated by its own registry entry (US-043).
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite({ id: "a1", kind: "energy", count: 1, value: "high" });
+    expect(ok.value).toBe("high");
   });
 });

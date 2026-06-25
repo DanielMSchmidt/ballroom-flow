@@ -26,6 +26,7 @@ export type {
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export { resolve } from "./overlay";
+export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { barsForFigure, countLabel, countToBar } from "./timing";
 export { redoLastChange, undoLastChange } from "./undo";
 export {
