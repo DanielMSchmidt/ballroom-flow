@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -93,5 +94,42 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     const { parseAttributeWrite } = await importDomain();
     const ok = parseAttributeWrite({ id: "a1", kind: "energy", count: 1, value: "high" });
     expect(ok.value).toBe("high");
+  });
+
+  it("raises every write failure as one ZodError with a stable code (uniform contract)", async () => {
+    // Intent: structural, invalid-value, and out-of-range failures all surface as
+    // a single ZodError so a caller catches one type and reads error.issues —
+    // domain-rule issues carry params.code + the offending data (US-029/M2 format
+    // their own message from these, not from regexing dev strings).
+    const { parseAttributeWrite } = await importDomain();
+
+    // (a) structural failure → ZodError (invalid_type)
+    expect(() =>
+      parseAttributeWrite({ id: "a1", kind: "step", count: "nope", value: "HT" }),
+    ).toThrow(z.ZodError);
+
+    // (b) invalid value → ZodError with params.code "unknown_value"
+    try {
+      parseAttributeWrite({ id: "a1", kind: "step", count: 1, value: "NOT_A_FOOTWORK" });
+      throw new Error("expected throw");
+    } catch (e) {
+      expect(e).toBeInstanceOf(z.ZodError);
+      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string; kind?: string } };
+      expect(issue.params?.code).toBe("unknown_value");
+      expect(issue.params?.kind).toBe("step");
+    }
+
+    // (c) out-of-range count → ZodError with params.code "count_out_of_range"
+    try {
+      parseAttributeWrite({ id: "a1", kind: "step", count: 99, value: "HT" }, { dance: "waltz" });
+      throw new Error("expected throw");
+    } catch (e) {
+      expect(e).toBeInstanceOf(z.ZodError);
+      const issue = (e as z.ZodError).issues[0] as {
+        params?: { code?: string; phraseBeats?: number };
+      };
+      expect(issue.params?.code).toBe("count_out_of_range");
+      expect(issue.params?.phraseBeats).toBe(6);
+    }
   });
 });

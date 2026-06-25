@@ -62,30 +62,56 @@ export function parseAttributeRead(input: unknown): Attribute {
  *     kinds are not value-restricted here.
  *   • When `ctx.dance` is given, `count` must fall within the dance's counted
  *     phrase (1 ≤ count < phraseBeats+1) — a count beyond the phrase is invalid.
- * Throws (ZodError / Error) on any violation.
+ *
+ * UNIFORM ERROR CONTRACT: every failure — structural, invalid value, or
+ * out-of-range count — is raised as a single **`ZodError`** (via `superRefine`),
+ * so a caller can `catch` one type and read `error.issues`. Each domain-rule
+ * issue carries a stable `params.code` (`"unknown_value"` | `"count_out_of_range"`)
+ * plus the raw offending data (kind/value/count, allowedValues/phraseBeats) so
+ * consumers (US-029 editor, the worker write route) format their own message
+ * from structured fields instead of regexing dev strings. The field set is
+ * intentionally minimal — more can be added compatibly when US-029 lands.
  */
 export function parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): Attribute {
-  const parsed = withNormalizedValue(baseAttribute.parse(input));
+  const schema = baseAttribute
+    .transform((attr) => withNormalizedValue(attr))
+    .superRefine((attr, refineCtx) => {
+      // Value must be a known registry value for a known enum kind.
+      const kind = ATTRIBUTE_REGISTRY[attr.kind];
+      if (kind?.valueType === "enum" && kind.values) {
+        if (typeof attr.value !== "string" || !kind.values.includes(attr.value)) {
+          refineCtx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `Invalid value ${JSON.stringify(attr.value)} for kind "${attr.kind}"`,
+            params: {
+              code: "unknown_value",
+              kind: attr.kind,
+              value: attr.value,
+              allowedValues: kind.values,
+            },
+          });
+        }
+      }
 
-  // Value must be a known registry value for a known enum kind.
-  const kind = ATTRIBUTE_REGISTRY[parsed.kind];
-  if (kind?.valueType === "enum" && kind.values) {
-    if (typeof parsed.value !== "string" || !kind.values.includes(parsed.value)) {
-      throw new Error(
-        `Invalid value ${JSON.stringify(parsed.value)} for kind "${parsed.kind}" on write`,
-      );
-    }
-  }
+      // Timing must fall within the dance's counted phrase, when a meter is given.
+      if (ctx?.dance) {
+        const { phraseBeats } = DANCES[ctx.dance];
+        if (attr.count < 1 || attr.count >= phraseBeats + 1) {
+          refineCtx.addIssue({
+            code: "custom",
+            path: ["count"],
+            message: `Count ${attr.count} is outside the ${ctx.dance} phrase (1..${phraseBeats})`,
+            params: {
+              code: "count_out_of_range",
+              dance: ctx.dance,
+              count: attr.count,
+              phraseBeats,
+            },
+          });
+        }
+      }
+    });
 
-  // Timing must fall within the dance's counted phrase, when a meter is given.
-  if (ctx?.dance) {
-    const { phraseBeats } = DANCES[ctx.dance];
-    if (parsed.count < 1 || parsed.count >= phraseBeats + 1) {
-      throw new Error(
-        `Count ${parsed.count} is outside the ${ctx.dance} phrase (1..${phraseBeats})`,
-      );
-    }
-  }
-
-  return toAttribute(parsed);
+  return toAttribute(schema.parse(input));
 }
