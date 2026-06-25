@@ -18,7 +18,7 @@ import {
 // helpers under test take/return in-memory Automerge docs.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-005 Routine + figure document schemas", () => {
+describe("US-005 Routine + figure document schemas", () => {
   it("builds a routine doc with sections → ordered placements + annotations", async () => {
     // Intent: a routine Automerge doc round-trips the logical shape.
     // Arrange: SAMPLE_ROUTINE POJO. Act: buildRoutineDoc then readRoutine.
@@ -78,5 +78,63 @@ describe.skip("US-005 Routine + figure document schemas", () => {
     let doc = buildFigureDoc(fig);
     doc = softDeleteAttribute(doc, "a1");
     expect(readFigure(doc).attributes).toHaveLength(0);
+  });
+
+  // ── Extra edge cases (in the spirit of US-005, beyond the listed ACs) ──
+
+  it("round-trips a variant figure's baseFigureRef + overlay", async () => {
+    // Intent: variant fields (overlay overrides/tombstones/additions/rename) and
+    // baseFigureRef survive the Automerge build/read round-trip (US-006 depends
+    // on this).
+    const { buildFigureDoc, readFigure } = await importDomain();
+    const variant = {
+      ...FEATHER_FOXTROT,
+      id: "fig_variant",
+      scope: "account" as const,
+      ownerId: "user_x",
+      source: "custom" as const,
+      attributes: [],
+      baseFigureRef: FEATHER_FOXTROT.id,
+      overlay: {
+        overrides: { a_ff_2: "TH" },
+        tombstones: ["a_ff_3"],
+        additions: [makeAttribute({ id: "a_add", kind: "sway", count: 2, value: "to_L" })],
+        rename: "My Feather",
+      },
+    };
+    const read = readFigure(buildFigureDoc(variant));
+    expect(read.baseFigureRef).toBe(FEATHER_FOXTROT.id);
+    expect(read.overlay?.overrides).toEqual({ a_ff_2: "TH" });
+    expect(read.overlay?.tombstones).toEqual(["a_ff_3"]);
+    expect(read.overlay?.additions.map((a) => a.id)).toEqual(["a_add"]);
+    expect(read.overlay?.rename).toBe("My Feather");
+  });
+
+  it("soft-deletes a single placement, leaving siblings live", async () => {
+    // Intent: tombstones filter at the placement grain too — deleting one
+    // placement must not drop the section or its other placements.
+    const { buildRoutineDoc, readRoutine } = await importDomain();
+    const section = makeSection({
+      id: "sec_p",
+      placements: [
+        makePlacement(FEATHER_FOXTROT.id, { id: "p_keep" }),
+        makePlacement(FEATHER_FOXTROT.id, { id: "p_drop", deletedAt: Date.now() }),
+      ],
+    });
+    const doc = buildRoutineDoc({ ...SAMPLE_ROUTINE, sections: [section] });
+    const read = readRoutine(doc);
+    expect(read.sections[0]?.placements.map((p) => p.id)).toEqual(["p_keep"]);
+    expect(readRoutine(doc, { includeDeleted: true }).sections[0]?.placements).toHaveLength(2);
+  });
+
+  it("does not mutate the input fixture when building a doc", async () => {
+    // Intent: buildRoutineDoc must not adopt or mutate the (frozen) POJO.
+    const { buildRoutineDoc, softDeleteSection } = await importDomain();
+    const section = makeSection({ id: "sec_imm", placements: [] });
+    const input = { ...SAMPLE_ROUTINE, sections: [section] };
+    const doc = buildRoutineDoc(input);
+    softDeleteSection(doc, "sec_imm");
+    // The original POJO is untouched by the soft-delete on the Automerge doc.
+    expect(input.sections[0]?.deletedAt).toBeFalsy();
   });
 });
