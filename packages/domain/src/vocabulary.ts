@@ -135,9 +135,18 @@ export function normalizeValue(kind: string, value: string): string {
 
 /**
  * Merge user-defined kinds into the standard registry, producing one vocabulary
- * indistinguishable downstream. User kinds are keyed by their `kind` slug; a
- * custom kind colliding with a standard slug overrides it (last-writer-wins on
- * key) — by design, so an account can refine a standard kind's presentation.
+ * indistinguishable downstream. The merge is additive and pure (the base
+ * singleton is never mutated). User kinds are keyed by their `kind` slug.
+ *
+ * Collision policy is intentionally NOT relied upon here: the plan (§3, D22)
+ * describes two tiers *merged* and custom-kind *creation*, but does not sanction
+ * a user-defined kind replacing a builtin. A custom kind keyed `rise` would, for
+ * example, clobber its `appliesToDances` and re-enable rise for Tango — the very
+ * §10.2 invariant US-003 protects. Nothing can mint such a kind today (US-043,
+ * the creation UI, is far off); when it lands it must reserve the builtin slugs.
+ *
+ * TODO(US-043): reject/namespace custom kinds whose slug collides with a builtin
+ * (see task #17) so the merge can never override a standard kind.
  */
 export function mergeRegistry(
   base: StandardRegistry,
