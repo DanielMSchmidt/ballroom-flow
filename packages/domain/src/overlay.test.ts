@@ -108,6 +108,21 @@ describe("US-006 Overlay resolution resolve(base, overlay)", () => {
     expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
   });
 
+  it("returns base identity (id/scope/owner) with the variant name (hybrid contract)", async () => {
+    // Intent: pin the documented identity contract — resolve returns the base
+    // figure seen through the overlay: base id/scope/ownerId/figureType/dance,
+    // only name overlaid. Downstream (US-008 COW) must stamp the variant's own
+    // identity; resolve gives effective CONTENT, not variant identity.
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay({ rename: "My Feather" }));
+    expect(eff.id).toBe(FEATHER_FOXTROT.id);
+    expect(eff.scope).toBe(FEATHER_FOXTROT.scope);
+    expect(eff.ownerId).toBe(FEATHER_FOXTROT.ownerId);
+    expect(eff.figureType).toBe(FEATHER_FOXTROT.figureType);
+    expect(eff.dance).toBe(FEATHER_FOXTROT.dance);
+    expect(eff.name).toBe("My Feather"); // name follows the overlay
+  });
+
   it("preserves base attribute order, with additions appended after", async () => {
     // Intent: resolution is order-stable — inherited base attributes keep their
     // order and additions come after them (deterministic timeline).

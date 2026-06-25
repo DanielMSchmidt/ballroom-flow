@@ -19,9 +19,22 @@ import type { Attribute, FigureDoc, Overlay } from "./doc-types";
 /**
  * Resolve a variant's effective figure by layering `overlay` onto `base`.
  *
+ * IDENTITY CONTRACT (read before consuming downstream): the result is the *base
+ * figure seen through the overlay* — it carries the **base's** `id`, `scope`,
+ * `ownerId`, `figureType`, `dance`, and `source`, with only the **attributes**
+ * overlaid and the **name** taken from `overlay.rename`. It is therefore a
+ * hybrid (variant name + base identity), because `resolve` is given the overlay,
+ * not the variant doc, so it cannot know the variant's own id/scope/owner. A
+ * caller that needs a coherent variant-identity figure (US-008 copy-on-write,
+ * US-033 "your variants") must stamp the variant's id/scope/owner onto the
+ * result itself. Use this for the effective *content* (the timeline US-028
+ * renders), not as the variant's identity.
+ *
  * Override semantics: `overlay.overrides` maps a base attribute id → its
  * replacement `value`; the rest of that attribute (kind/count/role) is inherited
  * from the base, so an override re-values a step without re-describing it.
+ * (Re-timing or re-roling a step is therefore modeled as tombstone-base +
+ * add-new, not as an override — relevant for US-029/US-036 UX.)
  */
 export function resolve(base: FigureDoc, overlay: Overlay): FigureDoc {
   const tombstoned = new Set(overlay.tombstones);
