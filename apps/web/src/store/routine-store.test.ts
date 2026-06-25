@@ -24,14 +24,24 @@ import { type OpenOptions, openRoutine } from "./routine";
 class FakeSocket {
   binaryType = "blob";
   private msg: ((ev: { data: unknown }) => void) | null = null;
+  private open: (() => void) | null = null;
+  private closed: (() => void) | null = null;
   sent: Uint8Array[] = [];
   addEventListener(type: string, fn: (ev: { data: unknown }) => void): void {
     if (type === "message") this.msg = fn;
+    else if (type === "open") this.open = fn as () => void;
+    else if (type === "close") this.closed = fn as () => void;
   }
   send(data: ArrayBufferView | ArrayBuffer): void {
     this.sent.push(new Uint8Array(data as ArrayBuffer));
   }
-  close(): void {}
+  close(): void {
+    this.closed?.();
+  }
+  /** Signal the socket is open (the runtime fires this; the DO then replays). */
+  fireOpen(): void {
+    this.open?.();
+  }
   /** Replay a doc's FULL history to the client (what the DO does on connect). */
   load(doc: A.Doc<unknown>): void {
     for (const c of A.getAllChanges(doc)) {
@@ -79,6 +89,12 @@ describe("US-017 store/ seam (multi-doc)", () => {
     const { opts, sockets } = fakeWiring();
     const store = await openRoutine("rt_sample", opts);
     expect(Array.isArray(store.readPlacements())).toBe(true);
+
+    // Sync state starts "connecting" and flips to "live" once the socket opens
+    // (US-018 "syncing…" indicator).
+    expect(store.syncState()).toBe("connecting");
+    sockets.get("rt_sample")?.fireOpen();
+    expect(store.syncState()).toBe("live");
 
     // The routine DO replays a section with a placement referencing variant "fv".
     const routineFull = buildRoutineDoc({

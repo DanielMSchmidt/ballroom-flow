@@ -33,21 +33,40 @@ export function connectUrl(base: string, docId: string): string {
  * A live connection to one document's DO. Owns the in-memory Automerge doc and
  * notifies a listener whenever it advances (from a local edit or a peer frame).
  */
+/** Where one document's connection is in its lifecycle (drives the UI indicator). */
+export type SyncState = "connecting" | "live" | "closed";
+
 export class DocConnection<T> {
   private doc: A.Doc<T>;
   private socket: SocketLike;
   private onChange: (() => void) | null = null;
+  private syncState: SyncState = "connecting";
 
   constructor(initial: A.Doc<T>, url: string, openSocket: SocketFactory) {
     this.doc = initial;
     this.socket = openSocket(url);
     this.socket.binaryType = "arraybuffer";
     this.socket.addEventListener("message", (ev) => this.receive(ev.data));
+    // Track lifecycle so the store can surface connecting/live/closed (US-018
+    // "syncing…" indicator). The DO replays the full log on open → "live".
+    this.socket.addEventListener("open", () => this.setState("live"));
+    this.socket.addEventListener("close", () => this.setState("closed"));
   }
 
   /** The current immutable doc. */
   current(): A.Doc<T> {
     return this.doc;
+  }
+
+  /** This connection's sync lifecycle state. */
+  state(): SyncState {
+    return this.syncState;
+  }
+
+  private setState(next: SyncState): void {
+    if (this.syncState === next) return;
+    this.syncState = next;
+    this.onChange?.(); // a state change re-renders the indicator
   }
 
   /** Subscribe to advances of this doc (replaces any prior listener). */

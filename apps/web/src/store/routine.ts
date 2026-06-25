@@ -16,7 +16,7 @@ import {
   resolve,
   undoLastChange,
 } from "@ballroom/domain";
-import { connectUrl, DocConnection, type SocketFactory } from "./doc-connection";
+import { connectUrl, DocConnection, type SocketFactory, type SyncState } from "./doc-connection";
 
 /** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
 export interface ResolvedPlacement {
@@ -37,6 +37,8 @@ export interface RoutineStore {
   redo(): void;
   /** Subscribe to any change (local or synced); returns an unsubscribe fn. */
   subscribe(fn: () => void): () => void;
+  /** The routine connection's sync lifecycle, for a "syncing…" indicator (US-018). */
+  syncState(): SyncState;
   /** Tear down all document connections. */
   close(): void;
 }
@@ -149,6 +151,10 @@ export async function openRoutine(
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
+
+    // The routine connection drives the indicator; figure connections are
+    // secondary. "live" once the routine DO's catch-up replay has arrived.
+    syncState: () => routineConn.state(),
 
     close: () => {
       routineConn.close();
