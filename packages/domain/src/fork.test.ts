@@ -96,7 +96,7 @@ describe("US-007 Choreo fork (clone)", () => {
   });
 });
 
-describe.skip("US-008 Copy-on-write (auto-variant)", () => {
+describe("US-008 Copy-on-write (auto-variant)", () => {
   it("spawns an owned variant (baseFigureRef + empty overlay) and re-points the placement", async () => {
     // Intent: editing a non-owned figure diverges only that figure into an owned variant.
     // Arrange: a placement pointing at the global FEATHER_FOXTROT; editor = student.
@@ -140,5 +140,50 @@ describe.skip("US-008 Copy-on-write (auto-variant)", () => {
     const owned = { ...FEATHER_FOXTROT, scope: "account" as const, ownerId: SAMPLE_COACH };
     const result = copyOnWrite(makePlacement(owned.id), owned, SAMPLE_COACH);
     expect(result.variant).toBeNull();
+  });
+
+  // ── Extra edge cases (in the spirit of US-008, beyond the listed ACs) ──
+
+  it("mints a fresh ULID variant id and does not mutate the input placement", async () => {
+    // Intent: the variant gets a real client id, and COW is pure — the caller's
+    // placement object is not mutated (a new re-pointed placement is returned).
+    const { copyOnWrite } = await importDomain();
+    const placement = makePlacement(FEATHER_FOXTROT.id, { id: "plc_keep" });
+    const { variant, placement: repointed } = copyOnWrite(
+      placement,
+      FEATHER_FOXTROT,
+      SAMPLE_STUDENT,
+    );
+    expect(variant?.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(placement.figureRef).toBe(FEATHER_FOXTROT.id); // input untouched
+    expect(repointed.id).toBe("plc_keep"); // same placement identity, new figureRef
+    expect(repointed.figureRef).toBe(variant?.id);
+  });
+
+  it("copy-on-writes another account-holder's figure (only the owner edits in place)", async () => {
+    // Intent: an account figure owned by SOMEONE ELSE still triggers COW — only
+    // the figure's own owner edits in place (§5.2 "others auto-variant").
+    const { copyOnWrite } = await importDomain();
+    const coachOwned = { ...FEATHER_FOXTROT, scope: "account" as const, ownerId: SAMPLE_COACH };
+    const { variant } = copyOnWrite(makePlacement(coachOwned.id), coachOwned, SAMPLE_STUDENT);
+    expect(variant).not.toBeNull();
+    expect(variant?.ownerId).toBe(SAMPLE_STUDENT);
+    expect(variant?.baseFigureRef).toBe(coachOwned.id);
+  });
+
+  it("produces a variant whose empty overlay resolves to the base content", async () => {
+    // Intent: an auto-variant diverges NOTHING initially — resolving its empty
+    // overlay against the base yields the base's attributes (US-006 contract).
+    const { copyOnWrite, resolve } = await importDomain();
+    const { variant } = copyOnWrite(
+      makePlacement(FEATHER_FOXTROT.id),
+      FEATHER_FOXTROT,
+      SAMPLE_STUDENT,
+    );
+    expect(variant).not.toBeNull();
+    if (variant?.overlay) {
+      const eff = resolve(FEATHER_FOXTROT, variant.overlay);
+      expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+    }
   });
 });
