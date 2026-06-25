@@ -17,7 +17,7 @@ import {
 // skipped. RED→GREEN: implement `resolve(base, overlay)`.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-006 Overlay resolution resolve(base, overlay)", () => {
+describe("US-006 Overlay resolution resolve(base, overlay)", () => {
   it("applies tombstones + overrides + additions and the rename", async () => {
     // Intent: effective = base − tombstones, overrides applied, plus additions.
     // Arrange: the global Feather base + STUDENT_FEATHER_VARIANT's overlay
@@ -64,5 +64,76 @@ describe.skip("US-006 Overlay resolution resolve(base, overlay)", () => {
     expect(first.attributes.find((a) => a.id === "a_ff_1")?.value).toBe("H");
     expect(first).toEqual(second);
     expect(JSON.stringify(FEATHER_FOXTROT)).toBe(before);
+  });
+
+  // ── Extra edge cases (in the spirit of US-006, beyond the listed ACs) ──
+
+  it("returns the base attributes unchanged under an empty overlay", async () => {
+    // Intent: an overlay with no divergences resolves to the base's attributes
+    // (the inheritance baseline), with no rename.
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay());
+    expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+    expect(eff.name).toBe(FEATHER_FOXTROT.name);
+  });
+
+  it("keeps a tombstoned attribute gone even if also overridden", async () => {
+    // Intent: tombstone wins — an id both dropped and overridden is absent
+    // (a tombstone removes the base attribute entirely; no override resurrects it).
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({ tombstones: ["a_ff_2"], overrides: { a_ff_2: "H" } });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.some((a) => a.id === "a_ff_2")).toBe(false);
+  });
+
+  it("does not share attribute objects by reference with the base", async () => {
+    // Intent: mutating the resolved result must never reach back into the base
+    // (purity at the element grain, not just the top level).
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay());
+    const first = eff.attributes[0];
+    expect(first).toBeDefined();
+    expect(first).not.toBe(FEATHER_FOXTROT.attributes[0]);
+  });
+
+  it("ignores an override that targets a since-deleted base step (no resurrection)", async () => {
+    // Intent: an overlay may carry an override keyed by a base attribute id that
+    // the base no longer contains (the base step was removed after the variant
+    // diverged). The override must be a harmless no-op — it must not resurrect a
+    // missing attribute. (Load-bearing for US-008 COW / US-036.)
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({ overrides: { a_does_not_exist: "H" } });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.some((a) => a.id === "a_does_not_exist")).toBe(false);
+    expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+  });
+
+  it("returns base identity (id/scope/owner) with the variant name (hybrid contract)", async () => {
+    // Intent: pin the documented identity contract — resolve returns the base
+    // figure seen through the overlay: base id/scope/ownerId/figureType/dance,
+    // only name overlaid. Downstream (US-008 COW) must stamp the variant's own
+    // identity; resolve gives effective CONTENT, not variant identity.
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay({ rename: "My Feather" }));
+    expect(eff.id).toBe(FEATHER_FOXTROT.id);
+    expect(eff.scope).toBe(FEATHER_FOXTROT.scope);
+    expect(eff.ownerId).toBe(FEATHER_FOXTROT.ownerId);
+    expect(eff.figureType).toBe(FEATHER_FOXTROT.figureType);
+    expect(eff.dance).toBe(FEATHER_FOXTROT.dance);
+    expect(eff.name).toBe("My Feather"); // name follows the overlay
+  });
+
+  it("preserves base attribute order, with additions appended after", async () => {
+    // Intent: resolution is order-stable — inherited base attributes keep their
+    // order and additions come after them (deterministic timeline).
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({
+      additions: [makeAttribute({ id: "a_added", kind: "sway", count: 9 })],
+    });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.map((a) => a.id)).toEqual([
+      ...FEATHER_FOXTROT.attributes.map((a) => a.id),
+      "a_added",
+    ]);
   });
 });
