@@ -1,19 +1,19 @@
 # Ballroom Flow — Master Plan
 
-**Status:** Draft for review — **v2 (owner-review pass, 2026-06-25)**
+**Status:** Draft for review — **v3 (CRDT foundation, 2026-06-25)**
 **Date:** 2026-06-25
 
-This is the single source of truth for Ballroom Flow. It consolidates the original design spec, implementation plan, testing plan, and open-questions docs into one plan, then folds in the **owner review on PR #9**, which reshaped several foundations (flat collaboration model, fork/variants in v1, an extensible per-count *attribute* notation model, unified annotations, sections instead of sides, plans/quotas).
+This is the single source of truth for Ballroom Flow. It consolidates the original design/implementation/testing/open-questions docs, then folds in two rounds of owner review on PR #9 — the second of which **resolved the architectural keystones**: a **CRDT document foundation** (built now so it's never swapped out; run online-first, with offline/fork mechanics layered on later), an **extensible attribute notation model**, **unified annotations**, **user-named sections**, **flat roles**, and **plans/quota**.
 
-Three sources are **retained for detail this plan does not reproduce in full** (see [§14 Further detail & sources](#14-further-detail--sources)):
+Three sources are **retained for detail this plan does not reproduce in full** (see [§14](#14-further-detail--sources)):
 
-- **`docs/superpowers/specs/2026-06-24-testing-plan.md`** — the verbatim per-screen prototype feature coverage matrix (this plan summarises it; note the testing plan predates the v2 redesign — see its banner);
-- **`docs/design/Ballroom Builder.dc.html`** — the wireframe prototype, the **product sketch** (feature inventory, not a requirements list);
-- **`research/*.md`** — the deep-dive research the decisions trace back to.
+- **`docs/superpowers/specs/2026-06-24-testing-plan.md`** — the verbatim per-screen surface checklist (predates the v2/v3 redesign — see its banner);
+- **`docs/design/Ballroom Builder.dc.html`** — the wireframe prototype (product sketch, not requirements);
+- **`research/*.md`** — the deep-dive research, incl. `extensibility-crdt.md` and `critique-sync.md`, now load-bearing again.
 
-**Guiding principle:** *quality and maintainability over feature count.* Every feature is sorted v1 / v1.1 / out-of-scope and YAGNI is applied ruthlessly — but the owner has pulled a few "extensibility" capabilities (fork, user-defined attributes, rich annotation anchors) *into* v1 because they are integral to how dancers actually work.
+**Guiding principle:** *quality and maintainability over feature count.* The owner has deliberately chosen the CRDT foundation — *more* upfront architecture — precisely to avoid a later rewrite; everything else stays YAGNI.
 
-> **Reading note (open architectural decisions).** The v2 review opened several decisions that are genuinely the owner's and that the rest of the design hinges on. They are written here as **★ open decisions** in [§12](#12-open-questions--decisions-needed), each with a recommendation, and the affected sections are written to accommodate either resolution. The biggest is **Q-FORK** (how fork/variants are implemented — server-side copy now, or a CRDT later), because it determines whether v1 stays online-only.
+> **Two consequences of the CRDT decision worth confirming (§12):** (1) a per-routine CRDT synced live wants a **Durable Object**, which requires **Workers Paid (~$5/mo)** — no longer the pure $0 free tier. (2) A CRDT's **native per-user undo** (e.g. Yjs `UndoManager`) likely **replaces the bespoke op-log/footprint undo** from earlier drafts — building that op-log would be the exact "redo it later" we're avoiding. Both are reflected below and flagged in §12.
 
 ---
 
@@ -40,15 +40,14 @@ Three sources are **retained for detail this plan does not reproduce in full** (
 
 ### 1.1 What it is
 
-Ballroom Flow is a **collaborative, mobile-first PWA** for building and annotating ballroom dance choreography ("routines"). A routine is an ordered sequence of **figures** (named movement patterns), each described as a **timeline of attributes** placed at a relative count from the figure's start. Some attributes we know we need (footwork/"step", sway, turn, rise, body position); the set is **user-extensible** because technique vocabulary is individual to dancers. Routines are organized into **sections** the user names however they structure their choreography. People **annotate** the routine — corrections, lessons, practice notes — anchored to a precise point, a figure (or figure variant), or a *query* like "all rising steps". Figures can be **forked into named variants** that inherit the original's detail.
+Ballroom Flow is a **collaborative, mobile-first PWA** for building and annotating ballroom dance choreography ("routines"). A routine is an ordered sequence of **figures**, each described as a **timeline of attributes** placed at a relative count from the figure's start. Some attribute kinds we know we need (footwork/"step", sway, turn, rise, position); the set is **user-extensible** because technique vocabulary is individual to dancers. Routines are organized into **sections** the user names however they structure their choreography. People **annotate** the routine — corrections, lessons, practice notes — anchored to a precise point or a figure. The data model is a **CRDT** from day one so collaborative editing, offline, and forking can be added without re-laying the foundation.
 
 ### 1.2 Who uses it
 
 A **flat collaboration model** — everyone is on the same level:
 
-- **Anyone** can create routines and invite others.
-- An invitee is granted one of **view**, **comment**, or **edit**. **Edit** covers both structure (sections/figures/attributes) and annotations (sway, turn, notes…).
-- A routine can be shared with **n people for reading**, though the common case is still small (a couple plus a coach, all as editors/commenters). There is no special "leader/follower/coach" *user* role — see §1.5.
+- **Anyone** creates routines and invites others, granting **view**, **comment**, or **edit**. Edit covers structure (sections/figures/attributes) *and* annotations (sway, turn, notes…).
+- A routine can be shared with **n people for reading** (less the norm, but supported). There is no special "leader/follower/coach" *user* role — see §1.5.
 
 A small-N collaboration tool, not a social network or studio LMS.
 
@@ -56,571 +55,510 @@ A small-N collaboration tool, not a social network or studio LMS.
 
 1. **Cloudflare-hosted** end to end.
 2. **No self-run auth** — managed identity provider with a generous free tier.
-3. **Cheap** — ~$0/month at hobby scale; usage-based beyond. (A future **pro plan** monetizes; the free tier is capped — §1.6.)
+3. **Cheap** — hobby scale stays low; a future **pro plan** monetizes (§1.6). *(The CRDT/Durable-Object foundation moves the floor from $0 to ~$5/mo Workers Paid — Q-CRDT.)*
 4. **Performant** on mobile.
 5. **PWA is the priority** (installable; no native app in v1).
-6. **Quality & maintainability over feature count** — apply YAGNI.
+6. **Quality & maintainability over feature count** — apply YAGNI (the CRDT foundation is the one deliberate exception, chosen to avoid a rewrite).
 7. **A solid, detailed testing plan is required** (§10).
 
 ### 1.4 Primary user journey (the core loop)
 
 1. Sign in (Clerk).
 2. Open the **sample routine**, start from a **template**, or create a routine for a dance.
-3. Add **sections** (named by you) → add **figures** from the library, compose custom, or **fork a variant** of an existing figure.
+3. Add **sections** (named by you) → add **figures** from the library or compose custom.
 4. Open a figure and **place attributes on its count timeline** (the hero flow) — footwork, sway, turn, rise, position, or any attribute kind you've added — for a count, optionally per role.
-5. **Annotate**: leave a correction on a point/figure/variant or a query ("all left-turning figures"), or write a journal lesson/practice note — from the timeline *or* the journal; they are the same kind of thing.
-6. **Undo** any of your own changes at per-action grain.
+5. **Annotate**: leave a correction on a point/figure, or write a journal lesson/practice note — from the timeline *or* the journal; they are the same kind of thing.
+6. **Undo** your own changes at per-action grain (via the CRDT's per-user undo).
 
 ### 1.5 Role of "leader / follower"
 
-Leader vs follower is **a view dimension, not a user attribute.** A user has no stored default role. Which role's steps you see is a **per-device preference** (remembered locally) and is **switchable directly in the timeline** (tap a step to flip the role you're viewing/editing). Attributes can carry a role when the two roles genuinely differ (e.g. a follower heel turn with no leader counterpart); attributes without a role apply to both. (Exactly how role overrides interact with the attribute model is **Q-ATTR**, §12.)
+Leader vs follower is **a view dimension, not a user attribute.** A user has no stored default role; which role's steps you see is a **per-device preference** (remembered locally), **switchable in the timeline** (tap a step to flip role). Attributes carry an **optional `role`** for genuine divergences (e.g. a follower heel turn with no leader counterpart); attributes without a role apply to both.
 
 ### 1.6 Plans & quotas
 
-A "classic" SaaS shape is planned: a **free tier** and a later **pro plan**. v1 enforces a quota — **free accounts may own at most 3 routines** — with a clear upsell when exceeded. The billing provider/integration is deferred (Q-PLAN); v1 builds the *quota seam* (owned-routine count check on create) so turning on pro later is additive.
+A **free tier** and a later **pro plan**. v1 enforces a quota — **free accounts may own at most 3 routines** (counting *owned*, not shared-in) — with a clear upsell when exceeded. Pro limits + billing provider (Stripe?) are deferred (Q-PLAN); v1 builds the quota seam.
 
-> **Note on offline:** v1 is **online-only by default**. Offline-first was an earlier goal; the next planned increment is offline *read*. **Caveat:** if fork/variants are implemented via a CRDT (Q-FORK path B), an offline/local-first capability comes along with it — so this default is contingent on that decision.
+> **Offline:** v1 is **online-first** — the data is a CRDT, but v1 syncs only while online (the per-routine Durable Object is the live authority). Offline editing and divergent fork/merge are the "later mechanics" the CRDT foundation makes additive rather than a rewrite.
 
 ---
 
 ## 2. Domain Model
 
-### 2.1 Conventions applying to every entity
+The canonical state of a routine is a **CRDT document** (recommended: **Yjs** — `Y.Map`/`Y.Array` give the ordered, nested structure here; Q-CRDT). Around it, **D1** holds the global index (users, memberships, routine metadata, invites, snapshots). The *shapes* below describe the logical model; §6 explains how they split across the CRDT doc and D1.
 
-Everything lives in **D1** (single relational source of truth); static reference data (dance metadata, figure catalog, the **standard** attribute kinds) ships **in the client bundle**.
+### 2.1 Conventions
 
-- **Client-generated IDs.** Every `id` is a client-generated, globally-unique, sortable identifier (**ULID** / UUIDv7), a **TEXT primary key** — **no autoincrement**. The client knows an id before the server does (unambiguous optimistic create; prerequisite for offline creation).
-- **Soft-delete / tombstones.** Deletable entities carry a nullable **`deletedAt`**; a delete sets it (filtered from normal queries), never a bare row-drop. Delete is reversible (inverse flips `deletedAt`), so cascade-undo restores a whole subtree with original ids — and it is the remove-wins tombstone a future CRDT requires.
+- **Client-generated IDs.** Every `id` is a client-generated ULID (sortable, collision-free) — the client knows an id before the server does. (CRDT map keys / list items reference these ids.)
+- **Soft-delete / tombstones.** Deletable entities carry `deletedAt`; a delete sets it (filtered from normal views), never a hard removal — the remove-wins tombstone the CRDT needs and what makes delete reversible by the CRDT undo.
+- **CRDT-native change tracking.** There is **no separate `EditOp` op-log**: the CRDT's update stream *is* the change history, and its `UndoManager` (per-origin = per-user) *is* undo/redo. (This is the bespoke machinery we deliberately don't build — Q-UNDO.)
 
 ### 2.2 Canonical entities
 
-#### User
-- `id` (mapped from Clerk `sub`), `displayName`, `identityColor` (hex, user-chosen, **global across their routines** — attributes their notes consistently), `plan` (`free` | `pro`, default `free` — §1.6).
-- **No `defaultRole`** (leader/follower is a per-device view preference, §1.5).
+#### User *(D1)*
+- `id` (from Clerk `sub`), `displayName`, `identityColor` (hex, global across their routines), `plan` (`free` | `pro`). **No `defaultRole`** (leader/follower is a per-device view pref, §1.5).
 
-#### Routine
-- `id`, `title`, `dance` (enum, §3.6), `ownerId` (the creator; the quota in §1.6 counts a user's owned routines), `forkedFromRoutineId` (nullable — fork lineage, §5.3), `templateOf` (nullable — read-only sample/templates), `schemaVersion` (int — migration/offline-cache key), `createdAt`, `updatedAt`, `deletedAt`.
-- Derived: per-figure/per-role bar counts (meter-based, §3); `dance`-derived display color.
-- **Owns** an ordered list of Sections.
+#### Routine *(metadata in D1; body in the CRDT doc)*
+- D1 metadata: `id`, `title`, `dance` (§3.6), `ownerId` (creator; the quota counts owned routines), `forkedFromRoutineId` (nullable — reserved for the deferred fork mechanic), `templateOf` (nullable), `schemaVersion`, `createdAt`, `updatedAt`, `deletedAt`.
+- CRDT body: the sections → figures → attributes → annotations tree.
+- Derived: per-figure/per-role bar counts (§3); `dance`-derived color.
 
-#### Section *(renamed from "Side")*
-- `id`, `routineId`, `name` (**free text**, user-set — people structure choreography differently), `sortKey` (fractional index + actor tiebreak), `deletedAt`.
-- **Owns** an ordered list of Figures.
-- The old fixed `long`/`short`/`corner` kind enum and computed ordinal names are **gone**. Optional preset name suggestions (e.g. "Long Side", "Corner") may be offered in the UI as quick-fills, but the stored value is just a name (Q-SECTION).
+#### Section *(CRDT — renamed from "Side")*
+- `id`, `name` (**free text**, user-set; the UI offers optional preset quick-fills like "Long Side"/"Corner"/"Intro"), order (CRDT list position). **No** long/short/corner enum or computed ordinals. A structured floor-position concept is **not** needed — **alignment-per-figure is enough** (owner).
+- Owns an ordered list of Figures.
 
-#### Figure
-- `id`, `sectionId`, `name`, `source` (`library` | `custom`), `libraryFigureId` (nullable), `sortKey`, `deletedAt`.
-- **Variant / inheritance (new — fork at the figure grain):** `baseFigureId` (nullable). A figure may be a **variant** of a base figure (e.g. a "Feather to PP" off a "Feather"): it shares the base's structure, may **rename**, may **drop a step/attribute**, and **inherits later additions** to the still-shared attributes of the base, while not differing structurally elsewhere. The variant stores its **overrides/removals** only; unchanged attributes resolve from the base. *(The precise inheritance/override resolution — copy-on-write vs live-inherit, and how it composes with undo — is **Q-ATTR/Q-FORK**, §12.)*
-- **Alignment (per-figure):** `entryAlignment` / `exitAlignment`, each `{ qualifier: facing|backing|pointing, direction: LOD|ALOD|wall|centre|DW|DC|DW_against|DC_against }` (§3.8). Nullable.
-- **Owns a set of Attributes** (the timeline; see below). No more "two step charts" as two ordered lists — role is carried per attribute (§1.5).
-- Position forward-compat: position is `(sectionId, sortKey)`; v1 reorders within a section; cross-section move (if added) writes position as one atomic value.
+#### Figure *(CRDT)*
+- `id`, `name`, `source` (`library` | `custom`), `libraryFigureId` (nullable), order, `entryAlignment`/`exitAlignment` (§3.8), `deletedAt`.
+- Owns a set of **Attributes** (the timeline). Role is carried per attribute (§1.5), not as two separate charts.
+- **Variant seam (deferred):** `baseFigureId` (nullable) is reserved so a figure can later become a **variant** of another (the "feather variant" that renames/drops steps and inherits the base's later additions). **The variant *inheritance* mechanic is postponed** (Q-ATTR e); v1 does not build resolution/inheritance. When it ships, the CRDT foundation absorbs it without migration.
 
-#### Attribute *(replaces "Step" — the central v2 change)*
-The notation model is **a figure is a set of attributes placed on a count timeline**, not a list of step rows with fixed typed columns. A "step" is simply the attribute of kind `step` (it carries footwork). This makes the vocabulary **user-extensible**: dancers can add attribute kinds beyond the standard set.
+#### Attribute *(CRDT — replaces "Step"; the central model)*
+A figure is **a set of attributes placed on a count timeline**, not fixed typed columns. A "step" is just the attribute of kind `step` (it carries footwork). The vocabulary is **user-extensible**.
+- `id`, `kind` (`step` | `sway` | `turn` | `rise` | `position` | … | a user-defined kind — §3), `count` (**float**, relative to figure start), **`role`** (`leader` | `follower` | `null` = both — *optional per attribute*), `value` (typed by `kind`), `deletedAt`.
+- **Timing as a float count:** interpreted **modulo the dance's counted phrase** (Waltz/Viennese = 1–6; the rest = 1–8; bars derive from meter, §3.6). The **fraction** renders as ballroom marks — **`a` = .25, `&` = .5, `e` = .75**, with `i` for 1/8s (`ia` = .125, `ai` = .375). *([confirm] this mapping inverts the common "1 e & a" ordering — Q-D3.)*
+- Multiple attributes share a count; the footwork-bearing `step` attributes ordered by count read as "the steps".
 
-- `id`, `figureId`, **`kind`** (`step` | `sway` | `turn` | `rise` | `position` | … | a user-defined kind — §3), `count` (**float**, relative to the figure start — see timing below), **`role`** (`leader` | `follower` | `null` = applies to both), `value` (typed by `kind`; e.g. the `step` kind's value includes footwork), `deletedAt`.
-- **Timing as a float count (replaces `{beat,sub,value}`):** the count is a float relative to the figure's start, interpreted **modulo the dance's counted phrase** (Waltz/Viennese = counts 1–6; the rest = 1–8; bars derive from meter, §3.6). The **fractional part** renders as ballroom subdivision marks — **`a` = .25, `&` = .5, `e` = .75**, with `i` for 1/8-note subdivisions (`ia` = .125, `ai` = .375, …). *([confirm] this exact letter→fraction mapping — it inverts the common "1 e & a" ordering, so flag if `e`/`a` should swap — Q-D3.)*
-- Multiple attributes share a count (e.g. at count `3`: a `step` with footwork, a `sway`, a `turn`). The footwork-bearing `step` attributes, ordered by count, form what a dancer reads as "the steps".
-- Derived: per-role step index `n`; bars from `ceil(maxCount / beatsPerBar)` per role.
+#### Annotation *(CRDT — unifies Thread/Comment and JournalEntry)*
+One concept for every human note — correction, lesson, practice, discussion — created from the **timeline** or the **journal**.
+- `id`, `authorId`, `kind` (`note` | `lesson` | `practice`), `text`, `tags[]`, `createdAt`, `media[]` (v1.1), `deletedAt`.
+- **Anchors[]** (v1: `point {figureId, count, role?}` and `figure {libraryFigureId | name}`). **Query anchors** ("all rising steps", "all left-turning figures") are **postponed to v1.1** (Q-ANNO) — they need a predicate language. The `figureVariant` anchor follows whenever variants ship.
+- Ordered **Replies** (`id`, `authorId`, `text`, `createdAt`, `deletedAt`; author-only delete).
 
-> **Why this matters (owner):** "turn, sway, body position … could be very individual to specific dancers, so we need input/edit for *kinds* of attributes and a standard set we support." The standard kinds (step, sway, turn, rise, position) ship built-in; user-defined kinds are additive (§3.0). This is the model the old v3 spec only *reserved* as a `stepAttributes` seam — the owner has now made it the primary model.
-
-#### Annotation *(unifies Thread+Comment and JournalEntry — they "are essentially the same")*
-One concept for every human note — a correction, a lesson, a practice log, a discussion. Created from the **timeline** or the **journal**; both surfaces show them.
-- `id`, `routineId`, `authorId`, `kind` (`note` | `lesson` | `practice` — extensible), `text`, `tags[]` (free-text themes), `createdAt`, `media[]` (v1.1; §13), `deletedAt`.
-- **Has `anchors[]`** (one or more — see below) and an ordered list of **Replies** (the discussion thread).
-- Visible to co-members; authorship/color via `identityColor`.
-
-#### AnnotationAnchor *(rich, polymorphic — un-cuts the old "9-cell" model the owner now wants)*
-A note can target any of:
-- `point` — a precise spot: `{ figureId, count, role? }`.
-- `figureVariant` — a specific variant: `{ figureId }`.
-- `figure` — a figure *type* across the routine: `{ libraryFigureId | name }`.
-- `query` — a derived set: `{ dimension, predicate }`, e.g. *all rising steps*, *all left-turning figures*. (Which query dimensions ship in v1 vs v1.1 is **Q-ANNO**, §12.)
-
-#### Reply
-- `id`, `annotationId`, `authorId`, `text`, `createdAt`, `deletedAt`. (Author-only delete.)
-
-#### Membership (classic sharing / ACL)
+#### Membership *(D1 — classic ACL)*
 - `id`, `routineId`, `userId`, `role` (**`viewer` | `commenter` | `editor`**), `createdAt`, `deletedAt`.
-- `viewer` = read only; `commenter` = read + annotate/reply; `editor` = full edit of structure **and** annotations. The routine **owner** (creator) is an editor and is the only one who can delete the routine or transfer ownership (transfer → v1.1).
+- viewer = read; commenter = read + annotate/reply; editor = full edit of structure **and** annotations. The **owner** (creator, an editor) alone deletes the routine; ownership transfer → later.
 
-#### EditOp (op-log — undo today, the CRDT seam tomorrow)
-Unchanged in shape: `id` (client ULID), `routineId`, `actorId`, `clock` (HLC), `seq` (server ordering authority), `createdAt`, `kind`, `forward`/`inverse` (structured self-describing diffs), `footprint` (entities touched + `versionBefore`), `undone`. Op-kind **registry** so new kinds (now including user-defined attribute kinds, fork/variant ops) need no undo-machinery changes. The log is **not** the source of state (D1 rows are); no replay-on-load. Appended on **every** mutation, in the same transaction.
+#### User-defined AttributeKind *(CRDT, routine-scoped for v1)*
+- `id`, `kind`, `label`, `color`, `cardinality`, `valueType`, `values[]`. Created in-app (the creation UI is **in v1** — Q-ATTR d). Account-level reuse across routines is a later refinement (Q-ATTR scope).
 
 ### 2.3 Entity-relationship summary
 
 ```
-User 1──* Membership *──1 Routine 1──* Section 1──* Figure ──(baseFigureId)──▶ Figure (variant)
-                                  │                         └──* Attribute { kind, count(float), role?, value }
-                                  ├──* Annotation 1──* Reply
-                                  │        └──* AnnotationAnchor ──▶ { point | figureVariant | figure | query }
-                                  └──* EditOp (append-only op-log, per-user undo)
+D1 index:   User 1──* Membership *──1 Routine(meta)   ·   Invite   ·   Snapshot(of CRDT doc)
+                                          │
+CRDT doc (per routine, Yjs): Routine-body 1──* Section 1──* Figure ──(baseFigureId: deferred seam)
+                                          │                    └──* Attribute { kind, count(float), role?, value }
+                                          ├──* Annotation 1──* Reply
+                                          │        └──* Anchor ──▶ { point | figure }   (query/variant: deferred)
+                                          └──* user-defined AttributeKind
 
-LibraryFigure (static reference, per Dance; carries default attributes) ──▶ instantiated into Figure
-AttributeKind: standard set ships in bundle (ATTRIBUTE_REGISTRY); user-defined kinds are additive (§3.0)
+LibraryFigure (static reference, per Dance; default attributes) ──▶ instantiated into Figure
+ATTRIBUTE_REGISTRY (standard kinds, bundle) ∪ user-defined kinds (in doc) = the merged registry
 ```
 
-Full field-level schema is the M2 data model in §9.
-
-### 2.4 Storage placement
-**Everything is in D1** (Drizzle-typed). The routine list is an indexed query; a routine's full tree (sections → figures (+variants) → attributes → annotations + replies) loads via Hono RPC. Static reference data (dances, library figures, **standard** attribute kinds) ships in the client bundle, versioned by `schemaVersion`; **user-defined attribute kinds** live in D1 (scope — per-routine vs per-account — is Q-ATTR).
+### 2.4 Storage placement (CRDT doc + D1 index)
+- **CRDT document per routine (Yjs, recommended):** the editable body — sections, figures, attributes, annotations + replies, user-defined kinds. Held authoritatively in a **Durable Object** (one per routine) which is also the **sync + permission boundary** (§6). Change history + per-user undo are native to the CRDT.
+- **D1 (Drizzle):** the global index — users, memberships, routine metadata (title/dance/owner/plan), invite tokens, and **periodic snapshots** of each CRDT doc (for the routine list, search, export, and cold-start load).
+- **Client bundle:** dances, library figures, the **standard** attribute kinds. Versioned by `schemaVersion`.
 
 ---
 
 ## 3. Controlled Vocabularies — the ATTRIBUTE_REGISTRY
 
-### 3.0 Standard kinds + user-defined kinds
-Attribute vocabulary has **two tiers**:
+### 3.0 Standard kinds + user-defined kinds (creation UI in v1)
+Two tiers, merged everywhere (editor, lanes, info-sheet, chips, Zod):
+1. **Standard kinds** ship in `packages/domain/src/vocabulary.ts` (the **ATTRIBUTE_REGISTRY**): `{ kind, label, color, cardinality, valueType, values?, appliesToDances?, builtin:true }`.
+2. **User-defined kinds** are **created in-app (v1)**, stored in the routine's CRDT doc, same shape (`builtin:false`).
 
-1. **Standard kinds** — ship in one module, `packages/domain/src/vocabulary.ts`, the **ATTRIBUTE_REGISTRY** (formerly SLOT_REGISTRY). Each entry:
-   ```
-   { kind, label, color, cardinality: "single" | "multi",
-     valueType: "enum" | "text" | "compound",
-     values?: [{ value, label, aliases?, confirm? }],
-     appliesToDances?: [...],   // omit a dance to hide the kind for it
-     builtin: true }
-   ```
-2. **User-defined kinds** — created in-app, stored in D1, with the same shape (`builtin: false`). The editor, timeline lanes, info-sheet, chips, and Zod validation all **derive from the merged registry** (standard ∪ user-defined) — there is no separately-maintained glossary.
+Forward-compatible reads: registry **version** + per-value **aliases**; unknown values **pass through on read**; aliases normalize (`CBP → CBMP`); writes of unknown values to a known kind are rejected.
 
-Forward-compatible reads carry over: a registry **version** and per-value **aliases**; an unknown value **passes through on read** rather than hard-failing; aliases normalize (e.g. **`CBP` → `CBMP`**). Validation rejects only on *write* of an unknown value for a known kind.
+Standard kinds (v1):
 
-> Whether v1 ships the *creation UI* for user-defined kinds, or only the extensible mechanism + standard set, is **Q-ATTR**. Either way the data model and registry are built to support it.
+### 3.1 Step / Footwork (`step`) — `#a9742c`
+Footwork (5): `HT`, `T`, `TH`, `heel_pull`, **`H`** (bare Heel). Broader set **[confirm]/deferred**. The `step` value also carries the free-text action ("LF forward").
 
-The standard kinds (v1):
+### 3.2 Rise & Fall (`rise`) — `#1f8a5b`
+(7): `commence`, `body_rise`, `foot_rise`, `up`, `continue`, `lowering`, **`NFR`**. **Tango omits this kind** via `appliesToDances`. `body lower` **[confirm]**.
 
-### 3.1 Step / Footwork (`step`) — color `#a9742c`
-The footwork-bearing attribute. Footwork values (5): `HT`, `T`, `TH`, `heel_pull`, **`H`** (bare Heel). Broader set (`B`, `F`/`WF`, `BH`, `IE`/`OE`) **[confirm]/deferred**. The `step` attribute's value may also carry the free-text action (e.g. "LF forward").
+### 3.3 Body position + body-action (`position` / `bodyActions`) — `#8a5cab`
+Position (single): `closed`, `promenade`, `wing` **[confirm]**; body-action (multi, may be empty): `CBM`, `CBMP` — **"CBP" treated as a CBMP typo** **[confirm] (Q-D4)**.
 
-### 3.2 Rise & Fall (`rise`) — color `#1f8a5b`
-Values (7): `commence`, `body_rise`, `foot_rise`, `up`, `continue`, `lowering`, **`NFR`** (no foot rise). **Tango omits this kind** via `appliesToDances` (no `hasRiseFall` boolean). `body lower` **[confirm]**.
+### 3.4 Sway (`sway`) — `#c0563f`
+(3): `to_L`, `to_R`, `none`.
 
-### 3.3 Body position + body-action (`position` / `bodyActions`) — color `#8a5cab`
-Two fields (owner: flexible, pending coach): **position** (single) `closed`, `promenade`, `wing` **[confirm]**; **body-action** (multi, possibly empty) `CBM`, `CBMP` — wireframe **"CBP" treated as a CBMP typo** **[confirm] (Q-D4)**.
-
-### 3.4 Sway (`sway`) — color `#c0563f`
-Values (3): `to_L`, `to_R`, `none`.
-
-### 3.5 Turn (`turn`) — color `#5b6b8a`
-Values (8): **`eighth_L` (⅛)**, `eighth_R`, `quarter_L`, `quarter_R`, `three_eighth_L`, `three_eighth_R`, `half_L`, `half_R`, `none`. Finer magnitudes **[confirm]/deferred**.
+### 3.5 Turn (`turn`) — `#5b6b8a`
+(8): **`eighth_L`**, `eighth_R`, `quarter_L`, `quarter_R`, `three_eighth_L`, `three_eighth_R`, `half_L`, `half_R`, `none`. Finer **[confirm]/deferred**.
 
 ### 3.6 Dance (`dance`)
-v1 ships **International Standard / Smooth (travelling) only**: `waltz`, `viennese_waltz`, `quickstep`, `foxtrot`, `tango`. Metadata: display color, `timeSignature`, `beatsPerBar` (3 for Waltz/Viennese; 4 for the rest), `phraseBeats` (the count cycle: **6** for Waltz/Viennese, **8** for the rest), `travelling: true`. The float-count timing (§2.2) reads the count modulo `phraseBeats`. Latin/spot → v1.1; `travelling` flag present so they slot in without a migration.
+v1: Standard travelling only — `waltz`, `viennese_waltz`, `quickstep`, `foxtrot`, `tango`. Metadata: color, `timeSignature`, `beatsPerBar` (3 Waltz/Viennese; 4 rest), `phraseBeats` (**6** Waltz/Viennese, **8** rest — the count cycle), `travelling:true`. Latin/spot → v1.1.
 
 ### 3.7 Small fixed enums
 - Membership role: `viewer` | `commenter` | `editor`.
-- Role (per attribute / view): `leader` | `follower` (or absent = both).
-- (Section has **no** kind enum — free-text name.)
+- Attribute role: `leader` | `follower` | absent (= both).
+- (Section has **no** kind enum — free-text name + optional preset quick-fills.)
 
-### 3.8 Alignment (per-figure)
-Optional `entryAlignment` / `exitAlignment` — qualifier (`facing`/`backing`/`pointing`) + direction (`LOD`/`ALOD`/`wall`/`centre`/`DW`/`DC`/`DW_against`/`DC_against`). Reads "Facing Diagonal to Wall". Per-step alignment deferred (or expressible later as a user-defined attribute kind).
+### 3.8 Alignment (per-figure — sufficient; no separate floor concept)
+Optional `entryAlignment`/`exitAlignment` — qualifier (`facing`/`backing`/`pointing`) + direction (`LOD`/`ALOD`/`wall`/`centre`/`DW`/`DC`/`DW_against`/`DC_against`). Reads "Facing Diagonal to Wall". Per-step alignment could later be a user-defined attribute kind.
 
 ---
 
 ## 4. Features by Screen
 
-Each screen scaled to complexity; **v1** vs **deferred** marked.
-
 ### 4.0 Cross-cutting
 | Capability | v1 decision |
 |---|---|
 | Auth / onboarding | Clerk hosted sign-in (Google + passkeys). Onboarding: displayName, identity color (no role). |
-| Account / settings | Edit displayName/color; sign out; **plan/quota status** (owned routines vs free cap). |
+| Account / settings | Edit displayName/color; sign out; **plan/quota status** (owned vs free cap). |
 | Delete flows | routine/section/figure/attribute/annotation; reply delete = author-only. Confirm dialogs. |
-| Reorder | figures (within a section) and attributes (by count) via `sortKey`/count. Section reorder deferred. |
+| Reorder | figures (within a section) and attributes (by count). Section reorder deferred. |
 | Attribute add/edit/remove | place/edit/remove attributes on a figure's count timeline; switch role inline. Core authoring. |
-| **Fork / variant** | **v1** — fork a routine, and fork a figure into a named variant (§5.3). |
-| **Undo** | **v1 required** — per-user, per-action (§5.4). |
-| Search | routine-list search by title/dance (indexed). Annotation search deferred. |
+| **Custom attribute kinds** | **v1** — create/edit user-defined kinds (Q-ATTR d). |
+| **Undo / redo** | **v1 required** — per-user, via the CRDT `UndoManager` (§5.4). |
+| Search | routine-list title/dance (indexed). Annotation search deferred. |
 | Invite | invite by link (signed token → Membership with chosen role). |
-| Media | "coming soon" (v1.1; §13). |
-| Sample/template | read-only sample routine + start-from-template. |
+| Media | "coming soon" (v1.1). |
+| Sample/template | read-only sample + start-from-template. |
 | Export/import | JSON export AND import (§7). |
 | **Plans/quota** | enforce free cap (3 owned routines) with upsell; billing deferred. |
+| Fork / variants | **deferred** (built on the CRDT foundation later; `baseFigureId`/`forkedFromRoutineId` seams present). |
 
-### 4.1 Routine List (Choreo tab) — list routines you're a member of; card shows dance-color icon, title, `dance · barLabel · created`. "+" → New Choreo (blocked with upsell if over free cap). Empty state → sample + template. Title/dance search.
+### 4.1 Routine List (Choreo tab) — list your routines; card: dance-color icon, title, `dance · barLabel · created`. "+" → New Choreo (quota-checked, upsell if over cap). Empty → sample + template. Title/dance search.
 
-### 4.2 Assemble (routine overview) — sections (user-named, collapsible) → figure cards (name, variant badge if `baseFigureId`, custom badge, attribute summary, entry/exit alignment chips). "Add figure" / "fork variant" / "add section" (name it). Reorder/delete figures within a section. Share button. **Role view toggle** (leader/follower) — a per-device view preference, also flippable per step in the timeline. Edit affordances gated by membership role (viewer/commenter see no structural edit).
+### 4.2 Assemble — sections (user-named, collapsible) → figure cards (name, custom badge, attribute summary, alignment chips). Add figure / add section (name it, with preset quick-fills). Reorder/delete figures. Share button. **Role view toggle** (per-device pref). Edit affordances gated by membership role.
 
-### 4.3 Figure Timeline (the hero surface) — the figure as a **count timeline**: at each count, the attributes present (footwork/step, sway, turn, rise, position, custom kinds) shown as chips; tap to edit; tap a step to flip the role you're viewing. **Add an attribute at a count**, edit its value, remove it. **Lanes view:** one attribute kind across all counts at once (fast cross-count tagging), kinds derived from the merged registry. Edit figure alignment here. **Fork into a variant** from here.
+### 4.3 Figure Timeline (hero surface) — the figure as a **count timeline**: at each count, the attributes present (step/footwork, sway, turn, rise, position, custom kinds) as chips; tap to edit; tap a step to flip viewed role. **Add an attribute at a count**, edit, remove. **Lanes view:** one kind across all counts (fast tagging), kinds from the merged registry. Edit figure alignment here.
 
-### 4.4 Attribute Editor (the hero flow) — for a count (and role), the attribute sections render **from the merged ATTRIBUTE_REGISTRY** — which kinds apply (Rise absent for Tango), their values, single/multi-select — not hardcoded UI. Re-tapping clears. Optimized for speed (large touch targets, minimal taps). If user-defined kinds ship (Q-ATTR), an "add a kind" affordance lives here.
+### 4.4 Attribute Editor (hero flow) — for a count (and role), attribute sections render **from the merged ATTRIBUTE_REGISTRY** — which kinds apply (Rise absent for Tango), values, single/multi-select — not hardcoded. Re-tap clears. An **"add a kind"** affordance creates a user-defined kind (v1).
 
-### 4.5 Annotation (timeline + journal) — annotations are one concept (§2.2). From a point/figure in the timeline, or from the Journal tab, create a `note`/`lesson`/`practice` with **anchors** (point / figure / variant / query) and a **reply thread**. People legend; author-color borders; reply bar; reply delete (author-only). Filters (all / lessons / practice / by figure / by query). Deferred: notifications, read/unread, reply editing.
+### 4.5 Annotation (timeline + journal) — one concept. From a point/figure in the timeline, or the Journal tab, create a `note`/`lesson`/`practice` with **anchors** (point / figure) and a **reply thread**. People legend; author-color borders; reply bar; reply delete (author-only). Filters (all / lessons / practice / by figure). *(Query anchors → v1.1.)*
 
-### 4.6 Link / Anchor Picker — choose anchor(s): **point** (section → figure → role → count), **figure variant**, **figure type**, or **query** (pick a dimension + predicate, e.g. turn = left). Query anchors may be v1.1 (Q-ANNO).
+### 4.6 Anchor Picker — choose anchor(s): **point** (section → figure → role → count) or **figure**. (Query/variant anchors deferred.)
 
-### 4.7 Share — member list (name, role: viewer/commenter/editor). Invite by link (inviter picks role). Remove a member (editor/owner). **Fork** button → fork the routine (§5.3). Microcopy: *"Anyone you invite can view, comment, or edit. Editors change steps and notes. Notes are shared with everyone on the routine."*
+### 4.7 Share — member list (name, role). Invite by link (inviter picks viewer/commenter/editor). Remove a member (editor/owner). Microcopy: *"Anyone you invite can view, comment, or edit. Editors change steps and notes. Notes are shared with everyone."*
 
-### 4.8 Profile — identity (avatar, name); editable name; note-color picker (global) with live preview; **plan status + owned-routine count**; sign out. (No default-role setting.)
+### 4.8 Profile — identity (avatar, name); editable name; note-color picker (global) + preview; **plan status + owned-routine count**; sign out.
 
-### 4.9 Overlays — Add-figure sheet (dance-filtered library; instantiate with catalog default attributes; or compose custom; or **fork a variant**); New Choreo sheet (5 Standard dance chips + name; or start-from-template; quota-checked); Info sheet (per-kind values **read from the merged registry**); Toast (incl. **"Undone"** with action name, and the **quota/upsell** toast).
+### 4.9 Overlays — Add-figure sheet (dance-filtered library; instantiate with default attributes; or compose custom); New Choreo sheet (5 dance chips + name; or template; quota-checked); **Add-kind sheet** (create a user-defined attribute kind); Info sheet (per-kind values from the merged registry); Toast (incl. **"Undone"** and the **quota/upsell** toast).
 
 ---
 
 ## 5. Collaboration, Permissions & Undo
 
 ### 5.1 Rules
-1. **Flat model:** anyone creates routines and invites others as viewer / commenter / editor (§2.2).
-2. **Editors edit structure *and* annotations.** Commenters annotate/reply but don't change structure. Viewers read.
+1. **Flat model:** anyone creates routines and invites others as viewer / commenter / editor.
+2. **Editors edit structure *and* annotations;** commenters annotate/reply; viewers read.
 3. **Annotations are shared and visible** to all members.
 4. **Identity color is per-user and global.**
-5. **Owner** (creator) alone deletes the routine; ownership transfer → v1.1.
+5. **Owner** (creator) alone deletes the routine; transfer → later.
 
 ### 5.2 Roles & access
 | Role | Can do |
 |---|---|
-| `editor` | Create/edit/delete sections, figures, variants, attributes, alignment; annotate + reply; invite/remove members; undo own actions. |
+| `editor` | Create/edit/delete sections, figures, attributes, custom kinds, alignment; annotate + reply; invite/remove members; undo own actions. |
 | `commenter` | Read; create annotations + replies; undo own annotation actions. |
 | `viewer` | Read only. |
-| `owner` (an editor) | All editor rights **plus** delete the routine. |
+| `owner` (an editor) | Editor rights **+** delete the routine. |
 
-### 5.3 Fork & variants (★ pulled into v1 — Q-FORK)
-Fork is "somewhat integral" (owner), at two grains:
+Enforcement is at the **CRDT sync boundary** (the Durable Object), not by rejecting individual CRDT cells (§6) — the critique-sync warning that post-hoc cell rejection is incoherent with a CRDT is resolved by gating the *connection/update stream*: the DO authenticates the sync, checks Membership/role from D1, and only accepts structure updates from editors / annotation updates from commenters+ / nothing from viewers. (Splitting the doc into a `structure` and an `annotations` sub-doc so a commenter can write the latter but not the former is the recommended mechanism — Q-CRDT.)
 
-- **Routine fork** — copy a routine into a new one you own (`forkedFromRoutineId` set for lineage). Replaces the old "save a copy". Whether annotations/journal copy is **Q-D5** (default: structure + attributes only).
-- **Figure variant** — fork a figure into a **named variant** (`baseFigureId`) that may rename/drop steps but otherwise tracks the base, **inheriting later additions** to shared attributes (the "feather variant" mechanic, §2.2).
+### 5.3 Fork & variants (deferred onto the CRDT foundation)
+Fork is integral but, per the owner, **postponed because the CRDT solves it cleanly later** — building it twice is the thing to avoid. Two grains, both deferred from v1: **routine fork** (`forkedFromRoutineId` lineage) and **figure variant** (`baseFigureId` + inherit-later-additions). The v1 data model reserves both seams so neither needs a migration; the offline/merge machinery a true fork wants is the same CRDT machinery, added once.
 
-**Two implementation paths (the keystone decision — Q-FORK):**
-- **Path A (recommended for v1) — server-side copy + lineage, no CRDT.** Routine fork = deep copy with new ids + lineage pointer. Figure variant = a base pointer + stored overrides/removals, resolved server-side; "inherit later additions" is a read-time merge of base attributes minus the variant's removals plus its overrides. Stays **online-only**, server-authoritative, LWW. No merge engine.
-- **Path B — defer concurrent fork/merge to a CRDT.** If true divergent-then-merge-back or offline editing is wanted, that implies a CRDT (the v3 op-log/footprint seams already point this way). This **reintroduces local-first** and is a much larger build; the owner is OK *postponing fork* if it's bundled with CRDTs rather than half-built now.
-
-The doc is written so either path works; §6/§8/§11 flag where Path B would change things. **Recommendation: Path A in v1** (it delivers the integral fork/variant capability without the CRDT cost), revisit Path B when offline-write is scheduled.
-
-### 5.4 Concurrent editing & undo (server-authoritative, LWW)
-- Every mutation → Worker validates permission, applies to D1, **appends an `EditOp`** (forward + inverse + footprint), bumps `routine.updatedAt`, returns new state.
-- **Last-write-wins** on the same field; edits to different attributes/fields both persist. Acceptable at this collaboration scale.
-- **Delete is soft;** inverse flips `deletedAt`. A figure delete cascades to its attributes/annotations/anchors/replies as a **compound op** (one footprint) → undo restores the subtree with original ids.
-- **Live refresh:** poll / stale-while-revalidate on `updatedAt`. No WebSocket/CRDT in Path A.
-- **Undo (required, per-user) — unified footprint rule:** a user undoes their own last not-yet-undone op; the undo is itself logged. **An op is undoable iff no later not-yet-undone op — by ANY user — touches any entity in its `footprint`.** Reduces to "changed since" for a field edit; handles cascade-delete; refuses the cross-user dangling case (A adds a figure, B annotates inside it → A's undo-of-add refused). Clear refusal message.
-- **Redo** is an explicit per-user cursor; a fresh edit clears it.
-- Granularity (D13): coalesce same-field edits within ~1s; a compound create undoes as one op; a reorder is one op.
+### 5.4 Concurrent editing & undo (CRDT-native)
+- The routine's CRDT doc is the source of truth; clients sync deltas through the Durable Object (online-first). **Concurrent edits merge by the CRDT's rules** — no bespoke last-write-wins logic, no two-zone authority.
+- **Delete is soft** (`deletedAt`), so it's a normal mergeable field flip; cascade-delete of a figure flips its subtree.
+- **Undo/redo is per-user via the CRDT `UndoManager`** scoped to that user's origin — it gives "undo my last change" natively and merges correctly with others' concurrent edits. We do **not** build the structured op-log + footprint-undoability rule from earlier drafts (it would be the redundant machinery the CRDT replaces). A "can't redo — diverged" style message, if wanted, is a thin UX layer over the UndoManager (Q-UNDO).
+- **Live refresh** is the sync itself (the DO pushes updates to connected clients over WebSocket / Hibernatable WebSockets).
 
 ### 5.5 Invites
-An `editor` generates a signed, expiring **invite token** (link); redeeming it (authenticated) creates a `Membership` with the inviter's chosen role. Editors/owner can remove members.
+An `editor` generates a signed, expiring **invite token** (link); redeeming it (authenticated) creates a `Membership` with the inviter's chosen role. Editors/owner remove members.
 
 ---
 
 ## 6. Architecture
 
-Lean, server-authoritative, single relational store (Path A). Path B (CRDT) would add a local store + merge engine behind the `store/` seam.
+A **CRDT document per routine** is the canonical editable state, hosted in a **Durable Object** that is also the sync + permission boundary. **D1** is the global index. Online-first; offline/fork are additive later.
 
 ```
-[ React 19 + Vite PWA ]   (vite-plugin-pwa: installable app-shell only — NOT offline data in Path A)
+[ React 19 + Vite PWA ]   (vite-plugin-pwa: installable shell)
    • Clerk client (session JWT)
-        │  HTTPS — Hono RPC (typed) + Zod      ▲ poll on updatedAt (live refresh)
-        ▼                                       │
-[ Worker ]  Workers Static Assets (serves SPA) + Hono API
-   • Clerk JWT verify (networkless)   • permission checks   • op-log append   • invite tokens   • quota check
+   • Yjs doc (in-memory) bound to UI via the store/ seam; UndoManager (per-user undo)
+        │  WebSocket sync (Yjs updates)            ▲ REST/RPC for list, auth, invites, snapshots
+        ▼                                          │
+[ Worker + Durable Object ]
+   • Worker (Hono): Clerk JWT verify, routine list/search, invites, quota, snapshot read/export   → D1
+   • Durable Object (one per routine): holds the authoritative Yjs doc; authenticates each sync
+     connection (Clerk JWT) + checks Membership/role; accepts editor structure updates /
+     commenter annotation updates / viewer read-only; persists doc + periodic snapshots
         │
         ▼
-[ D1 (Drizzle) ]  single source of truth: users, memberships, routines → sections → figures(+variants) →
-                  attributes, annotations + anchors + replies, user-defined attribute kinds, EditOp log
+[ D1 (Drizzle) ]  users, memberships, routine metadata, invites, CRDT snapshots
         (R2 for media → v1.1)
 ```
 
-### 6.1 Module boundaries (enforced by pnpm workspaces)
-`contract → domain`; `web → contract, domain`; `worker → contract, domain`. `domain` has no I/O.
-- **`packages/domain/`** — pure TS: the **ATTRIBUTE_REGISTRY** (`vocabulary.ts`), `sortKey`, **float-count timing & per-role bar derivation**, **figure-variant resolution (base + overrides)**, the **op registry** + apply/invert/footprint + undoability, deep-copy/fork, the migration ladder, Zod schemas.
-- **`apps/worker/`** — Hono routes, Clerk middleware (behind `auth/`), **permission enforcement** (`authorizeOp`, pure) + **quota check**, Drizzle/D1, op-log append, invite tokens.
-- **`apps/web/store/` (client repository seam)** — components access data only through this typed reactive-read + mutate layer; **never import the RPC client directly.** Path A implements it over RPC + TanStack Query; Path B's CRDT engine swaps the implementation here without touching components.
-- **`apps/web/`** — presentational React, service worker for installability.
-- **`packages/contract/`** — Zod schemas + Hono RPC `typeof app`.
+### 6.1 Module boundaries (pnpm workspaces)
+`contract → domain`; `web → contract, domain`; `worker → contract, domain`.
+- **`packages/domain/`** — pure TS, no network: the **ATTRIBUTE_REGISTRY** + merge; **float-count timing & per-role bars**; sortKey/order helpers; the **CRDT document schema** (the Yjs `Y.Map`/`Y.Array` shape for routine→sections→figures→attributes→annotations, + typed read/mutate helpers); **CRDT convergence invariants**; Zod schemas; the migration ladder. Yjs runs in-memory so all of this is unit/property-testable with no I/O.
+- **`apps/worker/`** — Hono routes (list/search/invite/quota/snapshot/export), Clerk middleware (behind `auth/`), the **Durable Object** (`routine-do.ts`: Yjs host, sync transport, **permission enforcement at the connection/update boundary**, snapshotting), Drizzle/D1.
+- **`apps/web/store/` (client repository seam)** — the only place that touches the Yjs doc + sync provider; presents typed reactive-read + mutate + `UndoManager` to components. Components never import Yjs or the RPC client directly. Swapping the sync provider (adding offline persistence later) happens here.
+- **`apps/web/`** — presentational React; service worker for installability.
+- **`packages/contract/`** — Zod schemas + Hono RPC `typeof app` (for the REST surface) + the shared CRDT-doc type.
 
-### 6.2 Data flow — Clerk JWT → Hono RPC (Worker verifies, checks Membership/role + quota, reads/writes D1) → every mutation appends an `EditOp` and bumps `updatedAt`; optional poll refetch.
+### 6.2 Data flow
+1. Clerk JWT.
+2. **Reads/edits of a routine** open a sync connection to its Durable Object; the DO verifies the JWT + role, then streams Yjs updates both ways. Local edits apply optimistically and merge.
+3. **List/search/invite/quota/export** are plain Hono RPC over D1 (no DO needed).
+4. The DO **snapshots** the doc to D1 periodically and on idle (for list/search/export/cold-start).
 
-### 6.3 File structure (domain modules reflect the v2 model)
+### 6.3 File structure (reflecting the CRDT foundation)
 ```
 packages/domain/src/
-  ids.ts          # ULID
-  vocabulary.ts   # ATTRIBUTE_REGISTRY (standard kinds) + merge(user-defined)
-  dances.ts       # dance metadata (meter, phraseBeats, travelling)
-  timing.ts       # float count → bar/fraction (a/&/e, i-subdivisions), per role
-  sortkey.ts      # fractional index + actor tiebreak
-  variants.ts     # figure-variant resolution: base attributes + overrides − removals
-  oplog.ts        # op registry, apply/invert, footprint, undoability
-  fork.ts         # deep routine fork (new ids, lineage)
-  schemas.ts      # Zod schemas derived from the merged registry
-apps/worker/src/ … (auth/, db/schema.ts, repo/, permissions.ts incl. quota, oplog.ts, routes/)
-apps/web/src/ …   (store/, components/ per screen, lib/ rpc+sentry, sw.ts)
+  ids.ts vocabulary.ts dances.ts timing.ts sortkey.ts
+  doc.ts          # CRDT document schema (Yjs shape) + typed read/mutate helpers
+  convergence.ts  # pure invariants used by property tests
+  schemas.ts      # Zod, derived from the merged registry
+apps/worker/src/
+  index.ts auth/ routes/ (list, invite, quota, snapshot, export)
+  routine-do.ts   # Durable Object: Yjs host + sync transport + permission boundary + snapshots
+  db/schema.ts repo/ permissions.ts (authorizeConnection + quota)
+apps/web/src/
+  store/          # Yjs doc + sync provider + UndoManager behind a typed seam
+  components/ (per screen) lib/ (rpc, sentry) sw.ts
 ```
-The rest of the repo scaffolding (root config, wrangler envs, CI) is as in §9 / the M0 tasks.
 
 ---
 
 ## 7. Non-Functional Requirements
 
-- **Performance:** mobile-first; app shell interactive < ~2s on mid-range/3G. Routine list + load are indexed queries / one RPC; **`EXPLAIN QUERY PLAN` in CI** guards the D1 rows-scanned trap.
-- **Connectivity:** online-only in Path A; offline *read* is the next increment (Path B's CRDT would bring offline write). Clear "you're offline" state for data.
-- **Cost ceiling:** **$0/mo at hobby scale** (Workers + D1 free tiers; Clerk 50k MRU). The **pro plan** monetizes beyond the free cap; billing provider TBD (Q-PLAN).
-- **Accessibility:** WCAG AA — color never the *only* signal (labels/initials); ≥ 44px targets; keyboard/SR navigable; reduced-motion respected.
+- **Performance:** mobile-first; app shell interactive < ~2s on mid-range/3G. Routine list/search from D1 snapshots (indexed; `EXPLAIN QUERY PLAN` in CI). A routine opens via one sync handshake; the doc loads from the DO (warm) or a D1 snapshot (cold).
+- **Connectivity:** online-first (sync requires the DO). The shell loads offline (installable PWA); a clear "you're offline" state for data. Offline *editing* (local CRDT persistence, sync-on-reconnect) is the next increment — additive, not a rewrite.
+- **Cost:** hobby scale stays cheap, but the **Durable Object requires Workers Paid (~$5/mo)** (DOs aren't on the free plan); **Hibernatable WebSockets** keep idle sync near-free. D1 + Clerk free tiers cover the rest. The **pro plan** monetizes beyond the free cap. *(This $0→~$5 shift is a direct consequence of the CRDT decision — Q-CRDT.)*
+- **Accessibility:** WCAG AA — color never the sole signal; ≥44px targets; keyboard/SR navigable; reduced-motion.
 - **Browser/PWA:** evergreen mobile + desktop; installable.
-- **Data ownership:** JSON **export AND import** (structure + attributes + annotations); envelope carries `schemaVersion`; import runs a migration ladder; unknown attribute values survive round-trip via the registry pass-through/alias rule.
-- **Ops:** Sentry (or Tail Workers); staging + prod; CI runs the test layers and the EXPLAIN check.
+- **Data ownership:** JSON **export AND import** (structure + attributes + annotations) from a snapshot; `schemaVersion` envelope + migration ladder; unknown attribute values survive round-trip.
+- **Ops:** Sentry (+ `@sentry/cloudflare`); staging + prod; CI runs the test layers + EXPLAIN check.
 
 ---
 
 ## 8. Locked Technical Decisions
 
-Infra decisions are stable; the v2 review changed several product/model decisions (marked **Δ**). **Override any on review** — none are expensive before code exists.
+**Δ = changed by the v3 (CRDT) review.** Override any on review — cheap before code exists.
 
 | # | Decision | Choice |
 |---|---|---|
 | D1 | Repo layout | **pnpm workspaces**: `packages/{domain,contract}`, `apps/{web,worker}`. |
 | D2 | Lint / format | **Biome**. |
 | D3 | CI | **GitHub Actions**. |
-| D4 | Deploy / envs | **Wrangler**, Workers Static Assets serving the SPA; `staging` + `production`. |
-| D5 | Entity IDs | **ULID** (`ulidx`), client-side, TEXT PKs. |
-| D6 | Client data layer | **TanStack Query** behind the `store/` seam. |
+| D4 | Deploy / envs | **Wrangler**, Workers Static Assets; `staging` + `production`. |
+| D5 | Entity IDs | **ULID** (`ulidx`), client-side, TEXT keys / map keys. |
+| D6 | Client data layer | **Yjs doc + sync provider + `UndoManager`** behind the `store/` seam (TanStack Query for the REST list/invite surface). |
 | D7 | Validation / contract | **Zod** in `packages/contract`. |
-| D8 | ORM / migrations | **Drizzle** + drizzle-kit; tests use `applyD1Migrations()`. |
+| D8 | ORM / migrations (D1 index) | **Drizzle** + drizzle-kit; tests use `applyD1Migrations()`. |
 | D9 | Auth boundary | **Clerk** isolated behind `auth/` (Q-A1). |
-| D10 | Live refresh | **Polling / SWR**; SSE deferred (Q-S1). |
-| **D11 Δ** | **Roles** | **Classic `viewer`/`commenter`/`editor` + `owner`** (replaces couple+coach; editors edit structure *and* annotations). |
-| **D12 Δ** | **Fork** | **In v1 via Path A** (server-side routine fork + figure variants); CRDT (Path B) deferred — Q-FORK. |
-| D13 | Undo granularity | Coalesce same-field ~1s; compound create = one op; reorder = one op. |
-| D14 | Identity-color collisions | Tolerated; initials are the primary signal (Q-A2). |
+| **D10 Δ** | **Sync / live refresh** | **CRDT sync via a Durable Object over WebSocket** (Hibernatable); REST for list/invite/quota/export. (Replaces polling-only / online-only.) |
+| D11 | Roles | **Classic `viewer`/`commenter`/`editor` + `owner`** (confirmed). |
+| **D12 Δ** | **Fork** | **Deferred** onto the CRDT foundation (seams reserved); not in v1. |
+| **D13 Δ** | **CRDT foundation** | **Build the CRDT document model now** (recommended **Yjs**); online-first; offline/fork later — *too foundational to swap out* (owner). |
+| **D14 Δ** | **Undo** | **CRDT-native per-user undo (`UndoManager`)**; **no** bespoke op-log/footprint machinery (Q-UNDO). |
 | D15 | Error monitoring | **Sentry** (+ `@sentry/cloudflare`); Tail Workers fallback. |
-| D16 | Node / tooling | **Node 22 LTS**, pnpm 9, TS strict, ESM everywhere. |
-| **D17 Δ** | **Notation model** | **Attributes-on-a-float-count timeline** (extensible kinds) replaces typed step-slot columns — Q-ATTR. |
-| **D18 Δ** | **Sections** | **User-named sections** replace the long/short/corner Side enum + computed ordinals — Q-SECTION. |
-| **D19 Δ** | **User role pref** | **No `User.defaultRole`**; leader/follower is a per-device view preference, switchable in the timeline. |
-| **D20 Δ** | **Annotations** | **Unified annotation** (note/lesson/practice) with polymorphic + query anchors replaces separate Thread/Comment + JournalEntry. |
-| **D21 Δ** | **Plans/quota** | **Free tier capped at 3 owned routines**; pro plan + billing provider deferred (Q-PLAN); v1 builds the quota seam. |
+| D16 | Node / tooling | **Node 22 LTS**, pnpm 9, TS strict, ESM. |
+| D17 | Notation model | **Attributes on a float-count timeline** (extensible kinds; optional per-attribute role) — confirmed. |
+| D18 | Sections | **User-named sections** + optional preset quick-fills (no kind enum) — confirmed. |
+| D19 | User role pref | **No `User.defaultRole`**; per-device view preference — confirmed. |
+| D20 | Annotations | **Unified annotation** (note/lesson/practice); v1 anchors = **point + figure**; query/variant deferred — confirmed. |
+| D21 | Plans/quota | **Free cap = 3 owned routines**; pro + billing deferred — confirmed. |
+| **D22 Δ** | **Custom attribute kinds** | **Creation UI in v1** (routine-scoped; account-level reuse later) — confirmed. |
+| **D23 Δ** | **Persistence topology** | **Durable Object hosts the per-routine Yjs doc** (sync + permission boundary); **D1** holds index + snapshots. Requires **Workers Paid (~$5/mo)** — Q-CRDT. |
 
 ### Global constraints (every task inherits)
-- **TypeScript strict**; no `any` without justification.
-- **Cloudflare-only** runtime: Worker + D1 + Static Assets. (Path A: no DO/WebSocket/R2 in v1; Path B would add a local store.)
-- **All ids are client-generated ULIDs**, TEXT PKs; **soft-delete only**.
-- **Every mutation appends an `EditOp`** (forward + inverse + footprint), in the same transaction; the op-log is **not** the source of state.
-- **Attribute vocabulary lives in the merged ATTRIBUTE_REGISTRY** (standard + user-defined); no `hasRiseFall` boolean.
-- **The client accesses data only through `store/`.**
-- **Quota check on routine create** (free cap).
-- **Cost ceiling ~$0/mo;** index every query (EXPLAIN in CI). **Accessibility WCAG AA.**
+- **TypeScript strict;** no `any` without justification.
+- **Cloudflare runtime:** Worker + **Durable Object** (per-routine CRDT host) + D1 + Static Assets. WebSocket sync (Hibernatable). R2 → v1.1.
+- **Canonical routine state is the CRDT doc;** D1 holds the index + snapshots. **No bespoke op-log.**
+- **All ids are client-generated ULIDs; soft-delete only.**
+- **Permission enforcement is at the sync boundary (the DO)** + on the REST surface — never by post-hoc CRDT cell rejection.
+- **Attribute vocabulary lives in the merged ATTRIBUTE_REGISTRY** (standard + user-defined).
+- **The client touches the CRDT doc only through `store/`.**
+- **Quota check on routine create.**
+- **Index every D1 query (EXPLAIN in CI). Accessibility WCAG AA.**
 
 ---
 
 ## 9. Implementation Roadmap (Milestones)
 
-Phased: M0–M1 detailed (the walking skeleton that proves the **attribute/notation + op-log** model); M2–M9 outlined, each expanded into its own plan when reached. Undo (M4) is sequenced after the notation core proves out. **The v2 model changes (attributes, sections, variants, annotations, roles) reshape M1–M6** vs the original plan; the M0 foundation is unchanged.
+Phased: M0–M1 detailed (the walking skeleton — the attribute/CRDT notation model proven pure, in-memory); M2–M9 outlined. The CRDT decision moves sync/permission earlier and **drops the op-log milestone**; undo is largely free (native) so its milestone is small (UX only).
 
-> **For agentic workers:** use `superpowers:subagent-driven-development` or `superpowers:executing-plans`; steps use `- [ ]`.
+> **For agentic workers:** use `superpowers:subagent-driven-development` / `executing-plans`; steps use `- [ ]`.
 
-| M | Milestone | Deliverable | Detail |
-|---|---|---|---|
-| **0** | **Foundation** | Monorepo boots; `domain` + `contract`; CI green; Worker serving a "hello" SPA with verified Clerk session + empty D1 migration | **Detailed below** |
-| **1** | **Domain core (walking skeleton)** | Pure `domain/`: ATTRIBUTE_REGISTRY (standard + merge), dances, **float-count timing**, sortKey, **figure-variant resolution**, op-log apply/invert + footprint undoability, deep fork — unit + property tested, no I/O | **Detailed below** |
-| **2** | Persistence + notation CRUD | Drizzle schema (sections, figures+variants, attributes, user-defined kinds, soft-delete, ULIDs), migrations, repo + Hono routes (routine/section/figure/variant/attribute), op-log append-in-tx, `store/` seam + Assemble/Figure-Timeline/Attribute-Editor screens | outline |
-| **3** | Auth, membership, permissions & quota | Clerk onboarding (name/color), Membership (viewer/commenter/editor + owner), `authorizeOp`, **quota check**, invite issue/redeem, Share | outline |
-| **4** | Undo / redo | Worker undo/redo over footprint undoability; per-user; toasts; refusal UX; cross-user + cascade + variant tests | outline |
-| **5** | Annotations | Unified annotation + replies; anchors (point/figure/variant; query per Q-ANNO); timeline + journal surfaces; identity colors; polling refresh | outline |
-| **6** | Fork & variants UX | Routine fork (Path A) + figure-variant authoring/inheritance UI; lineage display | outline |
-| **7** | Lanes + sample/template + search + custom kinds | Registry-derived Lanes; sample + start-from-template; routine search; (user-defined attribute kinds UI if Q-ATTR = yes) | outline |
-| **8** | Export / import + ops | schemaVersion'd JSON round-trip + migration ladder; Sentry; EXPLAIN-QUERY-PLAN CI gate; staging/prod | outline |
-| **9** | PWA + a11y + cross-browser | Installable shell + offline-state; axe/keyboard/reduced-motion; iOS Safari + Android Chrome E2E | outline |
+| M | Milestone | Deliverable |
+|---|---|---|
+| **0** | **Foundation** | Monorepo; `domain` + `contract`; CI green; Worker + **Durable Object scaffold + Yjs doc + WebSocket sync echo**; Clerk session; D1 index migration. **Detailed below.** |
+| **1** | **Domain core (walking skeleton)** | Pure `domain/`: ATTRIBUTE_REGISTRY (+ user-defined merge), dances, **float-count timing**, sortKey/order, the **CRDT document schema + typed helpers**, **convergence/commutativity/idempotence property tests** (in-memory Yjs), **per-user `UndoManager`** behavior, Zod. No network. **Detailed below.** |
+| **2** | Persistence + sync + notation CRUD | DO hosts the per-routine Yjs doc; **WebSocket sync**; **permission at the connection/update boundary**; D1 index + **snapshotting**; `store/` binds the doc + UndoManager to React; Assemble / Figure-Timeline / Attribute-Editor screens. |
+| **3** | Auth, membership, permissions & quota | Clerk onboarding (name/color); Membership (viewer/commenter/editor + owner); `authorizeConnection`; **quota check on create**; invite issue/redeem; Share. |
+| **4** | Undo/redo UX | Wire the `UndoManager` to the UI (per-user undo/redo, "Undone" toast); optional diverged-message UX. (Logic is native — small milestone.) |
+| **5** | Annotations | Unified annotation + replies; anchors (point + figure); timeline + journal surfaces; identity colors. |
+| **6** | Custom attribute kinds | Create/edit user-defined kinds; propagate to editor/lanes/info; validate. |
+| **7** | Lanes + sample/template + search | Registry-derived Lanes; sample + start-from-template; routine search over snapshots. |
+| **8** | Export / import + ops | schemaVersion'd JSON round-trip from snapshots + migration ladder; Sentry; EXPLAIN-QUERY-PLAN CI gate; staging/prod. |
+| **9** | PWA + a11y + cross-browser | Installable shell + offline-state; axe/keyboard/reduced-motion; iOS Safari + Android Chrome E2E. |
+| *(later)* | *Fork & variants; offline editing; query anchors; billing* | *Additive on the CRDT foundation — out of v1 (§11).* |
 
-### Data model (M2 schema)
+### Data model (M2)
 
 ```mermaid
 erDiagram
     User ||--o{ Membership : has
     Routine ||--o{ Membership : grants
-    User ||--o{ Annotation : authors
-    User ||--o{ Reply : authors
-    User ||--o{ EditOp : actor
-    Routine ||--o{ Section : owns
-    Section ||--o{ Figure : owns
-    Figure ||--o{ Figure : "variant of (baseFigureId)"
-    Figure ||--o{ Attribute : has
-    Routine ||--o{ Annotation : "scoped to"
-    Annotation ||--o{ Reply : has
-    Annotation ||--o{ AnnotationAnchor : "anchored by"
-    Routine ||--o{ AttributeKind : "user-defined kinds"
-    Routine ||--o{ EditOp : "op-log"
-
-    User { text id PK "ULID"; text clerkSub UK; text displayName; text identityColor "hex"; text plan "free|pro" }
+    Routine ||--o{ Invite : has
+    Routine ||--o{ Snapshot : "snapshotted as"
+    User { text id PK "ULID"; text clerkSub UK; text displayName; text identityColor; text plan "free|pro" }
     Membership { text id PK; text routineId FK; text userId FK; text role "viewer|commenter|editor"; int createdAt; int deletedAt }
-    Routine { text id PK; text title; text dance; text ownerId FK; text forkedFromRoutineId FK "nullable"; text templateOf "nullable"; int schemaVersion; int createdAt; int updatedAt; int deletedAt }
-    Section { text id PK; text routineId FK; text name "free text"; text sortKey; int deletedAt }
-    Figure { text id PK; text sectionId FK; text name; text source "library|custom"; text libraryFigureId "nullable"; text baseFigureId FK "nullable (variant)"; text sortKey; text entryAlignment "json nullable"; text exitAlignment "json nullable"; int deletedAt }
-    Attribute { text id PK; text figureId FK; text kind "step|sway|turn|rise|position|custom"; real count "float, rel. figure start"; text role "leader|follower|null"; text value "json typed by kind"; int deletedAt }
-    AttributeKind { text id PK; text routineId FK "scope TBD Q-ATTR"; text kind; text label; text color; text cardinality; text valueType; text values "json"; int deletedAt }
-    Annotation { text id PK; text routineId FK; text authorId FK; text kind "note|lesson|practice"; text text; text tags "json"; int createdAt; int deletedAt }
-    AnnotationAnchor { text id PK; text annotationId FK; text type "point|figureVariant|figure|query"; text figureId FK "nullable"; real count "nullable"; text role "nullable"; text query "json nullable" }
-    Reply { text id PK; text annotationId FK; text authorId FK; text text; int createdAt; int deletedAt }
-    EditOp { text id PK "ULID"; text routineId FK; text actorId FK; int seq; text clock "json HLC"; text kind; text forward "json"; text inverse "json"; text footprint "json"; int undone; int createdAt }
+    Routine { text id PK; text title; text dance; text ownerId FK; text forkedFromRoutineId "nullable (seam)"; text templateOf "nullable"; int schemaVersion; int createdAt; int updatedAt; int deletedAt }
+    Invite { text id PK; text routineId FK; text role; int expiresAt; int redeemedAt "nullable" }
+    Snapshot { text routineId FK; blob ydoc "Yjs state vector/update"; int updatedAt; text indexedTitle; text indexedDance }
 ```
 
-> **Reference data (client bundle, not D1):** `Dance` metadata, the `LibraryFigure` catalog (default attributes), and the **standard** attribute kinds. Versioned by `schemaVersion`. **User-defined** attribute kinds live in D1.
+> **CRDT document (Yjs, per routine — not D1 rows):** `Y.Map` routine-body → `Y.Array` sections → `Y.Array` figures → `Y.Array` attributes `{kind,count,role?,value}`; `Y.Array` annotations (+ anchors + replies); `Y.Map` user-defined kinds. **Reference data (bundle):** dances, library figures, standard attribute kinds. The DO is the authority; D1 `Snapshot` is a derived projection for list/search/export/cold-start.
 
-### Mutation + undo flow
-Unchanged from v1 in shape (optimistic apply with client ULID → RPC mutate → Worker `authorizeOp` + quota → tx applies change + appends EditOp + bumps `updatedAt` → authoritative response; undo finds the actor's latest non-undone op, applies its inverse iff no later op touches its footprint, else refuses).
+### Sync + permission flow
+Open routine → client connects to the routine's DO → DO verifies Clerk JWT + looks up Membership/role in D1 → DO streams Yjs updates (read-only for viewers; structure-writable for editors; annotation-writable for commenters+) → local `UndoManager` provides per-user undo → DO snapshots to D1 periodically.
 
 ---
 
 ### Task Detail — Milestone 0: Foundation
-*(unchanged from v1 — the foundation is model-agnostic)*
 
-#### Task 0.1: Initialize the monorepo
-**Files:** `pnpm-workspace.yaml`, `package.json`, `.nvmrc`, `biome.json`, `tsconfig.base.json`, `.gitignore`
-- [ ] Workspace lists `packages/*` + `apps/*`; `.nvmrc` 22; root `package.json` `"packageManager":"pnpm@9","type":"module"`, scripts delegate with `pnpm -r`.
-- [ ] `biome.json` (formatter + linter, `noExplicitAny: error`); `tsconfig.base.json` strict, Bundler resolution, ES2022.
-- [ ] `.gitignore` (node_modules, dist, .wrangler, .dev.vars, coverage, playwright-report, test-results).
-- [ ] `pnpm install && pnpm biome check .` clean → commit `chore: initialize pnpm monorepo with Biome + strict TS`.
+#### Task 0.1: Monorepo — `pnpm-workspace.yaml`, root `package.json` (`pnpm@9`, ESM, `pnpm -r` scripts), `.nvmrc` 22, `biome.json` (`noExplicitAny:error`), `tsconfig.base.json` (strict, Bundler, ES2022), `.gitignore`. Verify `pnpm install && pnpm biome check .` → commit `chore: initialize pnpm monorepo with Biome + strict TS`.
+#### Task 0.2: Scaffold `@ballroom/domain` (deps `zod`, `ulidx`, **`yjs`**; dev `vitest`, `fast-check`) + `@ballroom/contract`. Verify test + typecheck → commit `chore: scaffold domain + contract packages`.
+#### Task 0.3: Worker + Durable Object + D1 — Wrangler config (`staging`/`production`, `DB` D1 binding, **a `ROUTINE_DO` Durable Object binding**, SPA assets); Hono `GET /api/health → {ok:true}`; a minimal **DO with a WebSocket echo** (`/api/routine/:id/sync`); failing health + DO-echo tests (`vitest-pool-workers`) → PASS → commit `feat(worker): Hono health + Durable Object sync echo + D1 binding`.
+#### Task 0.4: Web SPA + Clerk + verified call — Vite + React + Clerk; `/api/me` returns verified `sub`; Worker `auth/` verifies JWT networklessly; failing integration test (mint JWT; 401 on missing) → PASS → commit `feat: Clerk-gated SPA + networkless JWT verify`.
+#### Task 0.5: CI — GitHub Actions (pnpm + Node 22, install, biome, typecheck, `pnpm -r test`); open PR; confirm green → commit `ci: lint + typecheck + unit/integration tests on PR`.
 
-#### Task 0.2: Scaffold `domain` + `contract`
-- [ ] `@ballroom/domain` (`"main":"src/index.ts"`, deps `zod`,`ulidx`; dev `vitest`,`fast-check`), `@ballroom/contract` (deps domain + zod). Verify `pnpm --filter @ballroom/domain test` + `pnpm -r typecheck` → commit `chore: scaffold domain + contract packages`.
-
-#### Task 0.3: Scaffold the Worker (Hono + assets + empty D1)
-- [ ] Wrangler config (`staging`/`production`, `DB` D1 binding, SPA assets), Hono `GET /api/health → {ok:true}`, failing health test (`vitest-pool-workers`) → PASS → commit `feat(worker): Hono health endpoint + D1 binding + SPA assets`.
-
-#### Task 0.4: Web SPA + Clerk + verified call
-- [ ] Vite + React + Clerk; `/api/me` returns verified `sub`; Worker `auth/` verifies JWT networklessly; failing integration test (mint JWT; 401 on missing) → PASS → commit `feat: Clerk-gated SPA + networkless JWT verify`.
-
-#### Task 0.5: CI
-- [ ] GitHub Actions on PR + main: pnpm + Node 22, install, biome, typecheck, `pnpm -r test`. Open PR; confirm green → commit `ci: lint + typecheck + unit/integration tests on PR`.
-
-**M0 exit:** repo boots; CI green; verified call round-trips; D1 binding present.
+**M0 exit:** repo boots; CI green; verified call round-trips; a client opens a WebSocket to the routine DO and echoes; D1 binding present.
 
 ---
 
 ### Task Detail — Milestone 1: Domain Core (walking skeleton)
-All in `packages/domain` — pure, TDD, unit + property tests. **Proves the v2 attribute/notation + op-log model.**
+All in `packages/domain` — pure, TDD, unit + property tests. **Proves the attribute model + CRDT document + per-user undo, in-memory (no network).**
 
-#### Task 1.1: ULID ids — `newId()`, `isId()`. → commit `feat(domain): ULID ids`.
-#### Task 1.2: Dance metadata — `DANCES` (Waltz/Viennese 3/4 phraseBeats 6; rest 4/4 phraseBeats 8; all `travelling`). → `feat(domain): dance metadata`.
-#### Task 1.3: ATTRIBUTE_REGISTRY (standard + merge)
-**Produces:** `ATTRIBUTE_REGISTRY: AttrKindDef[]` (standard kinds: step/sway/turn/rise/position), `mergeKinds(standard, userDefined)`, `kindsForDance(d)`, `valuesFor(kind)`, `isKnownValue`, `REGISTRY_VERSION`, `VALUE_ALIASES` (`CBP→CBMP`).
-- [ ] Failing test: `kindsForDance("tango")` excludes `rise`; `step` footwork includes `H`; `turn` includes `eighth_L`; `rise` includes `NFR`; position single vs body-action multi; `CBP`→`CBMP`; body values carry `[confirm]`; a user-defined kind merges in and is queryable. → implement → `feat(domain): ATTRIBUTE_REGISTRY (standard + user-defined merge)`.
-#### Task 1.4: Float-count timing
-**Produces:** `countToBar(count, dance)`, `countLabel(count, dance)` rendering integer beat (modulo `phraseBeats`) + fraction (`a`/`&`/`e`, `i`-subdivisions `ia`/`ai`), `barsForFigure(attrs, dance, role)` = `ceil(maxCount/beatsPerBar)`.
-- [ ] Failing test: Waltz count 6 → bar 2; count 4 → 2 bars; Foxtrot count 8 → 2; `3.5` → "3&", `3.25` → "3a", `3.75` → "3e", `3.125` → "3ia", `3.375` → "3ai" (per the [confirm] mapping, Q-D3); per-role derivation independent; empty → 0; out-of-phrase wraps via modulo. → implement → `feat(domain): float-count timing + fraction notation`.
-#### Task 1.5: Fractional sort keys — `keyBetween(a,b,actorId)` (lexicographic, actor tiebreak, no rebalance). → `feat(domain): fractional sort keys`.
-#### Task 1.6: Figure-variant resolution
-**Produces:** `resolveVariant(base: Attribute[], variant: {overrides, removals, renamed})` → the effective attribute set; "inherit later base additions" = base attrs not in `removals`, with `overrides` applied.
-- [ ] Failing test: variant inherits a newly-added base attribute; a removed step stays removed; an overridden value wins over the base; renaming the figure doesn't alter inheritance; resolution is pure/deterministic. → implement → `feat(domain): figure-variant resolution`.
-#### Task 1.7: Op registry + apply/invert
-**Produces:** `OP_REGISTRY` (`kind → {apply, invert, footprintOf}`), `applyOp`, `invertOp`. M1 kinds: `attribute.set`, `attribute.add`, `attribute.remove`, `figure.add` (compound: figure + default attributes), `figure.remove`, `figure.fork` (variant create), `section.add`, `section.rename`, `figure.reorder`. `Footprint = {entities[], versionBefore}`.
-- [ ] Failing round-trip test (per kind, apply→invert restores deep-equal; `figure.add` undoes figure + its attributes as one op; `figure.fork` undoes the variant; `footprintOf` lists every touched id). → implement → `feat(domain): op registry, apply/invert, footprint`.
-#### Task 1.8: Property-based op invertibility (fast-check) — `invert(apply)` round-trips for every generated op of every registered kind (auto-covers user-defined kinds). → `test(domain): property-based op invertibility`.
-#### Task 1.9: Footprint-based undoability — `isUndoable(target, laterOps)` (`superseded`/`dependent`), `latestUndoableForUser`, `nextRedoForUser`.
-- [ ] Failing tests: (a) field edit then nothing → undoable; (b) edit-twice → first `superseded`; (c) A adds figure, B annotates inside → A's undo `dependent`; (d) cascade footprint includes attributes/annotations; (e) redo cursor re-targets, cleared by a new edit. → implement → `feat(domain): footprint-based undoability + redo cursor`.
-#### Task 1.10: Deep routine fork — `forkRoutine(routine, byUserId)` (new ids throughout, sections/figures/variants/attributes preserved, `forkedFromRoutineId` set, annotations omitted per D5 default).
-- [ ] Failing test: fork has new ids, structure + attributes preserved, lineage set, no annotations carried. → implement → `feat(domain): deep routine fork`.
+#### Task 1.1: ULID ids → `feat(domain): ULID ids`.
+#### Task 1.2: Dance metadata (`DANCES`; Waltz/Viennese 3/4 phraseBeats 6; rest 4/4 phraseBeats 8; `travelling`) → `feat(domain): dance metadata`.
+#### Task 1.3: ATTRIBUTE_REGISTRY (+ merge) — `ATTRIBUTE_REGISTRY`, `mergeKinds(standard,userDefined)`, `kindsForDance`, `valuesFor`, `VALUE_ALIASES` (`CBP→CBMP`).
+- [ ] Failing test: Tango excludes `rise`; `step` includes `H`; `turn` includes `eighth_L`; `rise` includes `NFR`; position single vs body-action multi; `CBP→CBMP`; body values `[confirm]`; a user-defined kind merges in. → `feat(domain): ATTRIBUTE_REGISTRY (standard + user-defined merge)`.
+#### Task 1.4: Float-count timing — `countToBar`, `countLabel` (integer beat mod `phraseBeats` + fraction `a`/`&`/`e`, `i`-subdivisions `ia`/`ai`), `barsForFigure(attrs, dance, role)` = `ceil(maxCount/beatsPerBar)` per role.
+- [ ] Failing test: Waltz count 6 → bar 2; count 4 → 2 bars; Foxtrot count 8 → 2; `3.5`→"3&", `3.25`→"3a", `3.75`→"3e", `3.125`→"3ia", `3.375`→"3ai" (per Q-D3); per-role independent; empty → 0; wraps mod phrase. → `feat(domain): float-count timing + fraction notation`.
+#### Task 1.5: sortKey/order helpers — `keyBetween(a,b,actorId)` (lexicographic, actor tiebreak) for ordered lists not covered by Yjs array semantics → `feat(domain): fractional sort keys`.
+#### Task 1.6: CRDT document schema — `doc.ts`: build a routine Yjs doc (`Y.Map`/`Y.Array` per §9), with typed helpers `addSection/addFigure/setAttribute/addAnnotation/...` and typed reads.
+- [ ] Failing test: helpers create the right Yjs shape; reads return typed views; ids are ULIDs; soft-delete flips a field (not array removal). → `feat(domain): CRDT document schema + typed helpers`.
+#### Task 1.7: CRDT convergence (property-based, fast-check) — generate random edit sequences applied in different orders / on two replicas; assert **convergence** (both replicas equal after exchanging updates), **commutativity**, **idempotence** of duplicate updates.
+- [ ] Failing property until invariants hold → `test(domain): CRDT convergence/commutativity/idempotence`.
+#### Task 1.8: Per-user undo — wrap a Yjs `UndoManager` scoped to a user origin; `undo()/redo()` affect only that user's changes; a remote concurrent edit is preserved across an undo.
+- [ ] Failing test: A's undo reverts A's last change only; B's interleaved edit survives; redo re-applies; a fresh edit clears redo. → `feat(domain): per-user undo via UndoManager`.
+#### Task 1.9: Zod schemas (derived from the merged registry; lenient read vs strict write; timing range per meter) → `feat(domain): registry-derived Zod schemas`.
 
-**M1 exit:** vocabulary (standard + extensible), float-count timing, ordering, variant resolution, op apply/invert, footprint undoability, fork — implemented and unit + property tested, zero I/O.
+**M1 exit:** the attribute model, float-count timing, the CRDT document + convergence, and per-user undo are proven in-memory with unit + property tests, zero network.
 
 ---
 
 ### Milestones 2–9 (outline — each becomes its own detailed plan)
-- **M2 — Persistence + notation CRUD.** Drizzle tables per §9, migrations, `repo/`, Hono routes (routine/section/figure/variant/attribute), op-log append-in-tx, `store/` seam + Assemble/Figure-Timeline/Attribute-Editor. Tests: vitest-pool-workers integration; component; core authoring E2E.
-- **M3 — Auth, membership, permissions & quota.** User mapping, onboarding, Membership (viewer/commenter/editor + owner), `authorizeOp` truth table, **quota check on create**, invite issue/redeem, Share. Tests: permission + quota enforcement + forged-request rejection; invite lifecycle.
-- **M4 — Undo / redo.** Worker endpoints over `isUndoable`; per-user cursors; toasts/refusal. Tests: cascade + cross-user + variant undo at integration + E2E.
-- **M5 — Annotations.** Unified annotation + replies; anchors (point/figure/variant; query per Q-ANNO); timeline + journal. Tests: anchor integrity (incl. query anchors), author-color, commenter-can-annotate, LWW.
-- **M6 — Fork & variants UX.** Routine fork (Path A); figure-variant authoring + inheritance UI; lineage. Tests: fork copies structure not annotations; variant inherits base additions; override/removal persist.
-- **M7 — Lanes + sample/template + search (+ custom kinds if Q-ATTR=yes).** Registry-derived Lanes; sample + template; search; user-defined-kind creation. Tests: Lanes across counts; custom kind propagates to editor/lanes/info.
-- **M8 — Export / import + ops.** schemaVersion'd round-trip + migration ladder; Sentry; EXPLAIN gate; staging/prod.
+- **M2 — Persistence + sync + notation CRUD.** DO hosts the Yjs doc; WebSocket sync (Hibernatable); permission at the connection/update boundary; D1 index + snapshotting; `store/` seam; Assemble/Timeline/Attribute-Editor. Tests: two-client convergence over the real DO; permission (editor/commenter/viewer) at the boundary; snapshot round-trip; core authoring E2E.
+- **M3 — Auth, membership, permissions & quota.** User mapping; onboarding; Membership; `authorizeConnection`; **quota on create**; invite issue/redeem; Share. Tests: connection authorization truth table + forged-connection rejection; quota enforcement; invite lifecycle.
+- **M4 — Undo/redo UX.** Wire UndoManager; toasts; optional diverged message. Tests: per-user undo across two live clients (E2E).
+- **M5 — Annotations.** Unified annotation + replies; anchors (point + figure); timeline + journal. Tests: anchor integrity; commenter-can-annotate; merge of concurrent annotations.
+- **M6 — Custom attribute kinds.** Creation UI; propagation to editor/lanes/info; validation; kinds sync via the doc. Tests: a new kind appears for all clients; validates.
+- **M7 — Lanes + sample/template + search.** Registry-derived Lanes; sample + template; search over snapshots.
+- **M8 — Export / import + ops.** schemaVersion'd round-trip from snapshots + migration ladder; Sentry; EXPLAIN gate; staging/prod.
 - **M9 — PWA + a11y + cross-browser.**
 
 ---
 
 ## 10. Testing Strategy
 
-Quality and a detailed testing plan are a non-negotiable owner requirement. The pyramid, tooling, CI, and fixtures below are **unchanged in shape** by the v2 review; what changed is **the subjects under test** (attributes-on-a-count not typed step-slots; sections not sides; variants and fork; unified annotations with query anchors; classic roles; quota). The new highest-risk areas: **undo/op-log footprint logic (incl. cascade + cross-user + variant), the attribute/variant-resolution model, and Worker-side permission + quota enforcement.**
+Quality and a detailed testing plan are a non-negotiable owner requirement. **The CRDT decision brings back the CRDT/merge test surface that the earlier online-only draft had deleted** — convergence/commutativity/idempotence property tests, and *sync-boundary* permission tests — while removing the bespoke op-log/footprint tests (that machinery is gone). The new highest-risk areas: **CRDT convergence + the sync/permission boundary, the attribute model, and quota enforcement.**
 
-> **Annex status:** the retained testing plan (`docs/superpowers/specs/2026-06-24-testing-plan.md`) predates the v2 redesign. Its per-screen coverage matrix is still a useful checklist of *surfaces*, but several rows (two-chart, coach role, side auto-naming, typed slots) are superseded by this section. It carries a banner saying so and will be re-pinned once Q-FORK/Q-ATTR/Q-ANNO settle.
+> **Annex status:** the retained testing plan predates v2/v3; it's a useful per-screen *surface* checklist, but rows tied to two-chart/coach/side/typed-slots/LWW-op-log are superseded by this section (its banner says so).
 
 ### 10.1 Philosophy
-1. **Push correctness down the pyramid** — the hardest logic (op-log invert/undo, float-count timing, variant resolution, fork, registry/Zod validation) is pure `domain/` with no I/O, tested exhaustively + property-based.
-2. **Test the real runtime where a mock would lie** — Worker/D1 inside `workerd` against real D1 via `@cloudflare/vitest-pool-workers` + `applyD1Migrations()`.
-3. **Contract types-first, runtime-validated second** — Hono RPC `typeof app` + shared Zod; CI fails on drift.
-4. **E2E proves journeys and cross-process invariants**; smallest layer, most guarded.
-5. **Every surface is traced** against the wireframe inventory; deferred items listed in §11.
+1. **Push correctness down the pyramid** — the attribute model, float-count timing, the **CRDT document + convergence**, per-user undo, registry/Zod are pure `domain/` (Yjs runs in-memory), tested exhaustively + property-based.
+2. **Test the real runtime where a mock would lie** — the **Durable Object + sync + permission boundary** and the D1 index run inside `workerd` via `@cloudflare/vitest-pool-workers` (real DO + D1, `applyD1Migrations()`).
+3. **Contract types-first, runtime-validated second** — Hono RPC `typeof app` (REST surface) + the shared CRDT-doc type + Zod; CI fails on drift.
+4. **E2E proves journeys and cross-process invariants** (incl. **two live clients converging**); smallest layer, most guarded.
+5. **Every surface is traced** against the wireframe inventory; deferred items in §11.
 6. **Color is never the only signal under test.**
 
-### 10.2 Pyramid & layer ownership
-- **Unit (pure `domain/`):** float-count timing & per-role bars; **variant resolution** (inherit/override/remove); op apply/invert + `apply(inverse(apply(op,s)))===s` (property-based, all kinds incl. user-defined); **footprint undoability** (reduces to "changed since"; refuses cross-user dependent; allows disjoint); per-user redo cursor; coalesced inverse; sortKey ordering; deep fork; registry/Zod (`NFR`/`H`/`⅛` valid; Tango omits rise; position single vs body-action multi; `CBP`→`CBMP`; unknown-value passthrough-on-read vs reject-on-write; **user-defined kind merges & validates**; count fraction mapping per Q-D3); schemaVersion migration ladder.
-- **Worker / D1 (`vitest-pool-workers`):** every mutation persists rows **and** appends exactly one `EditOp` (`seq` monotonic); routine-load returns the full tree (sections→figures(+variants)→attributes→annotations) in one fetch; routine-list returns only the caller's memberships. **Permissions:** viewer rejected on any write; commenter accepted on annotate/reply, rejected on structure; editor succeeds; non-member rejected; only owner deletes routine. **Quota:** creating a 4th owned routine on a free plan is rejected with the upsell error. **Undo endpoint:** inverse applied, op marked, undo logged; stale/cross-user → defined refusal; soft-delete round-trips. **LWW.** **Invites** issue/redeem/expiry. **Fork/variant** routes copy structure (not annotations) and resolve variant inheritance. **Sample/template** read-only. **Export/import** round-trip. **EXPLAIN QUERY PLAN** on list/load/membership/op-log-tail/quota-count → index, no SCAN.
-- **Component (browser mode + Testing Library + axe):** attribute editor (chips from merged registry; re-tap clears; Tango hides rise; user-defined kind appears); timeline role flip; Lanes across counts; section rename; variant badge; annotation create from timeline + journal with anchor picker; empty states; viewer/commenter affordance gating; toasts incl. "Undone" + quota upsell.
-- **E2E (Playwright):** full authoring journey (create → section → figure/variant → place attributes → switch role); concurrent LWW (two contexts, sequenced writes); cross-user undo + refusal; permission (viewer/commenter blocked; forged write rejected by Worker); **quota** (free cap blocks 4th, upsell shown); invite redemption; fork a routine + a figure variant (inheritance visible); annotation with a query anchor (per Q-ANNO); export→import; PWA install/app-shell-offline; tab nav.
-- **Contract:** compile-time `typeof app` (drift fails `tsc`); runtime Zod both ends; schema-drift CI gate.
+### 10.2 Layer ownership
+- **Unit / property (pure `domain/`, in-memory Yjs):** float-count timing & per-role bars; **CRDT convergence/commutativity/idempotence** over random shuffled/partitioned edit sequences (fast-check); **per-user `UndoManager`** (undo affects only own changes; remote edit preserved; redo cursor); document-schema helpers + soft-delete; registry/Zod (`NFR`/`H`/`⅛` valid; Tango omits rise; position single vs body-action multi; `CBP→CBMP`; unknown-value passthrough-on-read vs reject-on-write; **user-defined kind merges & validates**; count fraction mapping per Q-D3); migration ladder.
+- **Worker / DO / D1 (`vitest-pool-workers`):** **two simulated clients converge** through the real DO; **permission at the boundary** — editor structure update accepted, commenter structure update rejected / annotation accepted, viewer read-only, non-member connection rejected, forged connection rejected; **quota** (4th owned routine on free → rejected with upsell); invite issue/redeem/expiry; **snapshotting** (DO → D1 projection round-trips; list/search read the snapshot); export/import; **EXPLAIN QUERY PLAN** on list/search/membership/quota-count → index, no SCAN.
+- **Component (browser mode + Testing Library + axe):** attribute editor (chips from merged registry; re-tap clears; Tango hides rise; **a newly-created user-defined kind appears**); timeline role flip; Lanes across counts; section rename + preset quick-fills; annotation create from timeline + journal with the point/figure anchor picker; empty states; viewer/commenter affordance gating; toasts incl. "Undone" + quota upsell.
+- **E2E (Playwright):** full authoring journey (create → section → figure → place attributes → switch role); **two live browser contexts editing the same routine converge** (the CRDT replacement for the old LWW test); per-user undo across two clients; permission (viewer/commenter blocked; **forged sync connection rejected by the DO**); **quota** (free cap blocks the 4th, upsell shown); invite redemption; annotation (point + figure); export→import; PWA install/app-shell-offline; tab nav.
+- **Contract:** compile-time `typeof app` + shared CRDT-doc type (drift fails `tsc`); runtime Zod both ends; schema-drift CI gate.
 
-### 10.3 Tooling, CI, fixtures (unchanged)
-- **Vitest projects:** `domain` (Node + fast-check), `worker` (`vitest-pool-workers`, real bindings), `component` (browser mode + `vitest-axe`). **Playwright:** `chromium-desktop`, `mobile-chrome`, `mobile-safari`.
-- **Cloudflare test config:** per-suite isolated D1; `applyD1Migrations()`; an `EXPLAIN QUERY PLAN` helper asserting `USING INDEX`, no `SCAN`.
-- **Clerk in tests:** inject test JWKS/PEM; `makeTestJWT`; the real verify + `sub`→user runs against minted tokens. E2E uses Clerk testing-mode/test tokens seeded per fixture.
-- **CI:** PR fast gate (typecheck+lint → unit/fast-check → contract+drift → worker/D1 incl. EXPLAIN → component+axe → E2E smoke). Merge/nightly: full Playwright matrix + Lighthouse-CI + staging→prod. No arbitrary sleeps; deterministic auth + seed; LWW tests sequence writes; `retries:1` with trace.
-- **Coverage gates:** domain ≥ 95%; worker routes ≥ 90% with *every undo, attribute/variant, permission, and quota edge case* covered; component/E2E by feature coverage against the surface inventory.
-- **Fixtures:** the read-only **sample routine** (sections, library + custom figures, a variant, attributes across kinds incl. one user-defined, a couple of annotations) defined once and reused across all layers; pure factories (`makeRoutine/Section/Figure/Variant/Attribute/Membership/Annotation/Reply/EditOp`); `seedDb(...)`; `makeTestJWT` + `authedContext(role)` with users matching the seed (so permission/quota/undo tests are realistic).
-- **A11y / perf / cross-browser:** axe on every screen (zero serious/critical); full keyboard nav; color-not-sole-signal; ≥44px; reduced-motion; app-shell <~2s (Lighthouse-CI); one-RPC routine load; mobile-safari + mobile-chrome run core journeys; PWA install + app-shell-offline.
+### 10.3 Tooling, CI, fixtures
+- **Vitest projects:** `domain` (Node + fast-check + in-memory Yjs), `worker` (`vitest-pool-workers`, **real Durable Object + D1**), `component` (browser mode + `vitest-axe`). **Playwright:** `chromium-desktop`, `mobile-chrome`, `mobile-safari`.
+- **Cloudflare test config:** per-suite isolated D1; `applyD1Migrations()`; DO instances per test; an `EXPLAIN QUERY PLAN` helper (index, no SCAN).
+- **Clerk in tests:** injected test JWKS/PEM; `makeTestJWT`; the real verify + role lookup runs at the DO boundary against minted tokens. E2E uses Clerk testing-mode tokens seeded per fixture.
+- **CI:** PR fast gate (typecheck+lint → unit/property → contract+drift → worker/DO/D1 incl. EXPLAIN → component+axe → E2E smoke incl. one two-client convergence). Merge/nightly: full Playwright matrix + Lighthouse-CI + staging→prod. No sleeps; deterministic auth + seed; convergence asserted by exchanging updates (not racing); `retries:1` with trace.
+- **Coverage gates:** domain ≥ 95% (holds the CRDT + timing correctness); worker/DO ≥ 90% with *every convergence, permission-boundary, and quota edge case* covered; component/E2E by surface coverage.
+- **Fixtures:** the read-only **sample routine** (sections, library + custom figures, attributes across kinds incl. one user-defined, a couple of annotations) defined once and reused across layers; pure factories; `seedDb(...)` for the D1 index + a seeded Yjs snapshot; `makeTestJWT` + `authedContext(role)` with users matching the seed (so permission/quota/convergence/undo tests are realistic).
+- **A11y / perf / cross-browser:** axe on every screen (zero serious/critical); keyboard nav; color-not-sole-signal; ≥44px; reduced-motion; app-shell <~2s (Lighthouse-CI); mobile-safari + mobile-chrome core journeys; PWA install + app-shell-offline.
 
 ---
 
-## 11. Out of Scope (v1) — explicit YAGNI cuts
+## 11. Out of Scope (v1) — explicit YAGNI cuts (all additive on the CRDT foundation)
 
-- **Offline-first / offline data** (CRDT, Durable Objects, WebSocket sync, IndexedDB store) — online-only in Path A; offline *read* is the next increment. *(Path B would pull a CRDT in alongside fork — Q-FORK.)*
-- **Concurrent fork-merge-back / diff between forks** — fork creates an independent copy (lineage pointer only); no merge engine in v1.
-- **Billing integration / payment provider** — the pro plan and quota *enforcement* are in v1, but charging is deferred (Q-PLAN).
-- **Ownership transfer.**
+- **Offline *editing*** (local CRDT persistence + sync-on-reconnect) — online-first in v1; the CRDT makes this additive, not a rewrite.
+- **Fork & figure variants** (routine fork; `baseFigureId` variant + inherit-later-additions) — seams reserved; mechanic deferred (Q-FORK/Q-ATTR e).
+- **Query anchors** for annotations ("all rising steps", "all left-turning figures") — need a predicate language; v1.1 (Q-ANNO).
+- **Billing integration / payment provider** — quota *enforcement* is in v1; charging is deferred (Q-PLAN). Ownership transfer deferred.
+- **Account-level (cross-routine) user-defined attribute kinds** — v1 kinds are routine-scoped.
 - **Latin / spot dances** — `travelling` flag present; v1 ships Standard only.
-- **Per-step alignment** (could later be a user-defined attribute kind), separate feet-vs-body turn amounts, richer footwork/turn magnitudes beyond the confirmed set.
+- **Per-step alignment** (could later be a user-defined kind), separate feet-vs-body turn amounts, richer footwork/turn magnitudes beyond the confirmed set.
 - **Cross-routine annotations**, annotation search.
-- **Query-anchor dimensions beyond the v1 set** (Q-ANNO decides which ship).
 - **Media attachments** — v1.1.
 - **Notifications, read/unread, reply editing, threading depth.**
-- **Syllabus-system attribution (ISTD/IDTA/WDSF/American)**, amalgamations as a first-class entity, precede/follow compatibility validation.
+- **Syllabus-system attribution**, amalgamations as a first-class entity, precede/follow validation.
 - **Themes/backdrop settings**, per-member fine-grained access editing, **section reorder**, **native app wrapper.**
-
-> The cheap-now CRDT *seams* (client ULIDs, `schemaVersion`, soft-delete tombstones, footprint/op-registry op-log) are still built and tested in v1, so Path B remains an additive future step rather than a rewrite.
 
 ---
 
 ## 12. Open Questions & Decisions Needed
 
-The v2 review resolved the old questions and opened new ones. Prior history (the v2/v3 "how we got here" archaeology) has been dropped as noise — only live decisions remain. **★ = blocks the relevant subsystem.**
+The PR review resolved the prior keystones. Remaining items are sub-decisions opened by the CRDT choice, plus carried-over domain confirms.
 
-### ★ New keystone & model decisions (from the PR review)
-- **★ Q-FORK — How are fork & figure-variants implemented in v1?** Recommendation: **Path A** (server-side routine fork + variant base/override resolution, online-only, no CRDT) now; defer **Path B** (CRDT-based concurrent/offline fork-merge) to when offline-write is scheduled. Decides whether v1 stays online-only (§5.3, §6, §11).
-- **★ Q-ATTR — Confirm the attribute notation model.** (a) Attributes-on-a-float-count replace typed step-slots (D17) — confirm. (b) How does leader/follower map on top — a `role?` per attribute (shared unless overridden), or two parallel attribute sets? (c) Which standard kinds ship (step/sway/turn/rise/position + alignment?). (d) Does v1 ship the **user-defined kind creation UI**, or only the extensible mechanism + standard set? (e) Variant inheritance semantics (live-inherit vs copy-on-write) and how they compose with undo.
-- **★ Q-ANNO — Unified annotation anchors.** Which anchor types ship in v1 — `point`, `figure`, `figureVariant` for sure; are **query anchors** ("all rising steps", "all left-turning figures") v1 or v1.1? They are the most powerful and the most complex (they need a predicate language over attributes).
-- **Q-ROLE — Confirm the flat classic role model** (viewer/commenter/editor + owner; editors edit structure *and* annotations; no leader/follower user role; per-device view preference). (D11/D19)
-- **Q-SECTION — Sections are free-text-named** (D18). Offer optional preset quick-fills ("Long Side", "Corner", "Intro")? Any need to keep a structured floor-position concept for alignment, or is alignment-per-figure enough?
-- **Q-PLAN — Plans/quota.** Free cap = **3 owned routines** — confirm the number and that it counts *owned* (not shared-in) routines. Pro tier limits + billing provider (Stripe?) deferred — confirm deferral.
+### ✅ Resolved on PR #9
+- ✅ **Roles** → flat `viewer`/`commenter`/`editor` + `owner` (D11).
+- ✅ **Notation** → attributes on a float-count timeline; **optional role per attribute**; standard kinds step/sway/turn/rise/position (alignment stays per-figure) (D17).
+- ✅ **Custom attribute kinds** → **creation UI in v1**, routine-scoped (D22).
+- ✅ **Variant inheritance** → **postponed** (D12; seam reserved).
+- ✅ **Annotations** → unified; v1 anchors **point + figure**; **query anchors postponed** (D20).
+- ✅ **Sections** → user-named + optional preset quick-fills; **alignment-per-figure is enough**, no floor concept (D18).
+- ✅ **Plans/quota** → free cap **3 owned routines**; billing deferred (D21).
+- ✅ **Fork** → **do it with CRDTs** so it isn't rebuilt; **build the CRDT foundation now**, online-first, fork/offline mechanics later (D12/D13).
 
-### Carried-over domain question
-- **★ Q-D4 — Body position + body-action vocabulary (pending the owner's coach).** Confirm position set (`closed`/`promenade`/`wing`), body-action `CBM`/`CBMP` multi-select, "CBP" = CBMP typo. Doesn't block the build (registry stub; values are data).
-- **Q-D3 — Count fraction mapping.** Confirm `a`=.25, `&`=.5, `e`=.75 and `i`-subdivisions (`ia`=.125, `ai`=.375). This **inverts the common "1 e & a" ordering**, so flag if `e`/`a` should swap.
-- **Q-D5 — Does a routine fork carry annotations?** Default **no** (fresh artifact). Cheap to flip.
-- **Q-M1/2/3 — Media (v1.1):** types, caps, which entities.
-- **Q-SC1/2 — Latin/spot & American** target versions (forward-compat; `travelling` flag present).
+### ★ New sub-decisions opened by the CRDT choice
+- **★ Q-CRDT — CRDT library & topology.** Recommendation: **Yjs** (mature ordered-list CRDT; strong Cloudflare-DO ecosystem) hosted in a **Durable Object per routine** (the sync + permission boundary), with **D1 snapshots** for list/search/export. **Consequence to confirm:** DOs require **Workers Paid (~$5/mo)** — accept the $0→~$5 floor? Alternative (cheaper, more limiting): store/merge Yjs updates in D1 from the Worker with polling, no DO — but loses live multi-client sync. Sub-question: split the doc into `structure` + `annotations` sub-docs so commenters can write annotations but not structure?
+- **★ Q-UNDO — Undo machinery.** Recommendation: use the CRDT's **native `UndoManager`** (per-user undo, merges correctly) and **drop the bespoke op-log/footprint-undoability** from earlier drafts. Confirm we don't need the "can't undo — others built on this" *refusal* semantics (the CRDT just merges); a soft "your change was superseded" message can layer on if wanted.
+- **Q-OFFLINE-NEXT — Sequencing.** Online-first now; when does offline *editing* (local Yjs persistence + sync-on-reconnect) land — v1.1, or later? (Cheap once the foundation exists.)
 
-### Settled infra defaults (flippable before code)
-Q-S1 live-refresh → polling (D10); Q-S2 undo granularity → coalesce/compound/reorder (D13); Q-A1 Clerk boundary clean (D9); Q-A2 color collisions tolerated (D14).
+### Carried-over confirms
+- **★ Q-D4 — Body position + body-action vocabulary (pending the owner's coach).** Confirm `closed`/`promenade`/`wing`, `CBM`/`CBMP`, "CBP" = CBMP typo. Doesn't block (registry stub; values are data).
+- **Q-D3 — Count fraction mapping.** Confirm `a`=.25, `&`=.5, `e`=.75 + `i`-subdivisions — this **inverts the common "1 e & a" order**, so flag if `e`/`a` should swap.
+- **Q-M1/2/3 — Media (v1.1)** types/caps/entities. **Q-SC1/2 — Latin/spot & American** target versions.
+
+### Settled infra defaults
+Q-A1 Clerk boundary clean (D9); Q-A2 color collisions tolerated (initials primary).
 
 ---
 
 ## 13. Appendix: Media (v1.1)
 
-Not in v1. Annotations carry `media[]`; UI shows "coming soon". When built (v1.1): R2 with Worker-issued **presigned PUT URLs** (browser→R2 directly, zero egress); client-side compression; metadata holds the object key. Upload inline while online (no background-sync; iOS Safari lacks Background Sync — fallback is an in-app retry queue). **Q-M1/2/3** cover types/caps/entities.
+Not in v1. Annotations carry `media[]`; UI shows "coming soon". When built (v1.1): R2 with Worker-issued **presigned PUT URLs** (browser→R2, zero egress); client-side compression; metadata holds the object key. Upload inline while online (iOS Safari lacks Background Sync — fallback is an in-app retry queue). **Q-M1/2/3** cover types/caps/entities.
 
 ---
 
 ## 14. Further detail & sources
 
-This plan is self-contained for building v1. The documents below are **retained for detail this plan does not reproduce in full**.
-
 | Document | What it adds | Status note |
 |---|---|---|
-| [`docs/superpowers/specs/2026-06-24-testing-plan.md`](superpowers/specs/2026-06-24-testing-plan.md) | The verbatim per-screen surface coverage matrix (one row per interaction with key assertions) | **Predates the v2 redesign** — useful as a surface checklist; rows tied to two-chart/coach/side/typed-slots are superseded by §10. To be re-pinned after Q-FORK/Q-ATTR/Q-ANNO. |
-| [`docs/design/Ballroom Builder.dc.html`](design/Ballroom%20Builder.dc.html) | The wireframe prototype — the product sketch / feature inventory | Sketch, not requirements. |
-| `research/domain.md` | Ballroom domain reference (counts, footwork, alignment, terminology systems) | Authority behind §3. |
-| `research/platform.md` | Platform/architecture research (Cloudflare stack, toolchain) | Behind §6/§8. |
-| `research/design-spec.md` | The exhaustive wireframe enumeration | The surface checklist the matrix traces against. |
-| `research/critique-{domain,sync,product,testing,scope}.md` | Five adversarial critiques | Drove the original simplification. |
-| `research/extensibility-{attributes,crdt,undo}.md` | Three extensibility reviews | Behind the op-log/ULID/soft-delete seams that now also underpin Path B. |
+| [`docs/superpowers/specs/2026-06-24-testing-plan.md`](superpowers/specs/2026-06-24-testing-plan.md) | The verbatim per-screen surface coverage matrix | **Predates v2/v3.** Useful surface checklist; rows tied to two-chart/coach/side/typed-slots/op-log are superseded by §10. |
+| [`docs/design/Ballroom Builder.dc.html`](design/Ballroom%20Builder.dc.html) | The wireframe prototype / feature inventory | Sketch, not requirements. |
+| `research/domain.md` | Ballroom domain reference | Authority behind §3. |
+| `research/platform.md` | Platform/architecture research | Behind §6/§8 (incl. CRDT/DO options). |
+| `research/extensibility-crdt.md` | The CRDT extensibility review | **Now load-bearing** — the basis for the v3 foundation. |
+| `research/critique-sync.md` | The sync critique | **Now load-bearing** — its warning (no post-hoc cell rejection) shapes the §5.2/§6 permission boundary. |
+| `research/design-spec.md` | The exhaustive wireframe enumeration | Surface checklist. |
+| `research/critique-{domain,product,testing,scope}.md`, `research/extensibility-{attributes,undo}.md` | The remaining critiques/reviews | Background for the model + scope. |
 
-**Removed** (folded into this plan, no longer maintained separately): the original design specification, the implementation plan, and the consolidated open-questions document.
+**Removed** (folded into this plan): the original design spec, implementation plan, and consolidated open-questions doc.
 
 ---
 
-*End of plan (v2, owner-review pass). The architectural keystones (Q-FORK, Q-ATTR, Q-ANNO) are flagged in §12 for the next round of comments; M0 is execution-ready, M1 reflects the v2 notation model, and M2–M9 expand into their own detailed plans as reached.*
+*End of plan (v3, CRDT foundation). The product model (attributes, sections, annotations, roles, quota) is settled; the remaining open items (Q-CRDT topology/cost, Q-UNDO) are flagged in §12. M0 stands up the CRDT/DO skeleton; M1 proves the notation + CRDT model in-memory; M2 makes it real over the Durable Object.*
