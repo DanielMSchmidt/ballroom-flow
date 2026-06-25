@@ -6,6 +6,21 @@ gated on env vars and tested only on its negative path). To run the app for
 real and to deploy, complete the steps below. None of these block development
 of the pure domain core (Milestone 1).
 
+## Status (2026-06-25)
+
+| Item | State |
+|---|---|
+| D1 `ballroom-flow-staging` + `ballroom-flow-production` | ✅ created; `database_id`s wired into `wrangler.toml` |
+| Staging + production Workers | ✅ smoke-deployed and verified healthy (`/api/health` → `{ok:true}`, SPA + fallback OK) |
+| GitHub Environments `staging` + `production` | ✅ created |
+| `CLOUDFLARE_ACCOUNT_ID` (both GH environments) | ✅ set |
+| **`CLOUDFLARE_API_TOKEN` (both GH environments)** | ⬜ **TODO — you** (OAuth login can't be used in CI; see §3.2) |
+| **`CLERK_SECRET_KEY` (Wrangler secret, per env)** | ⬜ **TODO — you** (see §1) |
+| `production` required-reviewer rule | ⬜ optional |
+
+Until `CLOUDFLARE_API_TOKEN` is set, the deploy workflow self-skips the deploy
+step (green). You can always deploy manually with `wrangler deploy --env <env>`.
+
 ## 1. Clerk (authentication)
 
 1. Create a Clerk application at <https://dashboard.clerk.com>. Enable **Google**
