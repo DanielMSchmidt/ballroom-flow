@@ -13,7 +13,7 @@ import { importDomain } from "./__fixtures__";
 
 const STANDARD: DanceId[] = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"];
 
-describe.skip("US-002 Dance metadata registry", () => {
+describe("US-002 Dance metadata registry", () => {
   it("exposes exactly the 5 Standard travelling dances, all travelling:true", async () => {
     // Intent: only the 5 Standard dances exist in v1; each is travelling.
     // Arrange: import DANCES. Act: read its keys + travelling flags.
@@ -48,6 +48,30 @@ describe.skip("US-002 Dance metadata registry", () => {
     const { DANCES } = await importDomain();
     for (const id of STANDARD) {
       expect(DANCES[id].timeSignature).toBeTruthy();
+    }
+  });
+
+  // ── Extra edge cases (in the spirit of US-002, beyond the listed ACs) ──
+
+  it("contains no Latin/spot dances (v1 scope)", async () => {
+    // Intent: AC-3 stated positively — the registry must not leak any out-of-
+    // scope dance (no Cha Cha, Rumba, Samba, Paso Doble, Jive, etc.).
+    const { DANCES } = await importDomain();
+    const forbidden = ["cha_cha", "rumba", "samba", "paso_doble", "jive", "salsa"];
+    for (const id of forbidden) {
+      expect(Object.keys(DANCES)).not.toContain(id);
+    }
+  });
+
+  it("carries every metadata field with a sane type for each dance", async () => {
+    // Intent: each DanceMeta is complete — no partially-populated entry slips in.
+    const { DANCES } = await importDomain();
+    for (const id of STANDARD) {
+      const meta = DANCES[id];
+      expect(typeof meta.timeSignature).toBe("string");
+      expect(typeof meta.beatsPerBar).toBe("number");
+      expect(typeof meta.phraseBeats).toBe("number");
+      expect(typeof meta.travelling).toBe("boolean");
     }
   });
 });
