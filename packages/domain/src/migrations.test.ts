@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { importDomain } from "./__fixtures__";
+import { type MigrationStep, runLadder } from "./migrations";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-013 — Migration ladder (schemaVersion) [M1, system/developer]
@@ -11,7 +12,7 @@ import { importDomain } from "./__fixtures__";
 // import, skipped.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-013 Migration ladder (schemaVersion)", () => {
+describe("US-013 Migration ladder (schemaVersion)", () => {
   it("upgrades an older-version doc through the ordered ladder to current", async () => {
     // Intent: a v(N-1) doc migrates to the current schemaVersion.
     // Arrange: a routine-shaped doc tagged schemaVersion: 1 (older).
@@ -47,5 +48,54 @@ describe.skip("US-013 Migration ladder (schemaVersion)", () => {
     const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
     const current = { schemaVersion: CURRENT_SCHEMA_VERSION, kind: "routine", sections: [] };
     expect(migrate(current)).toEqual(current);
+  });
+
+  // ── Extra edge cases (in the spirit of US-013, beyond the listed ACs) ──
+
+  it("preserves figureType across a migration (immutable identity, #91/#92)", async () => {
+    // Intent: figureType is an immutable family identity — a migration must never
+    // rewrite it (US-011/US-041 rely on it). Pin that it survives migrate().
+    const { migrate } = await importDomain();
+    const fig = {
+      schemaVersion: 1,
+      kind: "figure",
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+    };
+    expect((migrate(fig) as { figureType?: string }).figureType).toBe("feather");
+  });
+
+  it("runs the ladder in order across multiple versions (synthetic ladder)", () => {
+    // Intent: prove the ladder machinery iterates v→v+1 to the target. Production
+    // has no v2 step yet (CURRENT=1), so exercise the mechanism with a fake ladder.
+    const ladder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, steppedFrom1: true }),
+      2: (d) => ({ ...d, steppedFrom2: true }),
+    };
+    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3) as Record<string, unknown>;
+    expect(result.schemaVersion).toBe(3);
+    expect(result.steppedFrom1).toBe(true);
+    expect(result.steppedFrom2).toBe(true);
+    expect(result.x).toBe("keep"); // untouched fields survive
+  });
+
+  it("throws if a migration step rewrites figureType (guard fires)", () => {
+    // Intent: the immutability invariant is structurally enforced — a buggy step
+    // that changes figureType is rejected, not silently applied.
+    const badLadder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, figureType: "hacked" }),
+    };
+    expect(() => runLadder({ schemaVersion: 1, figureType: "feather" }, badLadder, 2)).toThrow(
+      /figureType is immutable/,
+    );
+  });
+
+  it("treats an untagged doc as v1", () => {
+    // Intent: a doc with no schemaVersion is migrated from the earliest version.
+    const ladder: Record<number, MigrationStep> = { 1: (d) => ({ ...d, upgraded: true }) };
+    const result = runLadder({ kind: "figure" }, ladder, 2) as Record<string, unknown>;
+    expect(result.schemaVersion).toBe(2);
+    expect(result.upgraded).toBe(true);
   });
 });
