@@ -1,6 +1,6 @@
 # Ballroom Flow — Master Plan
 
-**Status:** Draft for review — **v4.1 (Automerge document graph + full fork + cross-dance figure families, 2026-06-25)**
+**Status:** Draft for review — **v4.2 (full-syllabus global library + co-member figure-family notes, 2026-06-25)**
 **Date:** 2026-06-25
 
 This is the single source of truth for Ballroom Flow. It consolidates the original design/implementation/testing/open-questions docs, then folds in successive owner reviews on PR #9. The latest decision is the foundational one: **full fork/inheritance is in v1** — at both the **choreography** and **figure** level — and to support it correctly the data layer is an **Automerge document graph**, not a single per-routine CRDT. The owner deliberately took on this complexity now to make the storage choice right and avoid a later rewrite.
@@ -118,13 +118,14 @@ The system is a **graph of Automerge documents**, each hosted in its own Durable
 - `figure {figureRef}` — a whole figure instance in a routine.
 - **`figureType {figureType, danceScope: <DanceId> | "all"}` *(new — figure-level notes across dances)*** — a note on a whole library figure **family**: this dance only, or **all dances the figure exists in** (e.g. one note on every *Feather*, whether Waltz, Foxtrot, or Quickstep). Applies to global-library figures and to account variants (which inherit `figureType`).
 
-Routine anchors (`point`/`figure`) live in the **routine doc**; **`figureType` annotations are account-scoped** — your notes that follow a figure family across all your routines — and live in your **account doc** (§2.7). General predicate/**query anchors** ("all rising steps") remain v1.1; `figureType` is *identity-based*, not a predicate, which is why it ships in v1.
+Routine anchors (`point`/`figure`) live in the **routine doc** and are visible to all members of that routine. A **`figureType` annotation is *owned* in your account doc** (account-scoped — it follows the family across all your routines), but per **Q-FIGNOTE-VIS = option 2** it is **visible to co-members of any shared routine where that figure appears** — so a coach's "on every Feather, keep the head left" surfaces for the student on their Feathers (this-dance or all-dances). This needs a small **scoped cross-account read path** (§2.7, §5.1). Predicate **query anchors** ("all rising steps") remain v1.1; `figureType` is *identity-based*, not a predicate, which is why it ships in v1.
 
 ### 2.7 D1 index (not document content)
 - **User** `{ id (Clerk sub), displayName, identityColor, plan }`.
 - **Membership** `{ id, docRef, userId, role (viewer|commenter|editor) }` — **per document** (a routine doc; an account figure can also be shared).
 - **DocumentRegistry** `{ docRef, type (routine | global-figure | account-figure | account), ownerId, doName, figureType?, dance?, updatedAt, + list/search projection }` — routes each doc to its DO and powers list/search without reading CRDT content. (`account` = the per-user **account doc** that holds `figureType` annotations and the index of the user's variants.)
 - **FigureType catalog (reference data, bundle):** the family ids (e.g. `feather`) and which dances each exists in — drives the all-dances annotation scope and library browsing.
+- **FigureTypeNoteIndex** `{ accountDocRef, authorId, figureType, danceScope }` — lets a routine view discover **co-members'** `figureType` notes matching the figures present (Q-FIGNOTE-VIS option 2) without scanning account docs; reading a note's content is gated by **co-membership of a routine containing that figure**.
 - **Invite** `{ id, docRef, role, expiresAt, redeemedAt? }`.
 
 ### 2.8 Entity-relationship summary
@@ -199,6 +200,8 @@ Standard kinds (v1): **`step`** (footwork `HT`/`T`/`TH`/`heel_pull`/`H`, + free-
 | `viewer` | Read only. |
 | `owner` (an editor) | Editor rights + delete the doc. |
 Membership is **per document** — a routine doc and a figure doc are shared independently. Enforcement is at **each document's DO sync boundary** (not by rejecting CRDT cells): the DO authenticates the connection (Clerk JWT) and checks the doc's Membership/role from D1, accepting edits only from editors / annotations from commenters+ / read-only for viewers.
+
+**Annotation visibility:** routine annotations are visible to all members of that routine. **`figureType` annotations (option 2)** are owned in the author's account doc but **visible to co-members of any shared routine where the figure appears**: when the client renders routine R for viewer U, it queries the **FigureTypeNoteIndex** for notes by `members(R)` whose `figureType`/`danceScope` match a figure in R, and loads them — co-membership of R authorizes that scoped cross-account read. A viewer never browses another user's account doc wholesale; only family-notes relevant to a shared routine surface.
 
 ### 5.2 Fork & inheritance (the v1 centerpiece)
 - **Choreo fork ("make it your own"):** Automerge `clone` of the routine doc → new owned doc, `forkedFromRef` set, **shared history**. **Upstream changes auto-pull** (Q-FORK-UX): a fork stays live with its origin by default (background merge), rather than an explicit review-and-merge step — Automerge merges cleanly, and the small collaboration scale makes silent convergence the least-surprising behavior. Referenced figure docs stay **shared by reference** (updates flow) until diverged.
@@ -316,7 +319,8 @@ apps/web/src/
 | D26 | Product analytics | **Analytics Engine** alongside Sentry. |
 | D27 | Async backbone (v1.1) | **Queues** reserved (media, billing webhooks, email). |
 | **D28** | Figure scopes | **Global library = application-scoped** (app-owned canonical figures); **variants/custom = account-scoped**; placements routine-scoped (Q-FIGLIB). |
-| **D29** | Cross-dance figures | A **`figureType`** family spans dances (different steps, shared identity). **Figure-level + `figureType` annotations in v1**, scoped **this-dance or all-dances** (account-scoped notes). Predicate query anchors stay v1.1. |
+| **D29** | Cross-dance figures + note visibility | A **`figureType`** family spans dances (different steps, shared identity). **Figure-level + `figureType` annotations in v1**, scoped **this-dance or all-dances**, **owned account-scoped but visible to co-members of shared routines where the figure appears** (Q-FIGNOTE-VIS option 2 — via FigureTypeNoteIndex + co-membership gate). Predicate query anchors stay v1.1. |
+| **D30** | Global library seed | Ship a **full Standard syllabus** (ISTD), all 5 dances, organized by `figureType`×dance (Q-LIBSEED) — a dedicated, accuracy-validated **content workstream** (§9), parallel to engineering. |
 
 ### Global constraints
 - **TS strict;** no `any` without justification.
@@ -342,13 +346,19 @@ Fork/inheritance is in v1, so the document-graph, overlay resolution, and the DI
 | **1** | **Domain core (walking skeleton)** | Pure `domain/`: ATTRIBUTE_REGISTRY (+merge), dances, float-count timing, the **routine + figure document schemas**, **overlay resolution** (`resolve(base,overlay)`), **fork (clone) + copy-on-write**, **Automerge convergence** property tests, **history-based per-user undo**, Zod. In-memory, no network. **Detailed below.** |
 | **2** | DO + multi-doc sync + persistence | The **automerge-repo storage adapter (DO SQLite)** + **network adapter (WS)**; per-document DO; client repo loads a routine doc + referenced figure docs; **permission at the DO boundary**; alarm compaction + D1 index projection; `store/` seam + Assemble/Timeline/Attribute-Editor. |
 | **3** | Auth, membership (per doc), permissions & quota | Clerk onboarding; per-document Membership + `authorizeConnection`; quota on routine create; invite issue/redeem; Share. |
-| **4** | **Fork & inheritance UX** | Choreo fork (clone + lineage + **auto-pull**); figure variants (overlay) + **auto-variant** copy-on-write; **application-global library** (seeded, by `figureType`×dance) + account variants; figure library screen; "used in N routines". |
+| **4** | **Fork & inheritance UX** | Choreo fork (clone + lineage + **auto-pull**); figure variants (overlay) + **auto-variant** copy-on-write; **application-global library** + account variants; figure library screen; "used in N routines". (Library *content* = the parallel workstream below.) |
 | **5** | Undo/redo UX | History-based per-user undo wired to UI; "Undone" toast; soft superseded hint. |
-| **6** | Annotations (incl. cross-dance) | Unified annotation + replies; anchors **point + figure + `figureType`** (per-dance / all-dances, via the **account doc**); timeline + journal. |
+| **6** | Annotations (incl. cross-dance) | Unified annotation + replies; anchors **point + figure + `figureType`** (per-dance / all-dances, account doc); **co-member visibility** via the FigureTypeNoteIndex (option 2); timeline + journal. |
 | **7** | Custom attribute kinds + Lanes + sample/template + search | Create user-defined kinds; Lanes; sample + template; routine/figure search over the index. |
 | **8** | Export / import + ops | schemaVersion'd round-trip (routine + referenced figures) + migration ladder; Sentry + Analytics Engine; EXPLAIN gate; staging/prod; Smart Placement. |
 | **9** | PWA + a11y + cross-browser | Installable shell + offline-state; axe/keyboard/reduced-motion; iOS Safari + Android Chrome E2E. |
 | *(later)* | *Offline editing; query anchors; billing; ownership transfer* | additive on the document-graph foundation (§11). |
+
+### Content workstream — the full-syllabus global library (Q-LIBSEED)
+Seeding a **full Standard syllabus** (ISTD, all 5 dances) into the global library is a **major, accuracy-sensitive content effort** that runs **parallel to engineering**, not a code task:
+- **Source & system:** one syllabus system (**ISTD**, per Q-D8), enumerated as `figureType` families × the dances each appears in, with each (family×dance) figure's attributes (steps/footwork/sway/turn/rise/position/alignment).
+- **Accuracy is the risk:** "a notation tool that gets the notation wrong is worse than a blank notebook" — every seeded figure needs **coach/dancer validation** (ties to Q-D4, still pending the coach). 
+- **Recommended phasing (within the "full" goal):** ship a **validated core** (the most-used figures per dance) at launch, then expand to the full syllabus on a rolling basis — so a notation error never blocks release and the library grows verified. Seed data is versioned by `schemaVersion` and authored as global FigureDocs.
 
 ### Data model (D1 index — documents live in their DOs)
 ```mermaid
@@ -409,7 +419,7 @@ Push correctness down the pyramid (document schemas, overlay resolution, fork/co
 - **Unit / property (pure `domain/`, in-memory Automerge):** float-count timing; **overlay resolution** (inherit/override/tombstone/addition/rename; base-addition flow-up); **fork clone + copy-on-write** (new ids, lineage, placement re-point, no disturbance to the shared base); **`figureType` annotation resolution** (an `all`-dances note matches a figure of that family in *any* dance; a `this-dance` note matches only its dance; variants inherit `figureType`); **Automerge convergence/commutativity/idempotence** (fast-check, shuffled/partitioned changes incl. across forks); **history-based per-user undo** (own-change inverse; remote edit preserved; redo); registry/Zod (`NFR`/`H`/`⅛`; Tango omits rise; position vs body-action; `CBP→CBMP`; unknown passthrough-on-read vs reject-on-write; user-defined kind merges; count fraction per Q-D3); migration ladder.
 - **Worker / DO / D1 (`vitest-pool-workers`):** **two clients converge** through a real per-document DO; a routine that **references a figure doc syncs both**; **permission per document at the boundary** — editor/commenter/viewer/non-member/forged-connection on a routine doc *and* on a figure doc; **copy-on-write** when editing a shared figure without rights; **quota** (4th owned routine → upsell); invite lifecycle; DO **SQLite persistence** (doc survives eviction/reload) + alarm compaction + D1 index projection; export loads routine + referenced figures; **EXPLAIN QUERY PLAN** on index/registry/membership/quota queries.
 - **Component (browser + Testing Library + axe):** attribute editor (registry-derived; Tango hides rise; new user-defined kind appears); timeline role flip; Lanes; section rename; **figure library** screen (variant badge, "used in N"); **fork/variant** affordances + copy-on-write prompt; annotation create (point/figure); viewer/commenter gating; toasts incl. "Undone"/quota/"copied as your variant".
-- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → lineage kept → an upstream change auto-pulls in**; **edit your own shared figure → flows into a second routine**; **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; export→import (with referenced figures); PWA install/app-shell-offline; nav.
+- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → lineage kept → an upstream change auto-pulls in**; **edit your own shared figure → flows into a second routine**; **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); **note visibility (option 2)** — a coach's family-note surfaces for a **co-member** on a shared routine's matching figure, but **not** for a non-member (FigureTypeNoteIndex + co-membership gate); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; export→import (with referenced figures); PWA install/app-shell-offline; nav.
 - **Contract:** `typeof app` + shared doc-shape types (drift fails `tsc`); runtime Zod; schema-drift CI gate.
 
 ### 10.3 Tooling, CI, fixtures
@@ -449,12 +459,13 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 - ✅ **Q-FORK-UX** → **auto-pull**: forks track origin and shared figures update live (background merge), no explicit review-and-merge surface in v1 (D12).
 - ✅ **Q-COW-TRIGGER** → **auto-variant**: editing any non-owned figure silently creates an account-scoped variant; editing your own edits in place (D12).
 - ✅ **Q-FIGLIB** → **application-scoped global library + account-scoped variants** (D28). Editing a global figure → auto-variant.
-- ✅ **Cross-dance figures (new)** → a **`figureType`** family spans dances; **figure-level + cross-dance `figureType` annotations are in v1**, scoped *this-dance* or *all-dances*, account-scoped (D29).
+- ✅ **Cross-dance figures (new)** → a **`figureType`** family spans dances; **figure-level + cross-dance `figureType` annotations are in v1**, scoped *this-dance* or *all-dances*, owned account-scoped (D29).
+- ✅ **Q-FIGNOTE-VIS** → **option 2**: a `figureType` note is owned in your account doc but **visible to co-members of shared routines where the figure appears** (FigureTypeNoteIndex + co-membership gate). Adds a scoped cross-account read path (§2.7, §5.1) (D29).
+- ✅ **Q-LIBSEED** → **full Standard syllabus (ISTD)**, all 5 dances, as a parallel **content workstream** (§9), validated by the coach, recommended phased (validated core → full) (D30).
 
 ### ★ Remaining open
-- **Q-FIGNOTE-VIS — Are `figureType` notes private or shareable?** Default: **account-scoped / private** (your notes that follow the family). Later we could allow promoting a note to shared/canonical library knowledge. Confirm private-only for v1.
-- **Q-LIBSEED — Global library scope at launch.** The app ships a **seeded global library** keyed by `figureType`×dance; how broad a starter set for v1 (a handful of common figures per dance, or a fuller syllabus)? Content task, not architecture.
-- **Carried domain confirms:** **★ Q-D4** (body vocabulary, pending coach); **Q-D3** (count fraction mapping — inverts "1 e & a"); **Q-M1/2/3** (media v1.1); **Q-SC1/2** (Latin/American).
+- **★ Q-D4 — Body position + body-action vocabulary (pending the owner's coach).** Also now **gates the content workstream** — seeding syllabus figures needs validated technique values. Confirm `closed`/`promenade`/`wing`, `CBM`/`CBMP`, "CBP"→CBMP.
+- **Q-D3** — count fraction mapping (inverts "1 e & a"); **Q-M1/2/3** — media (v1.1); **Q-SC1/2** — Latin/American target versions.
 - **Settled infra:** Clerk boundary clean (D9); color collisions tolerated.
 
 ---
