@@ -23,7 +23,7 @@ export type {
   RoutineDoc,
   Section,
 } from "./doc-types";
-export { cloneRoutine } from "./fork";
+export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export { resolve } from "./overlay";
 export { barsForFigure, countLabel, countToBar } from "./timing";

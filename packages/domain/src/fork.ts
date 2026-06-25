@@ -21,7 +21,7 @@
 //     the same live library figure docs (those diverge later via copy-on-write,
 //     US-008), so a fork freezes the arrangement, not the figures.
 import * as A from "@automerge/automerge";
-import type { RoutineDoc } from "./doc-types";
+import type { FigureDoc, Overlay, Placement, RoutineDoc } from "./doc-types";
 import { newId } from "./ids";
 
 /**
@@ -44,4 +44,58 @@ export function cloneRoutine(doc: A.Doc<RoutineDoc>, opts: { byUser: string }): 
     // templateOf is not inherited — a clone is an owned routine, not a template.
     draft.templateOf = null;
   });
+}
+
+/**
+ * True when `byUser` may edit `figure` in place (no copy-on-write needed): the
+ * figure is account-scoped AND owned by them. Global-library figures are
+ * app-owned and never editable in place, so they always trigger COW (§5.2).
+ */
+function ownsFigure(figure: FigureDoc, byUser: string): boolean {
+  return figure.scope === "account" && figure.ownerId === byUser;
+}
+
+/**
+ * Copy-on-write = auto-variant (PLAN §2.4, §5.2, Q-COW-TRIGGER). Editing a
+ * figure you don't own (a global-library figure, or someone else's shared one)
+ * silently spawns an account-scoped variant you own — a new figure doc with
+ * `baseFigureRef` = the shared figure + an EMPTY overlay (it diverges nothing
+ * yet; the edit that triggered this is applied afterward) — and re-points the
+ * placement at the variant. The shared base is never mutated (no disturbance to
+ * others). Editing a figure you ALREADY own edits in place (no variant), so the
+ * change flows to all your routines that reference it (US-034).
+ *
+ * One rule covers "copy all info," "info flows up" (the variant resolves live
+ * against its base, US-006), and "don't disturb others."
+ *
+ * @returns `{ variant, placement }` — `variant` is the new owned figure doc, or
+ *   `null` when the user already owns the figure (edit-in-place signal); the
+ *   returned `placement` is re-pointed to the variant (or the original unchanged
+ *   when no COW happened). Pure: the inputs are never mutated.
+ */
+export function copyOnWrite(
+  placement: Placement,
+  sharedFigure: FigureDoc,
+  byUser: string,
+): { variant: FigureDoc | null; placement: Placement } {
+  // Editing your own figure edits in place — no variant, placement unchanged.
+  if (ownsFigure(sharedFigure, byUser)) {
+    return { variant: null, placement };
+  }
+
+  const emptyOverlay: Overlay = { overrides: {}, tombstones: [], additions: [] };
+  const variant: FigureDoc = {
+    ...sharedFigure,
+    id: newId(),
+    scope: "account",
+    ownerId: byUser,
+    source: "custom",
+    // A variant stores no base attributes — only its overlay against the base.
+    attributes: [],
+    baseFigureRef: sharedFigure.id,
+    overlay: emptyOverlay,
+    deletedAt: null,
+  };
+
+  return { variant, placement: { ...placement, figureRef: variant.id } };
 }
