@@ -59,10 +59,10 @@ describe("US-010 History-based per-user undo", () => {
   });
 
   it("redo re-applies the undone change", async () => {
-    // Intent: redo restores the undone change (redo = invert the undo).
+    // Intent: redo restores the undone change (redo = invert the pending undo).
     // Arrange: a doc (actor A) with one change. Act: undo it, then redo.
     // Assert: undo removed the value; redo restores it.
-    // Covers US-010 AC-3 (redo re-applies the undone change).
+    // Covers US-010 AC-3a (redo re-applies the undone change).
     const A = await loadAutomerge();
     const { undoLastChange, redoLastChange } = await importDomain();
     let doc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
@@ -71,6 +71,25 @@ describe("US-010 History-based per-user undo", () => {
     expect(undone.counts.k).toBeUndefined();
     const redone = redoLastChange(undone, ACTOR_A);
     expect(redone.counts.k).toBe(5);
+  });
+
+  it("a new edit after undo clears the redo: redo is a no-op and does NOT delete the new edit", async () => {
+    // Intent: AC-3b "a new edit clears the redo stack" — once the user makes a
+    // fresh edit after undoing, redo must NOT resurrect the undone change AND
+    // must NOT revert the fresh edit (a naive "invert the last change" redo would
+    // destroy the new edit — the bug this test pins).
+    // Scenario: edit X (k=5) → undo X → edit Y (m=9) → redo.
+    // Assert: Y survives (m===9), X stays undone (k undefined).
+    // Covers US-010 AC-3b.
+    const A = await loadAutomerge();
+    const { undoLastChange, redoLastChange } = await importDomain();
+    let doc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    doc = A.change(doc, (d) => (d.counts.k = 5)); // edit X
+    doc = undoLastChange(doc, ACTOR_A); // undo X → k gone
+    doc = A.change(doc, (d) => (d.counts.m = 9)); // fresh edit Y
+    const redone = redoLastChange(doc, ACTOR_A);
+    expect(redone.counts.m).toBe(9); // Y intact (redo did not delete it)
+    expect(redone.counts.k).toBeUndefined(); // X not resurrected
   });
 
   // ── Extra edge cases (in the spirit of US-010, beyond the listed ACs) ──
@@ -87,7 +106,8 @@ describe("US-010 History-based per-user undo", () => {
   });
 
   it("undo only reverts A's LAST change, leaving A's earlier ones", async () => {
-    // Intent: repeated undo walks back A's own stack one change at a time.
+    // Intent: a single undo reverts exactly the most recent change (per §5.4
+    // undo is single-level — "undo my last change"), leaving earlier ones.
     const A = await loadAutomerge();
     const { undoLastChange } = await importDomain();
     let doc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);

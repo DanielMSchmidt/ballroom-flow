@@ -17,12 +17,17 @@
 // change — then those patches are replayed inside a single `A.change`.
 import * as A from "@automerge/automerge";
 
+/** Change message tag marking an inverse change as an undo (vs a normal edit). */
+const UNDO_MESSAGE = "ballroom:undo";
+
 /** Decoded change with the fields we need to locate + invert it. */
 interface ChangeMeta {
   actor: string;
   seq: number;
   hash: string;
   deps: string[];
+  /** The change's commit message, if any (used to tag undos — see UNDO_MESSAGE). */
+  message: string | null;
 }
 
 /** The actor's own changes, oldest→newest (by seq). */
@@ -30,7 +35,13 @@ function changesByActor<T>(doc: A.Doc<T>, actorId: string): ChangeMeta[] {
   return A.getAllChanges(doc)
     .map((c) => A.decodeChange(c))
     .filter((c) => c.actor === actorId && c.hash != null)
-    .map((c) => ({ actor: c.actor, seq: c.seq, hash: c.hash as string, deps: c.deps }))
+    .map((c) => ({
+      actor: c.actor,
+      seq: c.seq,
+      hash: c.hash as string,
+      deps: c.deps,
+      message: c.message,
+    }))
     .sort((a, b) => a.seq - b.seq);
 }
 
@@ -40,8 +51,8 @@ function changesByActor<T>(doc: A.Doc<T>, actorId: string): ChangeMeta[] {
  * unknown patch actions are ignored (no-op) rather than throwing, so a partial
  * shape can't break an undo.
  */
-function applyInverse<T>(doc: A.Doc<T>, patches: A.Patch[]): A.Doc<T> {
-  return A.change(doc, (draft) => {
+function applyInverse<T>(doc: A.Doc<T>, patches: A.Patch[], message: string): A.Doc<T> {
+  return A.change(doc, { message }, (draft) => {
     for (const patch of patches) {
       const target = resolveContainer(draft as unknown, patch.path);
       if (target === undefined) continue;
@@ -92,34 +103,44 @@ function resolveContainer(root: unknown, path: A.Prop[]): unknown {
   return node;
 }
 
-/**
- * Invert the actor's last change and apply it as a new change. Shared by undo
- * (invert your last edit) and redo (invert the undo, restoring the original).
- * Returns the doc unchanged if the actor has no changes.
- */
-function invertActorsLastChange<T>(doc: A.Doc<T>, actorId: string): A.Doc<T> {
-  const mine = changesByActor(doc, actorId);
-  const target = mine[mine.length - 1];
-  if (!target) return doc;
+/** Invert one change and apply it as a new change tagged with `message`. */
+function invertChange<T>(doc: A.Doc<T>, target: ChangeMeta, message: string): A.Doc<T> {
   // AFTER→BEFORE diff = the patches that revert this change.
   const inverse = A.diff(doc, [target.hash], target.deps);
-  return applyInverse(doc, inverse);
+  return applyInverse(doc, inverse, message);
 }
 
 /**
- * Undo: revert `actorId`'s last change, applied as a new (mergeable) change.
- * Reverts only that user's change; others' concurrent edits are preserved.
+ * Undo: revert `actorId`'s last *editing* change, applied as a new (mergeable)
+ * change tagged as an undo. Reverts only that user's change; others' concurrent
+ * edits are preserved (the inverse is a normal change that merges).
+ *
+ * Single-level (PLAN §5.4/Q-UNDO — "undo my last change"): the target is the
+ * last change by the actor that is NOT itself an undo, so a pending undo isn't
+ * undone again (that would be the multi-level walk-back v1 doesn't do). No-op if
+ * the actor has no such change.
  */
 export function undoLastChange<T>(doc: A.Doc<T>, actorId: string): A.Doc<T> {
-  return invertActorsLastChange(doc, actorId);
+  const mine = changesByActor(doc, actorId);
+  const target = [...mine].reverse().find((c) => c.message !== UNDO_MESSAGE);
+  if (!target) return doc;
+  return invertChange(doc, target, UNDO_MESSAGE);
 }
 
 /**
- * Redo: re-apply the change the user just undid. Since undo is itself the actor's
- * most recent change, redo inverts THAT — restoring the original effect. A fresh
- * edit by the user makes that edit the last change, so a later redo would target
- * it instead (the "new edit clears the redo stack" behavior, US-010 AC-3).
+ * Redo: re-apply the change the user just undid — ONLY if an undo is actually
+ * pending, i.e. the actor's last change is an undo (nothing edited since). In
+ * that case we invert the undo, restoring the original effect.
+ *
+ * If the actor's last change is a normal edit (they moved on after undoing),
+ * redo is a NO-OP — a new edit clears the redo (US-010 AC-3). Crucially this
+ * means redo must NOT blindly invert the last change, or it would delete that
+ * fresh edit. There is no external stack: the undo tag in the change history is
+ * the redo state. (1-deep toggle: undo↔redo, not a multi-level cursor.)
  */
 export function redoLastChange<T>(doc: A.Doc<T>, actorId: string): A.Doc<T> {
-  return invertActorsLastChange(doc, actorId);
+  const mine = changesByActor(doc, actorId);
+  const last = mine[mine.length - 1];
+  if (!last || last.message !== UNDO_MESSAGE) return doc; // no pending undo → no-op
+  return invertChange(doc, last, "ballroom:redo");
 }
