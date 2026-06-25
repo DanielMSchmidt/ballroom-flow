@@ -19,6 +19,13 @@ import type { Env } from "./index";
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp = { op: "addSection"; name: string } & Record<string, unknown>;
 
+/**
+ * Compact once the incremental change log grows past this many rows. Bounds both
+ * the log size and the US-015 replay-on-connect cost (which scans the whole log
+ * on every WS connect) for a write-heavy doc that never sets metadata.
+ */
+const COMPACT_THRESHOLD = 64;
+
 /** Order-independent equality of two Automerge head sets (same logical state). */
 function headsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -61,10 +68,21 @@ export class DocDO extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    // Create the append-only change log once. Each row is one Automerge change
-    // (incremental bytes), replayed in `seq` order to rebuild the doc.
-    this.ctx.storage.sql.exec(
+    const sql = this.ctx.storage.sql;
+    // Append-only change log: each row is one Automerge change (incremental
+    // bytes), replayed in `seq` order to rebuild the doc.
+    sql.exec(
       "CREATE TABLE IF NOT EXISTS changes (seq INTEGER PRIMARY KEY AUTOINCREMENT, data BLOB NOT NULL)",
+    );
+    // Compaction snapshot (US-016): a single saved-doc blob the alarm writes to
+    // bound the change log. `getDoc` loads it then replays only later changes.
+    sql.exec(
+      "CREATE TABLE IF NOT EXISTS snapshot (id INTEGER PRIMARY KEY CHECK (id = 0), data BLOB NOT NULL)",
+    );
+    // D1-projected metadata (US-016 AC-2): the thin index fields the alarm pushes
+    // to the D1 document_registry. Single row keyed at id=0.
+    sql.exec(
+      "CREATE TABLE IF NOT EXISTS doc_meta (id INTEGER PRIMARY KEY CHECK (id = 0), doName TEXT, docRef TEXT, type TEXT, ownerId TEXT, title TEXT, dance TEXT, figureType TEXT)",
     );
   }
 
@@ -77,11 +95,15 @@ export class DocDO extends DurableObject<Env> {
   private getDoc(): A.Doc<RoutineDoc> {
     if (this.doc) return this.doc;
 
-    const rows = this.ctx.storage.sql
+    const sql = this.ctx.storage.sql;
+    const snapRows = sql
+      .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
+      .toArray();
+    const changeRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq ASC")
       .toArray();
 
-    if (rows.length === 0) {
+    if (snapRows.length === 0 && changeRows.length === 0) {
       // First touch: seed an empty routine and persist its creation changes so a
       // later cold-load rebuilds the identical doc from SQLite alone.
       const seeded = buildRoutineDoc(emptyRoutine());
@@ -90,9 +112,17 @@ export class DocDO extends DurableObject<Env> {
       return seeded;
     }
 
-    let doc = A.init<RoutineDoc>();
-    const changes = rows.map((r) => new Uint8Array(r.data) as A.Change);
-    [doc] = A.applyChanges(doc, changes);
+    // Start from the compacted snapshot (if the alarm has run), then replay any
+    // incremental changes recorded after it. Without a snapshot, replay all
+    // changes from an empty doc (the US-014 path).
+    let doc =
+      snapRows[0] !== undefined
+        ? A.load<RoutineDoc>(new Uint8Array(snapRows[0].data))
+        : A.init<RoutineDoc>();
+    if (changeRows.length > 0) {
+      const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
+      [doc] = A.applyChanges(doc, changes);
+    }
     this.doc = doc;
     return doc;
   }
@@ -134,6 +164,7 @@ export class DocDO extends DurableObject<Env> {
       return new Uint8Array();
     }
     this.persist(changes);
+    await this.maybeScheduleCompaction();
     // An RPC edit also propagates to any live WebSocket clients of this doc.
     this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
@@ -157,7 +188,7 @@ export class DocDO extends DurableObject<Env> {
    * it advanced the doc (new change). `from` is the socket the change arrived on
    * (excluded from the broadcast); null for RPC/relay-to-all.
    */
-  private ingestChange(change: Uint8Array, from: WebSocket | null): boolean {
+  private async ingestChange(change: Uint8Array, from: WebSocket | null): Promise<boolean> {
     const before = this.getDoc();
     const beforeHeads = A.getHeads(before);
     const [after] = A.applyChanges(before, [change as A.Change]);
@@ -165,6 +196,7 @@ export class DocDO extends DurableObject<Env> {
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change as A.Change]);
+    await this.maybeScheduleCompaction();
     this.broadcast([change as A.Change], from);
     return true;
   }
@@ -225,7 +257,7 @@ export class DocDO extends DurableObject<Env> {
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    this.ingestChange(new Uint8Array(message), ws);
+    await this.ingestChange(new Uint8Array(message), ws);
   }
 
   /** A client disconnected — close the server side cleanly. */
@@ -277,5 +309,162 @@ export class DocDO extends DurableObject<Env> {
    */
   async debugChangeRowCount(): Promise<number> {
     return this.ctx.storage.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes").one().n;
+  }
+
+  // ── US-016: DO alarm — compaction + D1 index projection + invite expiry ─────
+
+  /**
+   * Set the thin index metadata the alarm projects to D1 (title/dance/owner/
+   * figureType + the doName/docRef keys). Stored in DO SQLite so it survives
+   * eviction; the alarm reads it. `doName` is the document's DO name (the
+   * idFromName key) — the DO can't recover it from `ctx.id`, so the caller
+   * supplies it. Schedules the alarm so the projection happens off the request
+   * path (D24/§6.2).
+   */
+  async setMetadata(meta: Record<string, unknown>): Promise<void> {
+    const str = (k: string): string | null => (meta[k] == null ? null : String(meta[k]));
+    this.ctx.storage.sql.exec(
+      `INSERT INTO doc_meta (id, doName, docRef, type, ownerId, title, dance, figureType)
+       VALUES (0, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         doName = COALESCE(excluded.doName, doc_meta.doName),
+         docRef = COALESCE(excluded.docRef, doc_meta.docRef),
+         type = COALESCE(excluded.type, doc_meta.type),
+         ownerId = COALESCE(excluded.ownerId, doc_meta.ownerId),
+         title = excluded.title,
+         dance = excluded.dance,
+         figureType = excluded.figureType`,
+      str("doName"),
+      str("docRef"),
+      str("type") ?? "routine",
+      str("ownerId"),
+      str("title"),
+      str("dance"),
+      str("figureType"),
+    );
+    // Project off the request path on the next alarm tick.
+    await this.ctx.storage.setAlarm(Date.now());
+  }
+
+  /**
+   * DO alarm: runs compaction + D1 index projection + invite expiry OFF the
+   * request/sync path (D24). The runtime invokes this; tests drive it via
+   * `runAlarmForTest`.
+   */
+  async alarm(): Promise<void> {
+    this.compact();
+    await this.projectToD1();
+    await this.expireInvites();
+  }
+
+  /** Test hook: run the alarm body synchronously (no real timer). */
+  async runAlarmForTest(): Promise<void> {
+    await this.alarm();
+  }
+
+  /**
+   * Schedule a compaction alarm once the change log grows past the threshold —
+   * so a write-heavy doc that never sets metadata still gets compacted (Staff
+   * review #125: edits must trigger compaction, not just `setMetadata`). The
+   * alarm is COALESCED: we only arm one if none is already pending, so a burst
+   * of edits schedules a single tick, not one per edit.
+   */
+  private async maybeScheduleCompaction(): Promise<void> {
+    const rows = this.ctx.storage.sql
+      .exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes")
+      .one().n;
+    if (rows < COMPACT_THRESHOLD) return;
+    const pending = await this.ctx.storage.getAlarm();
+    if (pending !== null) return; // an alarm is already scheduled — coalesce.
+    await this.ctx.storage.setAlarm(Date.now());
+  }
+
+  /**
+   * Compact the persisted history: fold the current doc into a single saved-doc
+   * snapshot and clear the incremental change log. Bounds the log (and the
+   * replay-on-connect cost) without losing state — `getDoc` loads the snapshot
+   * then replays only changes recorded after it.
+   */
+  private compact(): void {
+    const doc = this.getDoc();
+    const saved = A.save(doc);
+    const buf = saved.buffer.slice(saved.byteOffset, saved.byteOffset + saved.byteLength);
+    const sql = this.ctx.storage.sql;
+    sql.exec(
+      "INSERT INTO snapshot (id, data) VALUES (0, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data",
+      buf,
+    );
+    sql.exec("DELETE FROM changes");
+  }
+
+  /**
+   * Project the thin index row to the D1 document_registry (AC-2) keyed by
+   * doName (#50 — one row per document, scoped by the DO's name so forks sharing
+   * nested ids never collide). No CRDT content is written — list/search read
+   * this, never the doc.
+   */
+  private async projectToD1(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{
+        doName: string | null;
+        docRef: string | null;
+        type: string | null;
+        ownerId: string | null;
+        title: string | null;
+        dance: string | null;
+        figureType: string | null;
+      }>(
+        "SELECT doName, docRef, type, ownerId, title, dance, figureType FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    if (!meta?.doName) return; // nothing to project until metadata is set
+
+    const docRef = meta.docRef ?? meta.doName;
+    await this.env.DB.prepare(
+      `INSERT INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, forkedFromRef, updatedAt, deletedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL)
+       ON CONFLICT(doName) DO UPDATE SET
+         type = excluded.type, ownerId = excluded.ownerId, figureType = excluded.figureType,
+         dance = excluded.dance, title = excluded.title, updatedAt = excluded.updatedAt`,
+    )
+      .bind(
+        docRef,
+        meta.type ?? "routine",
+        meta.ownerId ?? "",
+        meta.doName,
+        meta.figureType,
+        meta.dance,
+        meta.title,
+        Date.now(),
+      )
+      .run();
+  }
+
+  /**
+   * Expire due membership invites (AC-3): mark open invites whose `expiresAt` is
+   * past as redeemed (no longer redeemable). The sweep mechanism lands here in
+   * M2; invite rows are populated by the invite flow in M3 (US-023), so today
+   * this is a no-op against an empty table.
+   */
+  private async expireInvites(): Promise<void> {
+    await this.env.DB.prepare(
+      "UPDATE invite SET redeemedAt = ? WHERE redeemedAt IS NULL AND expiresAt < ?",
+    )
+      .bind(Date.now(), Date.now())
+      .run();
+  }
+
+  /** Test hook: total bytes currently persisted (snapshot + change log) — for
+   *  compaction assertions (after the alarm folds changes into a snapshot, the
+   *  change log is cleared, so this does not grow unbounded with edit count). */
+  async debugPersistedSize(): Promise<number> {
+    const sql = this.ctx.storage.sql;
+    const changeBytes = sql
+      .exec<{ n: number | null }>("SELECT SUM(LENGTH(data)) AS n FROM changes")
+      .one().n;
+    const snapBytes = sql
+      .exec<{ n: number | null }>("SELECT SUM(LENGTH(data)) AS n FROM snapshot")
+      .one().n;
+    return (changeBytes ?? 0) + (snapBytes ?? 0);
   }
 }
