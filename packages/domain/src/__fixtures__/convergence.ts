@@ -27,9 +27,12 @@
 export interface AutomergeLike {
   // biome-ignore lint/suspicious/noExplicitAny: Automerge docs are opaque generics by design.
   init<T = any>(): T;
-  from<T>(initial: T): T;
+  // `from`/`clone` optionally take an actor id (hex) so tests can author changes
+  // under a known actor — required for per-user undo (US-010), which filters the
+  // change log by actor id. Automerge actor ids must be hex strings.
+  from<T>(initial: T, actor?: string): T;
   change<T>(doc: T, fn: (d: T) => void): T;
-  clone<T>(doc: T): T;
+  clone<T>(doc: T, opts?: { actor?: string }): T;
   merge<T>(local: T, remote: T): T;
   getChanges<T>(oldDoc: T, newDoc: T): Uint8Array[];
   applyChanges<T>(doc: T, changes: Uint8Array[]): [T, unknown];
