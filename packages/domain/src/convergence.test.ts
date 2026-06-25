@@ -26,21 +26,25 @@ interface CountsDoc {
   counts: Record<string, number>;
 }
 
-describe.skip("US-009 Automerge convergence invariants", () => {
+describe("US-009 Automerge convergence invariants", () => {
   it("converges regardless of edit order (commutative) — property", async () => {
-    // Intent: shuffled independent changes converge to one doc (commutativity).
-    // Multi-actor scenario: a sequence of independent attribute writes.
-    // Arrange (property): a random list of unique-key writes. Act: capture each
-    //   as a discrete Automerge change off a common base. Assert: applying the
-    //   change set in forward vs reversed order yields byte-identical docs.
-    // Covers US-009 AC-1 (different orders converge; commutative).
+    // Intent: shuffled changes converge to one doc (commutativity), INCLUDING
+    //   the hard case — multiple changes writing the SAME cell (LWW conflict).
+    // Multi-actor scenario: a sequence of attribute writes; keys are drawn from a
+    //   small pool so writes collide on the same key within a case, exercising
+    //   conflict-LWW commutativity, not just independent-change commutativity.
+    // Arrange (property): a random list of [key, value] writes (keys MAY repeat).
+    //   Act: capture each as a discrete Automerge change off a common base.
+    //   Assert: applying the change set forward vs reversed converges (heads).
+    // Covers US-009 AC-1 (different orders converge; commutative, incl. same-cell).
     const A = await loadAutomerge();
     await fc.assert(
       fc.asyncProperty(
-        fc.uniqueArray(fc.tuple(fc.string({ minLength: 1, maxLength: 4 }), fc.integer()), {
+        // Small key pool (a–d) so 1–8 writes frequently target the same cell —
+        // a plain array (not uniqueArray) lets keys repeat, forcing LWW races.
+        fc.array(fc.tuple(fc.constantFrom("a", "b", "c", "d"), fc.integer()), {
           minLength: 1,
           maxLength: 8,
-          selector: ([k]) => k,
         }),
         async (writes) => {
           const base = A.from<CountsDoc>({ counts: {} });
