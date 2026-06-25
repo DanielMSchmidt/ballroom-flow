@@ -229,6 +229,13 @@ export class DocDO extends DurableObject<Env> {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket upgrade", { status: 426 });
     }
+    // The Worker route forwards the doc's name (the idFromName key) — the DO
+    // can't recover it from `ctx.id` (US-016). Remember it so the alarm can
+    // project the D1 registry row keyed by doName even if `setMetadata` is never
+    // called for a connect-only doc.
+    const doName = request.headers.get("x-doc-name");
+    if (doName) this.rememberDoName(doName);
+
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
@@ -258,6 +265,19 @@ export class DocDO extends DurableObject<Env> {
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
     await this.ingestChange(new Uint8Array(message), ws);
+  }
+
+  /**
+   * Persist the document's DO name (the idFromName key) into doc_meta if not
+   * already recorded, so the alarm's D1 projection is keyed correctly. Upsert
+   * only sets `doName`; `setMetadata` fills the rest of the index fields.
+   */
+  private rememberDoName(doName: string): void {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO doc_meta (id, doName, type) VALUES (0, ?, 'routine')
+       ON CONFLICT(id) DO UPDATE SET doName = COALESCE(doc_meta.doName, excluded.doName)`,
+      doName,
+    );
   }
 
   /** A client disconnected — close the server side cleanly. */

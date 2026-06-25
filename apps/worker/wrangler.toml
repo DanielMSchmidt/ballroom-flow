@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # --- Default config: local `wrangler dev` + the vitest-pool-workers tests.
 # Miniflare uses a local SQLite file and ignores database_id.
@@ -37,7 +37,7 @@ name = "ballroom-flow-staging"
 [env.staging.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # Bindings are NOT inherited by named environments — redeclare per env.
 # Replace database_id after `wrangler d1 create ballroom-flow-staging`.
@@ -58,7 +58,7 @@ name = "ballroom-flow-production"
 [env.production.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # Replace database_id after `wrangler d1 create ballroom-flow-production`.
 [[env.production.d1_databases]]
