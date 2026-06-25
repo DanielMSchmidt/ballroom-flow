@@ -37,12 +37,12 @@ describe("US-004 Float-count timing", () => {
   it("interprets counts modulo the dance phrase (Waltz 1–6, Foxtrot 1–8)", async () => {
     // Intent: counts wrap modulo the dance's counted phrase length.
     // Arrange: import countToBar. Act: map a count past the phrase end.
-    // Assert: in Waltz (phrase 6) count 7 → bar 2 count 1; in Foxtrot (phrase 8)
-    //   count 9 → bar 2 count 1.
+    // Assert: in Waltz (phrase 6) count 7 → phrase 2 count 1; in Foxtrot (phrase
+    //   8) count 9 → phrase 2 count 1.
     // Covers AC-2 (modulo phrase) — §10.2 "modulo phrase".
     const { countToBar } = await importDomain();
-    expect(countToBar(7, "waltz")).toMatchObject({ bar: 2, countInBar: 1 });
-    expect(countToBar(9, "foxtrot")).toMatchObject({ bar: 2, countInBar: 1 });
+    expect(countToBar(7, "waltz")).toMatchObject({ phrase: 2, countInPhrase: 1 });
+    expect(countToBar(9, "foxtrot")).toMatchObject({ phrase: 2, countInPhrase: 1 });
   });
 
   it("computes bars for a figure per role", async () => {
@@ -76,9 +76,9 @@ describe("US-004 Float-count timing", () => {
   it("keeps within-phrase counts in phrase 1", async () => {
     // Intent: counts inside the first phrase don't wrap.
     const { countToBar } = await importDomain();
-    expect(countToBar(1, "waltz")).toMatchObject({ bar: 1, countInBar: 1 });
-    expect(countToBar(6, "waltz")).toMatchObject({ bar: 1, countInBar: 6 });
-    expect(countToBar(8, "foxtrot")).toMatchObject({ bar: 1, countInBar: 8 });
+    expect(countToBar(1, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 1 });
+    expect(countToBar(6, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 6 });
+    expect(countToBar(8, "foxtrot")).toMatchObject({ phrase: 1, countInPhrase: 8 });
   });
 
   it("spans more phrases as a figure's counts extend past the phrase", async () => {
