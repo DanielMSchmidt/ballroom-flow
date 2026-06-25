@@ -31,7 +31,10 @@ jobs:
       # Gate the deploy on the same checks as CI.
       - run: pnpm lint
       - run: pnpm -r typecheck
+      # The publishable key (public) is baked into the SPA at build time.
       - run: pnpm -r build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
       - run: pnpm -r test
 
       - name: Resolve target environment
