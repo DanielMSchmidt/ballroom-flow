@@ -39,16 +39,41 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toThrow();
   });
 
-  it("rejects a timing value outside the meter's valid range on write", async () => {
-    // Intent: a count beyond the dance phrase is invalid on write.
-    // Arrange: a Waltz figure context (phrase 1–6); an attribute at count 7.5.
-    // Act: parse with the write schema bound to the dance meter.
-    // Assert: throws (out of range).
-    // Covers US-012 AC-3 (timing range per meter) — §10.2 "timing range per meter".
+  it("rejects an off-grid / below-1 timing value on write (valid range = on-grid + ≥1)", async () => {
+    // Intent: a count that isn't a real sub-beat is invalid on write. "Valid
+    // range" per §2.5/US-004 = on the 1/8-note grid AND ≥ 1 — NOT a phrase cap
+    // (figures span multiple phrases; counts may exceed phraseBeats and wrap).
+    // Arrange: an OFF-GRID fraction (3.3, not a multiple of 1/8) and a below-1 count.
+    // Act/Assert: both throw.
+    // Covers US-012 AC-3 (timing range per meter) — corrected to match merged US-004.
     const { parseAttributeWrite } = await importDomain();
     expect(() =>
-      parseAttributeWrite({ id: "a1", kind: "step", count: 7.5, value: "HT" }, { dance: "waltz" }),
-    ).toThrow();
+      parseAttributeWrite({ id: "a1", kind: "step", count: 3.3, value: "HT" }, { dance: "waltz" }),
+    ).toThrow(); // off-grid
+    expect(() =>
+      parseAttributeWrite({ id: "a1", kind: "step", count: 0.5, value: "HT" }, { dance: "waltz" }),
+    ).toThrow(); // below 1
+  });
+
+  it("accepts a multi-phrase count on write (aligns with US-004 modulo-phrase)", async () => {
+    // Intent: a count exceeding phraseBeats is VALID — figures span multiple
+    // phrases (§2.5 "modulo the counted phrase"; countToBar wraps it). Pins the
+    // reconciliation with the already-merged US-004 (countToBar(7,"waltz")→bar 2).
+    const { parseAttributeWrite } = await importDomain();
+    // Waltz phrase 6: count 7 (bar 2 beat 1) and 7.5 (bar 2 "&") are valid.
+    expect(
+      parseAttributeWrite({ id: "a1", kind: "step", count: 7, value: "HT" }, { dance: "waltz" })
+        .count,
+    ).toBe(7);
+    expect(
+      parseAttributeWrite({ id: "a2", kind: "step", count: 7.5, value: "HT" }, { dance: "waltz" })
+        .count,
+    ).toBe(7.5);
+    // Foxtrot phrase 8: count 9 (bar 2 beat 1) is valid.
+    expect(
+      parseAttributeWrite({ id: "a3", kind: "step", count: 9, value: "HT" }, { dance: "foxtrot" })
+        .count,
+    ).toBe(9);
   });
 
   it("normalizes CBP→CBMP on read", async () => {
@@ -119,17 +144,14 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       expect(issue.params?.kind).toBe("step");
     }
 
-    // (c) out-of-range count → ZodError with params.code "count_out_of_range"
+    // (c) off-grid count → ZodError with params.code "count_off_grid"
     try {
-      parseAttributeWrite({ id: "a1", kind: "step", count: 99, value: "HT" }, { dance: "waltz" });
+      parseAttributeWrite({ id: "a1", kind: "step", count: 3.3, value: "HT" }, { dance: "waltz" });
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as {
-        params?: { code?: string; phraseBeats?: number };
-      };
-      expect(issue.params?.code).toBe("count_out_of_range");
-      expect(issue.params?.phraseBeats).toBe(6);
+      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string } };
+      expect(issue.params?.code).toBe("count_off_grid");
     }
   });
 });

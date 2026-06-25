@@ -44,6 +44,19 @@ export function countLabel(count: number): string {
 }
 
 /**
+ * True when `count` lands on the 1/8-note grid — i.e. its fractional part is a
+ * multiple of 1/8 (the e/&/a/i subdivision grid). Counts are floats, so we snap
+ * to the nearest 1/8 and check the residual is within float tolerance. This is
+ * the "valid timing position" rule the strict write schema enforces (US-012):
+ * a count must sit on a real sub-beat, but it may exceed `phraseBeats` (figures
+ * span multiple phrases — see `countToBar`).
+ */
+export function isOnEighthGrid(count: number): boolean {
+  const snapped = Math.round(count / EIGHTH) * EIGHTH;
+  return Math.abs(count - snapped) < 1e-9;
+}
+
+/**
  * Locate a 1-indexed count within the dance's counted phrase. The phrase length
  * is the dance's `phraseBeats` (Waltz/Viennese 6, rest 8); counts beyond it wrap
  * to the next phrase. `bar` is the 1-indexed phrase number, `countInBar` the
