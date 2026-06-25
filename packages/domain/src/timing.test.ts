@@ -12,7 +12,7 @@ import { importDomain } from "./__fixtures__";
 // earlier swapped draft).
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-004 Float-count timing", () => {
+describe("US-004 Float-count timing", () => {
   it("renders quarter/half/three-quarter fractions as e/&/a", async () => {
     // Intent: the conventional "1 e & a 2" labels for float counts.
     // Arrange: import countLabel. Act: label .25/.5/.75 fractions of count 3.
@@ -54,5 +54,38 @@ describe.skip("US-004 Float-count timing", () => {
     const { barsForFigure } = await importDomain();
     const bars = barsForFigure([1, 2, 3], "foxtrot");
     expect(bars).toBeGreaterThan(0);
+  });
+
+  // ── Extra edge cases (in the spirit of US-004, beyond the listed ACs) ──
+
+  it("labels whole-number counts without a fraction suffix", async () => {
+    // Intent: an on-beat count renders as the bare beat number.
+    const { countLabel } = await importDomain();
+    expect(countLabel(1)).toBe("1");
+    expect(countLabel(8)).toBe("8");
+  });
+
+  it("snaps float-noise fractions to the nearest 1/8 grid label", async () => {
+    // Intent: real Automerge floats won't be exactly .25 — they must still
+    // resolve to the conventional suffix.
+    const { countLabel } = await importDomain();
+    expect(countLabel(3.2500001)).toBe("3e");
+    expect(countLabel(2.4999998)).toBe("2&");
+  });
+
+  it("keeps within-phrase counts in phrase 1", async () => {
+    // Intent: counts inside the first phrase don't wrap.
+    const { countToBar } = await importDomain();
+    expect(countToBar(1, "waltz")).toMatchObject({ bar: 1, countInBar: 1 });
+    expect(countToBar(6, "waltz")).toMatchObject({ bar: 1, countInBar: 6 });
+    expect(countToBar(8, "foxtrot")).toMatchObject({ bar: 1, countInBar: 8 });
+  });
+
+  it("spans more phrases as a figure's counts extend past the phrase", async () => {
+    // Intent: barsForFigure grows once attributes land in a later phrase.
+    const { barsForFigure } = await importDomain();
+    expect(barsForFigure([1, 2, 3], "waltz")).toBe(1); // within phrase 6
+    expect(barsForFigure([1, 7], "waltz")).toBe(2); // 7 lands in phrase 2
+    expect(barsForFigure([], "foxtrot")).toBe(1); // empty → 1
   });
 });
