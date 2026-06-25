@@ -40,13 +40,48 @@ export interface ExplainOptions {
  * the implementation, which builds on the per-suite D1 fixture.
  */
 export async function expectIndexedQuery(
-  _db: D1Database,
-  _sql: string,
-  _params: unknown[] = [],
-  _opts: ExplainOptions = {},
+  db: D1Database,
+  sql: string,
+  params: unknown[] = [],
+  opts: ExplainOptions = {},
 ): Promise<void> {
-  throw new Error(
-    "expectIndexedQuery: EXPLAIN QUERY PLAN helper not yet implemented — " +
-      "the test engineer implements this seam (see apps/worker/src/test-support/explain.ts).",
-  );
+  // Run EXPLAIN QUERY PLAN and inspect each access path's `detail`.
+  const planned = await db
+    .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+    .bind(...params)
+    .all<{ detail: string }>();
+
+  const details = planned.results.map((r) => r.detail);
+
+  // A full-table scan shows up as "SCAN <table>". A covering-index or indexed
+  // search shows "SEARCH … USING [COVERING ]INDEX". We fail on any SCAN that is
+  // not explicitly allow-listed (e.g. a tiny reference table).
+  const offending = details.filter((detail) => {
+    if (!/\bSCAN\b/.test(detail)) return false;
+    return !(opts.allow ?? []).some((allowed) => detail.includes(allowed));
+  });
+
+  if (offending.length > 0) {
+    throw new Error(
+      `EXPLAIN QUERY PLAN found a full-table SCAN (index every D1 query — PLAN §7):\n` +
+        `  SQL: ${sql}\n` +
+        offending.map((d) => `  ✗ ${d}`).join("\n") +
+        `\n  full plan:\n` +
+        details.map((d) => `    • ${d}`).join("\n"),
+    );
+  }
+}
+
+/**
+ * Convenience for Drizzle query builders: pass anything exposing `toSQL()`
+ * ({ sql, params }) and it is fed to `expectIndexedQuery`. Lets a test assert a
+ * typed Drizzle query is indexed without hand-writing the SQL string.
+ */
+export async function expectIndexedDrizzle(
+  db: D1Database,
+  query: { toSQL(): { sql: string; params: unknown[] } },
+  opts: ExplainOptions = {},
+): Promise<void> {
+  const { sql, params } = query.toSQL();
+  await expectIndexedQuery(db, sql, params, opts);
 }
