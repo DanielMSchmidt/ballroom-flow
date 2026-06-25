@@ -26,6 +26,7 @@ export type {
 export { matchesFigureType } from "./figuretype";
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
+export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export { resolve } from "./overlay";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { barsForFigure, countLabel, countToBar, isOnEighthGrid } from "./timing";
