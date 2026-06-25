@@ -23,6 +23,7 @@ export type {
   RoutineDoc,
   Section,
 } from "./doc-types";
+export { matchesFigureType } from "./figuretype";
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export { resolve } from "./overlay";
