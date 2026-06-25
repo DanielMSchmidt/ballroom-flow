@@ -3,7 +3,15 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!docs", "!research", "!**/dist", "!**/.wrangler", "!renovate.json"]
+    "includes": [
+      "**",
+      "!docs",
+      "!research",
+      "!**/dist",
+      "!**/.wrangler",
+      "!**/spike",
+      "!renovate.json"
+    ]
   },
   "formatter": {
     "enabled": true,

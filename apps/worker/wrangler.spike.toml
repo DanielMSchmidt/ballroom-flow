@@ -1,0 +1,13 @@
+# THROWAWAY SPIKE config (M0.5). Isolated from the production wrangler.toml.
+name = "ballroom-flow-spike"
+main = "spike/index.ts"
+compatibility_date = "2025-09-06"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "ROUTINE_DO"
+class_name = "RoutineDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoutineDO"]
