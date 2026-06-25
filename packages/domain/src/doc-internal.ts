@@ -37,11 +37,11 @@ export function buildDoc<T extends Record<string, unknown>>(initial: T): A.Doc<T
   return A.from(stripUndefined(structuredClone(initial)));
 }
 
-/** A plain, mutable deep copy of an Automerge doc's current value. */
+/** A plain, mutable, detached copy of an Automerge doc's current value. */
 export function materialize<T>(doc: A.Doc<T>): T {
-  // `A.save`+`A.load` would also work but is heavier; the doc proxy is a plain
-  // JSON value, so structuredClone yields a detached, writable POJO.
-  return structuredClone(A.toJS(doc)) as T;
+  // `A.toJS` already returns a fully detached, non-frozen, deeply-mutable POJO
+  // (verified: mutating it does not touch the doc), so no extra clone is needed.
+  return A.toJS(doc) as T;
 }
 
 /** True when an entity is soft-deleted (a truthy `deletedAt` tombstone). */
