@@ -128,6 +128,11 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     // Covers US-015 AC-2 (hibernation/wake keeps state).
     const { stub } = freshDoc("routine");
     await stub.applyChange({ op: "addSection", name: "Survives" });
+
+    // Simulate hibernation/eviction: the next read must rehydrate from SQLite,
+    // not return a warm in-memory doc (vitest-pool-workers keeps the DO warm).
+    await stub.reloadForTest();
+
     const doc = await stub.getSnapshot();
     expect((doc.sections ?? []).map((s) => s.name)).toContain("Survives");
   });
