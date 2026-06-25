@@ -73,6 +73,24 @@ describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
     const figDoc = await figure.stub.getSnapshot();
     expect(figDoc.sections ?? []).toHaveLength(0);
   });
+
+  it("appends one SQLite row per change, never a full rewrite", async () => {
+    // Intent: persistence is genuinely INCREMENTAL (AC-1) — each edit adds rows
+    //   to the change log rather than rewriting the whole doc. With the
+    //   getChanges(before, after) model, a single addSection is one change, so 3
+    //   edits add exactly 3 rows on top of the 1 seed row (4 total). A full-
+    //   rewrite design would hold a single row; a multi-change-per-op leak would
+    //   inflate it.
+    // Covers US-014 AC-1 ("incremental changes, not a full rewrite") + pins the
+    //   getChanges switch (#106) to one-row-per-op.
+    const { stub } = freshDoc("routine");
+    for (const name of ["A", "B", "C"]) {
+      await stub.applyChange({ op: "addSection", name });
+    }
+    // The DO's own change-log row count (test hook) proves persistence is
+    // incremental: 1 seed + 3 one-change ops = 4 rows.
+    expect(await stub.debugChangeRowCount()).toBe(4);
+  });
 });
 
 describe.skip("US-015 Live WebSocket sync (two clients converge)", () => {

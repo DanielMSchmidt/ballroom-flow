@@ -29,6 +29,8 @@ export interface DocStub {
   setMetadata(meta: Record<string, unknown>): Promise<void>;
   /** Test hook: drop the in-memory doc + re-run cold-load (simulates eviction). */
   reloadForTest(): Promise<void>;
+  /** Test hook: number of rows in the SQLite change log (incremental-persist assertions). */
+  debugChangeRowCount(): Promise<number>;
   /** Test hook: run the alarm body synchronously. */
   runAlarmForTest(): Promise<void>;
   /** Test hook: bytes currently persisted (for compaction assertions). */
