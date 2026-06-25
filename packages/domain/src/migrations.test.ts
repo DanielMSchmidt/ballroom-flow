@@ -91,6 +91,18 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     );
   });
 
+  it("throws if a migration step rewrites dance (guard fires)", () => {
+    // Intent: `dance` is also a copied-not-resolved identity field that family-note
+    // matching depends on (matchesFigureType gates on danceScope === figure.dance),
+    // so rewriting it would silently break this-dance notes. Same guard as figureType.
+    const badLadder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, dance: "waltz" }),
+    };
+    expect(() => runLadder({ schemaVersion: 1, dance: "foxtrot" }, badLadder, 2)).toThrow(
+      /dance is immutable/,
+    );
+  });
+
   it("treats an untagged doc as v1", () => {
     // Intent: a doc with no schemaVersion is migrated from the earliest version.
     const ladder: Record<number, MigrationStep> = { 1: (d) => ({ ...d, upgraded: true }) };
