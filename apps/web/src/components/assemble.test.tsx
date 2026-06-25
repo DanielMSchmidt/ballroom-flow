@@ -1,10 +1,12 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
+import type { FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
+import type { ResolvedPlacement, RoutineStore } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen, userEvent } from "../test-support/render";
+import { axeCheck, renderUi, screen, userEvent } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-018 — Open & view a routine [M2, user]
@@ -21,18 +23,79 @@ interface AssembleModule {
   Assemble: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-018 Open & view a routine", () => {
+// The store seam is the component's ONLY data source (CLAUDE.md §3). We inject a
+// pre-seeded fake store — mirroring how the store itself injects its socket — so
+// the screen renders synced data without a live worker (jsdom has no WS server).
+// The live multi-doc sync is the store seam's own test + the #116 wrangler smoke.
+function fakeStore(routine: RoutineDoc, resolved: ResolvedPlacement[]): RoutineStore {
+  return {
+    readRoutine: () => routine,
+    readPlacements: () => resolved,
+    renameSection: () => {},
+    undo: () => {},
+    redo: () => {},
+    subscribe: () => () => {},
+    syncState: () => "live",
+    close: () => {},
+  };
+}
+
+const placement = (id: string, figureRef: string): Placement => ({
+  id,
+  figureRef,
+  deletedAt: null,
+});
+const figure = (id: string, name: string): FigureDoc => ({
+  id,
+  scope: "global",
+  ownerId: "u",
+  figureType: id,
+  dance: "foxtrot",
+  name,
+  source: "library",
+  attributes: [{ id: `${id}-a1`, kind: "rise", count: 1, value: "rise", deletedAt: null }],
+  entryAlignment: { qualifier: "facing", direction: "DW" },
+  schemaVersion: 1,
+  deletedAt: null,
+});
+
+describe("US-018 Open & view a routine", () => {
   it("shows sections in order with placement cards (name, badges, summary, chips)", async () => {
     // Intent: opening a routine renders sections → placement cards from the synced docs.
-    // Arrange: render <Assemble> bound to the sample routine (2 sections, Feather + Three Step).
-    // Act: read the rendered structure.
-    // Assert: sections "Intro" then "Body" in order; placement cards show figure name +
-    //   attribute summary + alignment chips.
+    // Arrange: a sample routine — sections "Intro" (Feather) then "Body" (Three Step).
+    // Act: render <Assemble> bound to it. Assert: sections in order as headings; each
+    //   placement card shows the figure name + attribute summary + alignment chip.
     // Covers US-018 AC-1 (sections in order with placement cards).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
-    const headings = screen.getAllByRole("heading");
-    expect(headings.map((h) => h.textContent)).toEqual(expect.arrayContaining(["Intro", "Body"]));
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [
+        { id: "s1", name: "Intro", deletedAt: null, placements: [placement("p1", "feather")] },
+        { id: "s2", name: "Body", deletedAt: null, placements: [placement("p2", "threestep")] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const resolved: ResolvedPlacement[] = [
+      { placement: placement("p1", "feather"), figure: figure("feather", "Feather") },
+      { placement: placement("p2", "threestep"), figure: figure("threestep", "Three Step") },
+    ];
+    const { container } = renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />,
+    );
+
+    const headings = screen.getAllByRole("heading").map((h) => h.textContent);
+    expect(headings).toEqual(expect.arrayContaining(["Intro", "Body"]));
+    expect(headings.indexOf("Intro")).toBeLessThan(headings.indexOf("Body")); // in order
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    expect(screen.getByText("Three Step")).toBeInTheDocument();
+    expect(screen.getAllByText(/attribute/i).length).toBeGreaterThan(0); // attribute summary
+    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
+    expect(await axeCheck(container)).toHaveNoViolations(); // a11y smoke (DESIGN-PRINCIPLES)
   });
 
   it("shows a clear 'you're offline' state for data when offline", async () => {
