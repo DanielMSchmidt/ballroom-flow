@@ -20,7 +20,7 @@ import {
 // (US-041); THIS file is pure family-matching only.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-011 figureType annotation resolution", () => {
+describe("US-011 figureType annotation resolution", () => {
   it("matches an all-dances family note on a figure of that family in ANY dance", async () => {
     // Intent: "on every Feather" matches Foxtrot Feather AND Waltz Feather.
     // Arrange: an anchor {figureType:"feather", danceScope:"all"}.
@@ -69,5 +69,34 @@ describe.skip("US-011 figureType annotation resolution", () => {
     expect(matchesFigureType(makeFigureTypeAnchor("feather", "all"), STUDENT_FEATHER_VARIANT)).toBe(
       true,
     );
+  });
+
+  // ── Extra edge cases (in the spirit of US-011, beyond the listed ACs) ──
+
+  it("a this-dance note scoped to the wrong dance does not match", async () => {
+    // Intent: a Feather note scoped to Waltz must NOT land on the Foxtrot Feather
+    // (the dance scope is exact, in both directions).
+    const { matchesFigureType } = await importDomain();
+    expect(matchesFigureType(makeFigureTypeAnchor("feather", "waltz"), FEATHER_FOXTROT)).toBe(
+      false,
+    );
+  });
+
+  it("matches the same family across two different dances under an all-dances note", async () => {
+    // Intent: identity is the family, not the dance — one all-dances note covers
+    // every dance the family appears in (positively pinning the cross-dance reach).
+    const { matchesFigureType } = await importDomain();
+    const anchor = makeFigureTypeAnchor("feather", "all");
+    expect(FEATHER_FOXTROT.dance).not.toBe(FEATHER_WALTZ.dance); // genuinely different dances
+    expect(matchesFigureType(anchor, FEATHER_FOXTROT)).toBe(true);
+    expect(matchesFigureType(anchor, FEATHER_WALTZ)).toBe(true);
+  });
+
+  it("does not match a non-figureType anchor", async () => {
+    // Intent: only figureType anchors participate in family matching; a point
+    // anchor (or any other) never matches a figure family.
+    const { matchesFigureType } = await importDomain();
+    const pointAnchor = { type: "point" as const, figureRef: FEATHER_FOXTROT.id, count: 1 };
+    expect(matchesFigureType(pointAnchor, FEATHER_FOXTROT)).toBe(false);
   });
 });
