@@ -1,0 +1,20 @@
+# Git hooks (PLAN.md §10.3). Chosen: lefthook — one binary + one YAML replaces
+# husky's shell shims AND lint-staged's globbing, runs hooks in parallel, and
+# `wrangler`/`pnpm` stay the source of truth. Install with `pnpm install`
+# (root `prepare` runs `lefthook install`).
+pre-commit:
+  parallel: true
+  commands:
+    # Biome lint+format check on staged JS/TS, then re-stage any autofixes.
+    biome:
+      glob: "*.{js,jsx,ts,tsx,json,jsonc}"
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    # Type safety. TS project references can't be reliably narrowed to staged
+    # files, so typecheck the whole monorepo — it's fast and catches cross-file
+    # breakage a staged-only check would miss.
+    typecheck:
+      run: pnpm -r typecheck
+
+# `pnpm lint` / `pnpm -r typecheck` / `pnpm -r test` still gate every PR in CI;
+# the hook is a fast local pre-flight, not a replacement for CI.
