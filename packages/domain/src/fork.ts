@@ -7,17 +7,20 @@
 // the opposite of a figure variant, where non-overridden base edits flow up
 // live (`resolve`, US-006).
 //
-// What is and isn't copied:
-//   • the routine doc's structure (sections → placements) is deep-copied into a
-//     brand-new Automerge doc with a fresh id, so origin and clone never share
-//     mutable state — the freeze is structural, not a snapshot-and-hope;
+// What is and isn't copied (PLAN §5.2 — "Automerge `clone` of the routine doc"):
+//   • the routine doc is `A.clone`d → an independent doc that retains the origin's
+//     change history (AC-1 "retaining shared history") but never pulls future
+//     origin edits — that is the freeze;
+//   • only the identity fields change (fresh `id`, `ownerId`, `forkedFromRef`);
+//     nested sections/placements KEEP their ids — a choreo fork is an
+//     identity-preserving clone of the arrangement. (Re-minting nested ids is the
+//     figure-variant / copy-on-write concern, US-008, not this.)
 //   • `forkedFromRef` records lineage and is PROVENANCE-ONLY (nothing reads it to
 //     pull changes);
 //   • placements keep their `figureRef`s verbatim — the clone still references
 //     the same live library figure docs (those diverge later via copy-on-write,
 //     US-008), so a fork freezes the arrangement, not the figures.
-import type * as A from "@automerge/automerge";
-import { buildDoc, materialize } from "./doc-internal";
+import * as A from "@automerge/automerge";
 import type { RoutineDoc } from "./doc-types";
 import { newId } from "./ids";
 
@@ -27,22 +30,18 @@ import { newId } from "./ids";
  * @param doc    the origin routine Automerge doc.
  * @param byUser the id of the user who now owns the clone.
  * @returns a fresh, independent routine doc (new id, `forkedFromRef` = origin
- *   id, `ownerId` = byUser). Editing the origin afterwards does not affect it.
+ *   id, `ownerId` = byUser). Editing the origin afterwards does not affect the
+ *   clone, and editing the clone does not affect the origin (`A.clone` yields an
+ *   independent document).
  */
 export function cloneRoutine(doc: A.Doc<RoutineDoc>, opts: { byUser: string }): A.Doc<RoutineDoc> {
-  const origin = materialize(doc); // detached, mutable POJO of the origin's content
-
-  const clone: RoutineDoc = {
-    ...origin,
-    id: newId(),
-    ownerId: opts.byUser,
-    forkedFromRef: origin.id, // provenance only — no pull
-    // sections/placements (and their figureRefs) carry over verbatim; templateOf
-    // is not inherited — a clone is an owned routine, not a template source.
-    templateOf: null,
-  };
-
-  // buildDoc seeds a brand-new Automerge document from the deep-copied content,
-  // so the clone shares no structure with the origin (the freeze is structural).
-  return buildDoc(clone as unknown as Record<string, unknown>) as A.Doc<RoutineDoc>;
+  const originId = doc.id;
+  const cloned = A.clone(doc);
+  return A.change(cloned, (draft) => {
+    draft.id = newId();
+    draft.ownerId = opts.byUser;
+    draft.forkedFromRef = originId; // provenance only — no pull
+    // templateOf is not inherited — a clone is an owned routine, not a template.
+    draft.templateOf = null;
+  });
 }
