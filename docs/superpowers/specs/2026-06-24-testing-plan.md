@@ -1,11 +1,13 @@
 # Ballroom Flow — Detailed Testing Plan
 
+> **Note:** the testing strategy is now part of the consolidated [`docs/PLAN.md`](../../PLAN.md) (§10). This document is **retained as a detail annex** for its verbatim per-screen Prototype Feature Coverage Matrix (§2), which PLAN.md summarises to its high-risk rows. Where this document refers to "the design spec" (since removed), read [`docs/PLAN.md`](../../PLAN.md).
+
 **Status:** Draft for review — v1
 **Date:** 2026-06-24
 **Owner priority:** Quality and a solid, detailed testing plan are an explicit, non-negotiable requirement.
 **Sources of truth:**
 - `research/design-spec.md` — the exhaustive wireframe enumeration (the **prototype feature checklist**; every item here must appear below with explicit coverage).
-- `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` (**v2 spec**, the current target) — lean online-only stack: React + Vite PWA → Hono on Workers → D1 + Drizzle → Clerk; **two step charts per figure**; **meter-based timing**; **per-user op-log undo**; shared co-editing (LWW); Lanes view; sample routine; export/import.
+- [`docs/PLAN.md`](../../PLAN.md) (the consolidated plan, the current target) — lean online-only stack: React + Vite PWA → Hono on Workers → D1 + Drizzle → Clerk; **two step charts per figure**; **meter-based timing**; **per-user op-log undo**; shared co-editing (LWW); Lanes view; sample routine; export/import.
 - `research/platform.md` §6 — the toolchain.
 
 This document **expands §9 of the design spec into a standalone, far more detailed plan**, reconciled with the v2 decisions. In particular: there are **NO offline/CRDT two-client merge tests** in v1 (the entire sync-correctness surface was deleted). Concurrency is **server-authoritative last-write-wins (LWW)**, tested for a *defined deterministic outcome*, plus **per-user op-log undo**.

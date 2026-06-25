@@ -10,7 +10,11 @@ This is the single source of truth for Ballroom Flow. It consolidates four worki
 - the **testing plan** — the detailed, layered quality strategy (an explicit owner requirement);
 - the **open questions** — the live list of decisions still needed.
 
-The wireframe prototype (`docs/design/Ballroom Builder.dc.html`) is the **product sketch** these documents synthesize — a source of feature inventory, not a requirements list. Earlier research sources (`research/*.md`) are cited where a decision traces back to them.
+The design spec, implementation plan, and open-questions documents have been **fully folded into this plan and removed** — their content lives here. Three sources are **retained for detail this plan does not reproduce in full** (see [§14 Further detail & sources](#14-further-detail--sources)):
+
+- **`docs/superpowers/specs/2026-06-24-testing-plan.md`** — the verbatim per-screen [prototype feature coverage matrix](#104-prototype-feature-coverage-matrix) (this plan summarises it to its high-risk rows);
+- **`docs/design/Ballroom Builder.dc.html`** — the wireframe prototype, the **product sketch** this plan synthesizes (feature inventory, not a requirements list);
+- **`research/*.md`** — the deep-dive research the decisions trace back to (ballroom domain reference, platform/architecture research, the wireframe enumeration, five adversarial critiques, three extensibility reviews).
 
 **Guiding principle:** *quality and maintainability over feature count.* Every feature is sorted v1 / v1.1 / out-of-scope and YAGNI is applied ruthlessly.
 
@@ -31,6 +35,7 @@ The wireframe prototype (`docs/design/Ballroom Builder.dc.html`) is the **produc
 11. [Out of Scope (v1)](#11-out-of-scope-v1)
 12. [Open Questions & Decisions Needed](#12-open-questions--decisions-needed)
 13. [Appendix: Media (v1.1)](#13-appendix-media-v11)
+14. [Further detail & sources](#14-further-detail--sources)
 
 ---
 
@@ -851,4 +856,22 @@ Not in v1. The model carries `media[]` on Journal Entries and the UI shows "comi
 
 ---
 
-*End of consolidated plan. The four source documents remain in `docs/superpowers/` for detailed traceability; this document supersedes them as the working plan. M0–M1 are execution-ready; M2–M9 expand into their own detailed plans as reached.*
+## 14. Further detail & sources
+
+This plan is self-contained for building v1. The documents below are **retained because they hold extensive detail this plan deliberately does not reproduce in full** — consult them when you need the underlying enumeration, rationale, or verbatim reference.
+
+| Document | What it adds beyond this plan |
+|---|---|
+| [`docs/superpowers/specs/2026-06-24-testing-plan.md`](superpowers/specs/2026-06-24-testing-plan.md) | The **verbatim per-screen prototype feature coverage matrix** (§2 — Routine List, Assemble, Figure Timeline, Step Detail/Tag Editor, Thread, Share, Journal List, Entry Editor, Link Picker, Profile, Overlays, Tab bar, and the cross-cutting capabilities the prototype omitted), one row per interaction with key assertions. §10.4 here summarises it to its high-risk rows. |
+| [`docs/design/Ballroom Builder.dc.html`](design/Ballroom%20Builder.dc.html) | The **wireframe prototype** — the product sketch every screen and feature inventory was synthesized from. Open in a browser to view the interactive sketch. |
+| `research/domain.md` | Ballroom **domain reference** — counts, footwork, alignment, terminology systems (ISTD/IDTA/WDSF/American). The authority behind the §3 vocabularies. |
+| `research/platform.md` | **Platform/architecture research** — the Cloudflare stack, toolchain, and the trade-offs behind §6 and §8. |
+| `research/design-spec.md` | The **exhaustive wireframe enumeration** (every screen, toast, toggle, nav edge) — the prototype feature checklist the testing matrix traces against. |
+| `research/critique-{domain,sync,product,testing,scope}.md` | The **five adversarial critiques** that drove the v2 simplification (online-only, shared co-editing, two charts, meter-based timing). |
+| `research/extensibility-{attributes,crdt,undo}.md` | The **three extensibility reviews** that produced spec v3 (client ULIDs, soft-delete, the footprint op-log, SLOT_REGISTRY, schemaVersion, the `store/` seam). |
+
+**Removed** (fully folded into this plan, no longer maintained separately): the design specification, the implementation plan, and the consolidated open-questions document.
+
+---
+
+*End of consolidated plan. This document supersedes the design spec, implementation plan, and open-questions doc as the working plan (those have been removed; see §14 for what is retained). M0–M1 are execution-ready; M2–M9 expand into their own detailed plans as reached.*
