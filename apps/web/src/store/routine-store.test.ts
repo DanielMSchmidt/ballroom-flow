@@ -1,4 +1,10 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import * as A from "@automerge/automerge";
+import type { FigureDoc, RoutineDoc } from "@ballroom/domain";
+import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
 import { describe, expect, it } from "vitest";
+import { type OpenOptions, openRoutine } from "./routine";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-017 — store/ seam (multi-doc) [M2, system]
@@ -7,62 +13,214 @@ import { describe, expect, it } from "vitest";
 // doc's DO; resolves variant overlays client-side; exposes typed reactive reads
 // + mutations + history-based undo. Components import ONLY from store/.
 //
-// The store (apps/web/src/store/routine.ts) is built in M2 → dynamic import
-// behind it.skip. (The multi-doc SYNC over real DOs is the worker layer
-// doc-do.test.ts; here we pin the seam's CONTRACT.)
+// The store wraps the WS sync via an injectable SocketFactory — these tests
+// drive a FAKE socket (jsdom has no WS server) and feed it the change frames a
+// DO would replay, so the seam's multi-doc load + overlay resolve + reactive
+// reads/undo are exercised for real. (Live multi-doc sync over real DOs is the
+// worker doc-do.test.ts + the #116 wrangler-dev smoke.)
 // ─────────────────────────────────────────────────────────────────────────
 
-/** Structural view of the M2 store seam (avoids `any`; the real type lands in M2). */
-interface RoutineStore {
-  readPlacements(): unknown[];
-  undo(): void;
-  redo(): void;
-  subscribe(fn: () => void): () => void;
-}
-interface RoutineStoreModule {
-  openRoutine(routineId: string): Promise<RoutineStore>;
+/** A fake socket the test can push frames into (stands in for the DO). */
+class FakeSocket {
+  binaryType = "blob";
+  private msg: ((ev: { data: unknown }) => void) | null = null;
+  private open: (() => void) | null = null;
+  private closed: (() => void) | null = null;
+  sent: Uint8Array[] = [];
+  addEventListener(type: string, fn: (ev: { data: unknown }) => void): void {
+    if (type === "message") this.msg = fn;
+    else if (type === "open") this.open = fn as () => void;
+    else if (type === "close") this.closed = fn as () => void;
+  }
+  send(data: ArrayBufferView | ArrayBuffer): void {
+    this.sent.push(new Uint8Array(data as ArrayBuffer));
+  }
+  close(): void {
+    this.closed?.();
+  }
+  /** Signal the socket is open (the runtime fires this; the DO then replays). */
+  fireOpen(): void {
+    this.open?.();
+  }
+  /** Replay a doc's FULL history to the client (what the DO does on connect). */
+  load(doc: A.Doc<unknown>): void {
+    for (const c of A.getAllChanges(doc)) {
+      const u = c as Uint8Array;
+      this.msg?.({ data: u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) });
+    }
+  }
 }
 
-// Runtime-variable specifier so tsc doesn't try to resolve the not-yet-built M2
-// store module (apps/web/src/store/routine.ts). Replace with a direct import
-// once it exists. See the worker/domain shims for the same rationale.
-const ROUTINE_STORE_PATH = "./routine";
+/** Build OpenOptions whose socket factory hands back a FakeSocket per docId. */
+function fakeWiring(): { opts: OpenOptions; sockets: Map<string, FakeSocket> } {
+  const sockets = new Map<string, FakeSocket>();
+  const opts: OpenOptions = {
+    baseUrl: "http://test",
+    openSocket: (url) => {
+      const id = decodeURIComponent(url.split("/docs/")[1]?.replace("/connect", "") ?? url);
+      const s = new FakeSocket();
+      sockets.set(id, s);
+      return s as unknown as ReturnType<NonNullable<OpenOptions["openSocket"]>>;
+    },
+  };
+  return { opts, sockets };
+}
 
-describe.skip("US-017 store/ seam (multi-doc)", () => {
+const aFigure = (over: Partial<FigureDoc>): RoutineDoc | FigureDoc =>
+  ({
+    id: "f",
+    scope: "global",
+    ownerId: "u",
+    figureType: "natural_turn",
+    dance: "waltz",
+    name: "Natural Turn",
+    source: "library",
+    attributes: [],
+    schemaVersion: 1,
+    deletedAt: null,
+    ...over,
+  }) as FigureDoc;
+
+describe("US-017 store/ seam (multi-doc)", () => {
   it("loads a routine doc + each referenced figure doc and resolves variant overlays", async () => {
-    // Intent: opening a routine fans out to the routine DO + every referenced
+    // Intent: opening a routine fans out to the routine DO + each referenced
     //   figure DO and resolves variant overlays client-side via resolve().
-    // Arrange: a routine referencing a global figure + an account VARIANT of it.
-    // Act: openRoutine(routineId) and read the resolved placements.
-    // Assert: every placement's figure resolves to effective attributes (the
-    //   variant shows base ⊕ overlay), proving the multi-doc load + overlay resolve.
     // Covers US-017 AC-1 (connect routine + figure docs) + AC-2 (overlays resolve).
-    const mod = (await import(ROUTINE_STORE_PATH)) as unknown as RoutineStoreModule;
-    const store = await mod.openRoutine("rt_sample");
-    const placements = store.readPlacements();
-    expect(Array.isArray(placements)).toBe(true);
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+    expect(Array.isArray(store.readPlacements())).toBe(true);
+
+    // Sync state starts "connecting" and flips to "live" once the socket opens
+    // (US-018 "syncing…" indicator).
+    expect(store.syncState()).toBe("connecting");
+    sockets.get("rt_sample")?.fireOpen();
+    expect(store.syncState()).toBe("live");
+
+    // The routine DO replays a section with a placement referencing variant "fv".
+    const routineFull = buildRoutineDoc({
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fv", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(routineFull);
+
+    // Reading placements opens the variant figure's connection (the placement
+    // references "fv"). Load the variant — once it reports a baseFigureRef, the
+    // next read opens the base figure's connection, which we then load too.
+    store.readPlacements();
+    const varFull = buildFigureDoc(
+      aFigure({
+        id: "fv",
+        name: "My Turn",
+        scope: "account",
+        baseFigureRef: "fbase",
+        overlay: { overrides: { a1: "rise" }, tombstones: [], additions: [], rename: "My Turn" },
+      }) as FigureDoc,
+    );
+    sockets.get("fv")?.load(varFull);
+
+    // Reading again opens the base connection (fv now declares baseFigureRef).
+    store.readPlacements();
+    const baseFull = buildFigureDoc(
+      aFigure({
+        id: "fbase",
+        attributes: [{ id: "a1", kind: "rise", count: 1, value: "NFR", deletedAt: null }],
+      }) as FigureDoc,
+    );
+    sockets.get("fbase")?.load(baseFull);
+
+    const resolved = store.readPlacements();
+    expect(resolved).toHaveLength(1);
+    // The variant resolved to base ⊕ overlay (US-006): the base attribute a1 is
+    // present with the overlay's overridden value, and the variant rename applies.
+    // (resolve keeps base identity + variant name — the hybrid-identity contract.)
+    expect(resolved[0]?.figure?.attributes.find((x) => x.id === "a1")?.value).toBe("rise");
+    expect(resolved[0]?.figure?.name).toBe("My Turn");
+    store.close();
   });
 
   it("exposes typed reactive reads + mutations + history-based undo", async () => {
     // Intent: the seam is the only thing components touch — reads, mutations, undo.
-    // Arrange: open a routine. Act: subscribe to a read, apply a mutation, undo it.
-    // Assert: the subscription fires on mutation; undo reverts it (per-user, US-010).
     // Covers US-017 AC-3 (typed reactive reads + mutations + undo).
-    const mod = (await import(ROUTINE_STORE_PATH)) as unknown as RoutineStoreModule;
-    const store = await mod.openRoutine("rt_sample");
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, actor: "00aa00aa00aa00aa" });
+
+    // The DO replays a routine with one section so we can rename it.
+    const withSection = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(withSection);
+
+    let fired = 0;
+    const unsub = store.subscribe(() => {
+      fired++;
+    });
     expect(typeof store.undo).toBe("function");
-    expect(typeof store.subscribe).toBe("function");
+    expect(typeof store.redo).toBe("function");
+
+    // A mutation through the seam notifies subscribers + applies (reactive read).
+    store.renameSection("s1", "Verse");
+    expect(fired).toBe(1); // subscription fired on the mutation
+    expect(store.readRoutine().sections.find((s) => s.id === "s1")?.name).toBe("Verse");
+
+    // Undo is wired to the domain per-actor history (US-010) and notifies again.
+    store.undo();
+    expect(fired).toBe(2); // subscription fired on the undo
+    // The undo no longer shows "Verse" — the seam reverted the user's last change.
+    expect(store.readRoutine().sections.find((s) => s.id === "s1")?.name).not.toBe("Verse");
+
+    unsub();
+    store.renameSection("s1", "Ignored"); // unsubscribed → no more notifications
+    expect(fired).toBe(2);
+    store.close();
   });
 });
 
-describe.skip("US-017 architecture boundary (components import only from store/)", () => {
-  it("documents the lint/architecture rule forbidding direct automerge/RPC in components", () => {
-    // Intent: components must not import @automerge/automerge or the RPC client
-    //   directly — only the store/ seam (D6, §6.1). This is enforced by an
-    //   architecture/lint rule (M2). This placeholder marks where that gate is
-    //   asserted (e.g. a dependency-cruiser / Biome rule check), so the boundary
-    //   is part of the test map rather than implicit.
-    // Covers US-017 AC-4 (components import only from store/).
-    expect(true).toBe(true);
+describe("US-017 architecture boundary (components import only from store/)", () => {
+  it("no component imports @automerge/automerge or the RPC client directly", () => {
+    // Intent: components must reach Automerge / the worker only THROUGH store/
+    //   (D6, §6.1) — never import @automerge/automerge or lib/rpc directly. This
+    //   scans the components tree and fails on any direct import, so the boundary
+    //   is a real gate, not a comment. (A dependency-cruiser/Biome rule can
+    //   subsume this later; the assertion is what matters.)
+    // Covers US-017 AC-4.
+    const componentsDir = join(__dirname, "..", "components");
+    const offenders: string[] = [];
+    const FORBIDDEN = /from\s+["'](@automerge\/automerge|\.\.?\/(?:\.\.\/)*lib\/rpc)["']/;
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(p);
+        } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+          if (FORBIDDEN.test(readFileSync(p, "utf8"))) offenders.push(p);
+        }
+      }
+    };
+    try {
+      walk(componentsDir);
+    } catch {
+      // components dir may not exist yet (no product components) — vacuously clean.
+    }
+    expect(offenders).toEqual([]);
   });
 });
