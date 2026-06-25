@@ -34,7 +34,7 @@ beforeAll(async () => {
   await applyMigrations();
 });
 
-describe.skip("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
+describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
   it("persists incremental changes to DO SQLite and rehydrates after eviction", async () => {
     // Intent: the DO keeps the doc in memory + persists INCREMENTAL changes; a
     //   cold DO (post-eviction) rebuilds the same doc from SQLite (M0.5 S1).

@@ -18,6 +18,18 @@ database_name = "ballroom-flow-dev"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
+# Per-document Automerge host (US-014, PLAN §6/D23): one SQLite-backed DO per
+# routine/figure document. The DocDO class is exported from src/index.ts.
+[[durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
+# DO class migration — `new_sqlite_classes` because DocDO uses ctx.storage.sql
+# (SQLite-backed). Top-level migrations apply to all environments.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DocDO"]
+
 # --- Staging (deployed from the `development` branch).
 [env.staging]
 name = "ballroom-flow-staging"
@@ -35,6 +47,10 @@ database_name = "ballroom-flow-staging"
 database_id = "ad9ea4d2-3687-411d-a664-a938dc91b541"
 migrations_dir = "migrations"
 
+[[env.staging.durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
 # --- Production (deployed from the `main` branch).
 [env.production]
 name = "ballroom-flow-production"
@@ -50,3 +66,7 @@ binding = "DB"
 database_name = "ballroom-flow-production"
 database_id = "55ba153e-a24e-4cf6-8579-213b236abae5"
 migrations_dir = "migrations"
+
+[[env.production.durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"

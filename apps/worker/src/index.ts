@@ -3,6 +3,9 @@ import { authenticate } from "./auth";
 
 export type Env = {
   DB: D1Database;
+  // Per-document Automerge host (US-014, PLAN §6/D23): one DO per routine/figure
+  // document, SQLite-backed, the sync + permission boundary.
+  DOC_DO: DurableObjectNamespace;
   // Clerk verification keys — set as Wrangler secrets (see PROVISIONING.md).
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
@@ -20,3 +23,7 @@ app.get("/api/me", async (c) => {
 
 export type AppType = typeof app;
 export default app;
+
+// The per-document Durable Object must be exported from the Worker entry so the
+// runtime can instantiate it for the `DOC_DO` binding (wrangler.toml).
+export { DocDO } from "./doc-do";
