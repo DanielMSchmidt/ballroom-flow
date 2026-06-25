@@ -90,7 +90,7 @@ export interface DomainApi {
 
   // US-004 timing.ts
   countLabel(count: number): string;
-  countToBar(count: number, dance: DanceId): { bar: number; countInBar: number };
+  countToBar(count: number, dance: DanceId): { phrase: number; countInPhrase: number };
   barsForFigure(counts: number[], dance: DanceId): number;
 
   // US-005 doc-routine.ts / doc-figure.ts
