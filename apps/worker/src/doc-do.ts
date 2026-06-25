@@ -261,10 +261,21 @@ export class DocDO extends DurableObject<Env> {
    * A change arrived from a connected client. Binary frames are raw Automerge
    * change bytes; apply (idempotently) and relay to the OTHER clients so all
    * connections converge.
+   *
+   * The connect route is OPEN until US-021, so frames are untrusted: a malformed
+   * frame (not valid Automerge change bytes) must NOT crash the handler or take
+   * down the DO — we DROP it (Automerge `applyChanges` throws "Invalid magic
+   * bytes" on garbage). A typed WS envelope with explicit error replies is #117.
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    await this.ingestChange(new Uint8Array(message), ws);
+    try {
+      await this.ingestChange(new Uint8Array(message), ws);
+    } catch {
+      // Malformed/unapplyable frame — drop it; other clients + the doc are
+      // unaffected. (Closing the socket with 1003 "unsupported data" is a
+      // reasonable hardening once the typed envelope #117 distinguishes frames.)
+    }
   }
 
   /**
