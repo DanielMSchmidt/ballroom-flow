@@ -11,6 +11,7 @@
 - **Milestone** maps to the §9 roadmap (M1 = domain core, M2 = DO sync, … M9 = PWA/a11y). The parallel **content workstream** (full-syllabus seed) is tagged `Content`.
 - **Walking skeleton** (the minimal independently-testable spine) is flagged in §"Walking skeleton" and marked `🦴` in the index.
 - Out-of-scope items (§11 — offline editing, predicate query anchors, billing, ownership transfer, Latin/spot, media, notifications) have **no stories**.
+- **Each story carries a `Tests (unskip when done)` block** listing the exact test file(s) + the individual test names expected to PASS once the story is implemented. The full suite is authored up front as SKIPPED tests (RED→GREEN); a story is "done" when its listed tests are unskipped and green. Tests are split per acceptance criterion where the ACs land at different times, so a story can light up its tests **gradually** (unskip a single `it`/`test`, not a whole block). The cross-cutting index is [`docs/TEST-MAP.md`](TEST-MAP.md); the layer conventions + missing-dependency notes (e.g. `@automerge/automerge`) live there too.
 
 ---
 
@@ -101,6 +102,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Given a request for a new id, When generated, Then it is a valid 26-char ULID.
   - Ids generated in sequence sort lexicographically by creation time (monotonic).
   - Ids are generated client-side (no network), and two clients never collide in practice.
+- **Tests (unskip when done):** `packages/domain/src/ids.test.ts`
+  - `generates a valid 26-char Crockford-base32 ULID` (AC-1)
+  - `mints monotonically sortable ids in creation order` (AC-2)
+  - `does not collide across two independent generators (two clients)` (AC-3)
 
 #### US-002 — Dance metadata registry 🦴
 - **Narrative:** As the system, I want a `DANCES` registry, so that timing, phrasing, and applicability rules derive from one source.
@@ -109,6 +114,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The 5 Standard travelling dances exist: `waltz`, `viennese_waltz`, `quickstep`, `foxtrot`, `tango`, each `travelling:true`.
   - `beatsPerBar` = 3 for Waltz/Viennese, 4 for the rest; `phraseBeats` = 6 for Waltz/Viennese, 8 for the rest; `timeSignature` present.
   - No Latin/spot dances are present (v1 scope).
+- **Tests (unskip when done):** `packages/domain/src/dances.test.ts`
+  - `exposes exactly the 5 Standard travelling dances, all travelling:true` (AC-1 + AC-3 no Latin/spot)
+  - `sets beatsPerBar/phraseBeats per meter (3/6 Waltz+Viennese, 4/8 rest)` (AC-2)
+  - `carries a timeSignature for every dance` (AC-2)
 
 #### US-003 — ATTRIBUTE_REGISTRY + merge 🦴
 - **Narrative:** As the system, I want a two-tier attribute registry (standard + user-defined) merged everywhere, so that the editor, lanes, chips, and Zod all read one vocabulary.
@@ -120,6 +129,13 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Alias normalization: `CBP` → `CBMP` on read.
   - A user-defined kind merges into the registry and is indistinguishable in downstream reads (color, cardinality, valueType honored).
   - Unknown value written to a known kind is rejected; unknown value read passes through.
+- **Tests (unskip when done):** `packages/domain/src/vocabulary.test.ts`
+  - `ships the standard kinds with their footwork/rise/turn values` (AC-1)
+  - `omits rise for Tango via appliesToDances` (AC-2)
+  - `models position as single and bodyActions as multi cardinality` (AC-3)
+  - `normalizes the CBP alias to CBMP on read` (AC-4)
+  - `merges a user-defined kind so it is indistinguishable downstream` (AC-5)
+  - Note: the unknown-value reject-on-write / pass-on-read AC is exercised by the Zod layer — see US-012's `schemas.test.ts` tests.
 
 #### US-004 — Float-count timing 🦴
 - **Narrative:** As the system, I want float-count timing helpers, so that counts render in conventional ballroom notation modulo the dance phrase.
@@ -129,6 +145,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `countToBar` interprets counts modulo the dance's phrase (Waltz/Viennese 1–6; rest 1–8).
   - `barsForFigure` computes per role.
   - Fractions follow `e`=.25, `&`=.5, `a`=.75 (not the earlier swapped draft).
+- **Tests (unskip when done):** `packages/domain/src/timing.test.ts`
+  - `renders quarter/half/three-quarter fractions as e/&/a` (AC-1 first row, Q-D3)
+  - `renders eighth-note subdivisions as ia/ai` (AC-1 second row)
+  - `interprets counts modulo the dance phrase (Waltz 1–6, Foxtrot 1–8)` (AC-2)
+  - `computes bars for a figure per role` (AC-3)
 
 #### US-005 — Routine + figure document schemas 🦴
 - **Narrative:** As the system, I want typed routine and figure Automerge document schemas + helpers, so that the document graph is built and read consistently.
@@ -138,6 +159,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Figure doc holds `scope`, `ownerId`, `figureType`, `dance`, `name`, `source`, alignment, attributes `{id,kind,count,role?,value}`, optional variant fields (`baseFigureRef`, overlay), `schemaVersion`.
   - Soft-delete is a mergeable `deletedAt` flip; no hard removal anywhere.
   - Typed read/write helpers exist for every shape; reads of a deleted entity reflect the tombstone.
+- **Tests (unskip when done):** `packages/domain/src/doc-schemas.test.ts`
+  - `builds a routine doc with sections → ordered placements + annotations` (AC-1)
+  - `builds a figure doc carrying scope/figureType/dance/attributes/schemaVersion` (AC-2)
+  - `soft-deletes via a mergeable deletedAt flip, never a hard removal` (AC-3 + AC-4)
+  - `flips an attribute soft-delete on a figure doc` (AC-3 at attribute grain)
 
 #### US-006 — Overlay resolution `resolve(base, overlay)` 🦴
 - **Narrative:** As the system, I want `resolve(base, overlay)`, so that a figure variant inherits the live base and stores only its divergences.
@@ -147,6 +173,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `rename` applies to the variant's name.
   - Base additions to non-overridden attributes flow up into the variant automatically.
   - Overrides win over base; the function is pure and deterministic (same inputs → same output, no mutation of base).
+- **Tests (unskip when done):** `packages/domain/src/overlay.test.ts`
+  - `applies tombstones + overrides + additions and the rename` (AC-1 + AC-2)
+  - `flows a new base attribute up into the variant automatically` (AC-3)
+  - `lets overrides win over the base and is pure (does not mutate base)` (AC-4)
 
 #### US-007 — Choreo fork (clone) 🦴
 - **Narrative:** As the system, I want `cloneRoutine`, so that "make it your own" produces an independent frozen copy with provenance.
@@ -156,6 +186,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The clone is frozen: a later change to the origin routine does NOT appear in the clone.
   - `forkedFromRef` is provenance-only (no pull mechanism exists).
   - Referenced figure docs remain shared (the clone still points at the same figure docs until diverged).
+- **Tests (unskip when done):** `packages/domain/src/fork.test.ts` (describe `US-007 Choreo fork (clone)`)
+  - `clones a routine to a new id, frozen, with forkedFromRef provenance` (AC-1)
+  - `is frozen: a later edit to the origin does NOT appear in the clone` (AC-2 + AC-3)
+  - `keeps referenced figure docs shared (still points at the same figureRefs)` (AC-4)
 
 #### US-008 — Copy-on-write (auto-variant) 🦴
 - **Narrative:** As the system, I want `copyOnWrite(placement, sharedFigure, byUser)`, so that editing any non-owned figure diverges only that figure into an owned variant.
@@ -165,6 +199,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The placement is re-pointed to the new variant.
   - The shared base figure is untouched (no disturbance to others).
   - Editing a figure the user already owns does NOT trigger copy-on-write (edits in place).
+- **Tests (unskip when done):** `packages/domain/src/fork.test.ts` (describe `US-008 Copy-on-write (auto-variant)`)
+  - `spawns an owned variant (baseFigureRef + empty overlay) and re-points the placement` (AC-1 + AC-2)
+  - `leaves the shared base figure untouched (no disturbance to others)` (AC-3)
+  - `does NOT copy-on-write when the user already owns the figure (edits in place)` (AC-4)
 
 #### US-009 — Automerge convergence invariants 🦴
 - **Narrative:** As the system, I want property-based convergence tests, so that concurrent/partitioned edits always merge correctly.
@@ -174,6 +212,12 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Two replicas edited "offline" then merged converge with no lost edits.
   - Applying a duplicate change is idempotent.
   - Convergence holds across forks (shuffled/partitioned changes incl. cloned docs).
+- **Tests (unskip when done):** `packages/domain/src/convergence.test.ts` (fast-check property)
+  - `converges regardless of edit order (commutative) — property` (AC-1)
+  - `converges two partitioned (offline) replicas with no lost edits` (AC-2)
+  - `is idempotent when the same change is applied twice` (AC-3)
+  - `converges shuffled/partitioned changes across a fork (cloned doc)` (AC-4)
+  - Requires the `@automerge/automerge` dependency (see TEST-MAP.md "Missing dependencies").
 
 #### US-010 — History-based per-user undo 🦴
 - **Narrative:** As the system, I want history-based per-user undo, so that a user reverts their own last change without an op-log.
@@ -183,6 +227,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - B's concurrent edit survives A's undo.
   - Redo re-applies the undone change; a new edit clears the redo stack.
   - Scope is the doc being edited (no cross-document undo of a copy-on-write).
+- **Tests (unskip when done):** `packages/domain/src/undo.test.ts`
+  - `inverts only user A's last change, reverting just A's edit` (AC-1)
+  - `preserves actor B's concurrent edit when A undoes` (AC-2)
+  - `redo re-applies the undone change; a new edit clears the redo stack` (AC-3)
+  - Scope-to-the-edited-doc (AC-4) is implicit (the helpers operate on one doc); the cross-doc-COW-undo negative is asserted at the UX layer (US-038). Requires `@automerge/automerge`.
 
 #### US-011 — `figureType` annotation resolution
 - **Narrative:** As the system, I want `figureType` annotation matching, so that family notes resolve to the right figures across dances.
@@ -192,6 +241,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A `this-dance` note matches only figures of that family in its dance.
   - A variant inherits its base's `figureType` + `dance`, so family notes match it too.
   - Resolution is pure/deterministic and identity-based (not a predicate query).
+- **Tests (unskip when done):** `packages/domain/src/figuretype-notes.test.ts`
+  - `matches an all-dances family note on a figure of that family in ANY dance` (AC-1)
+  - `matches a this-dance family note only in that dance` (AC-2)
+  - `does not match a different family` (AC-4 identity-based)
+  - `matches a variant because it inherits its base's figureType + dance` (AC-3)
 
 #### US-012 — Zod schemas (lenient read / strict write) 🦴
 - **Narrative:** As the system, I want registry-derived Zod schemas, so that writes are validated strictly while reads tolerate forward-compatible data.
@@ -201,6 +255,12 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Unknown attribute values pass on read; unknown value written to a known kind is rejected.
   - Timing values outside the meter's valid range are rejected on write.
   - `CBP→CBMP` and other aliases normalize on read.
+- **Tests (unskip when done):** `packages/domain/src/schemas.test.ts`
+  - `passes an unknown attribute value on READ (forward compatible)` (AC-2 read half)
+  - `rejects an unknown value written to a known kind on WRITE` (AC-2 write half)
+  - `rejects a timing value outside the meter's valid range on write` (AC-3)
+  - `normalizes CBP→CBMP on read` (AC-4)
+  - The "schemas derived from the merged registry" AC-1 is structural — exercised by every parse test above using registry kinds.
 
 #### US-013 — Migration ladder (schemaVersion)
 - **Narrative:** As the system, I want a `schemaVersion` envelope + migration ladder, so that older documents upgrade and round-trips survive.
@@ -210,6 +270,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - An ordered chain of migrations upgrades an older doc to the current version.
   - Unknown attribute values survive a migration (no data loss).
   - Migrating an already-current doc is a no-op.
+- **Tests (unskip when done):** `packages/domain/src/migrations.test.ts`
+  - `upgrades an older-version doc through the ordered ladder to current` (AC-1 schemaVersion present + AC-2 ordered chain)
+  - `preserves unknown attribute values across a migration (no data loss)` (AC-3)
+  - `is a no-op when the doc is already at the current version` (AC-4)
 
 ---
 
@@ -224,6 +288,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The DO holds the Automerge doc in memory and persists incremental changes to DO SQLite (not a full rewrite per edit).
   - After DO eviction + reconnect, the doc rehydrates intact.
   - Routine docs and figure docs each get their own DO (one per document).
+- **Tests (unskip when done):** `apps/worker/src/doc-do.test.ts` (describe `US-014 …`)
+  - `persists incremental changes to DO SQLite and rehydrates after eviction` (AC-1 + AC-2)
+  - `gives routine docs and figure docs each their own DO` (AC-3)
+  - Needs the `DOC_DO` binding in `wrangler.toml` + `@automerge/automerge` (M2).
 
 #### US-015 — Live WebSocket sync (two clients converge) 🦴
 - **Narrative:** As the system, I want live WebSocket change-sync over Hibernatable WebSockets, so that two clients of a document converge in real time.
@@ -233,6 +301,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Hibernation then wake does not drop document state or buffered changes.
   - A duplicate change delivered over the socket is idempotent.
   - Starts with core `@automerge/automerge` + a thin custom sync (automerge-repo only if delta efficiency demands).
+- **Tests (unskip when done):**
+  - Worker (DO-level): `apps/worker/src/doc-do.test.ts` (describe `US-015 …`) — `converges two clients exchanging Automerge changes over the DO` (AC-1), `keeps state across a hibernation/wake cycle` (AC-2), `is idempotent when the same change arrives twice over the socket` (AC-3).
+  - E2E (real two browsers): `apps/web/e2e/convergence.spec.ts` — `an edit by user A appears live for user B and vice versa` (AC-1), `a duplicate change over the socket does not duplicate the edit` (AC-3).
 
 #### US-016 — DO alarm: compaction + D1 index projection + invite expiry
 - **Narrative:** As the system, I want a DO alarm, so that history compaction, index projection, and invite expiry happen off the request path.
@@ -242,6 +313,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The alarm projects a thin registry row (title/dance/owner/updatedAt/figureType/dance) to D1.
   - The alarm expires due invites.
   - None of these run on the synchronous request/sync path.
+- **Tests (unskip when done):** `apps/worker/src/doc-do.test.ts` (describe `US-016 …`)
+  - `compacts persisted history on the alarm (off the request path)` (AC-1 + AC-4)
+  - `projects a thin registry row to D1 on the alarm` (AC-2)
+  - `expires due invites on the alarm` (AC-3 — placeholder assertion; tighten against the M2 invite-table semantics)
 
 #### US-017 — `store/` seam (multi-doc) 🦴
 - **Narrative:** As a frontend developer, I want a typed `store/` seam over automerge, so that components never touch automerge or RPC directly.
@@ -251,6 +326,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Variant overlays resolve client-side via `resolve`.
   - The seam exposes typed reactive reads + mutations + history-based undo.
   - Components import only from `store/` (a lint/architecture check forbids direct automerge/RPC use in components).
+- **Tests (unskip when done):** `apps/web/src/store/routine-store.test.ts`
+  - `loads a routine doc + each referenced figure doc and resolves variant overlays` (AC-1 + AC-2)
+  - `exposes typed reactive reads + mutations + history-based undo` (AC-3)
+  - `documents the lint/architecture rule forbidding direct automerge/RPC in components` (AC-4 — placeholder; replace with the M2 dependency-cruiser/lint rule check).
 
 #### US-018 — Open & view a routine
 - **Narrative:** As a member, I want to open a routine and see its sections and figures, so that I can read the choreography.
@@ -259,6 +338,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Given a routine I'm a member of, When I open it, Then Assemble shows sections in order with placement cards (figure name, badges, attribute summary, alignment chips).
   - Edits made by another connected client appear without reload (live).
   - While offline for data, a clear "you're offline" state shows (no silent stale edits).
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/assemble.test.tsx` (describe `US-018 …`) — `shows sections in order with placement cards (name, badges, summary, chips)` (AC-1), `shows a clear 'you're offline' state for data when offline` (AC-3).
+  - E2E (live multi-client, AC-2): the "appears without reload" path is covered by `apps/web/e2e/convergence.spec.ts` (US-015); the read-only-viewer view by `apps/web/e2e/authoring.spec.ts` — `a viewer sees the routine read-only`.
 
 ---
 
@@ -273,6 +355,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Clerk hosted sign-in offers Google + passkeys.
   - Onboarding captures `displayName` + `identityColor`, persisted to the User row.
   - `GET /api/me` returns the verified Clerk `sub`; a missing/invalid JWT → 401 (networkless verify).
+- **Tests (unskip when done):**
+  - Negative auth (already PASSING, not skipped): `apps/worker/src/auth/index.test.ts` — `rejects /api/me without a bearer token`, `rejects /api/me with an invalid token` (AC-3 negative).
+  - Positive verify + onboarding: `apps/worker/src/routes/me-profile.test.ts` (describe `US-019 …`) — `returns the verified Clerk sub from /api/me for a valid token (networkless)` (AC-3 positive), `persists displayName + identityColor on onboarding` (AC-2). Needs `CLERK_JWT_KEY` = the test PEM injected (M3).
+  - AC-1 (Google + passkeys) is a Clerk-hosted-UI concern — verified manually/by Clerk, not unit-tested.
 
 #### US-020 — Per-document membership & roles
 - **Narrative:** As the system, I want per-document membership with roles, so that access is governed independently per doc.
@@ -281,6 +367,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Membership `{docRef, userId, role}` with role ∈ {viewer, commenter, editor}; owner = an editor who may also delete the doc.
   - A routine doc and a figure doc are shared independently (membership is per doc).
   - Capabilities: editor edits structure + annotations + invites/removes; commenter reads + annotates; viewer reads only.
+- **Tests (unskip when done):** `apps/worker/src/permissions.test.ts` (describe `US-020 …`)
+  - `grants editor edit+invite, commenter annotate, viewer read-only` (AC-1 + AC-3 capabilities)
+  - `treats a routine doc and a figure doc as independently shared` (AC-2)
 
 #### US-021 — Permission boundary at the DO connection 🦴
 - **Narrative:** As the system, I want the DO to enforce role at the sync connection, so that permission is never post-hoc CRDT-cell rejection.
@@ -290,6 +379,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Editor change accepted; commenter may write annotations only; viewer is read-only; non-member rejected.
   - A forged sync connection (valid JWT, no membership) is rejected — on a routine doc AND on a figure doc.
   - Editing a shared figure without rights triggers copy-on-write (US-035), not a hard block.
+- **Tests (unskip when done):**
+  - Worker (DO boundary): `apps/worker/src/permissions.test.ts` (describe `US-021 …`) — `accepts an editor's change connection on a routine doc` (AC-2 editor), `rejects a viewer's WRITE while allowing read-only connect` (AC-2 viewer), `rejects a non-member connection on a routine doc` (AC-2 non-member), `rejects a forged connection (valid JWT, no membership) on a routine AND a figure doc` (AC-3), `rejects a connection with an invalid/expired token before any role lookup` (AC-1 fail-closed).
+  - E2E: `apps/web/e2e/permission-quota-invite.spec.ts` — `a non-member opening a routine is denied (and a forged sync connection is rejected)`.
+  - AC-4 (edit-without-rights → COW, not block) is covered by US-035's tests.
 
 #### US-022 — Quota: 3 owned routines + upsell
 - **Narrative:** As a free user, I want a clear quota, so that I understand the limit and the upgrade path.
@@ -299,6 +392,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Routines shared in to me do NOT count against the cap.
   - The quota seam is checked server-side on create (not only client-side).
   - EXPLAIN shows the owned-routine count query is indexed (no SCAN).
+- **Tests (unskip when done):**
+  - Worker: `apps/worker/src/routes/quota.test.ts` (describe `US-022 …`) — `blocks the 4th OWNED routine with an upsell (server-side)` (AC-1 + AC-3), `does NOT count routines shared IN to the user against the cap` (AC-2), `uses an INDEX for the owned-routine count query (EXPLAIN, no SCAN)` (AC-4).
+  - Component (upsell UI): `apps/web/src/components/choreo-list.test.tsx` (describe `US-022 …`) — `shows an upsell when creating a 4th owned routine is blocked`.
+  - E2E: `apps/web/e2e/permission-quota-invite.spec.ts` — `creating a 4th owned routine shows the upsell and does not create it`.
 
 #### US-023 — Invite by link (issue + redeem)
 - **Narrative:** As an editor, I want to invite by link with a chosen role, so that I can share a doc with the right access.
@@ -308,6 +405,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Redeeming creates a Membership with that role.
   - An expired or already-redeemed token is rejected.
   - A non-editor cannot issue an invite.
+- **Tests (unskip when done):**
+  - Worker: `apps/worker/src/routes/invite.test.ts` — `lets an editor issue a signed invite carrying docRef + role + expiry` (AC-1), `creates a Membership with the invite's role on redeem` (AC-2), `rejects an expired or already-redeemed invite` (AC-3), `forbids a non-editor from issuing an invite` (AC-4).
+  - E2E: `apps/web/e2e/permission-quota-invite.spec.ts` — `redeeming a valid invite link grants membership and opens the routine`.
 
 #### US-024 — Share screen (member list + roles)
 - **Narrative:** As an editor, I want a Share screen, so that I can manage members and explain sharing semantics.
@@ -317,6 +417,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Editor/owner can remove a member; viewer/commenter cannot.
   - Invite-by-link is available from this screen.
   - Microcopy explains roles and that editing a shared figure affects every routine using it (else fork/variant).
+- **Tests (unskip when done):** `apps/worker/src/routes/share.test.ts` (server authorization + data)
+  - `lists members with their roles for a doc` (AC-1)
+  - `lets an editor/owner remove a member` (AC-2 + AC-3 invite-from-screen uses US-023)
+  - `forbids a commenter/viewer from removing a member` (AC-2 negative)
+  - Gap: AC-4 (role microcopy) is presentation-only and not yet asserted — add a `Share` component test (describe `US-024`) when the Share screen lands.
 
 #### US-025 — Create a routine
 - **Narrative:** As a user, I want to create a routine for a dance, so that I can start building choreography.
@@ -325,6 +430,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - New Choreo is quota-checked (US-022) before creation.
   - Creation makes a routine doc (its DO) + a DocumentRegistry row owned by the user.
   - The created routine appears in the Choreo list with dance-color icon, title, `dance · barLabel · created`.
+- **Tests (unskip when done):**
+  - Worker: `apps/worker/src/routes/quota.test.ts` (describe `US-025 …`) — `creates a routine doc + an owned registry row and returns it in the list` (AC-2 + AC-3).
+  - E2E: `apps/web/e2e/authoring.spec.ts` — the create step of `create a routine → add a section → …` (AC-1 quota-checked + AC-3 appears in list).
 
 #### US-026 — Add / rename / reorder / delete sections
 - **Narrative:** As an editor, I want to manage sections, so that I can organize the routine.
@@ -333,6 +441,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Editor adds a user-named section (with optional preset quick-fills), renames, reorders, and soft-deletes (confirm dialog).
   - A commenter/viewer cannot add/rename/reorder/delete sections.
   - Reorder and soft-delete merge correctly across two clients.
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/assemble.test.tsx` (describe `US-026 …`) — `lets an editor add, rename, reorder, and soft-delete (with confirm) sections` (AC-1), `hides section management from a commenter/viewer` (AC-2).
+  - E2E (two-client merge, AC-3): `apps/web/e2e/convergence.spec.ts` — `an edit by user A appears live for user B …` exercises section add convergence; add a section reorder/soft-delete convergence assertion there when the screen lands.
 
 #### US-027 — Add / reorder / delete figure placements
 - **Narrative:** As an editor, I want to manage placements within a section, so that I can sequence figures.
@@ -341,6 +452,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Editor adds a placement (figureRef into a section), reorders within the section, and soft-deletes (confirm).
   - A non-editor cannot modify placements.
   - The placement card shows the figure name + variant/custom badge + attribute summary + alignment chips.
+- **Tests (unskip when done):** `apps/web/src/components/assemble.test.tsx` (describe `US-027 …`)
+  - `lets an editor add a placement, reorder within a section, and soft-delete` (AC-1 + AC-3 card content)
+  - `blocks a non-editor from modifying placements` (AC-2)
 
 ---
 
@@ -356,6 +470,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Re-tapping a selected value clears it.
   - I can switch the attribute's role inline (leader/follower/both).
   - Counts render with conventional labels (US-004); a commenter/viewer cannot edit.
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/attribute-editor.test.tsx` (describe `US-028 …`) — `opens the editor on tapping a count and adds an attribute for that count` (AC-1), `clears a value when its selected option is re-tapped` (AC-2), `does not allow a commenter/viewer to edit` (AC-4). Inline role-switch (AC-3) is covered by US-030's role-toggle test.
+  - E2E: `apps/web/e2e/authoring.spec.ts` — the "place attributes" step of the hero journey.
 
 #### US-029 — Attribute editor (registry-derived sections)
 - **Narrative:** As an editor, I want the editor sections to derive from the merged registry, so that the right kinds/values show per dance.
@@ -365,6 +482,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Tango hides the rise section.
   - Single-select (position) vs multi-select (bodyActions) honored.
   - `CBP` input normalizes to `CBMP`.
+- **Tests (unskip when done):** `apps/web/src/components/attribute-editor.test.tsx` (describe `US-029 …`)
+  - `renders sections from the merged ATTRIBUTE_REGISTRY` (AC-1)
+  - `hides the rise section for Tango` (AC-2)
+  - `honors single (position) vs multi (bodyActions) selection cardinality` (AC-3)
+  - `normalizes a CBP input to CBMP` (AC-4)
 
 #### US-030 — Timeline role-view toggle
 - **Narrative:** As a user, I want to flip the viewed role on the timeline, so that I can read either partner's steps.
@@ -373,6 +495,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Tapping a step flips the viewed role; the choice is a per-device preference (no stored `User.defaultRole`).
   - Attributes with `role=null` (both) always show regardless of the toggle.
   - Role-specific attributes show only for the selected role.
+- **Tests (unskip when done):** `apps/web/src/components/attribute-editor.test.tsx` (describe `US-030 …`)
+  - `flips the viewed role on tapping a step (per-device preference)` (AC-1)
+  - `always shows both-role (role=null) attributes regardless of the toggle` (AC-2)
+  - `shows role-specific attributes only for the selected role` (AC-3)
 
 #### US-031 — Edit per-figure alignment
 - **Narrative:** As an editor, I want to set per-figure alignment, so that the figure's facing/direction is recorded without a floor concept.
@@ -381,6 +507,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Set `entryAlignment`/`exitAlignment` and optional `perPlacementAlignment` (qualifier `facing/backing/pointing` + a direction).
   - Alignment chips render on the placement card and timeline.
   - No separate floor/long/short/corner concept exists (per-figure alignment suffices).
+- **Tests (unskip when done):** `apps/web/src/components/assemble.test.tsx` (describe `US-031 …`)
+  - `sets entry/exit + per-placement alignment (qualifier + direction)` (AC-1)
+  - `renders alignment chips on the placement card and timeline` (AC-2)
+  - `has no separate floor / long / short / corner concept` (AC-3)
 
 ---
 
@@ -395,6 +525,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Global canonical figures are grouped by `figureType`, filterable by dance.
   - Global figures are app-owned and not directly editable by users.
   - Browsing reads the D1 registry + FigureType catalog (no CRDT scan for the list).
+- **Tests (unskip when done):**
+  - Worker (the index-backed list): `apps/worker/src/routes/search.test.ts` (describe `US-032/033 …`) — `lists global figures grouped by figureType, filterable by dance, from the index` (AC-1 + AC-3).
+  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-032 …`) — `groups global figures by figureType and filters by dance` (AC-1), `marks global figures as not directly editable (auto-variant on edit)` (AC-2).
 
 #### US-033 — Account variants + custom figures in library
 - **Narrative:** As a user, I want to see my variants and custom figures, so that I can manage my personal library.
@@ -403,6 +536,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - My account variants show a badge with base lineage; custom figures show a custom badge.
   - Each figure shows "used in N routines".
   - Variants/custom figures are account-scoped (owned by me, not the app).
+- **Tests (unskip when done):**
+  - Worker (usage count from the index): `apps/worker/src/routes/search.test.ts` (describe `US-032/033 …`) — `lists the user's account variants + custom figures with 'used in N routines'` (AC-2 + AC-3 account-scoped).
+  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-033 …`) — `shows a variant lineage badge + a custom badge + 'used in N routines'` (AC-1 + AC-2).
 
 #### US-034 — Editing your own figure flows into all referencing routines
 - **Narrative:** As a user, I want edits to my own figure to flow everywhere it's used, so that I refine once.
@@ -411,6 +547,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Given a figure I own referenced by two routines, When I edit it, Then the change appears in both routines (figure auto-update).
   - Editing in place does not create a variant.
   - The change syncs live to other connected members of those routines.
+- **Tests (unskip when done):**
+  - Worker (persistence-layer flow across two routine DOs): `apps/worker/src/figures.test.ts` (describe `US-034 …`) — `propagates an owned-figure edit to every routine referencing it` (AC-1 + AC-2 no variant).
+  - E2E: `apps/web/e2e/fork-and-figures.spec.ts` — `editing your OWN figure flows into every routine that references it` (AC-1; AC-3 live-sync is the convergence machinery).
 
 #### US-035 — Auto-variant on editing a non-owned figure
 - **Narrative:** As a user editing a figure I don't own, I want an automatic variant, so that I can tweak freely without disturbing others.
@@ -420,6 +559,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A "copied as your variant" toast shows.
   - The original/base figure is untouched (other routines/users unaffected).
   - No prompt is required (auto, not a dialog).
+- **Tests (unskip when done):**
+  - Worker (the COW spawn + re-point + base-untouched): `apps/worker/src/figures.test.ts` (describe `US-035 …`) — `silently creates an owned variant + re-points the placement; base untouched` (AC-1 + AC-3).
+  - Component (toast + no dialog): `apps/web/src/components/figure-library.test.tsx` (describe `US-035 …`) — `shows a 'copied as your variant' toast when editing a global figure` (AC-2 + AC-4).
+  - E2E: `apps/web/e2e/fork-and-figures.spec.ts` — `editing a GLOBAL figure auto-creates your variant with a toast; original untouched` (AC-1/2/3/4 end-to-end).
+  - Domain primitive behind it: US-008's `fork.test.ts` (`copyOnWrite`).
 
 #### US-036 — Fork a figure into a variant explicitly
 - **Narrative:** As a user, I want to fork a figure into a variant on purpose, so that I store overrides while inheriting the base.
@@ -428,6 +572,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - "Fork into variant" creates a variant with `baseFigureRef` + overlay.
   - Base edits to non-overridden steps flow up into my variant (live).
   - My overrides/tombstones/additions/rename win over the base where set.
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-036 …`) — `offers a 'Fork into variant' action that creates an overlay variant` (AC-1).
+  - Domain (the overlay semantics, AC-2 flow-up + AC-3 overrides-win): US-006's `overlay.test.ts`.
 
 #### US-037 — Choreo fork ("make it your own")
 - **Narrative:** As a user, I want to fork a whole routine, so that I get an independent copy to make my own.
@@ -437,6 +584,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A later edit to the origin routine does NOT appear in my fork (frozen).
   - Lineage is shown as provenance only (`forkedFromRef`).
   - Referenced figures remain shared (figure-level improvements still flow in until I diverge one).
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/choreo-list.test.tsx` (describe `US-037 …`) — `offers a fork action and shows lineage as provenance on the result` (AC-1 fork + AC-3 lineage).
+  - E2E (the frozen/independent proof): `apps/web/e2e/fork-and-figures.spec.ts` — `forking a routine yields an independent copy; an origin edit does NOT appear in the fork` (AC-2 frozen; AC-4 figures-still-shared).
+  - Domain primitive: US-007's `fork.test.ts` (`cloneRoutine`). Gap: AC-1's "counted against my quota" on fork is not yet asserted as a UI/worker step — add a fork-quota assertion when M4 wires fork→create.
 
 ---
 
@@ -450,6 +601,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Another client's concurrent edit survives my undo (two-client test).
   - If others built on my change, a soft "superseded" hint shows (no hard refusal).
   - Redo re-applies; a new edit clears redo. No cross-document undo of a copy-on-write.
+- **Tests (unskip when done):**
+  - Component (toast surface): `apps/web/src/components/profile.test.tsx` (describe `US-038 …`) — `shows an 'Undone' toast on undo and a soft 'superseded' hint` (AC-1; the superseded-hint AC-3 should get its own assertion when the hint UI lands).
+  - E2E (two-client, AC-2 + AC-4): `apps/web/e2e/undo.spec.ts` — `A's undo reverts only A's last change; B's concurrent edit survives; redo restores`.
+  - Domain primitive: US-010's `undo.test.ts` (inverse-change, B's edit preserved, redo).
 
 ---
 
@@ -465,6 +620,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Replies form an ordered thread; reply delete is author-only.
   - Routine annotations are visible to all members of that routine.
   - A viewer cannot create annotations; a commenter+ can.
+- **Tests (unskip when done):** `apps/web/src/components/annotations.test.tsx` (describe `US-039 …`)
+  - `lets a commenter create a note/lesson/practice anchored to a point or a figure` (AC-1)
+  - `threads replies and lets only the author delete a reply` (AC-2)
+  - `prevents a viewer from creating annotations` (AC-4)
+  - AC-3 (visible to all members) is enforced server-side (routine-doc membership) — see US-021/US-041; add a worker assertion if a dedicated annotations route lands.
 
 #### US-040 — `figureType` annotations (this-dance / all-dances)
 - **Narrative:** As a user, I want to annotate a whole figure family, so that one note covers a figure this dance or across all dances it exists in.
@@ -474,6 +634,11 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A `figureType` note is owned in my account doc (account-scoped).
   - An all-dances note surfaces on a figure of that family in any of my routines (e.g. Waltz Feather AND Foxtrot Feather); a this-dance note only in that dance.
   - Variants inherit the family, so family notes surface on my variants too.
+- **Tests (unskip when done):**
+  - Component (anchor picker, AC-1): `apps/web/src/components/annotations.test.tsx` (describe `US-040 …`) — `offers this-step / this-figure / this-figure-family with a dance-scope toggle`.
+  - Domain (matching logic, AC-3 + AC-4): US-011's `figuretype-notes.test.ts` (`matchesFigureType` all-dances vs this-dance; variant inheritance).
+  - E2E (surfaces across Waltz AND Foxtrot routines): `apps/web/e2e/fork-and-figures.spec.ts` — `an all-dances family note surfaces on a Feather in BOTH a Waltz and a Foxtrot routine`.
+  - AC-2 (note owned account-scoped) is the account-doc model — exercised via US-041's FigureTypeNoteIndex tests.
 
 #### US-041 — Co-member visibility of family notes (option 2)
 - **Narrative:** As a co-member of a shared routine, I want to see co-members' family notes for figures in it, so that a coach's "keep the head left on every Feather" reaches me.
@@ -483,6 +648,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Co-membership of R authorizes the scoped cross-account read of just those notes' content.
   - A non-member of R sees NONE of those family notes (gate holds).
   - A viewer never browses another user's account doc wholesale.
+- **Tests (unskip when done):**
+  - Worker (the scoped cross-account read + gate): `apps/worker/src/figuretype-visibility.test.ts` — `surfaces a co-member's family note on a shared routine's matching figure` (AC-1 + AC-2), `shows a NON-member NONE of those family notes (gate holds)` (AC-3 + AC-4), `uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)` (NFR).
+  - E2E (multi-user, co-member vs non-member): `apps/web/e2e/fork-and-figures.spec.ts` — `a co-member sees a coach's family note on a shared routine; a non-member sees none`.
+  - Needs the M6 `figure_type_note_index` D1 table.
 
 #### US-042 — Annotation filters (all / lessons / practice / by figure)
 - **Narrative:** As a user, I want to filter annotations, so that I can focus on lessons or a specific figure.
@@ -491,6 +660,8 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The timeline and journal share one annotation set (one concept).
   - Filters: all / lessons / practice / by figure.
   - Filtering is client-side over loaded annotations (no content search in v1).
+- **Tests (unskip when done):** `apps/web/src/components/annotations.test.tsx` (describe `US-042 …`)
+  - `shares one annotation set between timeline and journal and filters by kind + figure` (AC-1 + AC-2 + AC-3 client-side)
 
 ---
 
@@ -503,6 +674,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - I can create/edit a user-defined kind (label, color, cardinality, valueType, values).
   - The new kind merges into the registry and appears in the attribute editor, lanes, info sheet, and chips.
   - The kind is stored in the relevant document and survives reload.
+- **Tests (unskip when done):** `apps/web/src/components/custom-kind.test.tsx`
+  - `creates a user-defined kind (label, color, cardinality, valueType, values)` (AC-1)
+  - `makes the new kind appear in the attribute editor after creation` (AC-2)
+  - Domain primitive (the merge): US-003's `vocabulary.test.ts` (`mergeRegistry`). AC-3 (survives reload) is exercised end-to-end once the store seam persists custom kinds.
 
 #### US-044 — Lanes (one kind across all counts)
 - **Narrative:** As a user, I want a lane view of a single kind across counts, so that I can scan one dimension of the figure.
@@ -511,6 +686,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A lane shows one kind laid out across every count of the figure.
   - Editing in a lane updates the same attributes the timeline edits.
   - Lanes honor the role-view toggle.
+- **Tests (unskip when done):** `apps/web/src/components/attribute-editor.test.tsx` (describe `US-044 …`)
+  - `shows a single kind across every count and edits the same attributes as the timeline` (AC-1 + AC-2)
+  - `honors the role-view toggle in the lane` (AC-3)
 
 #### US-045 — Sample routine + start-from-template
 - **Narrative:** As a new user, I want a sample routine and templates, so that I can explore and start quickly.
@@ -519,6 +697,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A read-only sample routine is available (and shows in the empty Choreo state).
   - Start-from-template clones a `templateOf` routine into an owned routine (quota-checked).
   - The sample cannot be edited (read-only).
+- **Tests (unskip when done):** `apps/web/src/components/choreo-list.test.tsx` (describe `US-045 …`)
+  - `shows the read-only sample + a template in the empty state` (AC-1 + AC-2)
+  - `prevents editing the read-only sample` (AC-3)
+  - The reusable read-only sample fixture is `packages/domain/src/__fixtures__/sample.ts` (`SAMPLE_ROUTINE`, `templateOf`).
 
 #### US-046 — Routine + figure search
 - **Narrative:** As a user, I want to search my routines and figures, so that I can find them by title/name/dance.
@@ -527,6 +709,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Search routines + figures by title/name/dance over the D1 index.
   - `EXPLAIN QUERY PLAN` shows the search query is indexed (no SCAN).
   - Annotation/content search is NOT included (v1.1).
+- **Tests (unskip when done):** `apps/worker/src/routes/search.test.ts` (describe `US-046 …`)
+  - `searches routines + figures by title/name/dance over the D1 index` (AC-1)
+  - `uses an INDEX for the search query (EXPLAIN, no SCAN)` (AC-2)
 
 ---
 
@@ -539,6 +724,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Export produces a `schemaVersion`'d JSON bundle of the routine doc + every referenced figure doc.
   - The bundle is self-contained (a fork/export round-trips without external refs).
   - Unknown attribute values are preserved in the export.
+- **Tests (unskip when done):**
+  - Worker: `apps/worker/src/routes/export-import.test.ts` (describe `US-047 …`) — `exports a self-contained schemaVersion'd bundle incl. referenced figures + unknown values` (AC-1 + AC-2 + AC-3).
+  - E2E: `apps/web/e2e/export-import.spec.ts` — `export a routine then import the bundle …` (export half).
 
 #### US-048 — JSON import (routine + referenced figures)
 - **Narrative:** As a user, I want to import a bundle, so that I can recreate a routine and its figures.
@@ -548,6 +736,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Unknown attribute values survive the round-trip.
   - An older-`schemaVersion` bundle is migrated on import (US-013).
   - Import respects the quota (importing a routine counts as an owned routine).
+- **Tests (unskip when done):**
+  - Worker: `apps/worker/src/routes/export-import.test.ts` (describe `US-048 …`) — `recreates the routine + figures as owned docs, migrating an older bundle` (AC-1 + AC-2 + AC-3), `counts an imported routine against the owner's quota` (AC-4).
+  - E2E: `apps/web/e2e/export-import.spec.ts` — `export a routine then import the bundle …` (import half).
+  - Domain primitive (migration on import): US-013's `migrations.test.ts`.
 
 #### US-049 — Ops: Sentry + Analytics Engine + EXPLAIN gate + Smart Placement
 - **Narrative:** As an operator, I want errors, metrics, query-plan gating, and edge placement, so that the app is observable and performant.
@@ -556,6 +748,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Errors report to Sentry (+ `@sentry/cloudflare`); product metrics to Analytics Engine.
   - CI fails if any index/registry/membership/quota query shows a SCAN (EXPLAIN gate).
   - Worker uses Smart Placement; staging + prod environments exist.
+- **Tests (unskip when done):** `apps/worker/src/ops.test.ts`
+  - EXPLAIN gate (AC-2): `membership-by-doc lookup (the DO permission check) is indexed`, `owned-routine list (the Choreo list) is indexed`, `invite-by-token lookup (redeem path) is indexed`. The `expectIndexedQuery` helper body is implemented in `apps/worker/src/test-support/explain.ts`; extend with each route's compiled SQL as routes land.
+  - Observability (AC-1) + config (AC-3): `reports a thrown error to Sentry and a metric to Analytics Engine`, `declares Smart Placement + staging/prod environments` — placeholders pending the M8 Sentry/Analytics bindings + a wrangler.toml `placement` config check.
 
 ---
 
@@ -568,6 +763,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The PWA is installable on evergreen mobile + desktop.
   - The app shell loads offline; data shows a clear "you're offline" state (online-first; no offline editing in v1).
   - Shell interactive in <~2s.
+- **Tests (unskip when done):** `apps/web/e2e/pwa-a11y.spec.ts` (describe `@smoke PWA install + offline app shell`)
+  - `registers a service worker and exposes an install manifest` (AC-1)
+  - `loads the app shell offline with a clear 'you're offline' state for data` (AC-2)
+  - AC-3 (<~2s interactive) is asserted via a Lighthouse-CI budget on the nightly gate (M9), not a unit assertion.
 
 #### US-051 — Accessibility WCAG AA
 - **Narrative:** As a user with accessibility needs, I want WCAG AA compliance, so that the app is usable for everyone.
@@ -576,6 +775,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Color is never the only signal (kinds/roles carry text/shape too).
   - Touch targets ≥44px; keyboard + screen-reader navigable; reduced-motion honored.
   - axe reports no violations on each screen (component-level `vitest-axe`).
+- **Tests (unskip when done):**
+  - Component (axe per screen, AC-3 + AC-1): `apps/web/src/components/a11y.test.tsx` — one `… has no axe violations` row per screen (ChoreoList, Assemble, FigureTimeline, AttributeEditor, FigureLibrary, AnnotationPanel, Share, Profile) + `never uses color as the only signal`. Unskip a screen's row as that screen lands.
+  - E2E (keyboard / reduced-motion / ≥44px, AC-2): `apps/web/e2e/pwa-a11y.spec.ts` (describe `accessibility …`) — `the primary nav is keyboard reachable and focus is visible`, `honors prefers-reduced-motion`.
 
 #### US-052 — Cross-browser E2E (iOS Safari + Android Chrome)
 - **Narrative:** As QA, I want the core journeys to pass on the target browsers, so that mobile users have a working app.
@@ -584,6 +786,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Playwright matrix `chromium-desktop`, `mobile-chrome`, `mobile-safari` passes core journeys.
   - Includes two live contexts converging on a routine and a fork/copy-on-write flow.
   - Lighthouse-CI runs on the merge/nightly gate.
+- **Tests (unskip when done):** the WHOLE `apps/web/e2e/` matrix is the coverage — Playwright runs every spec on `chromium-desktop`, `mobile-chrome`, `mobile-safari` (config `apps/web/playwright.config.ts`). AC-2 (two-client converge + fork/COW) = `convergence.spec.ts` + `fork-and-figures.spec.ts`. AC-3 (Lighthouse-CI) is the nightly gate (M9). No story-specific spec file; unskipping ANY E2E describe makes it run across all 3 projects.
 
 ---
 
@@ -596,6 +799,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Edit `displayName` + identity color (global note color).
   - Show plan status + owned-routine count.
   - Sign out works (clears the Clerk session).
+- **Tests (unskip when done):**
+  - Component: `apps/web/src/components/profile.test.tsx` (describe `US-053 …`) — `edits displayName + identity color and shows plan + owned-routine count` (AC-1 + AC-2), `signs out (clears the Clerk session)` (AC-3).
+  - Worker (the data behind it): `apps/worker/src/routes/me-profile.test.ts` (describe `US-053 …`) — `returns plan + owned-routine count` (AC-2), `updates displayName + identity color` (AC-1).
 
 ---
 
@@ -609,5 +815,9 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - A validated **core** (most-used figures per dance) ships at launch; the full syllabus expands on a rolling basis.
   - Seed values are data (ATTRIBUTE_REGISTRY + seed docs) — corrections during testing are config edits, not code changes.
   - Seed docs are versioned by `schemaVersion`; the FigureType catalog (families × dances) is bundled.
-```
+- **Tests (unskip when done):** `packages/domain/src/seed-library.test.ts`
+  - `authors global FigureDocs tagged figureType + dance, app-owned, schema-valid` (AC-1)
+  - `bundles a FigureType catalog mapping each family to the dances it exists in` (AC-4 catalog)
+  - `versions seed docs by schemaVersion (corrections are data edits)` (AC-3 + AC-4 versioned)
+  - These pin that the seed is WELL-FORMED (schema-valid, tagged, versioned), not notation accuracy — AC-2's "validated core" is refined with testers per Q-LIBSEED.
 
