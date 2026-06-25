@@ -29,7 +29,7 @@ const EIGHTH = 0.125;
  * Render a float count as a conventional ballroom label, e.g. 3.25 → "3e",
  * 3 → "3". The whole part is the beat; the fraction is the sub-beat suffix.
  * Unrecognized fractions (outside the spec'd 1/8 grid) fall back to the whole
- * beat plus the raw fraction (e.g. "3+0.2") so nothing is silently dropped.
+ * beat plus the fraction (e.g. "3+0.2") so nothing is silently dropped.
  */
 export function countLabel(count: number): string {
   const whole = Math.floor(count);
@@ -39,8 +39,11 @@ export function countLabel(count: number): string {
   const snapped = Math.round(fraction / EIGHTH) * EIGHTH;
   const suffix = FRACTION_LABELS[String(snapped)];
   if (suffix) return `${whole}${suffix}`;
-  // Off-grid / unspecified fraction: keep it visible rather than rounding away.
-  return `${whole}+${fraction}`;
+  // Off-grid / unspecified fraction: keep it visible rather than rounding away,
+  // but round to 3 decimals so float noise (e.g. 0.20000000000000018) doesn't
+  // leak into the label. Trim trailing zeros so the display stays compact.
+  const trimmed = Number.parseFloat(fraction.toFixed(3));
+  return `${whole}+${trimmed}`;
 }
 
 /**
