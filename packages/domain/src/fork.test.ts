@@ -1,3 +1,4 @@
+import * as A from "@automerge/automerge";
 import { describe, expect, it } from "vitest";
 import {
   FEATHER_FOXTROT,
@@ -32,6 +33,22 @@ describe("US-007 Choreo fork (clone)", () => {
     expect(read.id).not.toBe(SAMPLE_ROUTINE.id);
     expect(read.forkedFromRef).toBe(SAMPLE_ROUTINE.id);
     expect(read.ownerId).toBe(SAMPLE_STUDENT);
+  });
+
+  it("retains the origin's change history (shared ancestry, not a fresh doc)", async () => {
+    // Intent: AC-1 "retaining shared history" — pin it directly. cloneRoutine
+    // uses A.clone (keeps change-ancestry), NOT A.from(materialized) (which would
+    // sever it). Shared ancestry is what makes a future explicit merge-back
+    // possible (PLAN §5.2 / §1 "lineage so changes can merge back"); a refactor
+    // that quietly rebuilds the doc would break that, so assert it self-evidently.
+    const { buildRoutineDoc, cloneRoutine } = await importDomain();
+    const origin = buildRoutineDoc(SAMPLE_ROUTINE);
+    const fork = cloneRoutine(origin, { byUser: SAMPLE_STUDENT });
+    // The product builders return in-memory Automerge docs; A.getHistory reads
+    // the change log (the shim types them opaquely, hence the cast).
+    expect(A.getHistory(fork as A.Doc<unknown>).length).toBeGreaterThanOrEqual(
+      A.getHistory(origin as A.Doc<unknown>).length,
+    );
   });
 
   it("is frozen: a later edit to the origin does NOT appear in the clone", async () => {
