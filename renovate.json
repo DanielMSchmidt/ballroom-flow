@@ -20,8 +20,14 @@
       "automerge": true
     },
     {
-      "description": "Pin the test stack — vitest 3 + pool-workers 0.8 are a deliberate, compatible pair (see commit history); only allow patch bumps automatically.",
-      "matchPackageNames": ["vitest", "@cloudflare/vitest-pool-workers"],
+      "description": "Pin the deliberately-paired toolchains: vitest 3 + pool-workers 0.8 (vitest 4 breaks pool-workers), and vite 6 + plugin-react 4 (plugin-react 6/vite 8 break the build). Major/minor bumps need explicit dashboard approval; patches still flow.",
+      "matchPackageNames": [
+        "vitest",
+        "@cloudflare/vitest-pool-workers",
+        "vite",
+        "@vitejs/plugin-react",
+        "vite-plugin-pwa"
+      ],
       "matchUpdateTypes": ["major", "minor"],
       "dependencyDashboardApproval": true
     }
