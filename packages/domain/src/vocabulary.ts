@@ -138,15 +138,14 @@ export function normalizeValue(kind: string, value: string): string {
  * indistinguishable downstream. The merge is additive and pure (the base
  * singleton is never mutated). User kinds are keyed by their `kind` slug.
  *
- * Collision policy is intentionally NOT relied upon here: the plan (§3, D22)
- * describes two tiers *merged* and custom-kind *creation*, but does not sanction
- * a user-defined kind replacing a builtin. A custom kind keyed `rise` would, for
- * example, clobber its `appliesToDances` and re-enable rise for Tango — the very
- * §10.2 invariant US-003 protects. Nothing can mint such a kind today (US-043,
- * the creation UI, is far off); when it lands it must reserve the builtin slugs.
- *
- * TODO(US-043): reject/namespace custom kinds whose slug collides with a builtin
- * (see task #17) so the merge can never override a standard kind.
+ * BUILTIN SLUGS ARE RESERVED (§3, D22, §10.2): a custom kind whose slug collides
+ * with a builtin is **ignored — the builtin wins**. The plan describes two tiers
+ * *merged* and custom-kind *creation*; it never sanctions a user kind replacing a
+ * builtin. Letting one through would, for example, let a custom kind keyed `rise`
+ * drop its `appliesToDances` and re-enable rise for Tango — the very §10.2
+ * invariant US-003 protects. Guarding here (not just at the US-043 creation UI)
+ * makes the registry safe by construction regardless of how a custom kind arrives
+ * (creation UI, import, migration).
  */
 export function mergeRegistry(
   base: StandardRegistry,
@@ -154,6 +153,8 @@ export function mergeRegistry(
 ): StandardRegistry & Record<string, RegistryKind> {
   const merged: StandardRegistry & Record<string, RegistryKind> = { ...base };
   for (const kind of custom) {
+    // Reserve builtin slugs: a custom kind cannot override a standard one.
+    if (base[kind.kind]?.builtin) continue;
     merged[kind.kind] = kind;
   }
   return merged;

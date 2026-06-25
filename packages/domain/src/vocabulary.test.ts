@@ -124,4 +124,49 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(Object.keys(ATTRIBUTE_REGISTRY).length).toBe(before);
     expect(ATTRIBUTE_REGISTRY.tempo).toBeUndefined();
   });
+
+  it("reserves builtin slugs: a custom kind cannot override a standard kind (task #17)", async () => {
+    // Intent: a user-defined kind whose slug collides with a builtin is IGNORED —
+    // the builtin wins. Otherwise a custom kind keyed "rise" could drop
+    // appliesToDances and re-enable rise for Tango (the §10.2 invariant US-003
+    // protects). Guard lives in mergeRegistry so the registry is safe by
+    // construction, not only at the US-043 creation UI.
+    const { ATTRIBUTE_REGISTRY, mergeRegistry } = await importDomain();
+    const merged = mergeRegistry(ATTRIBUTE_REGISTRY, [
+      {
+        kind: "rise", // collides with the builtin
+        label: "Hacked Rise",
+        color: "#000000",
+        cardinality: "multi",
+        valueType: "enum",
+        values: ["anything"],
+        builtin: false,
+        // note: NO appliesToDances — would re-enable rise for Tango if it won
+      },
+    ]);
+    // The builtin survives unchanged: still single, still omits Tango.
+    expect(merged.rise.label).toBe(ATTRIBUTE_REGISTRY.rise.label);
+    expect(merged.rise.cardinality).toBe("single");
+    expect(merged.rise.appliesToDances ?? []).not.toContain("tango");
+    expect(merged.rise.builtin).toBe(true);
+  });
+
+  it("still merges a NON-colliding custom kind alongside the reserved builtins", async () => {
+    // Intent: the guard only blocks builtin collisions — genuine custom kinds
+    // still merge.
+    const { ATTRIBUTE_REGISTRY, mergeRegistry } = await importDomain();
+    const merged = mergeRegistry(ATTRIBUTE_REGISTRY, [
+      {
+        kind: "energy",
+        label: "Energy",
+        color: "#123456",
+        cardinality: "single",
+        valueType: "enum",
+        values: ["low", "high"],
+        builtin: false,
+      },
+    ]);
+    expect(merged.energy?.label).toBe("Energy");
+    expect(merged.rise.builtin).toBe(true); // builtins intact
+  });
 });
