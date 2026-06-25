@@ -1,11 +1,17 @@
 # Ballroom Flow — Detailed Testing Plan
 
+> **⚠️ Predates the v2/v3 redesign.** The testing strategy now lives in [`docs/PLAN.md`](../../PLAN.md) (§10). Two owner-review passes changed the model and the architecture underneath this document:
+> - **Model (v2):** typed step-slots → **attributes on a float-count timeline** (extensible kinds, optional per-attribute role); sides (long/short/corner, auto-named) → **user-named sections**; couple + coach → **classic viewer/commenter/editor + owner**; separate threads/journal → **unified annotations** (v1 anchors: point + figure; query anchors deferred); plus **plans/quota** and **user-defined attribute kinds**.
+> - **Architecture (v3→v4):** the data model is now an **Automerge document graph** — reusable **figure docs** + **routine docs**, one **SQLite-backed Durable Object per document**, online-first — **not** D1-rows + server-LWW, and **not** a single per-routine doc. This **reverses two things this document asserts**: (1) it says "**NO offline/CRDT two-client merge tests**" — those (**convergence/merge + cross-document sync + per-document permission** tests) are now **central** (PLAN.md §10.2); (2) it tests a bespoke **op-log/footprint undo + LWW** — that machinery is **dropped** in favour of **history-based per-user undo**. v4 also adds **fork/inheritance** tests (overlay resolution, choreo clone + merge, copy-on-write) with no analogue here.
+>
+> This document is **retained only as a per-screen *surface* checklist** (the wireframe inventory is still valid). Any row tied to two-chart, coach, side auto-naming, typed slots, LWW, or the op-log is **superseded by PLAN.md §10**. Where it says "the design spec" (removed), read [`docs/PLAN.md`](../../PLAN.md).
+
 **Status:** Draft for review — v1
 **Date:** 2026-06-24
 **Owner priority:** Quality and a solid, detailed testing plan are an explicit, non-negotiable requirement.
 **Sources of truth:**
 - `research/design-spec.md` — the exhaustive wireframe enumeration (the **prototype feature checklist**; every item here must appear below with explicit coverage).
-- `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` (**v2 spec**, the current target) — lean online-only stack: React + Vite PWA → Hono on Workers → D1 + Drizzle → Clerk; **two step charts per figure**; **meter-based timing**; **per-user op-log undo**; shared co-editing (LWW); Lanes view; sample routine; export/import.
+- [`docs/PLAN.md`](../../PLAN.md) (the consolidated plan, the current target) — lean online-only stack: React + Vite PWA → Hono on Workers → D1 + Drizzle → Clerk; **two step charts per figure**; **meter-based timing**; **per-user op-log undo**; shared co-editing (LWW); Lanes view; sample routine; export/import.
 - `research/platform.md` §6 — the toolchain.
 
 This document **expands §9 of the design spec into a standalone, far more detailed plan**, reconciled with the v2 decisions. In particular: there are **NO offline/CRDT two-client merge tests** in v1 (the entire sync-correctness surface was deleted). Concurrency is **server-authoritative last-write-wins (LWW)**, tested for a *defined deterministic outcome*, plus **per-user op-log undo**.
