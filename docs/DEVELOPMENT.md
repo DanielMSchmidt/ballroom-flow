@@ -154,6 +154,37 @@ A.from({ sections });
 buildRoutineDoc(routine); // safe — undefined keys dropped, null kept
 ```
 
+### Automerge 3.x: clone before reusing a doc; assert convergence via heads
+
+Two more Automerge-3.x sharp edges that recur in undo (US-010) and the DO/sync
+layer (M2). One already caused a real flaky test in US-009; both are easy to trip.
+
+**1. A doc is "outdated" after `change`/`merge`/`applyChanges` — clone before reusing it.**
+Automerge 3.x invalidates the *input* document of any mutating op. Reusing the
+same reference for a second branch (e.g. building two replicas from one base, or
+folding changes onto a base twice) throws `RangeError: Attempting to change an
+outdated document. Use Automerge.clone()`. **Fix: `A.clone(base)` before each
+independent reuse.** (`cloneRoutine` already does this for the fork path.)
+
+```ts
+// ✗ second use of `base` throws — it was outdated by the first change
+const left = A.change(base, (d) => { … });
+const right = A.change(base, (d) => { … });   // RangeError
+// ✓ clone for each independent branch
+const left = A.change(A.clone(base), (d) => { … });
+const right = A.change(A.clone(base), (d) => { … });
+```
+
+**2. `save()` bytes are NOT canonical across merge order — assert convergence via heads.**
+Two docs with identical logical state (same heads, same `toJS`) can serialize to
+**different `save()` bytes** depending on the order changes were merged. So a
+`save()`-byte comparison is a flaky false-negative for convergence. **Assert
+convergence with sorted `getHeads(doc)`** (the change-hash set — order-independent),
+never with `save()` bytes. `save()`-byte equality is only valid for a *single*
+doc round-trip (`save`→`load`→`save`, e.g. M2 SQLite rehydration). The convergence
+helper (`packages/domain/src/__fixtures__/convergence.ts`) exposes `assertHeadsEqual`
+for this; `assertBytesEqual` there is for single-doc round-trips only.
+
 ## Git hooks
 
 `pnpm install` installs a **lefthook** pre-commit hook that runs, in parallel:
