@@ -133,6 +133,27 @@ mechanism are documented there; the **body is yours to implement** on the
 per-suite D1 fixture. CI already runs the worker/D1 suite, so the gate goes live
 the moment a test calls it.
 
+### Automerge cannot store `undefined` (domain doc builders)
+
+Automerge throws when a value is `undefined` — `RangeError: Cannot assign
+undefined value at /path` — at `A.from(...)` and inside `A.change(...)`. Our
+logical doc shapes carry optional fields (e.g. `entryAlignment`,
+`perPlacementAlignment`, `overlay`, `baseFigureRef`) that POJOs/fixtures often
+leave `undefined`, so feeding them straight into Automerge fails. The domain doc
+builders therefore **strip `undefined`-valued keys before `A.from`** (JSON
+drop-the-key semantics — an absent optional simply isn't set, and reads still
+return `undefined` for it). **`null` is preserved**, because `deletedAt: null` is
+a meaningful tombstone value the CRDT must keep. This is centralized in
+`packages/domain/src/doc-internal.ts` (`stripUndefined`); any new code that feeds
+a POJO into Automerge must go through it (or sanitize `undefined` the same way).
+
+```ts
+// ✗ throws if section.deletedAt or an optional alignment is `undefined`
+A.from({ sections });
+// ✓ builders run stripUndefined(structuredClone(input)) first
+buildRoutineDoc(routine); // safe — undefined keys dropped, null kept
+```
+
 ## Git hooks
 
 `pnpm install` installs a **lefthook** pre-commit hook that runs, in parallel:
