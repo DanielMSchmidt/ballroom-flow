@@ -6,7 +6,7 @@ gated on env vars and tested only on its negative path). To run the app for
 real and to deploy, complete the steps below. None of these block development
 of the pure domain core (Milestone 1).
 
-## Status (2026-06-25)
+## Status (updated 2026-06-25)
 
 | Item | State |
 |---|---|
@@ -14,12 +14,19 @@ of the pure domain core (Milestone 1).
 | Staging + production Workers | ✅ smoke-deployed and verified healthy (`/api/health` → `{ok:true}`, SPA + fallback OK) |
 | GitHub Environments `staging` + `production` | ✅ created |
 | `CLOUDFLARE_ACCOUNT_ID` (both GH environments) | ✅ set |
-| **`CLOUDFLARE_API_TOKEN` (both GH environments)** | ⬜ **TODO — you** (OAuth login can't be used in CI; see §3.2) |
-| **`CLERK_SECRET_KEY` (Wrangler secret, per env)** | ⬜ **TODO — you** (see §1) |
+| `CLOUDFLARE_API_TOKEN` (both GH environments) | ✅ set — CI deploy is live |
+| `VITE_CLERK_PUBLISHABLE_KEY` (GH Actions **variable**, both envs) | ✅ set (`pk_test`, shared Clerk dev instance) |
+| Local dev keys (`apps/web/.env.local`, `apps/worker/.dev.vars`) | ✅ present (`pk_test` / `sk_test`) |
+| `CLERK_SECRET_KEY` (Wrangler secret) — **staging** | ✅ set (`wrangler secret put … --env staging`) |
+| **`CLERK_SECRET_KEY` (Wrangler secret) — production** | ⬜ **TODO — you** — pending a Clerk **production** instance (`sk_live`); see §1 |
 | `production` required-reviewer rule | ⬜ optional |
 
-Until `CLOUDFLARE_API_TOKEN` is set, the deploy workflow self-skips the deploy
-step (green). You can always deploy manually with `wrangler deploy --env <env>`.
+CI now deploys on push: `development` → **staging**, `main` → **production** (see §3).
+Everything currently runs on Clerk's shared **dev/test** instance (`pk_test`/`sk_test`),
+which is correct for dev + staging; a real production launch needs a Clerk
+**production** instance (`pk_live`/`sk_live`) — re-run the prod `wrangler secret put`
+and update the prod GH variable then. You can always deploy manually with
+`wrangler deploy --env <env>`.
 
 ## 1. Clerk (authentication)
 
