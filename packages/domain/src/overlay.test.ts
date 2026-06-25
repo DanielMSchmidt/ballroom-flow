@@ -95,4 +95,30 @@ describe("US-006 Overlay resolution resolve(base, overlay)", () => {
     expect(first).toBeDefined();
     expect(first).not.toBe(FEATHER_FOXTROT.attributes[0]);
   });
+
+  it("ignores an override that targets a since-deleted base step (no resurrection)", async () => {
+    // Intent: an overlay may carry an override keyed by a base attribute id that
+    // the base no longer contains (the base step was removed after the variant
+    // diverged). The override must be a harmless no-op — it must not resurrect a
+    // missing attribute. (Load-bearing for US-008 COW / US-036.)
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({ overrides: { a_does_not_exist: "H" } });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.some((a) => a.id === "a_does_not_exist")).toBe(false);
+    expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+  });
+
+  it("preserves base attribute order, with additions appended after", async () => {
+    // Intent: resolution is order-stable — inherited base attributes keep their
+    // order and additions come after them (deterministic timeline).
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({
+      additions: [makeAttribute({ id: "a_added", kind: "sway", count: 9 })],
+    });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.map((a) => a.id)).toEqual([
+      ...FEATHER_FOXTROT.attributes.map((a) => a.id),
+      "a_added",
+    ]);
+  });
 });
