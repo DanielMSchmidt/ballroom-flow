@@ -12,7 +12,7 @@ import { importDomain } from "./__fixtures__";
 // merge so each assertion passes.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-003 ATTRIBUTE_REGISTRY + merge", () => {
+describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
   it("ships the standard kinds with their footwork/rise/turn values", async () => {
     // Intent: standard vocabulary present (step footwork, rise incl. NFR, turn).
     // Arrange: import the registry. Act: read each standard kind's values.
@@ -75,5 +75,53 @@ describe.skip("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(merged.energy?.color).toBe("#123456");
     expect(merged.energy?.cardinality).toBe("single");
     expect(merged.energy?.values).toEqual(["low", "high"]);
+  });
+
+  // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
+
+  it("ships all six standard kinds, every one builtin", async () => {
+    // Intent: the standard tier is complete and flagged builtin (so the merge
+    // and the creation UI can distinguish standard from user-defined kinds).
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    for (const k of ["step", "rise", "position", "bodyActions", "sway", "turn"]) {
+      expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
+      expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);
+    }
+  });
+
+  it("applies rise to every Standard dance except Tango", async () => {
+    // Intent: AC-2 stated positively — rise applies to the 4 swing dances.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    expect((ATTRIBUTE_REGISTRY.rise.appliesToDances ?? []).sort()).toEqual(
+      ["foxtrot", "quickstep", "viennese_waltz", "waltz"].sort(),
+    );
+  });
+
+  it("passes unknown values and non-aliased values through normalizeValue", async () => {
+    // Intent: forward-compatible reads — only true aliases are rewritten.
+    const { normalizeValue } = await importDomain();
+    expect(normalizeValue("bodyActions", "CBM")).toBe("CBM"); // known, not an alias
+    expect(normalizeValue("bodyActions", "future_value")).toBe("future_value"); // unknown
+    expect(normalizeValue("step", "CBP")).toBe("CBP"); // alias scoped to bodyActions only
+  });
+
+  it("merge does not mutate the base registry", async () => {
+    // Intent: mergeRegistry is pure — adding a kind must not leak into the shared
+    // ATTRIBUTE_REGISTRY singleton (it's read everywhere).
+    const { ATTRIBUTE_REGISTRY, mergeRegistry } = await importDomain();
+    const before = Object.keys(ATTRIBUTE_REGISTRY).length;
+    mergeRegistry(ATTRIBUTE_REGISTRY, [
+      {
+        kind: "tempo",
+        label: "Tempo",
+        color: "#000000",
+        cardinality: "single",
+        valueType: "enum",
+        values: ["slow", "fast"],
+        builtin: false,
+      },
+    ]);
+    expect(Object.keys(ATTRIBUTE_REGISTRY).length).toBe(before);
+    expect(ATTRIBUTE_REGISTRY.tempo).toBeUndefined();
   });
 });

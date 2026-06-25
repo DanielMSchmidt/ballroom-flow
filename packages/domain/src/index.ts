@@ -3,3 +3,10 @@
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCES, type DanceId, type DanceMeta } from "./dances";
 export { newId } from "./ids";
+export {
+  ATTRIBUTE_REGISTRY,
+  mergeRegistry,
+  normalizeValue,
+  type RegistryKind,
+  type StandardRegistry,
+} from "./vocabulary";
