@@ -17,7 +17,7 @@ import {
 // skipped. RED→GREEN: implement `resolve(base, overlay)`.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe.skip("US-006 Overlay resolution resolve(base, overlay)", () => {
+describe("US-006 Overlay resolution resolve(base, overlay)", () => {
   it("applies tombstones + overrides + additions and the rename", async () => {
     // Intent: effective = base − tombstones, overrides applied, plus additions.
     // Arrange: the global Feather base + STUDENT_FEATHER_VARIANT's overlay
@@ -64,5 +64,35 @@ describe.skip("US-006 Overlay resolution resolve(base, overlay)", () => {
     expect(first.attributes.find((a) => a.id === "a_ff_1")?.value).toBe("H");
     expect(first).toEqual(second);
     expect(JSON.stringify(FEATHER_FOXTROT)).toBe(before);
+  });
+
+  // ── Extra edge cases (in the spirit of US-006, beyond the listed ACs) ──
+
+  it("returns the base attributes unchanged under an empty overlay", async () => {
+    // Intent: an overlay with no divergences resolves to the base's attributes
+    // (the inheritance baseline), with no rename.
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay());
+    expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+    expect(eff.name).toBe(FEATHER_FOXTROT.name);
+  });
+
+  it("keeps a tombstoned attribute gone even if also overridden", async () => {
+    // Intent: tombstone wins — an id both dropped and overridden is absent
+    // (a tombstone removes the base attribute entirely; no override resurrects it).
+    const { resolve } = await importDomain();
+    const overlay = makeOverlay({ tombstones: ["a_ff_2"], overrides: { a_ff_2: "H" } });
+    const eff = resolve(FEATHER_FOXTROT, overlay);
+    expect(eff.attributes.some((a) => a.id === "a_ff_2")).toBe(false);
+  });
+
+  it("does not share attribute objects by reference with the base", async () => {
+    // Intent: mutating the resolved result must never reach back into the base
+    // (purity at the element grain, not just the top level).
+    const { resolve } = await importDomain();
+    const eff = resolve(FEATHER_FOXTROT, makeOverlay());
+    const first = eff.attributes[0];
+    expect(first).toBeDefined();
+    expect(first).not.toBe(FEATHER_FOXTROT.attributes[0]);
   });
 });

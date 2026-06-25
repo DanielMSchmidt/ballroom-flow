@@ -24,6 +24,7 @@ export type {
   Section,
 } from "./doc-types";
 export { newId } from "./ids";
+export { resolve } from "./overlay";
 export { barsForFigure, countLabel, countToBar } from "./timing";
 export {
   ATTRIBUTE_REGISTRY,
