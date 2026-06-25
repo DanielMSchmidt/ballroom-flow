@@ -52,7 +52,7 @@ export function countLabel(count: number): string {
  * to the nearest 1/8 and check the residual is within float tolerance. This is
  * the "valid timing position" rule the strict write schema enforces (US-012):
  * a count must sit on a real sub-beat, but it may exceed `phraseBeats` (figures
- * span multiple phrases — see `countToBar`).
+ * span multiple phrases — see `countToPhrase`).
  */
 export function isOnEighthGrid(count: number): boolean {
   const snapped = Math.round(count / EIGHTH) * EIGHTH;
@@ -70,7 +70,7 @@ export function isOnEighthGrid(count: number): boolean {
  * in the AC specifies. The `phrase` field was renamed from `bar`, which was a
  * misnomer: it indexes phrases, not musical bars.)
  */
-export function countToBar(
+export function countToPhrase(
   count: number,
   dance: DanceId,
 ): { phrase: number; countInPhrase: number } {
@@ -92,5 +92,5 @@ export function countToBar(
 export function barsForFigure(counts: number[], dance: DanceId): number {
   if (counts.length === 0) return 1;
   const maxCount = Math.max(...counts);
-  return countToBar(maxCount, dance).phrase;
+  return countToPhrase(maxCount, dance).phrase;
 }

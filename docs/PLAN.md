@@ -410,7 +410,7 @@ Pure `domain/`, in-memory Automerge, TDD. **Proves the document graph, overlay i
 #### 1.1 ULID ids → commit.
 #### 1.2 Dance metadata (`DANCES`) → commit.
 #### 1.3 ATTRIBUTE_REGISTRY (+merge) — Tango omits `rise`; `step` has `H`; `turn` has `eighth_L`; `rise` has `NFR`; position single vs body-action multi; `CBP→CBMP`; a user-defined kind merges → commit.
-#### 1.4 Float-count timing — `countLabel`/`countToBar` (`3.25`→"3e", `3.5`→"3&", `3.75`→"3a", `3.125`→"3ia", `3.375`→"3ai"); `barsForFigure` per role → commit.
+#### 1.4 Float-count timing — `countLabel`/`countToPhrase` (`3.25`→"3e", `3.5`→"3&", `3.75`→"3a", `3.125`→"3ia", `3.375`→"3ai"); `barsForFigure` per role → commit.
 #### 1.5 Document schemas (`doc-routine.ts`, `doc-figure.ts`) — build/read routine + figure Automerge docs (sections, placements w/ figureRef, attributes, annotations); typed helpers; soft-delete flips → commit.
 #### 1.6 Overlay resolution (`overlay.ts`) — `resolve(base, overlay)`: base − tombstones + overrides + additions; **base additions flow up**; overrides win; rename applies; pure/deterministic → commit.
 #### 1.7 Fork + copy-on-write (`fork.ts`) — `cloneRoutine(doc)` (new id, shared history, `forkedFromRef`); `copyOnWrite(placement, sharedFigure, byUser)` → new variant doc with `baseFigureRef` + empty overlay, placement re-pointed → commit.

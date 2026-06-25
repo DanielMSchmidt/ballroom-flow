@@ -57,10 +57,10 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
 
   it("accepts a multi-phrase count on write (aligns with US-004 modulo-phrase)", async () => {
     // Intent: a count exceeding phraseBeats is VALID — figures span multiple
-    // phrases (§2.5 "modulo the counted phrase"; countToBar wraps it). Pins the
-    // reconciliation with the already-merged US-004 (countToBar(7,"waltz")→bar 2).
+    // phrases (§2.5 "modulo the counted phrase"; countToPhrase wraps it). Pins
+    // the reconciliation with merged US-004 (countToPhrase(7,"waltz")→phrase 2).
     const { parseAttributeWrite } = await importDomain();
-    // Waltz phrase 6: count 7 (bar 2 beat 1) and 7.5 (bar 2 "&") are valid.
+    // Waltz phrase 6: count 7 (phrase 2 beat 1) and 7.5 (phrase 2 "&") are valid.
     expect(
       parseAttributeWrite({ id: "a1", kind: "step", count: 7, value: "HT" }, { dance: "waltz" })
         .count,

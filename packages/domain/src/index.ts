@@ -29,7 +29,7 @@ export { newId } from "./ids";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export { resolve } from "./overlay";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
-export { barsForFigure, countLabel, countToBar, isOnEighthGrid } from "./timing";
+export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
 export { redoLastChange, undoLastChange } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,

@@ -6,7 +6,7 @@ import { importDomain } from "./__fixtures__";
 // PLAN §2.5, Q-D3, §10.2 invariant: "float-count timing; count fraction
 // e/&/a". Counts render in conventional ballroom notation modulo the phrase.
 //
-// Product helpers `countLabel`/`countToBar`/`barsForFigure` (timing.ts, M1 §9
+// Product helpers `countLabel`/`countToPhrase`/`barsForFigure` (timing.ts, M1 §9
 // 1.4) don't exist yet → dynamic import, skipped. RED→GREEN: implement them so
 // the exact mappings below hold (note: e=.25, &=.5, a=.75 — corrected from the
 // earlier swapped draft).
@@ -36,13 +36,13 @@ describe("US-004 Float-count timing", () => {
 
   it("interprets counts modulo the dance phrase (Waltz 1–6, Foxtrot 1–8)", async () => {
     // Intent: counts wrap modulo the dance's counted phrase length.
-    // Arrange: import countToBar. Act: map a count past the phrase end.
+    // Arrange: import countToPhrase. Act: map a count past the phrase end.
     // Assert: in Waltz (phrase 6) count 7 → phrase 2 count 1; in Foxtrot (phrase
     //   8) count 9 → phrase 2 count 1.
     // Covers AC-2 (modulo phrase) — §10.2 "modulo phrase".
-    const { countToBar } = await importDomain();
-    expect(countToBar(7, "waltz")).toMatchObject({ phrase: 2, countInPhrase: 1 });
-    expect(countToBar(9, "foxtrot")).toMatchObject({ phrase: 2, countInPhrase: 1 });
+    const { countToPhrase } = await importDomain();
+    expect(countToPhrase(7, "waltz")).toMatchObject({ phrase: 2, countInPhrase: 1 });
+    expect(countToPhrase(9, "foxtrot")).toMatchObject({ phrase: 2, countInPhrase: 1 });
   });
 
   it("computes bars for a figure per role", async () => {
@@ -84,10 +84,10 @@ describe("US-004 Float-count timing", () => {
 
   it("keeps within-phrase counts in phrase 1", async () => {
     // Intent: counts inside the first phrase don't wrap.
-    const { countToBar } = await importDomain();
-    expect(countToBar(1, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 1 });
-    expect(countToBar(6, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 6 });
-    expect(countToBar(8, "foxtrot")).toMatchObject({ phrase: 1, countInPhrase: 8 });
+    const { countToPhrase } = await importDomain();
+    expect(countToPhrase(1, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 1 });
+    expect(countToPhrase(6, "waltz")).toMatchObject({ phrase: 1, countInPhrase: 6 });
+    expect(countToPhrase(8, "foxtrot")).toMatchObject({ phrase: 1, countInPhrase: 8 });
   });
 
   it("spans more phrases as a figure's counts extend past the phrase", async () => {
