@@ -3,6 +3,7 @@
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCES, type DanceId, type DanceMeta } from "./dances";
 export { newId } from "./ids";
+export { barsForFigure, countLabel, countToBar } from "./timing";
 export {
   ATTRIBUTE_REGISTRY,
   mergeRegistry,
