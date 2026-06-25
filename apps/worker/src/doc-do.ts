@@ -96,22 +96,31 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Apply a high-level op to the doc, persist the resulting incremental change,
-   * and return its bytes. The returned change is what a sync peer would receive
-   * (US-015 will put these on the wire).
+   * Apply a high-level op to the doc, persist EVERY change the op produced, and
+   * return the op's representative change bytes. We persist
+   * `A.getChanges(before, after)` — the full set of changes since the pre-op
+   * doc — rather than only the last local change. This removes the latent
+   * one-change-per-op constraint: an op that does more than one `A.change`
+   * (none today, but US-017+ may) would otherwise drop its earlier changes from
+   * the SQLite log, diverging the cold-loaded doc from in-memory (data loss).
+   * Each change is still its own row, so persistence stays incremental — never
+   * a full-doc rewrite. (US-015 will diff with the same `getChanges` for the
+   * sync wire.)
    */
   async applyChange(op: DocOp): Promise<Uint8Array> {
     const before = this.getDoc();
     const after = this.applyOp(before, op);
-    const change = A.getLastLocalChange(after);
-    if (!change) {
+    const changes = A.getChanges(before, after);
+    this.doc = after;
+    if (changes.length === 0) {
       // A no-op mutation produced no change; keep state and return empty bytes.
-      this.doc = after;
       return new Uint8Array();
     }
-    this.persist([change]);
-    this.doc = after;
-    return change;
+    this.persist(changes);
+    // One op is one change today; return the last change's bytes as the op's
+    // representative payload. The FULL set is what's persisted (and, in US-015,
+    // synced) — so a future multi-change op loses nothing.
+    return changes[changes.length - 1] as Uint8Array;
   }
 
   /** Map a high-level op onto a domain mutation. Unknown ops are a no-op change. */
@@ -139,5 +148,14 @@ export class DocDO extends DurableObject<Env> {
   async reloadForTest(): Promise<void> {
     this.doc = null;
     this.getDoc();
+  }
+
+  /**
+   * Test-only: number of rows in the SQLite change log. Lets a test assert
+   * persistence is genuinely incremental (one row per change) rather than a
+   * full-doc rewrite, without reaching into the DO's protected storage handle.
+   */
+  async debugChangeRowCount(): Promise<number> {
+    return this.ctx.storage.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes").one().n;
   }
 }
