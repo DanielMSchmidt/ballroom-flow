@@ -32,6 +32,7 @@ import {
   ShareIcon,
   Sheet,
   Spinner,
+  useToast,
 } from "../ui";
 import { Share } from "./Share";
 
@@ -120,6 +121,7 @@ export function Assemble({
     sectionId: string;
     placement: Placement;
   } | null>(null);
+  const toast = useToast();
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
@@ -150,6 +152,25 @@ export function Assemble({
             <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
               <Spinner /> Syncing…
             </span>
+          )}
+          {/* Per-user undo/redo (US-038): inverts only THIS actor's last change
+              (US-010); B's concurrent edit survives. Editor-only. */}
+          {canEdit && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  store.undo();
+                  toast.show("Undone");
+                }}
+              >
+                Undo
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => store.redo()}>
+                Redo
+              </Button>
+            </>
           )}
           {/* Choreo fork (US-037): any member may "make it your own" — the server
               clones it into a new owned, frozen routine. */}
