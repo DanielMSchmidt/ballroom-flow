@@ -40,6 +40,32 @@ beforeAll(async () => {
 });
 
 describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
+  it("seedDoc durably seeds a fresh doc's content at create, no-clobber after (#205)", async () => {
+    // Intent: the create routes server-seed the doc's initial CRDT content so it's
+    // DO-persisted the instant the doc exists (vs a racy client write). Assert it
+    // seeds a fresh DO and survives a forced cold-load, and NEVER overwrites a doc
+    // that already has content (idempotent create / retried request).
+    const { stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: "rt_seed",
+      title: "Server Seeded",
+      dance: "foxtrot",
+      ownerId: "u_seed",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.reloadForTest(); // force the SQLite cold-load path
+    const seeded = await stub.getSnapshot();
+    expect(seeded.title).toBe("Server Seeded");
+    expect(seeded.dance).toBe("foxtrot");
+
+    // No-clobber: a second seed (e.g. a retried create) must NOT overwrite content.
+    await stub.seedDoc({ id: "rt_seed", title: "DIFFERENT", dance: "waltz", sections: [] });
+    expect((await stub.getSnapshot()).title).toBe("Server Seeded");
+  });
+
   it("persists incremental changes to DO SQLite and rehydrates after eviction", async () => {
     // Intent: the DO keeps the doc in memory + persists INCREMENTAL changes; a
     //   cold DO (post-eviction) rebuilds the same doc from SQLite (M0.5 S1).

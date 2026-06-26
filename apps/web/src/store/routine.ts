@@ -240,29 +240,15 @@ export async function openRoutine(
         if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
       });
 
-      // Project the figure to D1 + an owner membership (#187) BEFORE opening its
-      // DO, so the fail-closed connect (US-021) owner-resolves it; then seed the
-      // figure doc into its now-authorized DO — but only ONCE that connection is
-      // HYDRATED (onceLive, #202), so the seed is written onto the DO's replayed
-      // doc and sent on an open socket, never buffered into an unhydrated doc
-      // where it would race/merge-clobber or be lost before its first sync.
+      // Project the figure to D1 + an owner membership AND server-seed its CRDT
+      // content durably (#187/#205): POST /api/figures now both projects the
+      // registry/membership rows AND seeds the figure doc into its DO server-side,
+      // so the figure's name/attributes are DO-persisted the instant it exists —
+      // no racy client seed write that could be lost on an immediate reload. We
+      // then just OPEN the figure connection so its (server-seeded) content
+      // replays into the local store on catch-up.
       createFigure({ figureRef, name, dance, figureType }).then(() => {
-        const conn = figureConn(figureRef);
-        conn.onceLive(() => {
-          conn.change((draft) => {
-            const seed = draft as unknown as Record<string, unknown>;
-            seed.id = figureRef;
-            seed.scope = "account";
-            seed.ownerId = actor ?? "";
-            seed.figureType = figureType;
-            seed.dance = dance;
-            seed.name = name;
-            seed.source = "custom";
-            seed.attributes = [];
-            seed.schemaVersion = 1;
-            seed.deletedAt = null;
-          });
-        });
+        figureConn(figureRef);
       });
     },
 
