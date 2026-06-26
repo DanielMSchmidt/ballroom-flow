@@ -22,7 +22,7 @@
 | Feature | Journey = ship gate (this E2E green) | Rolls up (subtasks) | Status |
 |---|---|---|---|
 | **FE-1 Author a routine** | `authoring.spec` — sign in → create → section → figure → edit timeline → role-flip | US-018, US-025, US-026, US-027, US-028, US-029, US-030 ✓ · US-053 profile · US-024 entry | built — **#191 proves the journey** |
-| **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** · denied-state UI (#178) | backend ✓ — needs share UI + E2E |
+| **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** ✓ · denied-state UI (#178) | **journey green** — share UI (roster + role + invite-from-UI → redeem), non-member denied, quota upsell all proven on the real worker |
 | **FE-3 Figures, variants & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW auto-variant; figure auto-updates across routines | US-006/007/008 ✓ (domain) · **US-031, US-032, US-033, US-034, US-035, US-036** · #42, #56 | M4 — UI/worker not started |
 | **FE-4 Live collaboration** | `convergence.spec` — two contexts converge live; reconnect after a drop | US-014/015/016/017 ✓ · reconnect (#161) · typed envelope (#117) | **journey green** — two real browsers converge bidirectionally + idempotent reconnect replay; typed envelope (#117) still open |
 | **FE-5 Undo across clients** | `undo.spec` — per-user undo across two clients (A's undo reverts only A; B's edit survives) | US-010 ✓ (domain) · **US-037, US-038** · #70/#73/#160 | M5 — UI not started |
