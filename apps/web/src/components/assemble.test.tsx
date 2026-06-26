@@ -1,7 +1,7 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
-import type { FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
+import type { Attribute, FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement, RoutineStore } from "../store/routine";
@@ -374,6 +374,62 @@ describe("US-038 Per-user undo / redo UX", () => {
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(undoRoutine(), [])} />);
     expect(screen.queryByRole("button", { name: /^undo$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /^redo$/i })).toBeNull();
+  });
+});
+
+describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () => {
+  /** A routine with one section holding one placement → a resolved Feather figure. */
+  const oneFigureRoutine = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p = placement("p1", "feather");
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p, figure: figure("feather", "Feather") }],
+    };
+  };
+
+  it("opens a placement's step editor and persists an attribute edit via the store (AC-1)", async () => {
+    // Intent: the hero flow — an editor opens a figure's step timeline from Assemble,
+    //   taps a count, picks a value, and the edit is written to THAT figure's doc.
+    // Covers US-028 AC-1 wired end-to-end through the store seam (setFigureAttributes).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const setFigureAttributes = vi.fn();
+    const { routine, resolved } = oneFigureRoutine();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { setFigureAttributes })}
+      />,
+    );
+    // Open the step editor for the Feather placement.
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    // The count timeline shows; tap count 1, then pick footwork "T".
+    await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^T$/ }));
+    expect(setFigureAttributes).toHaveBeenCalled();
+    const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
+    expect(figureRef).toBe("feather");
+    expect(attrs.some((a) => a.kind === "step" && a.value === "T" && a.count === 1)).toBe(true);
+  });
+
+  it("lets a viewer open the step editor read-only (no value-edit affordance)", async () => {
+    // Intent: viewers/commenters can READ a figure's notation but not edit it.
+    // Covers US-028 AC-4 (read-only for non-editors), surfaced from Assemble.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = oneFigureRoutine();
+    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
+    expect(screen.queryByRole("button", { name: /^T$/ })).toBeNull();
   });
 });
 

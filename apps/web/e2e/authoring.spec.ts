@@ -49,6 +49,14 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
+    // 4b. Notate the figure (US-028 hero flow): open its step timeline, tap
+    //     count 1, set footwork "T"; the chip shows on that count.
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /^T$/ }).click();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible();
+    await page.keyboard.press("Escape");
+
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
     //    reconnect (US-018 open & view). The figure-after-reload is reliable now
@@ -56,6 +64,14 @@ test.describe("@smoke core authoring journey", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
+    //     timeline → count 1 still carries "T".
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.keyboard.press("Escape");
 
     // The created title is also indexed in D1: it shows in the Choreo list.
     await page.getByRole("button", { name: /all routines/i }).click();

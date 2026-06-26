@@ -14,6 +14,7 @@
 import {
   type Attribute,
   can,
+  type DanceId,
   type FigureDoc,
   type Placement,
   type Section,
@@ -34,6 +35,7 @@ import {
   Spinner,
   useToast,
 } from "../ui";
+import { FigureTimeline } from "./FigureTimeline";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -117,6 +119,8 @@ export function Assemble({
   const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
+  // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
+  const [notating, setNotating] = useState<string | null>(null);
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
     sectionId: string;
     placement: Placement;
@@ -138,6 +142,12 @@ export function Assemble({
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp.figure]),
   );
   const syncing = store.syncState() === "connecting";
+  // The figure whose step timeline is open — re-read live each render so a
+  // collaborator's synced attribute edit flows into the open editor (US-018 AC-2).
+  const notatingFigure =
+    notating !== null
+      ? (store.readPlacements().find((rp) => rp.figure?.id === notating)?.figure ?? null)
+      : null;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -227,6 +237,10 @@ export function Assemble({
                         isFirst={pIndex === 0}
                         isLast={pIndex === section.placements.length - 1}
                         onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                        onOpen={() => {
+                          const f = figureByPlacement.get(placement.id);
+                          if (f) setNotating(f.id);
+                        }}
                         onDelete={() =>
                           setPendingDeletePlacement({ sectionId: section.id, placement })
                         }
@@ -259,6 +273,24 @@ export function Assemble({
             setAddingFigureTo(null);
           }}
         />
+      </Sheet>
+
+      {/* Notate a figure (US-028 hero flow): open the figure's step timeline. The
+          editor writes to the figure's OWN doc via the store; a viewer sees it
+          read-only. Re-reads live so a collaborator's edit flows in. */}
+      <Sheet
+        open={notating !== null}
+        onClose={() => setNotating(null)}
+        title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
+      >
+        {notatingFigure && (
+          <FigureTimeline
+            role={canEdit ? role : "viewer"}
+            dance={routine.dance as DanceId}
+            attributes={notatingFigure.attributes}
+            onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+          />
+        )}
       </Sheet>
 
       {/* Placement delete confirm (principle #28); soft-delete tombstone. */}
@@ -456,6 +488,7 @@ function PlacementCard({
   isFirst = false,
   isLast = false,
   onMove,
+  onOpen,
   onDelete,
 }: {
   placement: Placement;
@@ -464,6 +497,7 @@ function PlacementCard({
   isFirst?: boolean;
   isLast?: boolean;
   onMove?: (direction: "up" | "down") => void;
+  onOpen?: () => void;
   onDelete?: () => void;
 }) {
   const label = figure?.name ?? "Unknown figure";
@@ -472,27 +506,40 @@ function PlacementCard({
       <div className="flex items-center gap-2">
         <span className="font-medium">{label}</span>
         {figure ? <ScopeTag figure={figure} /> : null}
-        {canEdit && (
-          <div className="ml-auto flex items-center gap-1">
-            <IconButton
-              label={`Move ${label} up`}
-              disabled={isFirst}
-              onClick={() => onMove?.("up")}
+        <div className="ml-auto flex items-center gap-1">
+          {/* Open the figure's step timeline — editors notate, others view (US-028). */}
+          {figure && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`${canEdit ? "Edit" : "View"} steps: ${label}`}
+              onClick={onOpen}
             >
-              ↑
-            </IconButton>
-            <IconButton
-              label={`Move ${label} down`}
-              disabled={isLast}
-              onClick={() => onMove?.("down")}
-            >
-              ↓
-            </IconButton>
-            <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
-              Remove
+              Steps
             </Button>
-          </div>
-        )}
+          )}
+          {canEdit && (
+            <>
+              <IconButton
+                label={`Move ${label} up`}
+                disabled={isFirst}
+                onClick={() => onMove?.("up")}
+              >
+                ↑
+              </IconButton>
+              <IconButton
+                label={`Move ${label} down`}
+                disabled={isLast}
+                onClick={() => onMove?.("down")}
+              >
+                ↓
+              </IconButton>
+              <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
+                Remove
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       {figure ? (
         <p className="mt-1 text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
