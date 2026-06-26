@@ -49,6 +49,10 @@ export interface AssembleProps {
   store?: RoutineStore;
   /** Resolve a fresh auth token per connection-open (#189); the screen wires Clerk. */
   getToken?: TokenProvider;
+  /** Fork this routine ("make it your own", US-037). When set, a copy action shows. */
+  onFork?: () => void;
+  /** A fork is in flight (disables the action + shows a spinner). */
+  forking?: boolean;
 }
 
 /**
@@ -95,6 +99,8 @@ export function Assemble({
   connection,
   store: injected,
   getToken,
+  onFork,
+  forking,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   const store = useRoutineStore(routineId, injected, !offlineProp, getToken);
@@ -134,12 +140,23 @@ export function Assemble({
   return (
     <div className="flex flex-col gap-4 p-4">
       <header className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-bold">{routine.title || "Untitled routine"}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold">{routine.title || "Untitled routine"}</h1>
+          {/* Fork lineage as provenance (US-037 AC-3) — surfaced, not pulled-from. */}
+          {routine.forkedFromRef && <Badge tone="neutral">Forked copy</Badge>}
+        </div>
         <div className="flex items-center gap-2">
           {syncing && (
             <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
               <Spinner /> Syncing…
             </span>
+          )}
+          {/* Choreo fork (US-037): any member may "make it your own" — the server
+              clones it into a new owned, frozen routine. */}
+          {onFork && (
+            <Button variant="secondary" size="sm" loading={forking} onClick={onFork}>
+              Make a copy
+            </Button>
           )}
           {canShare && (
             <Button

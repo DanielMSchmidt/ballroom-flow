@@ -282,6 +282,62 @@ describe("US-027 Add / reorder / delete figure placements", () => {
   });
 });
 
+describe("US-037 Choreo fork ('make it your own')", () => {
+  /** A minimal routine for exercising the fork affordance + lineage badge. */
+  const baseRoutine = (overrides: Partial<RoutineDoc> = {}): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+    ...overrides,
+  });
+
+  it("offers a 'Make a copy' fork affordance that invokes onFork — even for a viewer (AC-1)", async () => {
+    // Intent: any member viewing a routine can fork it ("make it your own"); the
+    //   affordance calls back to the flow, which clones it server-side. A viewer
+    //   (who cannot edit) still gets the fork action.
+    // Covers US-037 AC-1 (a fork action exists and triggers the fork).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onFork = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="viewer"
+        store={fakeStore(baseRoutine(), [])}
+        onFork={onFork}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /make a copy/i }));
+    expect(onFork).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a 'Forked copy' lineage badge only when the routine has a forkedFromRef (AC-3)", async () => {
+    // Intent: lineage is surfaced as provenance only — a forked routine shows a
+    //   badge; a non-forked one does not. (Frozen-independence is the E2E test.)
+    // Covers US-037 AC-3 (lineage shown as provenance).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    // Not a fork → no badge.
+    const { unmount } = renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(baseRoutine(), [])} />,
+    );
+    expect(screen.queryByText(/forked copy/i)).toBeNull();
+    unmount();
+    // A fork (forkedFromRef set) → the lineage badge shows.
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(baseRoutine({ forkedFromRef: "rt_origin" }), [])}
+      />,
+    );
+    expect(screen.getByText(/forked copy/i)).toBeInTheDocument();
+  });
+});
+
 describe.skip("US-031 Edit per-figure alignment", () => {
   it("sets entry/exit + per-placement alignment (qualifier + direction)", async () => {
     // Intent: per-figure alignment is editable (entry/exit + optional per-placement).

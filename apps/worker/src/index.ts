@@ -139,6 +139,57 @@ app.post("/api/routines", async (c) => {
   return c.json({ docRef, title, dance, plan }, 201);
 });
 
+// POST /api/routines/:id/fork — choreo fork, "make it your own" (US-037). Any
+// MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
+// it into a NEW owned routine. The fork is FROZEN + INDEPENDENT: we snapshot the
+// origin's CRDT content and seed a brand-new doc with it (no shared history), so
+// later origin edits never appear in the fork. `forkedFromRef` records lineage
+// (provenance only — nothing pulls from it). Referenced figures stay shared (the
+// placements keep their figureRefs). A fork COUNTS against the forker's quota.
+app.post("/api/routines/:id/fork", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const originRef = c.req.param("id");
+  // Must be able to read the origin to fork it (member/owner) — else 403.
+  const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  // A fork is a new OWNED routine → subject to the same server-side quota as create.
+  const db = drizzle(c.env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
+  const plan = me?.plan ?? "free";
+  const owned = await countOwnedRoutines(c.env.DB, user.sub);
+  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
+    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
+  }
+
+  // Snapshot the origin's resolved content and clone it into a fresh, owned doc.
+  const origin = await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(originRef)).getSnapshot();
+  const docRef = newId();
+  const title = origin.title ?? "Untitled routine";
+  const dance = origin.dance ?? "waltz";
+  await createOwnedRoutine(c.env.DB, {
+    docRef,
+    ownerId: user.sub,
+    title,
+    dance,
+    forkedFromRef: originRef,
+  });
+  // Seed the new DO with the cloned content: keep sections/placements/annotations
+  // (figures stay shared via their figureRefs); re-stamp identity (new id, owner,
+  // lineage). No shared Automerge history ⇒ the fork is frozen from the origin.
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).seedDoc({
+    ...origin,
+    id: docRef,
+    ownerId: user.sub,
+    forkedFromRef: originRef,
+    schemaVersion: origin.schemaVersion ?? 1,
+    deletedAt: null,
+  });
+  return c.json({ docRef, forkedFromRef: originRef, title, dance, plan }, 201);
+});
+
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).
 // The client mints the figureRef + metadata; the SERVER stamps ownerId from the
 // verified JWT (never a client field). Projecting the registry row + owner

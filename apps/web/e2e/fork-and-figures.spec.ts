@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { gotoRoutine, seedAuth } from "./support/auth";
+import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectAbsent, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -9,36 +10,84 @@ import { closeUsers, expectAbsent, expectConverged, openTwoUsers } from "./suppo
 //   US-035 — auto-variant: edit a global/non-owned figure → variant created,
 //            original untouched, "copied as your variant" toast.
 //
-// @smoke includes one fork/copy-on-write journey (PLAN §10.3).
-// SKIPPED until M4 fork UX + screens + E2E auth exist.
+// @smoke includes one fork/copy-on-write journey (PLAN §10.3). The choreo-fork
+// journey (US-037) is LIVE; the figure auto-update / COW (US-034/035) and
+// cross-dance figureType-note (US-040/041) journeys stay skipped until those
+// FE-3 figure-library / FE-6 annotation slices land.
 // ─────────────────────────────────────────────────────────────────────────
 
-test.describe("@smoke choreo fork is frozen / independent", () => {
-  test.skip(true, "M4 fork UX + screens + E2E auth not built yet (see TEST-MAP.md)");
+/** Coach creates a routine via the UI; returns its docRef (from the URL). */
+async function createRoutineAsCoach(page: Page, title: string): Promise<string> {
+  await page.goto("/");
+  await page.getByRole("button", { name: /new choreo/i }).click();
+  await page.getByLabel("Routine name").fill(title);
+  await page.getByLabel("Dance").selectOption("waltz");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({ timeout: 15_000 });
+  const docRef = new URL(page.url()).pathname.split("/").pop() ?? "";
+  expect(docRef, "expected a created routine id in the URL").toBeTruthy();
+  return docRef;
+}
 
-  test("forking a routine yields an independent copy; an origin edit does NOT appear in the fork", async ({
+/** Add a section by name on a page that already shows the editor surface. */
+async function addSection(page: Page, name: string): Promise<void> {
+  await page.getByRole("button", { name: "Add section" }).click();
+  await page.getByLabel("Section name").fill(name);
+  await page.getByLabel("Section name").press("Enter");
+}
+
+test.describe("@smoke choreo fork is frozen / independent", () => {
+  test("forking a routine yields an independent, owned copy; an origin edit does NOT appear in the fork (US-037)", async ({
     browser,
   }) => {
-    // Intent: a choreo fork is frozen at fork time — origin changes never flow in.
-    // Multi-user scenario: student forks the coach's routine; coach then edits the ORIGIN.
-    // Steps/asserts:
-    //   1. Student opens rt_sample and clicks "Make it your own" → an owned fork opens
-    //      with a "forked from" lineage label (US-037 AC-1/AC-3).
-    //   2. Coach (separate context) adds a section "OriginOnly" to the ORIGIN rt_sample.
-    //   3. The coach's origin shows "OriginOnly" (converged on the origin doc),
-    //      but the student's FORK never shows it — expectAbsent (US-037 AC-2 frozen).
+    // Intent: a choreo fork is an OWNED, frozen copy — it carries the origin's
+    //   content at fork time but later origin changes never flow in.
+    // Multi-user scenario: the coach owns a routine and shares VIEW with the
+    //   student; the student forks it, then the coach edits the ORIGIN.
     const [coach, student] = await openTwoUsers(browser, "user_coach", "user_student");
-    await seedAuth(coach.page, coach.userId);
-    await seedAuth(student.page, student.userId);
-    await gotoRoutine(student.page, "rt_sample");
-    await student.page.getByRole("button", { name: /make it your own|fork/i }).click();
-    await expect(student.page.getByText(/forked from/i)).toBeVisible();
-    // Coach edits the ORIGIN; it must not bleed into the student's frozen fork.
-    await gotoRoutine(coach.page, "rt_sample");
-    await coach.page.getByRole("button", { name: /add section/i }).click();
-    await coach.page.getByRole("textbox", { name: /section name/i }).fill("OriginOnly");
-    await coach.page.getByRole("button", { name: /save section/i }).click();
-    await expectAbsent(student.page, "text=OriginOnly");
+    await resetDb(coach.page);
+    await seedDb(coach.page, {
+      users: [
+        { id: "user_coach", displayName: "Coach", identityColor: "#111111" },
+        { id: "user_student", displayName: "Student", identityColor: "#222222" },
+      ],
+    });
+    await seedAuth(coach.page, "user_coach");
+    await seedAuth(student.page, "user_student");
+
+    // Coach creates a routine with a section, then shares VIEW with the student.
+    const docRef = await createRoutineAsCoach(coach.page, "Forkable Waltz");
+    await addSection(coach.page, "OriginSec");
+    await expect(coach.page.getByRole("heading", { name: "OriginSec" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await seedDb(coach.page, { memberships: [{ docRef, userId: "user_student", role: "viewer" }] });
+
+    // Student opens it (read-only — no Add section) and forks it.
+    await student.page.goto(`/routines/${docRef}`);
+    await expect(student.page.getByRole("heading", { name: "OriginSec" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(student.page.getByRole("button", { name: "Add section" })).toHaveCount(0);
+    await student.page.getByRole("button", { name: /make a copy/i }).click();
+
+    // The fork opens: wait on the lineage badge (unique to a fork) so we don't
+    // read the URL before the async fork+navigate completes. It opens at a
+    // DIFFERENT id, shows the cloned section, and is OWNED (student can edit).
+    await expect(student.page.getByText(/forked copy/i)).toBeVisible({ timeout: 15_000 });
+    const forkRef = new URL(student.page.url()).pathname.split("/").pop();
+    expect(forkRef).not.toBe(docRef);
+    await expect(student.page.getByRole("heading", { name: "OriginSec" })).toBeVisible();
+    await expect(student.page.getByRole("button", { name: "Add section" })).toBeVisible();
+
+    // Coach edits the ORIGIN; it must NOT bleed into the student's frozen fork.
+    await addSection(coach.page, "OriginOnly");
+    await expect(coach.page.getByRole("heading", { name: "OriginOnly" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectAbsent(student.page, "[data-testid='section-list'] >> text=OriginOnly");
+    // ...and the fork still shows what it cloned (it isn't blank/broken).
+    await expect(student.page.getByRole("heading", { name: "OriginSec" })).toBeVisible();
     await closeUsers(coach, student);
   });
 });
