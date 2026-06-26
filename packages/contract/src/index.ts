@@ -59,3 +59,14 @@ export const zIssueInvite = z.object({
   role: z.enum(["viewer", "commenter", "editor"]),
 });
 export type IssueInvite = z.infer<typeof zIssueInvite>;
+
+/**
+ * WS sync marker (#202): a TEXT frame the DO sends to a client once it has
+ * finished replaying the document's full change log on connect (the initial
+ * catch-up). Receiving it means the client's doc is HYDRATED (caught up), as
+ * distinct from the socket merely being OPEN — so the UI can gate editing on a
+ * truly-synced doc rather than writing into a not-yet-replayed one. It rides as
+ * a text frame, inherently distinct from the binary Automerge change frames.
+ * (A minimal precursor to the fully typed WS envelope, #117.)
+ */
+export const SYNC_CAUGHT_UP = "ballroom:sync:caught-up";

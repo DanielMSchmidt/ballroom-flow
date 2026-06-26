@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as A from "@automerge/automerge";
+import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 import type { FigureDoc, RoutineDoc } from "@ballroom/domain";
 import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
 import { describe, expect, it, vi } from "vitest";
@@ -41,6 +42,10 @@ class FakeSocket {
   /** Signal the socket is open (the runtime fires this; the DO then replays). */
   fireOpen(): void {
     this.open?.();
+  }
+  /** Deliver the DO's catch-up-complete marker — the doc is now hydrated (#202). */
+  fireCaughtUp(): void {
+    this.msg?.({ data: SYNC_CAUGHT_UP });
   }
   /** Replay a doc's FULL history to the client (what the DO does on connect). */
   load(doc: A.Doc<unknown>): void {
@@ -151,10 +156,14 @@ describe("US-017 store/ seam (multi-doc)", () => {
     const store = await openRoutine("rt_sample", opts);
     expect(Array.isArray(store.readPlacements())).toBe(true);
 
-    // Sync state starts "connecting" and flips to "live" once the socket opens
-    // (US-018 "syncing…" indicator).
+    // Sync state starts "connecting" and STAYS "connecting" on socket-open —
+    // it only flips to "live" once the DO's catch-up-complete marker arrives, i.e.
+    // the doc is HYDRATED, not merely socket-open (#202). US-018 "syncing…" shows
+    // until then; editing is gated on this honest "live".
     expect(store.syncState()).toBe("connecting");
     sockets.get("rt_sample")?.fireOpen();
+    expect(store.syncState()).toBe("connecting");
+    sockets.get("rt_sample")?.fireCaughtUp();
     expect(store.syncState()).toBe("live");
 
     // The routine DO replays a section with a placement referencing variant "fv".

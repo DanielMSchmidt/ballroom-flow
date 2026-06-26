@@ -242,20 +242,26 @@ export async function openRoutine(
 
       // Project the figure to D1 + an owner membership (#187) BEFORE opening its
       // DO, so the fail-closed connect (US-021) owner-resolves it; then seed the
-      // figure doc into its now-authorized DO.
+      // figure doc into its now-authorized DO — but only ONCE that connection is
+      // HYDRATED (onceLive, #202), so the seed is written onto the DO's replayed
+      // doc and sent on an open socket, never buffered into an unhydrated doc
+      // where it would race/merge-clobber or be lost before its first sync.
       createFigure({ figureRef, name, dance, figureType }).then(() => {
-        figureConn(figureRef).change((draft) => {
-          const seed = draft as unknown as Record<string, unknown>;
-          seed.id = figureRef;
-          seed.scope = "account";
-          seed.ownerId = actor ?? "";
-          seed.figureType = figureType;
-          seed.dance = dance;
-          seed.name = name;
-          seed.source = "custom";
-          seed.attributes = [];
-          seed.schemaVersion = 1;
-          seed.deletedAt = null;
+        const conn = figureConn(figureRef);
+        conn.onceLive(() => {
+          conn.change((draft) => {
+            const seed = draft as unknown as Record<string, unknown>;
+            seed.id = figureRef;
+            seed.scope = "account";
+            seed.ownerId = actor ?? "";
+            seed.figureType = figureType;
+            seed.dance = dance;
+            seed.name = name;
+            seed.source = "custom";
+            seed.attributes = [];
+            seed.schemaVersion = 1;
+            seed.deletedAt = null;
+          });
         });
       });
     },

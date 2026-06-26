@@ -10,6 +10,7 @@
 // The WebSocket factory is injectable so the seam is testable without a live
 // server (jsdom has no WS server); production passes the global `WebSocket`.
 import * as A from "@automerge/automerge";
+import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 
 /** Minimal structural view of a WebSocket (so tests can inject a fake). */
 export interface SocketLike {
@@ -40,7 +41,12 @@ export function connectUrl(base: string, docId: string): string {
  * A live connection to one document's DO. Owns the in-memory Automerge doc and
  * notifies a listener whenever it advances (from a local edit or a peer frame).
  */
-/** Where one document's connection is in its lifecycle (drives the UI indicator). */
+/**
+ * Where one document's connection is in its lifecycle (drives the UI indicator
+ * and the edit gate). "connecting" = socket opening OR open-but-not-yet-hydrated;
+ * "live" = the DO's full catch-up replay has been APPLIED (hydrated, safe to
+ * edit, #202); "closed" = socket closed/offline.
+ */
 export type SyncState = "connecting" | "live" | "closed";
 
 export class DocConnection<T> {
@@ -82,13 +88,12 @@ export class DocConnection<T> {
     this.socket = socket;
     socket.binaryType = "arraybuffer";
     socket.addEventListener("message", (ev) => this.receive(ev.data));
-    // Track lifecycle so the store can surface connecting/live/closed (US-018
-    // "syncing…" indicator). The DO replays the full log on open → "live". On
-    // open we also flush any changes buffered while the socket was connecting.
-    socket.addEventListener("open", () => {
-      this.flush();
-      this.setState("live");
-    });
+    // On open, flush any changes buffered while connecting — but do NOT go
+    // "live" yet. "live" means HYDRATED (the DO's full catch-up replay has been
+    // applied), signalled by the SYNC_CAUGHT_UP marker in receive() (#202), so
+    // the UI never enables editing on a not-yet-replayed doc. Until then the
+    // state stays "connecting" (US-018 "syncing…").
+    socket.addEventListener("open", () => this.flush());
     socket.addEventListener("close", () => this.setState("closed"));
   }
 
@@ -102,10 +107,28 @@ export class DocConnection<T> {
     return this.syncState;
   }
 
+  private liveWaiters: Array<() => void> = [];
+
   private setState(next: SyncState): void {
     if (this.syncState === next) return;
     this.syncState = next;
+    if (next === "live") {
+      const waiters = this.liveWaiters;
+      this.liveWaiters = [];
+      for (const fn of waiters) fn();
+    }
     this.onChange?.(); // a state change re-renders the indicator
+  }
+
+  /**
+   * Run `fn` once this connection is HYDRATED ("live") — immediately if it
+   * already is. Used to defer a brand-new doc's SEED write until the DO's
+   * catch-up has been applied, so we never write into a not-yet-hydrated doc
+   * (which would race/merge-clobber or be lost before its first sync) (#202).
+   */
+  onceLive(fn: () => void): void {
+    if (this.syncState === "live") fn();
+    else this.liveWaiters.push(fn);
   }
 
   /** Subscribe to advances of this doc (replaces any prior listener). */
@@ -136,6 +159,12 @@ export class DocConnection<T> {
 
   /** Apply a raw incoming change frame from a peer. Drops malformed frames. */
   private receive(data: unknown): void {
+    // The DO's catch-up-complete marker (a TEXT frame): the full replay has been
+    // applied, so this connection is HYDRATED → go "live" (#202).
+    if (data === SYNC_CAUGHT_UP) {
+      this.setState("live");
+      return;
+    }
     if (!(data instanceof ArrayBuffer)) return; // sync frames are binary
     try {
       const [next] = A.applyChanges(this.doc, [new Uint8Array(data) as A.Change]);
