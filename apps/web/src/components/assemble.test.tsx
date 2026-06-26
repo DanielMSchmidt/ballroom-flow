@@ -32,6 +32,7 @@ function fakeStore(routine: RoutineDoc, resolved: ResolvedPlacement[]): RoutineS
     readRoutine: () => routine,
     readPlacements: () => resolved,
     renameSection: () => {},
+    setFigureAttributes: () => {},
     undo: () => {},
     redo: () => {},
     subscribe: () => () => {},

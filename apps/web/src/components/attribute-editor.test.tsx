@@ -1,8 +1,9 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
+import type { Attribute } from "@ballroom/domain";
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent } from "../test-support/render";
 
@@ -30,47 +31,63 @@ interface LanesModule {
   Lanes: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () => {
+/** A step="T" attribute on the given count (footwork value from the registry). */
+const stepT = (count: number): Attribute => ({
+  id: `step-${count}-T`,
+  kind: "step",
+  count,
+  value: "T",
+  role: null,
+  deletedAt: null,
+});
+
+describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () => {
   it("opens the editor on tapping a count and adds an attribute for that count", async () => {
     // Intent: tapping a count opens the editor; choosing a value adds an attribute.
     // User scenario: an editor taps count 2 and picks footwork "T".
-    // Arrange: render <FigureTimeline> for an editable figure (role=editor).
     // Act: click the count-2 cell, then the "T" footwork option.
-    // Assert: a step attribute appears on count 2 (chip rendered, onChange called).
+    // Assert: onChange fires with a step="T" attribute on count 2 (the add).
     // Covers US-028 AC-1 (tap a count → add) — hero flow.
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    renderUi(<FigureTimeline role="editor" />);
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /count 2/i }));
     await userEvent.click(screen.getByRole("button", { name: /^T$/ }));
-    expect(screen.getByText(/2/)).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalled();
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "step" && a.count === 2,
+    );
+    expect(added?.value).toBe("T");
   });
 
   it("clears a value when its selected option is re-tapped", async () => {
     // Intent: re-tapping a selected value clears it (toggle-off).
     // Arrange: render the editor with count 2 already = "T".
-    // Act: tap "T" again. Assert: the count-2 step attribute is removed.
+    // Act: tap "T" again. Assert: aria-pressed flips off + onChange emits an empty set.
     // Covers US-028 AC-2 (re-tap clears).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor count={2} role="editor" />);
+    const onChange = vi.fn();
+    renderUi(<AttributeEditor count={2} role="editor" value={[stepT(2)]} onChange={onChange} />);
     const t = screen.getByRole("button", { name: /^T$/, pressed: true });
     await userEvent.click(t);
-    expect(screen.getByRole("button", { name: /^T$/ })).toHaveAttribute("aria-pressed", "false");
+    expect(onChange).toHaveBeenCalledWith([]); // the step="T" was cleared
   });
 
   it("does not allow a commenter/viewer to edit", async () => {
     // Intent: edit affordances are gated by role (commenter/viewer read-only).
-    // Arrange: render the editor with role=commenter.
-    // Act/Assert: value options are disabled / not present; no edit controls.
+    // Arrange: render the editor (role=commenter) with an existing step="T".
+    // Act/Assert: "T" shows but is NOT an interactive button (no toggle).
     // Covers US-028 AC-4 (commenter/viewer cannot edit).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor count={2} role="commenter" />);
+    renderUi(<AttributeEditor count={2} role="commenter" value={[stepT(2)]} />);
     expect(screen.queryByRole("button", { name: /^T$/ })).toBeNull();
+    expect(screen.getByText("T")).toBeInTheDocument(); // shown read-only
   });
 });
 

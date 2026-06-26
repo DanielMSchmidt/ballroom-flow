@@ -193,6 +193,22 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(fired).toBe(2);
     store.close();
   });
+
+  it("setFigureAttributes writes the timeline to the figure's own doc connection (US-028)", async () => {
+    // Intent: the hero-flow mutation lands on the FIGURE doc (a separate DO), not
+    //   the routine doc — and goes out as a change frame on that figure's socket.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+
+    store.setFigureAttributes("fig1", [
+      { id: "step-2-T", kind: "step", count: 2, value: "T", role: null, deletedAt: null },
+    ]);
+
+    // Opening the figure connection + writing the change sends bytes on its socket.
+    expect(sockets.get("fig1")).toBeTruthy();
+    expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(0);
+    store.close();
+  });
 });
 
 describe("US-017 architecture boundary (components import only from store/)", () => {

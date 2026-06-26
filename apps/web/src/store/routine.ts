@@ -8,6 +8,7 @@
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
 import {
+  type Attribute,
   type FigureDoc,
   type Placement,
   type RoutineDoc,
@@ -32,6 +33,14 @@ export interface RoutineStore {
   readRoutine(): RoutineDoc;
   /** Rename a section (example mutation; the editor adds more). */
   renameSection(sectionId: string, name: string): void;
+  /**
+   * Replace a figure doc's attribute timeline (US-028). The timeline editor emits
+   * the figure's full next attribute set; this writes it to that figure's doc
+   * (opening its connection if needed). NOTE: editing a non-owned figure should
+   * fork via copy-on-write (US-008) — wired in the variant-editor story (#42); for
+   * now this writes straight to the referenced figure doc.
+   */
+  setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -141,6 +150,14 @@ export async function openRoutine(
       routineConn.change((draft) => {
         const section = draft.sections.find((s) => s.id === sectionId);
         if (section) section.name = name;
+      });
+    },
+
+    setFigureAttributes: (figureRef, attributes) => {
+      // Replace the whole timeline (the editor emits the figure's full next set).
+      // Writes to that figure's own doc connection — a separate DO from the routine.
+      figureConn(figureRef).change((draft) => {
+        draft.attributes = attributes;
       });
     },
 
