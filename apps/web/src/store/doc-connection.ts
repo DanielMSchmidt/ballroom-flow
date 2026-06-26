@@ -49,6 +49,12 @@ export class DocConnection<T> {
   private onChange: (() => void) | null = null;
   private syncState: SyncState = "connecting";
   private closed = false;
+  // Outgoing changes produced before the socket is open (e.g. while the #189
+  // token resolves, or during the CONNECTING window) are buffered here and
+  // flushed once it opens — otherwise a brand-new doc's seed change (a figure's
+  // name/attributes) is silently dropped and never reaches its DO, so it's lost
+  // on the next reload. (A precursor to full reconnect resend, #161.)
+  private pendingSends: Uint8Array[] = [];
 
   /**
    * `getToken` (#189): when provided, a FRESH token is fetched at THIS
@@ -77,8 +83,12 @@ export class DocConnection<T> {
     socket.binaryType = "arraybuffer";
     socket.addEventListener("message", (ev) => this.receive(ev.data));
     // Track lifecycle so the store can surface connecting/live/closed (US-018
-    // "syncing…" indicator). The DO replays the full log on open → "live".
-    socket.addEventListener("open", () => this.setState("live"));
+    // "syncing…" indicator). The DO replays the full log on open → "live". On
+    // open we also flush any changes buffered while the socket was connecting.
+    socket.addEventListener("open", () => {
+      this.flush();
+      this.setState("live");
+    });
     socket.addEventListener("close", () => this.setState("closed"));
   }
 
@@ -139,11 +149,31 @@ export class DocConnection<T> {
   }
 
   private send(change: Uint8Array): void {
-    try {
-      this.socket?.send(change);
-    } catch {
-      // Socket not open / closing (or not yet attached while the token resolves)
-      // — the DO replays state on reconnect.
+    if (this.socket) {
+      try {
+        this.socket.send(change);
+        return;
+      } catch {
+        // Socket attached but not open yet (CONNECTING) — fall through to buffer.
+      }
+    }
+    // Not attached (token still resolving) or not open — buffer for the flush on
+    // "open" so a brand-new doc's changes aren't lost before its first sync.
+    this.pendingSends.push(change);
+  }
+
+  /** Send everything buffered while the socket was connecting, in order. */
+  private flush(): void {
+    if (!this.socket || this.pendingSends.length === 0) return;
+    const queued = this.pendingSends;
+    this.pendingSends = [];
+    for (const change of queued) {
+      try {
+        this.socket.send(change);
+      } catch {
+        // Still not writable — re-buffer the rest and wait for the next open.
+        this.pendingSends.push(change);
+      }
     }
   }
 

@@ -24,8 +24,11 @@ jobs:
       # All three device projects (chromium-desktop, mobile-chrome, mobile-safari).
       - name: Install Playwright browsers
         run: pnpm --filter web exec playwright install --with-deps chromium webkit
+      # The journeys run against a real worker (wrangler dev) the Playwright
+      # webServer boots (apps/web/e2e/serve.sh). No --pass-with-no-tests: a real
+      # journey failure now FAILS the nightly gate (#191).
       - name: E2E (full matrix)
-        run: pnpm --filter web exec playwright test --pass-with-no-tests
+        run: pnpm --filter web exec playwright test
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

@@ -16,7 +16,7 @@
 // lands the Drizzle schema, implementers can swap these raw inserts for typed
 // Drizzle inserts; the shape is the contract.
 // ─────────────────────────────────────────────────────────────────────────
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 
 export type MembershipRole = "viewer" | "commenter" | "editor";
 export type DocType = "routine" | "global-figure" | "account-figure" | "account";
@@ -66,19 +66,18 @@ export interface SeedSpec {
  * Apply the per-suite migrations. Call once in a suite `beforeAll`.
  *
  * D1 is SHARED across the whole worker test run (isolatedStorage:false), so
- * several suites call this against the SAME database — and they race. The
- * migration SQL is idempotent (`CREATE TABLE/INDEX IF NOT EXISTS`), so the schema
- * work is harmless to repeat; the only thing that can still collide is
- * applyD1Migrations' own bookkeeping INSERT into `d1_migrations` (a duplicate
- * migration name). That just means the schema is already present, so we swallow
- * it. Any OTHER error still throws. (#173 — was a flake, became a CI blocker.)
+ * every suite migrates the SAME database. We run the migration SQL DIRECTLY
+ * (idempotent `CREATE … IF NOT EXISTS`) rather than via `applyD1Migrations`,
+ * whose `d1_migrations` bookkeeping RACES under shared storage and can make a
+ * suite skip its CREATEs (→ "no such table"). Running the statements directly is
+ * order-independent and self-contained. (#203 — the real fix behind #173; do not
+ * reintroduce the bookkeeping or an error-swallow that masks a missing schema.)
  */
 export async function applyMigrations(): Promise<void> {
-  try {
-    await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-  } catch (e) {
-    const msg = String((e as { message?: unknown })?.message ?? e);
-    if (!/already exists|UNIQUE constraint failed: d1_migrations/i.test(msg)) throw e;
+  for (const migration of env.TEST_MIGRATIONS) {
+    for (const query of migration.queries) {
+      if (query.trim()) await env.DB.prepare(query).run();
+    }
   }
 }
 

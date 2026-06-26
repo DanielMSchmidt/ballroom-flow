@@ -88,7 +88,10 @@ export function Assemble({
   const store = useRoutineStore(routineId, injected, !offlineProp, getToken);
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
-  const canEdit = can(role, "canEdit");
+  // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
+  // editing an as-yet-unsynced (empty A.init) doc would push onto a missing
+  // `sections` list and be lost on merge, so we wait for the seed to land.
+  const canEdit = can(role, "canEdit") && store?.syncState() === "live";
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{

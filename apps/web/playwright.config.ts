@@ -11,7 +11,10 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // Serialized: the journeys share ONE local D1 (the worker's e2e state), so they
+  // reset+seed deterministically rather than racing across parallel workers (#191).
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 1,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
@@ -33,12 +36,14 @@ export default defineConfig({
       use: { ...devices["iPhone 14"] },
     },
   ],
-  // Serve the built SPA for E2E. `vite preview` mirrors production assets
-  // (incl. the PWA service worker) better than the dev server.
+  // Serve the journeys against the REAL backend (#191): e2e/serve.sh builds the
+  // E2E SPA, migrates a fresh local D1, and runs the worker (SPA + API + WS at
+  // one origin) with the test CLERK_JWT_KEY. This is what makes the journeys
+  // exercise the real auth/permission boundary instead of a static preview.
   webServer: {
-    command: `pnpm run preview --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
+    command: `E2E_PORT=${PORT} bash e2e/serve.sh`,
+    url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

@@ -9,6 +9,7 @@ import { issueInvite, redeemInvite } from "./db/invites";
 import { resolveEffectiveRole } from "./db/membership";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
+import { testSeed } from "./routes/test-seed";
 
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
 const FREE_ROUTINE_CAP = 3;
@@ -21,11 +22,23 @@ export type Env = {
   // Clerk verification keys — set as Wrangler secrets (see PROVISIONING.md).
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
+  // "1" ONLY in the E2E wrangler run (wrangler.toml [env.e2e]); mounts the
+  // /api/test/* fixtures routes. Unset everywhere else → those routes 404.
+  E2E_TEST_ROUTES?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/api/health", (c) => c.json({ ok: true }));
+
+// E2E-only test fixtures (#191). Guarded so these routes exist ONLY when the
+// E2E wrangler run sets E2E_TEST_ROUTES=1 — in dev/staging/prod the flag is
+// unset and the routes 404 (never a backdoor into a real environment).
+app.use("/api/test/*", async (c, next) => {
+  if (c.env.E2E_TEST_ROUTES !== "1") return c.json({ error: "not_found" }, 404);
+  await next();
+});
+app.route("/", testSeed);
 
 // GET /api/me — the verified Clerk identity (US-019 AC-3). The JWT is verified
 // networklessly in auth/ (CLERK_JWT_KEY, no Clerk fetch). Returns the `sub`
