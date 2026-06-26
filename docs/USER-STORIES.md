@@ -21,7 +21,7 @@
 
 | Feature | Journey = ship gate (this E2E green) | Rolls up (subtasks) | Status |
 |---|---|---|---|
-| **FE-1 Author a routine** | `authoring.spec` — sign in → create → section → figure → edit timeline → role-flip | US-018, US-025, US-026, US-027, US-028, US-029, US-030 ✓ · US-053 profile · US-024 entry | built — **#191 proves the journey** |
+| **FE-1 Author a routine** | `authoring.spec` — sign in → create → section → figure → edit timeline → role-flip | US-018, US-025, US-026, US-027, US-028, US-029, US-030 ✓ · **US-053 profile ✓** (Profile tab: name/colour, plan, owned count, sign out) · **US-019 onboarding nudge ✓** · US-024 entry | built — **#191 proves the journey** |
 | **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** ✓ · denied-state UI (#178) | **journey green** — share UI (roster + role + invite-from-UI → redeem), non-member denied, quota upsell all proven on the real worker |
 | **FE-3 Figures, variants & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW auto-variant; figure auto-updates across routines | US-006/007/008 ✓ (domain) · **US-037 choreo fork ✓** · **US-028/029/030 notate-a-figure ✓ (wired into Assemble + authoring journey)** · **US-031 alignment ✓** · **US-032 figure library browse + add-from-library picker ✓** · US-033, US-034, US-035, US-036 (variants/COW/auto-update — not started, need backend) · #42, #56 | **partial** — notation + library + alignment + choreo fork done; variants/COW slice next |
 | **FE-4 Live collaboration** | `convergence.spec` — two contexts converge live; reconnect after a drop | US-014/015/016/017 ✓ · reconnect (#161) · typed envelope (#117) | **journey green** — two real browsers converge bidirectionally + idempotent reconnect replay; typed envelope (#117) still open |
@@ -90,7 +90,7 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 | US-050 | PWA install + offline app shell | M9 | user-facing | US-018 | Installable PWA; shell loads offline with a clear "you're offline" for data; <~2s interactive. |
 | US-051 | Accessibility WCAG AA | M9 | user-facing | all UI | Color never the sole signal; ≥44px targets; keyboard + SR navigable; reduced-motion; axe clean. |
 | US-052 | Cross-browser E2E (iOS Safari + Android Chrome) | M9 | system/developer | US-050 | Core journeys + convergence + fork pass on chromium-desktop, mobile-chrome, mobile-safari. |
-| US-053 | Account / profile + plan status | M3 | user-facing | US-019,US-022 | Edit displayName + identity color; show plan + owned-routine count; sign out. |
+| US-053 ✓ | Account / profile + plan status | M3 | user-facing | US-019,US-022 | Edit displayName + identity color; show plan + owned-routine count; sign out. Built: `Profile`/`ProfileScreen` + `profile.test.tsx` + `e2e/profile.spec.ts`; first-run onboarding nudge (US-019) points new users at it. |
 | US-054 | Full Standard syllabus library seed (ISTD) | Content | system/developer | US-005,US-032 | Global FigureDocs by figureType×dance; validated core at launch, full syllabus rolling; values are data, refinable. |
 | US-055 | Demo routine on join (fork of a central "golden steps" Waltz seed) | M7 | user-facing | US-007,US-025,US-045 | New users get a personal, editable demo routine — a fork of a central app-owned sample Waltz routine — so they explore real content immediately, not a blank page. |
 
