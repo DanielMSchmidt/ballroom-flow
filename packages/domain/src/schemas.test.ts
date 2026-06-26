@@ -28,15 +28,25 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     expect(parsed.value).toBe("FUTURE_FOOTWORK");
   });
 
-  it("rejects an unknown value written to a known kind on WRITE", async () => {
-    // Intent: writes are validated against the known vocabulary (strict).
-    // Arrange: same unknown-value attribute. Act: parse with the strict WRITE schema.
-    // Assert: it throws / returns a failure.
+  it("rejects an unknown value written to a known CLOSED-enum kind on WRITE", async () => {
+    // Intent: writes to a closed-enum kind are validated against the vocabulary.
+    // Arrange: an unknown value for `position` (a closed enum: closed/promenade/wing).
+    // Act: parse with the strict WRITE schema. Assert: it throws.
     // Covers US-012 AC-2 second half (reject on write) — §10.2 "reject-on-write".
+    // (Uses `position`, not `step`: step is free-text per §3/#83 — see below.)
     const { parseAttributeWrite } = await importDomain();
     expect(() =>
-      parseAttributeWrite({ id: "a1", kind: "step", count: 1, value: "NOT_A_FOOTWORK" }),
+      parseAttributeWrite({ id: "a1", kind: "position", count: 1, value: "NOT_A_POSITION" }),
     ).toThrow();
+  });
+
+  it("accepts a free-text value for the step kind on WRITE (§3 'controlled vocab + free-text')", async () => {
+    // Intent: step is free-text (#83) — its registry values are SUGGESTIONS, so a
+    //   custom footwork action writes through, while other enum kinds stay closed.
+    // Covers #83 (step free-text on the domain write-check).
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite({ id: "a1", kind: "step", count: 1, value: "brush_tap" });
+    expect(ok.value).toBe("brush_tap");
   });
 
   it("rejects an off-grid / below-1 timing value on write (valid range = on-grid + ≥1)", async () => {
@@ -133,15 +143,15 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       parseAttributeWrite({ id: "a1", kind: "step", count: "nope", value: "HT" }),
     ).toThrow(z.ZodError);
 
-    // (b) invalid value → ZodError with params.code "unknown_value"
+    // (b) invalid value (closed-enum kind) → ZodError with params.code "unknown_value"
     try {
-      parseAttributeWrite({ id: "a1", kind: "step", count: 1, value: "NOT_A_FOOTWORK" });
+      parseAttributeWrite({ id: "a1", kind: "position", count: 1, value: "NOT_A_POSITION" });
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
       const issue = (e as z.ZodError).issues[0] as { params?: { code?: string; kind?: string } };
       expect(issue.params?.code).toBe("unknown_value");
-      expect(issue.params?.kind).toBe("step");
+      expect(issue.params?.kind).toBe("position");
     }
 
     // (c) off-grid count → ZodError with params.code "count_off_grid"

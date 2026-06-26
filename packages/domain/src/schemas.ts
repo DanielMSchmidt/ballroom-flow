@@ -82,9 +82,11 @@ export function parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): 
   const schema = baseAttribute
     .transform((attr) => withNormalizedValue(attr))
     .superRefine((attr, refineCtx) => {
-      // Value must be a known registry value for a known enum kind.
+      // Value must be a known registry value for a known CLOSED enum kind. A
+      // free-text kind (step, §3/#83) treats `values` as suggestions, so any
+      // string passes — only its non-string/empty shape would be invalid.
       const kind = ATTRIBUTE_REGISTRY[attr.kind];
-      if (kind?.valueType === "enum" && kind.values) {
+      if (kind?.valueType === "enum" && kind.values && !kind.freeText) {
         if (typeof attr.value !== "string" || !kind.values.includes(attr.value)) {
           refineCtx.addIssue({
             code: "custom",

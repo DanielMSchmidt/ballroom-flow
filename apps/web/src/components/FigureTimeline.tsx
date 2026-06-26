@@ -38,7 +38,12 @@ export function FigureTimeline({
   initialView,
   onChange,
 }: FigureTimelineProps) {
-  const [attrs, setAttrs] = useState<Attribute[]>(attributes ?? []);
+  // FULLY CONTROLLED (#151): the rendered attributes derive directly from the
+  // `attributes` prop (the store snapshot) — NO internal copy. A collaborator's
+  // synced edit flows in via the prop and re-renders; local edits go out via
+  // `onChange` and come back as the next prop. Only transient UI state (which
+  // count's editor is open) lives in the component.
+  const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
   const view = initialView ?? null;
 
@@ -58,9 +63,7 @@ export function FigureTimeline({
   /** Replace this count's attributes within the figure's full set + emit. */
   const onCountChange = (count: number, next: Attribute[]): void => {
     const others = attrs.filter((a) => a.count !== count || a.deletedAt != null);
-    const merged = [...others, ...next];
-    setAttrs(merged);
-    onChange?.(merged);
+    onChange?.([...others, ...next]);
   };
 
   return (
