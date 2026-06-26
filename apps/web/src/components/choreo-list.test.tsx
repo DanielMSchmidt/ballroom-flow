@@ -17,7 +17,7 @@ interface ChoreoListModule {
   ChoreoList: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-022 Quota upsell (UI)", () => {
+describe("US-022 Quota upsell (UI)", () => {
   it("shows an upsell when creating a 4th owned routine is blocked", async () => {
     // Intent: the UI surfaces the server's quota block as an upsell.
     // Arrange: render <ChoreoList> for a user at the 3-owned cap (create returns 402/upsell).

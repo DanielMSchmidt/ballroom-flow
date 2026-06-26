@@ -42,7 +42,7 @@ describe.skip("US-025 Create a routine", () => {
   });
 });
 
-describe.skip("US-022 Quota: 3 owned routines + upsell", () => {
+describe("US-022 Quota: 3 owned routines + upsell", () => {
   it("blocks the 4th OWNED routine with an upsell (server-side)", async () => {
     // Intent: a free account may own at most 3 routines; the 4th create is blocked.
     // Arrange: seed a user already owning 3 routine registry rows. Act: POST a 4th.

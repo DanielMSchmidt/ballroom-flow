@@ -1,8 +1,13 @@
+import { DANCES, type DanceId, newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
 import { users } from "./db/schema";
+
+/** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
+const FREE_ROUTINE_CAP = 3;
 
 export type Env = {
   DB: D1Database;
@@ -64,6 +69,42 @@ app.post("/api/onboarding", async (c) => {
   return c.json({ sub: user.sub, displayName, identityColor, plan: "free" });
 });
 
+// POST /api/routines — create a routine (US-025 server path) with the SERVER-SIDE
+// quota gate (US-022). A free account may OWN at most FREE_ROUTINE_CAP routines;
+// the 4th create is refused with a structured upsell payload (402) the UI renders
+// — NOT a generic 403. The quota is enforced here so a client bypass is still
+// blocked. Only OWNED routines count (shared-in membership rows don't). On allow
+// we EAGER-project the registry row + the owner membership (createOwnedRoutine);
+// the CRDT doc is created lazily by its DO on first open (US-025 seeds content).
+app.post("/api/routines", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const body = (await c.req.json().catch(() => null)) as {
+    dance?: unknown;
+    title?: unknown;
+  } | null;
+  const dance = typeof body?.dance === "string" ? body.dance : "";
+  const title = typeof body?.title === "string" ? body.title.trim() : "";
+  if (!(dance in DANCES) || !title) {
+    return c.json({ error: "invalid_routine" }, 400);
+  }
+
+  const db = drizzle(c.env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
+  const plan = me?.plan ?? "free";
+
+  // SERVER-SIDE quota: count OWNED routines (indexed; shared-in excluded).
+  const owned = await countOwnedRoutines(c.env.DB, user.sub);
+  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
+    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
+  }
+
+  const docRef = newId();
+  await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance: dance as DanceId });
+  return c.json({ docRef, title, dance, plan }, 201);
+});
+
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a
 // `GET /docs/:id/connect` upgrade to that document's DO (one DO per document,
 // keyed by `:id` via idFromName) and forwards the upgrade so the DO's
@@ -71,9 +112,10 @@ app.post("/api/onboarding", async (c) => {
 // the `x-doc-name` header because the DO can't recover its idFromName key from
 // `ctx.id` (US-016).
 //
-// AUTH: this route is intentionally OPEN for now — per-connection auth +
-// membership/role enforcement at the sync boundary is US-021 (M3). Until then
-// anyone who knows a doc id can connect. MUST be gated before any real data.
+// AUTH: the DO connection is the permission boundary (US-021) — it is fail-closed
+// (a valid Clerk token + per-doc membership are REQUIRED; verified inside the DO).
+// This route only forwards the upgrade (and the Authorization + x-doc-name
+// headers); it deliberately does not re-authorize.
 app.get("/docs/:id/connect", (c) => {
   if (c.req.header("Upgrade") !== "websocket") {
     return c.text("expected websocket upgrade", 426);
