@@ -13,6 +13,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
+import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 import {
   addSection,
   buildRoutineDoc,
@@ -286,9 +287,13 @@ export class DocDO extends DurableObject<Env> {
     // survive hibernation — unlike addEventListener closures).
     this.ctx.acceptWebSocket(server);
 
-    // Catch the new client up with the full current state (all changes so far).
+    // Catch the new client up with the full current state (all changes so far),
+    // then signal catch-up-complete (#202) so the client knows the doc is
+    // HYDRATED — not merely socket-open — and may safely begin editing. The
+    // marker is a TEXT frame, distinct from the binary change frames above.
     const snapshot = A.getAllChanges(this.getDoc());
     for (const change of snapshot) server.send(change as Uint8Array);
+    server.send(SYNC_CAUGHT_UP);
 
     return new Response(null, { status: 101, webSocket: client });
   }
