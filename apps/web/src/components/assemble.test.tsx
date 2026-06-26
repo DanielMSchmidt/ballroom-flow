@@ -251,12 +251,12 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getAllByText(/attribute/i).length).toBeGreaterThan(0); // attribute summary
     expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
 
-    // Add a figure → a fresh figure + placement
+    // Add a figure → the picker sheet; create a custom one (no figureType).
     await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
-    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave");
+    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined);
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -374,6 +374,54 @@ describe("US-038 Per-user undo / redo UX", () => {
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(undoRoutine(), [])} />);
     expect(screen.queryByRole("button", { name: /^undo$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /^redo$/i })).toBeNull();
+  });
+});
+
+describe("US-027 Add a figure from the library picker", () => {
+  const emptySectionRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("adds a library preset with its canonical name + figureType (dance-scoped)", async () => {
+    // Intent: 'Add figure' is a real library picker — picking a Foxtrot preset
+    //   places it carrying the catalog's canonical name AND figureType identity.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const addPlacement = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [], { addPlacement })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /feather step/i }));
+    expect(addPlacement).toHaveBeenCalledWith("s1", "Feather Step", "feather-step");
+  });
+
+  it("still supports creating a custom figure by name", async () => {
+    // Intent: the picker keeps a 'create your own' escape hatch (no figureType →
+    //   the store slugs one). Covers US-027 custom-add alongside the library.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const addPlacement = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [], { addPlacement })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
+    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined);
   });
 });
 

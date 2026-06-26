@@ -16,6 +16,7 @@ import {
   can,
   type DanceId,
   type FigureDoc,
+  libraryFiguresForDance,
   type Placement,
   type Section,
 } from "@ballroom/domain";
@@ -267,9 +268,10 @@ export function Assemble({
         onClose={() => setAddingFigureTo(null)}
         title="Add a figure"
       >
-        <AddFigureForm
-          onAdd={(name) => {
-            if (addingFigureTo) store.addPlacement(addingFigureTo, name);
+        <AddFigurePicker
+          dance={routine.dance as DanceId}
+          onAdd={(name, figureType) => {
+            if (addingFigureTo) store.addPlacement(addingFigureTo, name, figureType);
             setAddingFigureTo(null);
           }}
         />
@@ -549,31 +551,72 @@ function PlacementCard({
   );
 }
 
-/** The add-figure form inside the "Add a figure" sheet: a name → a new figure. */
-function AddFigureForm({ onAdd }: { onAdd: (name: string) => void }) {
+/**
+ * The "Add a figure" picker (US-027 + US-032): browse the dance's library
+ * presets (filterable) and tap one to place it with its canonical name +
+ * figureType, OR create your own custom figure by name. A preset carries the
+ * catalog's figureType (cross-routine identity); a custom omits it.
+ */
+function AddFigurePicker({
+  dance,
+  onAdd,
+}: {
+  dance: DanceId;
+  onAdd: (name: string, figureType?: string) => void;
+}) {
+  const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
+  const q = filter.trim().toLowerCase();
+  const presets = libraryFiguresForDance(dance).filter(
+    (f) => q === "" || f.name.toLowerCase().includes(q),
+  );
   return (
-    <form
-      className="flex flex-col gap-3"
-      onSubmit={(e: FormEvent) => {
-        e.preventDefault();
-        const next = name.trim();
-        if (!next) return;
-        onAdd(next);
-        setName("");
-      }}
-    >
+    <div className="flex flex-col gap-3">
       <Input
-        label="Figure name"
-        placeholder="e.g. Feather Step"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
+        label="Filter figures"
+        placeholder="Search the library…"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
       />
-      <Button type="submit" variant="primary" disabled={!name.trim()}>
-        Add
-      </Button>
-    </form>
+      {presets.length === 0 ? (
+        <p className="text-2xs text-ink-faint">No library figures match — create your own below.</p>
+      ) : (
+        <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label="Library figures">
+          {presets.map((f) => (
+            <li key={f.figureType}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAdd(f.name, f.figureType)}
+              >
+                {f.name}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="flex flex-col gap-2 border-t border-line pt-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          const next = name.trim();
+          if (!next) return;
+          onAdd(next, undefined);
+          setName("");
+        }}
+      >
+        <Input
+          label="Figure name"
+          placeholder="…or create your own"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
+          Add custom
+        </Button>
+      </form>
+    </div>
   );
 }
 

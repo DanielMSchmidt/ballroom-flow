@@ -52,9 +52,10 @@ export interface RoutineStore {
   /**
    * Add a figure to a section (US-027): mints a fresh OWNED custom figure doc
    * (the user then edits its timeline, US-028) and appends a placement
-   * referencing it. The library-pick path (reuse a global figure) is US-032.
+   * referencing it. A library pick (US-032) passes the catalog's canonical
+   * `figureType`; a custom figure omits it and the store slugs one from the name.
    */
-  addPlacement(sectionId: string, figureName: string): void;
+  addPlacement(sectionId: string, figureName: string, figureType?: string): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -240,10 +241,12 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName) => {
+    addPlacement: (sectionId, figureName, figureTypeArg) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
-      const figureType = slugify(name) || figureRef; // immutable once set (#91)
+      // A library pick supplies the catalog's canonical figureType (cross-routine
+      // identity); a custom figure slugs one from the name. Immutable once set (#91).
+      const figureType = figureTypeArg ?? (slugify(name) || figureRef);
       const dance = readRoutineSafe().dance;
 
       // Add the placement to the routine immediately (it only references figureRef).

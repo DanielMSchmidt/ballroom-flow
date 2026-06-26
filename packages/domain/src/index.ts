@@ -27,6 +27,13 @@ export type {
 export { matchesFigureType } from "./figuretype";
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
+export {
+  LIBRARY_FIGURES,
+  type LibraryFigure,
+  type LibraryGroup,
+  libraryFiguresForDance,
+  libraryGroupsForDance,
+} from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export { resolve } from "./overlay";
 export {
