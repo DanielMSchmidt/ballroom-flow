@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
-import { resolveEffectiveRole } from "./db/membership";
+import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
@@ -51,13 +51,17 @@ app.get("/api/me", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const db = drizzle(c.env.DB);
   const row = await db.select().from(users).where(eq(users.id, user.sub)).get();
-  if (!row) return c.json({ sub: user.sub, onboarded: false });
+  if (!row) return c.json({ sub: user.sub, onboarded: false, routineCap: FREE_ROUTINE_CAP });
   return c.json({
     sub: user.sub,
     onboarded: true,
     displayName: row.displayName,
     identityColor: row.identityColor,
     plan: row.plan,
+    // The free-plan owned-routine cap, sourced from the ONE server constant so the
+    // client never hardcodes a second copy (#176) — the Choreo list gates the
+    // upsell on this, and the POST /api/routines 402 enforces the same value.
+    routineCap: FREE_ROUTINE_CAP,
   });
 });
 
@@ -210,6 +214,45 @@ app.post("/api/invites/:token/redeem", async (c) => {
     return c.json({ error: "invite_already_redeemed" }, 409);
   }
   return c.json({ docRef: result.docRef, role: result.role }, 200);
+});
+
+// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Any
+// MEMBER may read the roster (resolveEffectiveRole → non-null); a non-member 403s.
+app.get("/api/docs/:id/members", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return c.json({ members: await listMembers(c.env.DB, docRef) });
+});
+
+// DELETE /api/docs/:id/members/:userId — remove a member (US-024 AC-2). Only a
+// role that can manage membership (editor/owner via can(role,"canInvite")) may
+// remove; commenter/viewer → 403. Soft-delete only (tombstone), never hard removal.
+app.delete("/api/docs/:id/members/:userId", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role || !can(role, "canInvite")) return c.json({ error: "forbidden" }, 403);
+  await removeMember(c.env.DB, docRef, c.req.param("userId"));
+  return c.json({ ok: true }, 200);
+});
+
+// GET /api/docs/:id/access — the viewer's OWN effective role on a document, used
+// by the client to distinguish DENIED from offline before opening the heavy WS
+// store (FE-2 / #178). A browser WebSocket can't read the WS handshake's 401/403
+// (it only sees an abnormal 1006 close, indistinguishable from a transient
+// disconnect), so the calm access-denied state is driven by this browser-readable
+// preflight — the fail-closed DO sync boundary (US-021) is still the real gate.
+//   • unauthenticated → 401  • non-member → 403  • member/owner → 200 { role }
+app.get("/api/docs/:id/access", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const role = await resolveEffectiveRole(c.env.DB, c.req.param("id"), user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return c.json({ role }, 200);
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in

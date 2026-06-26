@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -167,6 +167,39 @@ describe("US-023 Invite by link (issue + redeem)", () => {
     });
     expect(res.status).toBe(200);
     expect(await roleFor(docRef, "u_up")).toBe("editor");
+  });
+
+  it("two concurrent redeems of the same token grant EXACTLY ONE membership (#193)", async () => {
+    // Intent: single-use is race-safe — two simultaneous redeems of one token must
+    //   not double-grant (the atomic redeemedAt claim is the gate, db/invites.ts).
+    // Arrange: a valid editor invite + a fresh redeemer. Act: fire two redeems at
+    //   once. Assert: exactly one wins (200) + the other is refused (409), and
+    //   exactly ONE active membership row exists for the user (no duplicate).
+    // Covers US-023 single-use under concurrency (#193).
+    const docRef = "rt_inv_race";
+    const redeemer = await authedContext({ keypair: kp, userId: "u_race", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_race", displayName: "Race", identityColor: "#888", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      invites: [{ id: "inv_race", docRef, role: "editor", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const fire = () =>
+      SELF.fetch("https://x/api/invites/inv_race/redeem", {
+        method: "POST",
+        headers: redeemer.authHeaders(),
+      });
+    const [a, b] = await Promise.all([fire(), fire()]);
+
+    // One redeem wins; the other sees the single-use claim already taken.
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    // And exactly ONE active membership row exists — no double-grant.
+    const { results } = await env.DB.prepare(
+      "SELECT id FROM membership WHERE docRef = ? AND userId = ? AND deletedAt IS NULL",
+    )
+      .bind(docRef, "u_race")
+      .all();
+    expect(results.length).toBe(1);
+    expect(await roleFor(docRef, "u_race")).toBe("editor");
   });
 
   it("rejects redeeming an unknown token (404, not a 500)", async () => {

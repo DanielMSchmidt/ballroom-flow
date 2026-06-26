@@ -8,9 +8,10 @@
 // the server boundary stays the real gate.
 import { useAppAuth } from "../auth/app-auth";
 import { navigate } from "../lib/router";
+import { useDocAccess } from "../store/access";
 import { useMe } from "../store/me";
-import { useCreateRoutine, useRoutines } from "../store/routines";
-import { Button, Spinner } from "../ui";
+import { isQuotaError, useCreateRoutine, useRoutines } from "../store/routines";
+import { AccessDenied, Button, Spinner } from "../ui";
 import { Assemble, type MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
 
@@ -31,10 +32,20 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const me = useMe();
   const create = useCreateRoutine();
   const { getToken } = useAppAuth();
+  // Access preflight (#178): for an OPEN routine, learn DENIED vs allowed before
+  // opening the heavy WS store, so a non-member sees the calm access-denied state
+  // rather than a connectivity-looking offline flash (DP #20).
+  const access = useDocAccess(openRoutineId ?? "", { enabled: Boolean(openRoutineId) });
 
   const items = routinesQ.data?.routines ?? [];
   const ownedCount = items.filter((r) => r.role === "owner").length;
   const plan = me.data?.plan ?? "free";
+  // The free-plan cap comes from the server (/api/me), never a 2nd hardcoded
+  // constant (#176); the POST /api/routines 402 enforces the same value.
+  const routineCap = me.data?.routineCap;
+  // A create blocked by the server quota (402) — surface the upsell even if the
+  // instant gate was bypassed (e.g. another tab consumed the last slot).
+  const quotaBlocked = isQuotaError(create.error);
 
   if (openRoutineId) {
     return (
@@ -42,9 +53,17 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
           ← All routines
         </Button>
-        {routinesQ.isLoading ? (
-          // Resolve the viewer's role from their list BEFORE opening, so a
-          // shared routine never flashes editor affordances during the load.
+        {access.state === "denied" ? (
+          <AccessDenied
+            action={
+              <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
+                Back to your routines
+              </Button>
+            }
+          />
+        ) : access.state === "checking" || routinesQ.isLoading ? (
+          // Resolve access + the viewer's role BEFORE opening, so a shared routine
+          // never flashes editor affordances (or an offline state) during the load.
           <div className="flex items-center gap-2 p-6 text-ink-faint" role="status">
             <Spinner /> <span className="text-2xs">Loading…</span>
           </div>
@@ -64,6 +83,8 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
       routines={items}
       ownedCount={ownedCount}
       plan={plan}
+      cap={routineCap}
+      quotaBlocked={quotaBlocked}
       creating={create.isPending}
       onCreate={(input) =>
         // A freshly-created routine isn't in the list yet — the creator owns it,

@@ -21,7 +21,19 @@ import {
 import { type FormEvent, useEffect, useReducer, useState } from "react";
 import type { TokenProvider } from "../store/doc-connection";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
-import { Badge, Button, Card, Chip, IconButton, Input, OfflineState, Sheet, Spinner } from "../ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  Input,
+  OfflineState,
+  ShareIcon,
+  Sheet,
+  Spinner,
+} from "../ui";
+import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
 export type MembershipRole = "editor" | "commenter" | "viewer";
@@ -92,6 +104,10 @@ export function Assemble({
   // editing an as-yet-unsynced (empty A.init) doc would push onto a missing
   // `sections` list and be lost on merge, so we wait for the seed to land.
   const canEdit = can(role, "canEdit") && store?.syncState() === "live";
+  // Sharing (invite/remove) is an editor/owner capability — gated on the SHARED
+  // table (principle #26); the worker still enforces it server-side (US-024).
+  const canShare = can(role, "canInvite");
+  const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
@@ -117,14 +133,31 @@ export function Assemble({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-bold">{routine.title || "Untitled routine"}</h1>
-        {syncing && (
-          <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
-            <Spinner /> Syncing…
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {syncing && (
+            <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
+              <Spinner /> Syncing…
+            </span>
+          )}
+          {canShare && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              leadingIcon={<ShareIcon size={16} />}
+            >
+              Share
+            </Button>
+          )}
+        </div>
       </header>
+
+      {/* Share screen: roster + roles, remove (confirmed), invite link (US-024). */}
+      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
+        <Share docRef={routineId} viewerRole={role} />
+      </Sheet>
 
       {routine.sections.length === 0 ? (
         <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>

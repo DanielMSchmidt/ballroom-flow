@@ -9,11 +9,8 @@
 
 import type { RoutineListItem } from "@ballroom/contract";
 import { DANCE_IDS, DANCES, type DanceId } from "@ballroom/domain";
-import { type FormEvent, useCallback, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Button, Card, Input, Select, Sheet } from "../ui";
-
-/** Free accounts may OWN at most this many routines (D21) — mirrors the server. */
-const FREE_ROUTINE_CAP = 3;
 
 /** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
 function danceLabel(dance: DanceId): string {
@@ -32,6 +29,11 @@ export interface ChoreoListProps {
   ownedCount: number;
   /** The viewer's plan; only "free" is capped. */
   plan: "free" | "pro";
+  /** The free-plan owned-routine cap, sourced from the server (/api/me) — the ONE
+   *  source of truth, never a hardcoded copy (#176). Undefined until /api/me loads. */
+  cap?: number;
+  /** The server refused a create with the quota 402 — open the upsell (race backstop). */
+  quotaBlocked?: boolean;
   /** Create a routine (the allowed path); the screen wires this to the store. */
   onCreate?: (input: { title: string; dance: DanceId }) => void;
   /** Open a routine (navigate to its Assemble screen). */
@@ -44,6 +46,8 @@ export function ChoreoList({
   routines = [],
   ownedCount,
   plan,
+  cap,
+  quotaBlocked,
   onCreate,
   onOpen,
   creating,
@@ -52,7 +56,12 @@ export function ChoreoList({
   const [formOpen, setFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dance, setDance] = useState<DanceId>("waltz");
-  const atCap = plan === "free" && ownedCount >= FREE_ROUTINE_CAP;
+  const atCap = plan === "free" && cap != null && ownedCount >= cap;
+  // If the server refuses a create with a 402 (a race past the instant gate),
+  // open the upsell so the user still sees why the routine wasn't created.
+  useEffect(() => {
+    if (quotaBlocked) setUpsellOpen(true);
+  }, [quotaBlocked]);
   // Stable close handlers: Sheet's useOverlay re-runs its focus effect when
   // onClose identity changes, so an inline arrow would re-focus the panel on
   // every keystroke and drop input. (useOverlay should depend on `open` alone —
@@ -145,8 +154,8 @@ export function ChoreoList({
       <Sheet open={upsellOpen} onClose={closeUpsell} title="Upgrade for more routines">
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            You've reached your free-plan cap of {FREE_ROUTINE_CAP} routines. A paid plan will let
-            you create more — your existing routines stay exactly as they are.
+            You've reached your free-plan cap{cap != null ? ` of ${cap} routines` : ""}. A paid plan
+            will let you create more — your existing routines stay exactly as they are.
           </p>
           {/* Billing is US-053; keep this honest rather than a dead live CTA. */}
           <Button variant="secondary" disabled>

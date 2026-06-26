@@ -3,6 +3,7 @@
  * Import primitives from "@/ui" (or relative "./ui"). The token layer
  * lives in styles/tokens.css; tokens.ts names them for TS consumers.
  */
+export { AccessDenied, type AccessDeniedProps } from "./AccessDenied";
 export { AppShell, type AppShellProps, type NavItem } from "./AppShell";
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";

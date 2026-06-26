@@ -8,6 +8,8 @@ export type Me = {
   plan?: "free" | "pro";
   displayName?: string;
   identityColor?: string;
+  /** The free-plan owned-routine cap (server source of truth, #176). */
+  routineCap?: number;
 };
 
 /** store/ seam: the current user's verified identity from the Worker. */

@@ -299,24 +299,37 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
     expect(row).toMatchObject({ title: "Projected", dance: "foxtrot" });
   });
 
-  it("expires due invites on the alarm", async () => {
-    // Intent: expired invites are reaped off the request path.
-    // Arrange: an open invite whose expiresAt is in the past. Act: run the alarm.
-    // Assert: the invite is marked redeemed (no longer redeemable).
-    // Covers US-016 AC-3 (invite expiry sweep — invite rows populated in M3/US-023).
-    const { stub } = freshDoc("routine");
-    const inviteId = `inv-${crypto.randomUUID()}`;
+  it("expires THIS doc's due invites on the alarm, leaving other docs' invites alone (#127)", async () => {
+    // Intent: expired invites are reaped off the request path — but a per-document
+    //   DO reaps ONLY its own invites (#127), never another doc's rows.
+    // Arrange: give the DO its identity (doName), then seed a due invite for THIS
+    //   doc and a due invite for a DIFFERENT doc. Act: run the alarm.
+    // Assert: this doc's invite is reaped; the other doc's invite is untouched.
+    // Covers US-016 AC-3 (invite expiry sweep) + #127 (scoped to this doc).
+    const { name, stub } = freshDoc("routine");
+    await stub.setMetadata({ doName: name, ownerId: "user_x" });
+    const mineId = `inv-${crypto.randomUUID()}`;
+    const otherId = `inv-${crypto.randomUUID()}`;
     await env.DB.prepare(
       "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, NULL)",
     )
-      .bind(inviteId, "doc-x", "editor", Date.now() - 1000)
+      .bind(mineId, name, "editor", Date.now() - 1000)
+      .run();
+    await env.DB.prepare(
+      "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, NULL)",
+    )
+      .bind(otherId, "some-other-doc", "editor", Date.now() - 1000)
       .run();
 
     await stub.runAlarmForTest();
 
-    const row = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
-      .bind(inviteId)
+    const mine = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
+      .bind(mineId)
       .first<{ redeemedAt: number | null }>();
-    expect(row?.redeemedAt).not.toBeNull(); // the due invite was reaped
+    const other = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
+      .bind(otherId)
+      .first<{ redeemedAt: number | null }>();
+    expect(mine?.redeemedAt).not.toBeNull(); // this doc's due invite was reaped
+    expect(other?.redeemedAt).toBeNull(); // another doc's invite is left alone (#127)
   });
 });
