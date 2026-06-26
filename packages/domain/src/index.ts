@@ -28,6 +28,14 @@ export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export { resolve } from "./overlay";
+export {
+  type Capabilities,
+  type Capability,
+  can,
+  capabilitiesFor,
+  type EffectiveRole,
+  type MembershipRole,
+} from "./permissions";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
 export { redoLastChange, undoLastChange } from "./undo";

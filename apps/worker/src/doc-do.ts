@@ -14,6 +14,8 @@
 import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
 import { addSection, buildRoutineDoc, type RoutineDoc, readRoutine } from "@ballroom/domain";
+import { authenticateToken } from "./auth";
+import { roleFor } from "./db/membership";
 import type { Env } from "./index";
 
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
@@ -235,6 +237,24 @@ export class DocDO extends DurableObject<Env> {
     // called for a connect-only doc.
     const doName = request.headers.get("x-doc-name");
     if (doName) this.rememberDoName(doName);
+
+    // US-020 — per-document permission boundary (transitional).
+    // SECURITY: the connect path is still OPEN when NO token is presented (the
+    // documented pre-US-021 state — see #133/#134). US-021 makes it fail-closed
+    // (a token is REQUIRED, and a viewer's writes are refused on the socket).
+    // For now, when a caller DOES authenticate we enforce membership on THIS
+    // document so an authenticated non-member is rejected (AC-2, per-doc):
+    //   • invalid/expired token → 401 (fail closed on the auth we were handed)
+    //   • valid token, no row   → 403 (authenticated, but not a member here)
+    // Membership is looked up by doName (the route always forwards x-doc-name).
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader) {
+      const user = await authenticateToken(authHeader, this.env);
+      if (!user) return new Response("unauthenticated", { status: 401 });
+      if (!doName) return new Response("missing doc name", { status: 400 });
+      const role = await roleFor(this.env.DB, doName, user.sub);
+      if (!role) return new Response("forbidden", { status: 403 });
+    }
 
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
