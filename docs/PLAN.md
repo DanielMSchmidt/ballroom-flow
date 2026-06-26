@@ -175,7 +175,7 @@ Standard kinds (v1): **`step`** (footwork `HT`/`T`/`TH`/`heel_pull`/`H`, + free-
 | Invite | per-document invite by link (signed token → Membership with chosen role). |
 | Media | "coming soon" (v1.1). |
 | Sample/template | read-only sample + start-from-template. |
-| Export/import | JSON export AND import of a routine + its referenced figures (§7). |
+| Ownership/copy | a self-contained owned copy is delivered by **forking** (clone + copy-on-write of a routine with its referenced figures); no separate JSON export/import (§7). |
 | Plans/quota | free cap (3 owned routines) + upsell; billing deferred. |
 
 ### 4.1 Routine List (Choreo tab) — your routines (D1 index); card: dance-color icon, title, `dance · barLabel · created`. "+" → New Choreo (quota-checked). **Fork** action on a routine. Empty → sample + template. Search.
@@ -231,7 +231,7 @@ A **graph of Automerge documents**, each hosted + persisted in its own Durable O
         │  WebSocket sync per document (automerge-repo network adapter)   ▲ REST for list/search/invite/quota
         ▼                                                                 │
 [ Worker + Durable Objects ]   (Smart Placement; Analytics Engine)
-   • Worker (Hono): Clerk verify; list/search/invite/quota/export over the D1 index/registry → D1
+   • Worker (Hono): Clerk verify; list/search/invite/quota over the D1 index/registry → D1
    • Durable Object PER DOCUMENT (routine docs AND figure docs), SQLite-backed:
        – hosts the Automerge doc; persists it via an automerge-repo STORAGE ADAPTER in DO SQLite
        – automerge-repo NETWORK ADAPTER over (Hibernatable) WebSockets
@@ -246,7 +246,7 @@ A **graph of Automerge documents**, each hosted + persisted in its own Durable O
 ### 6.1 Module boundaries (pnpm workspaces)
 `contract → domain`; `web → contract, domain`; `worker → contract, domain`.
 - **`packages/domain/`** — pure TS, in-memory Automerge (no network): the **document schemas** (routine doc, figure doc), **variant overlay resolution** (`resolve(base, overlay)`), **fork/clone + copy-on-write** helpers, the **ATTRIBUTE_REGISTRY** + merge, **float-count timing**, **convergence invariants**, **history-based undo** (inverse-change of a user's last change), Zod schemas, the migration ladder. All unit/property-testable.
-- **`apps/worker/`** — Hono routes (list/search/invite/quota/export), Clerk middleware (`auth/`), the **per-document SQLite-backed Durable Object** (`doc-do.ts`: automerge-repo host + **storage adapter (DO SQLite)** + **network adapter (WS)** + **permission boundary** + alarm), Drizzle/D1 index + registry, Analytics Engine helper.
+- **`apps/worker/`** — Hono routes (list/search/invite/quota), Clerk middleware (`auth/`), the **per-document SQLite-backed Durable Object** (`doc-do.ts`: automerge-repo host + **storage adapter (DO SQLite)** + **network adapter (WS)** + **permission boundary** + alarm), Drizzle/D1 index + registry, Analytics Engine helper.
 - **`apps/web/store/`** — wraps **automerge-repo** (loads the routine doc + referenced figure docs, resolves overlays, exposes typed reactive reads + mutations + history-based undo). Components never touch automerge-repo or the RPC client directly.
 - **`apps/web/`** — presentational React; service worker.
 - **`packages/contract/`** — Zod schemas + Hono RPC `typeof app` (REST surface) + shared document-shape types.
@@ -255,7 +255,7 @@ A **graph of Automerge documents**, each hosted + persisted in its own Durable O
 1. Clerk JWT.
 2. Opening a routine: the client repo connects to the **routine doc's DO**, reads its placements, then connects to each **referenced figure doc's DO**; overlays resolve client-side; UI binds via `store/`.
 3. Each DO verifies the JWT + that document's role, then syncs Automerge changes; it persists incoming changes to its SQLite (storage adapter).
-4. **List/search/invite/quota** are REST over the D1 index/registry. **Export** loads a routine doc + its referenced figure docs.
+4. **List/search/invite/quota** are REST over the D1 index/registry.
 5. Each DO's **alarm** compacts history, projects a thin index row to D1, and expires invites — off the request path.
 
 ### 6.3 File structure
@@ -268,7 +268,7 @@ packages/domain/src/
   undo.ts                         # history-based inverse-change, per-user
   convergence.ts schemas.ts
 apps/worker/src/
-  index.ts auth/ routes/ (list, search, invite, quota, export)
+  index.ts auth/ routes/ (list, search, invite, quota)
   doc-do.ts                       # per-document SQLite-backed DO: automerge-repo host +
                                   #   storage adapter (DO SQLite) + network adapter (WS) +
                                   #   permission boundary + alarm
@@ -288,7 +288,7 @@ apps/web/src/
 - **Worker bundle:** Automerge's WASM dominates the bundle — **~920 KiB gzipped** (M0.5-measured), well under the 10 MB paid limit (and the 3 MB free limit); loaded once per isolate.
 - **Accessibility:** WCAG AA — color never the sole signal; ≥44px; keyboard/SR navigable; reduced-motion.
 - **Browser/PWA:** evergreen mobile + desktop; installable.
-- **Data ownership:** JSON **export AND import** of a routine **plus its referenced figure docs** (so a fork/export is self-contained); `schemaVersion` envelope + migration ladder; unknown attribute values survive round-trip.
+- **Data ownership:** a self-contained owned copy comes from **forking** (clone + copy-on-write of a routine **plus its referenced figure docs**); `schemaVersion` envelope + migration ladder upgrade older documents in place; unknown attribute values survive.
 - **Ops:** Sentry (+ `@sentry/cloudflare`) for errors; **Analytics Engine** for product metrics; staging + prod; CI runs the test layers + EXPLAIN check.
 
 ---
@@ -306,7 +306,7 @@ apps/web/src/
 | **D13 Δ** | CRDT engine & shape | **Automerge** + a **document graph** (figure docs + routine docs), chosen for cross-routine inheritance + fork/merge/history. |
 | **D12 Δ** | Fork | **In v1, full** — choreo fork (clone, **frozen** from origin; lineage = provenance only), figure variants (overlay), **copy-on-write = auto-variant** for any non-owned figure. **Figures auto-update across routines; choreo forks do not pull.** |
 | **D14 Δ** | Undo | **History-based per-user undo** (inverse of the user's last change); no op-log; richer refusal UX not required (Q-UNDO). |
-| **D10 Δ** | Sync | **Custom Automerge change-sync over Hibernatable WebSockets**, one DO connection per document; REST for list/invite/quota/export. (Live WS/hibernation behavior is the M2 validation item per M0.5.) |
+| **D10 Δ** | Sync | **Custom Automerge change-sync over Hibernatable WebSockets**, one DO connection per document; REST for list/invite/quota. (Live WS/hibernation behavior is the M2 validation item per M0.5.) |
 | **D23 Δ** | Persistence topology | **One SQLite-backed Durable Object per document** (routine + figure docs); the DO hosts the Automerge doc + is the sync + permission boundary. **D1 = index/registry only.** Persist **incremental Automerge changes** to DO SQLite, compact on the alarm (spike-validated). |
 | D11 | Roles | **viewer/commenter/editor + owner**, **per document**. |
 | D17 | Notation | **Attributes on a float-count timeline** (extensible kinds; optional per-attribute role). |
@@ -352,7 +352,7 @@ Fork/inheritance is in v1, so the document-graph, overlay resolution, and the DO
 | **5** | Undo/redo UX | History-based per-user undo wired to UI; "Undone" toast; soft superseded hint. |
 | **6** | Annotations (incl. cross-dance) | Unified annotation + replies; anchors **point + figure + `figureType`** (per-dance / all-dances, account doc); **co-member visibility** via the FigureTypeNoteIndex (option 2); timeline + journal. |
 | **7** | Custom attribute kinds + Lanes + sample/template + search | Create user-defined kinds; Lanes; sample + template; routine/figure search over the index. |
-| **8** | Export / import + ops | schemaVersion'd round-trip (routine + referenced figures) + migration ladder; Sentry + Analytics Engine; EXPLAIN gate; staging/prod; Smart Placement. |
+| **8** | Ops | Migration ladder for in-place schemaVersion upgrades; Sentry + Analytics Engine; EXPLAIN gate; staging/prod; Smart Placement. |
 | **9** | PWA + a11y + cross-browser | Installable shell + offline-state; axe/keyboard/reduced-motion; iOS Safari + Android Chrome E2E. |
 | *(later)* | *Offline editing; query anchors; billing; ownership transfer* | additive on the document-graph foundation (§11). |
 
@@ -435,9 +435,9 @@ Push correctness down the pyramid (document schemas, overlay resolution, fork/co
 
 ### 10.2 Layer ownership
 - **Unit / property (pure `domain/`, in-memory Automerge):** float-count timing; **overlay resolution** (inherit/override/tombstone/addition/rename; base-addition flow-up); **fork clone + copy-on-write** (new ids, lineage, placement re-point, no disturbance to the shared base); **`figureType` annotation resolution** (an `all`-dances note matches a figure of that family in *any* dance; a `this-dance` note matches only its dance; variants inherit `figureType`); **Automerge convergence/commutativity/idempotence** (fast-check, shuffled/partitioned changes incl. across forks); **history-based per-user undo** (own-change inverse; remote edit preserved; redo); registry/Zod (`NFR`/`H`/`⅛`; Tango omits rise; position vs body-action; `CBP→CBMP`; unknown passthrough-on-read vs reject-on-write; user-defined kind merges; count fraction `e`/`&`/`a`); migration ladder.
-- **Worker / DO / D1 (`vitest-pool-workers`):** **two clients converge** through a real per-document DO; a routine that **references a figure doc syncs both**; **permission per document at the boundary** — editor/commenter/viewer/non-member/forged-connection on a routine doc *and* on a figure doc; **copy-on-write** when editing a shared figure without rights; **quota** (4th owned routine → upsell); invite lifecycle; DO **SQLite persistence** (doc survives eviction/reload) + alarm compaction + D1 index projection; export loads routine + referenced figures; **EXPLAIN QUERY PLAN** on index/registry/membership/quota queries.
+- **Worker / DO / D1 (`vitest-pool-workers`):** **two clients converge** through a real per-document DO; a routine that **references a figure doc syncs both**; **permission per document at the boundary** — editor/commenter/viewer/non-member/forged-connection on a routine doc *and* on a figure doc; **copy-on-write** when editing a shared figure without rights; **quota** (4th owned routine → upsell); invite lifecycle; DO **SQLite persistence** (doc survives eviction/reload) + alarm compaction + D1 index projection; **EXPLAIN QUERY PLAN** on index/registry/membership/quota queries.
 - **Component (browser + Testing Library + axe):** attribute editor (registry-derived; Tango hides rise; new user-defined kind appears); timeline role flip; Lanes; section rename; **figure library** screen (variant badge, "used in N"); **fork/variant** affordances + copy-on-write prompt; annotation create (point/figure); viewer/commenter gating; toasts incl. "Undone"/quota/"copied as your variant".
-- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → frozen/independent** (an edit to the *origin routine* does **not** appear in the fork); **edit your own shared figure → flows into a second routine** (figure auto-update); **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); **note visibility (option 2)** — a coach's family-note surfaces for a **co-member** on a shared routine's matching figure, but **not** for a non-member (FigureTypeNoteIndex + co-membership gate); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; export→import (with referenced figures); PWA install/app-shell-offline; nav.
+- **E2E (Playwright):** full authoring (create → section → figure → attributes → role flip); **two live contexts converge** on a routine; **fork a choreo → frozen/independent** (an edit to the *origin routine* does **not** appear in the fork); **edit your own shared figure → flows into a second routine** (figure auto-update); **auto-variant** (edit a global/non-owned figure → account variant created, original untouched); **cross-dance `figureType` note** (annotate *all Feathers* → it surfaces on a Feather in a Waltz routine *and* a Foxtrot routine; a *this-dance* note surfaces only in that dance); **note visibility (option 2)** — a coach's family-note surfaces for a **co-member** on a shared routine's matching figure, but **not** for a non-member (FigureTypeNoteIndex + co-membership gate); per-user undo across two clients; permission (forged sync connection rejected per doc); quota; invite redemption; PWA install/app-shell-offline; nav.
 - **Contract:** `typeof app` + shared doc-shape types (drift fails `tsc`); runtime Zod; schema-drift CI gate.
 
 ### 10.3 Tooling, CI, fixtures

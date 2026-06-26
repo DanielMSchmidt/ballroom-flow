@@ -65,8 +65,6 @@
 | US-044 | Lanes (one kind across all counts) | M7 | user-facing | US-028 | View/edit a single kind laid out across every count of the figure. |
 | US-045 | Sample routine + start-from-template | M7 | user-facing | US-018 | Read-only sample routine; start-from-template clones a template into an owned routine. |
 | US-046 | Routine + figure search | M7 | user-facing | US-025,US-032 | Search routines/figures by title/name/dance over the D1 index; EXPLAIN shows no SCAN. |
-| US-047 | JSON export (routine + referenced figures) | M8 | user-facing | US-025,US-032 | Export a self-contained schemaVersion'd JSON bundle of a routine + its referenced figure docs. |
-| US-048 | JSON import (routine + referenced figures) | M8 | user-facing | US-047,US-013 | Import the bundle → routine + figures recreated as owned docs; unknown values survive round-trip; migration applied. |
 | US-049 | Ops: Sentry + Analytics Engine + EXPLAIN gate + Smart Placement | M8 | system/developer | US-014 | Errors to Sentry, product metrics to Analytics Engine; CI EXPLAIN gate; Smart Placement; staging + prod. |
 | US-050 | PWA install + offline app shell | M9 | user-facing | US-018 | Installable PWA; shell loads offline with a clear "you're offline" for data; <~2s interactive. |
 | US-051 | Accessibility WCAG AA | M9 | user-facing | all UI | Color never the sole signal; ≥44px targets; keyboard + SR navigable; reduced-motion; axe clean. |
@@ -715,31 +713,14 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 
 ---
 
-### Epic I — Export/import + ops (M8)
+### Epic I — Ops (M8)
 
-#### US-047 — JSON export (routine + referenced figures)
-- **Narrative:** As a user, I want to export a routine with its referenced figures, so that I own a self-contained copy.
-- **Milestone:** M8 · **Source:** §4.0, §7, §9 M8 · **Depends-on:** US-025, US-032 · **Type:** user-facing
-- **Acceptance:**
-  - Export produces a `schemaVersion`'d JSON bundle of the routine doc + every referenced figure doc.
-  - The bundle is self-contained (a fork/export round-trips without external refs).
-  - Unknown attribute values are preserved in the export.
-- **Tests (unskip when done):**
-  - Worker: `apps/worker/src/routes/export-import.test.ts` (describe `US-047 …`) — `exports a self-contained schemaVersion'd bundle incl. referenced figures + unknown values` (AC-1 + AC-2 + AC-3).
-  - E2E: `apps/web/e2e/export-import.spec.ts` — `export a routine then import the bundle …` (export half).
-
-#### US-048 — JSON import (routine + referenced figures)
-- **Narrative:** As a user, I want to import a bundle, so that I can recreate a routine and its figures.
-- **Milestone:** M8 · **Source:** §4.0, §7, §9 M8 · **Depends-on:** US-047, US-013 · **Type:** user-facing
-- **Acceptance:**
-  - Import recreates the routine + referenced figures as docs I own.
-  - Unknown attribute values survive the round-trip.
-  - An older-`schemaVersion` bundle is migrated on import (US-013).
-  - Import respects the quota (importing a routine counts as an owned routine).
-- **Tests (unskip when done):**
-  - Worker: `apps/worker/src/routes/export-import.test.ts` (describe `US-048 …`) — `recreates the routine + figures as owned docs, migrating an older bundle` (AC-1 + AC-2 + AC-3), `counts an imported routine against the owner's quota` (AC-4).
-  - E2E: `apps/web/e2e/export-import.spec.ts` — `export a routine then import the bundle …` (import half).
-  - Domain primitive (migration on import): US-013's `migrations.test.ts`.
+> **Retired — US-047/US-048 (JSON export + import).** A self-contained owned copy
+> is already delivered by **forking** (US-007 clone + US-008 copy-on-write of a
+> routine *with* its referenced figures), so a separate JSON bundle round-trip is
+> redundant. Cross-version evolution is still covered by the migration ladder
+> (US-013). IDs left retired (not renumbered) so the rest of the backlog and the
+> test scaffold keep their numbers.
 
 #### US-049 — Ops: Sentry + Analytics Engine + EXPLAIN gate + Smart Placement
 - **Narrative:** As an operator, I want errors, metrics, query-plan gating, and edge placement, so that the app is observable and performant.
