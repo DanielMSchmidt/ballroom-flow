@@ -14,5 +14,8 @@ declare module "cloudflare:test" {
     DB: D1Database;
     /** Per-document SQLite-backed DO (M2, wrangler.toml). */
     DOC_DO: DurableObjectNamespace;
+    /** Clerk JWT public PEM — tests inject the test keypair for networkless
+     *  verify (US-019 positive auth path). Optional; a secret in prod. */
+    CLERK_JWT_KEY?: string;
   }
 }

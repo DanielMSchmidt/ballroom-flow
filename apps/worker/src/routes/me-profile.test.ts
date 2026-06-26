@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -12,22 +12,25 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // covered in auth/index.test.ts. Here we cover the POSITIVE networkless-verify
 // path + onboarding/profile persistence + plan/owned-count.
 //
-// To make the positive path deterministic, the suite injects the test keypair's
-// PUBLIC PEM as the worker's CLERK_JWT_KEY so verifyToken({ jwtKey }) verifies
-// our minted tokens with no Clerk network call. Wiring that env injection into
-// vitest-pool-workers is an M3 step (see TEST-MAP.md note) — until then skipped.
+// To make the positive path deterministic, the fixed test keypair's PUBLIC PEM
+// is bound as the worker's CLERK_JWT_KEY (statically, in vitest.config.ts), so
+// verifyToken({ jwtKey }) verifies our minted tokens with no Clerk network call
+// (US-019 M3 wiring). US-053 below stays skipped until the profile routes land.
 // ─────────────────────────────────────────────────────────────────────────
 
 let kp: TestKeypair;
 beforeAll(async () => {
   await applyMigrations();
+  // The worker verifies against CLERK_JWT_KEY (the test public PEM), bound
+  // statically in vitest.config.ts; this keypair's private key signs matching
+  // tokens. (See test-keys.ts for why the binding must be static, not runtime.)
   kp = await generateTestKeypair();
 });
 
-describe.skip("US-019 Clerk sign-in + onboarding (server)", () => {
+describe("US-019 Clerk sign-in + onboarding (server)", () => {
   it("returns the verified Clerk sub from /api/me for a valid token (networkless)", async () => {
     // Intent: a valid Clerk-shaped JWT verifies networklessly and yields its sub.
-    // Arrange: CLERK_JWT_KEY = kp.publicKeyPem (injected in M3); mint a token for sub.
+    // Arrange: CLERK_JWT_KEY = the test public PEM (bound in vitest.config.ts); mint a token.
     // Act: GET /api/me with the bearer token. Assert: 200 { sub }.
     // Covers US-019 AC-3 (verified sub; networkless verify) — positive path.
     const ctx = await authedContext({ keypair: kp, userId: "user_abc", docRef: "n/a", role: null });
@@ -48,6 +51,11 @@ describe.skip("US-019 Clerk sign-in + onboarding (server)", () => {
       body: JSON.stringify({ displayName: "Dancer", identityColor: "#1f8a5b" }),
     });
     expect(res.status).toBe(200);
+    // It actually persisted to the users row (not just a 200) — AC-2.
+    const row = await env.DB.prepare("SELECT displayName, identityColor FROM users WHERE id = ?")
+      .bind("user_new")
+      .first<{ displayName: string; identityColor: string }>();
+    expect(row).toMatchObject({ displayName: "Dancer", identityColor: "#1f8a5b" });
   });
 });
 
