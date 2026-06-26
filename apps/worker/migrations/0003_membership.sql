@@ -9,7 +9,7 @@
 -- is the #50 sibling invariant — arrangement/membership rows are scoped by the
 -- document identity, never a bare entity id. Soft-delete only (deletedAt).
 
-CREATE TABLE membership (
+CREATE TABLE IF NOT EXISTS membership (
   id        TEXT PRIMARY KEY,
   docRef    TEXT NOT NULL,
   userId    TEXT NOT NULL,
@@ -20,10 +20,10 @@ CREATE TABLE membership (
 
 -- At most one ACTIVE membership per (docRef, userId), and the hot lookup the
 -- boundary runs: `WHERE docRef = ? AND userId = ? AND deletedAt IS NULL`.
-CREATE UNIQUE INDEX membership_doc_user_idx
+CREATE UNIQUE INDEX IF NOT EXISTS membership_doc_user_idx
   ON membership (docRef, userId)
   WHERE deletedAt IS NULL;
 
 -- The per-document member list (US-023 manage members / invite redemption):
 -- `WHERE docRef = ? AND deletedAt IS NULL`.
-CREATE INDEX membership_doc_idx ON membership (docRef, deletedAt);
+CREATE INDEX IF NOT EXISTS membership_doc_idx ON membership (docRef, deletedAt);

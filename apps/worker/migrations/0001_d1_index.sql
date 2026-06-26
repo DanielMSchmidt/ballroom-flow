@@ -15,7 +15,7 @@
 -- The thin per-document index row. One row per document (routine/figure/account),
 -- projected from the DO on its alarm. `doName` is the DO's name (idFromName key);
 -- `docRef` is the logical document id (ULID).
-CREATE TABLE document_registry (
+CREATE TABLE IF NOT EXISTS document_registry (
   docRef        TEXT PRIMARY KEY,
   type          TEXT NOT NULL,           -- 'routine' | 'global-figure' | 'account-figure' | 'account'
   ownerId       TEXT NOT NULL,
@@ -30,16 +30,16 @@ CREATE TABLE document_registry (
 
 -- Owner's routine list, newest first (US-025 list, quota count): the hot path is
 -- `WHERE ownerId = ? AND type = ? AND deletedAt IS NULL ORDER BY updatedAt DESC`.
-CREATE INDEX document_registry_owner_idx
+CREATE INDEX IF NOT EXISTS document_registry_owner_idx
   ON document_registry (ownerId, type, deletedAt, updatedAt);
 
 -- Lookup/projection by the DO name (the alarm upsert + the US-016 projection read).
-CREATE INDEX document_registry_doName_idx ON document_registry (doName);
+CREATE INDEX IF NOT EXISTS document_registry_doName_idx ON document_registry (doName);
 
 -- Per-document membership invites. The alarm expires due ones off the request
 -- path; invite rows themselves are exercised in M3 (US-023). `expiresAt` is unix
 -- millis; `redeemedAt` NULL = still open.
-CREATE TABLE invite (
+CREATE TABLE IF NOT EXISTS invite (
   id         TEXT PRIMARY KEY,
   docRef     TEXT NOT NULL,
   role       TEXT NOT NULL,              -- 'viewer' | 'commenter' | 'editor'
@@ -48,4 +48,4 @@ CREATE TABLE invite (
 );
 
 -- The alarm's expiry sweep: `WHERE redeemedAt IS NULL AND expiresAt < ?`.
-CREATE INDEX invite_expiry_idx ON invite (redeemedAt, expiresAt);
+CREATE INDEX IF NOT EXISTS invite_expiry_idx ON invite (redeemedAt, expiresAt);
