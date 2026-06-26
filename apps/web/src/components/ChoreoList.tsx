@@ -51,10 +51,14 @@ export function ChoreoList({ ownedCount, plan, onCreate }: ChoreoListProps) {
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            You've reached your free-plan cap of {FREE_ROUTINE_CAP} routines. Going Pro lets you
-            create more — your existing routines stay exactly as they are.
+            You've reached your free-plan cap of {FREE_ROUTINE_CAP} routines. A paid plan will let
+            you create more — your existing routines stay exactly as they are.
           </p>
-          <Button variant="primary">Go Pro</Button>
+          {/* Billing is US-053; keep this honest rather than a dead live CTA —
+              non-interactive so it sets expectations, not a fake upgrade path. */}
+          <Button variant="secondary" disabled>
+            Pro plans — coming soon
+          </Button>
         </div>
       </Sheet>
     </section>
