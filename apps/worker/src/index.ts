@@ -1,10 +1,12 @@
-import { zCreateFigure, zCreateRoutine } from "@ballroom/contract";
-import { newId } from "@ballroom/domain";
+import { zCreateFigure, zCreateRoutine, zIssueInvite } from "@ballroom/contract";
+import { can, newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { createFigureRows } from "./db/figures";
+import { issueInvite, redeemInvite } from "./db/invites";
+import { resolveEffectiveRole } from "./db/membership";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 
@@ -123,6 +125,48 @@ app.post("/api/figures", async (c) => {
 
   await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
+});
+
+// POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only
+// a member who can invite (owner/editor via resolveEffectiveRole + can()) may
+// mint one; everyone else → 403 (a non-member resolves to null → also 403). The
+// granted role is validated against the contract (viewer/commenter/editor — never
+// "owner"). The token is unguessable and its role/docRef live in D1, so a
+// redeemer can't escalate (see db/invites.ts).
+app.post("/api/docs/:id/invites", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const docRef = c.req.param("id");
+  const effective = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!effective || !can(effective, "canInvite")) {
+    return c.json({ error: "forbidden" }, 403);
+  }
+
+  const parsed = zIssueInvite.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_invite", issues: parsed.error.flatten() }, 400);
+  }
+
+  const { token, expiresAt } = await issueInvite(c.env.DB, { docRef, role: parsed.data.role });
+  return c.json({ token, role: parsed.data.role, expiresAt }, 201);
+});
+
+// POST /api/invites/:token/redeem — redeem an invite (US-023 AC-2/AC-3). Grants
+// the REDEEMING user (the verified JWT sub, never a client field) the invite's
+// role on its doc; single-use + expiry enforced in db/invites.ts. Unknown → 404,
+// expired → 410, already-redeemed → 409 (clear errors, never a 500).
+app.post("/api/invites/:token/redeem", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const result = await redeemInvite(c.env.DB, c.req.param("token"), user.sub);
+  if (!result.ok) {
+    if (result.reason === "not_found") return c.json({ error: "invite_not_found" }, 404);
+    if (result.reason === "expired") return c.json({ error: "invite_expired" }, 410);
+    return c.json({ error: "invite_already_redeemed" }, 409);
+  }
+  return c.json({ docRef: result.docRef, role: result.role }, 200);
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in

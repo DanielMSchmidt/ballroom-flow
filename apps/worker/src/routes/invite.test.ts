@@ -20,7 +20,7 @@ beforeAll(async () => {
   kp = await generateTestKeypair();
 });
 
-describe.skip("US-023 Invite by link (issue + redeem)", () => {
+describe("US-023 Invite by link (issue + redeem)", () => {
   it("lets an editor issue a signed invite carrying docRef + role + expiry", async () => {
     // Intent: an editor mints a shareable invite for a chosen role.
     // Arrange: seed a routine + editor membership. Act: POST an invite {role:commenter}.
@@ -125,5 +125,64 @@ describe.skip("US-023 Invite by link (issue + redeem)", () => {
       body: JSON.stringify({ role: "viewer" }),
     });
     expect(res.status).toBe(403);
+  });
+
+  // ── Decisions confirmed with the lead (Tester will probe these) ──────────
+
+  it("redeem is upgrade-only — never downgrades an existing member", async () => {
+    // Intent: a low-privilege link must not demote a member who already has more.
+    // Arrange: an EDITOR member; a viewer invite for that same user.
+    // Act: they redeem. Assert: role stays editor (upgrade-only, no downgrade).
+    const docRef = "rt_inv5";
+    const editor = await authedContext({ keypair: kp, userId: "u_keep", docRef, role: "editor" });
+    await seedDb({
+      users: [{ id: "u_keep", displayName: "Keep", identityColor: "#555", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      memberships: editor.membership ? [editor.membership] : [],
+      invites: [{ id: "inv_dwn", docRef, role: "viewer", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_dwn/redeem", {
+      method: "POST",
+      headers: editor.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await roleFor(docRef, "u_keep")).toBe("editor"); // not downgraded to viewer
+  });
+
+  it("redeem upgrades an existing lower role to the invite's role", async () => {
+    // Intent: redeeming a higher-privilege link raises an existing member.
+    // Arrange: a VIEWER member; an editor invite for that same user.
+    // Act: they redeem. Assert: role becomes editor (single active membership).
+    const docRef = "rt_inv6";
+    const viewer = await authedContext({ keypair: kp, userId: "u_up", docRef, role: "viewer" });
+    await seedDb({
+      users: [{ id: "u_up", displayName: "Up", identityColor: "#666", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      memberships: viewer.membership ? [viewer.membership] : [],
+      invites: [{ id: "inv_up", docRef, role: "editor", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_up/redeem", {
+      method: "POST",
+      headers: viewer.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await roleFor(docRef, "u_up")).toBe("editor");
+  });
+
+  it("rejects redeeming an unknown token (404, not a 500)", async () => {
+    const redeemer = await authedContext({
+      keypair: kp,
+      userId: "u_ghost",
+      docRef: "x",
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_ghost", displayName: "Ghost", identityColor: "#777", plan: "free" }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/does-not-exist/redeem", {
+      method: "POST",
+      headers: redeemer.authHeaders(),
+    });
+    expect(res.status).toBe(404);
   });
 });

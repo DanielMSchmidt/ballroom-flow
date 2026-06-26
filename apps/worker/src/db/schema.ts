@@ -51,3 +51,21 @@ export const documentRegistry = sqliteTable("document_registry", {
 });
 
 export type DocumentRegistryRow = typeof documentRegistry.$inferSelect;
+
+/**
+ * Per-document membership invite (US-023, migration 0001). The `id` IS the
+ * shareable token — a high-entropy random (issued server-side); the redeemer
+ * presents it in the redeem URL. role/docRef are read back from THIS row on
+ * redeem (never from the token), so a redeemer can't forge or escalate the
+ * grant. `redeemedAt` NULL = still open (single-use); the alarm sweeps expired
+ * open ones (US-016). `expiresAt` is unix ms.
+ */
+export const invite = sqliteTable("invite", {
+  id: text("id").primaryKey(),
+  docRef: text("docRef").notNull(),
+  role: text("role", { enum: ["viewer", "commenter", "editor"] }).notNull(),
+  expiresAt: integer("expiresAt").notNull(),
+  redeemedAt: integer("redeemedAt"),
+});
+
+export type InviteRow = typeof invite.$inferSelect;
