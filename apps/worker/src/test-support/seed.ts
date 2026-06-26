@@ -66,23 +66,14 @@ export interface SeedSpec {
  * Apply the per-suite migrations. Call once in a suite `beforeAll`.
  *
  * D1 is SHARED across the whole worker test run (isolatedStorage:false), so
- * several suites call this against the SAME database — and they race. The
- * migration SQL is idempotent (`CREATE TABLE/INDEX IF NOT EXISTS`), so the schema
- * work is harmless to repeat; the only thing that can still collide is
- * applyD1Migrations' own bookkeeping INSERT into `d1_migrations` (a duplicate
- * migration name). That just means the schema is already present, so we swallow
- * it. Any OTHER error still throws. (#173 — was a flake, became a CI blocker.)
+ * every suite migrates the SAME database. We run the migration SQL DIRECTLY
+ * (idempotent `CREATE … IF NOT EXISTS`) rather than via `applyD1Migrations`,
+ * whose `d1_migrations` bookkeeping RACES under shared storage and can make a
+ * suite skip its CREATEs (→ "no such table"). Running the statements directly is
+ * order-independent and self-contained. (#203 — the real fix behind #173; do not
+ * reintroduce the bookkeeping or an error-swallow that masks a missing schema.)
  */
 export async function applyMigrations(): Promise<void> {
-  // Run the migration SQL DIRECTLY, every suite — do NOT go through
-  // applyD1Migrations' `d1_migrations` bookkeeping. Under shared storage
-  // (isolatedStorage:false) that bookkeeping RACES: once a sibling suite records
-  // a migration's name, applyD1Migrations treats it "already applied" for THIS
-  // suite and SKIPS its CREATEs while the tables aren't present in the D1 it
-  // queries → "no such table" (and the old swallow masked an incomplete schema
-  // as success). Every migration statement is `CREATE … IF NOT EXISTS`, so
-  // executing them directly is idempotent and ORDER-INDEPENDENT: the schema is
-  // guaranteed present with nothing to race on (#203 — the real fix behind #173).
   for (const migration of env.TEST_MIGRATIONS) {
     for (const query of migration.queries) {
       if (query.trim()) await env.DB.prepare(query).run();
