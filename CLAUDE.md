@@ -85,9 +85,7 @@ pnpm coverage         # coverage (thresholds: domain ≥95%, worker ≥90% — u
 
 ## 6. Status & how to proceed
 
-- **Done:** M0 foundation; design principles + prototype gap analysis; the 52-story backlog; the 3-layer test harness + Playwright matrix + CI; the Tailwind design-system base + `/styleguide` gallery; and a **complete skipped-test scaffold for all live stories**.
-- **Now:** **M1 — domain core.** Walking-skeleton stories first: US-001→010, US-012. Use `superpowers:subagent-driven-development` / `executing-plans`.
-- **Deferred wiring (add with its milestone, not before):**
-  - `pnpm add @automerge/automerge` to `packages/domain` (M1) and `apps/worker` (M2) — needed to unskip US-009/010 and the doc builders.
-  - `DOC_DO` Durable Object binding in `apps/worker/wrangler.toml` (M2).
-  - `CLERK_JWT_KEY` / E2E auth-mode injection for positive-path auth (M3). Test helpers already exist.
+- **Done:** M1 domain core; M2 DO sync (per-doc DO, hibernatable WS, alarm compaction, D1 index); M3 auth + permissions + quota + create/build loop — US-001…030 (the relevant ones), plus the Clerk auth chain end-to-end (verify → fail-closed DO boundary → figure-doc projection → WS-token plumbing). **Staging is live and sign-in works** (`ballroom-flow-staging.danielmschmidt.workers.dev`).
+- **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey — see `docs/USER-STORIES.md` § "Feature epics (E2E-anchored delivery)". `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
+- **Now:** **#191 — wire E2E auth-mode so the journeys actually run** (the verification keystone), starting with `authoring.spec`. Then build feature-at-a-time (FE-2 share UI, FE-3 figures/fork, …) per the feature-epic table.
+- **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves.

@@ -15,6 +15,27 @@
 
 ---
 
+## Feature epics (E2E-anchored delivery) — adopted 2026-06-26
+
+**Delivery model (from 2026-06-26):** the remaining work ships as **end-to-end-testable features**, not isolated screens. Each feature's **ship gate is its Playwright journey** (the `apps/web/e2e/*.spec.ts` named below) passing in CI — a **`@smoke` subset runs on every PR**, the **full matrix runs nightly**. The granular `US-…` stories are the **subtasks** of each feature: their per-AC `Tests (unskip when done)` blocks remain the detailed checklist, so no detail is lost — the difference is we merge + verify a whole user journey at a time, not a unit-tested screen. **A feature is "done" only when its journey is green on PR** (not just its unit tests — the lesson from the M1–M3 stack shipping with zero verified browser journeys). The `@smoke`-on-PR gate turns on once **US-191** (E2E auth-mode) lands and the journeys genuinely run.
+
+| Feature | Journey = ship gate (this E2E green) | Rolls up (subtasks) | Status |
+|---|---|---|---|
+| **FE-1 Author a routine** | `authoring.spec` — sign in → create → section → figure → edit timeline → role-flip | US-018, US-025, US-026, US-027, US-028, US-029, US-030 ✓ · US-053 profile · US-024 entry | built — **#191 proves the journey** |
+| **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** · denied-state UI (#178) | backend ✓ — needs share UI + E2E |
+| **FE-3 Figures, variants & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW auto-variant; figure auto-updates across routines | US-006/007/008 ✓ (domain) · **US-031, US-032, US-033, US-034, US-035, US-036** · #42, #56 | M4 — UI/worker not started |
+| **FE-4 Live collaboration** | `convergence.spec` — two contexts converge live; reconnect after a drop | US-014/015/016/017 ✓ · reconnect (#161) · typed envelope (#117) | sync ✓ (unit) + #189 token — needs E2E |
+| **FE-5 Undo across clients** | `undo.spec` — per-user undo across two clients (A's undo reverts only A; B's edit survives) | US-010 ✓ (domain) · **US-037, US-038** · #70/#73/#160 | M5 — UI not started |
+| **FE-6 Annotations** | new `annotations.spec` — note on point/figure; `figureType` note across matching figures; co-member visibility | **US-039, US-040, US-041, US-042** · #172 | M6 — not started |
+| **FE-7 Custom kinds / lanes / search / sample** | extends `authoring.spec` + new specs — custom kind → editor; lanes; search; start-from-template | **US-043, US-044, US-045, US-046** · #18/#19/#81 | M7 — not started |
+| **FE-8 PWA, a11y & cross-browser** | `pwa-a11y.spec` — installable, offline shell, axe-clean, journeys pass on mobile-chrome/safari | **US-050, US-051, US-052** · #182 | M9 |
+| **Ops** (not a UI journey) | worker tests + EXPLAIN gate | US-049 | M8 |
+| **Content** (parallel) | seed-validity tests | US-054, US-055 · #100 | best-effort seed merged |
+
+The per-story detail in the index + sections below is **unchanged** — it is the subtask reference for each feature.
+
+---
+
 ## Summary index
 
 | ID | Title | M | Type | Depends-on | Acceptance (one line) |
