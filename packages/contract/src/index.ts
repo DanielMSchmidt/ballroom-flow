@@ -48,3 +48,14 @@ export const zCreateFigure = z.object({
   figureType: z.string().trim().min(1),
 });
 export type CreateFigure = z.infer<typeof zCreateFigure>;
+
+/**
+ * Issue-invite request (US-023). An editor/owner mints a shareable link granting
+ * a chosen role. `role` is one of the three STORED membership roles — never
+ * "owner" (ownership isn't transferable by link). The granted role is read back
+ * from D1 on redeem, never from the token, so a redeemer can't escalate it.
+ */
+export const zIssueInvite = z.object({
+  role: z.enum(["viewer", "commenter", "editor"]),
+});
+export type IssueInvite = z.infer<typeof zIssueInvite>;
