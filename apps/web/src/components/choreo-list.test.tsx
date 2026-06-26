@@ -65,19 +65,11 @@ describe("US-025 Create a routine (UI)", () => {
   });
 });
 
-describe.skip("US-037 Choreo fork ('make it your own')", () => {
-  it("offers a fork action and shows lineage as provenance on the result", async () => {
-    // Intent: a routine card offers "Make it your own" (fork); the fork shows lineage.
-    // Arrange: render <ChoreoList> with a shared routine that has a fork action.
-    // Act: invoke fork. Assert: a fork is created (callback), counted to quota, and a
-    //   "forked from" lineage label shows. (Frozen-independence is the E2E test.)
-    // Covers US-037 AC-1 (fork creates owned clone) + AC-3 (lineage as provenance).
-    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
-    renderUi(<ChoreoList ownedCount={0} plan="free" />);
-    await userEvent.click(screen.getByRole("button", { name: /make it your own|fork/i }));
-    expect(await screen.findByText(/forked from/i)).toBeInTheDocument();
-  });
-});
+// US-037 Choreo fork ("make it your own"): the fork affordance ("Make a copy")
+// and the "Forked copy" lineage badge live on the OPEN routine (the Assemble
+// header), not on a list card — so the component coverage is in
+// `assemble.test.tsx` (describe "US-037 Choreo fork"). Frozen-independence is the
+// E2E test (`fork-and-figures.spec.ts`); the server endpoint is `fork.test.ts`.
 
 describe.skip("US-045 Sample routine + start-from-template", () => {
   it("shows the read-only sample + a template in the empty state", async () => {

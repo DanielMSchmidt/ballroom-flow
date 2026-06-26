@@ -605,9 +605,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Lineage is shown as provenance only (`forkedFromRef`).
   - Referenced figures remain shared (figure-level improvements still flow in until I diverge one).
 - **Tests (unskip when done):**
-  - Component: `apps/web/src/components/choreo-list.test.tsx` (describe `US-037 …`) — `offers a fork action and shows lineage as provenance on the result` (AC-1 fork + AC-3 lineage).
-  - E2E (the frozen/independent proof): `apps/web/e2e/fork-and-figures.spec.ts` — `forking a routine yields an independent copy; an origin edit does NOT appear in the fork` (AC-2 frozen; AC-4 figures-still-shared).
-  - Domain primitive: US-007's `fork.test.ts` (`cloneRoutine`). Gap: AC-1's "counted against my quota" on fork is not yet asserted as a UI/worker step — add a fork-quota assertion when M4 wires fork→create.
+  - Component: `apps/web/src/components/assemble.test.tsx` (describe `US-037 Choreo fork`) — `offers a 'Make a copy' fork affordance that invokes onFork — even for a viewer` (AC-1) + `shows a 'Forked copy' lineage badge only when the routine has a forkedFromRef` (AC-3). (The affordance lives on the open routine's header, not a list card.)
+  - E2E (the frozen/independent proof): `apps/web/e2e/fork-and-figures.spec.ts` — `forking a routine yields an independent, owned copy; an origin edit does NOT appear in the fork` (AC-2 frozen; AC-4 figures-still-shared).
+  - Worker (endpoint): `apps/worker/src/routes/fork.test.ts` — cloned content + frozen independence, non-member 403, and **fork counted against quota (402 at cap)** (AC-1 quota now asserted server-side).
+  - Domain primitive: US-007's `fork.test.ts` (`cloneRoutine`).
 
 ---
 
