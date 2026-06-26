@@ -20,6 +20,7 @@ import {
   softDeleteSection,
   undoLastChange,
 } from "@ballroom/domain";
+import { apiPost } from "../lib/rpc";
 import { connectUrl, DocConnection, type SocketFactory, type SyncState } from "./doc-connection";
 
 /** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
@@ -71,6 +72,14 @@ export interface RoutineStore {
   close(): void;
 }
 
+/** Project a freshly-minted figure server-side (#187) before opening its DO. */
+export type CreateFigureFn = (figure: {
+  figureRef: string;
+  name: string;
+  dance: string;
+  figureType: string;
+}) => Promise<void>;
+
 /** Injectable wiring so the seam is testable without a live worker. */
 export interface OpenOptions {
   /** Base URL of the worker (default: same-origin). */
@@ -79,10 +88,21 @@ export interface OpenOptions {
   openSocket?: SocketFactory;
   /** Per-tab Automerge actor id, so undo is per-user (US-010 / #70). */
   actor?: string;
+  /** Project a new figure to D1 before opening it (default: POST /api/figures). */
+  createFigure?: CreateFigureFn;
 }
 
 const defaultSocketFactory: SocketFactory = (url) =>
   new WebSocket(url) as unknown as ReturnType<SocketFactory>;
+
+/**
+ * Default figure projection: POST /api/figures so the fail-closed DO boundary
+ * (US-021) can owner-resolve the new figure (#187). NOTE: this currently sends
+ * no token — the store→worker auth (token on the POST AND the WS connect) is the
+ * deferred auth-mode work; until then this only works against an open boundary.
+ */
+const defaultCreateFigure: CreateFigureFn = (figure) =>
+  apiPost<unknown>("/api/figures", null, figure).then(() => undefined);
 
 /** An empty routine doc to seed a fresh connection; the DO replays real state. */
 function emptyRoutine(id: string): RoutineDoc {
@@ -111,6 +131,7 @@ export async function openRoutine(
     opts.baseUrl ?? (typeof location !== "undefined" ? location.origin : "http://localhost");
   const openSocket = opts.openSocket ?? defaultSocketFactory;
   const actor = opts.actor;
+  const createFigure = opts.createFigure ?? defaultCreateFigure;
 
   // Start from a TRULY empty doc (A.init) — the DO replays its full history
   // (getAllChanges, incl. the doc's creation) on connect, so the client builds
@@ -198,26 +219,33 @@ export async function openRoutine(
     addPlacement: (sectionId, figureName) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
-      // Seed a fresh owned custom figure doc in its own DO. NOTE: the new figure
-      // DO isn't projected to document_registry yet, so the fail-closed connect
-      // (US-021) can't owner-resolve it server-side — figure-create eager
-      // projection is a follow-up (analogous to routines' #129).
-      figureConn(figureRef).change((draft) => {
-        const seed = draft as unknown as Record<string, unknown>;
-        seed.id = figureRef;
-        seed.scope = "account";
-        seed.ownerId = actor ?? "";
-        seed.figureType = slugify(name) || figureRef; // immutable once set (#91)
-        seed.dance = readRoutineSafe().dance;
-        seed.name = name;
-        seed.source = "custom";
-        seed.attributes = [];
-        seed.schemaVersion = 1;
-        seed.deletedAt = null;
-      });
+      const figureType = slugify(name) || figureRef; // immutable once set (#91)
+      const dance = readRoutineSafe().dance;
+
+      // Add the placement to the routine immediately (it only references figureRef).
+      // `sections?` guards the not-yet-synced (empty A.init) doc edge.
       routineConn.change((draft) => {
-        const section = draft.sections.find((s) => s.id === sectionId);
+        const section = draft.sections?.find((s) => s.id === sectionId);
         if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
+      });
+
+      // Project the figure to D1 + an owner membership (#187) BEFORE opening its
+      // DO, so the fail-closed connect (US-021) owner-resolves it; then seed the
+      // figure doc into its now-authorized DO.
+      createFigure({ figureRef, name, dance, figureType }).then(() => {
+        figureConn(figureRef).change((draft) => {
+          const seed = draft as unknown as Record<string, unknown>;
+          seed.id = figureRef;
+          seed.scope = "account";
+          seed.ownerId = actor ?? "";
+          seed.figureType = figureType;
+          seed.dance = dance;
+          seed.name = name;
+          seed.source = "custom";
+          seed.attributes = [];
+          seed.schemaVersion = 1;
+          seed.deletedAt = null;
+        });
       });
     },
 

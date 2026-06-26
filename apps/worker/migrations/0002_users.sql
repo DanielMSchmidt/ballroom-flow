@@ -8,7 +8,7 @@
 -- (auth/index.ts). One row per account; onboarding upserts displayName +
 -- identityColor, plan defaults to 'free' until billing (US-053/quota).
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id            TEXT PRIMARY KEY,        -- Clerk sub (verified from the JWT)
   displayName   TEXT NOT NULL,
   identityColor TEXT NOT NULL,           -- the user's annotation/identity color

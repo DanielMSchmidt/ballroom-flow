@@ -33,3 +33,18 @@ export type RoutineListItem = z.infer<typeof zRoutineListItem>;
 
 export const zRoutineList = z.object({ routines: z.array(zRoutineListItem) });
 export type RoutineList = z.infer<typeof zRoutineList>;
+
+/**
+ * Create-figure request (#187). The client mints the figureRef (ULID) + the
+ * metadata; the SERVER stamps ownerId from the verified JWT sub. Projecting the
+ * registry row + owner membership at create is what lets the fail-closed DO
+ * boundary (US-021) owner-resolve a freshly-minted figure. `figureType` is the
+ * figure's immutable kind (#91); for a fresh custom figure it's a name slug.
+ */
+export const zCreateFigure = z.object({
+  figureRef: z.string().min(1),
+  name: z.string().trim().min(1, "Give the figure a name").max(80, "Keep the name under 80 chars"),
+  dance: z.enum(DANCE_IDS),
+  figureType: z.string().trim().min(1),
+});
+export type CreateFigure = z.infer<typeof zCreateFigure>;
