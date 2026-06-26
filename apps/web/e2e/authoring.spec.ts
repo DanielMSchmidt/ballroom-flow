@@ -81,7 +81,7 @@ test.describe("@smoke core authoring journey", () => {
     // 5c. The reading view lays the whole routine out read-only — the notated
     //     step ("T") shows as a chip in the timeline.
     await page.getByRole("button", { name: /reading view/i }).click();
-    await expect(page.getByTestId("reading-view").getByText("T")).toBeVisible();
+    await expect(page.getByTestId("reading-view").getByText("T", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
