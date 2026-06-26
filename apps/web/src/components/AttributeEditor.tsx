@@ -12,7 +12,8 @@
 // next attribute set via `onChange`. The screen wires `onChange` to the store's
 // setAttribute mutation; component tests pass it directly.
 import { ATTRIBUTE_REGISTRY, type Attribute, type DanceId, normalizeValue } from "@ballroom/domain";
-import { Chip } from "../ui";
+import { type FormEvent, useState } from "react";
+import { Button, Chip, Input } from "../ui";
 import type { MembershipRole } from "./Assemble";
 
 export interface AttributeEditorProps {
@@ -77,34 +78,85 @@ export function AttributeEditor({
 
   return (
     <section className="flex flex-col gap-3" aria-label={`Attributes for count ${count}`}>
-      {kindsFor(dance).map((kind) => (
-        // A <fieldset> is implicitly role="group"; the <legend> is its name —
-        // so `getByRole("group", { name })` resolves per kind (US-029).
-        <fieldset key={kind.kind} className="flex flex-wrap items-center gap-1">
-          <legend className="mb-1 text-2xs font-bold text-ink-faint">{kind.label}</legend>
-          {(kind.values ?? []).map((v) => {
-            const on = selected(kind.kind, v);
-            if (!editable) {
-              // Read-only: show only the selected values, as static chips.
-              return on ? (
-                <Chip key={v} tone="neutral" asStatic>
+      {kindsFor(dance).map((kind) => {
+        const suggestions = kind.values ?? [];
+        // Selected values not in the suggestion list (e.g. a free-text step) still
+        // render as chips so a custom value is visible + clearable.
+        const customSelected = live
+          .filter((a) => a.kind === kind.kind)
+          .map((a) => normalizeValue(kind.kind, String(a.value)))
+          .filter((v) => !suggestions.includes(v));
+
+        return (
+          // A <fieldset> is implicitly role="group", named by its <legend> — so
+          // both `getByRole("heading")` (the <h3>) and `getByRole("group", { name })`
+          // resolve per kind (US-029).
+          <fieldset key={kind.kind} className="flex flex-wrap items-center gap-1">
+            <legend className="mb-1 w-full">
+              <h3 className="text-2xs font-bold text-ink-faint">{kind.label}</h3>
+            </legend>
+
+            {[...suggestions, ...customSelected].map((v) => {
+              const on = selected(kind.kind, v);
+              if (!editable) {
+                // Read-only: show only the selected values, as static chips.
+                return on ? (
+                  <Chip key={v} tone="neutral" asStatic>
+                    {v}
+                  </Chip>
+                ) : null;
+              }
+              return (
+                <Chip
+                  key={v}
+                  tone="neutral"
+                  selected={on}
+                  onClick={() => toggle(kind.kind, kind.cardinality, v)}
+                >
                   {v}
                 </Chip>
-              ) : null;
-            }
-            return (
-              <Chip
-                key={v}
-                tone="neutral"
-                selected={on}
-                onClick={() => toggle(kind.kind, kind.cardinality, v)}
-              >
-                {v}
-              </Chip>
-            );
-          })}
-        </fieldset>
-      ))}
+              );
+            })}
+
+            {editable && kind.freeText && (
+              <FreeTextAdd
+                label={kind.label}
+                onAdd={(v) => toggle(kind.kind, kind.cardinality, v)}
+              />
+            )}
+          </fieldset>
+        );
+      })}
     </section>
+  );
+}
+
+/**
+ * A tiny inline form to enter a CUSTOM value for a free-text kind (step, §3/#83):
+ * the registry values are suggestions, this adds anything else (e.g. a named
+ * action). Submitting a non-empty value calls `onAdd` and clears the input.
+ */
+function FreeTextAdd({ label, onAdd }: { label: string; onAdd: (value: string) => void }) {
+  const [text, setText] = useState("");
+  const submit = (e: FormEvent): void => {
+    e.preventDefault();
+    const v = text.trim();
+    if (!v) return;
+    onAdd(v);
+    setText("");
+  };
+  return (
+    <form onSubmit={submit} className="flex items-center gap-1">
+      <Input
+        label={`Custom ${label}`}
+        hideLabel
+        placeholder={`Custom ${label.toLowerCase()}…`}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <Button type="submit" variant="secondary" size="sm" disabled={!text.trim()}>
+        Add
+      </Button>
+    </form>
   );
 }

@@ -28,6 +28,12 @@ export interface RegistryKind {
   valueType: string;
   /** Enumerated values for enum kinds (omitted for free-text kinds). */
   values?: string[];
+  /**
+   * When true, `values` are SUGGESTIONS, not a closed enum — a free-text value is
+   * also valid (§3: step is "controlled vocab + free-text action"). The strict
+   * write-check (US-012) skips the unknown-value rejection for such kinds.
+   */
+  freeText?: boolean;
   /** When present, the kind applies only to these dances (e.g. rise omits Tango). */
   appliesToDances?: DanceId[];
   /** true for standard kinds shipped here; false for user-defined kinds. */
@@ -57,8 +63,10 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#a9742c",
     cardinality: "multi",
     valueType: "enum",
-    // Footwork values + free-text action handled at the value level (US-012).
+    // Footwork SUGGESTIONS; `freeText` lets a custom action through too (§3,
+    // #83) — the value list isn't a closed enum for step.
     values: ["HT", "T", "TH", "heel_pull", "H"],
+    freeText: true,
     builtin: true,
   },
   rise: {

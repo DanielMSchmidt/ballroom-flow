@@ -91,54 +91,118 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
   });
 });
 
-describe.skip("US-029 Attribute editor (registry-derived sections)", () => {
+/** An attribute of `kind`=`value` on count `c`. */
+const attr = (kind: string, value: string, c = 1): Attribute => ({
+  id: `${kind}-${c}-${value}`,
+  kind,
+  count: c,
+  value,
+  role: null,
+  deletedAt: null,
+});
+
+describe("US-029 Attribute editor (registry-derived sections)", () => {
   it("renders sections from the merged ATTRIBUTE_REGISTRY", async () => {
     // Intent: editor sections derive from the merged registry (one vocabulary).
-    // Arrange: render the editor for a Foxtrot figure.
-    // Act: inspect the section headings. Assert: step/turn/sway/position headings present.
+    // Assert: step/turn/sway/position section headings are present (Foxtrot).
     // Covers US-029 AC-1 (sections from registry) — §10.2.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor dance="foxtrot" role="editor" />);
-    expect(screen.getByRole("heading", { name: /step/i })).toBeInTheDocument();
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
+    for (const name of [/step/i, /turn/i, /sway/i, /position/i]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
   });
 
-  it("hides the rise section for Tango", async () => {
+  it("hides the rise section for Tango (but shows it for a rise dance)", async () => {
     // Intent: Tango omits rise (appliesToDances) so the editor hides that section.
-    // Arrange: render the editor for a Tango figure.
-    // Act: look for a rise heading. Assert: NO "rise" section.
     // Covers US-029 AC-2 (Tango hides rise) — §10.2 "Tango omits rise".
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor dance="tango" role="editor" />);
-    expect(screen.queryByRole("heading", { name: /rise/i })).toBeNull();
+    const { unmount } = renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
+    expect(screen.getByRole("heading", { name: /rise/i })).toBeInTheDocument(); // shown for foxtrot
+    unmount();
+    renderUi(<AttributeEditor count={1} dance="tango" role="editor" />);
+    expect(screen.queryByRole("heading", { name: /rise/i })).toBeNull(); // hidden for tango
   });
 
   it("honors single (position) vs multi (bodyActions) selection cardinality", async () => {
-    // Intent: single-select vs multi-select per the registry cardinality.
-    // Arrange: render the editor for a Foxtrot figure.
-    // Act: pick two positions (only the last sticks — single); pick CBM + CBMP (both — multi).
-    // Assert: position is single-valued; bodyActions holds multiple.
+    // Intent: single-select replaces; multi-select accumulates (registry cardinality).
     // Covers US-029 AC-3 (single vs multi cardinality).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor dance="foxtrot" role="editor" />);
-    expect(screen.getByRole("group", { name: /position/i })).toBeInTheDocument();
+    // SINGLE (position): start with "closed"; picking "promenade" replaces it.
+    const onSingle = vi.fn();
+    const single = renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        value={[attr("position", "closed")]}
+        onChange={onSingle}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
+    const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
+    expect(afterSingle.filter((a) => a.kind === "position")).toHaveLength(1);
+    expect(afterSingle.find((a) => a.kind === "position")?.value).toBe("promenade");
+    single.unmount();
+
+    // MULTI (bodyActions): start with "CBM"; picking "CBMP" keeps BOTH.
+    const onMulti = vi.fn();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        value={[attr("bodyActions", "CBM")]}
+        onChange={onMulti}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^CBMP$/ }));
+    const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
+    expect(
+      afterMulti
+        .filter((a) => a.kind === "bodyActions")
+        .map((a) => a.value)
+        .sort(),
+    ).toEqual(["CBM", "CBMP"]);
   });
 
-  it("normalizes a CBP input to CBMP", async () => {
-    // Intent: alias normalization at the editor boundary (Q-D4).
-    // Arrange: render the editor; enter the legacy bodyActions value "CBP".
-    // Act/Assert: it displays/stores as "CBMP".
+  it("normalizes a stored CBP value to CBMP (read alias, Q-D4)", async () => {
+    // Intent: a legacy bodyActions value "CBP" reads as "CBMP" — the CBMP chip
+    //   shows selected for a figure that stored "CBP".
     // Covers US-029 AC-4 (CBP→CBMP).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor dance="foxtrot" role="editor" />);
-    expect(screen.getByRole("group", { name: /body action|position/i })).toBeInTheDocument();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        value={[attr("bodyActions", "CBP")]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("adds a free-text step value (suggestions are not a closed enum, §3/#83)", async () => {
+    // Intent: step is free-text — typing a custom action adds it alongside the
+    //   footwork suggestions.
+    // Covers #83 (step free-text on the editor side).
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn();
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
+    await userEvent.type(screen.getByPlaceholderText(/custom step/i), "brush_tap");
+    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find((a) => a.kind === "step");
+    expect(added?.value).toBe("brush_tap");
   });
 });
 
