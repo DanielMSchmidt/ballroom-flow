@@ -3,7 +3,7 @@ import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import type { FigureDoc, RoutineDoc } from "@ballroom/domain";
 import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { type OpenOptions, openRoutine } from "./routine";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -80,6 +80,38 @@ const aFigure = (over: Partial<FigureDoc>): RoutineDoc | FigureDoc =>
     deletedAt: null,
     ...over,
   }) as FigureDoc;
+
+describe("#187 figure projection on addPlacement", () => {
+  it("projects the new figure (createFigure) BEFORE opening its DO", async () => {
+    // Intent: addPlacement must project the figure to D1 + an owner membership
+    //   (createFigure) before opening its DO, so the fail-closed connect (US-021)
+    //   owner-resolves it (101, not 403).
+    const { opts, sockets } = fakeWiring();
+    let resolveCreate: () => void = () => {};
+    const seen: Array<{ figureRef: string; name: string; dance: string; figureType: string }> = [];
+    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
+      seen.push(meta);
+      return new Promise<void>((r) => {
+        resolveCreate = r;
+      });
+    });
+    const store = await openRoutine("rt_sample", { ...opts, createFigure });
+
+    store.addPlacement("s1", "Feather");
+
+    // Projected immediately with the figure metadata; its DO is NOT yet opened.
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect(seen[0]).toMatchObject({ name: "Feather", dance: "waltz", figureType: "feather" });
+    const figureRef = seen[0]?.figureRef ?? "";
+    expect(sockets.has(figureRef)).toBe(false);
+
+    // Once projected, the figure DO opens (it's now owner-resolvable server-side).
+    resolveCreate();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sockets.has(figureRef)).toBe(true);
+  });
+});
 
 describe("US-017 store/ seam (multi-doc)", () => {
   it("loads a routine doc + each referenced figure doc and resolves variant overlays", async () => {

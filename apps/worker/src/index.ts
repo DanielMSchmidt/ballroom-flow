@@ -1,9 +1,10 @@
-import { zCreateRoutine } from "@ballroom/contract";
+import { zCreateFigure, zCreateRoutine } from "@ballroom/contract";
 import { newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { createFigureRows } from "./db/figures";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 
@@ -102,6 +103,26 @@ app.post("/api/routines", async (c) => {
   const docRef = newId();
   await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance });
   return c.json({ docRef, title, dance, plan }, 201);
+});
+
+// POST /api/figures — project a client-minted figure doc to the D1 index (#187).
+// The client mints the figureRef + metadata; the SERVER stamps ownerId from the
+// verified JWT (never a client field). Projecting the registry row + owner
+// membership is what lets the fail-closed DO boundary (US-021) owner-resolve a
+// connect to that figure (101, not 403). Idempotent on figureRef. Figures are
+// NOT counted against the routine quota (type="figure" ≠ "routine").
+app.post("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const parsed = zCreateFigure.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
+  }
+  const { figureRef, name, dance, figureType } = parsed.data;
+
+  await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in
