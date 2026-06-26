@@ -1,10 +1,36 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role`/`figureScope` here are
 // component props (membership role, figure scope), not ARIA roles — Biome's a11y
 // rule mis-flags them.
+import type { FigureListItem } from "@ballroom/contract";
 import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen, userEvent } from "../test-support/render";
+import { renderUi, screen, userEvent, within } from "../test-support/render";
+import { FigureLibrary } from "./FigureLibrary";
+
+// Library fixtures (projected D1 rows — no CRDT). A Feather family spans dances
+// (foxtrot + waltz, US-029/§2.2), a Three Step (foxtrot), and a waltz-only
+// Reverse Turn so the dance filter has something to remove.
+const fig = (
+  over: Partial<FigureListItem> & { docRef: string; figureType: string },
+): FigureListItem => ({
+  name: over.name ?? over.figureType,
+  dance: "foxtrot",
+  scope: "global",
+  ...over,
+});
+const FEATHER_FOXTROT = fig({
+  docRef: "ff",
+  figureType: "feather",
+  name: "Feather",
+  dance: "foxtrot",
+});
+const GLOBAL: FigureListItem[] = [
+  FEATHER_FOXTROT,
+  fig({ docRef: "fw", figureType: "feather", name: "Feather", dance: "waltz" }),
+  fig({ docRef: "ts", figureType: "three_step", name: "Three Step", dance: "foxtrot" }),
+  fig({ docRef: "rt", figureType: "reverse_turn", name: "Reverse Turn", dance: "waltz" }),
+];
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-032 — Application-global figure library browse [M4, user]
@@ -18,53 +44,73 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface FigureLibraryModule {
-  FigureLibrary: ComponentType<Record<string, unknown>>;
-}
 interface FigureTimelineModule {
   FigureTimeline: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-032 Application-global figure library browse", () => {
+describe("US-032 Application-global figure library browse", () => {
   it("groups global figures by figureType and filters by dance", async () => {
     // Intent: the library shows canonical figures grouped by family, dance-filterable.
-    // Arrange: render <FigureLibrary> seeded with Feather (foxtrot+waltz) + Three Step.
+    // Arrange: render <FigureLibrary> seeded with Feather (foxtrot+waltz) + Three Step
+    //   (foxtrot) + a waltz-only Reverse Turn.
     // Act: select the dance filter = Foxtrot. Assert: a "Feather" group + a "Three Step"
-    //   group show; the Waltz Feather is filtered out.
+    //   group show; the waltz-only Reverse Turn family is filtered out.
     // Covers US-032 AC-1 (grouped by figureType, filter by dance).
-    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
-      "../components/FigureLibrary",
-    );
-    renderUi(<FigureLibrary />);
+    renderUi(<FigureLibrary globalFigures={GLOBAL} />);
     await userEvent.selectOptions(screen.getByLabelText(/dance/i), "foxtrot");
     expect(screen.getByRole("heading", { name: /feather/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /three step/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /reverse turn/i })).not.toBeInTheDocument();
+    // Only the foxtrot Feather row remains under the family (the waltz one is filtered).
+    expect(screen.getAllByRole("button", { name: /feather/i })).toHaveLength(1);
   });
 
   it("marks global figures as not directly editable (auto-variant on edit)", async () => {
-    // Intent: a global figure is app-owned; the UI signals editing creates a variant.
-    // Arrange: render the library; open a global figure. Act: inspect its edit affordance.
-    // Assert: an "edit → creates your variant" affordance, not a direct in-place edit.
+    // Intent: a global figure is app-owned; the UI surfaces it with the Library scope
+    //   badge (editing it auto-variants on the timeline — US-035), not an in-place edit.
+    // Arrange: render the library with a single global Feather.
+    // Assert: the list renders; the figure row carries the "Library" scope badge.
     // Covers US-032 AC-2 (global not directly editable).
-    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
-      "../components/FigureLibrary",
-    );
-    renderUi(<FigureLibrary />);
+    renderUi(<FigureLibrary globalFigures={[FEATHER_FOXTROT]} />);
     expect(screen.getByRole("list")).toBeInTheDocument();
+    const row = screen.getByRole("button", { name: /feather/i });
+    expect(within(row).getByText("Library")).toBeInTheDocument();
   });
 });
 
-describe.skip("US-033 Account variants + custom figures in library", () => {
+describe("US-033 Account variants + custom figures in library", () => {
   it("shows a variant lineage badge + a custom badge + 'used in N routines'", async () => {
     // Intent: my variants show base lineage; custom figures a custom badge; usage count.
-    // Arrange: render <FigureLibrary> with my variant (base=Feather, used in 2) + a custom.
-    // Act: read the figure cards. Assert: lineage badge naming the base; custom badge;
-    //   "used in 2 routines".
+    // Arrange: render <FigureLibrary tab="mine"> with my variant (base=Telemark, used in 2)
+    //   + a custom figure (no base). The variant/custom split keys on baseName, not source (#56).
+    // Assert: variant row → "Variant" + "based on Telemark"; custom row → "Custom"; "used in 2 routines".
     // Covers US-033 AC-1 (variant/custom badges) + AC-2 ("used in N").
-    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
-      "../components/FigureLibrary",
-    );
-    renderUi(<FigureLibrary tab="mine" />);
+    const mine: FigureListItem[] = [
+      fig({
+        docRef: "v1",
+        figureType: "open_telemark",
+        name: "Open Telemark",
+        dance: "foxtrot",
+        scope: "variant",
+        baseName: "Telemark",
+        usedInCount: 2,
+      }),
+      fig({
+        docRef: "c1",
+        figureType: "my_swivel",
+        name: "My Swivel",
+        dance: "foxtrot",
+        scope: "custom",
+        usedInCount: 0,
+      }),
+    ];
+    renderUi(<FigureLibrary tab="mine" myFigures={mine} />);
     expect(screen.getByText(/used in 2 routines/i)).toBeInTheDocument();
+    const variantRow = screen.getByRole("button", { name: /open telemark/i });
+    expect(within(variantRow).getByText("Variant")).toBeInTheDocument();
+    expect(within(variantRow).getByText(/based on Telemark/i)).toBeInTheDocument();
+    const customRow = screen.getByRole("button", { name: /my swivel/i });
+    expect(within(customRow).getByText("Custom")).toBeInTheDocument();
   });
 });
 

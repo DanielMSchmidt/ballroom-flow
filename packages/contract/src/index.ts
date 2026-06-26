@@ -50,6 +50,39 @@ export const zCreateFigure = z.object({
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
+ * A figure's scope as surfaced to the library UI (US-032/033, PLAN §2.2):
+ * `global` = app-owned canonical library figure; `variant` = an account figure
+ * with a baseFigureRef (overlay over a base); `custom` = an account figure the
+ * user authored from scratch (no base). The variant-vs-custom distinction is by
+ * `baseFigureRef` presence, NOT `source` (#56) — a copy-on-write variant also
+ * carries source="custom", so the badge must key off the base link.
+ */
+export const zFigureScope = z.enum(["global", "variant", "custom"]);
+export type FigureScopeName = z.infer<typeof zFigureScope>;
+
+/**
+ * One figure row in the library (US-032/033). Projected from the D1 registry +
+ * FigureType catalog — never a CRDT scan. The global list omits `usedInCount`
+ * and `baseName`; the "mine" list carries `usedInCount` ("used in N routines",
+ * US-033 AC-2) and, for a variant, `baseName` (lineage, DESIGN-PRINCIPLES #12).
+ */
+export const zFigureListItem = z.object({
+  docRef: z.string(),
+  name: z.string(),
+  figureType: z.string(),
+  dance: z.enum(DANCE_IDS),
+  scope: zFigureScope,
+  /** A variant's base figure display name, for the "based on …" lineage (#56). */
+  baseName: z.string().nullish(),
+  /** "used in N routines" (US-033 AC-2). Omitted on the global list. */
+  usedInCount: z.number().int().nonnegative().nullish(),
+});
+export type FigureListItem = z.infer<typeof zFigureListItem>;
+
+export const zFigureList = z.object({ figures: z.array(zFigureListItem) });
+export type FigureList = z.infer<typeof zFigureList>;
+
+/**
  * Issue-invite request (US-023). An editor/owner mints a shareable link granting
  * a chosen role. `role` is one of the three STORED membership roles — never
  * "owner" (ownership isn't transferable by link). The granted role is read back
