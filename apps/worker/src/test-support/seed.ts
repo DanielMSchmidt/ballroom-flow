@@ -16,7 +16,7 @@
 // lands the Drizzle schema, implementers can swap these raw inserts for typed
 // Drizzle inserts; the shape is the contract.
 // ─────────────────────────────────────────────────────────────────────────
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 
 export type MembershipRole = "viewer" | "commenter" | "editor";
 export type DocType = "routine" | "global-figure" | "account-figure" | "account";
@@ -74,11 +74,19 @@ export interface SeedSpec {
  * it. Any OTHER error still throws. (#173 — was a flake, became a CI blocker.)
  */
 export async function applyMigrations(): Promise<void> {
-  try {
-    await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-  } catch (e) {
-    const msg = String((e as { message?: unknown })?.message ?? e);
-    if (!/already exists|UNIQUE constraint failed: d1_migrations/i.test(msg)) throw e;
+  // Run the migration SQL DIRECTLY, every suite — do NOT go through
+  // applyD1Migrations' `d1_migrations` bookkeeping. Under shared storage
+  // (isolatedStorage:false) that bookkeeping RACES: once a sibling suite records
+  // a migration's name, applyD1Migrations treats it "already applied" for THIS
+  // suite and SKIPS its CREATEs while the tables aren't present in the D1 it
+  // queries → "no such table" (and the old swallow masked an incomplete schema
+  // as success). Every migration statement is `CREATE … IF NOT EXISTS`, so
+  // executing them directly is idempotent and ORDER-INDEPENDENT: the schema is
+  // guaranteed present with nothing to race on (#203 — the real fix behind #173).
+  for (const migration of env.TEST_MIGRATIONS) {
+    for (const query of migration.queries) {
+      if (query.trim()) await env.DB.prepare(query).run();
+    }
   }
 }
 
