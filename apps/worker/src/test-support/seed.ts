@@ -62,9 +62,24 @@ export interface SeedSpec {
   invites?: SeedInvite[];
 }
 
-/** Apply the per-suite migrations. Call once in a suite `beforeAll`. */
+/**
+ * Apply the per-suite migrations. Call once in a suite `beforeAll`.
+ *
+ * D1 is SHARED across the whole worker test run (isolatedStorage:false), so
+ * several suites call this against the SAME database — and they race. The
+ * migration SQL is idempotent (`CREATE TABLE/INDEX IF NOT EXISTS`), so the schema
+ * work is harmless to repeat; the only thing that can still collide is
+ * applyD1Migrations' own bookkeeping INSERT into `d1_migrations` (a duplicate
+ * migration name). That just means the schema is already present, so we swallow
+ * it. Any OTHER error still throws. (#173 — was a flake, became a CI blocker.)
+ */
 export async function applyMigrations(): Promise<void> {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  try {
+    await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  } catch (e) {
+    const msg = String((e as { message?: unknown })?.message ?? e);
+    if (!/already exists|UNIQUE constraint failed: d1_migrations/i.test(msg)) throw e;
+  }
 }
 
 /**
