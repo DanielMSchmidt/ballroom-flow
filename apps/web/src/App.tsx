@@ -2,16 +2,17 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-reac
 import { useState } from "react";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { Styleguide } from "./styleguide/Styleguide";
-import { AppShell, Button, Card, type NavItem, ToastProvider } from "./ui";
+import { AppShell, Card, type NavItem, ToastProvider } from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
 
 /**
- * Is the styleguide route active? Routing is kept trivial at the
- * design-system stage (no router dependency yet): the gallery is
- * reachable at `/styleguide` or `#styleguide`. Real screens land in a
- * later milestone.
+ * Is the styleguide route active? The gallery is a DEVELOPMENT-only tool — it's
+ * reachable at `/styleguide` or `#styleguide` while developing, but gated behind
+ * `import.meta.env.DEV` so it is NOT reachable in a shipped staging/prod build
+ * (#192). Real product screens own those routes; the gallery never leaks to users.
  */
 function isStyleguideRoute(): boolean {
+  if (!import.meta.env.DEV) return false;
   if (typeof window === "undefined") return false;
   return (
     window.location.pathname.replace(/\/$/, "").endsWith("/styleguide") ||
@@ -67,20 +68,8 @@ function AppHome() {
             <Card>
               <p className="text-sm font-bold text-ink">Coming soon</p>
               <p className="mt-1 text-2xs text-ink-muted">
-                This screen lands in a later milestone. Preview the primitives in the styleguide.
+                This screen lands in a later milestone.
               </p>
-              <div className="mt-3">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    window.location.hash = "styleguide";
-                    window.location.reload();
-                  }}
-                >
-                  Open the styleguide
-                </Button>
-              </div>
             </Card>
           )}
         </SignedIn>
