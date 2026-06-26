@@ -1,9 +1,10 @@
-import { DANCES, type DanceId, newId } from "@ballroom/domain";
+import { zCreateRoutine } from "@ballroom/contract";
+import { newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
-import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
+import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
@@ -80,15 +81,13 @@ app.post("/api/routines", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const body = (await c.req.json().catch(() => null)) as {
-    dance?: unknown;
-    title?: unknown;
-  } | null;
-  const dance = typeof body?.dance === "string" ? body.dance : "";
-  const title = typeof body?.title === "string" ? body.title.trim() : "";
-  if (!(dance in DANCES) || !title) {
-    return c.json({ error: "invalid_routine" }, 400);
+  // Validate against the SHARED contract schema (#79 home) — title is trimmed +
+  // non-empty + length-capped, dance is one of the five; web + worker agree.
+  const parsed = zCreateRoutine.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_routine", issues: parsed.error.flatten() }, 400);
   }
+  const { title, dance } = parsed.data;
 
   const db = drizzle(c.env.DB);
   const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
@@ -101,8 +100,19 @@ app.post("/api/routines", async (c) => {
   }
 
   const docRef = newId();
-  await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance: dance as DanceId });
+  await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance });
   return c.json({ docRef, title, dance, plan }, 201);
+});
+
+// GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in
+// routines (newest first), served from the D1 index (no CRDT content read). A
+// just-created routine appears immediately (eager projection); edit metadata is
+// alarm-projected and may lag (#126).
+app.get("/api/routines", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routines = await listRoutines(c.env.DB, user.sub);
+  return c.json({ routines });
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a

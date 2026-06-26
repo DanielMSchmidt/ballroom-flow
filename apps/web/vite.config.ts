@@ -2,13 +2,26 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import topLevelAwait from "vite-plugin-top-level-await";
+import wasm from "vite-plugin-wasm";
 
 export default defineConfig({
   plugins: [
+    // Automerge ships its core as WASM (imported via the ESM-integration
+    // proposal Vite/Rollup can't bundle natively). US-025 is the first screen to
+    // mount the routine editor (Assemble → store → @automerge/automerge) in the
+    // production bundle, so the web build now needs these plugins.
+    wasm(),
+    topLevelAwait(),
     react(),
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        // The Automerge core WASM (~3 MB) is part of the installable editor
+        // shell, so allow it past Workbox's 2 MiB default precache cap.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
       manifest: {
         name: "Ballroom Flow",
         short_name: "Ballroom",

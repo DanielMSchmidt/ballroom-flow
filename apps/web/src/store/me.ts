@@ -2,7 +2,13 @@ import { useAuth } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../lib/rpc";
 
-export type Me = { sub: string };
+export type Me = {
+  sub: string;
+  onboarded?: boolean;
+  plan?: "free" | "pro";
+  displayName?: string;
+  identityColor?: string;
+};
 
 /** store/ seam: the current user's verified identity from the Worker. */
 export function useMe() {

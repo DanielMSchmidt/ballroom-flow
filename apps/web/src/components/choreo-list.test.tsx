@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent } from "../test-support/render";
 
@@ -27,6 +27,40 @@ describe("US-022 Quota upsell (UI)", () => {
     renderUi(<ChoreoList ownedCount={3} plan="free" />);
     await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
     expect(await screen.findByText(/upgrade|upsell|limit/i)).toBeInTheDocument();
+  });
+});
+
+describe("US-025 Create a routine (UI)", () => {
+  it("lists the viewer's routines and opens one on tap", async () => {
+    // Intent: the list shows each routine; tapping one navigates to it (Assemble).
+    // Covers US-025 AC-3 (appears in list) + the list → open navigation seam.
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    const onOpen = vi.fn();
+    const routines = [
+      {
+        docRef: "rt1",
+        title: "Showcase Waltz",
+        dance: "waltz",
+        role: "owner",
+        updatedAt: Date.now(),
+      },
+    ];
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={routines} onOpen={onOpen} />);
+    await userEvent.click(screen.getByText("Showcase Waltz"));
+    expect(onOpen).toHaveBeenCalledWith("rt1");
+  });
+
+  it("creates a routine through the form when under the cap", async () => {
+    // Intent: New Choreo (under cap) opens a create form; submitting calls onCreate
+    //   with the title + chosen dance (the store wires this to POST /api/routines).
+    // Covers US-025 AC-1/AC-2 (create) at the UI.
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    const onCreate = vi.fn();
+    renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
+    await userEvent.type(screen.getByLabelText(/routine name/i), "Showcase");
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(onCreate).toHaveBeenCalledWith({ title: "Showcase", dance: "waltz" });
   });
 });
 

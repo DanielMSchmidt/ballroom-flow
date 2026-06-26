@@ -12,3 +12,18 @@ export async function apiGet<T>(path: string, token: string | null): Promise<T> 
   if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   return (await res.json()) as T;
 }
+
+/** Typed POST. Throws on non-2xx (the server-side quota 402 is pre-empted by the
+ *  client cap check, so the create path here only sees success in practice). */
+export async function apiPost<T>(path: string, token: string | null, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`POST ${path} -> ${res.status}`);
+  return (await res.json()) as T;
+}

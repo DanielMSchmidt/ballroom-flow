@@ -3,7 +3,9 @@
 // D1 is the source of truth for the owned-routine count (quota) and the list.
 // Create EAGER-projects the registry row (+ the owner membership row) so the
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
-import { and, count, eq, isNull } from "drizzle-orm";
+import type { RoutineListItem } from "@ballroom/contract";
+import type { DanceId } from "@ballroom/domain";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { documentRegistry, membership } from "./schema";
 
@@ -26,6 +28,76 @@ export async function countOwnedRoutines(db: D1Database, userId: string): Promis
     )
     .get();
   return row?.n ?? 0;
+}
+
+/**
+ * The viewer's routines for the Choreo list (US-025): the ones they OWN plus the
+ * ones SHARED IN to them, newest first. Two indexed reads (owned via
+ * document_registry_owner_idx; shared via membership_user_idx + the registry PK)
+ * merged in memory — owner wins on overlap. D1 is a pure index, so this never
+ * reads CRDT content; create eager-projects (US-022) so a new routine is here
+ * immediately, while edit metadata is alarm-projected and may lag (#126).
+ */
+export async function listRoutines(db: D1Database, userId: string): Promise<RoutineListItem[]> {
+  const d = drizzle(db);
+
+  const owned = await d
+    .select({
+      docRef: documentRegistry.docRef,
+      title: documentRegistry.title,
+      dance: documentRegistry.dance,
+      updatedAt: documentRegistry.updatedAt,
+    })
+    .from(documentRegistry)
+    .where(
+      and(
+        eq(documentRegistry.ownerId, userId),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .orderBy(desc(documentRegistry.updatedAt))
+    .all();
+
+  const shared = await d
+    .select({
+      docRef: documentRegistry.docRef,
+      title: documentRegistry.title,
+      dance: documentRegistry.dance,
+      updatedAt: documentRegistry.updatedAt,
+      role: membership.role,
+    })
+    .from(membership)
+    .innerJoin(documentRegistry, eq(documentRegistry.docRef, membership.docRef))
+    .where(
+      and(
+        eq(membership.userId, userId),
+        isNull(membership.deletedAt),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .all();
+
+  const seen = new Set<string>();
+  const items: RoutineListItem[] = [];
+  const push = (
+    row: { docRef: string; title: string | null; dance: string | null; updatedAt: number },
+    role: RoutineListItem["role"],
+  ): void => {
+    if (seen.has(row.docRef)) return; // owner wins over a redundant membership row
+    seen.add(row.docRef);
+    items.push({
+      docRef: row.docRef,
+      title: row.title ?? "Untitled routine",
+      dance: (row.dance ?? "waltz") as DanceId,
+      role,
+      updatedAt: row.updatedAt,
+    });
+  };
+  for (const r of owned) push(r, "owner");
+  for (const r of shared) push(r, r.role);
+  return items.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export interface NewRoutine {
