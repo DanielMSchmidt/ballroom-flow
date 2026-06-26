@@ -19,7 +19,7 @@ beforeAll(async () => {
   kp = await generateTestKeypair();
 });
 
-describe.skip("US-024 Share screen (member list + roles)", () => {
+describe("US-024 Share screen (member list + roles)", () => {
   it("lists members with their roles for a doc", async () => {
     // Intent: the Share screen reads the member+role list from D1.
     // Arrange: seed a routine with editor + commenter + viewer memberships.
@@ -35,9 +35,9 @@ describe.skip("US-024 Share screen (member list + roles)", () => {
       ],
       docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
       memberships: [
-        { id: "m_ed", docRef, userId: "u_ed", role: "editor" },
-        { id: "m_co", docRef, userId: "u_co", role: "commenter" },
-        { id: "m_vw", docRef, userId: "u_vw", role: "viewer" },
+        { id: "m_ed_s1", docRef, userId: "u_ed", role: "editor" },
+        { id: "m_co_s1", docRef, userId: "u_co", role: "commenter" },
+        { id: "m_vw_s1", docRef, userId: "u_vw", role: "viewer" },
       ],
     });
     const res = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
@@ -67,8 +67,8 @@ describe.skip("US-024 Share screen (member list + roles)", () => {
       ],
       docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
       memberships: [
-        { id: "m_ed", docRef, userId: "u_ed", role: "editor" },
-        { id: "m_vw", docRef, userId: "u_vw", role: "viewer" },
+        { id: "m_ed_s2", docRef, userId: "u_ed", role: "editor" },
+        { id: "m_vw_s2", docRef, userId: "u_vw", role: "viewer" },
       ],
     });
     const res = await SELF.fetch(`https://x/api/docs/${docRef}/members/u_vw`, {
@@ -98,8 +98,8 @@ describe.skip("US-024 Share screen (member list + roles)", () => {
       ],
       docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
       memberships: [
-        { id: "m_co", docRef, userId: "u_co", role: "commenter" },
-        { id: "m_vw", docRef, userId: "u_vw", role: "viewer" },
+        { id: "m_co_s3", docRef, userId: "u_co", role: "commenter" },
+        { id: "m_vw_s3", docRef, userId: "u_vw", role: "viewer" },
       ],
     });
     const res = await SELF.fetch(`https://x/api/docs/${docRef}/members/u_vw`, {

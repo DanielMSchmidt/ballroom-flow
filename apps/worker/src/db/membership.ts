@@ -55,3 +55,38 @@ export async function resolveEffectiveRole(
   const owner = await ownerOf(db, docRef);
   return owner !== null && owner === userId ? "owner" : null;
 }
+
+/** One member of a document (for the US-024 Share screen member list). */
+export interface MemberRow {
+  userId: string;
+  role: MembershipRole;
+}
+
+/** All ACTIVE members of `docRef` with their roles (US-024 AC-1). */
+export async function listMembers(db: D1Database, docRef: string): Promise<MemberRow[]> {
+  const rows = await drizzle(db)
+    .select({ userId: membership.userId, role: membership.role })
+    .from(membership)
+    .where(and(eq(membership.docRef, docRef), isNull(membership.deletedAt)))
+    .all();
+  return rows;
+}
+
+/**
+ * Remove a member from `docRef` (US-024 AC-2): SOFT-delete their active
+ * membership row (set `deletedAt`) — never a hard removal. The caller authorizes
+ * (editor/owner via can(role,"canInvite")). Returns the number of rows tombstoned.
+ */
+export async function removeMember(
+  db: D1Database,
+  docRef: string,
+  userId: string,
+): Promise<number> {
+  const res = await db
+    .prepare(
+      "UPDATE membership SET deletedAt = ? WHERE docRef = ? AND userId = ? AND deletedAt IS NULL",
+    )
+    .bind(Date.now(), docRef, userId)
+    .run();
+  return res.meta?.changes ?? 0;
+}
