@@ -8,6 +8,7 @@
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
 import {
+  type Alignment,
   type Attribute,
   addSection,
   type FigureDoc,
@@ -52,9 +53,10 @@ export interface RoutineStore {
   /**
    * Add a figure to a section (US-027): mints a fresh OWNED custom figure doc
    * (the user then edits its timeline, US-028) and appends a placement
-   * referencing it. The library-pick path (reuse a global figure) is US-032.
+   * referencing it. A library pick (US-032) passes the catalog's canonical
+   * `figureType`; a custom figure omits it and the store slugs one from the name.
    */
-  addPlacement(sectionId: string, figureName: string): void;
+  addPlacement(sectionId: string, figureName: string, figureType?: string): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -67,6 +69,8 @@ export interface RoutineStore {
    * now this writes straight to the referenced figure doc.
    */
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
+  /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
+  setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -240,10 +244,12 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName) => {
+    addPlacement: (sectionId, figureName, figureTypeArg) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
-      const figureType = slugify(name) || figureRef; // immutable once set (#91)
+      // A library pick supplies the catalog's canonical figureType (cross-routine
+      // identity); a custom figure slugs one from the name. Immutable once set (#91).
+      const figureType = figureTypeArg ?? (slugify(name) || figureRef);
       const dance = readRoutineSafe().dance;
 
       // Add the placement to the routine immediately (it only references figureRef).
@@ -294,6 +300,16 @@ export async function openRoutine(
       // Writes to that figure's own doc connection — a separate DO from the routine.
       figureConn(figureRef).change((draft) => {
         draft.attributes = attributes;
+      });
+    },
+
+    setFigureAlignment: (figureRef, edge, alignment) => {
+      // Entry/exit alignment lives on the figure doc (US-031). Clearing deletes
+      // the key (Automerge can't store undefined).
+      const key = edge === "entry" ? "entryAlignment" : "exitAlignment";
+      figureConn(figureRef).change((draft) => {
+        if (alignment) draft[key] = alignment;
+        else delete draft[key];
       });
     },
 

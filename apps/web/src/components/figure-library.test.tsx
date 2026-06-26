@@ -25,7 +25,7 @@ interface FigureTimelineModule {
   FigureTimeline: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-032 Application-global figure library browse", () => {
+describe("US-032 Application-global figure library browse", () => {
   it("groups global figures by figureType and filters by dance", async () => {
     // Intent: the library shows canonical figures grouped by family, dance-filterable.
     // Arrange: render <FigureLibrary> seeded with Feather (foxtrot+waltz) + Three Step.
@@ -37,7 +37,9 @@ describe.skip("US-032 Application-global figure library browse", () => {
     );
     renderUi(<FigureLibrary />);
     await userEvent.selectOptions(screen.getByLabelText(/dance/i), "foxtrot");
-    expect(screen.getByRole("heading", { name: /feather/i })).toBeInTheDocument();
+    // The Feather Step is the canonical Foxtrot opener; selecting Foxtrot surfaces
+    // its family heading (several figures mention "feather", so match it exactly).
+    expect(screen.getByRole("heading", { name: /feather step/i })).toBeInTheDocument();
   });
 
   it("marks global figures as not directly editable (auto-variant on edit)", async () => {

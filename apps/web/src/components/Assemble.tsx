@@ -7,14 +7,18 @@
 // another client re-renders without reload (US-018 AC-2). An offline data state
 // is shown honestly rather than presenting stale content as live (AC-3).
 //
-// US-018 is read-only viewing; section/placement EDITING is US-026/US-027 (those
-// describes stay skipped), so no editor controls render here yet — the `role`
-// prop is accepted for when they land.
+// Editing is gated by the `role`/capability table: editors manage sections
+// (US-026) and placements (US-027), notate a figure's steps (US-028) and its
+// alignment (US-031) via the step sheet, and add figures from the library picker
+// (US-027/US-032); viewers/commenters see it all read-only.
 
 import {
+  type Alignment,
   type Attribute,
   can,
+  type DanceId,
   type FigureDoc,
+  libraryFiguresForDance,
   type Placement,
   type Section,
 } from "@ballroom/domain";
@@ -29,11 +33,14 @@ import {
   IconButton,
   Input,
   OfflineState,
+  Select,
   ShareIcon,
   Sheet,
   Spinner,
   useToast,
 } from "../ui";
+import { FigureTimeline } from "./FigureTimeline";
+import { RoutineReadingView } from "./RoutineReadingView";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -117,6 +124,10 @@ export function Assemble({
   const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
+  // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
+  const [notating, setNotating] = useState<string | null>(null);
+  // "read" lays the whole routine out as a read-only timeline (the payoff view).
+  const [mode, setMode] = useState<"edit" | "read">("edit");
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
     sectionId: string;
     placement: Placement;
@@ -138,6 +149,12 @@ export function Assemble({
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp.figure]),
   );
   const syncing = store.syncState() === "connecting";
+  // The figure whose step timeline is open — re-read live each render so a
+  // collaborator's synced attribute edit flows into the open editor (US-018 AC-2).
+  const notatingFigure =
+    notating !== null
+      ? (store.readPlacements().find((rp) => rp.figure?.id === notating)?.figure ?? null)
+      : null;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -179,6 +196,14 @@ export function Assemble({
               Make a copy
             </Button>
           )}
+          {/* Read-only timeline payoff view ⇄ the editable list (US-018 reading). */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMode(mode === "edit" ? "read" : "edit")}
+          >
+            {mode === "edit" ? "Reading view" : "List view"}
+          </Button>
           {canShare && (
             <Button
               variant="secondary"
@@ -197,55 +222,69 @@ export function Assemble({
         <Share docRef={routineId} viewerRole={role} />
       </Sheet>
 
-      {/* The live section list. data-testid is a stable hook the two-client
+      {mode === "read" ? (
+        <RoutineReadingView routine={routine} placements={store.readPlacements()} />
+      ) : (
+        <>
+          {/* The live section list. data-testid is a stable hook the two-client
           convergence E2E (US-015) asserts on (no role/name ambiguity). */}
-      <div data-testid="section-list" className="flex flex-col gap-4">
-        {routine.sections.length === 0 ? (
-          <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
-        ) : (
-          routine.sections.map((section, index) => (
-            <section key={section.id} className="flex flex-col gap-2">
-              <SectionHeader
-                section={section}
-                canEdit={canEdit}
-                isFirst={index === 0}
-                isLast={index === routine.sections.length - 1}
-                onRename={(name) => store.renameSection(section.id, name)}
-                onMove={(dir) => store.moveSection(section.id, dir)}
-                onDelete={() => setPendingDelete(section)}
-              />
-              {section.placements.length === 0 ? (
-                <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {section.placements.map((placement, pIndex) => (
-                    <li key={placement.id}>
-                      <PlacementCard
-                        placement={placement}
-                        figure={figureByPlacement.get(placement.id) ?? null}
-                        canEdit={canEdit}
-                        isFirst={pIndex === 0}
-                        isLast={pIndex === section.placements.length - 1}
-                        onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
-                        onDelete={() =>
-                          setPendingDeletePlacement({ sectionId: section.id, placement })
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {canEdit && (
-                <Button variant="secondary" size="sm" onClick={() => setAddingFigureTo(section.id)}>
-                  Add figure
-                </Button>
-              )}
-            </section>
-          ))
-        )}
-      </div>
+          <div data-testid="section-list" className="flex flex-col gap-4">
+            {routine.sections.length === 0 ? (
+              <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
+            ) : (
+              routine.sections.map((section, index) => (
+                <section key={section.id} className="flex flex-col gap-2">
+                  <SectionHeader
+                    section={section}
+                    canEdit={canEdit}
+                    isFirst={index === 0}
+                    isLast={index === routine.sections.length - 1}
+                    onRename={(name) => store.renameSection(section.id, name)}
+                    onMove={(dir) => store.moveSection(section.id, dir)}
+                    onDelete={() => setPendingDelete(section)}
+                  />
+                  {section.placements.length === 0 ? (
+                    <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
+                  ) : (
+                    <ul className="flex flex-col gap-2">
+                      {section.placements.map((placement, pIndex) => (
+                        <li key={placement.id}>
+                          <PlacementCard
+                            placement={placement}
+                            figure={figureByPlacement.get(placement.id) ?? null}
+                            canEdit={canEdit}
+                            isFirst={pIndex === 0}
+                            isLast={pIndex === section.placements.length - 1}
+                            onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                            onOpen={() => {
+                              const f = figureByPlacement.get(placement.id);
+                              if (f) setNotating(f.id);
+                            }}
+                            onDelete={() =>
+                              setPendingDeletePlacement({ sectionId: section.id, placement })
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {canEdit && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setAddingFigureTo(section.id)}
+                    >
+                      Add figure
+                    </Button>
+                  )}
+                </section>
+              ))
+            )}
+          </div>
 
-      {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
+          {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
+        </>
+      )}
 
       {/* Add a figure: mints a fresh owned custom figure + a placement (US-027). */}
       <Sheet
@@ -253,12 +292,41 @@ export function Assemble({
         onClose={() => setAddingFigureTo(null)}
         title="Add a figure"
       >
-        <AddFigureForm
-          onAdd={(name) => {
-            if (addingFigureTo) store.addPlacement(addingFigureTo, name);
+        <AddFigurePicker
+          dance={routine.dance as DanceId}
+          onAdd={(name, figureType) => {
+            if (addingFigureTo) store.addPlacement(addingFigureTo, name, figureType);
             setAddingFigureTo(null);
           }}
         />
+      </Sheet>
+
+      {/* Notate a figure (US-028 hero flow): open the figure's step timeline. The
+          editor writes to the figure's OWN doc via the store; a viewer sees it
+          read-only. Re-reads live so a collaborator's edit flows in. */}
+      <Sheet
+        open={notating !== null}
+        onClose={() => setNotating(null)}
+        title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
+      >
+        {notatingFigure && (
+          <div className="flex flex-col gap-4">
+            <FigureTimeline
+              role={canEdit ? role : "viewer"}
+              dance={routine.dance as DanceId}
+              attributes={notatingFigure.attributes}
+              onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+            />
+            {canEdit && (
+              <AlignmentEditor
+                figure={notatingFigure}
+                onSet={(edge, alignment) =>
+                  store.setFigureAlignment(notatingFigure.id, edge, alignment)
+                }
+              />
+            )}
+          </div>
+        )}
       </Sheet>
 
       {/* Placement delete confirm (principle #28); soft-delete tombstone. */}
@@ -456,6 +524,7 @@ function PlacementCard({
   isFirst = false,
   isLast = false,
   onMove,
+  onOpen,
   onDelete,
 }: {
   placement: Placement;
@@ -464,6 +533,7 @@ function PlacementCard({
   isFirst?: boolean;
   isLast?: boolean;
   onMove?: (direction: "up" | "down") => void;
+  onOpen?: () => void;
   onDelete?: () => void;
 }) {
   const label = figure?.name ?? "Unknown figure";
@@ -472,27 +542,40 @@ function PlacementCard({
       <div className="flex items-center gap-2">
         <span className="font-medium">{label}</span>
         {figure ? <ScopeTag figure={figure} /> : null}
-        {canEdit && (
-          <div className="ml-auto flex items-center gap-1">
-            <IconButton
-              label={`Move ${label} up`}
-              disabled={isFirst}
-              onClick={() => onMove?.("up")}
+        <div className="ml-auto flex items-center gap-1">
+          {/* Open the figure's step timeline — editors notate, others view (US-028). */}
+          {figure && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`${canEdit ? "Edit" : "View"} steps: ${label}`}
+              onClick={onOpen}
             >
-              ↑
-            </IconButton>
-            <IconButton
-              label={`Move ${label} down`}
-              disabled={isLast}
-              onClick={() => onMove?.("down")}
-            >
-              ↓
-            </IconButton>
-            <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
-              Remove
+              Steps
             </Button>
-          </div>
-        )}
+          )}
+          {canEdit && (
+            <>
+              <IconButton
+                label={`Move ${label} up`}
+                disabled={isFirst}
+                onClick={() => onMove?.("up")}
+              >
+                ↑
+              </IconButton>
+              <IconButton
+                label={`Move ${label} down`}
+                disabled={isLast}
+                onClick={() => onMove?.("down")}
+              >
+                ↓
+              </IconButton>
+              <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
+                Remove
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       {figure ? (
         <p className="mt-1 text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
@@ -502,31 +585,155 @@ function PlacementCard({
   );
 }
 
-/** The add-figure form inside the "Add a figure" sheet: a name → a new figure. */
-function AddFigureForm({ onAdd }: { onAdd: (name: string) => void }) {
+/**
+ * The "Add a figure" picker (US-027 + US-032): browse the dance's library
+ * presets (filterable) and tap one to place it with its canonical name +
+ * figureType, OR create your own custom figure by name. A preset carries the
+ * catalog's figureType (cross-routine identity); a custom omits it.
+ */
+function AddFigurePicker({
+  dance,
+  onAdd,
+}: {
+  dance: DanceId;
+  onAdd: (name: string, figureType?: string) => void;
+}) {
+  const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
+  const q = filter.trim().toLowerCase();
+  const presets = libraryFiguresForDance(dance).filter(
+    (f) => q === "" || f.name.toLowerCase().includes(q),
+  );
   return (
-    <form
-      className="flex flex-col gap-3"
-      onSubmit={(e: FormEvent) => {
-        e.preventDefault();
-        const next = name.trim();
-        if (!next) return;
-        onAdd(next);
-        setName("");
-      }}
-    >
+    <div className="flex flex-col gap-3">
       <Input
-        label="Figure name"
-        placeholder="e.g. Feather Step"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
+        label="Filter figures"
+        placeholder="Search the library…"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
       />
-      <Button type="submit" variant="primary" disabled={!name.trim()}>
-        Add
-      </Button>
-    </form>
+      {presets.length === 0 ? (
+        <p className="text-2xs text-ink-faint">No library figures match — create your own below.</p>
+      ) : (
+        <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label="Library figures">
+          {presets.map((f) => (
+            <li key={f.figureType}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAdd(f.name, f.figureType)}
+              >
+                {f.name}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="flex flex-col gap-2 border-t border-line pt-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          const next = name.trim();
+          if (!next) return;
+          onAdd(next, undefined);
+          setName("");
+        }}
+      >
+        <Input
+          label="Figure name"
+          placeholder="…or create your own"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
+          Add custom
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+const ALIGNMENT_QUALIFIERS: Alignment["qualifier"][] = ["facing", "backing", "pointing"];
+const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
+  "LOD",
+  "ALOD",
+  "wall",
+  "centre",
+  "DW",
+  "DC",
+  "DW_against",
+  "DC_against",
+];
+
+/** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
+ *  facing-direction the figure starts and ends on. Editor-only. */
+function AlignmentEditor({
+  figure,
+  onSet,
+}: {
+  figure: FigureDoc;
+  onSet: (edge: "entry" | "exit", alignment: Alignment | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-line pt-3">
+      <h3 className="text-sm font-bold text-ink">Alignment</h3>
+      <AlignmentEdge
+        label="Entry"
+        current={figure.entryAlignment ?? null}
+        onChange={onSet}
+        edge="entry"
+      />
+      <AlignmentEdge
+        label="Exit"
+        current={figure.exitAlignment ?? null}
+        onChange={onSet}
+        edge="exit"
+      />
+    </div>
+  );
+}
+
+/** One edge (entry/exit) of the alignment editor: qualifier + direction selects. */
+function AlignmentEdge({
+  label,
+  edge,
+  current,
+  onChange,
+}: {
+  label: string;
+  edge: "entry" | "exit";
+  current: Alignment | null;
+  onChange: (edge: "entry" | "exit", alignment: Alignment | null) => void;
+}) {
+  const qualifier = current?.qualifier ?? "facing";
+  const direction = current?.direction ?? "";
+  return (
+    <fieldset aria-label={`${label} alignment`} className="flex items-end gap-2">
+      <Select
+        label={`${label} facing`}
+        value={qualifier}
+        options={ALIGNMENT_QUALIFIERS.map((q) => ({ value: q, label: q }))}
+        onChange={(e) =>
+          onChange(edge, {
+            qualifier: e.target.value as Alignment["qualifier"],
+            direction: (direction || "LOD") as Alignment["direction"],
+          })
+        }
+      />
+      <Select
+        label={`${label} direction`}
+        value={direction}
+        options={[
+          { value: "", label: "— not set" },
+          ...ALIGNMENT_DIRECTIONS.map((d) => ({ value: d, label: d })),
+        ]}
+        onChange={(e) => {
+          const d = e.target.value;
+          onChange(edge, d ? { qualifier, direction: d as Alignment["direction"] } : null);
+        }}
+      />
+    </fieldset>
   );
 }
 

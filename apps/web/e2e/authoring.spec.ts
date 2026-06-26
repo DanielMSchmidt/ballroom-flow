@@ -49,6 +49,17 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
+    // 4b. Notate the figure (US-028 hero flow): open its step timeline, tap
+    //     count 1, set footwork "T"; the chip shows on that count.
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /^T$/ }).click();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible();
+    // 4c. Set the figure's entry alignment (US-031): a facing-direction → a chip.
+    await page.getByLabel(/entry direction/i).selectOption("DW");
+    await page.keyboard.press("Escape");
+    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
+
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
     //    reconnect (US-018 open & view). The figure-after-reload is reliable now
@@ -56,6 +67,22 @@ test.describe("@smoke core authoring journey", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // The entry-alignment chip persisted too (figure doc).
+    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
+
+    // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
+    //     timeline → count 1 still carries "T".
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.keyboard.press("Escape");
+
+    // 5c. The reading view lays the whole routine out read-only — the notated
+    //     step ("T") shows as a chip in the timeline.
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await expect(page.getByTestId("reading-view").getByText("T", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
     await page.getByRole("button", { name: /all routines/i }).click();
