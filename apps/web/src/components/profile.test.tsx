@@ -15,10 +15,6 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 interface ProfileModule {
   Profile: ComponentType<Record<string, unknown>>;
 }
-interface UndoBarModule {
-  UndoControls: ComponentType<Record<string, unknown>>;
-}
-
 describe.skip("US-053 Account / profile + plan status", () => {
   it("edits displayName + identity color and shows plan + owned-routine count", async () => {
     // Intent: the profile edits identity and shows plan/quota.
@@ -43,16 +39,9 @@ describe.skip("US-053 Account / profile + plan status", () => {
   });
 });
 
-describe.skip("US-038 Per-user undo / redo UX (toast surface)", () => {
-  it("shows an 'Undone' toast on undo and a soft 'superseded' hint", async () => {
-    // Intent: undo shows an "Undone" toast; if others built on the change, a soft hint.
-    // Arrange: render <UndoControls> with an undoable last change.
-    // Act: click Undo. Assert: an "Undone" toast appears; redo becomes available.
-    //   (The two-client "only my change reverts" is the E2E test undo.spec.ts.)
-    // Covers US-038 AC-1 (Undone toast) + AC-4 (redo available) — §10.2 "toasts incl. 'Undone'".
-    const { UndoControls } = await importComponent<UndoBarModule>("../components/UndoControls");
-    renderUi(<UndoControls canUndo />);
-    await userEvent.click(screen.getByRole("button", { name: /undo/i }));
-    expect(await screen.findByText(/undone/i)).toBeInTheDocument();
-  });
-});
+// US-038 Per-user undo / redo UX: the undo/redo affordances + "Undone" toast live
+// on the OPEN routine (the Assemble header), not on a standalone <UndoControls> or
+// the Profile — so the component coverage is in `assemble.test.tsx` (describe
+// "US-038 Per-user undo / redo UX"). The two-client "only my change reverts;
+// redo restores" proof is the E2E test (`undo.spec.ts`). AC-3 (the soft
+// "superseded" hint) is deferred — see USER-STORIES.md US-038.

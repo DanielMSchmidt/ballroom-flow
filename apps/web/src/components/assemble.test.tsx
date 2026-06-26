@@ -338,6 +338,45 @@ describe("US-037 Choreo fork ('make it your own')", () => {
   });
 });
 
+describe("US-038 Per-user undo / redo UX", () => {
+  /** A minimal routine for exercising the undo/redo affordances. */
+  const undoRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("lets an editor undo (with an 'Undone' toast) and redo (AC-1 + AC-4)", async () => {
+    // Intent: the editor surface exposes per-user undo/redo; undo shows the
+    //   "Undone" toast and inverts via the store; redo re-applies via the store.
+    //   (The "only my change reverts across two clients" proof is undo.spec.ts.)
+    // Covers US-038 AC-1 (Undone toast) + AC-4 (redo).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const spies = { undo: vi.fn(), redo: vi.fn() };
+    renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(undoRoutine(), [], spies)} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^undo$/i }));
+    expect(spies.undo).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/undone/i)).toBeInTheDocument(); // AC-1 toast
+    await userEvent.click(screen.getByRole("button", { name: /^redo$/i }));
+    expect(spies.redo).toHaveBeenCalledTimes(1); // AC-4 redo
+  });
+
+  it("hides undo/redo from a non-editor (viewer)", async () => {
+    // Intent: undo/redo are editor-only affordances (gated on can(role,'canEdit')).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(undoRoutine(), [])} />);
+    expect(screen.queryByRole("button", { name: /^undo$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^redo$/i })).toBeNull();
+  });
+});
+
 describe.skip("US-031 Edit per-figure alignment", () => {
   it("sets entry/exit + per-placement alignment (qualifier + direction)", async () => {
     // Intent: per-figure alignment is editable (entry/exit + optional per-placement).

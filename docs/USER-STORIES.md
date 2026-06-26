@@ -623,9 +623,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - If others built on my change, a soft "superseded" hint shows (no hard refusal).
   - Redo re-applies; a new edit clears redo. No cross-document undo of a copy-on-write.
 - **Tests (unskip when done):**
-  - Component (toast surface): `apps/web/src/components/profile.test.tsx` (describe `US-038 …`) — `shows an 'Undone' toast on undo and a soft 'superseded' hint` (AC-1; the superseded-hint AC-3 should get its own assertion when the hint UI lands).
+  - Component (toast surface): `apps/web/src/components/assemble.test.tsx` (describe `US-038 Per-user undo / redo UX`) — `lets an editor undo (with an 'Undone' toast) and redo` (AC-1 + AC-4) + `hides undo/redo from a non-editor`. (The affordances + toast live on the open routine's header.)
   - E2E (two-client, AC-2 + AC-4): `apps/web/e2e/undo.spec.ts` — `A's undo reverts only A's last change; B's concurrent edit survives; redo restores`.
   - Domain primitive: US-010's `undo.test.ts` (inverse-change, B's edit preserved, redo).
+  - **Deferred — AC-3 soft "superseded" hint:** not yet built. History-based undo still succeeds when others built on the change (Automerge merges; no hard refusal), so the hint is advisory; add it + its assertion when the hint UX lands.
 
 ---
 
