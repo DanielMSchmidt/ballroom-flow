@@ -71,6 +71,7 @@
 | US-052 | Cross-browser E2E (iOS Safari + Android Chrome) | M9 | system/developer | US-050 | Core journeys + convergence + fork pass on chromium-desktop, mobile-chrome, mobile-safari. |
 | US-053 | Account / profile + plan status | M3 | user-facing | US-019,US-022 | Edit displayName + identity color; show plan + owned-routine count; sign out. |
 | US-054 | Full Standard syllabus library seed (ISTD) | Content | system/developer | US-005,US-032 | Global FigureDocs by figureType×dance; validated core at launch, full syllabus rolling; values are data, refinable. |
+| US-055 | Demo routine on join (fork of a central "golden steps" Waltz seed) | M7 | user-facing | US-007,US-025,US-045 | New users get a personal, editable demo routine — a fork of a central app-owned sample Waltz routine — so they explore real content immediately, not a blank page. |
 
 ---
 
@@ -801,4 +802,24 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `bundles a FigureType catalog mapping each family to the dances it exists in` (AC-4 catalog)
   - `versions seed docs by schemaVersion (corrections are data edits)` (AC-3 + AC-4 versioned)
   - These pin that the seed is WELL-FORMED (schema-valid, tagged, versioned), not notation accuracy — AC-2's "validated core" is refined with testers per Q-LIBSEED.
+
+#### US-055 — Demo routine on join (fork of a central "golden steps" Waltz seed)
+- **Narrative:** As a new user, when I join I want a personal demo routine already in my list — a **fork** of a central, app-owned sample Waltz routine — so I can explore and edit real choreography immediately instead of staring at a blank page.
+- **Milestone:** M7 (build once the first feature-complete slice exists — create/list/open/fork/sample all working) · **Source:** user request 2026-06-26; §2.4/§5.2 fork, §4.0 onboarding · **Depends-on:** US-007 (fork/clone), US-025 (create/own a routine), US-045 (sample routine) · **Type:** user-facing
+- **Acceptance:**
+  - A central, **app-owned** "golden steps" Waltz sample routine exists as a seed (authored like the library seed; the same routine US-045 surfaces as the sample).
+  - On a new user's first join/onboarding, they receive a **fork** of it (US-007 clone — frozen + independent: later edits to the central seed do **not** flow into their copy) that they **own and can fully edit**.
+  - The demo is clearly labelled as a demo/sample (so the user knows it's a starting point, not their own work).
+  - **Decision to settle at build:** whether the demo counts against the 3-routine quota (US-022). Default lean: it does **not** count (it's a gift), or it counts but is trivially deletable — pick during build.
+- **Figure sequence (Waltz):** the user's "golden steps" amalgamation, mapped to canonical ISTD names (verify against [`docs/seed/istd-standard-figures.json`](seed/istd-standard-figures.json) / `wdsf-standard-figures.json` at build):
+  1. **Natural Turn** *(user said "Natural Half Turn" — there is no figure by that name; this is the Natural Turn 1–3 that begins the spin)*
+  2. **Natural Spin Turn** *(user "Spin Turn"; in ISTD the Natural Spin Turn = Natural Turn 1–3 + Spin Turn 4–6, so the first two map to one Natural Spin Turn)*
+  3. **Natural Turn (4–6)** *(user "4-6 Natural Turn" — the back half, resolving after the spin)*
+  4. **Progressive Chassé to R** *(user "Chasse")*
+  5. **Outside Change** *(exact ✓)*
+  6. **Progressive Chassé to R** *(user second "Chasse"; could be Chassé from PP — confirm)*
+  7. **Natural Turn** *(✓)*
+  - **Terminology note:** "golden steps" is the user's friendly term for this classic foundational amalgamation — NOT the formal Gold-level "Golden Waltz" figures (Contra Check, Outside Spin, Turning Lock…). Keep the friendly name; it's a bronze-level teaching routine.
+- **Tests (when built):** worker/onboarding — a new user ends up owning a forked demo routine; domain — the fork is independent (an edit to the central seed does not appear in the user's fork). (Test ids TBD when scheduled.)
+- **Not now:** explicitly deferred by the user — schedule after the first feature-complete version. Captured so it isn't forgotten (see also the central-seed authoring, which pairs with US-045/US-054).
 
