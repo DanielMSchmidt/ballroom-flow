@@ -16,6 +16,7 @@ import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 import {
   addSection,
+  buildDoc,
   buildRoutineDoc,
   can,
   type EffectiveRole,
@@ -158,6 +159,27 @@ export class DocDO extends DurableObject<Env> {
       );
       this.ctx.storage.sql.exec("INSERT INTO changes (data) VALUES (?)", buf);
     }
+  }
+
+  /**
+   * Seed a never-before-used document's INITIAL content durably, server-side, at
+   * create (#201/#109). The worker calls this from POST /api/routines & /figures
+   * after the D1 projection, so the doc's title/dance (routine) or name/etc.
+   * (figure) is DO-PERSISTED the instant the doc exists — instead of a client
+   * write that can be lost on a reload right after create. NO-CLOBBER: if the DO
+   * already has any persisted content, this is a no-op (never overwrites a real
+   * doc). Seeding here also means a later connect finds real content and never
+   * auto-materializes the empty-routine placeholder (#109).
+   */
+  async seedDoc(content: Record<string, unknown>): Promise<void> {
+    if (this.doc) return;
+    const sql = this.ctx.storage.sql;
+    const hasSnap = sql.exec("SELECT 1 FROM snapshot WHERE id = 0 LIMIT 1").toArray().length > 0;
+    const hasChanges = sql.exec("SELECT 1 FROM changes LIMIT 1").toArray().length > 0;
+    if (hasSnap || hasChanges) return; // already a real doc — don't clobber
+    const seeded = buildDoc(content) as A.Doc<RoutineDoc>;
+    this.persist(A.getAllChanges(seeded));
+    this.doc = seeded;
   }
 
   /**

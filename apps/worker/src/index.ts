@@ -9,6 +9,7 @@ import { issueInvite, redeemInvite } from "./db/invites";
 import { resolveEffectiveRole } from "./db/membership";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
+import type { DocDO } from "./doc-do";
 import { testSeed } from "./routes/test-seed";
 
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
@@ -17,8 +18,9 @@ const FREE_ROUTINE_CAP = 3;
 export type Env = {
   DB: D1Database;
   // Per-document Automerge host (US-014, PLAN §6/D23): one DO per routine/figure
-  // document, SQLite-backed, the sync + permission boundary.
-  DOC_DO: DurableObjectNamespace;
+  // document, SQLite-backed, the sync + permission boundary. Typed with the DO
+  // class so the create routes can call its RPC (seedDoc, #205).
+  DOC_DO: DurableObjectNamespace<DocDO>;
   // Clerk verification keys — set as Wrangler secrets (see PROVISIONING.md).
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
@@ -117,6 +119,19 @@ app.post("/api/routines", async (c) => {
 
   const docRef = newId();
   await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance });
+  // Server-seed the routine's CRDT content durably at create (#201/#109), so its
+  // title/dance is DO-persisted before any client connects — the Assemble header
+  // shows the real title, never "Untitled routine", and survives an immediate reload.
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).seedDoc({
+    id: docRef,
+    title,
+    dance,
+    ownerId: user.sub,
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
   return c.json({ docRef, title, dance, plan }, 201);
 });
 
@@ -137,6 +152,21 @@ app.post("/api/figures", async (c) => {
   const { figureRef, name, dance, figureType } = parsed.data;
 
   await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  // Server-seed the figure's CRDT content durably at create (#205), so the figure
+  // name/attributes are DO-persisted before the client connects — no racy client
+  // seed write that can be lost on a reload right after "Add figure".
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
+    id: figureRef,
+    scope: "account",
+    ownerId: user.sub,
+    figureType,
+    dance,
+    name,
+    source: "custom",
+    attributes: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
 });
 
