@@ -31,3 +31,23 @@ export const membership = sqliteTable("membership", {
 });
 
 export type MembershipRow = typeof membership.$inferSelect;
+
+/**
+ * The thin per-document index row (US-016 migration 0001), projected from the DO
+ * on its alarm. Typed here so the permission boundary can resolve a doc's owner
+ * (US-021 owner elevation) and US-025 can list/search without reading CRDT.
+ */
+export const documentRegistry = sqliteTable("document_registry", {
+  docRef: text("docRef").primaryKey(),
+  type: text("type").notNull(),
+  ownerId: text("ownerId").notNull(),
+  doName: text("doName").notNull(),
+  figureType: text("figureType"),
+  dance: text("dance"),
+  title: text("title"),
+  forkedFromRef: text("forkedFromRef"),
+  updatedAt: integer("updatedAt").notNull(),
+  deletedAt: integer("deletedAt"),
+});
+
+export type DocumentRegistryRow = typeof documentRegistry.$inferSelect;

@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { capabilitiesFor } from "@ballroom/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "./test-support/authed-context";
@@ -120,7 +120,7 @@ describe("US-020 Per-document membership & roles", () => {
   });
 });
 
-describe.skip("US-021 Permission boundary at the DO connection", () => {
+describe("US-021 Permission boundary at the DO connection", () => {
   it("accepts an editor's change connection on a routine doc", async () => {
     // Intent: an editor connects and may push changes (the happy path).
     // Arrange: seed routine + editor membership; mint the editor's JWT.
@@ -214,5 +214,53 @@ describe.skip("US-021 Permission boundary at the DO connection", () => {
     });
     const res = await tryConnect(docRef, ctx.authHeaders());
     expect(res.status).toBe(401);
+  });
+
+  it("accepts the OWNER even with no membership row (owner elevation, #168)", async () => {
+    // Intent: a doc's owner is never locked out of their own doc — resolveEffectiveRole
+    //   elevates document_registry.ownerId to "owner" (editor+delete) without a
+    //   membership row. Arrange: seed a routine owned by the actor, NO membership.
+    // Act: connect. Assert: 101 (owner gets an accepted editor-grade connection).
+    // Covers #168 (owner elevation at the boundary).
+    const docRef = uniqueDocName("rt");
+    const ctx = await authedContext({ keypair: kp, userId: "u_owner", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_owner", displayName: "O", identityColor: "#777", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+      // deliberately NO memberships
+    });
+    const res = await tryConnect(docRef, ctx.authHeaders());
+    expect(res.status).toBe(101);
+  });
+
+  it("drops a viewer's structural write over the socket (read-only enforced)", async () => {
+    // Intent: a viewer may CONNECT (read-only) but a structural write frame is
+    //   refused at the socket — proven by feeding a real, lineage-valid change
+    //   through webSocketMessage with a viewer attachment (dropped) vs an editor
+    //   attachment (applied). Covers US-021 AC-2 (viewer read-only) at the write.
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_vw", displayName: "Vw", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(
+      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (inst) => {
+        const bytes = await inst.buildChangeForTest({ op: "addSection", name: "ViewerEdit" });
+        const rows0 = await inst.debugChangeRowCount();
+        const wsAs = (role: string) =>
+          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+
+        // Viewer frame → dropped (no new persisted change).
+        await inst.webSocketMessage(wsAs("viewer"), bytes.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0);
+
+        // The SAME bytes from an editor → applied (proves the bytes were valid;
+        // the viewer drop was the role gate, not a malformed/duplicate frame).
+        await inst.webSocketMessage(wsAs("editor"), bytes.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+      },
+    );
   });
 });

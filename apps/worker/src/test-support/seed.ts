@@ -77,9 +77,14 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
   const stmts: D1PreparedStatement[] = [];
 
   for (const u of spec.users ?? []) {
+    // INSERT OR IGNORE: D1 is shared across the whole worker run (isolatedStorage
+    // is false — DO/SQLite teardown gotcha), so the same fixed actor id (e.g.
+    // "u_ed") is seeded by several suites/tests. Re-seeding one identity is a
+    // harmless no-op. Docs/memberships below stay strict — they're keyed by the
+    // per-test unique docRef, so a collision there is a real isolation bug.
     stmts.push(
       env.DB.prepare(
-        "INSERT INTO users (id, displayName, identityColor, plan) VALUES (?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO users (id, displayName, identityColor, plan) VALUES (?, ?, ?, ?)",
       ).bind(u.id, u.displayName, u.identityColor, u.plan),
     );
   }

@@ -13,10 +13,25 @@
 
 import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
-import { addSection, buildRoutineDoc, type RoutineDoc, readRoutine } from "@ballroom/domain";
+import {
+  addSection,
+  buildRoutineDoc,
+  can,
+  type EffectiveRole,
+  type RoutineDoc,
+  readRoutine,
+} from "@ballroom/domain";
 import { authenticateToken } from "./auth";
-import { roleFor } from "./db/membership";
+import { resolveEffectiveRole } from "./db/membership";
 import type { Env } from "./index";
+
+/** Per-connection socket attachment (survives hibernation). */
+interface SocketAttachment {
+  /** Stable per-connection Automerge actor id (hex). */
+  actor: string;
+  /** The connection's resolved per-document role (US-021); gates socket writes. */
+  role: EffectiveRole;
+}
 
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp = { op: "addSection"; name: string } & Record<string, unknown>;
@@ -235,36 +250,37 @@ export class DocDO extends DurableObject<Env> {
     // can't recover it from `ctx.id` (US-016). Remember it so the alarm can
     // project the D1 registry row keyed by doName even if `setMetadata` is never
     // called for a connect-only doc.
+    // SECURITY (#133/#134): `x-doc-name` is the DO's identity (its idFromName
+    // key), set ONLY by the trusted Worker connect route — the DO can't recover
+    // it from `ctx.id`. `rememberDoName` persists it once (COALESCE), so a later
+    // request can't overwrite an established doc's identity; we authorize against
+    // THIS name. (A forged x-doc-name only ever targets the DO you already
+    // addressed via idFromName, so it can't cross-authorize another document.)
     const doName = request.headers.get("x-doc-name");
     if (doName) this.rememberDoName(doName);
 
-    // US-020 — per-document permission boundary (transitional).
-    // SECURITY: the connect path is still OPEN when NO token is presented (the
-    // documented pre-US-021 state — see #133/#134). US-021 makes it fail-closed
-    // (a token is REQUIRED, and a viewer's writes are refused on the socket).
-    // For now, when a caller DOES authenticate we enforce membership on THIS
-    // document so an authenticated non-member is rejected (AC-2, per-doc):
-    //   • invalid/expired token → 401 (fail closed on the auth we were handed)
-    //   • valid token, no row   → 403 (authenticated, but not a member here)
-    // Membership is looked up by doName (the route always forwards x-doc-name).
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader) {
-      const user = await authenticateToken(authHeader, this.env);
-      if (!user) return new Response("unauthenticated", { status: 401 });
-      if (!doName) return new Response("missing doc name", { status: 400 });
-      const role = await roleFor(this.env.DB, doName, user.sub);
-      if (!role) return new Response("forbidden", { status: 403 });
-    }
+    // US-021 — FAIL-CLOSED per-document permission boundary (PLAN §5.1/§6).
+    // A token is REQUIRED and verified BEFORE any role lookup (AC-1 fail-closed):
+    //   • missing/invalid/expired token → 401 (never reaches the role check)
+    //   • valid token, non-member       → 403 (per-doc, routine AND figure; AC-3)
+    // The owner is elevated even without a membership row (#168). The resolved
+    // role rides on the socket attachment so webSocketMessage can gate writes.
+    const user = await authenticateToken(request.headers.get("Authorization"), this.env);
+    if (!user) return new Response("unauthenticated", { status: 401 });
+    if (!doName) return new Response("missing doc name", { status: 400 });
+    const role = await resolveEffectiveRole(this.env.DB, doName, user.sub);
+    if (!role) return new Response("forbidden", { status: 403 });
 
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
-    // Per-connection Automerge actor id (#107/#70). Client-authored changes
-    // already carry the client's own actor; we still tag the SERVER socket with
-    // a stable per-connection actor so any DO-side mutation on behalf of this
-    // connection is attributed to it, never the DO's own actor (which would
-    // break per-user undo). Survives hibernation via the socket attachment.
-    server.serializeAttachment({ actor: newActorId() });
+    // Per-connection attachment (#107/#70): a stable Automerge actor id so any
+    // DO-side mutation on behalf of this connection is attributed to it (never
+    // the DO's own actor, which would break per-user undo), plus the connection's
+    // resolved role so webSocketMessage can refuse a read-only socket's writes.
+    // Survives hibernation via the socket attachment.
+    const attachment: SocketAttachment = { actor: newActorId(), role };
+    server.serializeAttachment(attachment);
 
     // Accept as a Hibernatable WebSocket (handlers are DO methods, so they
     // survive hibernation — unlike addEventListener closures).
@@ -282,19 +298,40 @@ export class DocDO extends DurableObject<Env> {
    * change bytes; apply (idempotently) and relay to the OTHER clients so all
    * connections converge.
    *
-   * The connect route is OPEN until US-021, so frames are untrusted: a malformed
-   * frame (not valid Automerge change bytes) must NOT crash the handler or take
-   * down the DO — we DROP it (Automerge `applyChanges` throws "Invalid magic
-   * bytes" on garbage). A typed WS envelope with explicit error replies is #117.
+   * US-021 permission boundary: writes are gated by the connection's role. Only a
+   * role that `canEdit` (editor/owner) may mutate the doc over the socket; a
+   * viewer is read-only. A COMMENTER is also read-only AT THE SOCKET FOR NOW — a
+   * raw change frame carries no annotation-vs-structural intent, so we can't yet
+   * allow a commenter's annotation while refusing a structural edit; that's
+   * re-enabled by the annotations story via a typed change envelope (#117).
+   *
+   * Frames are still untrusted: a malformed frame (not valid Automerge change
+   * bytes) must NOT crash the handler — we DROP it (Automerge `applyChanges`
+   * throws "Invalid magic bytes" on garbage).
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
+    // Read-only socket (viewer/commenter, or an attachment we can't read) → drop
+    // the write. This is defence in depth: the connection was already authorized
+    // at upgrade, but the role still bounds what it may DO.
+    const role = this.socketRole(ws);
+    if (!role || !can(role, "canEdit")) return;
     try {
       await this.ingestChange(new Uint8Array(message), ws);
     } catch {
       // Malformed/unapplyable frame — drop it; other clients + the doc are
       // unaffected. (Closing the socket with 1003 "unsupported data" is a
       // reasonable hardening once the typed envelope #117 distinguishes frames.)
+    }
+  }
+
+  /** The connection's resolved role from its socket attachment, or null. */
+  private socketRole(ws: WebSocket): EffectiveRole | null {
+    try {
+      const att = ws.deserializeAttachment() as SocketAttachment | null;
+      return att?.role ?? null;
+    } catch {
+      return null; // no/garbled attachment (e.g. a never-accepted socket) → read-only
     }
   }
 
@@ -360,6 +397,22 @@ export class DocDO extends DurableObject<Env> {
    */
   async debugChangeRowCount(): Promise<number> {
     return this.ctx.storage.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes").one().n;
+  }
+
+  /**
+   * Test-only: build a valid, lineage-compatible change for `op` against the
+   * CURRENT doc WITHOUT applying or persisting it. Lets a test feed a real change
+   * through `webSocketMessage` to prove the US-021 socket-write role gate (a
+   * viewer's frame is dropped; the same bytes from an editor apply).
+   */
+  async buildChangeForTest(op: DocOp): Promise<Uint8Array> {
+    // Clone first: applyOp goes through A.change, which INVALIDATES its input
+    // handle — applying it to the live `this.doc` would free the DO's doc
+    // (Automerge outdated-doc edge). The clone shares history, so the resulting
+    // change still applies cleanly onto this.doc and advances it.
+    const base = A.clone(this.getDoc());
+    const after = this.applyOp(base, op);
+    return (A.getChanges(base, after)[0] ?? new Uint8Array()) as Uint8Array;
   }
 
   // ── US-016: DO alarm — compaction + D1 index projection + invite expiry ─────

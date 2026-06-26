@@ -1,8 +1,10 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
-import { applyMigrations } from "./test-support/seed";
+import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
+import { applyMigrations, seedDb } from "./test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-014 — Per-document SQLite-backed DO hosts an Automerge doc [M2, system]
@@ -29,9 +31,12 @@ function freshDoc(prefix: string): { name: string; stub: DocStub } {
   return { name, stub: docs.get(docs.idFromName(name)) };
 }
 
+let kp: TestKeypair;
 beforeAll(async () => {
-  // Per-suite freshly-migrated D1 (empty migrations until M2 → no-op today).
   await applyMigrations();
+  // US-021 made the DO connect FAIL-CLOSED, so the WS-connect tests below must
+  // authenticate + be a member/owner. CLERK_JWT_KEY is the static test PEM.
+  kp = await generateTestKeypair();
 });
 
 describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
@@ -105,10 +110,19 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     //   cycle, SPIKE-FINDINGS sharp-edge #3, so the DO sync core is asserted here
     //   via the RPC stand-in the spike used.)
     // Covers US-015 AC-1 — §10.2 "two clients converge through a real DO".
-    const { stub } = freshDoc("routine");
+    const { name, stub } = freshDoc("routine");
 
+    // US-021: the connect is fail-closed — B authenticates as a member of THIS doc.
+    const ctx = await authedContext({ keypair: kp, userId: "u_ed", docRef: name, role: "editor" });
+    await seedDb({
+      users: [{ id: "u_ed", displayName: "Ed", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef: name, type: "routine", ownerId: "u_ed", doName: name }],
+      memberships: ctx.membership ? [ctx.membership] : [],
+    });
     const res = await stub.fetch(
-      new Request("https://do/connect", { headers: { Upgrade: "websocket" } }),
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": name, ...ctx.authHeaders() },
+      }),
     );
     expect(res.status).toBe(101); // B's Hibernatable WS connection is accepted
     res.webSocket?.accept();
@@ -157,11 +171,13 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     expect(await stub.debugChangeRowCount()).toBe(rowsBefore);
   });
 
-  it("drops a malformed WS frame without crashing the handler (open route is untrusted)", async () => {
-    // Intent: the connect route is OPEN until US-021, so frames are untrusted —
-    //   a garbage frame (not valid Automerge change bytes) must be DROPPED, not
-    //   crash webSocketMessage / take down the DO. Automerge's applyChanges
-    //   throws "Invalid magic bytes" on garbage; webSocketMessage swallows it.
+  it("drops a malformed WS frame without crashing the handler (frames are untrusted)", async () => {
+    // Intent: even from an authorized EDITOR socket, a garbage frame (not valid
+    //   Automerge change bytes) must be DROPPED, not crash webSocketMessage / take
+    //   down the DO. Automerge's applyChanges throws "Invalid magic bytes" on
+    //   garbage; webSocketMessage swallows it. (The socket carries an editor
+    //   attachment so the US-021 role gate passes and we genuinely exercise the
+    //   malformed-bytes path, not a read-only drop.)
     // Arrange: a DO with a real applied change. Act: deliver garbage bytes via
     //   webSocketMessage directly. Assert: it doesn't throw AND the doc is intact.
     const realDocs = env.DOC_DO;
@@ -173,14 +189,14 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
 
     // Call the DO's webSocketMessage with garbage bytes (no real socket needed —
     // broadcast no-ops with no connected sockets). Must resolve, not reject.
+    const editorWs = {
+      deserializeAttachment: () => ({ actor: "e", role: "editor" }),
+    } as unknown as WebSocket;
     await runInDurableObject(
       realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
       async (instance) => {
         await expect(
-          instance.webSocketMessage(
-            {} as unknown as WebSocket,
-            new Uint8Array([9, 9, 9, 9]).buffer,
-          ),
+          instance.webSocketMessage(editorWs, new Uint8Array([9, 9, 9, 9]).buffer),
         ).resolves.toBeUndefined();
       },
     );
