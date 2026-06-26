@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineWorkersConfig, readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
+import { TEST_JWT_PUBLIC_KEY_PEM } from "./src/test-support/test-keys";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,7 +32,11 @@ export default defineWorkersConfig(async () => {
           isolatedStorage: false,
           miniflare: {
             // Surfaced to tests via `import { env } from "cloudflare:test"`.
-            bindings: { TEST_MIGRATIONS: migrations },
+            // CLERK_JWT_KEY is the FIXED test public PEM (test-keys.ts) so the
+            // worker under test (`SELF`) verifies our minted tokens networklessly
+            // — it reads this STATIC binding, not a runtime env mutation. This is
+            // the deferred M3 positive-auth wiring (CLAUDE.md / TEST-MAP.md).
+            bindings: { TEST_MIGRATIONS: migrations, CLERK_JWT_KEY: TEST_JWT_PUBLIC_KEY_PEM },
           },
           wrangler: { configPath: "./wrangler.toml" },
         },

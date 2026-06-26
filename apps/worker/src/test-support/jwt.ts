@@ -2,19 +2,39 @@
 // Clerk test JWT minting (PLAN §10.3: "Clerk test JWKS/PEM + makeTestJWT; real
 // verify + per-doc role lookup at the DO boundary").
 //
-// We mint REAL RS256 JWTs with a locally-generated RSA keypair using Web Crypto
-// (available in workerd, so this runs inside vitest-pool-workers). The matching
-// PUBLIC key is exported as PEM so it can be injected as the worker's
-// `CLERK_JWT_KEY` env var — `@clerk/backend`'s `verifyToken({ jwtKey })` then
-// verifies our tokens NETWORKLESSLY (no Clerk JWKS fetch). This exercises the
-// real auth boundary (auth/index.ts) deterministically, with no live Clerk.
+// We mint REAL RS256 JWTs with a FIXED RSA keypair (test-keys.ts) using Web
+// Crypto (available in workerd, so this runs inside vitest-pool-workers). The
+// matching PUBLIC key is bound as the worker's `CLERK_JWT_KEY` (vitest.config.ts)
+// so `@clerk/backend`'s `verifyToken({ jwtKey })` verifies our tokens
+// NETWORKLESSLY (no Clerk JWKS fetch). This exercises the real auth boundary
+// (auth/index.ts) deterministically, with no live Clerk.
+//
+// The keypair is FIXED (not generated per run) because the worker under test
+// (`SELF`) reads CLERK_JWT_KEY from a STATIC binding — it can't see a runtime
+// env mutation (its env is a different object than the test runner's). See
+// test-keys.ts for the full rationale.
 //
 // No new dependency: built on Web Crypto + base64url, not `jose`/`jsonwebtoken`.
 // (If a future test needs ES256/EdDSA or JWKS rotation, consider adding `jose`
 // — see TEST-MAP.md "Missing dependencies". RS256 is enough for v1.)
 // ─────────────────────────────────────────────────────────────────────────
 
+import { TEST_JWT_PRIVATE_KEY_PEM, TEST_JWT_PUBLIC_KEY_PEM } from "./test-keys";
+
 const enc = new TextEncoder();
+
+/** Decode a PEM (BEGIN/END framed base64) to its raw DER bytes. */
+function pemToDer(pem: string): ArrayBuffer {
+  const b64 = pem
+    .replace(/-----BEGIN [^-]+-----/, "")
+    .replace(/-----END [^-]+-----/, "")
+    .replace(/\s/g, "");
+  const bin = atob(b64);
+  const buffer = new ArrayBuffer(bin.length);
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return buffer;
+}
 
 function base64url(input: ArrayBuffer | Uint8Array | string): string {
   let bytes: Uint8Array;
@@ -26,11 +46,11 @@ function base64url(input: ArrayBuffer | Uint8Array | string): string {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** A minted keypair + the artifacts the worker needs to verify its tokens. */
+/** A test keypair + the artifacts the worker needs to verify its tokens. */
 export interface TestKeypair {
   privateKey: CryptoKey;
   publicKey: CryptoKey;
-  /** SPKI PEM of the public key — set as the worker's CLERK_JWT_KEY for networkless verify. */
+  /** SPKI PEM of the public key — bound as the worker's CLERK_JWT_KEY for networkless verify. */
   publicKeyPem: string;
   kid: string;
 }
@@ -47,22 +67,28 @@ export interface JwtClaims {
   [claim: string]: unknown;
 }
 
-/** Generate an RSA-256 keypair and export the public key as SPKI PEM. */
+/**
+ * Load the FIXED RS256 test keypair (test-keys.ts) as Web Crypto keys. Returns
+ * the private key (to sign), the public key, and the public SPKI PEM (= the
+ * worker's test CLERK_JWT_KEY). Deterministic so it matches the static binding.
+ */
 export async function generateTestKeypair(kid = "test-key-1"): Promise<TestKeypair> {
-  const pair = await crypto.subtle.generateKey(
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      modulusLength: 2048,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: "SHA-256",
-    },
-    true,
-    ["sign", "verify"],
+  const algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToDer(TEST_JWT_PRIVATE_KEY_PEM),
+    algorithm,
+    false,
+    ["sign"],
   );
-  const spki = await crypto.subtle.exportKey("spki", pair.publicKey);
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(spki)));
-  const pem = `-----BEGIN PUBLIC KEY-----\n${(b64.match(/.{1,64}/g) ?? []).join("\n")}\n-----END PUBLIC KEY-----`;
-  return { privateKey: pair.privateKey, publicKey: pair.publicKey, publicKeyPem: pem, kid };
+  const publicKey = await crypto.subtle.importKey(
+    "spki",
+    pemToDer(TEST_JWT_PUBLIC_KEY_PEM),
+    algorithm,
+    false,
+    ["verify"],
+  );
+  return { privateKey, publicKey, publicKeyPem: TEST_JWT_PUBLIC_KEY_PEM, kid };
 }
 
 /**
