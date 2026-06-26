@@ -78,8 +78,8 @@ imports through small shims that defer module resolution to runtime:
 | US-044 | Lanes (one kind across all counts) | component | `apps/web/src/components/attribute-editor.test.tsx` |
 | US-045 | Sample routine + start-from-template | component | `apps/web/src/components/choreo-list.test.tsx` |
 | US-046 | Routine + figure search (EXPLAIN) | worker | `apps/worker/src/routes/search.test.ts` |
-| US-047 | JSON export (routine + figures) | worker + E2E | `apps/worker/src/routes/export-import.test.ts`, `apps/web/e2e/export-import.spec.ts` |
-| US-048 | JSON import (routine + figures) | worker + E2E | `apps/worker/src/routes/export-import.test.ts`, `apps/web/e2e/export-import.spec.ts` |
+| US-047 | _retired — JSON export superseded by forking_ | — | — |
+| US-048 | _retired — JSON import superseded by forking_ | — | — |
 | US-049 | Ops: Sentry + AE + EXPLAIN gate + Smart Placement | worker | `apps/worker/src/ops.test.ts` |
 | US-050 | PWA install + offline app shell | E2E | `apps/web/e2e/pwa-a11y.spec.ts` |
 | US-051 | Accessibility WCAG AA | component (axe) + E2E | `apps/web/src/components/a11y.test.tsx`, `apps/web/e2e/pwa-a11y.spec.ts` |
@@ -87,7 +87,7 @@ imports through small shims that defer module resolution to runtime:
 | US-053 | Account / profile + plan status | worker + component | `apps/worker/src/routes/me-profile.test.ts`, `apps/web/src/components/profile.test.tsx` |
 | US-054 | Full Standard syllabus library seed (ISTD) | domain | `packages/domain/src/seed-library.test.ts` |
 
-**Every US-001…US-054 is covered.** No story is left untested.
+**Every live story (US-001…US-054, minus the retired US-047/US-048) is covered.** No story is left untested.
 
 ## Reusable test abstractions built (signatures + locations)
 
@@ -146,7 +146,7 @@ imports through small shims that defer module resolution to runtime:
 - `pnpm test` → exit 0. Domain 49 skipped (13 files); worker 47 skipped + 3 pre-existing pass (13 files); web 52 skipped (9 files). No collection/import errors.
 - `pnpm typecheck` → all 4 workspaces pass.
 - `pnpm lint` → Biome clean (no errors).
-- `pnpm --filter web exec playwright test --list` → 54 tests collect across 3 projects (18 × 3).
+- `pnpm --filter web exec playwright test --list` → 51 tests collect across 3 projects (17 × 3; the export/import spec was retired with US-047/048).
 
 Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into one
 `it` per acceptance criterion, and a US-009 AC-4 "convergence across a fork (cloned

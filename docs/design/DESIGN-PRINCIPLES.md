@@ -38,7 +38,7 @@ A PR that touches user-facing UI should link this file and confirm the applicabl
 
 16. **Standard toast conventions.** Confirmations use the toast pattern and include at least these required messages where applicable: **"Copied as your variant"** (copy-on-write), **"Undone"** (undo), and a **quota upsell** toast (4th owned routine). Toasts are announced to AT (see #8) and are dismissible / auto-dismiss without trapping focus.
 17. **Undo is discoverable and honest.** A user can undo their **own** last change; the UI offers "Undone" feedback and, at most, a **soft "superseded" hint** if others built on it — never a hard refusal (PLAN §5.4).
-18. **Every async/loading action has a state.** Pending, success, and error states are visible; the UI never looks idle while work is in flight (relevant for multi-doc sync, fork, export/import).
+18. **Every async/loading action has a state.** Pending, success, and error states are visible; the UI never looks idle while work is in flight (relevant for multi-doc sync and fork).
 19. **Empty states are designed.** Every list/collection (routines, sections, figures, variants, annotations, members) has a purposeful empty state that guides the next action (e.g. empty Choreo list → **sample + start-from-template**), not a blank area.
 
 ## Group 5 — Online-first, loading & offline

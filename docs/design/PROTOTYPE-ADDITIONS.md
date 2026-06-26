@@ -99,7 +99,7 @@ The single biggest gap: the plan's v1 centerpiece **does not exist** in the wire
 
 ### J. Data ownership — PLAN §7, §4.0
 
-- **J1. JSON export AND import** of a routine + its referenced figures. *Rationale: §7, §4.0 export/import row.* — **TODO** (absent from wireframe entirely).
+- **J1. ~~JSON export AND import~~ — RETIRED.** A self-contained owned copy is delivered by **forking** (clone + copy-on-write of a routine with its referenced figures); no separate JSON export/import screen is needed.
 
 ### K. Sample / template & empty states — PLAN §4.0, §4.1
 
@@ -127,4 +127,4 @@ The single biggest gap: the plan's v1 centerpiece **does not exist** in the wire
 - Quota check + upsell toast; Profile plan status + owned count; remove stored role (F1, F2, I1, I3, C5).
 - Role view toggle; alignment chips/editing; section rename on figure (B5, B2, C5t).
 - Unify timeline-comment + journal as one Annotation concept (D5).
-- JSON export/import (J1); sample/template + empty states (K1); offline-state (L1).
+- Sample/template + empty states (K1); offline-state (L1). _(J1 JSON export/import retired — forking supersedes.)_

@@ -18,7 +18,7 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | Document | What it is | Read it when… |
 |---|---|---|
 | **[`docs/PLAN.md`](docs/PLAN.md)** | **The single source of truth.** Domain model, controlled vocabularies, features-by-screen, collaboration/fork/permissions/undo, architecture, NFRs, **locked technical decisions** (§8), milestone roadmap (§9), testing strategy (§10). | **Always, first.** Any ambiguity is resolved here. |
-| [`docs/USER-STORIES.md`](docs/USER-STORIES.md) | The v1 backlog: 54 stories (US-001…054) mapped to milestones M1–M9. Each story has acceptance criteria, dependencies, **and an "unskip when done" block naming the exact tests that should pass when it's implemented.** | Picking up a unit of work; knowing what "done" means. |
+| [`docs/USER-STORIES.md`](docs/USER-STORIES.md) | The v1 backlog: 52 stories (US-001…054, minus the retired US-047/048 JSON export/import — forking supersedes) mapped to milestones M1–M9. Each story has acceptance criteria, dependencies, **and an "unskip when done" block naming the exact tests that should pass when it's implemented.** | Picking up a unit of work; knowing what "done" means. |
 | [`docs/TEST-MAP.md`](docs/TEST-MAP.md) | Story → test-file × layer coverage matrix; flagged sub-AC gaps. | Finding which tests cover a story, or what's not yet asserted. |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | How to install, run locally, run each test layer, manage env/secrets, and **the test-harness conventions you must follow**. | Setting up; running things; writing tests. |
 | [`docs/TOOLING.md`](docs/TOOLING.md) | What dev/test tooling exists, why, and what's deferred (Sentry/Analytics → M8, Lighthouse → M9). | Touching CI, configs, or test infra. |
@@ -85,7 +85,7 @@ pnpm coverage         # coverage (thresholds: domain ≥95%, worker ≥90% — u
 
 ## 6. Status & how to proceed
 
-- **Done:** M0 foundation; design principles + prototype gap analysis; the 54-story backlog; the 3-layer test harness + Playwright matrix + CI; the Tailwind design-system base + `/styleguide` gallery; and a **complete skipped-test scaffold for all 54 stories**.
+- **Done:** M0 foundation; design principles + prototype gap analysis; the 52-story backlog; the 3-layer test harness + Playwright matrix + CI; the Tailwind design-system base + `/styleguide` gallery; and a **complete skipped-test scaffold for all live stories**.
 - **Now:** **M1 — domain core.** Walking-skeleton stories first: US-001→010, US-012. Use `superpowers:subagent-driven-development` / `executing-plans`.
 - **Deferred wiring (add with its milestone, not before):**
   - `pnpm add @automerge/automerge` to `packages/domain` (M1) and `apps/worker` (M2) — needed to unskip US-009/010 and the doc builders.
