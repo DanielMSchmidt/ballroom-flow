@@ -206,17 +206,37 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
   });
 });
 
-describe.skip("US-030 Timeline role-view toggle", () => {
-  it("flips the viewed role on tapping a step (per-device preference)", async () => {
-    // Intent: tapping a step flips the viewed role; the choice is a per-device pref
-    //   (no stored User.defaultRole).
-    // Arrange: render the timeline with view=leader. Act: tap a step / flip control.
-    // Assert: the role indicator switches to follower.
+describe("US-030 Timeline role-view toggle", () => {
+  /** A free-text step attribute on count 1 scoped to `role` (null = both). */
+  const roleStep = (value: string, role: Attribute["role"]): Attribute => ({
+    id: `step-1-${value}`,
+    kind: "step",
+    count: 1,
+    value,
+    role,
+    deletedAt: null,
+  });
+
+  // A figure carrying one both-role + one leader-only + one follower-only value,
+  // so the lens has something to show/hide in each view.
+  const roleSeeded: Attribute[] = [
+    roleStep("both-role", null),
+    roleStep("leader-only", "leader"),
+    roleStep("follower-only", "follower"),
+  ];
+
+  it("flips the viewed role on the dedicated toggle (per-device preference)", async () => {
+    // Intent: the role lens flips on a dedicated, labelled toggle; the choice is a
+    //   per-device pref (no stored User.defaultRole) — local UI state only.
+    // Design note: AC-1 says "tap a step flips role"; we use a dedicated labelled
+    //   toggle instead (clearer a11y) — count taps stay bound to opening the editor.
+    // Arrange: render the timeline with view=leader. Act: click the flip toggle.
+    // Assert: the toggle now names the leader→follower flip (view switched).
     // Covers US-030 AC-1 (flip; per-device pref).
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    renderUi(<FigureTimeline role="editor" initialView="leader" />);
+    renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
     await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
     expect(screen.getByRole("button", { name: /leader|follower/i })).toBeInTheDocument();
   });
@@ -229,7 +249,7 @@ describe.skip("US-030 Timeline role-view toggle", () => {
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    renderUi(<FigureTimeline role="editor" initialView="leader" />);
+    renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
     expect(screen.getByText(/both-role/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
     expect(screen.getByText(/both-role/i)).toBeInTheDocument();
@@ -243,10 +263,12 @@ describe.skip("US-030 Timeline role-view toggle", () => {
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    renderUi(<FigureTimeline role="editor" initialView="leader" />);
+    renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
     expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/follower-only/i)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
     expect(screen.queryByText(/leader-only/i)).toBeNull();
+    expect(screen.getByText(/follower-only/i)).toBeInTheDocument();
   });
 });
 
