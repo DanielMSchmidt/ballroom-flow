@@ -11,8 +11,13 @@
 // respectively. Time signatures follow ballroom convention (research/domain.md):
 // Waltz & Viennese 3/4, Foxtrot & Quickstep 4/4, Tango 2/4.
 
+/** The 5 Standard travelling dances of v1 (no Latin/spot), as a runtime tuple —
+ *  the single source for both the {@link DanceId} type and value-level checks
+ *  (e.g. a Zod enum in @ballroom/contract, US-025/#79). */
+export const DANCE_IDS = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"] as const;
+
 /** The 5 Standard travelling dances of v1 (no Latin/spot). */
-export type DanceId = "waltz" | "viennese_waltz" | "quickstep" | "foxtrot" | "tango";
+export type DanceId = (typeof DANCE_IDS)[number];
 
 /** Per-dance metadata driving timing, phrasing, and applicability. */
 export interface DanceMeta {

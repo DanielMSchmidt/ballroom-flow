@@ -24,12 +24,13 @@ beforeAll(async () => {
   kp = await generateTestKeypair();
 });
 
-describe.skip("US-025 Create a routine", () => {
+describe("US-025 Create a routine", () => {
   it("creates a routine doc + an owned registry row and returns it in the list", async () => {
-    // Intent: creating a routine makes a DO-backed doc + a DocumentRegistry row.
+    // Intent: creating a routine makes a DO-backed doc + a DocumentRegistry row
+    //   that immediately appears (eager projection) in the owner's list.
     // Arrange: a signed-in free user under quota. Act: POST /api/routines {dance,title}.
-    // Assert: 201 with a new docRef; a document_registry row owned by the user exists;
-    //   GET /api/routines includes it (title/dance/created).
+    // Assert: 201 with a new docRef; GET /api/routines includes it as an owned
+    //   routine with the chosen title/dance.
     // Covers US-025 AC-2 (doc + registry row) + AC-3 (appears in list).
     const ctx = await authedContext({ keypair: kp, userId: "u1", docRef: "n/a", role: null });
     await seedDb({ users: [{ id: "u1", displayName: "U1", identityColor: "#111", plan: "free" }] });
@@ -39,6 +40,46 @@ describe.skip("US-025 Create a routine", () => {
       body: JSON.stringify({ dance: "foxtrot", title: "New" }),
     });
     expect(res.status).toBe(201);
+    const created = (await res.json()) as { docRef: string };
+
+    const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
+    expect(list.status).toBe(200);
+    const { routines } = (await list.json()) as {
+      routines: Array<{ docRef: string; title: string; dance: string; role: string }>;
+    };
+    expect(routines).toContainEqual(
+      expect.objectContaining({
+        docRef: created.docRef,
+        title: "New",
+        dance: "foxtrot",
+        role: "owner",
+      }),
+    );
+  });
+
+  it("rejects an empty/over-long title (shared zCreateRoutine validation, #79)", async () => {
+    // Intent: the create endpoint validates against the shared contract schema —
+    //   an empty title is refused (no empty doc-name reaches the registry).
+    // Covers US-025/#79 (doc-name validation home).
+    const ctx = await authedContext({ keypair: kp, userId: "u_v", docRef: "n/a", role: null });
+    await seedDb({ users: [{ id: "u_v", displayName: "V", identityColor: "#111", plan: "free" }] });
+    const res = await SELF.fetch("https://x/api/routines", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ dance: "waltz", title: "   " }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("uses an INDEX for the owned-routine LIST query (EXPLAIN, no SCAN)", async () => {
+    // Intent: the owned-list query is indexed (NFR "index every D1 query") — the
+    //   document_registry_owner_idx covers the filter AND the updatedAt ordering.
+    // Covers US-025 AC (#128) — the EXPLAIN gate via expectIndexedQuery.
+    await expectIndexedQuery(
+      env.DB,
+      "SELECT docRef, title, dance, updatedAt FROM document_registry WHERE ownerId = ? AND type = 'routine' AND deletedAt IS NULL ORDER BY updatedAt DESC",
+      ["u1"],
+    );
   });
 });
 

@@ -1,6 +1,6 @@
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
 import { useState } from "react";
-import { useMe } from "./store/me";
+import { ChoreoFlow } from "./components/ChoreoFlow";
 import { Styleguide } from "./styleguide/Styleguide";
 import { AppShell, Button, Card, type NavItem, ToastProvider } from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
@@ -52,39 +52,39 @@ function AppHome() {
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4 lg:p-0 lg:pt-4">
+        <SignedOut>
+          <Card>
+            <p className="text-sm font-bold text-ink">Sign in to build choreography</p>
+            <p className="mt-1 text-2xs text-ink-muted">
+              Ballroom Flow keeps your routines in sync across your devices.
+            </p>
+          </Card>
+        </SignedOut>
         <SignedIn>
-          <CurrentUser />
+          {tab === "choreo" ? (
+            <ChoreoFlow />
+          ) : (
+            <Card>
+              <p className="text-sm font-bold text-ink">Coming soon</p>
+              <p className="mt-1 text-2xs text-ink-muted">
+                This screen lands in a later milestone. Preview the primitives in the styleguide.
+              </p>
+              <div className="mt-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    window.location.hash = "styleguide";
+                    window.location.reload();
+                  }}
+                >
+                  Open the styleguide
+                </Button>
+              </div>
+            </Card>
+          )}
         </SignedIn>
-        <Card>
-          <p className="text-sm font-bold text-ink">Design system ready</p>
-          <p className="mt-1 text-2xs text-ink-muted">
-            Product screens land in a later milestone. Preview the primitives in the styleguide.
-          </p>
-          <div className="mt-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                window.location.hash = "styleguide";
-                window.location.reload();
-              }}
-            >
-              Open the styleguide
-            </Button>
-          </div>
-        </Card>
       </div>
     </AppShell>
-  );
-}
-
-function CurrentUser() {
-  const { data, isLoading, error } = useMe();
-  if (isLoading) return <p className="text-2xs text-ink-muted">Loading your profile…</p>;
-  if (error) return <p className="text-2xs text-danger-ink">Could not load your profile.</p>;
-  return (
-    <p className="text-2xs text-ink-muted">
-      Signed in as <code className="text-ink">{data?.sub}</code>
-    </p>
   );
 }
