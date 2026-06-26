@@ -55,7 +55,10 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /count 1/i }).click();
     await page.getByRole("button", { name: /^T$/ }).click();
     await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible();
+    // 4c. Set the figure's entry alignment (US-031): a facing-direction → a chip.
+    await page.getByLabel(/entry direction/i).selectOption("DW");
     await page.keyboard.press("Escape");
+    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
 
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
@@ -64,6 +67,8 @@ test.describe("@smoke core authoring journey", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // The entry-alignment chip persisted too (figure doc).
+    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
     //     timeline → count 1 still carries "T".

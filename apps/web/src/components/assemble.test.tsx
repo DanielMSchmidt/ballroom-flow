@@ -43,6 +43,7 @@ function fakeStore(
     movePlacement: () => {},
     deletePlacement: () => {},
     setFigureAttributes: () => {},
+    setFigureAlignment: () => {},
     undo: () => {},
     redo: () => {},
     subscribe: () => () => {},
@@ -481,35 +482,69 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
   });
 });
 
-describe.skip("US-031 Edit per-figure alignment", () => {
-  it("sets entry/exit + per-placement alignment (qualifier + direction)", async () => {
-    // Intent: per-figure alignment is editable (entry/exit + optional per-placement).
-    // Arrange: open the alignment editor for a placement. Act: set entry = facing/LOD,
-    //   exit = backing/wall, and a per-placement override. Assert: the values persist
-    //   (onChange called / chips reflect the chosen qualifier+direction).
-    // Covers US-031 AC-1 (set entry/exit + per-placement).
+describe("US-031 Edit per-figure alignment", () => {
+  /** A routine with one placement → a Feather figure carrying entry = facing/DW. */
+  const alignedRoutine = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p = placement("p1", "feather");
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p, figure: figure("feather", "Feather") }],
+    };
+  };
+
+  it("edits a figure's entry alignment (qualifier + direction) via the store (AC-1)", async () => {
+    // Intent: an editor sets a figure's entry/exit facing-direction from the step
+    //   sheet; the change writes to the figure's doc through the store seam.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
-    await userEvent.click(screen.getByRole("button", { name: /alignment/i }));
+    const setFigureAlignment = vi.fn();
+    const { routine, resolved } = alignedRoutine();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { setFigureAlignment })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
     expect(screen.getByRole("group", { name: /entry alignment/i })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/entry direction/i), "LOD");
+    expect(setFigureAlignment).toHaveBeenCalledWith("feather", "entry", {
+      qualifier: "facing",
+      direction: "LOD",
+    });
   });
 
-  it("renders alignment chips on the placement card and timeline", async () => {
-    // Intent: chosen alignment shows as chips.
-    // Arrange: render a routine whose placement has entry/exit alignment set.
-    // Act/Assert: a chip with the qualifier+direction (e.g. "facing LOD") renders.
-    // Covers US-031 AC-2 (alignment chips render).
+  it("renders an alignment chip on the placement card (AC-2)", async () => {
+    // Intent: a figure's set alignment shows as a read-only chip on its card.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
-    expect(screen.getByText(/facing|backing|pointing/i)).toBeInTheDocument();
+    const { routine, resolved } = alignedRoutine();
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    expect(screen.getByText(/entry DW/i)).toBeInTheDocument();
   });
 
-  it("has no separate floor / long / short / corner concept", async () => {
-    // Intent: per-figure alignment suffices; there is no floor model.
-    // Arrange: render Assemble. Act/Assert: no long-side/short-side/corner controls.
-    // Covers US-031 AC-3 (no floor concept).
+  it("has no separate floor / long / short / corner concept (AC-3)", async () => {
+    // Intent: per-figure alignment replaces any floor/side model.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
+    const { routine, resolved } = alignedRoutine();
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
     expect(screen.queryByText(/long side|short side|corner/i)).toBeNull();
+  });
+
+  it("hides alignment editing from a viewer", async () => {
+    // Intent: alignment editing is editor-only; a viewer sees chips, not selects.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = alignedRoutine();
+    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    expect(screen.queryByRole("group", { name: /entry alignment/i })).toBeNull();
   });
 });

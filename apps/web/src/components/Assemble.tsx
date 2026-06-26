@@ -7,11 +7,13 @@
 // another client re-renders without reload (US-018 AC-2). An offline data state
 // is shown honestly rather than presenting stale content as live (AC-3).
 //
-// US-018 is read-only viewing; section/placement EDITING is US-026/US-027 (those
-// describes stay skipped), so no editor controls render here yet — the `role`
-// prop is accepted for when they land.
+// Editing is gated by the `role`/capability table: editors manage sections
+// (US-026) and placements (US-027), notate a figure's steps (US-028) and its
+// alignment (US-031) via the step sheet, and add figures from the library picker
+// (US-027/US-032); viewers/commenters see it all read-only.
 
 import {
+  type Alignment,
   type Attribute,
   can,
   type DanceId,
@@ -31,6 +33,7 @@ import {
   IconButton,
   Input,
   OfflineState,
+  Select,
   ShareIcon,
   Sheet,
   Spinner,
@@ -286,12 +289,22 @@ export function Assemble({
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
       >
         {notatingFigure && (
-          <FigureTimeline
-            role={canEdit ? role : "viewer"}
-            dance={routine.dance as DanceId}
-            attributes={notatingFigure.attributes}
-            onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
-          />
+          <div className="flex flex-col gap-4">
+            <FigureTimeline
+              role={canEdit ? role : "viewer"}
+              dance={routine.dance as DanceId}
+              attributes={notatingFigure.attributes}
+              onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+            />
+            {canEdit && (
+              <AlignmentEditor
+                figure={notatingFigure}
+                onSet={(edge, alignment) =>
+                  store.setFigureAlignment(notatingFigure.id, edge, alignment)
+                }
+              />
+            )}
+          </div>
         )}
       </Sheet>
 
@@ -617,6 +630,89 @@ function AddFigurePicker({
         </Button>
       </form>
     </div>
+  );
+}
+
+const ALIGNMENT_QUALIFIERS: Alignment["qualifier"][] = ["facing", "backing", "pointing"];
+const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
+  "LOD",
+  "ALOD",
+  "wall",
+  "centre",
+  "DW",
+  "DC",
+  "DW_against",
+  "DC_against",
+];
+
+/** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
+ *  facing-direction the figure starts and ends on. Editor-only. */
+function AlignmentEditor({
+  figure,
+  onSet,
+}: {
+  figure: FigureDoc;
+  onSet: (edge: "entry" | "exit", alignment: Alignment | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-line pt-3">
+      <h3 className="text-sm font-bold text-ink">Alignment</h3>
+      <AlignmentEdge
+        label="Entry"
+        current={figure.entryAlignment ?? null}
+        onChange={onSet}
+        edge="entry"
+      />
+      <AlignmentEdge
+        label="Exit"
+        current={figure.exitAlignment ?? null}
+        onChange={onSet}
+        edge="exit"
+      />
+    </div>
+  );
+}
+
+/** One edge (entry/exit) of the alignment editor: qualifier + direction selects. */
+function AlignmentEdge({
+  label,
+  edge,
+  current,
+  onChange,
+}: {
+  label: string;
+  edge: "entry" | "exit";
+  current: Alignment | null;
+  onChange: (edge: "entry" | "exit", alignment: Alignment | null) => void;
+}) {
+  const qualifier = current?.qualifier ?? "facing";
+  const direction = current?.direction ?? "";
+  return (
+    <fieldset aria-label={`${label} alignment`} className="flex items-end gap-2">
+      <Select
+        label={`${label} facing`}
+        value={qualifier}
+        options={ALIGNMENT_QUALIFIERS.map((q) => ({ value: q, label: q }))}
+        onChange={(e) =>
+          onChange(edge, {
+            qualifier: e.target.value as Alignment["qualifier"],
+            direction: (direction || "LOD") as Alignment["direction"],
+          })
+        }
+      />
+      <Select
+        label={`${label} direction`}
+        value={direction}
+        options={[
+          { value: "", label: "— not set" },
+          ...ALIGNMENT_DIRECTIONS.map((d) => ({ value: d, label: d })),
+        ]}
+        onChange={(e) => {
+          const d = e.target.value;
+          onChange(edge, d ? { qualifier, direction: d as Alignment["direction"] } : null);
+        }}
+      />
+    </fieldset>
   );
 }
 

@@ -8,6 +8,7 @@
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
 import {
+  type Alignment,
   type Attribute,
   addSection,
   type FigureDoc,
@@ -68,6 +69,8 @@ export interface RoutineStore {
    * now this writes straight to the referenced figure doc.
    */
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
+  /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
+  setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -297,6 +300,16 @@ export async function openRoutine(
       // Writes to that figure's own doc connection — a separate DO from the routine.
       figureConn(figureRef).change((draft) => {
         draft.attributes = attributes;
+      });
+    },
+
+    setFigureAlignment: (figureRef, edge, alignment) => {
+      // Entry/exit alignment lives on the figure doc (US-031). Clearing deletes
+      // the key (Automerge can't store undefined).
+      const key = edge === "entry" ? "entryAlignment" : "exitAlignment";
+      figureConn(figureRef).change((draft) => {
+        if (alignment) draft[key] = alignment;
+        else delete draft[key];
       });
     },
 
