@@ -19,3 +19,15 @@ export const users = sqliteTable("users", {
 });
 
 export type UserRow = typeof users.$inferSelect;
+
+/** Per-document membership (US-020). Keyed per (docRef, userId); soft-delete. */
+export const membership = sqliteTable("membership", {
+  id: text("id").primaryKey(),
+  docRef: text("docRef").notNull(),
+  userId: text("userId").notNull(),
+  role: text("role", { enum: ["viewer", "commenter", "editor"] }).notNull(),
+  createdAt: integer("createdAt").notNull(),
+  deletedAt: integer("deletedAt"),
+});
+
+export type MembershipRow = typeof membership.$inferSelect;

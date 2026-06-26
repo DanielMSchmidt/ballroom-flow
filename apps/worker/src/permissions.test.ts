@@ -1,4 +1,5 @@
 import { env } from "cloudflare:test";
+import { capabilitiesFor } from "@ballroom/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
@@ -15,9 +16,11 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 // a figure doc". Enforcement is at the DO sync connection (Clerk JWT verify +
 // D1 role lookup), NEVER post-hoc CRDT-cell rejection.
 //
-// The DO connect endpoint + the route auth are M2/M3 product code → the bodies
-// are skipped and dynamic/structural. The keypair's public PEM is injected as
-// CLERK_JWT_KEY so the real auth boundary verifies our minted tokens networklessly.
+// US-020 (below) is implemented: the membership table + the pure capability
+// model (@ballroom/domain) + the DO's transitional membership gate (an
+// authenticated non-member is rejected per-doc). The US-021 block stays skipped
+// — it makes the boundary fail-closed (token REQUIRED) + refuses a viewer's
+// writes on the socket. CLERK_JWT_KEY is the static test PEM (vitest.config.ts).
 //
 // MANDATORY isolatedStorage:false → unique DO ids (uniqueDocName).
 // ─────────────────────────────────────────────────────────────────────────
@@ -27,20 +30,28 @@ let kp: TestKeypair;
 
 beforeAll(async () => {
   await applyMigrations();
+  // CLERK_JWT_KEY is bound statically (vitest.config.ts → the fixed test PEM,
+  // US-019); generateTestKeypair() returns that keypair so verifyToken({ jwtKey })
+  // verifies our minted tokens networklessly.
   kp = await generateTestKeypair();
-  // In M3, the suite sets env.CLERK_JWT_KEY = kp.publicKeyPem (via vitest env or
-  // a per-test binding) so verifyToken({ jwtKey }) verifies our tokens.
 });
 
-/** Open a sync connection to a doc DO with the given bearer token. */
+/**
+ * Open a sync connection to a doc DO with the given headers. Forwards the doc
+ * name via `x-doc-name` exactly as the real Worker connect route does (the DO
+ * can't recover its idFromName key from `ctx.id`), so the permission boundary
+ * can look up membership for THIS document.
+ */
 async function tryConnect(docName: string, headers: Record<string, string>): Promise<Response> {
   const stub = docs.get(docs.idFromName(docName));
   return stub.fetch(
-    new Request("https://do/connect", { headers: { Upgrade: "websocket", ...headers } }),
+    new Request("https://do/connect", {
+      headers: { Upgrade: "websocket", "x-doc-name": docName, ...headers },
+    }),
   );
 }
 
-describe.skip("US-020 Per-document membership & roles", () => {
+describe("US-020 Per-document membership & roles", () => {
   it("grants editor edit+invite, commenter annotate, viewer read-only", async () => {
     // Intent: capabilities derive from the per-doc role (editor/commenter/viewer).
     // Arrange: seed a routine doc + three memberships (editor/commenter/viewer).
@@ -67,11 +78,19 @@ describe.skip("US-020 Per-document membership & roles", () => {
         m ? [m] : [],
       ),
     });
-    // capabilitiesFor() is a domain/permission helper (M3). The assertion below
-    // is the contract the M3 implementation must satisfy.
     expect(editor.role).toBe("editor");
     expect(commenter.role).toBe("commenter");
     expect(viewer.role).toBe("viewer");
+    // The capability model these roles map to (the contract the boundary gates on).
+    const ed = capabilitiesFor("editor");
+    expect(ed.canEdit && ed.canInvite && ed.canAnnotate).toBe(true);
+    expect(ed.canDelete).toBe(false); // only the owner may delete the doc
+    const co = capabilitiesFor("commenter");
+    expect(co.canAnnotate).toBe(true);
+    expect(co.canEdit || co.canInvite).toBe(false);
+    const vw = capabilitiesFor("viewer");
+    expect(vw.canRead).toBe(true);
+    expect(vw.canAnnotate || vw.canEdit || vw.canInvite).toBe(false);
   });
 
   it("treats a routine doc and a figure doc as independently shared", async () => {
