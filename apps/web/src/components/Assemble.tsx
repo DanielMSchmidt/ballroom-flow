@@ -19,6 +19,7 @@ import {
   type Section,
 } from "@ballroom/domain";
 import { type FormEvent, useEffect, useReducer, useState } from "react";
+import type { TokenProvider } from "../store/doc-connection";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
 import { Badge, Button, Card, Chip, IconButton, Input, OfflineState, Sheet, Spinner } from "../ui";
 
@@ -34,6 +35,8 @@ export interface AssembleProps {
   connection?: "live" | "offline";
   /** Injectable store for tests; production opens one via `openRoutine(routineId)`. */
   store?: RoutineStore;
+  /** Resolve a fresh auth token per connection-open (#189); the screen wires Clerk. */
+  getToken?: TokenProvider;
 }
 
 /**
@@ -45,6 +48,7 @@ function useRoutineStore(
   routineId: string,
   injected: RoutineStore | undefined,
   enabled: boolean,
+  getToken: TokenProvider | undefined,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
@@ -53,7 +57,7 @@ function useRoutineStore(
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
-    openRoutine(routineId).then((opened) => {
+    openRoutine(routineId, { getToken }).then((opened) => {
       if (cancelled) {
         opened.close();
         return;
@@ -65,7 +69,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled]);
+  }, [routineId, injected, enabled, getToken]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -73,9 +77,15 @@ function useRoutineStore(
   return store;
 }
 
-export function Assemble({ routineId, role, connection, store: injected }: AssembleProps) {
+export function Assemble({
+  routineId,
+  role,
+  connection,
+  store: injected,
+  getToken,
+}: AssembleProps) {
   const offlineProp = connection === "offline";
-  const store = useRoutineStore(routineId, injected, !offlineProp);
+  const store = useRoutineStore(routineId, injected, !offlineProp, getToken);
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
   const canEdit = can(role, "canEdit");

@@ -81,6 +81,35 @@ const aFigure = (over: Partial<FigureDoc>): RoutineDoc | FigureDoc =>
     ...over,
   }) as FigureDoc;
 
+describe("#189 store attaches the auth token to the connect", () => {
+  it("calls getToken at the connection-open and rides it as the ballroom.auth subprotocol", async () => {
+    const captured: Array<{ id: string; protocols?: string[] }> = [];
+    const getToken = vi.fn(async () => "tok_123");
+    const opts: OpenOptions = {
+      baseUrl: "http://test",
+      getToken,
+      openSocket: (url, protocols) => {
+        const id = decodeURIComponent(url.split("/docs/")[1]?.replace("/connect", "") ?? url);
+        captured.push({ id, protocols });
+        return new FakeSocket() as unknown as ReturnType<NonNullable<OpenOptions["openSocket"]>>;
+      },
+    };
+    await openRoutine("rt_sample", opts);
+    // The connect opens AFTER getToken resolves (per-connection-open, async).
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(getToken).toHaveBeenCalled();
+    const routineOpen = captured.find((c) => c.id === "rt_sample");
+    expect(routineOpen?.protocols).toEqual(["ballroom.auth", "tok_123"]);
+  });
+
+  it("opens WITHOUT a subprotocol when no getToken is wired (tests / open boundary)", async () => {
+    const { opts, sockets } = fakeWiring();
+    await openRoutine("rt_sample", opts);
+    expect(sockets.has("rt_sample")).toBe(true); // opens synchronously, no token
+  });
+});
+
 describe("#187 figure projection on addPlacement", () => {
   it("projects the new figure (createFigure) BEFORE opening its DO", async () => {
     // Intent: addPlacement must project the figure to D1 + an owner membership

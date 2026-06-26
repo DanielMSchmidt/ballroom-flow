@@ -4,6 +4,7 @@
 // Navigation is a MINIMAL state seam, not a router dependency (YAGNI): a selected
 // routine lives in local state — null shows the list, set shows Assemble with a
 // back action. A real deep-linkable router is a later concern.
+import { useAuth } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useMe } from "../store/me";
 import { useCreateRoutine, useRoutines } from "../store/routines";
@@ -15,6 +16,7 @@ export function ChoreoFlow() {
   const routinesQ = useRoutines();
   const me = useMe();
   const create = useCreateRoutine();
+  const { getToken } = useAuth();
   const [open, setOpen] = useState<{ id: string; role: MembershipRole } | null>(null);
 
   const items = routinesQ.data?.routines ?? [];
@@ -34,7 +36,7 @@ export function ChoreoFlow() {
         <Button variant="ghost" size="sm" onClick={() => setOpen(null)}>
           ← All routines
         </Button>
-        <Assemble routineId={open.id} role={open.role} />
+        <Assemble routineId={open.id} role={open.role} getToken={() => getToken()} />
       </div>
     );
   }

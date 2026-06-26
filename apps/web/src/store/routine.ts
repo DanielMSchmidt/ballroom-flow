@@ -21,7 +21,13 @@ import {
   undoLastChange,
 } from "@ballroom/domain";
 import { apiPost } from "../lib/rpc";
-import { connectUrl, DocConnection, type SocketFactory, type SyncState } from "./doc-connection";
+import {
+  connectUrl,
+  DocConnection,
+  type SocketFactory,
+  type SyncState,
+  type TokenProvider,
+} from "./doc-connection";
 
 /** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
 export interface ResolvedPlacement {
@@ -90,19 +96,14 @@ export interface OpenOptions {
   actor?: string;
   /** Project a new figure to D1 before opening it (default: POST /api/figures). */
   createFigure?: CreateFigureFn;
+  /** Resolve a fresh Clerk token at each connection-open (#189), attached to the
+   *  WS connect as a subprotocol so the fail-closed DO boundary authenticates it.
+   *  The screen wires this to Clerk's `getToken`; omit it (tests / open boundary). */
+  getToken?: TokenProvider;
 }
 
-const defaultSocketFactory: SocketFactory = (url) =>
-  new WebSocket(url) as unknown as ReturnType<SocketFactory>;
-
-/**
- * Default figure projection: POST /api/figures so the fail-closed DO boundary
- * (US-021) can owner-resolve the new figure (#187). NOTE: this currently sends
- * no token — the store→worker auth (token on the POST AND the WS connect) is the
- * deferred auth-mode work; until then this only works against an open boundary.
- */
-const defaultCreateFigure: CreateFigureFn = (figure) =>
-  apiPost<unknown>("/api/figures", null, figure).then(() => undefined);
+const defaultSocketFactory: SocketFactory = (url, protocols) =>
+  new WebSocket(url, protocols) as unknown as ReturnType<SocketFactory>;
 
 /** An empty routine doc to seed a fresh connection; the DO replays real state. */
 function emptyRoutine(id: string): RoutineDoc {
@@ -131,7 +132,15 @@ export async function openRoutine(
     opts.baseUrl ?? (typeof location !== "undefined" ? location.origin : "http://localhost");
   const openSocket = opts.openSocket ?? defaultSocketFactory;
   const actor = opts.actor;
-  const createFigure = opts.createFigure ?? defaultCreateFigure;
+  const getToken: TokenProvider | undefined = opts.getToken;
+  // Default figure projection: POST /api/figures (authenticated with a fresh
+  // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
+  const createFigure: CreateFigureFn =
+    opts.createFigure ??
+    (async (figure) => {
+      const token = getToken ? await getToken() : null;
+      await apiPost<unknown>("/api/figures", token, figure);
+    });
 
   // Start from a TRULY empty doc (A.init) — the DO replays its full history
   // (getAllChanges, incl. the doc's creation) on connect, so the client builds
@@ -141,6 +150,7 @@ export async function openRoutine(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
     openSocket,
+    getToken,
   );
 
   // One connection per referenced figure doc, opened on demand and cached.
@@ -152,6 +162,7 @@ export async function openRoutine(
         A.init<FigureDoc>(),
         connectUrl(baseUrl, figureRef),
         openSocket,
+        getToken, // a FRESH token at THIS (lazy) figure conn's open (#189)
       );
       conn.onAdvance(() => notify());
       figureConns.set(figureRef, conn);

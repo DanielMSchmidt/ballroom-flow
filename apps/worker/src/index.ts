@@ -143,20 +143,44 @@ app.get("/api/routines", async (c) => {
 // the `x-doc-name` header because the DO can't recover its idFromName key from
 // `ctx.id` (US-016).
 //
-// AUTH: the DO connection is the permission boundary (US-021) — it is fail-closed
-// (a valid Clerk token + per-doc membership are REQUIRED; verified inside the DO).
-// This route only forwards the upgrade (and the Authorization + x-doc-name
-// headers); it deliberately does not re-authorize.
-app.get("/docs/:id/connect", (c) => {
+// AUTH (#189): a browser WS handshake can't set an Authorization header, so the
+// client offers the Clerk token as a `Sec-WebSocket-Protocol` subprotocol
+// (`ballroom.auth, <token>`). This route extracts the token and forwards it to
+// the DO as `Authorization: Bearer …` (worker→DO fetch CAN set headers). The DO's
+// US-021 fail-closed boundary then authenticates it UNCHANGED — this route only
+// delivers the token, it does not re-authorize. On a 101 we echo the selected
+// subprotocol (browsers fail the handshake unless the server selects one offered).
+const AUTH_SUBPROTOCOL = "ballroom.auth";
+
+app.get("/docs/:id/connect", async (c) => {
   if (c.req.header("Upgrade") !== "websocket") {
     return c.text("expected websocket upgrade", 426);
   }
   const id = c.req.param("id");
   const stub = c.env.DOC_DO.get(c.env.DOC_DO.idFromName(id));
-  // Forward the original upgrade request, adding the doc name for the DO.
+
   const headers = new Headers(c.req.raw.headers);
   headers.set("x-doc-name", id);
-  return stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
+
+  // Pull the bearer token out of the auth subprotocol → Authorization header.
+  const offered = (c.req.header("Sec-WebSocket-Protocol") ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const hasAuthProto = offered.includes(AUTH_SUBPROTOCOL);
+  const token = hasAuthProto ? offered.find((p) => p !== AUTH_SUBPROTOCOL) : undefined;
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const res = await stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
+
+  // Echo the auth subprotocol on a successful upgrade so the browser completes
+  // the handshake (it requires the server to select one of the offered protocols).
+  if (res.status === 101 && hasAuthProto) {
+    const out = new Response(null, { status: 101, webSocket: res.webSocket });
+    out.headers.set("Sec-WebSocket-Protocol", AUTH_SUBPROTOCOL);
+    return out;
+  }
+  return res;
 });
 
 export type AppType = typeof app;

@@ -20,8 +20,15 @@ export interface SocketLike {
   addEventListener(type: "open" | "close", fn: () => void): void;
 }
 
-/** Opens a socket to a URL. Production: `(url) => new WebSocket(url)`. */
-export type SocketFactory = (url: string) => SocketLike;
+/** Opens a socket to a URL, optionally offering WS subprotocols (the auth token
+ *  rides here, #189). Production: `(url, protocols) => new WebSocket(url, protocols)`. */
+export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
+
+/** Resolve a fresh auth token for ONE connection-open (#189). null = no token. */
+export type TokenProvider = () => Promise<string | null>;
+
+/** The WS subprotocol that carries the bearer token (the worker route reads it). */
+export const AUTH_SUBPROTOCOL = "ballroom.auth";
 
 /** Where the worker serves the per-document sync socket. */
 export function connectUrl(base: string, docId: string): string {
@@ -38,19 +45,41 @@ export type SyncState = "connecting" | "live" | "closed";
 
 export class DocConnection<T> {
   private doc: A.Doc<T>;
-  private socket: SocketLike;
+  private socket: SocketLike | null = null;
   private onChange: (() => void) | null = null;
   private syncState: SyncState = "connecting";
+  private closed = false;
 
-  constructor(initial: A.Doc<T>, url: string, openSocket: SocketFactory) {
+  /**
+   * `getToken` (#189): when provided, a FRESH token is fetched at THIS
+   * connection's open and offered as the `ballroom.auth` WS subprotocol, so the
+   * fail-closed DO boundary (US-021) authenticates it. Resolving per-open (not
+   * once for the whole session) means a lazily-opened figure conn gets a current
+   * token, not a stale cached one. Mid-session re-auth of an open socket is #161.
+   * Without `getToken` the socket opens immediately (tests / open-boundary).
+   */
+  constructor(initial: A.Doc<T>, url: string, openSocket: SocketFactory, getToken?: TokenProvider) {
     this.doc = initial;
-    this.socket = openSocket(url);
-    this.socket.binaryType = "arraybuffer";
-    this.socket.addEventListener("message", (ev) => this.receive(ev.data));
+    if (getToken) {
+      void getToken().then((token) => {
+        if (this.closed) return; // closed before the token resolved
+        const protocols = token ? [AUTH_SUBPROTOCOL, token] : undefined;
+        this.attach(openSocket(url, protocols));
+      });
+    } else {
+      this.attach(openSocket(url));
+    }
+  }
+
+  /** Wire up a freshly-opened socket. */
+  private attach(socket: SocketLike): void {
+    this.socket = socket;
+    socket.binaryType = "arraybuffer";
+    socket.addEventListener("message", (ev) => this.receive(ev.data));
     // Track lifecycle so the store can surface connecting/live/closed (US-018
     // "syncing…" indicator). The DO replays the full log on open → "live".
-    this.socket.addEventListener("open", () => this.setState("live"));
-    this.socket.addEventListener("close", () => this.setState("closed"));
+    socket.addEventListener("open", () => this.setState("live"));
+    socket.addEventListener("close", () => this.setState("closed"));
   }
 
   /** The current immutable doc. */
@@ -111,13 +140,15 @@ export class DocConnection<T> {
 
   private send(change: Uint8Array): void {
     try {
-      this.socket.send(change);
+      this.socket?.send(change);
     } catch {
-      // Socket not open / closing — the DO replays state on reconnect.
+      // Socket not open / closing (or not yet attached while the token resolves)
+      // — the DO replays state on reconnect.
     }
   }
 
   close(): void {
-    this.socket.close();
+    this.closed = true;
+    this.socket?.close();
   }
 }
