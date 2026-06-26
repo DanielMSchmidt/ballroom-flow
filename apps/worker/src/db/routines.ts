@@ -105,6 +105,8 @@ export interface NewRoutine {
   ownerId: string;
   title: string;
   dance: string;
+  /** Provenance for a choreo fork (US-037): the routine this was forked from. */
+  forkedFromRef?: string | null;
 }
 
 /**
@@ -112,6 +114,7 @@ export interface NewRoutine {
  * immediately visible to the count/list) plus the creator's owner membership
  * (role=editor — #168 option (a); US-021's ownerId fallback is the belt to this
  * suspenders). The CRDT doc itself is created lazily by its DO on first open.
+ * A fork passes `forkedFromRef` so the registry records its lineage (US-037).
  */
 export async function createOwnedRoutine(db: D1Database, r: NewRoutine): Promise<void> {
   const now = Date.now();
@@ -124,6 +127,7 @@ export async function createOwnedRoutine(db: D1Database, r: NewRoutine): Promise
       doName: r.docRef, // one DO per document; doName is the idFromName key
       title: r.title,
       dance: r.dance,
+      forkedFromRef: r.forkedFromRef ?? null,
       updatedAt: now,
     }),
     d.insert(membership).values({

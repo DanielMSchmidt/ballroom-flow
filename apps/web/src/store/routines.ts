@@ -32,3 +32,22 @@ export function useCreateRoutine() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
   });
 }
+
+/**
+ * Fork a routine ("make it your own", US-037): the server clones it into a NEW
+ * OWNED, frozen copy and returns its docRef. On success the list refetches so the
+ * fork appears. Quota-checked server-side (402 → isQuotaError, same as create).
+ */
+export function useForkRoutine() {
+  const { getToken } = useAppAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (originRef: string) =>
+      apiPost<{ docRef: string; forkedFromRef: string }>(
+        `/api/routines/${encodeURIComponent(originRef)}/fork`,
+        await getToken(),
+        {},
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
+  });
+}

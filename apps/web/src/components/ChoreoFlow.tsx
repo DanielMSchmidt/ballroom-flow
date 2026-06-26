@@ -10,7 +10,7 @@ import { useAppAuth } from "../auth/app-auth";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
 import { useMe } from "../store/me";
-import { isQuotaError, useCreateRoutine, useRoutines } from "../store/routines";
+import { isQuotaError, useCreateRoutine, useForkRoutine, useRoutines } from "../store/routines";
 import { AccessDenied, Button, Spinner } from "../ui";
 import { Assemble, type MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
@@ -31,6 +31,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const routinesQ = useRoutines();
   const me = useMe();
   const create = useCreateRoutine();
+  const fork = useForkRoutine();
   const { getToken } = useAppAuth();
   // Access preflight (#178): for an OPEN routine, learn DENIED vs allowed before
   // opening the heavy WS store, so a non-member sees the calm access-denied state
@@ -72,6 +73,13 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             routineId={openRoutineId}
             role={roleForOpen(items, openRoutineId)}
             getToken={() => getToken()}
+            forking={fork.isPending}
+            onFork={() =>
+              // Fork → a new owned, frozen copy; deep-link to it once created.
+              fork.mutate(openRoutineId, {
+                onSuccess: (res) => navigate(`/routines/${res.docRef}`),
+              })
+            }
           />
         )}
       </div>
