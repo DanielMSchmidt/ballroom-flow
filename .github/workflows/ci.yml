@@ -46,10 +46,12 @@ jobs:
       - name: Component + a11y (web)
         run: pnpm --filter web test
 
-      # 5. E2E smoke — one fast Playwright pass (the convergence + fork/COW
-      #    smoke journeys are tagged @smoke). Chromium only on PRs for speed;
-      #    the full 3-device matrix runs nightly.
+      # 5. E2E smoke — one fast Playwright pass against a REAL worker (wrangler
+      #    dev, booted by the webServer in apps/web/e2e/serve.sh). The @smoke
+      #    authoring journey gates here; chromium only on PRs for speed, the full
+      #    3-device matrix runs nightly. No --pass-with-no-tests: a real journey
+      #    failure FAILS the PR gate (#191).
       - name: Install Playwright (chromium)
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: E2E smoke (chromium)
-        run: pnpm --filter web exec playwright test --project=chromium-desktop --grep @smoke --pass-with-no-tests
+        run: pnpm --filter web exec playwright test --project=chromium-desktop --grep @smoke

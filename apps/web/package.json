@@ -10,8 +10,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "coverage": "vitest run --passWithNoTests --coverage",
-    "test:e2e": "playwright test --pass-with-no-tests",
-    "test:e2e:smoke": "playwright test --grep @smoke --pass-with-no-tests",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

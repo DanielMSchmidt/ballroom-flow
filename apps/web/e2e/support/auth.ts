@@ -1,30 +1,32 @@
 // ─────────────────────────────────────────────────────────────────────────
 // Deterministic E2E auth (PLAN §10.3: "deterministic auth+seed"). Establishes a
-// signed-in session for a seeded user WITHOUT live Clerk, so multi-user journeys
-// are reproducible offline.
+// signed-in session for a seeded user WITHOUT live Clerk, so journeys are
+// reproducible offline.
 //
-// MECHANISM (wired in M3): the preview build runs in an E2E mode where the app
-// reads a test session token (set here via addInitScript / a cookie) instead of
-// the live Clerk widget, and the worker verifies it against the test PEM
-// (CLERK_JWT_KEY) — the same networkless path as the worker tests' makeTestJWT.
-// Until that mode exists, the E2E specs that use this are skipped.
+// MECHANISM (#191): the E2E build (VITE_E2E=1) reads an injected test session
+// from localStorage and renders signed-in, with getToken returning the injected
+// token. Here we mint a REAL test-signed JWT for `userId` and inject it before
+// any app code runs; the worker (run with the matching test CLERK_JWT_KEY)
+// verifies it networklessly — exercising the real auth boundary end-to-end.
 // ─────────────────────────────────────────────────────────────────────────
 import type { Page } from "@playwright/test";
+import { mintTestJWT } from "./jwt";
 
-/** Storage key the E2E build reads its impersonated session from (M3 contract). */
+/** localStorage key the E2E build reads its impersonated session from. */
 export const E2E_SESSION_KEY = "ballroom-e2e-session";
 
 /**
- * Sign a page in as `userId` by injecting a test session before any app code
- * runs. The token is a placeholder here; M3 swaps in a real signed test JWT
- * minted from the shared test keypair (mirrors the worker layer's makeTestJWT).
+ * Sign a page in as `userId`: mint a test JWT and inject the session before any
+ * app code runs (addInitScript), so the app boots signed-in as that user.
  */
 export async function seedAuth(page: Page, userId: string): Promise<void> {
+  const token = await mintTestJWT(userId);
+  const session = JSON.stringify({ sub: userId, token });
   await page.addInitScript(
-    ([key, uid]) => {
-      window.localStorage.setItem(key, JSON.stringify({ sub: uid, e2e: true }));
+    ([key, value]) => {
+      window.localStorage.setItem(key, value);
     },
-    [E2E_SESSION_KEY, userId] as const,
+    [E2E_SESSION_KEY, session] as const,
   );
 }
 

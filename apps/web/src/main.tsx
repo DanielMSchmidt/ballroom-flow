@@ -1,8 +1,9 @@
-import { ClerkProvider } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { AppAuthProvider } from "./auth/app-auth";
+import { isE2E } from "./lib/e2e-auth";
 import "./styles/index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -11,8 +12,9 @@ if (!rootEl) throw new Error("#root element not found");
 const root = createRoot(rootEl);
 const queryClient = new QueryClient();
 
-if (!publishableKey) {
-  // Graceful first-run state when Clerk isn't configured yet.
+if (!isE2E() && !publishableKey) {
+  // Graceful first-run state when Clerk isn't configured yet. (An E2E build needs
+  // no publishable key — it uses the injected test session; see lib/e2e-auth.ts.)
   root.render(
     <div style={{ font: "16px system-ui", padding: 24 }}>
       <h1>Ballroom Flow</h1>
@@ -25,11 +27,11 @@ if (!publishableKey) {
 } else {
   root.render(
     <StrictMode>
-      <ClerkProvider publishableKey={publishableKey}>
+      <AppAuthProvider publishableKey={publishableKey ?? ""}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
-      </ClerkProvider>
+      </AppAuthProvider>
     </StrictMode>,
   );
 }

@@ -1,5 +1,5 @@
-import { useAuth } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAppAuth } from "../auth/app-auth";
 import { apiGet } from "../lib/rpc";
 
 export type Me = {
@@ -12,7 +12,7 @@ export type Me = {
 
 /** store/ seam: the current user's verified identity from the Worker. */
 export function useMe() {
-  const { getToken } = useAuth();
+  const { getToken } = useAppAuth();
   return useQuery({
     queryKey: ["me"],
     queryFn: async () => apiGet<Me>("/api/me", await getToken()),

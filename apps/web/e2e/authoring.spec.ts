@@ -1,47 +1,84 @@
 import { expect, test } from "@playwright/test";
 import { gotoRoutine, seedAuth } from "./support/auth";
+import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Core authoring journey (PLAN §10.2 E2E: "full authoring (create → section →
-// figure → attributes → role flip)").
-// Covers: US-018 (open & view), US-025 (create), US-026 (sections),
-//         US-027 (placements), US-028 (place attributes — hero), US-030 (role flip).
+// Core authoring journey (PLAN §10.2 E2E: "full authoring"). Runs against the
+// REAL worker (D1 + per-document Durable Objects + the fail-closed auth/sync
+// boundary) via the #191 E2E harness — no live Clerk, but a real test JWT and
+// the real permission boundary.
+// Covers: US-025 (create), US-018 (open & view), US-026 (sections),
+//         US-027 (figure placements), and persistence across reload.
 //
 // @smoke — part of the CI PR smoke subset.
-//
-// SKIPPED until the M2/M3 screens + the deterministic E2E auth mode exist.
-// Specs still COLLECT cleanly (playwright --list sees them).
 // ─────────────────────────────────────────────────────────────────────────
 
 test.describe("@smoke core authoring journey", () => {
-  test.skip(true, "M2/M3 screens + E2E auth mode not built yet (see TEST-MAP.md)");
-
-  test("create a routine → add a section → add a figure → place attributes → flip role", async ({
-    page,
-  }) => {
-    // Intent: the end-to-end hero loop from an empty account to a notated figure.
-    // User scenario: a signed-in user builds a Foxtrot routine from scratch.
-    // Steps/asserts:
-    //   1. seedAuth + open the Choreo list. Click "New Choreo" → pick Foxtrot →
-    //      the new routine opens in Assemble (US-025).
-    //   2. Add a section "Intro"; it appears in order (US-026).
-    //   3. Add a figure placement (Feather) to "Intro"; the card shows the name (US-027).
-    //   4. Open the figure timeline; tap count 1 → choose footwork "HT"; the chip
-    //      renders on count 1 (US-028 hero).
-    //   5. Tap a step to flip the viewed role; the role indicator toggles (US-030).
-    //   6. Reload → everything persisted (US-018 open & view).
-    await seedAuth(page, "user_solo");
+  test("create a routine → add a section → add a figure → reload persists", async ({ page }) => {
+    const user = "user_solo";
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: user, displayName: "Solo", identityColor: "#3344ff" }],
+    });
+    await seedAuth(page, user);
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /ballroom flow/i })).toBeVisible();
+
+    // 1. Create a routine (US-025) — server-side create + quota gate.
+    await page.getByRole("button", { name: /new choreo/i }).click();
+    await page.getByLabel("Routine name").fill("E2E Foxtrot");
+    await page.getByLabel("Dance").selectOption("foxtrot");
+    await page.getByRole("button", { name: "Create" }).click();
+
+    // 2. The new routine opens in Assemble as an editor (owner → editor): the
+    //    add-section affordance is the proof we connected with edit rights.
+    const addSection = page.getByRole("button", { name: "Add section" });
+    await expect(addSection).toBeVisible({ timeout: 15_000 });
+
+    // 3. Add a section "Intro" (US-026); it renders in order. (Wait for the
+    //    routine doc to hydrate from the DO catch-up before editing — see the
+    //    edit-before-hydration note in the PR; generous timeout absorbs it.)
+    await addSection.click();
+    await page.getByLabel("Section name").fill("Intro");
+    await page.getByLabel("Section name").press("Enter");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+
+    // 4. Add a figure "Feather Step" to the section (US-027): mints a custom
+    //    figure doc + a placement; the card shows the figure name.
+    await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByLabel("Figure name").fill("Feather Step");
+    await page.getByLabel("Figure name").press("Enter");
+    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // 5. Reload → the routine document (section + figure) was persisted in the
+    //    DO and replays on reconnect (US-018 open & view).
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // The created title is also indexed in D1: it shows in the Choreo list.
+    await page.getByRole("button", { name: /all routines/i }).click();
+    await expect(page.getByText("E2E Foxtrot")).toBeVisible();
   });
 
   test("a viewer sees the routine read-only (no edit affordances)", async ({ page }) => {
-    // Intent: opening a routine as a viewer shows content but no edit controls.
-    // User scenario: a viewer member opens a shared routine.
-    // Steps/asserts: seedAuth as a viewer; open the shared routine; sections +
-    //   placements render; NO add-section / add-figure / attribute-edit controls (US-018/021).
-    await seedAuth(page, "user_viewer");
-    await gotoRoutine(page, "rt_sample");
-    await expect(page.getByRole("button", { name: /add section/i })).toHaveCount(0);
+    const owner = "user_owner";
+    const viewer = "user_viewer";
+    const docRef = "rt_view_sample";
+    await resetDb(page);
+    await seedDb(page, {
+      users: [
+        { id: owner, displayName: "Owner", identityColor: "#111111" },
+        { id: viewer, displayName: "Viewer", identityColor: "#222222" },
+      ],
+      docs: [{ docRef, type: "routine", ownerId: owner, title: "Shared Routine", dance: "waltz" }],
+      memberships: [{ docRef, userId: viewer, role: "viewer" }],
+    });
+    await seedAuth(page, viewer);
+    await gotoRoutine(page, docRef);
+
+    // The viewer connects (US-021 allows a member) and views, but sees NO edit
+    // controls (US-018/US-026 gate on the shared capability table).
+    await expect(page.getByText(/no sections yet/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Add section" })).toHaveCount(0);
   });
 });
