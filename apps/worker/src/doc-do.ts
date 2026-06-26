@@ -572,16 +572,31 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Expire due membership invites (AC-3): mark open invites whose `expiresAt` is
-   * past as redeemed (no longer redeemable). The sweep mechanism lands here in
-   * M2; invite rows are populated by the invite flow in M3 (US-023), so today
-   * this is a no-op against an empty table.
+   * Expire due membership invites (AC-3): mark THIS document's open invites whose
+   * `expiresAt` is past as redeemed (no longer redeemable).
+   *
+   * SCOPED to this doc's invites (#127): a per-document DO must reap only its OWN
+   * invite rows — sweeping the whole table would be a layering violation (one
+   * doc's alarm mutating another doc's rows) and O(docs) redundant full-table
+   * scans. We key by the DO's own document id (its docRef / doName). Correctness
+   * never depends on this sweep — `redeemInvite` independently rejects an expired
+   * invite — so if this doc has no identity yet (metadata unset), it has no
+   * invites to reap; skip.
    */
   private async expireInvites(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{
+        docRef: string | null;
+        doName: string | null;
+      }>("SELECT docRef, doName FROM doc_meta WHERE id = 0")
+      .toArray()[0];
+    const docRef = meta?.docRef ?? meta?.doName;
+    if (!docRef) return; // no identity yet → no invites belong to this doc
+    const now = Date.now();
     await this.env.DB.prepare(
-      "UPDATE invite SET redeemedAt = ? WHERE redeemedAt IS NULL AND expiresAt < ?",
+      "UPDATE invite SET redeemedAt = ? WHERE docRef = ? AND redeemedAt IS NULL AND expiresAt < ?",
     )
-      .bind(Date.now(), Date.now())
+      .bind(now, docRef, now)
       .run();
   }
 
