@@ -159,49 +159,53 @@ export function Assemble({
         <Share docRef={routineId} viewerRole={role} />
       </Sheet>
 
-      {routine.sections.length === 0 ? (
-        <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
-      ) : (
-        routine.sections.map((section, index) => (
-          <section key={section.id} className="flex flex-col gap-2">
-            <SectionHeader
-              section={section}
-              canEdit={canEdit}
-              isFirst={index === 0}
-              isLast={index === routine.sections.length - 1}
-              onRename={(name) => store.renameSection(section.id, name)}
-              onMove={(dir) => store.moveSection(section.id, dir)}
-              onDelete={() => setPendingDelete(section)}
-            />
-            {section.placements.length === 0 ? (
-              <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {section.placements.map((placement, pIndex) => (
-                  <li key={placement.id}>
-                    <PlacementCard
-                      placement={placement}
-                      figure={figureByPlacement.get(placement.id) ?? null}
-                      canEdit={canEdit}
-                      isFirst={pIndex === 0}
-                      isLast={pIndex === section.placements.length - 1}
-                      onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
-                      onDelete={() =>
-                        setPendingDeletePlacement({ sectionId: section.id, placement })
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-            {canEdit && (
-              <Button variant="secondary" size="sm" onClick={() => setAddingFigureTo(section.id)}>
-                Add figure
-              </Button>
-            )}
-          </section>
-        ))
-      )}
+      {/* The live section list. data-testid is a stable hook the two-client
+          convergence E2E (US-015) asserts on (no role/name ambiguity). */}
+      <div data-testid="section-list" className="flex flex-col gap-4">
+        {routine.sections.length === 0 ? (
+          <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
+        ) : (
+          routine.sections.map((section, index) => (
+            <section key={section.id} className="flex flex-col gap-2">
+              <SectionHeader
+                section={section}
+                canEdit={canEdit}
+                isFirst={index === 0}
+                isLast={index === routine.sections.length - 1}
+                onRename={(name) => store.renameSection(section.id, name)}
+                onMove={(dir) => store.moveSection(section.id, dir)}
+                onDelete={() => setPendingDelete(section)}
+              />
+              {section.placements.length === 0 ? (
+                <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {section.placements.map((placement, pIndex) => (
+                    <li key={placement.id}>
+                      <PlacementCard
+                        placement={placement}
+                        figure={figureByPlacement.get(placement.id) ?? null}
+                        canEdit={canEdit}
+                        isFirst={pIndex === 0}
+                        isLast={pIndex === section.placements.length - 1}
+                        onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                        onDelete={() =>
+                          setPendingDeletePlacement({ sectionId: section.id, placement })
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canEdit && (
+                <Button variant="secondary" size="sm" onClick={() => setAddingFigureTo(section.id)}>
+                  Add figure
+                </Button>
+              )}
+            </section>
+          ))
+        )}
+      </div>
 
       {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
 
