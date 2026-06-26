@@ -9,12 +9,14 @@
 import * as A from "@automerge/automerge";
 import {
   type Attribute,
+  addSection,
   type FigureDoc,
   type Placement,
   type RoutineDoc,
   readRoutine,
   redoLastChange,
   resolve,
+  softDeleteSection,
   undoLastChange,
 } from "@ballroom/domain";
 import { connectUrl, DocConnection, type SocketFactory, type SyncState } from "./doc-connection";
@@ -31,8 +33,14 @@ export interface RoutineStore {
   readPlacements(): ResolvedPlacement[];
   /** The materialized routine doc (tombstones dropped). */
   readRoutine(): RoutineDoc;
-  /** Rename a section (example mutation; the editor adds more). */
+  /** Add a new user-named section to the end of the routine (US-026). */
+  addSection(name: string): void;
+  /** Rename a section (US-026). */
   renameSection(sectionId: string, name: string): void;
+  /** Move a section one step up/down in order (US-026; reorder convergence #63). */
+  moveSection(sectionId: string, direction: "up" | "down"): void;
+  /** Soft-delete a section — sets its tombstone, never a hard removal (US-026). */
+  deleteSection(sectionId: string): void;
   /**
    * Replace a figure doc's attribute timeline (US-028). The timeline editor emits
    * the figure's full next attribute set; this writes it to that figure's doc
@@ -146,11 +154,34 @@ export async function openRoutine(
       return out;
     },
 
+    addSection: (name) => {
+      routineConn.commit(addSection(routineConn.current(), { name }));
+    },
+
     renameSection: (sectionId, name) => {
       routineConn.change((draft) => {
         const section = draft.sections.find((s) => s.id === sectionId);
         if (section) section.name = name;
       });
+    },
+
+    moveSection: (sectionId, direction) => {
+      routineConn.change((draft) => {
+        const i = draft.sections.findIndex((s) => s.id === sectionId);
+        if (i < 0) return;
+        const j = direction === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= draft.sections.length) return;
+        // Re-insert a plain copy: an Automerge object can't be re-inserted after
+        // removal, so move via a JSON copy. Single-client correct; robust
+        // concurrent-reorder convergence is the (open) sortKey work, #63.
+        const moved = JSON.parse(JSON.stringify(draft.sections[i]));
+        draft.sections.splice(i, 1);
+        draft.sections.splice(j, 0, moved);
+      });
+    },
+
+    deleteSection: (sectionId) => {
+      routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
     setFigureAttributes: (figureRef, attributes) => {

@@ -11,10 +11,16 @@
 // describes stay skipped), so no editor controls render here yet — the `role`
 // prop is accepted for when they land.
 
-import type { Attribute, FigureDoc, Placement } from "@ballroom/domain";
-import { useEffect, useReducer, useState } from "react";
+import {
+  type Attribute,
+  can,
+  type FigureDoc,
+  type Placement,
+  type Section,
+} from "@ballroom/domain";
+import { type FormEvent, useEffect, useReducer, useState } from "react";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
-import { Badge, Card, Chip, OfflineState, Spinner } from "../ui";
+import { Badge, Button, Card, Chip, IconButton, Input, OfflineState, Sheet, Spinner } from "../ui";
 
 /** Per-document membership role (NOT an ARIA role). */
 export type MembershipRole = "editor" | "commenter" | "viewer";
@@ -67,9 +73,13 @@ function useRoutineStore(
   return store;
 }
 
-export function Assemble({ routineId, role: _role, connection, store: injected }: AssembleProps) {
+export function Assemble({ routineId, role, connection, store: injected }: AssembleProps) {
   const offlineProp = connection === "offline";
   const store = useRoutineStore(routineId, injected, !offlineProp);
+  // Section management is editor-only — gated on the SHARED capability table, not
+  // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
+  const canEdit = can(role, "canEdit");
+  const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
@@ -101,9 +111,17 @@ export function Assemble({ routineId, role: _role, connection, store: injected }
       {routine.sections.length === 0 ? (
         <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
       ) : (
-        routine.sections.map((section) => (
+        routine.sections.map((section, index) => (
           <section key={section.id} className="flex flex-col gap-2">
-            <h2 className="text-sm font-bold">{section.name}</h2>
+            <SectionHeader
+              section={section}
+              canEdit={canEdit}
+              isFirst={index === 0}
+              isLast={index === routine.sections.length - 1}
+              onRename={(name) => store.renameSection(section.id, name)}
+              onMove={(dir) => store.moveSection(section.id, dir)}
+              onDelete={() => setPendingDelete(section)}
+            />
             {section.placements.length === 0 ? (
               <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
             ) : (
@@ -121,7 +139,161 @@ export function Assemble({ routineId, role: _role, connection, store: injected }
           </section>
         ))
       )}
+
+      {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
+
+      {/* Destructive actions confirm (principle #28); soft-delete tombstone. */}
+      <Sheet
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        title="Delete section?"
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-ink-secondary">
+            "{pendingDelete?.name}" and its placements will be removed from this routine. You can
+            still recover it from history.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (pendingDelete) store.deleteSection(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Delete section
+            </Button>
+          </div>
+        </div>
+      </Sheet>
     </div>
+  );
+}
+
+/** A section's heading with editor management (rename inline, move up/down, delete). */
+function SectionHeader({
+  section,
+  canEdit,
+  isFirst,
+  isLast,
+  onRename,
+  onMove,
+  onDelete,
+}: {
+  section: Section;
+  canEdit: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  onRename: (name: string) => void;
+  onMove: (direction: "up" | "down") => void;
+  onDelete: () => void;
+}) {
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(section.name);
+
+  if (renaming) {
+    return (
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          const next = name.trim();
+          if (next) onRename(next);
+          setRenaming(false);
+        }}
+      >
+        <Input
+          label="Section name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <Button type="submit" variant="primary" size="sm">
+          Save
+        </Button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <h2 className="text-sm font-bold">{section.name}</h2>
+      {canEdit && (
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Rename ${section.name}`}
+            onClick={() => setRenaming(true)}
+          >
+            Rename
+          </Button>
+          <IconButton
+            label={`Move ${section.name} up`}
+            disabled={isFirst}
+            onClick={() => onMove("up")}
+          >
+            ↑
+          </IconButton>
+          <IconButton
+            label={`Move ${section.name} down`}
+            disabled={isLast}
+            onClick={() => onMove("down")}
+          >
+            ↓
+          </IconButton>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Delete ${section.name}`}
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The add-section affordance: a button that reveals a name input. */
+function AddSection({ onAdd }: { onAdd: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  if (!open) {
+    return (
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Add section
+      </Button>
+    );
+  }
+  return (
+    <form
+      className="flex items-end gap-2"
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        const next = name.trim();
+        if (!next) return;
+        onAdd(next);
+        setName("");
+        setOpen(false);
+      }}
+    >
+      <Input
+        label="Section name"
+        placeholder="e.g. Intro"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
+        Add
+      </Button>
+    </form>
   );
 }
 

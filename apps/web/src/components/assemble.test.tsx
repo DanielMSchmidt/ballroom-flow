@@ -3,7 +3,7 @@
 // rule mis-flags it on these component props.
 import type { FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement, RoutineStore } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
 import { axeCheck, renderUi, screen, userEvent } from "../test-support/render";
@@ -27,17 +27,25 @@ interface AssembleModule {
 // pre-seeded fake store — mirroring how the store itself injects its socket — so
 // the screen renders synced data without a live worker (jsdom has no WS server).
 // The live multi-doc sync is the store seam's own test + the #116 wrangler smoke.
-function fakeStore(routine: RoutineDoc, resolved: ResolvedPlacement[]): RoutineStore {
+function fakeStore(
+  routine: RoutineDoc,
+  resolved: ResolvedPlacement[],
+  overrides: Partial<RoutineStore> = {},
+): RoutineStore {
   return {
     readRoutine: () => routine,
     readPlacements: () => resolved,
+    addSection: () => {},
     renameSection: () => {},
+    moveSection: () => {},
+    deleteSection: () => {},
     setFigureAttributes: () => {},
     undo: () => {},
     redo: () => {},
     subscribe: () => () => {},
     syncState: () => "live",
     close: () => {},
+    ...overrides,
   };
 }
 
@@ -110,26 +118,86 @@ describe("US-018 Open & view a routine", () => {
   });
 });
 
-describe.skip("US-026 Add / rename / reorder / delete sections", () => {
+describe("US-026 Add / rename / reorder / delete sections", () => {
+  /** A routine with two sections, for exercising reorder + per-section controls. */
+  const twoSectionRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [
+      { id: "s1", name: "Intro", deletedAt: null, placements: [] },
+      { id: "s2", name: "Body", deletedAt: null, placements: [] },
+    ],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
   it("lets an editor add, rename, reorder, and soft-delete (with confirm) sections", async () => {
-    // Intent: editors manage user-named sections; delete confirms.
-    // Arrange: render <Assemble role="editor">. Act: add a section, rename it,
-    //   trigger delete → confirm. Assert: the add/rename reflected; delete shows a
-    //   confirm dialog before removing.
+    // Intent: editors manage user-named sections through the store; delete confirms.
+    // Arrange: an editor on a 2-section routine, with store mutations spied.
+    // Act/Assert: add (reveals a name input → addSection), rename (→ renameSection),
+    //   move down (→ moveSection), delete (→ a confirm dialog → deleteSection).
     // Covers US-026 AC-1 (add/rename/reorder/soft-delete + confirm).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
+    const spies = {
+      addSection: vi.fn(),
+      renameSection: vi.fn(),
+      moveSection: vi.fn(),
+      deleteSection: vi.fn(),
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(twoSectionRoutine(), [], spies)}
+      />,
+    );
+
+    // Add
     await userEvent.click(screen.getByRole("button", { name: /add section/i }));
-    expect(screen.getByRole("textbox", { name: /section name/i })).toBeInTheDocument();
+    const nameInput = screen.getByRole("textbox", { name: /section name/i });
+    expect(nameInput).toBeInTheDocument();
+    await userEvent.type(nameInput, "Coda");
+    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    expect(spies.addSection).toHaveBeenCalledWith("Coda");
+
+    // Rename "Intro" → "Opening"
+    await userEvent.click(screen.getByRole("button", { name: /rename intro/i }));
+    const renameInput = screen.getByRole("textbox", { name: /section name/i });
+    await userEvent.clear(renameInput);
+    await userEvent.type(renameInput, "Opening");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(spies.renameSection).toHaveBeenCalledWith("s1", "Opening");
+
+    // Reorder: move "Intro" down
+    await userEvent.click(screen.getByRole("button", { name: /move intro down/i }));
+    expect(spies.moveSection).toHaveBeenCalledWith("s1", "down");
+
+    // Soft-delete "Body" — confirm required
+    await userEvent.click(screen.getByRole("button", { name: /delete body/i }));
+    expect(spies.deleteSection).not.toHaveBeenCalled(); // not until confirmed
+    await userEvent.click(screen.getByRole("button", { name: /delete section/i }));
+    expect(spies.deleteSection).toHaveBeenCalledWith("s2");
   });
 
   it("hides section management from a commenter/viewer", async () => {
-    // Intent: only editors manage sections.
-    // Arrange: render <Assemble role="commenter">. Act/Assert: no add/rename/delete controls.
+    // Intent: only editors manage sections (gated on can(role,'canEdit')).
+    // Arrange: a commenter on a 2-section routine. Act/Assert: no add/rename/move/delete.
     // Covers US-026 AC-2 (commenter/viewer cannot manage sections).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="commenter" />);
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="commenter"
+        store={fakeStore(twoSectionRoutine(), [])}
+      />,
+    );
     expect(screen.queryByRole("button", { name: /add section/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /rename intro/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /move intro down/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /delete intro/i })).toBeNull();
   });
 });
 
