@@ -72,6 +72,45 @@ const figure = (id: string, name: string): FigureDoc => ({
   deletedAt: null,
 });
 
+describe("Reading view (read-only routine timeline)", () => {
+  it("toggles to a read-only timeline showing figures and their step chips", async () => {
+    // Intent: a view toggle lays the whole routine out as a read-only timeline —
+    //   every figure's notated steps as chips — the payoff view (US-018 reading).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const fig: FigureDoc = {
+      ...figure("feather", "Feather"),
+      attributes: [{ id: "a1", kind: "step", count: 2, value: "T", role: null, deletedAt: null }],
+    };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig }])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /reading view/i }));
+    expect(screen.getByTestId("reading-view")).toBeInTheDocument();
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    expect(screen.getByText("T")).toBeInTheDocument();
+    // Reading mode is read-only — no section-management affordance.
+    expect(screen.queryByRole("button", { name: /add section/i })).toBeNull();
+    // Toggle back to the editable list view.
+    await userEvent.click(screen.getByRole("button", { name: /list view/i }));
+    expect(screen.queryByTestId("reading-view")).toBeNull();
+  });
+});
+
 describe("US-018 Open & view a routine", () => {
   it("shows sections in order with placement cards (name, badges, summary, chips)", async () => {
     // Intent: opening a routine renders sections → placement cards from the synced docs.
