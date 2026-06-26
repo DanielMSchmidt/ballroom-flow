@@ -72,6 +72,32 @@ describe("#187 figure-doc projection", () => {
     expect(conn.status).toBe(101);
   });
 
+  it("the projection is what UNBLOCKS the connect (owner 403 before, 101 after)", async () => {
+    // RED property (the figure analog of US-021 owner elevation): the ONLY thing
+    // that changes between the two connects is the projection. An owner connecting
+    // to an UN-projected figure is 403; after POST /api/figures projects the
+    // registry row + owner membership, the SAME owner's connect is 101. Removing
+    // the projection (or the owner-membership row) flips 101 → 403 — proving the
+    // projection is load-bearing, not incidental.
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({ keypair: kp, userId: "u_p", docRef: figureRef, role: null });
+    await seedDb({ users: [{ id: "u_p", displayName: "P", identityColor: "#111", plan: "free" }] });
+
+    // Before projection: the owner can't reach their own (un-indexed) figure.
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
+
+    // Project it.
+    const res = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ figureRef, name: "Feather", dance: "foxtrot", figureType: "feather" }),
+    });
+    expect(res.status).toBe(201);
+
+    // After projection: the SAME owner's connect is accepted.
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(101);
+  });
+
   it("rejects a non-member connection to the figure (per-doc, fail-closed)", async () => {
     const figureRef = uniqueDocName("fig");
     const owner = await authedContext({
