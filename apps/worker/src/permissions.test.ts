@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { capabilitiesFor } from "@ballroom/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "./test-support/authed-context";
@@ -120,7 +120,7 @@ describe("US-020 Per-document membership & roles", () => {
   });
 });
 
-describe.skip("US-021 Permission boundary at the DO connection", () => {
+describe("US-021 Permission boundary at the DO connection", () => {
   it("accepts an editor's change connection on a routine doc", async () => {
     // Intent: an editor connects and may push changes (the happy path).
     // Arrange: seed routine + editor membership; mint the editor's JWT.
@@ -194,11 +194,30 @@ describe.skip("US-021 Permission boundary at the DO connection", () => {
     expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
   });
 
-  it("rejects a connection with an invalid/expired token before any role lookup", async () => {
-    // Intent: auth fails closed — an expired token never reaches the role check.
-    // Arrange: mint an EXPIRED token for a real editor membership.
-    // Act: connect. Assert: 401 (auth failure, not 403).
-    // Covers US-021 AC-1 (authenticates the connection) — fail-closed auth.
+  it("rejects a connection with a MISSING token (fail-closed) — no open path", async () => {
+    // Intent: with NO Authorization header at all, the connect is rejected — the
+    //   pre-US-021 open-when-no-token path is gone. (Dedicated guardrail: the two
+    //   infra tests that used to connect token-less now authenticate, so this is
+    //   the suite's explicit proof that a missing token fails closed.)
+    // Arrange: seed a routine WITH an editor membership (would be 101 if reached).
+    // Act: connect with NO Authorization header. Assert: 401 (never reaches role lookup).
+    // Covers US-021 AC-1 (missing token → 401).
+    const docRef = uniqueDocName("rt");
+    await seedDb({
+      users: [{ id: "u_ed", displayName: "Ed", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      memberships: [{ id: `mem_u_ed_${docRef}`, docRef, userId: "u_ed", role: "editor" }],
+    });
+    const res = await tryConnect(docRef, {}); // no Authorization header
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects an invalid/expired token with 401 BEFORE any role lookup (order)", async () => {
+    // Intent: auth fails closed and runs FIRST — an expired token never reaches
+    //   roleFor. The actor here is the doc's OWNER and an editor member, so they
+    //   WOULD get 101 if the token were valid (or 403 if the role check ran on a
+    //   bad token). Getting 401 proves auth gates strictly before the role lookup.
+    // Covers US-021 AC-1 (authenticate the connection; order: auth → role).
     const docRef = uniqueDocName("rt");
     const ctx = await authedContext({
       keypair: kp,
@@ -213,6 +232,54 @@ describe.skip("US-021 Permission boundary at the DO connection", () => {
       memberships: ctx.membership ? [ctx.membership] : [],
     });
     const res = await tryConnect(docRef, ctx.authHeaders());
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(401); // auth failure — NOT 101 (member) and NOT 403 (role lookup)
+  });
+
+  it("accepts the OWNER even with no membership row (owner elevation, #168)", async () => {
+    // Intent: a doc's owner is never locked out of their own doc — resolveEffectiveRole
+    //   elevates document_registry.ownerId to "owner" (editor+delete) without a
+    //   membership row. Arrange: seed a routine owned by the actor, NO membership.
+    // Act: connect. Assert: 101 (owner gets an accepted editor-grade connection).
+    // Covers #168 (owner elevation at the boundary).
+    const docRef = uniqueDocName("rt");
+    const ctx = await authedContext({ keypair: kp, userId: "u_owner", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_owner", displayName: "O", identityColor: "#777", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+      // deliberately NO memberships
+    });
+    const res = await tryConnect(docRef, ctx.authHeaders());
+    expect(res.status).toBe(101);
+  });
+
+  it("drops a viewer's structural write over the socket (read-only enforced)", async () => {
+    // Intent: a viewer may CONNECT (read-only) but a structural write frame is
+    //   refused at the socket — proven by feeding a real, lineage-valid change
+    //   through webSocketMessage with a viewer attachment (dropped) vs an editor
+    //   attachment (applied). Covers US-021 AC-2 (viewer read-only) at the write.
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_vw", displayName: "Vw", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(
+      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (inst) => {
+        const bytes = await inst.buildChangeForTest({ op: "addSection", name: "ViewerEdit" });
+        const rows0 = await inst.debugChangeRowCount();
+        const wsAs = (role: string) =>
+          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+
+        // Viewer frame → dropped (no new persisted change).
+        await inst.webSocketMessage(wsAs("viewer"), bytes.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0);
+
+        // The SAME bytes from an editor → applied (proves the bytes were valid;
+        // the viewer drop was the role gate, not a malformed/duplicate frame).
+        await inst.webSocketMessage(wsAs("editor"), bytes.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+      },
+    );
   });
 });
