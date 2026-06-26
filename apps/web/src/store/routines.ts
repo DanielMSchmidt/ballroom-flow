@@ -4,7 +4,14 @@
 import type { CreateRoutine, RoutineList } from "@ballroom/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "../auth/app-auth";
-import { apiGet, apiPost } from "../lib/rpc";
+import { ApiError, apiGet, apiPost } from "../lib/rpc";
+
+/** Whether a create failure is the server's quota refusal (402) — drives the
+ *  upsell. Lives in the store so components branch on it without importing
+ *  lib/rpc directly (the §3 boundary, enforced by routine-store.test.ts). */
+export function isQuotaError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 402;
+}
 
 /** The viewer's routines (owned + shared-in) for the Choreo list. */
 export function useRoutines() {

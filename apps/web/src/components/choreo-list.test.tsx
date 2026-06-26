@@ -24,7 +24,8 @@ describe("US-022 Quota upsell (UI)", () => {
     // Act: click "New Choreo". Assert: an upsell sheet/toast appears (not a new routine).
     // Covers US-022 (4th blocked → upsell) at the UI — §10.2 "toasts incl. quota".
     const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
-    renderUi(<ChoreoList ownedCount={3} plan="free" />);
+    // cap comes from the server (/api/me), not a hardcoded client constant (#176).
+    renderUi(<ChoreoList ownedCount={3} plan="free" cap={3} />);
     await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
     expect(await screen.findByText(/upgrade|upsell|limit/i)).toBeInTheDocument();
   });
