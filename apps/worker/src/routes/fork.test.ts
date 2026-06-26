@@ -76,7 +76,11 @@ describe("US-037 Choreo fork", () => {
     ).map((s) => s.name);
     expect(forkNames).toContain("Intro");
     expect(forkNames).not.toContain("AfterFork");
-  });
+    // This case is the suite's heaviest: it cold-starts TWO Durable Objects
+    // (origin + fork) and runs several Automerge ops + getSnapshots across them.
+    // Under a cold CI workerd runner that can exceed vitest's default 5s, so give
+    // it a larger budget (it runs in ~250ms warm) to avoid a cold-start flake.
+  }, 15_000);
 
   it("forbids a non-member from forking (403)", async () => {
     // Intent: you can only fork a routine you can read; a stranger is refused.

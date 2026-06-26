@@ -1,35 +1,87 @@
-import { expect, test } from "@playwright/test";
-import { gotoRoutine, seedAuth } from "./support/auth";
+import { expect, type Page, test } from "@playwright/test";
+import { seedAuth } from "./support/auth";
+import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Per-user undo across two clients (PLAN §10.2 E2E: "per-user undo across two
 // clients"). Covers US-038 (undo reverts only YOUR change; the other client's
-// concurrent edit survives; redo).
-// SKIPPED until M5 undo UX + live sync + screens + E2E auth exist.
+// concurrent edit survives; redo). The domain primitive (history-based per-actor
+// undo, US-010) is proven in packages/domain; this proves it end-to-end through
+// the store seam + live sync, in two real browsers.
+//
+// @smoke — FE-5 is done only when this journey is green.
 // ─────────────────────────────────────────────────────────────────────────
 
-test.describe("per-user undo across two clients", () => {
-  test.skip(true, "M5 undo UX + live sync + screens + E2E auth not built yet (see TEST-MAP.md)");
+const A = "user_a";
+const B = "user_b";
 
+async function createRoutineAsOwner(page: Page, title: string): Promise<string> {
+  await page.goto("/");
+  await page.getByRole("button", { name: /new choreo/i }).click();
+  await page.getByLabel("Routine name").fill(title);
+  await page.getByLabel("Dance").selectOption("waltz");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({ timeout: 15_000 });
+  const docRef = new URL(page.url()).pathname.split("/").pop() ?? "";
+  expect(docRef, "expected a created routine id in the URL").toBeTruthy();
+  return docRef;
+}
+
+async function addSection(page: Page, name: string): Promise<void> {
+  await page.getByRole("button", { name: "Add section" }).click();
+  await page.getByLabel("Section name").fill(name);
+  await page.getByLabel("Section name").press("Enter");
+}
+
+test.describe("@smoke per-user undo across two clients", () => {
   test("A's undo reverts only A's last change; B's concurrent edit survives; redo restores", async ({
     browser,
   }) => {
-    // Intent: history-based per-user undo merges correctly with a concurrent remote edit.
-    // Multi-user scenario: A and B both edit the same routine; A undoes A's last change.
-    // Steps/asserts:
-    //   1. A adds section "FromA"; B adds section "FromB"; both converge (both see both).
-    //   2. A clicks Undo → an "Undone" toast (US-038 AC-1); "FromA" disappears on BOTH;
-    //      "FromB" REMAINS on both (US-038 AC-2 — B's edit survives).
-    //   3. A clicks Redo → "FromA" reappears on both (US-038 AC-4).
-    const [a, b] = await openTwoUsers(browser, "user_a", "user_b");
-    await seedAuth(a.page, a.userId);
-    await seedAuth(b.page, b.userId);
-    await Promise.all([gotoRoutine(a.page, "rt_shared_ab"), gotoRoutine(b.page, "rt_shared_ab")]);
-    // (A adds FromA, B adds FromB — omitted setup steps mirror authoring.spec.ts.)
+    // Intent: history-based per-user undo merges correctly with a concurrent
+    //   remote edit — A's undo touches only A's change; B's survives; redo restores.
+    const [a, b] = await openTwoUsers(browser, A, B);
+    await resetDb(a.page);
+    await seedDb(a.page, {
+      users: [
+        { id: A, displayName: "A", identityColor: "#111111" },
+        { id: B, displayName: "B", identityColor: "#222222" },
+      ],
+    });
+    await seedAuth(a.page, A);
+    await seedAuth(b.page, B);
+
+    // A owns a routine; B joins as a co-editor; both open it live.
+    const docRef = await createRoutineAsOwner(a.page, "Undo Waltz");
+    await seedDb(a.page, { memberships: [{ docRef, userId: B, role: "editor" }] });
+    await b.page.goto(`/routines/${docRef}`);
+    await expect(b.page.getByRole("button", { name: "Add section" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 1. A adds "FromA", B adds "FromB"; both clients converge on BOTH.
+    await addSection(a.page, "FromA");
+    await expectConverged([a.page, b.page], "[data-testid='section-list']", "FromA");
+    await addSection(b.page, "FromB");
+    await expectConverged([a.page, b.page], "[data-testid='section-list']", "FromB");
+
+    // 2. A undoes → "Undone" toast; "FromA" disappears on BOTH; "FromB" REMAINS.
     await a.page.getByRole("button", { name: /^undo$/i }).click();
     await expect(a.page.getByText(/undone/i)).toBeVisible();
-    await expectConverged([a.page, b.page], "[data-testid='section-list']", "FromB");
+    await expect(a.page.getByRole("heading", { name: "FromA" })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(b.page.getByRole("heading", { name: "FromA" })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    // B's concurrent edit survives A's undo (US-038 AC-2).
+    await expect(a.page.getByRole("heading", { name: "FromB" })).toBeVisible();
+    await expect(b.page.getByRole("heading", { name: "FromB" })).toBeVisible();
+
+    // 3. A redoes → "FromA" reappears on both (US-038 AC-4).
+    await a.page.getByRole("button", { name: /^redo$/i }).click();
+    await expectConverged([a.page, b.page], "[data-testid='section-list']", "FromA");
+
     await closeUsers(a, b);
   });
 });

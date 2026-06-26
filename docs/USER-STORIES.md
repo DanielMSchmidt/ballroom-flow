@@ -25,7 +25,7 @@
 | **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** ✓ · denied-state UI (#178) | **journey green** — share UI (roster + role + invite-from-UI → redeem), non-member denied, quota upsell all proven on the real worker |
 | **FE-3 Figures, variants & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW auto-variant; figure auto-updates across routines | US-006/007/008 ✓ (domain) · **US-037 choreo fork ✓ (journey green)** · US-031, US-032, US-033, US-034, US-035, US-036 (figure library/variants/COW — not started) · #42, #56 | **partial** — choreo fork done; figure-library/COW slice next |
 | **FE-4 Live collaboration** | `convergence.spec` — two contexts converge live; reconnect after a drop | US-014/015/016/017 ✓ · reconnect (#161) · typed envelope (#117) | **journey green** — two real browsers converge bidirectionally + idempotent reconnect replay; typed envelope (#117) still open |
-| **FE-5 Undo across clients** | `undo.spec` — per-user undo across two clients (A's undo reverts only A; B's edit survives) | US-010 ✓ (domain) · **US-037, US-038** · #70/#73/#160 | M5 — UI not started |
+| **FE-5 Undo across clients** | `undo.spec` — per-user undo across two clients (A's undo reverts only A; B's edit survives) | US-010 ✓ (domain) · **US-038 ✓ (journey green)** · #70/#73/#160 | **journey green** — Undo/Redo + "Undone" toast; per-tab actor so A's undo touches only A's change; B's survives; redo restores |
 | **FE-6 Annotations** | new `annotations.spec` — note on point/figure; `figureType` note across matching figures; co-member visibility | **US-039, US-040, US-041, US-042** · #172 | M6 — not started |
 | **FE-7 Custom kinds / lanes / search / sample** | extends `authoring.spec` + new specs — custom kind → editor; lanes; search; start-from-template | **US-043, US-044, US-045, US-046** · #18/#19/#81 | M7 — not started |
 | **FE-8 PWA, a11y & cross-browser** | `pwa-a11y.spec` — installable, offline shell, axe-clean, journeys pass on mobile-chrome/safari | **US-050, US-051, US-052** · #182 | M9 |
@@ -623,9 +623,10 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - If others built on my change, a soft "superseded" hint shows (no hard refusal).
   - Redo re-applies; a new edit clears redo. No cross-document undo of a copy-on-write.
 - **Tests (unskip when done):**
-  - Component (toast surface): `apps/web/src/components/profile.test.tsx` (describe `US-038 …`) — `shows an 'Undone' toast on undo and a soft 'superseded' hint` (AC-1; the superseded-hint AC-3 should get its own assertion when the hint UI lands).
+  - Component (toast surface): `apps/web/src/components/assemble.test.tsx` (describe `US-038 Per-user undo / redo UX`) — `lets an editor undo (with an 'Undone' toast) and redo` (AC-1 + AC-4) + `hides undo/redo from a non-editor`. (The affordances + toast live on the open routine's header.)
   - E2E (two-client, AC-2 + AC-4): `apps/web/e2e/undo.spec.ts` — `A's undo reverts only A's last change; B's concurrent edit survives; redo restores`.
   - Domain primitive: US-010's `undo.test.ts` (inverse-change, B's edit preserved, redo).
+  - **Deferred — AC-3 soft "superseded" hint:** not yet built. History-based undo still succeeds when others built on the change (Automerge merges; no hard refusal), so the hint is advisory; add it + its assertion when the hint UX lands.
 
 ---
 

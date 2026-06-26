@@ -105,6 +105,15 @@ export interface OpenOptions {
 const defaultSocketFactory: SocketFactory = (url, protocols) =>
   new WebSocket(url, protocols) as unknown as ReturnType<SocketFactory>;
 
+/** A valid Automerge actor id (even-length hex string), unique per tab (#70). */
+function randomActorId(): string {
+  const c = typeof crypto !== "undefined" ? crypto : undefined;
+  if (c?.randomUUID) return c.randomUUID().replace(/-/g, "");
+  let s = "";
+  for (let i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16);
+  return s;
+}
+
 /** An empty routine doc to seed a fresh connection; the DO replays real state. */
 function emptyRoutine(id: string): RoutineDoc {
   return {
@@ -131,7 +140,11 @@ export async function openRoutine(
   const baseUrl =
     opts.baseUrl ?? (typeof location !== "undefined" ? location.origin : "http://localhost");
   const openSocket = opts.openSocket ?? defaultSocketFactory;
-  const actor = opts.actor;
+  // A STABLE per-tab Automerge actor id (#70): the same actor must (a) author this
+  // client's changes and (b) be the one undo/redo target, or undoLastChange finds
+  // nothing. Default one when the caller omits it (the screen does), so per-user
+  // undo works out of the box — and two tabs/users get distinct actors.
+  const actor = opts.actor ?? randomActorId();
   const getToken: TokenProvider | undefined = opts.getToken;
   // Default figure projection: POST /api/figures (authenticated with a fresh
   // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
