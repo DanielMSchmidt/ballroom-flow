@@ -1,10 +1,10 @@
 import { zCreateFigure, zCreateRoutine, zIssueInvite } from "@ballroom/contract";
-import { can, newId } from "@ballroom/domain";
+import { can, DANCE_IDS, type DanceId, newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
-import { createFigureRows } from "./db/figures";
+import { createFigureRows, listGlobalFigures, listMyFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
@@ -264,6 +264,31 @@ app.get("/api/routines", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const routines = await listRoutines(c.env.DB, user.sub);
   return c.json({ routines });
+});
+
+// GET /api/figures — the application-global figure library browse (US-032),
+// optionally filtered by `?dance=`. Served from the D1 registry (no CRDT scan);
+// grouping by figureType is the client's concern. An unknown dance value is
+// ignored (returns the unfiltered library) rather than erroring.
+app.get("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const danceParam = c.req.query("dance");
+  const dance = (DANCE_IDS as readonly string[]).includes(danceParam ?? "")
+    ? (danceParam as DanceId)
+    : undefined;
+  const figures = await listGlobalFigures(c.env.DB, dance);
+  return c.json({ figures });
+});
+
+// GET /api/figures/mine — the viewer's account variants + custom figures (US-033)
+// with "used in N routines" + variant lineage, from the D1 index + figure_usage
+// edge projection (no CRDT scan).
+app.get("/api/figures/mine", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const figures = await listMyFigures(c.env.DB, user.sub);
+  return c.json({ figures });
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a

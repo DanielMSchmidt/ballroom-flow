@@ -55,11 +55,19 @@ export interface SeedInvite {
   redeemedAt?: number | null;
 }
 
+/** A figure→routine usage edge (US-033 "used in N routines"; FE-3 S1). */
+export interface SeedFigureUsage {
+  routineRef: string;
+  figureRef: string;
+  deletedAt?: number | null;
+}
+
 export interface SeedSpec {
   users?: SeedUser[];
   docs?: SeedDoc[];
   memberships?: SeedMembership[];
   invites?: SeedInvite[];
+  figureUsage?: SeedFigureUsage[];
 }
 
 /**
@@ -131,6 +139,13 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
       env.DB.prepare(
         "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, ?)",
       ).bind(i.id, i.docRef, i.role, i.expiresAt, i.redeemedAt ?? null),
+    );
+  }
+  for (const e of spec.figureUsage ?? []) {
+    stmts.push(
+      env.DB.prepare(
+        "INSERT INTO figure_usage (routineRef, figureRef, deletedAt) VALUES (?, ?, ?)",
+      ).bind(e.routineRef, e.figureRef, e.deletedAt ?? null),
     );
   }
 

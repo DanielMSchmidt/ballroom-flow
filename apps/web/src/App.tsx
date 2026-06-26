@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AccountControls, useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
-import { FigureLibrary } from "./components/FigureLibrary";
+import { FigureLibraryScreen } from "./components/FigureLibraryScreen";
 import { InviteRedeem } from "./components/InviteRedeem";
 import { navigate, useRoute } from "./lib/router";
 import { Styleguide } from "./styleguide/Styleguide";
@@ -73,9 +73,9 @@ function AppHome(): React.JSX.Element {
         ) : openRoutineId || tab === "choreo" ? (
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (
-          // Read-only library browse (US-032/033). Data wiring (GET /api/figures
-          // + /api/figures/mine) lands in FE-3 S1; presentational for now.
-          <FigureLibrary />
+          // Read-only library browse (US-032/033) — fetches global + my figures
+          // through the store seam (FE-3 S1).
+          <FigureLibraryScreen />
         ) : (
           <Card>
             <p className="text-sm font-bold text-ink">Coming soon</p>

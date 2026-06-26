@@ -69,3 +69,18 @@ export const invite = sqliteTable("invite", {
 });
 
 export type InviteRow = typeof invite.$inferSelect;
+
+/**
+ * figure→routine usage edges (US-033/034, migration 0005). A pure projected
+ * index — which routines reference which figure docs — written by each ROUTINE
+ * DO's alarm from its own placements (scoped to that routineRef). Powers "used
+ * in N routines" without a CRDT scan. Soft-delete: a removed placement tombstones
+ * its edge. Keyed per (routineRef, figureRef) so a re-project is an upsert.
+ */
+export const figureUsage = sqliteTable("figure_usage", {
+  routineRef: text("routineRef").notNull(),
+  figureRef: text("figureRef").notNull(),
+  deletedAt: integer("deletedAt"),
+});
+
+export type FigureUsageRow = typeof figureUsage.$inferSelect;
