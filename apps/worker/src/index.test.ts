@@ -46,3 +46,36 @@ it("GET /docs/:id/connect rejects a non-upgrade request with 426", async () => {
   const res = await SELF.fetch("https://example.com/docs/rt_sample/connect");
   expect(res.status).toBe(426);
 });
+
+// #189 — a browser WS handshake can't set Authorization, so the token rides the
+// `ballroom.auth` subprotocol. The route extracts it → forwards as Authorization
+// to the DO → the US-021 boundary authenticates it → 101, with the subprotocol
+// echoed so the browser completes the handshake.
+it("authorizes a connect via the ballroom.auth subprotocol (browser transport)", async () => {
+  const docRef = "rt_subproto";
+  const ctx = await authedContext({ keypair: kp, userId: "u_sp", docRef, role: "editor" });
+  await seedDb({
+    users: [{ id: "u_sp", displayName: "Sp", identityColor: "#111", plan: "free" }],
+    docs: [{ docRef, type: "routine", ownerId: "u_sp", doName: docRef }],
+    memberships: ctx.membership ? [ctx.membership] : [],
+  });
+  const res = await SELF.fetch(`https://example.com/docs/${docRef}/connect`, {
+    headers: { Upgrade: "websocket", "Sec-WebSocket-Protocol": `ballroom.auth, ${ctx.token}` },
+  });
+  expect(res.status).toBe(101);
+  expect(res.headers.get("Sec-WebSocket-Protocol")).toBe("ballroom.auth"); // echoed
+});
+
+it("rejects a subprotocol connect with NO token (401, fail-closed end-to-end)", async () => {
+  const res = await SELF.fetch("https://example.com/docs/rt_sample/connect", {
+    headers: { Upgrade: "websocket", "Sec-WebSocket-Protocol": "ballroom.auth" }, // no token
+  });
+  expect(res.status).toBe(401);
+});
+
+it("rejects a subprotocol connect with an INVALID token (401)", async () => {
+  const res = await SELF.fetch("https://example.com/docs/rt_sample/connect", {
+    headers: { Upgrade: "websocket", "Sec-WebSocket-Protocol": "ballroom.auth, not-a-real-token" },
+  });
+  expect(res.status).toBe(401);
+});
