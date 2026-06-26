@@ -80,6 +80,11 @@ export function Assemble({ routineId, role, connection, store: injected }: Assem
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
   const canEdit = can(role, "canEdit");
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
+  const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
+  const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
+    sectionId: string;
+    placement: Placement;
+  } | null>(null);
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
@@ -126,21 +131,79 @@ export function Assemble({ routineId, role, connection, store: injected }: Assem
               <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {section.placements.map((placement) => (
+                {section.placements.map((placement, pIndex) => (
                   <li key={placement.id}>
                     <PlacementCard
                       placement={placement}
                       figure={figureByPlacement.get(placement.id) ?? null}
+                      canEdit={canEdit}
+                      isFirst={pIndex === 0}
+                      isLast={pIndex === section.placements.length - 1}
+                      onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                      onDelete={() =>
+                        setPendingDeletePlacement({ sectionId: section.id, placement })
+                      }
                     />
                   </li>
                 ))}
               </ul>
+            )}
+            {canEdit && (
+              <Button variant="secondary" size="sm" onClick={() => setAddingFigureTo(section.id)}>
+                Add figure
+              </Button>
             )}
           </section>
         ))
       )}
 
       {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
+
+      {/* Add a figure: mints a fresh owned custom figure + a placement (US-027). */}
+      <Sheet
+        open={addingFigureTo !== null}
+        onClose={() => setAddingFigureTo(null)}
+        title="Add a figure"
+      >
+        <AddFigureForm
+          onAdd={(name) => {
+            if (addingFigureTo) store.addPlacement(addingFigureTo, name);
+            setAddingFigureTo(null);
+          }}
+        />
+      </Sheet>
+
+      {/* Placement delete confirm (principle #28); soft-delete tombstone. */}
+      <Sheet
+        open={pendingDeletePlacement !== null}
+        onClose={() => setPendingDeletePlacement(null)}
+        title="Remove figure?"
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-ink-secondary">
+            This figure will be removed from the section. You can still recover it from history.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPendingDeletePlacement(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (pendingDeletePlacement) {
+                  store.deletePlacement(
+                    pendingDeletePlacement.sectionId,
+                    pendingDeletePlacement.placement.id,
+                  );
+                }
+                setPendingDeletePlacement(null);
+              }}
+            >
+              Remove figure
+            </Button>
+          </div>
+        </div>
+      </Sheet>
 
       {/* Destructive actions confirm (principle #28); soft-delete tombstone. */}
       <Sheet
@@ -298,18 +361,84 @@ function AddSection({ onAdd }: { onAdd: (name: string) => void }) {
 }
 
 /** One placement → a card: figure name, scope badge, attribute summary, alignment chips. */
-function PlacementCard({ placement, figure }: { placement: Placement; figure: FigureDoc | null }) {
+function PlacementCard({
+  placement,
+  figure,
+  canEdit = false,
+  isFirst = false,
+  isLast = false,
+  onMove,
+  onDelete,
+}: {
+  placement: Placement;
+  figure: FigureDoc | null;
+  canEdit?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
+  onMove?: (direction: "up" | "down") => void;
+  onDelete?: () => void;
+}) {
+  const label = figure?.name ?? "Unknown figure";
   return (
     <Card>
       <div className="flex items-center gap-2">
-        <span className="font-medium">{figure?.name ?? "Unknown figure"}</span>
+        <span className="font-medium">{label}</span>
         {figure ? <ScopeTag figure={figure} /> : null}
+        {canEdit && (
+          <div className="ml-auto flex items-center gap-1">
+            <IconButton
+              label={`Move ${label} up`}
+              disabled={isFirst}
+              onClick={() => onMove?.("up")}
+            >
+              ↑
+            </IconButton>
+            <IconButton
+              label={`Move ${label} down`}
+              disabled={isLast}
+              onClick={() => onMove?.("down")}
+            >
+              ↓
+            </IconButton>
+            <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
+              Remove
+            </Button>
+          </div>
+        )}
       </div>
       {figure ? (
         <p className="mt-1 text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
       ) : null}
       <AlignmentChips placement={placement} figure={figure} />
     </Card>
+  );
+}
+
+/** The add-figure form inside the "Add a figure" sheet: a name → a new figure. */
+function AddFigureForm({ onAdd }: { onAdd: (name: string) => void }) {
+  const [name, setName] = useState("");
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        const next = name.trim();
+        if (!next) return;
+        onAdd(next);
+        setName("");
+      }}
+    >
+      <Input
+        label="Figure name"
+        placeholder="e.g. Feather Step"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <Button type="submit" variant="primary" disabled={!name.trim()}>
+        Add
+      </Button>
+    </form>
   );
 }
 

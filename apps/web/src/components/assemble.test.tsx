@@ -39,6 +39,9 @@ function fakeStore(
     renameSection: () => {},
     moveSection: () => {},
     deleteSection: () => {},
+    addPlacement: () => {},
+    movePlacement: () => {},
+    deletePlacement: () => {},
     setFigureAttributes: () => {},
     undo: () => {},
     redo: () => {},
@@ -201,26 +204,81 @@ describe("US-026 Add / rename / reorder / delete sections", () => {
   });
 });
 
-describe.skip("US-027 Add / reorder / delete figure placements", () => {
+describe("US-027 Add / reorder / delete figure placements", () => {
+  /** A section "Intro" with two placements (Feather, Three Step), resolved. */
+  const seeded = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p1 = placement("p1", "feather");
+    const p2 = placement("p2", "threestep");
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1, p2] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [
+        { placement: p1, figure: figure("feather", "Feather") },
+        { placement: p2, figure: figure("threestep", "Three Step") },
+      ],
+    };
+  };
+
   it("lets an editor add a placement, reorder within a section, and soft-delete", async () => {
     // Intent: editors sequence figures via placements (figureRef) within a section.
-    // Arrange: render <Assemble role="editor">. Act: add a placement to "Intro",
-    //   reorder it, delete it (confirm). Assert: the card shows figure name + variant/custom
-    //   badge + attribute summary + alignment chips; reorder/delete work.
+    // Arrange: an editor on a section with two resolved placements; mutations spied.
+    // Act/Assert: the card shows figure name + scope badge + attribute summary +
+    //   alignment chip; Add opens a dialog → addPlacement; move down → movePlacement;
+    //   remove → a confirm dialog → deletePlacement.
     // Covers US-027 AC-1 (add/reorder/soft-delete) + AC-3 (card content).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="editor" />);
+    const spies = {
+      addPlacement: vi.fn(),
+      movePlacement: vi.fn(),
+      deletePlacement: vi.fn(),
+    };
+    const { routine, resolved } = seeded();
+    renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved, spies)} />,
+    );
+
+    // AC-3 card content
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    expect(screen.getAllByText(/library|custom|variant/i).length).toBeGreaterThan(0); // scope badge
+    expect(screen.getAllByText(/attribute/i).length).toBeGreaterThan(0); // attribute summary
+    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
+
+    // Add a figure → a fresh figure + placement
     await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
+    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave");
+
+    // Reorder: move "Feather" down within the section
+    await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
+    expect(spies.movePlacement).toHaveBeenCalledWith("s1", "p1", "down");
+
+    // Soft-delete "Feather" — confirm required
+    await userEvent.click(screen.getByRole("button", { name: /remove feather/i }));
+    expect(spies.deletePlacement).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /remove figure/i }));
+    expect(spies.deletePlacement).toHaveBeenCalledWith("s1", "p1");
   });
 
   it("blocks a non-editor from modifying placements", async () => {
-    // Intent: placement editing is editor-only.
-    // Arrange: render <Assemble role="viewer">. Act/Assert: no add/reorder/delete controls.
+    // Intent: placement editing is editor-only (gated on can(role,'canEdit')).
+    // Arrange: a viewer on the seeded section. Act/Assert: no add/move/remove controls.
     // Covers US-027 AC-2 (non-editor cannot modify placements).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    renderUi(<Assemble routineId="rt_sample" role="viewer" />);
+    const { routine, resolved } = seeded();
+    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
     expect(screen.queryByRole("button", { name: /add figure/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /move feather down/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /remove feather/i })).toBeNull();
   });
 });
 

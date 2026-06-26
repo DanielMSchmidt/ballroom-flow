@@ -11,6 +11,7 @@ import {
   type Attribute,
   addSection,
   type FigureDoc,
+  newId,
   type Placement,
   type RoutineDoc,
   readRoutine,
@@ -41,6 +42,16 @@ export interface RoutineStore {
   moveSection(sectionId: string, direction: "up" | "down"): void;
   /** Soft-delete a section — sets its tombstone, never a hard removal (US-026). */
   deleteSection(sectionId: string): void;
+  /**
+   * Add a figure to a section (US-027): mints a fresh OWNED custom figure doc
+   * (the user then edits its timeline, US-028) and appends a placement
+   * referencing it. The library-pick path (reuse a global figure) is US-032.
+   */
+  addPlacement(sectionId: string, figureName: string): void;
+  /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
+  movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
+  /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
+  deletePlacement(sectionId: string, placementId: string): void;
   /**
    * Replace a figure doc's attribute timeline (US-028). The timeline editor emits
    * the figure's full next attribute set; this writes it to that figure's doc
@@ -184,6 +195,56 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
+    addPlacement: (sectionId, figureName) => {
+      const figureRef = newId();
+      const name = figureName.trim() || "New figure";
+      // Seed a fresh owned custom figure doc in its own DO. NOTE: the new figure
+      // DO isn't projected to document_registry yet, so the fail-closed connect
+      // (US-021) can't owner-resolve it server-side — figure-create eager
+      // projection is a follow-up (analogous to routines' #129).
+      figureConn(figureRef).change((draft) => {
+        const seed = draft as unknown as Record<string, unknown>;
+        seed.id = figureRef;
+        seed.scope = "account";
+        seed.ownerId = actor ?? "";
+        seed.figureType = slugify(name) || figureRef; // immutable once set (#91)
+        seed.dance = readRoutineSafe().dance;
+        seed.name = name;
+        seed.source = "custom";
+        seed.attributes = [];
+        seed.schemaVersion = 1;
+        seed.deletedAt = null;
+      });
+      routineConn.change((draft) => {
+        const section = draft.sections.find((s) => s.id === sectionId);
+        if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
+      });
+    },
+
+    movePlacement: (sectionId, placementId, direction) => {
+      routineConn.change((draft) => {
+        const section = draft.sections.find((s) => s.id === sectionId);
+        if (!section) return;
+        const i = section.placements.findIndex((p) => p.id === placementId);
+        if (i < 0) return;
+        const j = direction === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= section.placements.length) return;
+        // Re-insert a plain copy (an Automerge object can't be re-inserted after
+        // removal). Single-client correct; concurrent-reorder fidelity is #63.
+        const moved = JSON.parse(JSON.stringify(section.placements[i]));
+        section.placements.splice(i, 1);
+        section.placements.splice(j, 0, moved);
+      });
+    },
+
+    deletePlacement: (sectionId, placementId) => {
+      routineConn.change((draft) => {
+        const section = draft.sections.find((s) => s.id === sectionId);
+        const placement = section?.placements.find((p) => p.id === placementId);
+        if (placement) placement.deletedAt = Date.now();
+      });
+    },
+
     setFigureAttributes: (figureRef, attributes) => {
       // Replace the whole timeline (the editor emits the figure's full next set).
       // Writes to that figure's own doc connection — a separate DO from the routine.
@@ -231,4 +292,12 @@ export async function openRoutine(
 function readFigureDoc(doc: A.Doc<FigureDoc>): FigureDoc | null {
   const js = A.toJS(doc) as FigureDoc;
   return js.figureType ? js : null;
+}
+
+/** A safe figureType slug from a user name (a new custom figure's stable type). */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
