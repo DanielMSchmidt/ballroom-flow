@@ -13,7 +13,8 @@ import type { MembershipRole } from "@ballroom/domain";
 import { newId } from "@ballroom/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { roleFor } from "./membership";
+import { resolveEffectiveRole, roleFor } from "./membership";
+import { countEditableRoutines } from "./routines";
 import { invite, membership } from "./schema";
 
 /** Default invite lifetime: 7 days. The alarm sweeps unredeemed expired ones. */
@@ -47,9 +48,29 @@ export async function issueInvite(
   return { token, expiresAt };
 }
 
+/**
+ * The free-plan routine-edit cap context the redeem path enforces. `editableCap`
+ * is the max routines a `plan==="free"` user may EDIT (owned + editor-shared);
+ * the route supplies it from the one server constant. Omit (or a non-free plan)
+ * to skip the cap entirely.
+ */
+export interface RedeemQuota {
+  plan: string;
+  editableCap: number;
+}
+
 /** The outcome of a redeem — the route maps each reason to a status code. */
 export type RedeemResult =
-  | { ok: true; docRef: string; role: MembershipRole }
+  | {
+      ok: true;
+      docRef: string;
+      /** The role actually granted (may be downgraded from `requestedRole`). */
+      role: MembershipRole;
+      /** The role the invite asked for. */
+      requestedRole: MembershipRole;
+      /** True when an editor invite was downgraded to commenter by the cap. */
+      downgraded: boolean;
+    }
   | { ok: false; reason: "not_found" | "expired" | "already_redeemed" };
 
 /**
@@ -57,11 +78,17 @@ export type RedeemResult =
  * Rejects an unknown (404), expired (410), or already-redeemed (409) invite.
  * On success it claims the single-use stamp atomically and grants membership at
  * the invite's role (upgrade-only — a viewer link never demotes an editor).
+ *
+ * If `quota` is supplied and the invite is an EDITOR link to a ROUTINE the
+ * redeemer can't already edit, the cap is applied: a free user already at their
+ * editable-routine limit is granted COMMENTER instead (US-022 × US-023), and the
+ * result is flagged `downgraded` so the client can notice the user.
  */
 export async function redeemInvite(
   db: D1Database,
   token: string,
   userId: string,
+  quota?: RedeemQuota,
 ): Promise<RedeemResult> {
   const now = Date.now();
   const row = await drizzle(db).select().from(invite).where(eq(invite.id, token)).get();
@@ -80,8 +107,48 @@ export async function redeemInvite(
     .run();
   if ((claim.meta?.changes ?? 0) !== 1) return { ok: false, reason: "already_redeemed" };
 
-  await grantMembership(db, row.docRef, userId, row.role as MembershipRole, now);
-  return { ok: true, docRef: row.docRef, role: row.role as MembershipRole };
+  const requestedRole = row.role as MembershipRole;
+  const grantedRole = await applyEditableCap(db, row.docRef, userId, requestedRole, quota);
+  await grantMembership(db, row.docRef, userId, grantedRole, now);
+  return {
+    ok: true,
+    docRef: row.docRef,
+    role: grantedRole,
+    requestedRole,
+    downgraded: grantedRole !== requestedRole,
+  };
+}
+
+/**
+ * Apply the free-plan editable-routine cap to an invite's role. Only an EDITOR
+ * invite to a ROUTINE the redeemer can't ALREADY edit is affected — accepting it
+ * would add a new editable routine, so a free user already at their cap is
+ * granted commenter instead. Commenter/viewer invites, figure docs, paid plans,
+ * and re-redeems by an existing owner/editor all pass through unchanged.
+ */
+async function applyEditableCap(
+  db: D1Database,
+  docRef: string,
+  userId: string,
+  requested: MembershipRole,
+  quota?: RedeemQuota,
+): Promise<MembershipRole> {
+  if (requested !== "editor" || !quota || quota.plan !== "free") return requested;
+
+  // The cap is on routines only — a figure-doc editor invite is never downgraded.
+  const typeRow = await db
+    .prepare("SELECT type FROM document_registry WHERE docRef = ? OR doName = ? LIMIT 1")
+    .bind(docRef, docRef)
+    .first<{ type: string }>();
+  if (typeRow?.type !== "routine") return requested;
+
+  // Already able to edit this doc (owner / existing editor)? Accepting adds no
+  // NEW editable routine → no downgrade.
+  const effective = await resolveEffectiveRole(db, docRef, userId);
+  if (effective === "owner" || effective === "editor") return requested;
+
+  const editable = await countEditableRoutines(db, userId);
+  return editable >= quota.editableCap ? "commenter" : requested;
 }
 
 /**

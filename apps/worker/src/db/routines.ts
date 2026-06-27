@@ -31,6 +31,51 @@ export async function countOwnedRoutines(db: D1Database, userId: string): Promis
 }
 
 /**
+ * How many routines the user can EDIT: the ones they OWN plus the ones SHARED IN
+ * to them as an active EDITOR (commenter/viewer access is uncapped). Distinct
+ * docRefs, type routine, not soft-deleted. Two indexed reads (owned via
+ * document_registry_owner_idx; editor-shared via membership_user_idx → the
+ * registry PK), deduped in memory — an owner also carries an editor membership
+ * row on their own routine, so the dedup prevents double-counting.
+ *
+ * Drives the invite-accept downgrade (US-022 × US-023): an editor invite that
+ * would push the redeemer past their cap is granted as commenter instead. The
+ * CREATE/fork quota intentionally stays owned-only (countOwnedRoutines).
+ */
+export async function countEditableRoutines(db: D1Database, userId: string): Promise<number> {
+  const d = drizzle(db);
+  const owned = await d
+    .select({ docRef: documentRegistry.docRef })
+    .from(documentRegistry)
+    .where(
+      and(
+        eq(documentRegistry.ownerId, userId),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .all();
+  const editorShared = await d
+    .select({ docRef: membership.docRef })
+    .from(membership)
+    .innerJoin(documentRegistry, eq(documentRegistry.docRef, membership.docRef))
+    .where(
+      and(
+        eq(membership.userId, userId),
+        eq(membership.role, "editor"),
+        isNull(membership.deletedAt),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .all();
+  const distinct = new Set<string>();
+  for (const r of owned) distinct.add(r.docRef);
+  for (const r of editorShared) distinct.add(r.docRef);
+  return distinct.size;
+}
+
+/**
  * The viewer's routines for the Choreo list (US-025): the ones they OWN plus the
  * ones SHARED IN to them, newest first. Two indexed reads (owned via
  * document_registry_owner_idx; shared via membership_user_idx + the registry PK)

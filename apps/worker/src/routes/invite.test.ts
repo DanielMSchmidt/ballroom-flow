@@ -202,6 +202,113 @@ describe("US-023 Invite by link (issue + redeem)", () => {
     expect(await roleFor(docRef, "u_race")).toBe("editor");
   });
 
+  // ── Editor-invite downgrade at the editable limit (US-022 × US-023) ──────
+  // A free account's routine cap counts the routines they can EDIT (owned +
+  // editor-shared). Accepting an editor invite would add another editable
+  // routine, so when the redeemer is already at the cap we grant COMMENTER
+  // instead of editor and flag the redeem `downgraded` (the client notices).
+  // Commenter/viewer access is uncapped, so they can still join — just not edit.
+
+  it("downgrades an editor invite to commenter when the redeemer is at their editable limit", async () => {
+    // Arrange: a free redeemer who already OWNS 3 routines (= the cap) is invited
+    //   as EDITOR to a 4th (someone else's). Act: redeem.
+    // Assert: 200 { downgraded:true, role:"commenter" } and the granted role is
+    //   commenter — they joined, but can't edit a 4th routine.
+    const docRef = "rt_dg_target";
+    const redeemer = await authedContext({ keypair: kp, userId: "u_cap", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_cap", displayName: "Cap", identityColor: "#111", plan: "free" }],
+      docs: [
+        { docRef, type: "routine", ownerId: "u_ed", doName: docRef },
+        { docRef: "rt_own1", type: "routine", ownerId: "u_cap", doName: "rt_own1" },
+        { docRef: "rt_own2", type: "routine", ownerId: "u_cap", doName: "rt_own2" },
+        { docRef: "rt_own3", type: "routine", ownerId: "u_cap", doName: "rt_own3" },
+      ],
+      invites: [{ id: "inv_dg", docRef, role: "editor", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_dg/redeem", {
+      method: "POST",
+      headers: redeemer.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ role: "commenter", downgraded: true });
+    expect(await roleFor(docRef, "u_cap")).toBe("commenter");
+  });
+
+  it("counts EDITOR-shared routines toward the limit (not just owned)", async () => {
+    // Arrange: a free redeemer who owns 1 routine AND is editor on 2 shared ones
+    //   (= 3 editable, the cap) is invited as EDITOR to a 4th. Act: redeem.
+    // Assert: downgraded to commenter — "routines one can edit" includes shared.
+    const docRef = "rt_dg_target2";
+    const redeemer = await authedContext({ keypair: kp, userId: "u_mix", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_mix", displayName: "Mix", identityColor: "#222", plan: "free" }],
+      docs: [
+        { docRef, type: "routine", ownerId: "u_ed", doName: docRef },
+        { docRef: "rt_mine", type: "routine", ownerId: "u_mix", doName: "rt_mine" },
+        { docRef: "rt_sh1", type: "routine", ownerId: "u_ed", doName: "rt_sh1" },
+        { docRef: "rt_sh2", type: "routine", ownerId: "u_ed", doName: "rt_sh2" },
+      ],
+      memberships: [
+        { id: "m_sh1", docRef: "rt_sh1", userId: "u_mix", role: "editor" },
+        { id: "m_sh2", docRef: "rt_sh2", userId: "u_mix", role: "editor" },
+      ],
+      invites: [{ id: "inv_mix", docRef, role: "editor", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_mix/redeem", {
+      method: "POST",
+      headers: redeemer.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ role: "commenter", downgraded: true });
+  });
+
+  it("grants the editor invite in full when the redeemer is BELOW their limit", async () => {
+    // Arrange: a free redeemer who owns only 2 routines (under the cap) is invited
+    //   as EDITOR to a 3rd. Act: redeem. Assert: editor granted, NOT downgraded.
+    const docRef = "rt_room_target";
+    const redeemer = await authedContext({ keypair: kp, userId: "u_room", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_room", displayName: "Room", identityColor: "#333", plan: "free" }],
+      docs: [
+        { docRef, type: "routine", ownerId: "u_ed", doName: docRef },
+        { docRef: "rt_r1", type: "routine", ownerId: "u_room", doName: "rt_r1" },
+        { docRef: "rt_r2", type: "routine", ownerId: "u_room", doName: "rt_r2" },
+      ],
+      invites: [{ id: "inv_room", docRef, role: "editor", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_room/redeem", {
+      method: "POST",
+      headers: redeemer.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ role: "editor", downgraded: false });
+    expect(await roleFor(docRef, "u_room")).toBe("editor");
+  });
+
+  it("never downgrades a non-editor invite, even at the limit (only edit access is capped)", async () => {
+    // Arrange: a redeemer at the cap (3 owned) redeems a COMMENTER invite. Act: redeem.
+    // Assert: commenter granted, downgraded:false — commenter/viewer access is uncapped.
+    const docRef = "rt_co_target";
+    const redeemer = await authedContext({ keypair: kp, userId: "u_co2", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_co2", displayName: "Co2", identityColor: "#444", plan: "free" }],
+      docs: [
+        { docRef, type: "routine", ownerId: "u_ed", doName: docRef },
+        { docRef: "rt_c1", type: "routine", ownerId: "u_co2", doName: "rt_c1" },
+        { docRef: "rt_c2", type: "routine", ownerId: "u_co2", doName: "rt_c2" },
+        { docRef: "rt_c3", type: "routine", ownerId: "u_co2", doName: "rt_c3" },
+      ],
+      invites: [{ id: "inv_co", docRef, role: "commenter", expiresAt: Date.now() + 3_600_000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_co/redeem", {
+      method: "POST",
+      headers: redeemer.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ role: "commenter", downgraded: false });
+  });
+
   it("rejects redeeming an unknown token (404, not a 500)", async () => {
     const redeemer = await authedContext({
       keypair: kp,

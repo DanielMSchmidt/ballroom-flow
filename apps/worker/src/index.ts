@@ -399,17 +399,37 @@ app.post("/api/docs/:id/invites", async (c) => {
 // the REDEEMING user (the verified JWT sub, never a client field) the invite's
 // role on its doc; single-use + expiry enforced in db/invites.ts. Unknown → 404,
 // expired → 410, already-redeemed → 409 (clear errors, never a 500).
+//
+// QUOTA (US-022 × US-023): the routine-edit cap counts routines the user can
+// EDIT. An editor invite to a routine a free user can't already edit would add
+// one more, so when they're at the cap we grant COMMENTER instead and flag
+// `downgraded` — they still join, just read/comment-only. The client notices.
 app.post("/api/invites/:token/redeem", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const result = await redeemInvite(c.env.DB, c.req.param("token"), user.sub);
+  const db = drizzle(c.env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
+  const plan = me?.plan ?? "free";
+
+  const result = await redeemInvite(c.env.DB, c.req.param("token"), user.sub, {
+    plan,
+    editableCap: FREE_ROUTINE_CAP,
+  });
   if (!result.ok) {
     if (result.reason === "not_found") return c.json({ error: "invite_not_found" }, 404);
     if (result.reason === "expired") return c.json({ error: "invite_expired" }, 410);
     return c.json({ error: "invite_already_redeemed" }, 409);
   }
-  return c.json({ docRef: result.docRef, role: result.role }, 200);
+  return c.json(
+    {
+      docRef: result.docRef,
+      role: result.role,
+      requestedRole: result.requestedRole,
+      downgraded: result.downgraded,
+    },
+    200,
+  );
 });
 
 // GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Any
