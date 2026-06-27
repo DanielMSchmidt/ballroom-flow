@@ -70,7 +70,7 @@ describe.skip("US-033 Account variants + custom figures in library", () => {
   });
 });
 
-describe.skip("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast)", () => {
+describe("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast)", () => {
   it("shows a 'copied as your variant' toast when editing a global figure", async () => {
     // Intent: editing a non-owned figure silently creates a variant + shows the toast.
     // User scenario: an editor opens a GLOBAL figure in their routine and edits a step.
@@ -88,7 +88,7 @@ describe.skip("US-035 Auto-variant on editing a non-owned figure (copy-on-write 
   });
 });
 
-describe.skip("US-036 Fork a figure into a variant explicitly", () => {
+describe("US-036 Fork a figure into a variant explicitly", () => {
   it("offers a 'Fork into variant' action that creates an overlay variant", async () => {
     // Intent: an explicit "Fork into variant" creates a variant (overlay), inheriting the base.
     // Arrange: render <FigureTimeline> for a figure with a "Fork into variant" action.

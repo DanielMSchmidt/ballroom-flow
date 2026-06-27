@@ -56,6 +56,13 @@ export interface FigureTimelineProps {
   initialView?: "leader" | "follower";
   /** Emits the figure's next full attribute set after an edit. */
   onChange?: (next: Attribute[]) => void;
+  /** Whether the figure is the user's own ("owned") or a non-owned global/shared
+   *  figure ("global") — editing a "global" figure copies it to a variant (US-035). */
+  figureScope?: "owned" | "global";
+  /** Explicit "Fork into variant" action (US-036). */
+  onForkIntoVariant?: () => void;
+  /** The base figure's display name, for the "Variant of …" lineage badge. */
+  baseName?: string;
 }
 
 export function FigureTimeline({
@@ -65,6 +72,9 @@ export function FigureTimeline({
   counts = 8,
   initialView,
   onChange,
+  figureScope,
+  onForkIntoVariant,
+  baseName,
 }: FigureTimelineProps) {
   // FULLY CONTROLLED (#151): the rendered attributes derive directly from the
   // `attributes` prop (the store snapshot) — NO internal copy. A collaborator's
@@ -76,6 +86,9 @@ export function FigureTimeline({
   // The role lens is local UI state (US-030): a per-device view toggle, NOT a
   // stored user role (principle #25). New editor values inherit it.
   const [view, setView] = useState<RoleView>(initialView ?? "leader");
+  const [copied, setCopied] = useState(false);
+  const [forked, setForked] = useState(false);
+  const isGlobal = figureScope === "global";
 
   const byCount = useMemo(() => {
     const map = new Map<number, Attribute[]>();
@@ -93,6 +106,7 @@ export function FigureTimeline({
   /** Replace this count's attributes within the figure's full set + emit. */
   const onCountChange = (count: number, next: Attribute[]): void => {
     const others = attrs.filter((a) => a.count !== count || a.deletedAt != null);
+    if (isGlobal && !copied) setCopied(true);
     onChange?.([...others, ...next]);
   };
 
@@ -108,6 +122,28 @@ export function FigureTimeline({
           Flip role to {flipped(view)}
         </Button>
       </div>
+
+      {isGlobal && (
+        <div className="flex flex-col gap-1">
+          {(copied || forked) && (
+            <p role="status" className="text-2xs text-accent">
+              {forked ? `Variant of ${baseName ?? "the base figure"}` : "Copied as your variant"}
+            </p>
+          )}
+          {role === "editor" && !forked && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setForked(true);
+                onForkIntoVariant?.();
+              }}
+            >
+              Fork into variant
+            </Button>
+          )}
+        </div>
+      )}
 
       <ol className="flex flex-wrap gap-1" aria-label="Count timeline">
         {cells.map((count) => {
