@@ -217,7 +217,7 @@ app.post("/api/routines/:id/fork", async (c) => {
 // verified JWT (never a client field). Projecting the registry row + owner
 // membership is what lets the fail-closed DO boundary (US-021) owner-resolve a
 // connect to that figure (101, not 403). Idempotent on figureRef. Figures are
-// NOT counted against the routine quota (type="figure" ≠ "routine").
+// NOT counted against the routine quota (type="account-figure" ≠ "routine").
 app.post("/api/figures", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
@@ -226,7 +226,7 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType, routineId, attributes } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId, attributes, baseFigureRef } = parsed.data;
 
   // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
   // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
@@ -253,6 +253,9 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
+    ...(baseFigureRef
+      ? { baseFigureRef, overlay: { overrides: {}, tombstones: [], additions: [] } }
+      : {}),
     schemaVersion: 1,
     deletedAt: null,
   });

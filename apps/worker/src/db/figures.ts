@@ -17,8 +17,8 @@ export interface NewFigure {
 }
 
 /**
- * Eager-create a figure's D1 rows atomically: a registry row (type="figure", so
- * it never counts against the owned-ROUTINE quota) + the creator's owner
+ * Eager-create a figure's D1 rows atomically: a registry row (type="account-figure",
+ * so it never counts against the owned-ROUTINE quota) + the creator's owner
  * membership (role=editor — same belt-and-suspenders as routines). Idempotent on
  * figureRef so a re-create (or a retried request) is a no-op upsert. The CRDT
  * figure doc itself is seeded by the client into its DO once this lands.
@@ -31,7 +31,7 @@ export async function createFigureRows(db: D1Database, f: NewFigure): Promise<vo
       .insert(documentRegistry)
       .values({
         docRef: f.figureRef,
-        type: "figure",
+        type: "account-figure",
         ownerId: f.ownerId,
         doName: f.figureRef,
         title: f.name,
@@ -64,7 +64,7 @@ export async function countOwnedFigures(db: D1Database, userId: string): Promise
     .where(
       and(
         eq(documentRegistry.ownerId, userId),
-        eq(documentRegistry.type, "figure"),
+        eq(documentRegistry.type, "account-figure"),
         isNull(documentRegistry.deletedAt),
       ),
     )
