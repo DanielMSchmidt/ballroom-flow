@@ -213,6 +213,7 @@ app.post("/api/figures", async (c) => {
   try {
     for (const a of attributes) parseAttributeWrite(a, { dance });
   } catch {
+    // Don't echo attacker-shaped attribute data back at the seed boundary — just reject.
     return c.json({ error: "invalid_attribute" }, 400);
   }
 

@@ -8,7 +8,7 @@ import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
-// #XXX — validate + seed forwarded figure attributes on POST /api/figures.
+// WDSF attr-seed — validate + seed forwarded figure attributes on POST /api/figures.
 //
 // Task 6: the route must strict-validate every forwarded attribute via
 // parseAttributeWrite before seeding, and pass the real attributes array into
@@ -16,7 +16,7 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // must be rejected 400 BEFORE any seeding.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("#XXX figure attribute forwarding + validation", () => {
+describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
   let kp2: TestKeypair;
   const docs2 = env.DOC_DO as unknown as DocNamespace;
 
