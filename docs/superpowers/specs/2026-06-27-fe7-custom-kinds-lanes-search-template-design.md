@@ -34,6 +34,12 @@ makes them green, adds the missing domain/contract unit coverage, and lands the
    "app"`) read-only sample routine + its figures are server-seeded into D1 + DO
    content; start-from-template forks it via the existing quota-checked fork
    endpoint. The fork **counts against** the 3-routine free cap.
+   - **Template content = Golden Waltz Basic only (user-confirmed 2026-06-27).**
+     The single app-owned template is the hand-authored "Golden Waltz Basic"
+     (`buildGoldenWaltzBasic`, seeded with `ownerId:"app"` + deterministic ids),
+     used for BOTH the onboarding gift and the empty-state read-only sample +
+     picker. The Foxtrot `SAMPLE_ROUTINE` fixture stays in the domain for other
+     tests but is NOT the app-owned template.
 4. **Done bar = component + worker tests AND `@smoke` E2E journeys.**
 5. **Custom-kind delete is deferred** (YAGNI; orphaned values would need a
    migration story). Create + edit only.
