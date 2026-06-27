@@ -57,5 +57,14 @@ test.describe("@smoke annotations journey", () => {
     await lessons.click();
     await expect(lessons).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("keep the head left")).toBeVisible();
+
+    // US-040/041: author an all-dances FAMILY note ("every <figureType>") and see
+    // it surface in the family-notes list — server-mediated, co-membership-gated.
+    const family = page.getByRole("region", { name: /family notes/i });
+    await family.getByRole("button", { name: /this figure family/i }).click();
+    await family.getByRole("radio", { name: /all dances/i }).click();
+    await family.getByRole("textbox", { name: /family note/i }).fill("rise later on this family");
+    await family.getByRole("button", { name: /add family note/i }).click();
+    await expect(family.getByText("rise later on this family")).toBeVisible({ timeout: 15_000 });
   });
 });

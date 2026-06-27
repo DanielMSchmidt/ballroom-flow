@@ -72,6 +72,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           <Assemble
             routineId={openRoutineId}
             role={roleForOpen(items, openRoutineId)}
+            currentUserId={me.data?.sub}
             getToken={() => getToken()}
             forking={fork.isPending}
             onFork={() =>
