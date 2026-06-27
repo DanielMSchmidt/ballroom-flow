@@ -20,8 +20,9 @@ interface AttributeEditorModule {
   AttributeEditor: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-043 Custom attribute-kind creation UI", () => {
-  it("creates a user-defined kind (label, color, cardinality, valueType, values)", async () => {
+describe("US-043 Custom attribute-kind creation UI", () => {
+  // Task 10: AddKindSheet not built yet — unskip when AddKindSheet exists.
+  it.skip("creates a user-defined kind (label, color, cardinality, valueType, values)", async () => {
     // Intent: the add-kind sheet captures the full kind descriptor.
     // Arrange: render <AddKindSheet>. Act: fill label "Energy", color, cardinality=single,
     //   valueType=enum, values=[low,high]; submit.
@@ -42,7 +43,16 @@ describe.skip("US-043 Custom attribute-kind creation UI", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor dance="foxtrot" role="editor" customKinds={["energy"]} />);
+    const energy = {
+      kind: "energy",
+      label: "Energy",
+      color: "#c0563f",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["low", "high"],
+      builtin: false,
+    };
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" customKinds={[energy]} />);
     expect(screen.getByRole("heading", { name: /energy/i })).toBeInTheDocument();
   });
 });
