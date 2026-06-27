@@ -207,3 +207,58 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     await closeUsers(coach, student, stranger);
   });
 });
+
+test.describe("@smoke routine editor edits a referenced figure (cascade grants edit)", () => {
+  test("a routine-editor co-member edits a referenced figure; the owner sees the change converge", async ({
+    browser,
+  }) => {
+    // Intent: inviting a co-member as a routine EDITOR lets them EDIT the figures it
+    //   references (decided 2026-06-27) — via the placement_edge cascade, NOT a direct
+    //   figure share. The edit lands on the SHARED figure doc, so the owner sees it.
+    const [owner, editor] = await openTwoUsers(browser, "ce_owner", "ce_editor");
+    await resetDb(owner.page);
+    await seedDb(owner.page, {
+      users: [
+        { id: "ce_owner", displayName: "Owner", identityColor: "#111111" },
+        { id: "ce_editor", displayName: "Editor", identityColor: "#222222" },
+      ],
+    });
+    await seedAuth(owner.page, "ce_owner");
+    await seedAuth(editor.page, "ce_editor");
+
+    // Owner creates a routine with a Feather figure.
+    const docRef = await createRoutineAsCoach(owner.page, "Co-edit Waltz");
+    await addSection(owner.page, "Intro");
+    await expect(owner.page.getByRole("heading", { name: "Intro" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await owner.page.getByRole("button", { name: "Add figure" }).click();
+    await owner.page.getByLabel("Figure name").fill("Feather Step");
+    await owner.page.getByLabel("Figure name").press("Enter");
+    await expect(owner.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // Share EDITOR on the ROUTINE only — figure edit rights come via the cascade.
+    await seedDb(owner.page, {
+      memberships: [{ docRef, userId: "ce_editor", role: "editor" }],
+    });
+
+    // The co-editor opens the routine + the figure, and tags count 1 footwork "T".
+    await editor.page.goto(`/routines/${docRef}`);
+    await expect(editor.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await editor.page.getByRole("button", { name: /count 1/i }).click();
+    await editor.page.getByRole("button", { name: /^T$/ }).click();
+    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The OWNER opens the SAME figure → sees the co-editor's edit converge: it hit the
+    // shared figure doc, not just the co-editor's local copy (cascade edit is real).
+    await owner.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await closeUsers(owner, editor);
+  });
+});
