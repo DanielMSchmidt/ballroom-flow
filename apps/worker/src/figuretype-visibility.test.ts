@@ -117,6 +117,43 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
     expect(res.status).toBe(403);
   });
 
+  it("a member can author a family note (POST) and read it back with content (GET)", async () => {
+    // Intent: the create path (US-040) round-trips — author a family note, then
+    //   discover it (with its content) via the co-member read on a routine the
+    //   author belongs to. Proves the feature works end-to-end at the worker.
+    const docRef = "rt_authored";
+    await seedDb({
+      users: [{ id: "author1", displayName: "A", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "author1", doName: docRef, dance: "waltz" }],
+      memberships: [{ id: "m_a1", docRef, userId: "author1", role: "editor" }],
+    });
+    const ctx = await authedContext({ keypair: kp, userId: "author1", docRef, role: "editor" });
+    const created = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "lesson",
+        text: "rise later",
+        figureType: "natural_turn",
+        danceScope: "all",
+      }),
+    });
+    expect(created.status).toBe(201);
+
+    const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
+      headers: ctx.authHeaders(),
+    });
+    expect(got.status).toBe(200);
+    const body = (await got.json()) as {
+      notes: Array<{ figureType: string; text: string; kind: string }>;
+    };
+    expect(body.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ figureType: "natural_turn", text: "rise later", kind: "lesson" }),
+      ]),
+    );
+  });
+
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {
     // Intent: the co-member family-note discovery query is indexed (NFR).
     // Arrange: the lookup SQL (notes by members(R) matching the figures in R).

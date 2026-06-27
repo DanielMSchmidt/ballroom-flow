@@ -11,11 +11,17 @@
 -- projection won't resurrect it, and a concurrent read filters it out.
 
 CREATE TABLE IF NOT EXISTS figure_type_note_index (
-  noteId        TEXT PRIMARY KEY,        -- the Annotation id in the account doc
+  noteId        TEXT PRIMARY KEY,        -- the Annotation id
   accountDocRef TEXT NOT NULL,           -- the author's account doc (account:<userId>)
   authorId      TEXT NOT NULL,           -- the note's author (= account doc owner)
   figureType    TEXT NOT NULL,           -- the figure family the note anchors to
   danceScope    TEXT NOT NULL,           -- a DanceId, or 'all' (every dance)
+  -- Family notes are single-author, non-collaborative reference data, so v1 keeps
+  -- the content here alongside the index (server-mediated; the client never reads
+  -- another account's doc directly). The account-doc CRDT model (doc-account.ts)
+  -- is the intended future home if family notes ever need offline/concurrent edit.
+  kind          TEXT NOT NULL DEFAULT 'note',  -- note | lesson | practice
+  text          TEXT NOT NULL DEFAULT '',
   updatedAt     INTEGER NOT NULL,
   deletedAt     INTEGER                  -- soft-delete tombstone
 );

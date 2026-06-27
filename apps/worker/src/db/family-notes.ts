@@ -6,13 +6,25 @@
 // worker route gates the read on co-membership and the client matches each row
 // to the figures actually in the routine (resolveFamilyNotesFor).
 
-/** One thin family-note index row (no content). */
+/** One family-note index row (carries content in v1 — see migration 0005). */
 export interface FamilyNoteRow {
   noteId: string;
   accountDocRef: string;
   authorId: string;
   figureType: string;
   danceScope: string;
+  kind: string;
+  text: string;
+}
+
+/** Fields needed to persist a family note. */
+export interface FamilyNoteInput {
+  noteId: string;
+  authorId: string;
+  figureType: string;
+  danceScope: string;
+  kind: string;
+  text: string;
 }
 
 /**
@@ -28,7 +40,7 @@ export async function familyNotesForMembers(
   if (authorIds.length === 0) return [];
   const placeholders = authorIds.map(() => "?").join(",");
   const sql =
-    `SELECT noteId, accountDocRef, authorId, figureType, danceScope FROM figure_type_note_index ` +
+    `SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text FROM figure_type_note_index ` +
     `WHERE deletedAt IS NULL AND (danceScope = ? OR danceScope = 'all') ` +
     `AND authorId IN (${placeholders})`;
   const res = await db
@@ -36,4 +48,24 @@ export async function familyNotesForMembers(
     .bind(dance, ...authorIds)
     .all<FamilyNoteRow>();
   return res.results ?? [];
+}
+
+/** Persist a family note (server-mediated; accountDocRef = `account:<authorId>`). */
+export async function insertFamilyNote(db: D1Database, note: FamilyNoteInput): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO figure_type_note_index (noteId, accountDocRef, authorId, figureType, danceScope, kind, text, updatedAt, deletedAt) ` +
+        `VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+    )
+    .bind(
+      note.noteId,
+      `account:${note.authorId}`,
+      note.authorId,
+      note.figureType,
+      note.danceScope,
+      note.kind,
+      note.text,
+      Date.now(),
+    )
+    .run();
 }

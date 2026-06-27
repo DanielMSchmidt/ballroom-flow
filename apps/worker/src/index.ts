@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
-import { familyNotesForMembers } from "./db/family-notes";
+import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
@@ -250,8 +250,60 @@ app.get("/api/routines/:id/family-notes", async (c) => {
 
   const members = await listMembers(c.env.DB, routineRef);
   const authorIds = members.map((m) => m.userId);
-  const notes = await familyNotesForMembers(c.env.DB, authorIds, dance);
+  const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
+  // Shape each row as an Annotation-like note (with a figureType anchor) so the
+  // client can match it to the routine's figures (resolveFamilyNotesFor).
+  const notes = rows.map((r) => ({
+    id: r.noteId,
+    authorId: r.authorId,
+    kind: r.kind,
+    text: r.text,
+    figureType: r.figureType,
+    danceScope: r.danceScope,
+    anchors: [{ type: "figureType", figureType: r.figureType, danceScope: r.danceScope }],
+  }));
   return c.json({ notes });
+});
+
+// POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
+// is owned by the caller (authorId from the verified JWT) and scoped to a figure
+// family + dance scope (this dance, or "all"). Server-mediated: the client never
+// writes another account's data. Co-members then discover it via the route above.
+app.post("/api/account/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const body = (await c.req.json().catch(() => null)) as {
+    kind?: unknown;
+    text?: unknown;
+    figureType?: unknown;
+    danceScope?: unknown;
+  } | null;
+  const kind = body?.kind;
+  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  const figureType = body?.figureType;
+  const danceScope = body?.danceScope;
+  if (
+    (kind !== "note" && kind !== "lesson" && kind !== "practice") ||
+    !text ||
+    typeof figureType !== "string" ||
+    !figureType ||
+    typeof danceScope !== "string" ||
+    !danceScope
+  ) {
+    return c.json({ error: "invalid_family_note" }, 400);
+  }
+
+  const noteId = newId();
+  await insertFamilyNote(c.env.DB, {
+    noteId,
+    authorId: user.sub,
+    figureType,
+    danceScope,
+    kind,
+    text,
+  });
+  return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
 });
 
 // POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only
