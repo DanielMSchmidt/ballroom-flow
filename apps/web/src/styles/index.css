@@ -191,6 +191,23 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Deterministic E2E (#191): the E2E build adds `.bf-e2e` to <html>, which
+     removes animations outright. An enter animation like `bf-sheet-in`
+     (`from { translateY(100%) }`) slides a panel up from below the viewport over
+     ~320ms; Playwright's actionability polling can starve the compositor so the
+     animation never advances, freezing a tall sheet at its off-screen `from`
+     frame — its deep controls then never become clickable. Dropping animations
+     (not just shortening them — a near-zero duration still pins the `from`
+     frame if no frame composites) lets every panel rest at its final layout
+     immediately. Inert in real builds (the class is never added). */
+  :root.bf-e2e *,
+  :root.bf-e2e *::before,
+  :root.bf-e2e *::after {
+    animation: none !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* -----------------------------------------------------------------
