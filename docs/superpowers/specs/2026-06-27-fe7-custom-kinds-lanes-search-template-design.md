@@ -47,9 +47,12 @@ bypassing the quota gate. That is the "one routine we start with" and is the
 rough "start from template" the user referred to. US-045 is **distinct**: a
 read-only *sample* + an explicit *Start from template* picker. This spec builds
 US-045 cleanly and reuses the same domain builder/seed primitives so the two
-mechanisms converge rather than diverge. **Converging the onboarding gift to fork
-the app-owned template is an OPTIONAL follow-up within this branch**, surfaced for
-the user to accept/decline at plan time — not a rip-out of working onboarding.
+mechanisms converge rather than diverge. **Converging the onboarding gift is
+IN SCOPE for this branch (user-confirmed 2026-06-27):** the first-run gift becomes
+a fork of the app-owned template via the same template-fork path, so there is ONE
+seed/clone mechanism, not two. The golden-waltz builder content is preserved (it
+becomes a template source); the onboarding gift must keep working — account
+creation never fails on a seed error.
 
 ---
 
@@ -251,5 +254,5 @@ Each step is TDD (RED→GREEN→REFACTOR): unskip/author the failing test first.
 - Annotation/content search (v1.1, per US-046 AC).
 - FTS5 substring search — prefix is sufficient for v1; revisit if testers need
   mid-word matches.
-- US-055 onboarding-gift refactor — optional follow-up, decided at plan time.
+- (US-055 onboarding-gift convergence is now IN scope — see §C.)
 - "Embed custom kind only on first use" optimization — embed-at-create instead.
