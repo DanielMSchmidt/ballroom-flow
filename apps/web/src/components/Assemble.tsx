@@ -713,7 +713,12 @@ function AddFigurePicker({
       ) : (
         <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label="Library figures">
           {presets.map((f) => (
-            <li key={f.figureType}>
+            // figureType is NOT unique within a dance (figure families repeat it —
+            // e.g. foxtrot's base + "incorporating Feather Finish" Reverse Turns),
+            // so key on the (figureType, name) pair the library guarantees unique
+            // (packages/domain library-data integrity test). Keying on figureType
+            // alone collides and triggers React's duplicate-key warning.
+            <li key={`${f.figureType}::${f.name}`}>
               <Button
                 variant="ghost"
                 size="sm"
