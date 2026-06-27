@@ -45,14 +45,17 @@ export default defineWorkersConfig(async () => {
         provider: "istanbul" as const,
         include: ["src/**/*.ts"],
         exclude: ["src/**/*.test.ts", "src/**/*.d.ts", "src/test-support/**"],
-        // PLAN.md §10.3: worker/DO ≥ 90%. Not enforced until tests exist (a
-        // 90% gate on zero code fails an empty suite); the test engineer
-        // uncomments the thresholds once the M2 DO/permission/quota suites land.
+        // PLAN.md §10.3 targets worker/DO ≥ 90%. ARMED at the current measured
+        // floor so coverage can't silently regress; ratchet UP toward 90 as the
+        // DO/route branches get covered. (The All-files number is depressed by
+        // test-seed.ts — the E2E-only fixture route exercised by Playwright, not
+        // vitest — which is a constant drag, not a regression risk.) A drop below
+        // these fails CI.
         thresholds: {
-          // lines: 90,
-          // functions: 90,
-          // branches: 90,
-          // statements: 90,
+          lines: 88,
+          functions: 85,
+          branches: 66,
+          statements: 84,
         },
       },
     },
