@@ -59,6 +59,63 @@ describe("US-019 Clerk sign-in + onboarding (server)", () => {
   });
 });
 
+describe("US-055 Starter routine seeded on first onboarding", () => {
+  it("seeds the Golden Waltz Basic starter on a user's FIRST onboarding", async () => {
+    // Intent: a brand-new user who completes onboarding receives exactly one
+    //   starter routine ("Golden Waltz Basic", dance "waltz") in their list.
+    // Arrange: a user id that has never onboarded. Act: POST /api/onboarding.
+    // Assert: GET /api/routines includes exactly one "Golden Waltz Basic" waltz.
+    // Covers US-055 AC-1 (starter seeded on first onboarding).
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_starter_first",
+      docRef: "n/a",
+      role: null,
+    });
+    const res = await SELF.fetch("https://x/api/onboarding", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ displayName: "New", identityColor: "#abc" }),
+    });
+    expect(res.status).toBe(200);
+
+    // The user now owns exactly one routine: the starter.
+    const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
+    const body = (await list.json()) as { routines: Array<{ title: string; dance: string }> };
+    const owned = body.routines.filter(
+      (r) => r.title === "Golden Waltz Basic" && r.dance === "waltz",
+    );
+    expect(owned).toHaveLength(1);
+  });
+
+  it("does NOT re-seed the starter on a repeat onboarding", async () => {
+    // Intent: a repeat POST /api/onboarding (profile edit / re-onboard) must NOT
+    //   create a second starter routine — the seed fires at most once per user.
+    // Arrange: POST onboarding twice for the same user. Act: GET /api/routines.
+    // Assert: still exactly one "Golden Waltz Basic".
+    // Covers US-055 AC-2 (idempotent — seeded exactly once).
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_starter_twice",
+      docRef: "n/a",
+      role: null,
+    });
+    const post = () =>
+      SELF.fetch("https://x/api/onboarding", {
+        method: "POST",
+        headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+        body: JSON.stringify({ displayName: "Twice", identityColor: "#abc" }),
+      });
+    await post();
+    await post(); // re-onboard / profile edit
+
+    const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
+    const body = (await list.json()) as { routines: Array<{ title: string }> };
+    const starters = body.routines.filter((r) => r.title === "Golden Waltz Basic");
+    expect(starters).toHaveLength(1); // seeded once, not twice
+  });
+});
+
 describe.skip("US-053 Account / profile + plan status", () => {
   it("returns plan + owned-routine count", async () => {
     // Intent: the profile shows plan status + how many routines the user owns.

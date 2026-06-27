@@ -13,6 +13,7 @@ import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routi
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
 import { testSeed } from "./routes/test-seed";
+import { seedStarterRoutine } from "./starter";
 
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
 const FREE_ROUTINE_CAP = 3;
@@ -86,10 +87,29 @@ app.post("/api/onboarding", async (c) => {
   }
 
   const db = drizzle(c.env.DB);
+  // Detect a genuine first onboarding (no prior users row) so the starter routine
+  // is seeded at most once — a re-onboard / profile edit hits the update path.
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, user.sub))
+    .get();
+  const firstRun = !existing;
+
   await db
     .insert(users)
     .values({ id: user.sub, displayName, identityColor, plan: "free", createdAt: Date.now() })
     .onConflictDoUpdate({ target: users.id, set: { displayName, identityColor } });
+
+  if (firstRun) {
+    // Best-effort: a new user gets a default "Golden Waltz Basic" routine (US-055).
+    // Never fail onboarding if the gift can't be seeded — the account must succeed.
+    try {
+      await seedStarterRoutine(c.env, user.sub);
+    } catch (err) {
+      console.error("starter routine seed failed", { userId: user.sub, err });
+    }
+  }
 
   return c.json({ sub: user.sub, displayName, identityColor, plan: "free" });
 });
