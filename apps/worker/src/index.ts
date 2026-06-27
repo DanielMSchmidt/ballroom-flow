@@ -1,9 +1,10 @@
-import { zCreateFigure, zCreateRoutine, zIssueInvite } from "@ballroom/contract";
-import { can, newId, parseAttributeWrite } from "@ballroom/domain";
+import { zCreateFigure, zCreateRoutine, zIssueInvite, zRegistryKind } from "@ballroom/contract";
+import { can, isReservedKind, newId, parseAttributeWrite } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
@@ -344,6 +345,28 @@ app.post("/api/account/family-notes", async (c) => {
     text,
   });
   return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
+});
+
+// GET /api/account/custom-kinds — the caller's account-wide custom kinds (US-043).
+app.get("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const kinds = await listAccountKinds(c.env.DB, user.sub);
+  return c.json({ kinds });
+});
+
+// POST /api/account/custom-kinds — create/update a custom kind (US-043).
+app.post("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const parsed = zRegistryKind.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success)
+    return c.json({ error: "invalid_kind", issues: parsed.error.flatten() }, 400);
+  const kind = parsed.data;
+  // Builtins are reserved — a custom kind may never be builtin or collide with one.
+  if (kind.builtin || isReservedKind(kind.kind)) return c.json({ error: "reserved_kind" }, 400);
+  await upsertAccountKind(c.env.DB, user.sub, kind, Date.now());
+  return c.json(kind, 201);
 });
 
 // POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only

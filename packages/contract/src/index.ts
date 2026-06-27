@@ -112,3 +112,7 @@ export type SearchResults = z.infer<typeof zSearchResults>;
 /** Templates list (US-045) — app-owned routines flagged templateOf. */
 export const zTemplateList = z.object({ templates: z.array(zRoutineListItem) });
 export type TemplateList = z.infer<typeof zTemplateList>;
+
+/** Account custom-kinds response (US-043) — the caller's account-wide custom attribute kinds. */
+export const zAccountCustomKinds = z.object({ kinds: z.array(zRegistryKind) });
+export type AccountCustomKinds = z.infer<typeof zAccountCustomKinds>;
