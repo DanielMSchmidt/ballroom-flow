@@ -7,7 +7,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./fixtures": "./src/__fixtures__/index.ts"
+    "./fixtures": "./src/__fixtures__/public.ts"
   },
   "scripts": {
     "test": "vitest run --passWithNoTests",
