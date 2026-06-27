@@ -1,3 +1,6 @@
+import type { DanceId } from "./dances";
+import type { Attribute } from "./doc-types";
+
 // Parse a WDSF syllabus timing string into one float beat-count per step.
 //
 // The WDSF Standard syllabus states each figure's timing as syllable counts
@@ -36,4 +39,30 @@ export function parseWdsfTiming(timing: string): number[] {
     cursor += dur;
   }
   return counts;
+}
+
+/**
+ * Build a figure's per-step `step` attributes from its WDSF timing + actions.
+ * The public syllabus gives only the first action (`start`) and last (`finish`);
+ * intermediate steps get their count but a blank action (footwork lives in the
+ * paid technique books — left for the content workstream). Ids are deterministic
+ * so the generated catalog is stable and reproducible.
+ */
+export function buildWdsfAttributes(input: {
+  figureType: string;
+  dance: DanceId;
+  timing: string;
+  start?: string;
+  finish?: string;
+}): Attribute[] {
+  const counts = parseWdsfTiming(input.timing);
+  const last = counts.length - 1;
+  return counts.map((count, i) => ({
+    id: `wdsf-${input.figureType}-${input.dance}-s${i + 1}`,
+    kind: "step",
+    count,
+    role: null,
+    value: i === 0 ? (input.start ?? "") : i === last ? (input.finish ?? "") : "",
+    deletedAt: null,
+  }));
 }

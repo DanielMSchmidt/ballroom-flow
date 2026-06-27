@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { parseAttributeWrite } from "./schemas";
 import { isOnEighthGrid } from "./timing";
-import { parseWdsfTiming } from "./wdsf-timing";
+import { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";
 
 describe("parseWdsfTiming", () => {
   it("numbers across two waltz bars accumulate the beat cursor", () => {
@@ -39,5 +40,53 @@ describe("parseWdsfTiming", () => {
         expect(isOnEighthGrid(c)).toBe(true);
       }
     }
+  });
+});
+
+describe("buildWdsfAttributes", () => {
+  const natural = buildWdsfAttributes({
+    figureType: "natural-turn",
+    dance: "waltz",
+    timing: "123 123",
+    start: "RF fwd (Closed Position)",
+    finish: "LF closes to RF",
+  });
+
+  it("emits one step attribute per parsed count with deterministic ids", () => {
+    expect(natural).toHaveLength(6);
+    expect(natural.map((a) => a.id)).toEqual([
+      "wdsf-natural-turn-waltz-s1",
+      "wdsf-natural-turn-waltz-s2",
+      "wdsf-natural-turn-waltz-s3",
+      "wdsf-natural-turn-waltz-s4",
+      "wdsf-natural-turn-waltz-s5",
+      "wdsf-natural-turn-waltz-s6",
+    ]);
+    expect(natural.every((a) => a.kind === "step")).toBe(true);
+    expect(natural.map((a) => a.count)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("puts start on step 1, finish on the last step, blanks between", () => {
+    expect(natural[0]?.value).toBe("RF fwd (Closed Position)");
+    expect(natural[5]?.value).toBe("LF closes to RF");
+    expect(natural.slice(1, 5).every((a) => a.value === "")).toBe(true);
+  });
+
+  it("produces only attributes the strict write schema accepts", () => {
+    for (const a of natural) {
+      expect(() => parseAttributeWrite(a, { dance: "waltz" })).not.toThrow();
+    }
+  });
+
+  it("a single-step figure carries both start and finish on that step", () => {
+    const one = buildWdsfAttributes({
+      figureType: "x",
+      dance: "tango",
+      timing: "S",
+      start: "LF fwd",
+      finish: "weight fwd",
+    });
+    expect(one).toHaveLength(1);
+    expect(one[0]?.value).toBe("LF fwd"); // start wins the lone step
   });
 });
