@@ -34,6 +34,15 @@ export type RoutineListItem = z.infer<typeof zRoutineListItem>;
 export const zRoutineList = z.object({ routines: z.array(zRoutineListItem) });
 export type RoutineList = z.infer<typeof zRoutineList>;
 
+export const zAttribute = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  count: z.number(),
+  role: z.enum(["leader", "follower"]).nullish(),
+  value: z.unknown(),
+  deletedAt: z.number().nullish(),
+});
+
 /**
  * Create-figure request (#187). The client mints the figureRef (ULID) + the
  * metadata; the SERVER stamps ownerId from the verified JWT sub. Projecting the
@@ -49,6 +58,7 @@ export const zCreateFigure = z.object({
   /** The routine this figure is being added to — records the placement edge so
    *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
   routineId: z.string().min(1),
+  attributes: z.array(zAttribute).default([]),
 });
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 

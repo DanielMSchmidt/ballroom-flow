@@ -72,3 +72,4 @@ export {
   type RegistryKind,
   type StandardRegistry,
 } from "./vocabulary";
+export { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";

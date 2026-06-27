@@ -17,6 +17,7 @@ import {
   addReply,
   addSection,
   type FigureDoc,
+  LIBRARY_FIGURES,
   newId,
   type Placement,
   type RoutineDoc,
@@ -115,6 +116,7 @@ export type CreateFigureFn = (figure: {
   figureType: string;
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
+  attributes: Attribute[];
 }) => Promise<void>;
 
 /** Injectable wiring so the seam is testable without a live worker. */
@@ -289,6 +291,15 @@ export async function openRoutine(
         if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
       });
 
+      // A library pick carries the catalog's per-step timeline (US-032 + WDSF seed);
+      // a custom figure has none. Match on (dance, figureType, name) — the picked
+      // identity. A few figureType slugs are shared by different figures (e.g.
+      // foxtrot "reverse-turn"), so we also match on name to be precise.
+      const preset = LIBRARY_FIGURES.find(
+        (f) => f.dance === dance && f.figureType === figureType && f.name === name,
+      );
+      const attributes = preset?.attributes ?? [];
+
       // Project the figure to D1 + an owner membership AND server-seed its CRDT
       // content durably (#187/#205): POST /api/figures now both projects the
       // registry/membership rows AND seeds the figure doc into its DO server-side,
@@ -296,7 +307,7 @@ export async function openRoutine(
       // no racy client seed write that could be lost on an immediate reload. We
       // then just OPEN the figure connection so its (server-seeded) content
       // replays into the local store on catch-up.
-      createFigure({ figureRef, name, dance, figureType, routineId }).then(() => {
+      createFigure({ figureRef, name, dance, figureType, routineId, attributes }).then(() => {
         figureConn(figureRef);
       });
     },
