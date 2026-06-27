@@ -17,7 +17,7 @@ import { useMe } from "../store/me";
 import { isQuotaError, useCreateRoutine, useForkRoutine, useRoutines } from "../store/routines";
 import { search } from "../store/search";
 import { forkTemplate, listTemplates } from "../store/templates";
-import { AccessDenied, Button, Spinner } from "../ui";
+import { AccessDenied, Button, Spinner, useToast } from "../ui";
 import { Assemble, type MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
 
@@ -42,6 +42,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const create = useCreateRoutine();
   const fork = useForkRoutine();
   const { getToken } = useAppAuth();
+  const toast = useToast();
   // Access preflight (#178): for an OPEN routine, learn DENIED vs allowed before
   // opening the heavy WS store, so a non-member sees the calm access-denied state
   // rather than a connectivity-looking offline flash (DP #20).
@@ -53,6 +54,9 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   // Debounce timer ref — cleared on each keystroke, fired after the delay.
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A template-fork blocked by the server quota (402) — feeds the upsell, same
+  // path as a create 402 (the ChoreoList upsell Sheet opens on `quotaBlocked`).
+  const [forkQuotaBlocked, setForkQuotaBlocked] = useState(false);
 
   // Fetch templates once on mount (US-045).
   useEffect(() => {
@@ -66,6 +70,14 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
       cancelled = true;
     };
   }, [getToken]);
+
+  // Clear a pending debounce on unmount so a route change mid-type doesn't fire
+  // a stale search / setState after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, []);
 
   // Debounced search handler (US-046).
   const onSearch = useCallback(
@@ -87,15 +99,28 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   );
 
   // Fork a template into a new owned routine and navigate there (US-045).
+  // On a 402 the user is at their routine cap → drive the SAME upsell path as a
+  // create-quota block; any other failure surfaces as a danger toast so the tap
+  // is never silently swallowed.
   const onStartFromTemplate = useCallback(
     (docRef: string) => {
       void (async () => {
-        const token = await getToken();
-        const res = await forkTemplate(token, docRef);
-        navigate(`/routines/${res.docRef}`);
+        try {
+          const token = await getToken();
+          const res = await forkTemplate(token, docRef);
+          navigate(`/routines/${res.docRef}`);
+        } catch (err) {
+          // isQuotaError keeps the ApiError/status check behind the store seam
+          // (§3) — components never import lib/rpc directly (routine-store.test).
+          if (isQuotaError(err)) {
+            setForkQuotaBlocked(true);
+          } else {
+            toast.show("Couldn't start from template. Please try again.", { tone: "danger" });
+          }
+        }
       })();
     },
-    [getToken],
+    [getToken, toast],
   );
 
   const items = routinesQ.data?.routines ?? [];
@@ -104,9 +129,10 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // The free-plan cap comes from the server (/api/me), never a 2nd hardcoded
   // constant (#176); the POST /api/routines 402 enforces the same value.
   const routineCap = me.data?.routineCap;
-  // A create blocked by the server quota (402) — surface the upsell even if the
-  // instant gate was bypassed (e.g. another tab consumed the last slot).
-  const quotaBlocked = isQuotaError(create.error);
+  // A create OR template-fork blocked by the server quota (402) — surface the
+  // upsell even if the instant gate was bypassed (e.g. another tab consumed the
+  // last slot).
+  const quotaBlocked = isQuotaError(create.error) || forkQuotaBlocked;
 
   // US-045: the sample is the first template (app currently publishes one).
   const sample = templates[0];

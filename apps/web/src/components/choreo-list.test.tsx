@@ -86,7 +86,10 @@ describe("US-045 Sample routine + start-from-template", () => {
       updatedAt: 1,
     };
     renderUi(<ChoreoList ownedCount={0} plan="free" sample={sample} templates={[sample]} />);
-    expect(screen.getByText(/sample/i)).toBeInTheDocument();
+    // The sample card shows its title; the "Read-only sample" Badge is asserted
+    // separately below — scope each selector so they resolve uniquely.
+    expect(screen.getByText("Sample Foxtrot")).toBeInTheDocument();
+    expect(screen.getByText(/read-only sample/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /start from template/i })).toBeInTheDocument();
   });
 
@@ -104,7 +107,9 @@ describe("US-045 Sample routine + start-from-template", () => {
       updatedAt: 1,
     };
     renderUi(<ChoreoList ownedCount={0} plan="free" sample={sample} />);
-    expect(screen.getByText(/read-only|sample/i)).toBeInTheDocument();
+    // The "Read-only sample" Badge marks the card as non-editable (read-only is
+    // enforced server-side); scope to the badge text so it resolves uniquely.
+    expect(screen.getByText(/read-only sample/i)).toBeInTheDocument();
   });
 });
 

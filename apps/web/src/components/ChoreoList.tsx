@@ -11,7 +11,7 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { DANCE_IDS, DANCES, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { Button, Card, Input, Select, Sheet } from "../ui";
+import { Badge, Button, Card, Input, Select, Sheet } from "../ui";
 
 /** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
 function danceLabel(dance: DanceId): string {
@@ -161,12 +161,10 @@ export function ChoreoList({
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: `var(--bf-dance-${sample.dance}, var(--bf-accent))` }}
               />
-              <span className="flex flex-col">
-                {/* Title + badge in one span: keeps getByText(/sample/i) and
-                    getByText(/read-only|sample/i) to a single match each. */}
-                <span className="font-medium text-ink">
-                  {sample.title}
-                  {" — "}Read-only sample
+              <span className="flex flex-1 flex-col gap-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="font-medium text-ink">{sample.title}</span>
+                  <Badge tone="neutral">Read-only sample</Badge>
                 </span>
                 <span className="text-2xs text-ink-muted">
                   {danceLabel(sample.dance)} · {DANCES[sample.dance].timeSignature}
