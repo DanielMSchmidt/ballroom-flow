@@ -57,7 +57,7 @@ export function FigureLibrary({
             <li key={f.docRef}>
               <Card>
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-medium text-ink">{f.title ?? f.figureType}</h3>
+                  <h2 className="font-medium text-ink">{f.title ?? f.figureType}</h2>
                   <Badge tone="accent">{f.baseFigureRef ? "Variant" : "Custom"}</Badge>
                 </div>
                 <p className="mt-0.5 text-2xs text-ink-faint">
@@ -93,7 +93,7 @@ export function FigureLibrary({
         {groups.map((group) => (
           <li key={group.figureType}>
             <Card>
-              <h3 className="font-medium text-ink">{group.figures[0]?.name ?? group.figureType}</h3>
+              <h2 className="font-medium text-ink">{group.figures[0]?.name ?? group.figureType}</h2>
               {group.figures.length > 1 && (
                 <p className="mt-0.5 text-2xs text-ink-faint">{group.figures.length} variations</p>
               )}
