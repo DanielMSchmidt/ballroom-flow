@@ -17,24 +17,6 @@ import type { Attribute, Role } from "./doc-types";
 import { isOnEighthGrid } from "./timing";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 
-/**
- * Zod schema for a single attribute-kind descriptor (US-043). Mirrors the
- * `RegistryKind` interface in vocabulary.ts — kept here (ONE definition) so
- * both the account and routine doc schemas can import it, and so Task 2's
- * write-validation can re-export it without duplication.
- */
-export const zRegistryKind = z.object({
-  kind: z.string(),
-  label: z.string(),
-  color: z.string(),
-  cardinality: z.enum(["single", "multi"]),
-  valueType: z.string(),
-  values: z.array(z.string()).optional(),
-  freeText: z.boolean().optional(),
-  appliesToDances: z.array(z.string()).optional(),
-  builtin: z.boolean(),
-});
-
 /** The structural shape shared by read + write (value validity differs). */
 const baseAttribute = z.object({
   id: z.string(),

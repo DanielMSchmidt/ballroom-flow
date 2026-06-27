@@ -5,12 +5,9 @@
 import { newId } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
+import { countOwnedRoutines, createOwnedRoutine, FREE_ROUTINE_CAP } from "./db/routines";
 import { users } from "./db/schema";
 import type { Env } from "./index";
-
-/** Free-plan owned-routine cap (must match the constant in index.ts). */
-const FREE_ROUTINE_CAP = 3;
 
 export interface ForkSuccess {
   docRef: string;

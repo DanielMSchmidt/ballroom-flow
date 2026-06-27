@@ -55,6 +55,13 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
     }
 
     const slug = slugifyKind(trimmedLabel);
+    // A label of only punctuation/symbols (e.g. "!!!") passes the non-empty
+    // check above but slugify strips non-alphanumeric chars → empty slug, which
+    // would create a kind with an empty `kind` key (invalid). Block it early.
+    if (!slug) {
+      setError("Enter a valid name");
+      return;
+    }
     if (isReservedKind(slug)) {
       setError("That name is reserved");
       return;

@@ -13,6 +13,7 @@ import { linkPlacement } from "./db/placement-edge";
 import {
   countOwnedRoutines,
   createOwnedRoutine,
+  FREE_ROUTINE_CAP,
   getDocOwner,
   listRoutines,
   listTemplates,
@@ -24,9 +25,6 @@ import { forkRoutineFor } from "./fork";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
 import { seedStarterRoutine } from "./starter";
-
-/** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
-const FREE_ROUTINE_CAP = 3;
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
 // state (not a stale module boolean). A cheap indexed existence check (ownerId
@@ -201,13 +199,20 @@ app.post("/api/routines/:id/fork", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
   const originRef = c.req.param("id");
-  // Ensure the app template is seeded before resolving ownership/role, so its
-  // DO content exists when getSnapshot is called inside forkRoutineFor.
-  await ensureSample(c.env);
+
+  // Fast PK lookup — tells us if this is an app-owned template before any heavy work.
+  const owner = await getDocOwner(c.env.DB, originRef);
+
+  // Only app-template forks need the seed: user-routine forks never call getSnapshot
+  // on an app-owned DO, so the extra existence check is wasteful on every user fork.
+  if (owner === "app") {
+    // Ensure the app template DO content exists before getSnapshot is called inside
+    // forkRoutineFor (idempotent; re-seeds if the E2E reset wiped D1).
+    await ensureSample(c.env);
+  }
 
   // Must be able to read the origin to fork it (member/owner — or app-owned template).
   const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
-  const owner = await getDocOwner(c.env.DB, originRef);
   if (!role && owner !== "app") return c.json({ error: "forbidden" }, 403);
 
   const db = drizzle(c.env.DB);
@@ -497,7 +502,15 @@ app.get("/api/search", async (c) => {
   const rows = await searchReachable(c.env.DB, { userId: user.sub, q, dance });
   const results = rows.map((r) => ({
     docRef: r.docRef,
-    type: r.type,
+    // Production figures are stored as type="figure" in the DB (createFigureRows).
+    // Map to the contract-valid types ("global-figure" / "account-figure") here so
+    // the web client's zSearchResults.parse never sees the raw "figure" value and
+    // silently empties the results list via a ZodError that .catch swallows.
+    type: (r.type === "figure"
+      ? r.ownerId === "app"
+        ? "global-figure"
+        : "account-figure"
+      : r.type) as "routine" | "global-figure" | "account-figure",
     title: r.title ?? "",
     dance: r.dance,
   }));
