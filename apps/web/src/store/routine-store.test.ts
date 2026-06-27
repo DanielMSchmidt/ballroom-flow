@@ -161,8 +161,8 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
     store.addPlacement("s1", "Natural Turn", "natural-turn");
 
     expect(createFigure).toHaveBeenCalledTimes(1);
-    expect(seen[0]!.figureType).toBe("natural-turn");
-    expect((seen[0]!.attributes ?? []).length).toBe(6);
+    expect(seen[0]?.figureType).toBe("natural-turn");
+    expect((seen[0]?.attributes ?? []).length).toBe(6);
   });
 
   it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {
@@ -174,7 +174,7 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
     });
     const store = await openRoutine("rt_sample", { ...opts, createFigure });
     store.addPlacement("s1", "My Move"); // no figureType → custom
-    expect((seen[0]!.attributes ?? []).length).toBe(0);
+    expect((seen[0]?.attributes ?? []).length).toBe(0);
   });
 });
 
