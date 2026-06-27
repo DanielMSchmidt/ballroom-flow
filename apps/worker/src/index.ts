@@ -1,5 +1,5 @@
 import { zCreateFigure, zCreateRoutine, zIssueInvite } from "@ballroom/contract";
-import { can, newId } from "@ballroom/domain";
+import { can, newId, parseAttributeWrite } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
@@ -206,7 +206,15 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType, routineId } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId, attributes } = parsed.data;
+
+  // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
+  // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
+  try {
+    for (const a of attributes) parseAttributeWrite(a, { dance });
+  } catch {
+    return c.json({ error: "invalid_attribute" }, 400);
+  }
 
   await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
   // Record the routine→figure edge so the routine's co-members get read access to
@@ -223,7 +231,7 @@ app.post("/api/figures", async (c) => {
     dance,
     name,
     source: "custom",
-    attributes: [],
+    attributes,
     schemaVersion: 1,
     deletedAt: null,
   });
