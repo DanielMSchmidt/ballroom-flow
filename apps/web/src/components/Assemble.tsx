@@ -22,8 +22,9 @@ import {
   type Placement,
   type Section,
 } from "@ballroom/domain";
-import { type FormEvent, useEffect, useReducer, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useReducer, useState } from "react";
 import type { TokenProvider } from "../store/doc-connection";
+import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
 import {
   Badge,
@@ -40,6 +41,7 @@ import {
   useToast,
 } from "../ui";
 import { AnnotationPanel } from "./AnnotationPanel";
+import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
 import { RoutineReadingView } from "./RoutineReadingView";
 import { Share } from "./Share";
@@ -138,6 +140,22 @@ export function Assemble({
     placement: Placement;
   } | null>(null);
   const toast = useToast();
+
+  // Family notes (US-040/041) come from the worker (co-member visibility gate),
+  // not the routine doc — load them for this routine + reload after authoring one.
+  // No-ops without a token (tests / open boundary) → an empty list.
+  const [familyNotes, setFamilyNotes] = useState<FamilyNote[]>([]);
+  const reloadFamilyNotes = useCallback(async () => {
+    if (!getToken) return;
+    try {
+      setFamilyNotes(await loadFamilyNotes(routineId, await getToken()));
+    } catch {
+      // Surfacing family notes is best-effort; a failure must not block authoring.
+    }
+  }, [routineId, getToken]);
+  useEffect(() => {
+    void reloadFamilyNotes();
+  }, [reloadFamilyNotes]);
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
@@ -354,6 +372,20 @@ export function Assemble({
               }
               onReply={(annotationId, text) => store.addReply(annotationId, text)}
               onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            />
+            {/* Figure-family notes (US-040/041): "every Feather" notes from this
+                routine's members, surfaced on the matching figure; commenter+ may
+                author one (server-mediated, co-membership-gated). */}
+            <FamilyNotes
+              figureType={notatingFigure.figureType}
+              dance={routine.dance as DanceId}
+              notes={familyNotes}
+              canAnnotate={can(role, "canAnnotate")}
+              onCreate={async (input) => {
+                if (!getToken) return;
+                await createFamilyNote(input, await getToken());
+                await reloadFamilyNotes();
+              }}
             />
           </div>
         )}
