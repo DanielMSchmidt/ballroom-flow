@@ -5,6 +5,7 @@ import {
   libraryFiguresForDance,
   libraryGroupsForDance,
 } from "./library";
+import { parseAttributeWrite } from "./schemas";
 
 // US-032 — the application-global figure library (client-bundled catalog shaped
 // from the ISTD Standard syllabus seed). PLAN §4.2, D30. The catalog is pure
@@ -40,5 +41,26 @@ describe("figure library catalog", () => {
       );
     }
     expect(groups.some((g) => g.figureType === "natural-turn")).toBe(true);
+  });
+
+  it("includes the net-new WDSF figures with parsed step attributes", () => {
+    // ~247 = 122 ISTD + 125 net-new WDSF
+    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(240);
+
+    const natural = libraryFiguresForDance("waltz").find(
+      (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
+    );
+    expect(natural?.attributes).toBeDefined();
+    expect(natural?.attributes).toHaveLength(6); // "123 123"
+    expect(natural?.attributes?.[0]?.value).toBe("RF fwd (Closed Position)");
+    expect(natural?.attributes?.at(-1)?.value).toBe("LF closes to RF");
+  });
+
+  it("every catalog attribute is a valid strict-write attribute for its dance", () => {
+    for (const f of LIBRARY_FIGURES) {
+      for (const a of f.attributes ?? []) {
+        expect(() => parseAttributeWrite(a, { dance: f.dance })).not.toThrow();
+      }
+    }
   });
 });
