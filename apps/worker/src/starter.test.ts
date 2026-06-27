@@ -35,7 +35,7 @@ describe("seedStarterRoutine", () => {
 
     // 6 figure rows projected + 6 placement edges linked.
     const figureCount = await typedEnv.DB.prepare(
-      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'figure' AND ownerId = ?",
+      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'account-figure' AND ownerId = ?",
     )
       .bind("u_starter")
       .first<{ n: number }>();

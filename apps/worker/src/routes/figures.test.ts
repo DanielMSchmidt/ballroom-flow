@@ -175,11 +175,11 @@ describe("#187 figure-doc projection", () => {
     });
     expect(res.status).toBe(201);
 
-    // The registry row exists, typed "figure", owned by the verified sub.
+    // The registry row exists, typed "account-figure", owned by the verified sub.
     const row = await env.DB.prepare("SELECT type, ownerId FROM document_registry WHERE docRef = ?")
       .bind(figureRef)
       .first<{ type: string; ownerId: string }>();
-    expect(row).toMatchObject({ type: "figure", ownerId: "u_fig" });
+    expect(row).toMatchObject({ type: "account-figure", ownerId: "u_fig" });
 
     // The owner membership row exists (editor).
     const mem = await env.DB.prepare(

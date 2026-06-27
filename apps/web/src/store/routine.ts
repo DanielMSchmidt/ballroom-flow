@@ -16,6 +16,7 @@ import {
   addAnnotation,
   addReply,
   addSection,
+  copyOnWrite,
   type FigureDoc,
   LIBRARY_FIGURES,
   newId,
@@ -37,6 +38,7 @@ import {
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
+import { overlayFromAttributes } from "./overlay-diff";
 
 /** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
 export interface ResolvedPlacement {
@@ -117,6 +119,8 @@ export type CreateFigureFn = (figure: {
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
   attributes: Attribute[];
+  /** When set, the new figure is a COW variant of this base (US-035). */
+  baseFigureRef?: string;
 }) => Promise<void>;
 
 /** Injectable wiring so the seam is testable without a live worker. */
@@ -135,6 +139,9 @@ export interface OpenOptions {
    *  WS connect as a subprotocol so the fail-closed DO boundary authenticates it.
    *  The screen wires this to Clerk's `getToken`; omit it (tests / open boundary). */
   getToken?: TokenProvider;
+  /** Called when an edit triggered copy-on-write (US-035), so the screen can
+   *  toast "copied as your variant". Receives the new variant's id. */
+  onCopyOnWrite?: (variantRef: string) => void;
 }
 
 const defaultSocketFactory: SocketFactory = (url, protocols) =>
@@ -182,6 +189,7 @@ export async function openRoutine(
   const actor = opts.actor ?? randomActorId();
   const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
+  const onCopyOnWrite = opts.onCopyOnWrite;
   // Default figure projection: POST /api/figures (authenticated with a fresh
   // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
   const createFigure: CreateFigureFn =
@@ -231,6 +239,11 @@ export async function openRoutine(
     if (!Array.isArray(js.sections)) return emptyRoutine(routineId); // not synced yet
     return readRoutine(routineConn.current());
   };
+
+  // M2: guard against duplicate orphan variants on rapid double-edits. A second
+  // COW on the same figureRef before the first re-point lands would produce two
+  // variant rows and orphan one. Cleared in both the success and error paths.
+  const cowInFlight = new Set<string>();
 
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
@@ -337,11 +350,86 @@ export async function openRoutine(
     },
 
     setFigureAttributes: (figureRef, attributes) => {
-      // Replace the whole timeline (the editor emits the figure's full next set).
-      // Writes to that figure's own doc connection — a separate DO from the routine.
-      figureConn(figureRef).change((draft) => {
-        draft.attributes = attributes;
-      });
+      const figure = readFigureDoc(figureConn(figureRef).current());
+      if (figure?.scope !== "global") {
+        // Account figures edit IN PLACE — whether you own it, or it's a co-member's
+        // figure you can edit via the routine cascade (the shared doc converges to
+        // its owner, US-034). The DO permission boundary enforces your rights: an
+        // editor's write is applied, a viewer's is dropped. Copy-on-write fires
+        // ONLY for global (app-owned library) figures, which are non-editable.
+        figureConn(figureRef).change((draft) => {
+          draft.attributes = attributes;
+        });
+        return;
+      }
+      // Copy-on-write: editing a global (app-owned library) figure spawns an owned
+      // variant, re-points the placement, and stores the edit as an overlay against
+      // the live base (US-035 / US-008). The base is untouched.
+      const base = figure;
+      const loc = findPlacement(figureRef);
+      if (!loc) return;
+      const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
+      // defensive: a global figure always yields a variant
+      if (!variant) return;
+      // M2: guard against duplicate orphan variants on rapid double-edits.
+      if (cowInFlight.has(figureRef)) return;
+      cowInFlight.add(figureRef);
+      // 1) Project the variant (account-figure row + variant DO seeded w/ base ref).
+      //    Only AFTER it succeeds do we write the overlay, re-point the placement,
+      //    and toast — so a failed POST never leaves the placement pointing at a
+      //    variant doc that was never created (consistent state; the edit drops).
+      createFigure({
+        figureRef: variant.id,
+        name: variant.name,
+        dance: variant.dance,
+        figureType: variant.figureType,
+        routineId,
+        attributes: [],
+        baseFigureRef: base.id,
+      })
+        .then(() => {
+          const conn = figureConn(variant.id);
+          // 2) Write the edit as an overlay against the live base — deferred until
+          //    the variant DO's catch-up replay has been applied (#202 / C1). Without
+          //    onceLive the overlay races the empty server seed: both writes are
+          //    causally independent, so ~50% of the time the server's empty overlay
+          //    wins and the user's edit is silently lost. With onceLive the client
+          //    write lands causally AFTER the seed, so it always wins.
+          const overlay = overlayFromAttributes(base.attributes, attributes);
+          conn.onceLive(() => {
+            conn.change((draft) => {
+              draft.id = variant.id;
+              draft.scope = "account";
+              draft.ownerId = currentUserId;
+              draft.source = "custom";
+              draft.figureType = variant.figureType;
+              draft.dance = variant.dance;
+              draft.name = variant.name;
+              draft.baseFigureRef = base.id;
+              draft.overlay = overlay;
+              draft.attributes = [];
+              draft.schemaVersion = base.schemaVersion;
+              draft.deletedAt = null;
+            });
+          });
+          // 3) Re-point the placement in the routine doc — only on success.
+          routineConn.change((draft) => {
+            for (const section of draft.sections ?? []) {
+              const p = section.placements?.find((pp) => pp.id === rePointed.id);
+              if (p) p.figureRef = variant.id;
+            }
+          });
+          // 4) Tell the screen to toast "copied as your variant".
+          onCopyOnWrite?.(variant.id);
+          cowInFlight.delete(figureRef); // M2: release the in-flight guard on success
+        })
+        .catch((err) => {
+          // The variant POST failed (auth/network/quota): leave the placement on
+          // the base figure (no re-point, no toast) — the edit is dropped rather
+          // than corrupting state with a dangling variant reference.
+          console.warn("copy-on-write failed; placement left on the base figure", err);
+          cowInFlight.delete(figureRef); // M2: release the in-flight guard on failure too
+        });
     },
 
     setFigureAlignment: (figureRef, edge, alignment) => {
@@ -397,6 +485,18 @@ export async function openRoutine(
     },
   };
 
+  /** Find the (live) placement and its section id that references `figureRef`. */
+  function findPlacement(figureRef: string): { sectionId: string; placement: Placement } | null {
+    const routine = readRoutineSafe();
+    for (const section of routine.sections) {
+      for (const placement of section.placements) {
+        if (placement.deletedAt != null) continue; // never re-point a tombstoned placement
+        if (placement.figureRef === figureRef) return { sectionId: section.id, placement };
+      }
+    }
+    return null;
+  }
+
   /** Resolve a placement's figure: a variant (baseFigureRef + overlay) resolves to base ⊕ overlay. */
   function resolveFigure(figureRef: string): FigureDoc | null {
     const conn = figureConn(figureRef);
@@ -404,7 +504,18 @@ export async function openRoutine(
     if (!figure) return null;
     if (figure.baseFigureRef && figure.overlay) {
       const base = readFigureDoc(figureConn(figure.baseFigureRef).current());
-      if (base) return resolve(base, figure.overlay);
+      if (base) {
+        // resolve() returns the BASE's identity by contract (overlay.ts) — stamp
+        // the variant's own identity back so re-points/edits target the variant doc.
+        return {
+          ...resolve(base, figure.overlay),
+          id: figure.id,
+          scope: figure.scope,
+          ownerId: figure.ownerId,
+          source: figure.source,
+          baseFigureRef: figure.baseFigureRef,
+        };
+      }
     }
     return figure;
   }

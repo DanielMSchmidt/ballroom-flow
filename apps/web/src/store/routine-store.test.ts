@@ -249,6 +249,11 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // (resolve keeps base identity + variant name — the hybrid-identity contract.)
     expect(resolved[0]?.figure?.attributes.find((x) => x.id === "a1")?.value).toBe("rise");
     expect(resolved[0]?.figure?.name).toBe("My Turn");
+    // The resolved variant must carry the VARIANT's identity, not the base's
+    // (resolve() returns base identity by contract — the store stamps it back).
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === "fv");
+    expect(rp?.figure?.id).toBe("fv");
+    expect(rp?.figure?.baseFigureRef).toBe("fbase");
     store.close();
   });
 
@@ -345,8 +350,43 @@ describe("US-017 store/ seam (multi-doc)", () => {
   it("setFigureAttributes writes the timeline to the figure's own doc connection (US-028)", async () => {
     // Intent: the hero-flow mutation lands on the FIGURE doc (a separate DO), not
     //   the routine doc — and goes out as a change frame on that figure's socket.
+    //   The figure must be account-owned by the current user so the COW path (US-035)
+    //   doesn't intercept it — an unowned figure would trigger copy-on-write instead.
     const { opts, sockets } = fakeWiring();
-    const store = await openRoutine("rt_sample", opts);
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me" });
+
+    // Seed the routine so the placement referencing "fig1" exists.
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fig1", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Trigger the figure connection to open (it's lazy — opened by readPlacements).
+    store.readPlacements();
+
+    // Load "fig1" as account-owned by the current user → edits in place (no COW).
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me" }) as FigureDoc,
+    );
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(figDoc);
+    sockets.get("fig1")?.fireCaughtUp();
 
     store.setFigureAttributes("fig1", [
       { id: "step-2-T", kind: "step", count: 2, value: "T", role: null, deletedAt: null },
@@ -355,6 +395,240 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // Opening the figure connection + writing the change sends bytes on its socket.
     expect(sockets.get("fig1")).toBeTruthy();
     expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(0);
+    store.close();
+  });
+
+  it("copy-on-write: editing a NON-owned figure spawns an owned variant + re-points (US-035)", async () => {
+    // Intent: when the user edits a global/shared figure they don't own, the store
+    //   must silently spawn an owned variant, re-point the placement to it, and
+    //   notify the screen to toast — without touching the shared base (US-035).
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string; baseFigureRef?: string }) => {
+      created.push({ figureRef: m.figureRef, baseFigureRef: m.baseFigureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // Routine references a GLOBAL figure "fg" (owned by "app", not "me").
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "foxtrot",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Open the figure connection so we can load its doc.
+    store.readPlacements();
+
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    // Edit count-1 footwork HT→T on the non-owned figure → copy-on-write.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+
+    // A variant was projected with baseFigureRef = the global base (synchronous —
+    // createFigure is called before its .then()).
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect(created[0]?.baseFigureRef).toBe("fg");
+    const variantRef = created[0]?.figureRef as string;
+
+    // The re-point + toast now happen INSIDE createFigure's .then() (only on
+    // success), so wait for the async completion before asserting them.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef));
+
+    // The placement was re-pointed to the new variant id…
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(variantRef);
+    // …and the shared base figure doc was NEVER written to (COW must not mutate it).
+    expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
+  });
+
+  it("C1: onceLive defers the variant overlay write until after the DO seed replay, preventing silent edit loss", async () => {
+    // Without onceLive, conn.change fires on an A.init() doc immediately in .then(),
+    // BEFORE the variant DO's catch-up replay has been applied. When the DO's empty
+    // seed overlay arrives and is applied via applyChanges, the two writes are
+    // causally independent — Automerge resolves the conflict non-deterministically
+    // (~50% of the time the server's empty overlay wins → the user's "T" edit is
+    // silently lost). With onceLive the client write lands causally AFTER the seed,
+    // so it always wins (C1).
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string; baseFigureRef?: string }) => {
+      created.push({ figureRef: m.figureRef, baseFigureRef: m.baseFigureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_c1", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // Routine references global figure "fg" with count-1 footwork "HT".
+    const routine = buildRoutineDoc({
+      id: "rt_c1",
+      title: "R",
+      dance: "foxtrot",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_c1")?.fireOpen();
+    sockets.get("rt_c1")?.load(routine);
+    sockets.get("rt_c1")?.fireCaughtUp();
+
+    // Open the figure connection (lazy) then load the global figure.
+    store.readPlacements();
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    // Edit count-1 footwork HT→T → triggers copy-on-write.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+
+    // Wait for createFigure + re-point + onCopyOnWrite to fire.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    const variantRef = created[0]?.figureRef as string;
+
+    // Simulate the server seed of the variant DO: POST /api/figures seeds the DO
+    // with an EMPTY overlay (no overrides). Without onceLive, conn.change already
+    // ran on an A.init() doc, making the T-overlay and the empty-seed concurrent.
+    // With onceLive the T-overlay fires here (causally after fireCaughtUp), so T wins.
+    const seeded = buildFigureDoc({
+      id: variantRef,
+      scope: "account",
+      ownerId: "me",
+      figureType: "feather",
+      dance: "foxtrot",
+      name: "Feather",
+      source: "custom",
+      attributes: [],
+      baseFigureRef: "fg",
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+
+    // Drive the variant socket: open → seed replay → caught-up.
+    // onceLive fires on fireCaughtUp: the deferred conn.change runs here,
+    // causally on top of the seed → the "T" overlay always wins.
+    sockets.get(variantRef)?.fireOpen();
+    sockets.get(variantRef)?.load(seeded);
+    sockets.get(variantRef)?.fireCaughtUp();
+
+    // The re-pointed placement now resolves base ⊕ overlay: count-1 must be "T".
+    await vi.waitFor(() => {
+      const rp = store.readPlacements().find((p) => p.placement.figureRef === variantRef);
+      expect(rp?.figure?.attributes.find((a) => a.id === "b1")?.value).toBe("T");
+    });
+    store.close();
+  });
+
+  it("co-member editing a shared ACCOUNT figure edits in place — no COW (US-034)", async () => {
+    // Intent: a routine-editor co-member editing a shared account figure they DON'T
+    //   own must edit the shared doc IN PLACE (the owner converges) — NOT fork a
+    //   private variant. COW fires only for global library figures. The DO boundary
+    //   enforces whether the write is accepted (editor via cascade → applied).
+    const { opts, sockets } = fakeWiring();
+    const createFigure = vi.fn(async () => {});
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me", createFigure });
+
+    // Routine references an ACCOUNT figure "fa" owned by SOMEONE ELSE ("coach").
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "coach",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fa", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Open the figure connection so we can load its doc.
+    store.readPlacements();
+
+    const fa = buildFigureDoc(
+      aFigure({ id: "fa", scope: "account", ownerId: "coach" }) as FigureDoc,
+    );
+    sockets.get("fa")?.fireOpen();
+    sockets.get("fa")?.load(fa);
+    sockets.get("fa")?.fireCaughtUp();
+
+    store.setFigureAttributes("fa", [
+      { id: "step-1-T", kind: "step", count: 1, value: "T", role: null, deletedAt: null },
+    ]);
+
+    // No copy-on-write: the edit hit the shared figure's own doc in place.
+    expect(createFigure).not.toHaveBeenCalled();
+    expect(sockets.get("fa")?.sent.length ?? 0).toBeGreaterThan(0);
+    // The placement still references the shared figure (never re-pointed).
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe("fa");
     store.close();
   });
 });

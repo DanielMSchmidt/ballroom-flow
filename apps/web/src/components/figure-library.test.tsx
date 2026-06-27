@@ -55,22 +55,40 @@ describe("US-032 Application-global figure library browse", () => {
   });
 });
 
-describe.skip("US-033 Account variants + custom figures in library", () => {
+describe("US-033 Account variants + custom figures in library", () => {
   it("shows a variant lineage badge + a custom badge + 'used in N routines'", async () => {
     // Intent: my variants show base lineage; custom figures a custom badge; usage count.
-    // Arrange: render <FigureLibrary> with my variant (base=Feather, used in 2) + a custom.
-    // Act: read the figure cards. Assert: lineage badge naming the base; custom badge;
-    //   "used in 2 routines".
+    // Arrange: render <FigureLibrary tab="mine"> injecting data — a variant (baseFigureRef set,
+    //   usedInCount 2) and a custom figure (baseFigureRef null). No auth/query provider needed.
+    // Act: await async load. Assert: "used in 2 routines"; a "Variant" badge; a "Custom" badge.
     // Covers US-033 AC-1 (variant/custom badges) + AC-2 ("used in N").
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
-    renderUi(<FigureLibrary tab="mine" />);
-    expect(screen.getByText(/used in 2 routines/i)).toBeInTheDocument();
+    const loadMine = async () => [
+      {
+        docRef: "v1",
+        title: "My Feather",
+        figureType: "feather",
+        baseFigureRef: "fg",
+        usedInCount: 2,
+      },
+      {
+        docRef: "c1",
+        title: "My Spin",
+        figureType: "custom_move",
+        baseFigureRef: null,
+        usedInCount: 0,
+      },
+    ];
+    renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
+    expect(await screen.findByText(/used in 2 routines/i)).toBeInTheDocument();
+    expect(screen.getByText(/variant/i)).toBeInTheDocument();
+    expect(screen.getByText(/custom/i)).toBeInTheDocument();
   });
 });
 
-describe.skip("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast)", () => {
+describe("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast)", () => {
   it("shows a 'copied as your variant' toast when editing a global figure", async () => {
     // Intent: editing a non-owned figure silently creates a variant + shows the toast.
     // User scenario: an editor opens a GLOBAL figure in their routine and edits a step.
@@ -88,7 +106,7 @@ describe.skip("US-035 Auto-variant on editing a non-owned figure (copy-on-write 
   });
 });
 
-describe.skip("US-036 Fork a figure into a variant explicitly", () => {
+describe("US-036 Fork a figure into a variant explicitly", () => {
   it("offers a 'Fork into variant' action that creates an overlay variant", async () => {
     // Intent: an explicit "Fork into variant" creates a variant (overlay), inheriting the base.
     // Arrange: render <FigureTimeline> for a figure with a "Fork into variant" action.

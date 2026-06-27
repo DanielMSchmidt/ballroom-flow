@@ -67,7 +67,7 @@ describe.skip("US-046 Routine + figure search", () => {
   });
 });
 
-describe.skip("US-032/033 Figure library browse (global + account variants)", () => {
+describe("US-032/033 Figure library browse (global + account variants)", () => {
   it("lists global figures grouped by figureType, filterable by dance, from the index", async () => {
     // Intent: the library list reads D1 + the FigureType catalog (no CRDT scan).
     // Arrange: seed global Feather (foxtrot + waltz) + a Three Step. Act: GET
@@ -78,28 +78,28 @@ describe.skip("US-032/033 Figure library browse (global + account variants)", ()
       users: [{ id: "u1", displayName: "U1", identityColor: "#111", plan: "free" }],
       docs: [
         {
-          docRef: "ff",
+          docRef: "srch_ff",
           type: "global-figure",
           ownerId: "app",
-          doName: "ff",
+          doName: "srch_ff",
           figureType: "feather",
           dance: "foxtrot",
           title: "Feather",
         },
         {
-          docRef: "fw",
+          docRef: "srch_fw",
           type: "global-figure",
           ownerId: "app",
-          doName: "fw",
+          doName: "srch_fw",
           figureType: "feather",
           dance: "waltz",
           title: "Feather",
         },
         {
-          docRef: "ts",
+          docRef: "srch_ts",
           type: "global-figure",
           ownerId: "app",
-          doName: "ts",
+          doName: "srch_ts",
           figureType: "three_step",
           dance: "foxtrot",
           title: "Three Step",
@@ -128,12 +128,23 @@ describe.skip("US-032/033 Figure library browse (global + account variants)", ()
           doName: "var1",
           figureType: "feather",
           dance: "foxtrot",
+          forkedFromRef: "fg_base",
         },
         { docRef: "rtA", type: "routine", ownerId: "u1", doName: "rtA" },
         { docRef: "rtB", type: "routine", ownerId: "u1", doName: "rtB" },
       ],
+      placementEdges: [
+        { routineRef: "rtA", figureRef: "var1" },
+        { routineRef: "rtB", figureRef: "var1" },
+      ],
     });
     const res = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
     expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      figures: { docRef: string; usedInCount: number; baseFigureRef: string | null }[];
+    };
+    const v = body.figures.find((f) => f.docRef === "var1");
+    expect(v?.usedInCount).toBe(2);
+    expect(v?.baseFigureRef).toBe("fg_base");
   });
 });
