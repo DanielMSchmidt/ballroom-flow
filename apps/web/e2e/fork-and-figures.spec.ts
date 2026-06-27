@@ -172,17 +172,10 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     await expect(coach.page.getByRole("heading", { name: "Intro" })).toBeVisible({
       timeout: 15_000,
     });
-    // Capture the client-minted figureRef from the create request — a figure doc is
-    // shared INDEPENDENTLY of its routine (US-020 AC-2), so the student needs access
-    // to it too (below) to see the figure on the shared routine.
-    const figureReq = coach.page.waitForRequest(
-      (r) => r.url().includes("/api/figures") && r.method() === "POST",
-    );
     await coach.page.getByRole("button", { name: "Add figure" }).click();
     await coach.page.getByLabel("Figure name").fill("Feather Step");
     await coach.page.getByLabel("Figure name").press("Enter");
     await expect(coach.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    const figureRef = (await figureReq).postDataJSON().figureRef as string;
     await coach.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     const coachFamily = coach.page.getByRole("region", { name: /family notes/i });
     await coachFamily.getByRole("button", { name: /this figure family/i }).click();
@@ -191,14 +184,11 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     await coachFamily.getByRole("button", { name: /add family note/i }).click();
     await expect(coachFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
 
-    // Coach shares COMMENTER access with the student — both the routine AND the
-    // referenced figure doc (independently shared, US-020 AC-2), so the student can
-    // see the figure on the shared routine.
+    // Coach shares COMMENTER access to the ROUTINE only. The student gets read
+    // access to the referenced figure via the cascade (placement_edge), NOT a
+    // direct figure share — proving "inviting to a routine cascades its figures".
     await seedDb(coach.page, {
-      memberships: [
-        { docRef, userId: "fc_student", role: "commenter" },
-        { docRef: figureRef, userId: "fc_student", role: "commenter" },
-      ],
+      memberships: [{ docRef, userId: "fc_student", role: "commenter" }],
     });
 
     // Student (co-member) opens the shared routine, opens the figure → SEES the note.
