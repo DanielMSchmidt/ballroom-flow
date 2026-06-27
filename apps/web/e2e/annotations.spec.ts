@@ -41,22 +41,26 @@ test.describe("@smoke annotations journey", () => {
     // Open the figure's step sheet — the annotation panel lives here.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
 
+    // Scope to the per-figure Annotations panel (the family-notes panel below also
+    // has a "… note" textbox, so unscoped role queries would be ambiguous).
+    const panel = page.getByRole("region", { name: /^annotations$/i });
+
     // US-039: add a LESSON note on this figure; it renders in the thread.
-    await page.getByLabel("Kind").selectOption("lesson");
-    await page.getByRole("textbox", { name: /note/i }).fill("keep the head left");
-    await page.getByRole("button", { name: /add note/i }).click();
-    await expect(page.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
+    await panel.getByLabel("Kind").selectOption("lesson");
+    await panel.getByRole("textbox", { name: /^note$/i }).fill("keep the head left");
+    await panel.getByRole("button", { name: /add note/i }).click();
+    await expect(panel.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
 
     // US-039: reply forms an ordered thread.
-    await page.getByRole("textbox", { name: /reply/i }).fill("on every Feather");
-    await page.getByRole("button", { name: /post reply/i }).click();
-    await expect(page.getByText("on every Feather")).toBeVisible({ timeout: 15_000 });
+    await panel.getByRole("textbox", { name: /reply/i }).fill("on every Feather");
+    await panel.getByRole("button", { name: /post reply/i }).click();
+    await expect(panel.getByText("on every Feather")).toBeVisible({ timeout: 15_000 });
 
     // US-042: the "lessons" filter is engaged (aria-pressed); the lesson stays.
-    const lessons = page.getByRole("button", { name: /^lessons$/i });
+    const lessons = panel.getByRole("button", { name: /^lessons$/i });
     await lessons.click();
     await expect(lessons).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText("keep the head left")).toBeVisible();
+    await expect(panel.getByText("keep the head left")).toBeVisible();
 
     // US-040/041: author an all-dances FAMILY note ("every <figureType>") and see
     // it surface in the family-notes list — server-mediated, co-membership-gated.
