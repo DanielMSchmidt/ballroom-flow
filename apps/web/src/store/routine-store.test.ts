@@ -459,15 +459,21 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // Edit count-1 footwork HT→T on the non-owned figure → copy-on-write.
     store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
 
-    // A variant was projected with baseFigureRef = the global base…
+    // A variant was projected with baseFigureRef = the global base (synchronous —
+    // createFigure is called before its .then()).
     expect(createFigure).toHaveBeenCalledTimes(1);
     expect(created[0]?.baseFigureRef).toBe("fg");
-    // …the placement was re-pointed to the new variant id…
     const variantRef = created[0]?.figureRef as string;
+
+    // The re-point + toast now happen INSIDE createFigure's .then() (only on
+    // success), so wait for the async completion before asserting them.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef));
+
+    // The placement was re-pointed to the new variant id…
     const rp = store.readPlacements().find((p) => p.placement.id === "p1");
     expect(rp?.placement.figureRef).toBe(variantRef);
-    // …and the screen was told to toast.
-    expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef);
+    // …and the shared base figure doc was NEVER written to (COW must not mutate it).
+    expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 });
 

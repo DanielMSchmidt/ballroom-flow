@@ -369,6 +369,9 @@ export async function openRoutine(
         return;
       }
       // 1) Project the variant (account-figure row + variant DO seeded w/ base ref).
+      //    Only AFTER it succeeds do we write the overlay, re-point the placement,
+      //    and toast — so a failed POST never leaves the placement pointing at a
+      //    variant doc that was never created (consistent state; the edit drops).
       createFigure({
         figureRef: variant.id,
         name: variant.name,
@@ -377,33 +380,41 @@ export async function openRoutine(
         routineId,
         attributes: [],
         baseFigureRef: base.id,
-      }).then(() => {
-        const conn = figureConn(variant.id);
-        // 2) Write the edit as an overlay against the live base.
-        const overlay = overlayFromAttributes(base.attributes, attributes);
-        conn.change((draft) => {
-          draft.id = variant.id;
-          draft.scope = "account";
-          draft.ownerId = currentUserId;
-          draft.source = "custom";
-          draft.figureType = variant.figureType;
-          draft.dance = variant.dance;
-          draft.name = variant.name;
-          draft.baseFigureRef = base.id;
-          draft.overlay = overlay;
-          draft.attributes = [];
-          draft.schemaVersion = base.schemaVersion;
-          draft.deletedAt = null;
+      })
+        .then(() => {
+          const conn = figureConn(variant.id);
+          // 2) Write the edit as an overlay against the live base.
+          const overlay = overlayFromAttributes(base.attributes, attributes);
+          conn.change((draft) => {
+            draft.id = variant.id;
+            draft.scope = "account";
+            draft.ownerId = currentUserId;
+            draft.source = "custom";
+            draft.figureType = variant.figureType;
+            draft.dance = variant.dance;
+            draft.name = variant.name;
+            draft.baseFigureRef = base.id;
+            draft.overlay = overlay;
+            draft.attributes = [];
+            draft.schemaVersion = base.schemaVersion;
+            draft.deletedAt = null;
+          });
+          // 3) Re-point the placement in the routine doc — only on success.
+          routineConn.change((draft) => {
+            for (const section of draft.sections ?? []) {
+              const p = section.placements?.find((pp) => pp.id === rePointed.id);
+              if (p) p.figureRef = variant.id;
+            }
+          });
+          // 4) Tell the screen to toast "copied as your variant".
+          onCopyOnWrite?.(variant.id);
+        })
+        .catch((err) => {
+          // The variant POST failed (auth/network/quota): leave the placement on
+          // the base figure (no re-point, no toast) — the edit is dropped rather
+          // than corrupting state with a dangling variant reference.
+          console.warn("copy-on-write failed; placement left on the base figure", err);
         });
-      });
-      // 3) Re-point the placement in the routine doc (immediate; sync-safe).
-      routineConn.change((draft) => {
-        for (const section of draft.sections ?? []) {
-          const p = section.placements?.find((pp) => pp.id === rePointed.id);
-          if (p) p.figureRef = variant.id;
-        }
-      });
-      onCopyOnWrite?.(variant.id);
     },
 
     setFigureAlignment: (figureRef, edge, alignment) => {
@@ -465,11 +476,12 @@ export async function openRoutine(
     return !!f && f.scope === "account" && f.ownerId === currentUserId;
   }
 
-  /** Find the placement (and its section id) that references `figureRef`. */
+  /** Find the (live) placement and its section id that references `figureRef`. */
   function findPlacement(figureRef: string): { sectionId: string; placement: Placement } | null {
     const routine = readRoutineSafe();
     for (const section of routine.sections) {
       for (const placement of section.placements) {
+        if (placement.deletedAt != null) continue; // never re-point a tombstoned placement
         if (placement.figureRef === figureRef) return { sectionId: section.id, placement };
       }
     }
