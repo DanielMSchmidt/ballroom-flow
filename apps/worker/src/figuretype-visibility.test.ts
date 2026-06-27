@@ -25,8 +25,13 @@ beforeAll(async () => {
 });
 
 /** Seed: coach authors a "feather/all" family note; coach+student co-own a
- *  Foxtrot routine referencing a Feather; stranger is NOT a member. */
+ *  Foxtrot routine referencing a Feather; stranger is NOT a member.
+ *  Seeds ONCE — D1 is shared across the run (isolatedStorage:false), so the
+ *  fixed doNames would collide if each test re-seeded them. */
+let scenarioSeeded = false;
 async function seedCoMembershipScenario() {
+  if (scenarioSeeded) return;
+  scenarioSeeded = true;
   await seedDb({
     users: [
       { id: "coach", displayName: "Coach", identityColor: "#c0563f", plan: "free" },
@@ -49,13 +54,22 @@ async function seedCoMembershipScenario() {
       { id: "m_coach", docRef: "rt", userId: "coach", role: "editor" },
       { id: "m_student", docRef: "rt", userId: "student", role: "commenter" },
     ],
+    // The thin FigureTypeNoteIndex row {accountDocRef, authorId, figureType,
+    // danceScope} = {acct_coach, coach, feather, all}. The note CONTENT stays in
+    // the coach's account doc; only this projection is queried cross-account.
+    familyNotes: [
+      {
+        noteId: "n_feather",
+        accountDocRef: "acct_coach",
+        authorId: "coach",
+        figureType: "feather",
+        danceScope: "all",
+      },
+    ],
   });
-  // M6 also writes a FigureTypeNoteIndex row {accountDocRef, authorId, figureType,
-  // danceScope} = {acct_coach, coach, feather, all}; the test seeds it once that
-  // table exists. The note CONTENT stays in the coach's account doc.
 }
 
-describe.skip("US-041 Co-member visibility of family notes (option 2)", () => {
+describe("US-041 Co-member visibility of family notes (option 2)", () => {
   it("surfaces a co-member's family note on a shared routine's matching figure", async () => {
     // Intent: the student (a co-member) sees the coach's "every Feather" note on the
     //   Feather in their shared routine.
@@ -103,15 +117,55 @@ describe.skip("US-041 Co-member visibility of family notes (option 2)", () => {
     expect(res.status).toBe(403);
   });
 
+  it("a member can author a family note (POST) and read it back with content (GET)", async () => {
+    // Intent: the create path (US-040) round-trips — author a family note, then
+    //   discover it (with its content) via the co-member read on a routine the
+    //   author belongs to. Proves the feature works end-to-end at the worker.
+    const docRef = "rt_authored";
+    await seedDb({
+      users: [{ id: "author1", displayName: "A", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "author1", doName: docRef, dance: "waltz" }],
+      memberships: [{ id: "m_a1", docRef, userId: "author1", role: "editor" }],
+    });
+    const ctx = await authedContext({ keypair: kp, userId: "author1", docRef, role: "editor" });
+    const created = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "lesson",
+        text: "rise later",
+        figureType: "natural_turn",
+        danceScope: "all",
+      }),
+    });
+    expect(created.status).toBe(201);
+
+    const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
+      headers: ctx.authHeaders(),
+    });
+    expect(got.status).toBe(200);
+    const body = (await got.json()) as {
+      notes: Array<{ figureType: string; text: string; kind: string }>;
+    };
+    expect(body.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ figureType: "natural_turn", text: "rise later", kind: "lesson" }),
+      ]),
+    );
+  });
+
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {
     // Intent: the co-member family-note discovery query is indexed (NFR).
-    // Arrange: the lookup SQL (notes by members(R) matching the figures in R).
-    // Act: expectIndexedQuery. Assert: no SCAN.
+    // Arrange: the EXACT SQL the route runs — familyNotesForMembers filters by
+    //   `authorId IN (members(R))` + dance scope (NOT by figureType; the client
+    //   matches families post-hoc via resolveFamilyNotesFor). The test must mirror
+    //   the runtime query, or it proves an index for a path the code never takes.
+    // Act: expectIndexedQuery. Assert: no SCAN (uses idx_ftni_author on authorId).
     // Covers the §10.2 EXPLAIN coverage for this cross-account read path.
     await expectIndexedQuery(
       env.DB,
-      "SELECT accountDocRef, authorId, figureType, danceScope FROM figure_type_note_index WHERE figureType = ?1 AND (danceScope = ?2 OR danceScope = 'all') AND authorId IN (SELECT userId FROM membership WHERE docRef = ?3 AND deletedAt IS NULL)",
-      ["feather", "foxtrot", "rt"],
+      "SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text FROM figure_type_note_index WHERE deletedAt IS NULL AND (danceScope = ? OR danceScope = 'all') AND authorId IN (?, ?)",
+      ["foxtrot", "coach", "student"],
     );
   });
 });

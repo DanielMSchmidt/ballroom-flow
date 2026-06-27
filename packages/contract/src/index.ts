@@ -46,6 +46,9 @@ export const zCreateFigure = z.object({
   name: z.string().trim().min(1, "Give the figure a name").max(80, "Keep the name under 80 chars"),
   dance: z.enum(DANCE_IDS),
   figureType: z.string().trim().min(1),
+  /** The routine this figure is being added to — records the placement edge so
+   *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
+  routineId: z.string().min(1),
 });
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 

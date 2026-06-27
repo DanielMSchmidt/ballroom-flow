@@ -1,9 +1,11 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { capabilitiesFor } from "@ballroom/domain";
 import { beforeAll, describe, expect, it } from "vitest";
+import { resolveEffectiveRole } from "./db/membership";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace } from "./test-support/doc-do-api";
+import { expectIndexedQuery } from "./test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
 
@@ -280,6 +282,119 @@ describe("US-021 Permission boundary at the DO connection", () => {
         await inst.webSocketMessage(wsAs("editor"), bytes.buffer as ArrayBuffer);
         expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
       },
+    );
+  });
+
+  it("admits a commenter's annotation write but drops their structural write (US-039/#117)", async () => {
+    // Intent: a commenter (canAnnotate, !canEdit) may add an annotation over the
+    //   socket but NOT a structural edit. The DO classifies by EFFECT — a change
+    //   that touches only `annotations` is an annotation; anything else is
+    //   structural — so the client can't bypass the gate by mislabelling a frame.
+    //   Covers US-039 AC-4 (commenter+ annotates; viewer can't).
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_co", displayName: "Co", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(
+      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (inst) => {
+        const wsAs = (role: string) =>
+          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+
+        // A commenter's ANNOTATION change → applied.
+        const anno = await inst.buildChangeForTest({ op: "addAnnotation", text: "rise earlier" });
+        const rows0 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter"), anno.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+
+        // A commenter's STRUCTURAL change → dropped (touches sections, not just annotations).
+        const struct = await inst.buildChangeForTest({ op: "addSection", name: "Sneaky" });
+        const rows1 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter"), struct.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows1);
+
+        // A viewer's annotation change → dropped (viewer can't annotate).
+        const anno2 = await inst.buildChangeForTest({ op: "addAnnotation", text: "no" });
+        const rows2 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("viewer"), anno2.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows2);
+      },
+    );
+  });
+
+  it("cascades VIEWER on a referenced figure to a routine co-member (sharing a routine shares its figures)", async () => {
+    // Intent: a co-member of a routine can READ the figures it references, even
+    //   with NO direct figure membership — the placement_edge cascade. Decided
+    //   2026-06-27; figure docs are otherwise shared independently (US-020 AC-2).
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({ keypair: kp, userId: "u_co", docRef: figureRef, role: null });
+    await seedDb({
+      users: [{ id: "u_co", displayName: "Co", identityColor: "#555", plan: "free" }],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      // Member of the ROUTINE, not the figure — the edge cascades read access.
+      memberships: [{ id: "m_co_rt", docRef: routineRef, userId: "u_co", role: "commenter" }],
+      placementEdges: [{ routineRef, figureRef }],
+    });
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(101);
+  });
+
+  it("does NOT cascade figure access to a NON-member of the referencing routine", async () => {
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_out",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_out", displayName: "Out", identityColor: "#666", plan: "free" }],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      placementEdges: [{ routineRef, figureRef }], // referenced, but u_out isn't a routine member
+    });
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
+  });
+
+  it("cascades EDITOR on a referenced figure to a routine EDITOR (editors may edit referenced figures)", async () => {
+    // Intent: a routine editor may EDIT the figures it references (decided
+    //   2026-06-27) — the cascade derives 'editor' from the routine role; a
+    //   commenter/viewer still gets read-only.
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    await seedDb({
+      users: [
+        { id: "u_ed2", displayName: "Ed2", identityColor: "#777", plan: "free" },
+        { id: "u_co2", displayName: "Co2", identityColor: "#888", plan: "free" },
+      ],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      memberships: [
+        { id: "m_ed2_rt", docRef: routineRef, userId: "u_ed2", role: "editor" },
+        { id: "m_co2_rt", docRef: routineRef, userId: "u_co2", role: "commenter" },
+      ],
+      placementEdges: [{ routineRef, figureRef }],
+    });
+    // A routine editor → EDITOR on the figure; a routine commenter → read-only viewer.
+    expect(await resolveEffectiveRole(env.DB, figureRef, "u_ed2")).toBe("editor");
+    expect(await resolveEffectiveRole(env.DB, figureRef, "u_co2")).toBe("viewer");
+  });
+
+  it("uses INDEXES for the figure-access cascade lookup (EXPLAIN, no SCAN)", async () => {
+    await expectIndexedQuery(
+      env.DB,
+      "SELECT m.role AS role FROM placement_edge pe JOIN membership m ON m.docRef = pe.routineRef WHERE pe.figureRef = ?1 AND m.userId = ?2 AND m.deletedAt IS NULL",
+      ["fig_x", "u_x"],
     );
   });
 });

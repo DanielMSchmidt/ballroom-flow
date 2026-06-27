@@ -4,9 +4,11 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
+import { linkPlacement } from "./db/placement-edge";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
@@ -204,9 +206,12 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId } = parsed.data;
 
   await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  // Record the routine→figure edge so the routine's co-members get read access to
+  // this figure (cascade): figure docs are otherwise shared independently (US-020).
+  await linkPlacement(c.env.DB, routineId, figureRef);
   // Server-seed the figure's CRDT content durably at create (#205), so the figure
   // name/attributes are DO-persisted before the client connects — no racy client
   // seed write that can be lost on a reload right after "Add figure".
@@ -223,6 +228,88 @@ app.post("/api/figures", async (c) => {
     deletedAt: null,
   });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
+});
+
+// GET /api/routines/:id/family-notes — the co-member family-note read (US-041,
+// option 2). Surfaces the family notes authored by THIS routine's members that
+// apply to its dance, so the client can show a co-member's "every Feather" note
+// on the matching figure. In v1 a note's content lives in the figure_type_note_
+// index row (server-mediated; see migration 0005), so this returns it directly —
+// the client never reads another user's account doc. The co-membership gate is
+// the security boundary: a NON-member is refused (403) before any note is read
+// (AC-3/4). The query is keyed by members(R) + dance scope; the client then
+// matches each note to the figures actually in R (resolveFamilyNotesFor).
+app.get("/api/routines/:id/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+
+  // Gate on co-membership of the routine: a non-member resolves to null → 403.
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  // The routine's dance scopes which family notes apply (its dance, or "all").
+  const reg = await c.env.DB.prepare("SELECT dance FROM document_registry WHERE docRef = ?")
+    .bind(routineRef)
+    .first<{ dance: string | null }>();
+  const dance = reg?.dance ?? "waltz";
+
+  const members = await listMembers(c.env.DB, routineRef);
+  const authorIds = members.map((m) => m.userId);
+  const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
+  // Shape each row as an Annotation-like note (with a figureType anchor) so the
+  // client can match it to the routine's figures (resolveFamilyNotesFor).
+  const notes = rows.map((r) => ({
+    id: r.noteId,
+    authorId: r.authorId,
+    kind: r.kind,
+    text: r.text,
+    figureType: r.figureType,
+    danceScope: r.danceScope,
+    anchors: [{ type: "figureType", figureType: r.figureType, danceScope: r.danceScope }],
+  }));
+  return c.json({ notes });
+});
+
+// POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
+// is owned by the caller (authorId from the verified JWT) and scoped to a figure
+// family + dance scope (this dance, or "all"). Server-mediated: the client never
+// writes another account's data. Co-members then discover it via the route above.
+app.post("/api/account/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const body = (await c.req.json().catch(() => null)) as {
+    kind?: unknown;
+    text?: unknown;
+    figureType?: unknown;
+    danceScope?: unknown;
+  } | null;
+  const kind = body?.kind;
+  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  const figureType = body?.figureType;
+  const danceScope = body?.danceScope;
+  if (
+    (kind !== "note" && kind !== "lesson" && kind !== "practice") ||
+    !text ||
+    typeof figureType !== "string" ||
+    !figureType ||
+    typeof danceScope !== "string" ||
+    !danceScope
+  ) {
+    return c.json({ error: "invalid_family_note" }, 400);
+  }
+
+  const noteId = newId();
+  await insertFamilyNote(c.env.DB, {
+    noteId,
+    authorId: user.sub,
+    figureType,
+    danceScope,
+    kind,
+    text,
+  });
+  return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
 });
 
 // POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only

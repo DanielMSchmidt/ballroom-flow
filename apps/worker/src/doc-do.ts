@@ -15,6 +15,7 @@ import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 import {
+  addAnnotation,
   addSection,
   buildDoc,
   buildRoutineDoc,
@@ -36,7 +37,9 @@ interface SocketAttachment {
 }
 
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
-export type DocOp = { op: "addSection"; name: string } & Record<string, unknown>;
+export type DocOp =
+  | ({ op: "addSection"; name: string } & Record<string, unknown>)
+  | ({ op: "addAnnotation"; text: string } & Record<string, unknown>);
 
 /**
  * Compact once the incremental change log grows past this many rows. Bounds both
@@ -246,6 +249,13 @@ export class DocDO extends DurableObject<Env> {
     switch (op.op) {
       case "addSection":
         return addSection(doc, { name: String(op.name) });
+      case "addAnnotation":
+        return addAnnotation(doc, {
+          authorId: "tester",
+          kind: "note",
+          text: String(op.text),
+          anchors: [{ type: "figure", figureRef: "f1" }],
+        });
       default:
         return doc;
     }
@@ -325,12 +335,13 @@ export class DocDO extends DurableObject<Env> {
    * change bytes; apply (idempotently) and relay to the OTHER clients so all
    * connections converge.
    *
-   * US-021 permission boundary: writes are gated by the connection's role. Only a
-   * role that `canEdit` (editor/owner) may mutate the doc over the socket; a
-   * viewer is read-only. A COMMENTER is also read-only AT THE SOCKET FOR NOW — a
-   * raw change frame carries no annotation-vs-structural intent, so we can't yet
-   * allow a commenter's annotation while refusing a structural edit; that's
-   * re-enabled by the annotations story via a typed change envelope (#117).
+   * US-021 + US-039 permission boundary: writes are gated by the connection's
+   * role. An editor/owner (`canEdit`) may make any change. A COMMENTER
+   * (`canAnnotate`, not `canEdit`) may make a change that touches ONLY annotations
+   * — classified by EFFECT (#117), not by a client-declared label, so a commenter
+   * can't smuggle a structural edit through by mislabelling the frame. A viewer is
+   * read-only. This is defence in depth: the connection was already authorized at
+   * upgrade, but the role still bounds what it may DO.
    *
    * Frames are still untrusted: a malformed frame (not valid Automerge change
    * bytes) must NOT crash the handler — we DROP it (Automerge `applyChanges`
@@ -338,18 +349,41 @@ export class DocDO extends DurableObject<Env> {
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    // Read-only socket (viewer/commenter, or an attachment we can't read) → drop
-    // the write. This is defence in depth: the connection was already authorized
-    // at upgrade, but the role still bounds what it may DO.
     const role = this.socketRole(ws);
-    if (!role || !can(role, "canEdit")) return;
+    if (!role) return; // no/garbled attachment → read-only
+    const bytes = new Uint8Array(message);
+    const allowed =
+      can(role, "canEdit") || (can(role, "canAnnotate") && this.touchesOnlyAnnotations(bytes));
+    if (!allowed) return;
     try {
-      await this.ingestChange(new Uint8Array(message), ws);
+      await this.ingestChange(bytes, ws);
     } catch {
       // Malformed/unapplyable frame — drop it; other clients + the doc are
-      // unaffected. (Closing the socket with 1003 "unsupported data" is a
-      // reasonable hardening once the typed envelope #117 distinguishes frames.)
+      // unaffected. (Automerge `applyChanges` throws on garbage bytes.)
     }
+  }
+
+  /**
+   * Classify a change by EFFECT (US-039/#117): does applying it to the current
+   * doc change anything OTHER than `annotations`? Used to admit a commenter's
+   * annotation while refusing a structural edit, without trusting any
+   * client-supplied label. An unapplyable (malformed) frame is not an annotation.
+   * Compares with tombstones INCLUDED so a structural soft-delete still counts as
+   * structural.
+   */
+  private touchesOnlyAnnotations(change: Uint8Array): boolean {
+    const before = this.getDoc();
+    let after: A.Doc<RoutineDoc>;
+    try {
+      // Clone first: A.applyChanges may free its input handle; the live doc must
+      // stay valid for the subsequent real ingest.
+      [after] = A.applyChanges(A.clone(before), [change as A.Change]);
+    } catch {
+      return false;
+    }
+    const nonAnnotation = (doc: A.Doc<RoutineDoc>): string =>
+      JSON.stringify({ ...readRoutine(doc, { includeDeleted: true }), annotations: [] });
+    return nonAnnotation(before) === nonAnnotation(after);
   }
 
   /** The connection's resolved role from its socket attachment, or null. */

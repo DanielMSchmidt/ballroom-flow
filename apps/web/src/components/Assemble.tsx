@@ -22,8 +22,9 @@ import {
   type Placement,
   type Section,
 } from "@ballroom/domain";
-import { type FormEvent, useEffect, useReducer, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useReducer, useState } from "react";
 import type { TokenProvider } from "../store/doc-connection";
+import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
 import {
   Badge,
@@ -39,6 +40,8 @@ import {
   Spinner,
   useToast,
 } from "../ui";
+import { AnnotationPanel } from "./AnnotationPanel";
+import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
 import { RoutineReadingView } from "./RoutineReadingView";
 import { Share } from "./Share";
@@ -51,6 +54,8 @@ export interface AssembleProps {
   routineId: string;
   /** This member's role on the doc (gates editing — US-026+; view is open to all). */
   role: MembershipRole;
+  /** The viewer's user id — stamps authored annotations + gates author-only reply delete (US-039). */
+  currentUserId?: string;
   /** Optional connection override; otherwise derived from the store's sync state. */
   connection?: "live" | "offline";
   /** Injectable store for tests; production opens one via `openRoutine(routineId)`. */
@@ -73,6 +78,7 @@ function useRoutineStore(
   injected: RoutineStore | undefined,
   enabled: boolean,
   getToken: TokenProvider | undefined,
+  currentUserId: string | undefined,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
@@ -81,7 +87,7 @@ function useRoutineStore(
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
-    openRoutine(routineId, { getToken }).then((opened) => {
+    openRoutine(routineId, { getToken, currentUserId }).then((opened) => {
       if (cancelled) {
         opened.close();
         return;
@@ -93,7 +99,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, getToken]);
+  }, [routineId, injected, enabled, getToken, currentUserId]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -104,6 +110,7 @@ function useRoutineStore(
 export function Assemble({
   routineId,
   role,
+  currentUserId,
   connection,
   store: injected,
   getToken,
@@ -111,7 +118,7 @@ export function Assemble({
   forking,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
-  const store = useRoutineStore(routineId, injected, !offlineProp, getToken);
+  const store = useRoutineStore(routineId, injected, !offlineProp, getToken, currentUserId);
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
   // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
@@ -133,6 +140,22 @@ export function Assemble({
     placement: Placement;
   } | null>(null);
   const toast = useToast();
+
+  // Family notes (US-040/041) come from the worker (co-member visibility gate),
+  // not the routine doc — load them for this routine + reload after authoring one.
+  // No-ops without a token (tests / open boundary) → an empty list.
+  const [familyNotes, setFamilyNotes] = useState<FamilyNote[]>([]);
+  const reloadFamilyNotes = useCallback(async () => {
+    if (!getToken) return;
+    try {
+      setFamilyNotes(await loadFamilyNotes(routineId, await getToken()));
+    } catch {
+      // Surfacing family notes is best-effort; a failure must not block authoring.
+    }
+  }, [routineId, getToken]);
+  useEffect(() => {
+    void reloadFamilyNotes();
+  }, [reloadFamilyNotes]);
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
@@ -325,6 +348,46 @@ export function Assemble({
                 }
               />
             )}
+            {/* Annotations on this figure (US-039/042): notes/lessons/practice +
+                replies, gated by role. Commenter+ may add; viewer is read-only. */}
+            <AnnotationPanel
+              role={role}
+              currentUserId={currentUserId}
+              annotations={store
+                .readAnnotations()
+                .filter((a) =>
+                  a.anchors.some(
+                    (an) =>
+                      (an.type === "figure" || an.type === "point") &&
+                      an.figureRef === notatingFigure.id,
+                  ),
+                )}
+              composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
+              figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
+              onCreate={({ kind, text }) =>
+                store.createAnnotation({
+                  kind,
+                  text,
+                  anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                })
+              }
+              onReply={(annotationId, text) => store.addReply(annotationId, text)}
+              onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            />
+            {/* Figure-family notes (US-040/041): "every Feather" notes from this
+                routine's members, surfaced on the matching figure; commenter+ may
+                author one (server-mediated, co-membership-gated). */}
+            <FamilyNotes
+              figureType={notatingFigure.figureType}
+              dance={routine.dance as DanceId}
+              notes={familyNotes}
+              canAnnotate={can(role, "canAnnotate")}
+              onCreate={async (input) => {
+                if (!getToken) return;
+                await createFamilyNote(input, await getToken());
+                await reloadFamilyNotes();
+              }}
+            />
           </div>
         )}
       </Sheet>

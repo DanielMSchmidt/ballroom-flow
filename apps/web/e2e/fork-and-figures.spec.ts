@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { gotoRoutine, seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
-import { closeUsers, expectAbsent, expectConverged, openTwoUsers } from "./support/two-users";
+import { closeUsers, expectAbsent, openTwoUsers, openUser } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Fork + inheritance journeys (PLAN §10.2 E2E). Covers:
@@ -140,24 +140,125 @@ test.describe("cross-dance figureType notes + co-member visibility (option 2)", 
     await gotoRoutine(page, "rt_foxtrot_feather");
     await expect(page).toHaveURL(/rt_foxtrot_feather/);
   });
+});
 
+test.describe("@smoke co-member family-note visibility (US-041)", () => {
   test("a co-member sees a coach's family note on a shared routine; a non-member sees none", async ({
     browser,
   }) => {
-    // Intent: option-2 visibility — the coach's family note surfaces for a CO-MEMBER on a
-    //   shared routine's matching figure, but NOT for a non-member (US-041).
-    // Multi-user scenario: coach authors "every Feather: head left"; student is a co-member
-    //   of the shared Feather routine; a stranger is not.
-    // Steps/asserts:
-    //   1. Coach adds an all-dances Feather family note (in their account doc).
-    //   2. Student opens the SHARED routine rt_sample → sees the coach's note on the Feather.
-    //   3. Stranger opens (or is denied) rt_sample → sees NONE of the coach's family notes.
-    const [student, stranger] = await openTwoUsers(browser, "user_student", "user_stranger");
-    await seedAuth(student.page, student.userId);
-    await seedAuth(stranger.page, stranger.userId);
-    await gotoRoutine(student.page, "rt_sample");
-    await expectConverged([student.page], "[data-testid='figure-notes']", /head left/i);
-    await expectAbsent(stranger.page, "text=head left");
-    await closeUsers(student, stranger);
+    // Intent: option-2 visibility — a coach's figure-family note surfaces for a
+    //   CO-MEMBER on a shared routine's matching figure, but NOT for a non-member.
+    // Multi-user scenario (three real contexts): coach authors "every Feather:
+    //   keep the head left" (all dances) on a routine, shares COMMENTER with the
+    //   student, while a stranger has no membership.
+    const [coach, student] = await openTwoUsers(browser, "fc_coach", "fc_student");
+    const stranger = await openUser(browser, "fc_stranger");
+    await resetDb(coach.page);
+    await seedDb(coach.page, {
+      users: [
+        { id: "fc_coach", displayName: "Coach", identityColor: "#c0563f" },
+        { id: "fc_student", displayName: "Student", identityColor: "#1f8a5b" },
+        { id: "fc_stranger", displayName: "Stranger", identityColor: "#5b6b8a" },
+      ],
+    });
+    await seedAuth(coach.page, "fc_coach");
+    await seedAuth(student.page, "fc_student");
+    await seedAuth(stranger.page, "fc_stranger");
+
+    // Coach creates a routine with a Feather figure, then authors an all-dances
+    // family note on it ("every Feather …").
+    const docRef = await createRoutineAsCoach(coach.page, "Shared Coaching Waltz");
+    await addSection(coach.page, "Intro");
+    await expect(coach.page.getByRole("heading", { name: "Intro" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await coach.page.getByRole("button", { name: "Add figure" }).click();
+    await coach.page.getByLabel("Figure name").fill("Feather Step");
+    await coach.page.getByLabel("Figure name").press("Enter");
+    await expect(coach.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await coach.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    const coachFamily = coach.page.getByRole("region", { name: /family notes/i });
+    await coachFamily.getByRole("button", { name: /this figure family/i }).click();
+    await coachFamily.getByRole("radio", { name: /all dances/i }).click();
+    await coachFamily.getByRole("textbox", { name: /family note/i }).fill("keep the head left");
+    await coachFamily.getByRole("button", { name: /add family note/i }).click();
+    await expect(coachFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
+
+    // Coach shares COMMENTER access to the ROUTINE only. The student gets read
+    // access to the referenced figure via the cascade (placement_edge), NOT a
+    // direct figure share — proving "inviting to a routine cascades its figures".
+    await seedDb(coach.page, {
+      memberships: [{ docRef, userId: "fc_student", role: "commenter" }],
+    });
+
+    // Student (co-member) opens the shared routine, opens the figure → SEES the note.
+    await student.page.goto(`/routines/${docRef}`);
+    await expect(student.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await student.page.getByRole("button", { name: /steps: Feather Step/i }).click();
+    const studentFamily = student.page.getByRole("region", { name: /family notes/i });
+    await expect(studentFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
+
+    // Stranger (NOT a member) opens the routine → the access-denied state, and NONE
+    // of the coach's family-note content (the co-membership gate holds).
+    await stranger.page.goto(`/routines/${docRef}`);
+    await expect(stranger.page.getByText(/don't have access/i)).toBeVisible({ timeout: 15_000 });
+    await expectAbsent(stranger.page, "text=keep the head left");
+
+    await closeUsers(coach, student, stranger);
+  });
+});
+
+test.describe("@smoke routine editor edits a referenced figure (cascade grants edit)", () => {
+  test("a routine-editor co-member edits a referenced figure; the owner sees the change converge", async ({
+    browser,
+  }) => {
+    // Intent: inviting a co-member as a routine EDITOR lets them EDIT the figures it
+    //   references (decided 2026-06-27) — via the placement_edge cascade, NOT a direct
+    //   figure share. The edit lands on the SHARED figure doc, so the owner sees it.
+    const [owner, editor] = await openTwoUsers(browser, "ce_owner", "ce_editor");
+    await resetDb(owner.page);
+    await seedDb(owner.page, {
+      users: [
+        { id: "ce_owner", displayName: "Owner", identityColor: "#111111" },
+        { id: "ce_editor", displayName: "Editor", identityColor: "#222222" },
+      ],
+    });
+    await seedAuth(owner.page, "ce_owner");
+    await seedAuth(editor.page, "ce_editor");
+
+    // Owner creates a routine with a Feather figure.
+    const docRef = await createRoutineAsCoach(owner.page, "Co-edit Waltz");
+    await addSection(owner.page, "Intro");
+    await expect(owner.page.getByRole("heading", { name: "Intro" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await owner.page.getByRole("button", { name: "Add figure" }).click();
+    await owner.page.getByLabel("Figure name").fill("Feather Step");
+    await owner.page.getByLabel("Figure name").press("Enter");
+    await expect(owner.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // Share EDITOR on the ROUTINE only — figure edit rights come via the cascade.
+    await seedDb(owner.page, {
+      memberships: [{ docRef, userId: "ce_editor", role: "editor" }],
+    });
+
+    // The co-editor opens the routine + the figure, and tags count 1 footwork "T".
+    await editor.page.goto(`/routines/${docRef}`);
+    await expect(editor.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await editor.page.getByRole("button", { name: /count 1/i }).click();
+    await editor.page.getByRole("button", { name: /^T$/ }).click();
+    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The OWNER opens the SAME figure → sees the co-editor's edit converge: it hit the
+    // shared figure doc, not just the co-editor's local copy (cascade edit is real).
+    await owner.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await closeUsers(owner, editor);
   });
 });

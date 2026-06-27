@@ -55,11 +55,28 @@ export interface SeedInvite {
   redeemedAt?: number | null;
 }
 
+/** A thin FigureTypeNoteIndex row (US-041) — the content stays in the account doc. */
+export interface SeedFamilyNote {
+  noteId: string;
+  accountDocRef: string;
+  authorId: string;
+  figureType: string;
+  danceScope: string; // a DanceId or 'all'
+}
+
+/** A routine→figure reference edge (cascade access, migration 0006). */
+export interface SeedPlacementEdge {
+  routineRef: string;
+  figureRef: string;
+}
+
 export interface SeedSpec {
   users?: SeedUser[];
   docs?: SeedDoc[];
   memberships?: SeedMembership[];
   invites?: SeedInvite[];
+  familyNotes?: SeedFamilyNote[];
+  placementEdges?: SeedPlacementEdge[];
 }
 
 /**
@@ -131,6 +148,20 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
       env.DB.prepare(
         "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, ?)",
       ).bind(i.id, i.docRef, i.role, i.expiresAt, i.redeemedAt ?? null),
+    );
+  }
+  for (const n of spec.familyNotes ?? []) {
+    stmts.push(
+      env.DB.prepare(
+        "INSERT INTO figure_type_note_index (noteId, accountDocRef, authorId, figureType, danceScope, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, NULL)",
+      ).bind(n.noteId, n.accountDocRef, n.authorId, n.figureType, n.danceScope, now),
+    );
+  }
+  for (const e of spec.placementEdges ?? []) {
+    stmts.push(
+      env.DB.prepare(
+        "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
+      ).bind(e.routineRef, e.figureRef),
     );
   }
 
