@@ -63,6 +63,7 @@ export {
   type MembershipRole,
 } from "./permissions";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
+export { buildGoldenWaltzBasic } from "./starter-routine";
 export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
 export { redoLastChange, undoLastChange } from "./undo";
 export {
