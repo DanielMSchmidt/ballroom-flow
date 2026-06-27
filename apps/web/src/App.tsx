@@ -3,9 +3,11 @@ import { AccountControls, useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
+import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
+import { useMe } from "./store/me";
 import { Styleguide } from "./styleguide/Styleguide";
-import { AppShell, Card, type NavItem, ToastProvider } from "./ui";
+import { AppShell, Button, Card, type NavItem, ToastProvider } from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
 
 /**
@@ -41,8 +43,13 @@ export function App(): React.JSX.Element {
 function AppHome(): React.JSX.Element {
   const route = useRoute();
   const { isSignedIn } = useAppAuth();
+  const me = useMe();
   const [tab, setTab] = useState("choreo");
   const openRoutineId = route.name === "routine" ? route.id : undefined;
+  // First-run nudge: a signed-in user who hasn't set a name/colour yet (US-019)
+  // is pointed at Profile, so they aren't shown as a raw id to co-editors.
+  const needsOnboarding =
+    isSignedIn && me.data?.onboarded === false && tab !== "profile" && route.name !== "invite";
 
   return (
     <AppShell
@@ -61,6 +68,18 @@ function AppHome(): React.JSX.Element {
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4 lg:p-0 lg:pt-4">
+        {needsOnboarding && (
+          <Card>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-secondary">
+                Add your name and note colour so co-editors know who's who.
+              </p>
+              <Button variant="primary" size="sm" onClick={() => setTab("profile")}>
+                Set up profile
+              </Button>
+            </div>
+          </Card>
+        )}
         {!isSignedIn ? (
           <Card>
             <p className="text-sm font-bold text-ink">Sign in to build choreography</p>
@@ -74,6 +93,8 @@ function AppHome(): React.JSX.Element {
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (
           <FigureLibrary />
+        ) : tab === "profile" ? (
+          <ProfileScreen />
         ) : (
           <Card>
             <p className="text-sm font-bold text-ink">Coming soon</p>

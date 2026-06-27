@@ -16,13 +16,15 @@ import {
   useAuth,
 } from "@clerk/clerk-react";
 import { createContext, type ReactNode, useContext } from "react";
-import { isE2E, readE2ESession } from "../lib/e2e-auth";
+import { E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
 
 export interface AppAuth {
   /** A fresh bearer token for the API/WS, or null when signed out. */
   getToken: () => Promise<string | null>;
   /** Whether a user is signed in (gates the signed-in/out UI). */
   isSignedIn: boolean;
+  /** Sign the user out (Clerk in prod; clears the injected session in E2E). */
+  signOut: () => Promise<void>;
 }
 
 const AppAuthContext = createContext<AppAuth | null>(null);
@@ -36,10 +38,14 @@ export function useAppAuth(): AppAuth {
 
 /** Bridge live Clerk auth into the context (prod/dev). Rendered inside ClerkProvider. */
 function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Element {
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, signOut } = useAuth();
   return (
     <AppAuthContext.Provider
-      value={{ getToken: () => getToken(), isSignedIn: Boolean(isSignedIn) }}
+      value={{
+        getToken: () => getToken(),
+        isSignedIn: Boolean(isSignedIn),
+        signOut: () => signOut(),
+      }}
     >
       {children}
     </AppAuthContext.Provider>
@@ -51,7 +57,15 @@ function E2EAuthBridge({ children }: { children: ReactNode }): React.JSX.Element
   const session = readE2ESession();
   return (
     <AppAuthContext.Provider
-      value={{ getToken: async () => session?.token ?? null, isSignedIn: session !== null }}
+      value={{
+        getToken: async () => session?.token ?? null,
+        isSignedIn: session !== null,
+        // No Clerk in E2E: drop the injected session + reload to the signed-out shell.
+        signOut: async () => {
+          window.localStorage.removeItem(E2E_SESSION_KEY);
+          window.location.assign("/");
+        },
+      }}
     >
       {children}
     </AppAuthContext.Provider>
