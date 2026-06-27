@@ -79,6 +79,7 @@ function useRoutineStore(
   enabled: boolean,
   getToken: TokenProvider | undefined,
   currentUserId: string | undefined,
+  onCopyOnWrite?: (variantRef: string) => void,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
@@ -87,7 +88,7 @@ function useRoutineStore(
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
-    openRoutine(routineId, { getToken, currentUserId }).then((opened) => {
+    openRoutine(routineId, { getToken, currentUserId, onCopyOnWrite }).then((opened) => {
       if (cancelled) {
         opened.close();
         return;
@@ -99,7 +100,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, getToken, currentUserId]);
+  }, [routineId, injected, enabled, getToken, currentUserId, onCopyOnWrite]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -118,7 +119,25 @@ export function Assemble({
   forking,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
-  const store = useRoutineStore(routineId, injected, !offlineProp, getToken, currentUserId);
+  // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
+  const [notating, setNotating] = useState<string | null>(null);
+  // Toast shown when a COW fork happens (US-035): "Copied as your variant".
+  const [copiedToast, setCopiedToast] = useState(false);
+  // Stable COW callback: re-points notating to the new variant id so the open
+  // sheet follows it, and surfaces the "Copied as your variant" status.
+  // useCallback with [] is correct — the setX fns from useState are always stable.
+  const onCopyOnWrite = useCallback((variantRef: string) => {
+    setCopiedToast(true);
+    setNotating(variantRef);
+  }, []);
+  const store = useRoutineStore(
+    routineId,
+    injected,
+    !offlineProp,
+    getToken,
+    currentUserId,
+    onCopyOnWrite,
+  );
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
   // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
@@ -131,8 +150,6 @@ export function Assemble({
   const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
-  // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
-  const [notating, setNotating] = useState<string | null>(null);
   // "read" lays the whole routine out as a read-only timeline (the payoff view).
   const [mode, setMode] = useState<"edit" | "read">("edit");
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
@@ -240,6 +257,15 @@ export function Assemble({
         </div>
       </header>
 
+      {/* COW toast: "Copied as your variant" — shown when a non-owned figure edit
+          triggers copy-on-write (US-035). role="status" is the E2E observable hook.
+          Cleared when the notation Sheet closes. */}
+      {copiedToast && (
+        <p role="status" className="text-2xs text-accent">
+          Copied as your variant
+        </p>
+      )}
+
       {/* Share screen: roster + roles, remove (confirmed), invite link (US-024). */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
         <Share docRef={routineId} viewerRole={role} />
@@ -329,7 +355,10 @@ export function Assemble({
           read-only. Re-reads live so a collaborator's edit flows in. */}
       <Sheet
         open={notating !== null}
-        onClose={() => setNotating(null)}
+        onClose={() => {
+          setNotating(null);
+          setCopiedToast(false);
+        }}
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
       >
         {notatingFigure && (
@@ -338,6 +367,14 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              figureScope={
+                notatingFigure.scope === "account" && notatingFigure.ownerId === currentUserId
+                  ? "owned"
+                  : "global"
+              }
+              onForkIntoVariant={() =>
+                store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
+              }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
             />
             {canEdit && (
