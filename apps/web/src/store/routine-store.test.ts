@@ -475,6 +475,60 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // …and the shared base figure doc was NEVER written to (COW must not mutate it).
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
+
+  it("co-member editing a shared ACCOUNT figure edits in place — no COW (US-034)", async () => {
+    // Intent: a routine-editor co-member editing a shared account figure they DON'T
+    //   own must edit the shared doc IN PLACE (the owner converges) — NOT fork a
+    //   private variant. COW fires only for global library figures. The DO boundary
+    //   enforces whether the write is accepted (editor via cascade → applied).
+    const { opts, sockets } = fakeWiring();
+    const createFigure = vi.fn(async () => {});
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me", createFigure });
+
+    // Routine references an ACCOUNT figure "fa" owned by SOMEONE ELSE ("coach").
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "coach",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fa", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Open the figure connection so we can load its doc.
+    store.readPlacements();
+
+    const fa = buildFigureDoc(
+      aFigure({ id: "fa", scope: "account", ownerId: "coach" }) as FigureDoc,
+    );
+    sockets.get("fa")?.fireOpen();
+    sockets.get("fa")?.load(fa);
+    sockets.get("fa")?.fireCaughtUp();
+
+    store.setFigureAttributes("fa", [
+      { id: "step-1-T", kind: "step", count: 1, value: "T", role: null, deletedAt: null },
+    ]);
+
+    // No copy-on-write: the edit hit the shared figure's own doc in place.
+    expect(createFigure).not.toHaveBeenCalled();
+    expect(sockets.get("fa")?.sent.length ?? 0).toBeGreaterThan(0);
+    // The placement still references the shared figure (never re-pointed).
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe("fa");
+    store.close();
+  });
 });
 
 describe("US-017 architecture boundary (components import only from store/)", () => {

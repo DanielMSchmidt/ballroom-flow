@@ -345,19 +345,22 @@ export async function openRoutine(
     },
 
     setFigureAttributes: (figureRef, attributes) => {
-      const owned = isOwnedFigure(figureRef);
-      if (owned) {
-        // Edit in place — flows to every routine referencing this owned figure (US-034).
+      const figure = readFigureDoc(figureConn(figureRef).current());
+      if (figure?.scope !== "global") {
+        // Account figures edit IN PLACE — whether you own it, or it's a co-member's
+        // figure you can edit via the routine cascade (the shared doc converges to
+        // its owner, US-034). The DO permission boundary enforces your rights: an
+        // editor's write is applied, a viewer's is dropped. Copy-on-write fires
+        // ONLY for global (app-owned library) figures, which are non-editable.
         figureConn(figureRef).change((draft) => {
           draft.attributes = attributes;
         });
         return;
       }
-      // Copy-on-write: editing a non-owned (global/other's) figure spawns an
-      // owned variant, re-points the placement, and stores the edit as an
-      // overlay against the live base (US-035 / US-008). The base is untouched.
-      const base = readFigureDoc(figureConn(figureRef).current());
-      if (!base) return;
+      // Copy-on-write: editing a global (app-owned library) figure spawns an owned
+      // variant, re-points the placement, and stores the edit as an overlay against
+      // the live base (US-035 / US-008). The base is untouched.
+      const base = figure;
       const loc = findPlacement(figureRef);
       if (!loc) return;
       const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
@@ -469,12 +472,6 @@ export async function openRoutine(
       for (const conn of figureConns.values()) conn.close();
     },
   };
-
-  /** True when the figure at `figureRef` is account-scoped AND owned by the open user. */
-  function isOwnedFigure(figureRef: string): boolean {
-    const f = readFigureDoc(figureConn(figureRef).current());
-    return !!f && f.scope === "account" && f.ownerId === currentUserId;
-  }
 
   /** Find the (live) placement and its section id that references `figureRef`. */
   function findPlacement(figureRef: string): { sectionId: string; placement: Placement } | null {

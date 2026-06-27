@@ -367,11 +367,7 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
-              figureScope={
-                notatingFigure.scope === "account" && notatingFigure.ownerId === currentUserId
-                  ? "owned"
-                  : "global"
-              }
+              figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
               }
