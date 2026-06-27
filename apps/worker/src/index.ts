@@ -5,7 +5,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
-import { createFigureRows } from "./db/figures";
+import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
@@ -210,6 +210,25 @@ app.post("/api/routines/:id/fork", async (c) => {
     deletedAt: null,
   });
   return c.json({ docRef, forkedFromRef: originRef, title, dance, plan }, 201);
+});
+
+// GET /api/figures?dance= — the global figure library list (US-032), from the
+// D1 index (no CRDT scan). Open to any authenticated user.
+app.get("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const dance = c.req.query("dance") || undefined;
+  const figures = await listGlobalFigures(c.env.DB, dance);
+  return c.json({ figures });
+});
+
+// GET /api/figures/mine — the caller's account variants + custom figures with a
+// "used in N routines" count (US-033), from the D1 index.
+app.get("/api/figures/mine", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const figures = await listMineFigures(c.env.DB, user.sub);
+  return c.json({ figures });
 });
 
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).

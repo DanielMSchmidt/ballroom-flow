@@ -56,6 +56,44 @@ export async function createFigureRows(db: D1Database, f: NewFigure): Promise<vo
   ]);
 }
 
+export interface GlobalFigureRow {
+  docRef: string;
+  figureType: string | null;
+  dance: string | null;
+  title: string | null;
+}
+
+/** Global (app-owned) library figures from the index, optionally dance-filtered. */
+export async function listGlobalFigures(
+  db: D1Database,
+  dance?: string,
+): Promise<GlobalFigureRow[]> {
+  const sql = dance
+    ? "SELECT docRef, figureType, dance, title FROM document_registry WHERE type = 'global-figure' AND deletedAt IS NULL AND dance = ?1 ORDER BY figureType, title"
+    : "SELECT docRef, figureType, dance, title FROM document_registry WHERE type = 'global-figure' AND deletedAt IS NULL ORDER BY figureType, title";
+  const stmt = dance ? db.prepare(sql).bind(dance) : db.prepare(sql);
+  const res = await stmt.all<GlobalFigureRow>();
+  return res.results ?? [];
+}
+
+export interface MineFigureRow extends GlobalFigureRow {
+  usedInCount: number;
+}
+
+/** The caller's account figures (variants + custom) with a usage count from the edges. */
+export async function listMineFigures(db: D1Database, userId: string): Promise<MineFigureRow[]> {
+  const res = await db
+    .prepare(
+      "SELECT r.docRef AS docRef, r.figureType AS figureType, r.dance AS dance, r.title AS title, " +
+        "(SELECT COUNT(*) FROM placement_edge pe WHERE pe.figureRef = r.docRef) AS usedInCount " +
+        "FROM document_registry r WHERE r.ownerId = ?1 AND r.type = 'account-figure' AND r.deletedAt IS NULL " +
+        "ORDER BY r.updatedAt DESC",
+    )
+    .bind(userId)
+    .all<MineFigureRow>();
+  return res.results ?? [];
+}
+
 /** Count a user's OWNED figures (for tests/quota separation — figures are uncapped). */
 export async function countOwnedFigures(db: D1Database, userId: string): Promise<number> {
   const row = await drizzle(db)
