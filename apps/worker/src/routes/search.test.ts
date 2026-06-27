@@ -1,5 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import { buildSearchSql } from "../db/routines";
 import { authedContext } from "../test-support/authed-context";
 import { expectIndexedQuery } from "../test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -23,13 +24,18 @@ beforeAll(async () => {
 
 describe("US-046 Routine + figure search", () => {
   it("searches routines + figures by title/name/dance over the D1 index", async () => {
-    // Intent: search hits the D1 projection, not CRDT content.
-    // Arrange: seed registry rows (a 'Feather' figure + a 'My Foxtrot' routine).
-    // Act: GET /api/search?q=My. Assert: 200 returning the routine row.
-    // Covers US-046 AC-1 (search by title/name/dance).
+    // Intent: search hits the D1 projection, not CRDT content; it spans BOTH
+    //   reachable branches — the caller's OWN routines AND app-owned global figures —
+    //   and must NOT leak another user's docs.
+    // Arrange: seed an app 'Feather' figure, u1's 'My Foxtrot' routine, and u2's
+    //   'Secret Quickstep' routine. Act/Assert below.
+    // Covers US-046 AC-1 (search by title/name/dance) + scope (app branch, no leak).
     const ctx = await authedContext({ keypair: kp, userId: "u1", docRef: "n/a", role: null });
     await seedDb({
-      users: [{ id: "u1", displayName: "U1", identityColor: "#111", plan: "free" }],
+      users: [
+        { id: "u1", displayName: "U1", identityColor: "#111", plan: "free" },
+        { id: "u2", displayName: "U2", identityColor: "#222", plan: "free" },
+      ],
       docs: [
         {
           docRef: "fig_f",
@@ -48,24 +54,43 @@ describe("US-046 Routine + figure search", () => {
           dance: "foxtrot",
           title: "My Foxtrot",
         },
+        {
+          docRef: "rt_u2",
+          type: "routine",
+          ownerId: "u2",
+          doName: "rt_u2",
+          dance: "quickstep",
+          title: "Secret Quickstep",
+        },
       ],
     });
-    const res = await SELF.fetch("https://x/api/search?q=My", { headers: ctx.authHeaders() });
-    expect(res.status).toBe(200);
-    const body = await res.json<{ results: { title: string }[] }>();
-    expect(body.results.some((r) => r.title === "My Foxtrot")).toBe(true);
+
+    // Owned-routine branch: u1 finds their own routine.
+    const owned = await SELF.fetch("https://x/api/search?q=My", { headers: ctx.authHeaders() });
+    expect(owned.status).toBe(200);
+    const ownedBody = await owned.json<{ results: { title: string }[] }>();
+    expect(ownedBody.results.some((r) => r.title === "My Foxtrot")).toBe(true);
+
+    // App-owned branch (the high-cardinality title_idx path): the global figure is reachable.
+    const app = await SELF.fetch("https://x/api/search?q=Feat", { headers: ctx.authHeaders() });
+    expect(app.status).toBe(200);
+    const appBody = await app.json<{ results: { title: string }[] }>();
+    expect(appBody.results.some((r) => r.title === "Feather")).toBe(true);
+
+    // No cross-user leak: u1 must NOT see u2's routine (prefix would match it).
+    const leak = await SELF.fetch("https://x/api/search?q=Secret", { headers: ctx.authHeaders() });
+    expect(leak.status).toBe(200);
+    const leakBody = await leak.json<{ results: { title: string }[] }>();
+    expect(leakBody.results.every((r) => r.title !== "Secret Quickstep")).toBe(true);
   });
 
   it("uses an INDEX for the search query (EXPLAIN, no SCAN)", async () => {
     // Intent: the search query is indexed (NFR "index every D1 query"; CI gate).
-    // Arrange: the title prefix search SQL (real scoped query). Act: expectIndexedQuery.
-    // Assert: the query plan shows index use, no full-table SCAN.
+    // Arrange: the REAL SQL searchReachable runs (via buildSearchSql — no drift).
+    // Act: expectIndexedQuery. Assert: the query plan shows index use, no SCAN
+    //   (a TEMP B-TREE for ORDER BY is a SORT, not a SCAN — allowed).
     // Covers US-046 AC-2 (EXPLAIN no SCAN) — the EXPLAIN gate.
-    await expectIndexedQuery(
-      env.DB,
-      "SELECT docRef, type, title, dance FROM document_registry WHERE ownerId = ?1 AND deletedAt IS NULL AND title LIKE ?2",
-      ["u1", "feather%"],
-    );
+    await expectIndexedQuery(env.DB, buildSearchSql(false), ["u1", "feather%"]);
   });
 });
 

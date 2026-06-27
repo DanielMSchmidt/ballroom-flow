@@ -100,6 +100,22 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
   return items.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+/**
+ * The exact SQL `searchReachable` runs (US-046). Exported so the EXPLAIN-gate
+ * test asserts the REAL query (no drift). Scoped to owned docs + app-owned
+ * globals via `(ownerId = ?1 OR ownerId = 'app')` — the planner serves each
+ * branch from an index (owner_idx + title_idx COLLATE NOCASE), no full SCAN.
+ * `withDance` appends the optional `AND dance = ?3` filter.
+ */
+export function buildSearchSql(withDance: boolean): string {
+  return (
+    "SELECT docRef, type, title, dance FROM document_registry " +
+    "WHERE deletedAt IS NULL AND title LIKE ?2 AND (ownerId = ?1 OR ownerId = 'app')" +
+    (withDance ? " AND dance = ?3" : "") +
+    " ORDER BY updatedAt DESC LIMIT 50"
+  );
+}
+
 /** Prefix search over the caller's reachable docs (US-046). Indexed: routines by
  *  owner (owner_idx), figures by owner IN (user,'app') (title_idx COLLATE NOCASE).
  *  NOTE: shared-in routines (membership, not ownership) are out of v1 search scope
@@ -109,16 +125,10 @@ export async function searchReachable(
   { userId, q, dance }: { userId: string; q: string; dance?: string },
 ): Promise<{ docRef: string; type: string; title: string; dance: string | null }[]> {
   const prefix = `${q}%`;
-  const danceClause = dance ? " AND dance = ?3" : "";
   const params = dance ? [userId, prefix, dance] : [userId, prefix];
   // Owned routines + figures the user owns or that are app-owned globals.
-  const sql =
-    "SELECT docRef, type, title, dance FROM document_registry " +
-    "WHERE deletedAt IS NULL AND title LIKE ?2 AND (ownerId = ?1 OR ownerId = 'app')" +
-    danceClause +
-    " ORDER BY updatedAt DESC LIMIT 50";
   const rows = await db
-    .prepare(sql)
+    .prepare(buildSearchSql(Boolean(dance)))
     .bind(...params)
     .all<{ docRef: string; type: string; title: string; dance: string | null }>();
   return rows.results;
