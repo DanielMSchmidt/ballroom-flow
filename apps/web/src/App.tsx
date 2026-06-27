@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AccountControls, useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
 import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
+import { loadMineFigures } from "./store/figures";
 import { useMe } from "./store/me";
 import { Styleguide } from "./styleguide/Styleguide";
-import { AppShell, Button, Card, type NavItem, ToastProvider } from "./ui";
+import { AppShell, Button, Card, type NavItem, Tabs, ToastProvider } from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
 
 /**
@@ -42,9 +43,12 @@ export function App(): React.JSX.Element {
  */
 function AppHome(): React.JSX.Element {
   const route = useRoute();
-  const { isSignedIn } = useAppAuth();
+  const { isSignedIn, getToken } = useAppAuth();
   const me = useMe();
   const [tab, setTab] = useState("choreo");
+  // US-033: "My figures" toggle — stable so FigureLibrary's effect deps don't refetch on every render.
+  const [libTab, setLibTab] = useState<"all" | "mine">("all");
+  const loadMine = useCallback(async () => loadMineFigures(await getToken()), [getToken]);
   const openRoutineId = route.name === "routine" ? route.id : undefined;
   // First-run nudge: a signed-in user who hasn't set a name/colour yet (US-019)
   // is pointed at Profile, so they aren't shown as a raw id to co-editors.
@@ -92,7 +96,18 @@ function AppHome(): React.JSX.Element {
         ) : openRoutineId || tab === "choreo" ? (
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (
-          <FigureLibrary />
+          <>
+            <Tabs
+              label="Library view"
+              items={[
+                { value: "all", label: "All" },
+                { value: "mine", label: "My figures" },
+              ]}
+              value={libTab}
+              onChange={(v) => setLibTab(v as "all" | "mine")}
+            />
+            <FigureLibrary tab={libTab} loadMine={loadMine} />
+          </>
         ) : tab === "profile" ? (
           <ProfileScreen />
         ) : (

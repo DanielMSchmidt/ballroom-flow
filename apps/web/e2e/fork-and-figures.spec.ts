@@ -189,7 +189,11 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByRole("button", { name: /^T$/ }).click();
 
     // The FigureTimeline immediately shows "Copied as your variant" (local state).
-    await expect(page.getByText(/copied as your variant/i)).toBeVisible({ timeout: 15_000 });
+    // Use .first() because both FigureTimeline (on `copied`) and Assemble (`copiedToast`)
+    // can briefly show this text simultaneously — M3 strict-mode flake guard.
+    await expect(page.getByText(/copied as your variant/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // After the async COW (POST /api/figures + re-point) the placement card shows
     // a "Variant" badge (scope=account + baseFigureRef set). The card is in the DOM

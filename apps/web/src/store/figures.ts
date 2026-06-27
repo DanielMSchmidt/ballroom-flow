@@ -19,6 +19,15 @@ export interface MineFigure {
   usedInCount: number;
 }
 
+/**
+ * Non-hook loader for "My figures" (US-033): fetches with a caller-supplied token
+ * so the App screen can build a stable `useCallback`-wrapped version (avoids an
+ * unstable `loadMine` identity that would cause a FigureLibrary refetch loop).
+ */
+export async function loadMineFigures(token: string | null): Promise<MineFigure[]> {
+  return (await apiGet<{ figures: MineFigure[] }>("/api/figures/mine", token)).figures;
+}
+
 /** The viewer's account variants + custom figures, for the "My figures" tab. */
 export function useMineFigures() {
   const { getToken } = useAppAuth();

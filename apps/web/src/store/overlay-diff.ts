@@ -26,6 +26,8 @@ export function overlayFromAttributes(baseAttrs: Attribute[], nextAttrs: Attribu
     if (!baseAttr) {
       additions.push(a);
     } else if (!Object.is(baseAttr.value, a.value) && baseAttr.value !== a.value) {
+      // Only `value` is diffed: re-timing or re-roling is modeled as tombstone+add
+      // (the editor mints a new attribute id), matching domain resolve()'s contract.
       overrides[a.id] = a.value;
     }
   }

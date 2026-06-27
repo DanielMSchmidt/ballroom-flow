@@ -476,6 +476,108 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 
+  it("C1: onceLive defers the variant overlay write until after the DO seed replay, preventing silent edit loss", async () => {
+    // Without onceLive, conn.change fires on an A.init() doc immediately in .then(),
+    // BEFORE the variant DO's catch-up replay has been applied. When the DO's empty
+    // seed overlay arrives and is applied via applyChanges, the two writes are
+    // causally independent — Automerge resolves the conflict non-deterministically
+    // (~50% of the time the server's empty overlay wins → the user's "T" edit is
+    // silently lost). With onceLive the client write lands causally AFTER the seed,
+    // so it always wins (C1).
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string; baseFigureRef?: string }) => {
+      created.push({ figureRef: m.figureRef, baseFigureRef: m.baseFigureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_c1", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // Routine references global figure "fg" with count-1 footwork "HT".
+    const routine = buildRoutineDoc({
+      id: "rt_c1",
+      title: "R",
+      dance: "foxtrot",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_c1")?.fireOpen();
+    sockets.get("rt_c1")?.load(routine);
+    sockets.get("rt_c1")?.fireCaughtUp();
+
+    // Open the figure connection (lazy) then load the global figure.
+    store.readPlacements();
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    // Edit count-1 footwork HT→T → triggers copy-on-write.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+
+    // Wait for createFigure + re-point + onCopyOnWrite to fire.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    const variantRef = created[0]?.figureRef as string;
+
+    // Simulate the server seed of the variant DO: POST /api/figures seeds the DO
+    // with an EMPTY overlay (no overrides). Without onceLive, conn.change already
+    // ran on an A.init() doc, making the T-overlay and the empty-seed concurrent.
+    // With onceLive the T-overlay fires here (causally after fireCaughtUp), so T wins.
+    const seeded = buildFigureDoc({
+      id: variantRef,
+      scope: "account",
+      ownerId: "me",
+      figureType: "feather",
+      dance: "foxtrot",
+      name: "Feather",
+      source: "custom",
+      attributes: [],
+      baseFigureRef: "fg",
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+
+    // Drive the variant socket: open → seed replay → caught-up.
+    // onceLive fires on fireCaughtUp: the deferred conn.change runs here,
+    // causally on top of the seed → the "T" overlay always wins.
+    sockets.get(variantRef)?.fireOpen();
+    sockets.get(variantRef)?.load(seeded);
+    sockets.get(variantRef)?.fireCaughtUp();
+
+    // The re-pointed placement now resolves base ⊕ overlay: count-1 must be "T".
+    await vi.waitFor(() => {
+      const rp = store.readPlacements().find((p) => p.placement.figureRef === variantRef);
+      expect(rp?.figure?.attributes.find((a) => a.id === "b1")?.value).toBe("T");
+    });
+    store.close();
+  });
+
   it("co-member editing a shared ACCOUNT figure edits in place — no COW (US-034)", async () => {
     // Intent: a routine-editor co-member editing a shared account figure they DON'T
     //   own must edit the shared doc IN PLACE (the owner converges) — NOT fork a

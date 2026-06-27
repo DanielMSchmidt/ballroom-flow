@@ -240,6 +240,11 @@ export async function openRoutine(
     return readRoutine(routineConn.current());
   };
 
+  // M2: guard against duplicate orphan variants on rapid double-edits. A second
+  // COW on the same figureRef before the first re-point lands would produce two
+  // variant rows and orphan one. Cleared in both the success and error paths.
+  const cowInFlight = new Set<string>();
+
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
 
@@ -364,13 +369,11 @@ export async function openRoutine(
       const loc = findPlacement(figureRef);
       if (!loc) return;
       const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
-      if (!variant) {
-        // Defensive: copyOnWrite says we own it after all — edit in place.
-        figureConn(figureRef).change((draft) => {
-          draft.attributes = attributes;
-        });
-        return;
-      }
+      // defensive: a global figure always yields a variant
+      if (!variant) return;
+      // M2: guard against duplicate orphan variants on rapid double-edits.
+      if (cowInFlight.has(figureRef)) return;
+      cowInFlight.add(figureRef);
       // 1) Project the variant (account-figure row + variant DO seeded w/ base ref).
       //    Only AFTER it succeeds do we write the overlay, re-point the placement,
       //    and toast — so a failed POST never leaves the placement pointing at a
@@ -386,21 +389,28 @@ export async function openRoutine(
       })
         .then(() => {
           const conn = figureConn(variant.id);
-          // 2) Write the edit as an overlay against the live base.
+          // 2) Write the edit as an overlay against the live base — deferred until
+          //    the variant DO's catch-up replay has been applied (#202 / C1). Without
+          //    onceLive the overlay races the empty server seed: both writes are
+          //    causally independent, so ~50% of the time the server's empty overlay
+          //    wins and the user's edit is silently lost. With onceLive the client
+          //    write lands causally AFTER the seed, so it always wins.
           const overlay = overlayFromAttributes(base.attributes, attributes);
-          conn.change((draft) => {
-            draft.id = variant.id;
-            draft.scope = "account";
-            draft.ownerId = currentUserId;
-            draft.source = "custom";
-            draft.figureType = variant.figureType;
-            draft.dance = variant.dance;
-            draft.name = variant.name;
-            draft.baseFigureRef = base.id;
-            draft.overlay = overlay;
-            draft.attributes = [];
-            draft.schemaVersion = base.schemaVersion;
-            draft.deletedAt = null;
+          conn.onceLive(() => {
+            conn.change((draft) => {
+              draft.id = variant.id;
+              draft.scope = "account";
+              draft.ownerId = currentUserId;
+              draft.source = "custom";
+              draft.figureType = variant.figureType;
+              draft.dance = variant.dance;
+              draft.name = variant.name;
+              draft.baseFigureRef = base.id;
+              draft.overlay = overlay;
+              draft.attributes = [];
+              draft.schemaVersion = base.schemaVersion;
+              draft.deletedAt = null;
+            });
           });
           // 3) Re-point the placement in the routine doc — only on success.
           routineConn.change((draft) => {
@@ -411,12 +421,14 @@ export async function openRoutine(
           });
           // 4) Tell the screen to toast "copied as your variant".
           onCopyOnWrite?.(variant.id);
+          cowInFlight.delete(figureRef); // M2: release the in-flight guard on success
         })
         .catch((err) => {
           // The variant POST failed (auth/network/quota): leave the placement on
           // the base figure (no re-point, no toast) — the edit is dropped rather
           // than corrupting state with a dangling variant reference.
           console.warn("copy-on-write failed; placement left on the base figure", err);
+          cowInFlight.delete(figureRef); // M2: release the in-flight guard on failure too
         });
     },
 
