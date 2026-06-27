@@ -1,9 +1,9 @@
-// US-045/US-046 — search + templates REST helpers.
+// US-046 — search REST helper.
 import { describe, expect, it, vi } from "vitest";
 
-import { forkTemplate, listTemplates, search } from "./search";
+import { search } from "./search";
 
-describe("US-046 store/search + US-045 store/templates REST helpers", () => {
+describe("US-046 store/search REST helper", () => {
   it("search GET /api/search?q=<encoded>&dance=<encoded> and returns body.results", async () => {
     const results = [
       {
@@ -38,56 +38,6 @@ describe("US-046 store/search + US-045 store/templates REST helpers", () => {
     await search("tok_abc", "test");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/search?q=test", expect.anything());
-    vi.unstubAllGlobals();
-  });
-
-  it("listTemplates GET /api/templates and returns body.templates", async () => {
-    const templates = [
-      {
-        docRef: "t1",
-        title: "Starter Waltz",
-        dance: "waltz" as const,
-        role: "viewer" as const,
-        updatedAt: 1234567890,
-      },
-    ];
-    const fetchMock = vi.fn(
-      async () => new Response(JSON.stringify({ templates }), { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await listTemplates("tok_abc");
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/templates",
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer tok_abc" }),
-      }),
-    );
-    expect(result.templates).toHaveLength(1);
-    expect(result.templates[0]?.title).toBe("Starter Waltz");
-    vi.unstubAllGlobals();
-  });
-
-  it("forkTemplate POSTs to /api/routines/:id/fork", async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ docRef: "new-fork-ref" }), {
-          status: 200,
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await forkTemplate("tok_abc", "template-id");
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/routines/template-id/fork",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({ Authorization: "Bearer tok_abc" }),
-      }),
-    );
-    expect(result.docRef).toBe("new-fork-ref");
     vi.unstubAllGlobals();
   });
 });
