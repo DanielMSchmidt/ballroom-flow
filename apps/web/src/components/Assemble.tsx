@@ -39,6 +39,7 @@ import {
   Spinner,
   useToast,
 } from "../ui";
+import { AnnotationPanel } from "./AnnotationPanel";
 import { FigureTimeline } from "./FigureTimeline";
 import { RoutineReadingView } from "./RoutineReadingView";
 import { Share } from "./Share";
@@ -51,6 +52,8 @@ export interface AssembleProps {
   routineId: string;
   /** This member's role on the doc (gates editing — US-026+; view is open to all). */
   role: MembershipRole;
+  /** The viewer's user id — stamps authored annotations + gates author-only reply delete (US-039). */
+  currentUserId?: string;
   /** Optional connection override; otherwise derived from the store's sync state. */
   connection?: "live" | "offline";
   /** Injectable store for tests; production opens one via `openRoutine(routineId)`. */
@@ -73,6 +76,7 @@ function useRoutineStore(
   injected: RoutineStore | undefined,
   enabled: boolean,
   getToken: TokenProvider | undefined,
+  currentUserId: string | undefined,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
@@ -81,7 +85,7 @@ function useRoutineStore(
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
-    openRoutine(routineId, { getToken }).then((opened) => {
+    openRoutine(routineId, { getToken, currentUserId }).then((opened) => {
       if (cancelled) {
         opened.close();
         return;
@@ -93,7 +97,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, getToken]);
+  }, [routineId, injected, enabled, getToken, currentUserId]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -104,6 +108,7 @@ function useRoutineStore(
 export function Assemble({
   routineId,
   role,
+  currentUserId,
   connection,
   store: injected,
   getToken,
@@ -111,7 +116,7 @@ export function Assemble({
   forking,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
-  const store = useRoutineStore(routineId, injected, !offlineProp, getToken);
+  const store = useRoutineStore(routineId, injected, !offlineProp, getToken, currentUserId);
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
   // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
@@ -325,6 +330,31 @@ export function Assemble({
                 }
               />
             )}
+            {/* Annotations on this figure (US-039/042): notes/lessons/practice +
+                replies, gated by role. Commenter+ may add; viewer is read-only. */}
+            <AnnotationPanel
+              role={role}
+              currentUserId={currentUserId}
+              annotations={store
+                .readAnnotations()
+                .filter((a) =>
+                  a.anchors.some(
+                    (an) =>
+                      (an.type === "figure" || an.type === "point") &&
+                      an.figureRef === notatingFigure.id,
+                  ),
+                )}
+              composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
+              onCreate={({ kind, text }) =>
+                store.createAnnotation({
+                  kind,
+                  text,
+                  anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                })
+              }
+              onReply={(annotationId, text) => store.addReply(annotationId, text)}
+              onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            />
           </div>
         )}
       </Sheet>
