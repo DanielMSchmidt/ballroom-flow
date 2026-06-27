@@ -517,9 +517,26 @@ export class DocDO extends DurableObject<Env> {
    * `runAlarmForTest`.
    */
   async alarm(): Promise<void> {
-    this.compact();
-    await this.projectToD1();
-    await this.expireInvites();
+    // The three steps are INDEPENDENT and best-effort: a failure in one (e.g. a
+    // transient D1 error during projection) must not abort the others or surface
+    // as an unhandled alarm rejection — that would silently drop compaction and
+    // invite expiry (a doc vanishes from search; expired invites stay redeemable),
+    // with zero observability. Isolate + log each; never throw out of the alarm.
+    try {
+      this.compact();
+    } catch (err) {
+      console.error("doc-do alarm: compaction failed", err);
+    }
+    try {
+      await this.projectToD1();
+    } catch (err) {
+      console.error("doc-do alarm: D1 index projection failed", err);
+    }
+    try {
+      await this.expireInvites();
+    } catch (err) {
+      console.error("doc-do alarm: invite expiry failed", err);
+    }
   }
 
   /** Test hook: run the alarm body synchronously (no real timer). */

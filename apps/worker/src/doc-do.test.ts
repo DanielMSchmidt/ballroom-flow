@@ -1,5 +1,5 @@
 import { env, runInDurableObject } from "cloudflare:test";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
@@ -331,5 +331,45 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
       .first<{ redeemedAt: number | null }>();
     expect(mine?.redeemedAt).not.toBeNull(); // this doc's due invite was reaped
     expect(other?.redeemedAt).toBeNull(); // another doc's invite is left alone (#127)
+  });
+
+  it("isolates alarm steps: a failing D1 projection still runs invite expiry and never throws", async () => {
+    // Intent: the alarm's steps (compact / project-to-D1 / expire-invites) are
+    //   INDEPENDENT + best-effort. A transient failure in one (e.g. D1 briefly
+    //   unavailable for the index projection) must NOT abort the others or surface
+    //   as an unhandled alarm rejection — which would silently drop compaction and
+    //   invite expiry, leaving a doc unsearchable and expired invites redeemable.
+    // Arrange: a DO with identity + a due invite; force projectToD1 to throw.
+    // Act: run the alarm. Assert: it resolves (no throw) AND the due invite is still
+    //   reaped — proving expiry ran after the projection failed.
+    const realDocs = env.DOC_DO;
+    const name = uniqueDocName("routine");
+    const id = realDocs.idFromName(name);
+    const stub = realDocs.get(id) as unknown as DocStub;
+    await stub.setMetadata({ doName: name, ownerId: "user_x" });
+    const inviteId = `inv-${crypto.randomUUID()}`;
+    await env.DB.prepare(
+      "INSERT INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, NULL)",
+    )
+      .bind(inviteId, name, "editor", Date.now() - 1000)
+      .run();
+
+    await runInDurableObject(
+      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (instance) => {
+        // projectToD1 is a private step; force it to fail to simulate a transient
+        // D1 error during the alarm tick.
+        vi.spyOn(
+          instance as unknown as { projectToD1: () => Promise<void> },
+          "projectToD1",
+        ).mockRejectedValue(new Error("D1 projection boom"));
+        await expect(instance.alarm()).resolves.toBeUndefined();
+      },
+    );
+
+    const row = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
+      .bind(inviteId)
+      .first<{ redeemedAt: number | null }>();
+    expect(row?.redeemedAt).not.toBeNull(); // expiry ran despite the projection failing
   });
 });
