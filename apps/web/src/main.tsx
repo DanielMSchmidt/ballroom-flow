@@ -7,6 +7,12 @@ import { isE2E } from "./lib/e2e-auth";
 import "./styles/index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+// Deterministic E2E (#191): disable animations so journeys never race a sheet/
+// modal enter-animation (see the `.bf-e2e` rule in styles/index.css). Folds to
+// dead code in real builds, where `isE2E()` is a compile-time `false`.
+if (isE2E()) document.documentElement.classList.add("bf-e2e");
+
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root element not found");
 const root = createRoot(rootEl);

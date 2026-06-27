@@ -43,6 +43,11 @@ testSeed.post("/api/test/reset", async (c) => {
   // `invite` is created by migration 0001 but typed in drizzle only once US-023
   // lands; clear it via raw SQL so this endpoint is independent of that merge.
   await c.env.DB.prepare("DELETE FROM invite").run();
+  // Family-note index (US-040/041). Authored against a STABLE per-user account
+  // ref (`account:<userId>`), so without this a reused seed user accumulates the
+  // same note across serial journeys/projects — raw SQL to stay independent of
+  // the drizzle schema's merge timeline (mirrors `invite`).
+  await c.env.DB.prepare("DELETE FROM figure_type_note_index").run();
   await d.delete(membership);
   await d.delete(documentRegistry);
   await d.delete(users);
