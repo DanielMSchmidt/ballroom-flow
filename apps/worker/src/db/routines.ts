@@ -3,6 +3,13 @@
 // D1 is the source of truth for the owned-routine count (quota) and the list.
 // Create EAGER-projects the registry row (+ the owner membership row) so the
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
+
+/**
+ * Free-plan owned-routine cap — the ONE authoritative source. Imported by
+ * fork.ts and index.ts so the constant is never duplicated (#176).
+ */
+export const FREE_ROUTINE_CAP = 3;
+
 import type { RoutineListItem } from "@ballroom/contract";
 import type { DanceId } from "@ballroom/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
@@ -109,7 +116,7 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
  */
 export function buildSearchSql(withDance: boolean): string {
   return (
-    "SELECT docRef, type, title, dance FROM document_registry " +
+    "SELECT docRef, type, ownerId, title, dance FROM document_registry " +
     "WHERE deletedAt IS NULL AND title LIKE ?2 AND (ownerId = ?1 OR ownerId = 'app')" +
     (withDance ? " AND dance = ?3" : "") +
     " ORDER BY updatedAt DESC LIMIT 50"
@@ -123,14 +130,16 @@ export function buildSearchSql(withDance: boolean): string {
 export async function searchReachable(
   db: D1Database,
   { userId, q, dance }: { userId: string; q: string; dance?: string },
-): Promise<{ docRef: string; type: string; title: string; dance: string | null }[]> {
+): Promise<
+  { docRef: string; type: string; ownerId: string; title: string; dance: string | null }[]
+> {
   const prefix = `${q}%`;
   const params = dance ? [userId, prefix, dance] : [userId, prefix];
   // Owned routines + figures the user owns or that are app-owned globals.
   const rows = await db
     .prepare(buildSearchSql(Boolean(dance)))
     .bind(...params)
-    .all<{ docRef: string; type: string; title: string; dance: string | null }>();
+    .all<{ docRef: string; type: string; ownerId: string; title: string; dance: string | null }>();
   return rows.results;
 }
 

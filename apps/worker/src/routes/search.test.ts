@@ -92,6 +92,51 @@ describe("US-046 Routine + figure search", () => {
     // Covers US-046 AC-2 (EXPLAIN no SCAN) — the EXPLAIN gate.
     await expectIndexedQuery(env.DB, buildSearchSql(false), ["u1", "feather%"]);
   });
+
+  it("uses an INDEX for the with-dance search variant (EXPLAIN, no SCAN)", async () => {
+    // Intent: the dance-filtered variant also hits an index (FIX 6).
+    // Covers US-046 AC-2 (EXPLAIN no SCAN) for the AND dance=?3 code path.
+    await expectIndexedQuery(env.DB, buildSearchSql(true), ["u1", "feather%", "foxtrot"]);
+  });
+
+  it("maps DB type='figure' to 'global-figure' for app-owned figures (FIX 1 regression)", async () => {
+    // Intent: production createFigureRows writes type="figure" to the DB. The search
+    //   route MUST map it to the contract-valid type before returning so the web
+    //   client's zSearchResults.parse doesn't throw and silently empty the results.
+    // Arrange: insert a row with the REAL production type="figure", owner="app".
+    // Act: GET /api/search?q=<prefix>. Assert: result has type="global-figure".
+    const ctx = await authedContext({ keypair: kp, userId: "u_fix1", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_fix1", displayName: "Fix1User", identityColor: "#aaa", plan: "free" }],
+    });
+    // Insert a figure with the raw production type="figure" (bypassing seedDb's DocType
+    // union which only accepts contract-valid types). This simulates createFigureRows.
+    await env.DB.prepare(
+      "INSERT INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+    )
+      .bind(
+        "fig_fix1_app",
+        "figure",
+        "app",
+        "fig_fix1_app",
+        "feather",
+        "foxtrot",
+        "ProdFeather",
+        Date.now(),
+      )
+      .run();
+
+    const res = await SELF.fetch("https://x/api/search?q=ProdFeat", {
+      headers: ctx.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ results: { title: string; type: string }[] }>();
+    const hit = body.results.find((r) => r.title === "ProdFeather");
+    expect(hit).toBeDefined();
+    // The route must map "figure"+"app" → "global-figure" (not the raw "figure" which
+    // fails zSearchResult.type validation on the client).
+    expect(hit?.type).toBe("global-figure");
+  });
 });
 
 describe.skip("US-032/033 Figure library browse (global + account variants)", () => {
