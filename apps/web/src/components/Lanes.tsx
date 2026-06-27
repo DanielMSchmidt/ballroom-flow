@@ -14,9 +14,10 @@
 // Controlled: `attributes` is the figure's full attribute set; every edit
 // emits the next full set via `onChange`.
 //
-// biome-ignore-all lint/a11y/useSemanticElements: ARIA grid widget needs
-// explicit role="grid" / role="gridcell" — the native <table>/<td> mapping
-// is NOT recognized as gridcell by the test renderer's aria-query version.
+// biome-ignore-all lint/a11y/useSemanticElements: this is an ARIA grid widget
+// (grid → row → gridcell). The native <table>/<tr>/<td> mapping is NOT
+// recognized as grid/row/gridcell by the test renderer's aria-query version, so
+// the roles must be explicit on <div>s.
 // biome-ignore-all lint/a11y/useFocusableInteractive: gridcell keyboard
 // navigation is handled by the contained <button> (tab→button; arrows between
 // cells is a grid-level responsibility not yet implemented for this MVP lane).
@@ -24,7 +25,6 @@
 import {
   ATTRIBUTE_REGISTRY,
   type Attribute,
-  type DanceId,
   mergeRegistry,
   normalizeValue,
   type RegistryKind,
@@ -55,8 +55,6 @@ export interface LanesProps {
   kind: string;
   /** Membership role — only an editor can place/edit attributes. */
   role: MembershipRole;
-  /** The dance, accepted for prop-interface parity with FigureTimeline. */
-  dance?: DanceId;
   /** How many whole counts to lay out (default one 8-count phrase). */
   counts?: number;
   /** The figure's current full attribute set (controlled). */
@@ -154,81 +152,86 @@ export function Lanes({
         </Button>
       </div>
 
-      {/* Explicit role="grid" is required: aria-query in the test renderer does
-          NOT map <table role="grid"> children to gridcell implicitly. */}
-      <div role="grid" aria-label={`${kindDescriptor?.label ?? kind} lane`} className="flex gap-1">
-        {cells.map((count) => {
-          const onCount = byCount.get(count) ?? [];
-          // Visible chips: this count's kind attrs filtered by role view.
-          const visible = filterByRoleView(onCount, view);
-          const isOpen = openCount === count;
+      {/* ARIA grid: grid → row → gridcell ownership chain. Explicit roles on
+          <div> are required because aria-query in the test renderer does NOT
+          map <table>/<tr>/<td> to grid/row/gridcell implicitly. */}
+      <div role="grid" aria-label={`${kindDescriptor?.label ?? kind} lane`}>
+        <div role="row" className="flex gap-1">
+          {cells.map((count) => {
+            const onCount = byCount.get(count) ?? [];
+            // Visible chips: this count's kind attrs filtered by role view.
+            const visible = filterByRoleView(onCount, view);
+            const isOpen = openCount === count;
 
-          return (
-            /* tabIndex={-1} makes the cell programmatically focusable (arrow-key
-               navigation pattern for grids); the button handles Tab focus. */
-            <div key={count} role="gridcell" tabIndex={-1} className="flex flex-col gap-1 p-1">
-              {/* Count tap target — opens/closes the inline value picker. */}
-              <button
-                type="button"
-                aria-label={`count ${count}`}
-                aria-expanded={isOpen}
-                onClick={() => setOpenCount(isOpen ? null : count)}
-                className={cx(
-                  "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
-                  isOpen ? "border-accent" : "border-line",
+            return (
+              /* tabIndex={-1} makes the cell programmatically focusable (arrow-key
+                 navigation pattern for grids); the button handles Tab focus. */
+              <div key={count} role="gridcell" tabIndex={-1} className="flex flex-col gap-1 p-1">
+                {/* Count cell. Only an editor gets an interactive open-toggle;
+                    a commenter/viewer sees a static label + read-only chips. */}
+                {editable ? (
+                  <button
+                    type="button"
+                    aria-label={`count ${count}`}
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenCount(isOpen ? null : count)}
+                    className={cx(
+                      "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
+                      isOpen ? "border-accent" : "border-line",
+                    )}
+                  >
+                    {count}
+                  </button>
+                ) : (
+                  // Read-only count label: its visible text ({count}) names it,
+                  // so no aria-label (a generic <span> doesn't support one).
+                  <span className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-line">
+                    {count}
+                  </span>
                 )}
-              >
-                {count}
-              </button>
 
-              {/* Always-visible chips: this count's kind values (role-filtered).
-                  Hidden when filterByRoleView omits them (e.g. follower chip in
-                  leader view). */}
-              {visible.length > 0 && (
-                <ul className="flex flex-col items-center gap-0.5 pt-1">
-                  {visible.map((a) => (
-                    <li key={a.id}>
-                      <Chip asStatic tone={chipTone(kind)}>
-                        {displayValue(a.value)}
-                      </Chip>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                {/* Always-visible chips: this count's kind values (role-filtered).
+                    Hidden when filterByRoleView omits them (e.g. follower chip in
+                    leader view). */}
+                {visible.length > 0 && (
+                  <ul className="flex flex-col items-center gap-0.5 pt-1">
+                    {visible.map((a) => (
+                      <li key={a.id}>
+                        <Chip asStatic tone={chipTone(kind)}>
+                          {displayValue(a.value)}
+                        </Chip>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-              {/* Inline value picker when this cell is open. */}
-              {isOpen && kindDescriptor && (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {(kindDescriptor.values ?? []).map((v) => {
-                    const nv = normalizeValue(kind, v);
-                    const live = byCount.get(count) ?? [];
-                    const isSelected = live.some(
-                      (a) => normalizeValue(kind, String(a.value)) === nv,
-                    );
-                    if (!editable) {
-                      // Commenter/viewer: show only selected values, read-only.
-                      return isSelected ? (
-                        <Chip key={v} tone={chipTone(kind)} asStatic>
+                {/* Inline value picker when this cell is open. Only an editor can
+                    open a cell, so every option here is an editable toggle. */}
+                {isOpen && kindDescriptor && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {(kindDescriptor.values ?? []).map((v) => {
+                      const nv = normalizeValue(kind, v);
+                      const live = byCount.get(count) ?? [];
+                      const isSelected = live.some(
+                        (a) => normalizeValue(kind, String(a.value)) === nv,
+                      );
+                      return (
+                        <Chip
+                          key={v}
+                          tone={chipTone(kind)}
+                          selected={isSelected}
+                          onClick={() => toggle(count, v)}
+                        >
                           {v}
                         </Chip>
-                      ) : null;
-                    }
-                    return (
-                      <Chip
-                        key={v}
-                        tone={chipTone(kind)}
-                        selected={isSelected}
-                        onClick={() => toggle(count, v)}
-                      >
-                        {v}
-                      </Chip>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
