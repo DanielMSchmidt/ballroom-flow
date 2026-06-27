@@ -49,6 +49,8 @@ function fakeStore(
     addReply: () => {},
     deleteAnnotation: () => {},
     deleteReply: () => {},
+    createCustomKind: () => {},
+    customKinds: () => [],
     undo: () => {},
     redo: () => {},
     subscribe: () => () => {},

@@ -17,9 +17,11 @@ import {
   addReply,
   addSection,
   type FigureDoc,
+  isReservedKind,
   LIBRARY_FIGURES,
   newId,
   type Placement,
+  type RegistryKind,
   type RoutineDoc,
   readRoutine,
   redoLastChange,
@@ -97,6 +99,18 @@ export interface RoutineStore {
   deleteAnnotation(annotationId: string): void;
   /** Soft-delete a reply — author-only is enforced in the UI (US-039). */
   deleteReply(annotationId: string, replyId: string): void;
+  /**
+   * Create a user-defined attribute kind (US-043). Embeds it into the routine
+   * doc (CRDT — co-editors/forks get it), adds it to the in-memory account set,
+   * and persists it account-wide via REST (best-effort, fire-and-forget). Ignored
+   * for reserved/builtin slugs (`isReservedKind`).
+   */
+  createCustomKind(kind: RegistryKind): void;
+  /**
+   * All visible custom attribute kinds: account set ∪ routine-embedded, de-duped
+   * by `kind` slug (routine-embedded wins on conflict), builtins excluded (US-043).
+   */
+  customKinds(): RegistryKind[];
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -135,6 +149,20 @@ export interface OpenOptions {
    *  WS connect as a subprotocol so the fail-closed DO boundary authenticates it.
    *  The screen wires this to Clerk's `getToken`; omit it (tests / open boundary). */
   getToken?: TokenProvider;
+  /**
+   * The caller's account-wide custom kinds (fetched by the screen via
+   * `listAccountKinds`; tests pass directly). Seeded into the in-memory account
+   * set so `customKinds()` includes them without a `createCustomKind` call
+   * (US-043). Defaults to [].
+   */
+  accountKinds?: RegistryKind[];
+  /**
+   * Persist a newly-created custom kind account-wide. Default: POST
+   * /api/account/custom-kinds with a fresh Clerk token (mirrors `createFigure`).
+   * Tests pass a `vi.fn()` to avoid real network calls. Called best-effort —
+   * fire-and-forget, errors swallowed so the UI never throws (US-043).
+   */
+  saveCustomKind?: (kind: RegistryKind) => void | Promise<void>;
 }
 
 const defaultSocketFactory: SocketFactory = (url, protocols) =>
@@ -191,6 +219,16 @@ export async function openRoutine(
       await apiPost<unknown>("/api/figures", token, figure);
     });
 
+  // Account-wide custom kinds: seeded from opts; grow as createCustomKind is called.
+  let accountKinds: RegistryKind[] = [...(opts.accountKinds ?? [])];
+  // Default: POST /api/account/custom-kinds with a fresh token (mirrors createFigure).
+  const saveCustomKind: (k: RegistryKind) => void | Promise<void> =
+    opts.saveCustomKind ??
+    (async (k) => {
+      const token = getToken ? await getToken() : null;
+      await apiPost<unknown>("/api/account/custom-kinds", token, k);
+    });
+
   // Start from a TRULY empty doc (A.init) — the DO replays its full history
   // (getAllChanges, incl. the doc's creation) on connect, so the client builds
   // the identical doc by applying those changes. Seeding content here would
@@ -228,7 +266,14 @@ export async function openRoutine(
   /** Read the routine, tolerating an as-yet-unsynced (empty A.init) doc. */
   const readRoutineSafe = (): RoutineDoc => {
     const js = A.toJS(routineConn.current()) as Partial<RoutineDoc>;
-    if (!Array.isArray(js.sections)) return emptyRoutine(routineId); // not synced yet
+    if (!Array.isArray(js.sections)) {
+      // Not yet synced from the DO — return the empty sentinel, but preserve any
+      // customKinds that have been locally embedded (e.g. via createCustomKind
+      // called before the DO's catch-up replay arrives).
+      const fallback = emptyRoutine(routineId);
+      if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds as RegistryKind[];
+      return fallback;
+    }
     return readRoutine(routineConn.current());
   };
 
@@ -377,6 +422,31 @@ export async function openRoutine(
 
     deleteReply: (annotationId, replyId) => {
       routineConn.commit(softDeleteReply(routineConn.current(), annotationId, replyId));
+    },
+
+    createCustomKind: (kind) => {
+      // Ignore reserved/builtin slugs — they can't be overridden by user kinds.
+      if (isReservedKind(kind.kind)) return;
+      // (a) Embed into the routine doc (CRDT — all co-editors and forks receive it).
+      routineConn.change((draft) => {
+        if (!draft.customKinds) draft.customKinds = [];
+        if (!draft.customKinds.some((k) => k.kind === kind.kind)) draft.customKinds.push(kind);
+      });
+      // (b) Add to the in-memory account set (available across routines this session).
+      if (!accountKinds.some((k) => k.kind === kind.kind)) {
+        accountKinds = [...accountKinds, kind];
+      }
+      // (c) Persist account-wide — best-effort, never block the UI on the network.
+      void Promise.resolve(saveCustomKind(kind)).catch(() => {});
+      notify();
+    },
+
+    customKinds: () => {
+      const routineKinds = readRoutineSafe().customKinds ?? [];
+      const bySlug = new Map<string, RegistryKind>();
+      for (const k of accountKinds) bySlug.set(k.kind, k);
+      for (const k of routineKinds) bySlug.set(k.kind, k); // routine-embedded wins
+      return [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
     },
 
     undo: () => routineConn.commit(undoLastChange(routineConn.current(), actor ?? "local")),

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP } from "@ballroom/contract";
-import type { FigureDoc, RoutineDoc } from "@ballroom/domain";
+import type { FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
 import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
 import { describe, expect, it, vi } from "vitest";
 import { type OpenOptions, openRoutine } from "./routine";
@@ -355,6 +355,56 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // Opening the figure connection + writing the change sends bytes on its socket.
     expect(sockets.get("fig1")).toBeTruthy();
     expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(0);
+    store.close();
+  });
+});
+
+describe("US-043 createCustomKind (routine CRDT + account REST) + customKinds()", () => {
+  const energy: RegistryKind = {
+    kind: "energy",
+    label: "Energy",
+    color: "#c0563f",
+    cardinality: "single",
+    valueType: "enum",
+    values: ["low", "high"],
+    builtin: false,
+  };
+
+  it("embeds the kind into the routine doc, exposes it via customKinds(), and calls saveCustomKind", async () => {
+    const { opts } = fakeWiring();
+    const saveCustomKind = vi.fn();
+    const store = await openRoutine("rt_sample", { ...opts, saveCustomKind });
+    store.createCustomKind(energy);
+    expect(store.customKinds().some((k) => k.kind === "energy")).toBe(true);
+    expect(store.readRoutine().customKinds?.some((k) => k.kind === "energy")).toBe(true);
+    expect(saveCustomKind).toHaveBeenCalledWith(energy);
+    store.close();
+  });
+
+  it("ignores a reserved/builtin slug (isReservedKind)", async () => {
+    const { opts } = fakeWiring();
+    const saveCustomKind = vi.fn();
+    const store = await openRoutine("rt_sample", { ...opts, saveCustomKind });
+    store.createCustomKind({
+      kind: "rise",
+      label: "Hacked",
+      color: "#000",
+      cardinality: "single",
+      valueType: "enum",
+      values: [],
+      builtin: false,
+    });
+    expect(store.customKinds().some((k) => k.kind === "rise")).toBe(false);
+    expect(saveCustomKind).not.toHaveBeenCalled();
+    store.close();
+  });
+
+  it("merges account-wide kinds into customKinds() even without a createCustomKind call", async () => {
+    const { opts } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, accountKinds: [energy] });
+    expect(store.customKinds().some((k) => k.kind === "energy")).toBe(true);
+    // The kind is NOT embedded in the routine doc — it only comes from accountKinds.
+    expect(store.readRoutine().customKinds?.some((k) => k.kind === "energy") ?? false).toBe(false);
     store.close();
   });
 });
