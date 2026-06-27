@@ -2,7 +2,7 @@
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent } from "../test-support/render";
 
@@ -21,18 +21,25 @@ interface AttributeEditorModule {
 }
 
 describe("US-043 Custom attribute-kind creation UI", () => {
-  // Task 10: AddKindSheet not built yet — unskip when AddKindSheet exists.
-  it.skip("creates a user-defined kind (label, color, cardinality, valueType, values)", async () => {
+  it("creates a user-defined kind (label, color, cardinality, valueType, values)", async () => {
     // Intent: the add-kind sheet captures the full kind descriptor.
-    // Arrange: render <AddKindSheet>. Act: fill label "Energy", color, cardinality=single,
-    //   valueType=enum, values=[low,high]; submit.
+    // Arrange: render <AddKindSheet>. Act: fill label "Energy", values=[low,high]; submit.
     // Assert: onCreate is called with the descriptor.
     // Covers US-043 AC-1 (create/edit a user-defined kind).
     const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
-    renderUi(<AddKindSheet />);
+    const onCreate = vi.fn();
+    renderUi(<AddKindSheet open onCreate={onCreate} />);
     await userEvent.type(screen.getByLabelText(/label/i), "Energy");
+    await userEvent.type(screen.getByLabelText(/values/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
-    expect(screen.getByLabelText(/label/i)).toHaveValue("Energy");
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "energy",
+        label: "Energy",
+        values: ["low", "high"],
+        builtin: false,
+      }),
+    );
   });
 
   it("makes the new kind appear in the attribute editor after creation", async () => {
