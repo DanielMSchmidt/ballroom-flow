@@ -27,8 +27,13 @@ export function Sheet({ open, onClose, title, meta, children }: SheetProps) {
   useOverlay(open, onClose, panelRef);
   if (!open) return null;
 
+  // Height is the DYNAMIC viewport (dvh), not `inset-0`'s full layout viewport:
+  // on mobile the browser toolbar makes innerHeight > dvh, so a `bottom-0` sheet
+  // anchored to the layout-viewport bottom pushes its lower content into the dead
+  // zone behind the toolbar — unreachable to taps (and to Playwright's
+  // scroll-into-view). Anchoring to dvh keeps the sheet's bottom at the visible edge.
   return (
-    <div className="fixed inset-0" style={{ zIndex: "var(--bf-z-overlay)" }}>
+    <div className="fixed inset-x-0 top-0 h-[100dvh]" style={{ zIndex: "var(--bf-z-overlay)" }}>
       {/* scrim */}
       <button
         type="button"
