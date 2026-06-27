@@ -13,7 +13,10 @@ import type { Env } from "./index";
 
 /** Seed the starter routine for `userId`; returns the new routine's id. */
 export async function seedStarterRoutine(env: Env, userId: string): Promise<string> {
-  const { routine, figures } = buildGoldenWaltzBasic(userId, newId);
+  const { routine, figures, missing } = buildGoldenWaltzBasic(userId, newId);
+  if (missing.length > 0) {
+    console.warn("starter routine: figures missing from library", { userId, missing });
+  }
 
   for (const figure of figures) {
     await createFigureRows(env.DB, {
