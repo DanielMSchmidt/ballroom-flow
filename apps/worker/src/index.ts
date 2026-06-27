@@ -9,7 +9,12 @@ import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
-import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
+import {
+  countOwnedRoutines,
+  createOwnedRoutine,
+  listRoutines,
+  searchReachable,
+} from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
 import { testSeed } from "./routes/test-seed";
@@ -431,6 +436,27 @@ app.get("/api/routines", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const routines = await listRoutines(c.env.DB, user.sub);
   return c.json({ routines });
+});
+
+// GET /api/search — prefix search over the D1 index (US-046). Scoped to the
+// caller's reachable docs (owned routines + owned/app-owned figures). Indexed
+// (EXPLAIN no-SCAN gate, ops.test). Annotation/content search is v1.1.
+// NOTE: shared-in routines (membership, not ownership) are out of v1 search
+// scope to keep the query single-index; add a UNION over membership_user_idx later.
+app.get("/api/search", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const q = (c.req.query("q") ?? "").trim();
+  if (!q) return c.json({ results: [] });
+  const dance = c.req.query("dance") ?? undefined;
+  const rows = await searchReachable(c.env.DB, { userId: user.sub, q, dance });
+  const results = rows.map((r) => ({
+    docRef: r.docRef,
+    type: r.type,
+    title: r.title ?? "",
+    dance: r.dance,
+  }));
+  return c.json({ results });
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a

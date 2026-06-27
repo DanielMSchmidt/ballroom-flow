@@ -100,6 +100,30 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
   return items.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+/** Prefix search over the caller's reachable docs (US-046). Indexed: routines by
+ *  owner (owner_idx), figures by owner IN (user,'app') (title_idx COLLATE NOCASE).
+ *  NOTE: shared-in routines (membership, not ownership) are out of v1 search scope
+ *  to keep the query single-index; add a UNION over membership_user_idx in v1.1. */
+export async function searchReachable(
+  db: D1Database,
+  { userId, q, dance }: { userId: string; q: string; dance?: string },
+): Promise<{ docRef: string; type: string; title: string; dance: string | null }[]> {
+  const prefix = `${q}%`;
+  const danceClause = dance ? " AND dance = ?3" : "";
+  const params = dance ? [userId, prefix, dance] : [userId, prefix];
+  // Owned routines + figures the user owns or that are app-owned globals.
+  const sql =
+    "SELECT docRef, type, title, dance FROM document_registry " +
+    "WHERE deletedAt IS NULL AND title LIKE ?2 AND (ownerId = ?1 OR ownerId = 'app')" +
+    danceClause +
+    " ORDER BY updatedAt DESC LIMIT 50";
+  const rows = await db
+    .prepare(sql)
+    .bind(...params)
+    .all<{ docRef: string; type: string; title: string; dance: string | null }>();
+  return rows.results;
+}
+
 export interface NewRoutine {
   docRef: string;
   ownerId: string;

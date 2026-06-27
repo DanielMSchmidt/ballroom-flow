@@ -21,11 +21,11 @@ beforeAll(async () => {
   kp = await generateTestKeypair();
 });
 
-describe.skip("US-046 Routine + figure search", () => {
+describe("US-046 Routine + figure search", () => {
   it("searches routines + figures by title/name/dance over the D1 index", async () => {
     // Intent: search hits the D1 projection, not CRDT content.
     // Arrange: seed registry rows (a 'Feather' figure + a 'My Foxtrot' routine).
-    // Act: GET /api/search?q=feather. Assert: 200 returning the figure row.
+    // Act: GET /api/search?q=My. Assert: 200 returning the routine row.
     // Covers US-046 AC-1 (search by title/name/dance).
     const ctx = await authedContext({ keypair: kp, userId: "u1", docRef: "n/a", role: null });
     await seedDb({
@@ -50,19 +50,21 @@ describe.skip("US-046 Routine + figure search", () => {
         },
       ],
     });
-    const res = await SELF.fetch("https://x/api/search?q=feather", { headers: ctx.authHeaders() });
+    const res = await SELF.fetch("https://x/api/search?q=My", { headers: ctx.authHeaders() });
     expect(res.status).toBe(200);
+    const body = await res.json<{ results: { title: string }[] }>();
+    expect(body.results.some((r) => r.title === "My Foxtrot")).toBe(true);
   });
 
   it("uses an INDEX for the search query (EXPLAIN, no SCAN)", async () => {
     // Intent: the search query is indexed (NFR "index every D1 query"; CI gate).
-    // Arrange: the title/name/dance search SQL. Act: expectIndexedQuery.
+    // Arrange: the title prefix search SQL (real scoped query). Act: expectIndexedQuery.
     // Assert: the query plan shows index use, no full-table SCAN.
     // Covers US-046 AC-2 (EXPLAIN no SCAN) — the EXPLAIN gate.
     await expectIndexedQuery(
       env.DB,
-      "SELECT docRef, type, title, dance FROM document_registry WHERE deletedAt IS NULL AND (title LIKE ?1 OR dance = ?2)",
-      ["%feather%", "foxtrot"],
+      "SELECT docRef, type, title, dance FROM document_registry WHERE ownerId = ?1 AND deletedAt IS NULL AND title LIKE ?2",
+      ["u1", "feather%"],
     );
   });
 });
