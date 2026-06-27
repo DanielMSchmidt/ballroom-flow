@@ -3,9 +3,14 @@
 // matches and the dance scope covers this dance; co-members' notes appear too
 // (the worker's co-membership gate). Commenter+ may author one here, choosing the
 // dance scope via the AnchorPicker's "this figure family" option.
+//
+// Styling: uses the `../ui` primitives (Button, Chip) for 44px targets and the
+// shared scale; kind + dance scope render as text so colour is never the only
+// signal (#5). Keeps the accessible region/textbox/button names the tests assert.
 import type { Anchor, AnnotationKind, DanceId } from "@ballroom/domain";
 import { useState } from "react";
 import type { FamilyNote } from "../store/family-notes";
+import { Button, Chip } from "../ui";
 import { AnchorPicker } from "./AnchorPicker";
 
 export interface FamilyNotesProps {
@@ -55,12 +60,16 @@ export function FamilyNotes({
   };
 
   return (
-    <section aria-label="Family notes">
+    <section aria-label="Family notes" className="flex flex-col gap-2 border-t border-line pt-3">
       <h3 className="text-sm font-medium text-ink-secondary">Notes on every {figureType}</h3>
-      <ul aria-label="family notes">
+      <ul aria-label="family notes" className="flex flex-col gap-1.5">
         {matching.map((n) => (
-          <li key={n.id}>
-            <span data-kind={n.kind}>{n.kind}</span> <span>{n.text}</span>{" "}
+          <li key={n.id} className="flex items-center gap-1.5 text-sm">
+            {/* kind + scope as text so colour is never the only signal (#5). */}
+            <Chip tone="neutral" asStatic data-kind={n.kind}>
+              {n.kind}
+            </Chip>
+            <span className="text-ink">{n.text}</span>
             <span className="text-2xs text-ink-faint">
               {n.danceScope === "all" ? "all dances" : n.danceScope}
             </span>
@@ -71,6 +80,7 @@ export function FamilyNotes({
       {canAnnotate && (
         <form
           aria-label="Add family note"
+          className="flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
@@ -82,10 +92,12 @@ export function FamilyNotes({
             placeholder={`A note for every ${figureType}…`}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-border-strong bg-surface-sunken px-3.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none"
           />
-          <button type="submit" disabled={!scope || !text.trim()}>
+          <Button type="submit" variant="primary" size="sm" disabled={!scope || !text.trim()}>
             Add family note
-          </button>
+          </Button>
         </form>
       )}
     </section>

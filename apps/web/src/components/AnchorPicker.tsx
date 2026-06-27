@@ -6,8 +6,13 @@
 // Presentational: it reports the chosen anchor via `onPick`; the screen (Task 8)
 // routes a point/figure anchor to the routine store and a family anchor to the
 // account doc.
+//
+// Styling: the three anchor choices are `Chip` toggles (the app's "pick one"
+// pattern — 44px target, focus ring, aria-pressed); the dance scope stays a
+// native radio group (the family identity the tests assert on).
 import type { Anchor, DanceId } from "@ballroom/domain";
 import { useState } from "react";
+import { Chip } from "../ui";
 
 export interface AnchorPickerProps {
   /** The figure family this picker anchors against (US-011 identity). */
@@ -43,50 +48,52 @@ export function AnchorPicker({
   };
 
   return (
-    <fieldset aria-label="Anchor this note to">
-      <button
-        type="button"
-        aria-pressed={choice === "step"}
-        onClick={() => {
-          setChoice("step");
-          onPick?.({ type: "point", figureRef, count: 0, role: null });
-        }}
-      >
-        this step
-      </button>
-      <button
-        type="button"
-        aria-pressed={choice === "figure"}
-        onClick={() => {
-          setChoice("figure");
-          onPick?.({ type: "figure", figureRef });
-        }}
-      >
-        this figure here
-      </button>
-      <button type="button" aria-pressed={choice === "family"} onClick={() => pickFamily(scope)}>
-        this figure family
-      </button>
+    <fieldset aria-label="Anchor this note to" className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-1">
+        <Chip
+          selected={choice === "step"}
+          onClick={() => {
+            setChoice("step");
+            onPick?.({ type: "point", figureRef, count: 0, role: null });
+          }}
+        >
+          this step
+        </Chip>
+        <Chip
+          selected={choice === "figure"}
+          onClick={() => {
+            setChoice("figure");
+            onPick?.({ type: "figure", figureRef });
+          }}
+        >
+          this figure here
+        </Chip>
+        <Chip selected={choice === "family"} onClick={() => pickFamily(scope)}>
+          this figure family
+        </Chip>
+      </div>
 
       {choice === "family" && (
-        <fieldset>
-          <legend>Across</legend>
-          <label>
+        <fieldset className="flex flex-wrap items-center gap-3 rounded-md border border-line p-2">
+          <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+            Across
+          </legend>
+          <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
             <input
               type="radio"
               name="dance-scope"
               checked={scope === "this"}
               onChange={() => pickFamily("this")}
-            />{" "}
+            />
             this dance
           </label>
-          <label>
+          <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
             <input
               type="radio"
               name="dance-scope"
               checked={scope === "all"}
               onChange={() => pickFamily("all")}
-            />{" "}
+            />
             all dances
           </label>
         </fieldset>

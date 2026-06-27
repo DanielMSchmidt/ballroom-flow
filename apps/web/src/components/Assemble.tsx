@@ -363,6 +363,7 @@ export function Assemble({
                   ),
                 )}
               composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
+              figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
               onCreate={({ kind, text }) =>
                 store.createAnnotation({
                   kind,

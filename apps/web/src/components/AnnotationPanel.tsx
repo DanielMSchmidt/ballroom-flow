@@ -9,8 +9,13 @@
 // Capability gating mirrors the shared table (principle #26): only a commenter+
 // sees the compose box. The worker still enforces it — a viewer's write is
 // refused at the DO (US-039 effect-based gate).
+//
+// Styling: uses the `../ui` primitives (Button, Chip) so the panel matches the
+// rest of the app — 44px touch targets (#3), focus rings (#7), the shared
+// type/colour scale — and keeps the accessible names/roles the tests rely on.
 import type { Annotation, AnnotationKind, Role } from "@ballroom/domain";
 import { useState } from "react";
+import { Button, Chip } from "../ui";
 
 /** A point or figure anchor the panel is composing against (Task 8 supplies it). */
 export type ComposeAnchor =
@@ -26,6 +31,12 @@ export interface AnnotationPanelProps {
   annotations?: Annotation[];
   /** The anchor a newly-composed annotation attaches to (Task 8). */
   composeAnchor?: ComposeAnchor;
+  /**
+   * Human-readable labels for figure refs (US-042 by-figure filter). The panel
+   * derives the figure set from the annotations' anchors; this maps each ref to
+   * a name. A ref with no entry falls back to the ref itself.
+   */
+  figureLabels?: Record<string, string>;
   /** Create handler (controlled). Omitted ⇒ the panel appends to internal state. */
   onCreate?: (input: { kind: AnnotationKind; text: string }) => void;
   /** Reply handler (controlled). */
@@ -34,18 +45,38 @@ export interface AnnotationPanelProps {
   onDeleteReply?: (annotationId: string, replyId: string) => void;
 }
 
-type Filter = "all" | "lessons" | "practice";
+/** A kind filter, or a `figure:<ref>` by-figure filter (US-042). */
+type Filter = "all" | "lessons" | "practice" | `figure:${string}`;
 
 const KINDS: AnnotationKind[] = ["note", "lesson", "practice"];
 
 let localSeq = 0;
 const nextLocalId = (): string => `local-${localSeq++}`;
 
+/** The distinct figure refs an annotation set anchors to (US-042 by-figure). */
+function figureRefsOf(list: Annotation[]): string[] {
+  const seen = new Set<string>();
+  for (const a of list) {
+    for (const an of a.anchors) {
+      if (an.type === "point" || an.type === "figure") seen.add(an.figureRef);
+    }
+  }
+  return [...seen];
+}
+
+/** Does an annotation anchor to `figureRef`? (point or figure anchor.) */
+function anchorsToFigure(a: Annotation, figureRef: string): boolean {
+  return a.anchors.some(
+    (an) => (an.type === "point" || an.type === "figure") && an.figureRef === figureRef,
+  );
+}
+
 export function AnnotationPanel({
   role,
   currentUserId,
   annotations,
   composeAnchor,
+  figureLabels,
   onCreate,
   onReply,
   onDeleteReply,
@@ -58,6 +89,7 @@ export function AnnotationPanel({
 
   // Controlled when `annotations` is provided; otherwise the panel owns the list.
   const list = annotations ?? local;
+  const figureRefs = figureRefsOf(list);
 
   const submit = (): void => {
     const text = draft.trim();
@@ -84,39 +116,48 @@ export function AnnotationPanel({
     setDraft("");
   };
 
-  const visible = list.filter((a) =>
-    filter === "all" ? true : filter === "lessons" ? a.kind === "lesson" : a.kind === "practice",
-  );
+  const visible = list.filter((a) => {
+    if (filter === "all") return true;
+    if (filter === "lessons") return a.kind === "lesson";
+    if (filter === "practice") return a.kind === "practice";
+    // `figure:<ref>` — only annotations anchored to that figure (US-042 by-figure).
+    return anchorsToFigure(a, filter.slice("figure:".length));
+  });
+
+  const labelFor = (ref: string): string => figureLabels?.[ref] ?? ref;
 
   return (
-    <section aria-label="Annotations">
-      <fieldset>
-        <legend>Filter annotations</legend>
+    <section aria-label="Annotations" className="flex flex-col gap-3">
+      {/* Filter chips share the app's "pick one" pattern (#5/#7): a real button
+          per filter, aria-pressed on the active one, 44px hit area via Chip. */}
+      <fieldset className="flex flex-wrap items-center gap-1">
+        <legend className="bf-sr-only">Filter annotations</legend>
         {(["all", "lessons", "practice"] as const).map((f) => (
-          <button type="button" key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>
+          <Chip key={f} selected={filter === f} onClick={() => setFilter(f)}>
             {f}
-          </button>
+          </Chip>
         ))}
+        {/* By-figure filters (US-042): one chip per anchored figure. */}
+        {figureRefs.map((ref) => {
+          const value: Filter = `figure:${ref}`;
+          return (
+            <Chip key={ref} selected={filter === value} onClick={() => setFilter(value)}>
+              {labelFor(ref)}
+            </Chip>
+          );
+        })}
       </fieldset>
 
-      <ul aria-label="comment thread">
+      <ul aria-label="comment thread" className="flex flex-col gap-2">
         {visible.map((a) => (
           <li key={a.id}>
-            {/* kind shown as text so colour is never the sole signal (a11y). */}
-            <span data-kind={a.kind}>{a.kind}</span> <span>{a.text}</span>
-            <ul aria-label="replies thread">
-              {a.replies.map((r) => (
-                <li key={r.id}>
-                  <span>{r.text}</span>
-                  {r.authorId === currentUserId && (
-                    <button type="button" onClick={() => onDeleteReply?.(a.id, r.id)}>
-                      delete reply
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {canAnnotate && onReply && <ReplyBox onSend={(text) => onReply(a.id, text)} />}
+            <AnnotationRow
+              annotation={a}
+              currentUserId={currentUserId}
+              canReply={canAnnotate && Boolean(onReply)}
+              onReply={onReply ? (text) => onReply(a.id, text) : undefined}
+              onDeleteReply={onDeleteReply ? (replyId) => onDeleteReply(a.id, replyId) : undefined}
+            />
           </li>
         ))}
       </ul>
@@ -124,31 +165,81 @@ export function AnnotationPanel({
       {canAnnotate && (
         <form
           aria-label="Add annotation"
+          className="flex flex-col gap-2 border-t border-line pt-3"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
         >
-          <label>
-            Kind
-            <select value={kind} onChange={(e) => setKind(e.target.value as AnnotationKind)}>
-              {KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Kind chosen via a labelled select; the chosen kind also renders as
+              text on each annotation so colour is never the only cue (#5).
+              Native control stays keyboard/AT-friendly with a 44px target (#3/#7). */}
+          <select
+            aria-label="Kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as AnnotationKind)}
+            className="w-full appearance-none rounded-md border border-border-strong bg-surface-sunken px-3.5 text-sm text-ink min-h-[var(--bf-touch-target)] outline-none"
+          >
+            {KINDS.map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
           <textarea
             aria-label="note"
             placeholder="Add a note…"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-border-strong bg-surface-sunken px-3.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none"
           />
-          <button type="submit">add note</button>
+          <Button type="submit" variant="primary" size="sm" disabled={!draft.trim()}>
+            add note
+          </Button>
         </form>
       )}
     </section>
+  );
+}
+
+/** One annotation: its kind (as text, not colour-only), body, and reply thread. */
+function AnnotationRow({
+  annotation: a,
+  currentUserId,
+  canReply,
+  onReply,
+  onDeleteReply,
+}: {
+  annotation: Annotation;
+  currentUserId?: string;
+  canReply: boolean;
+  onReply?: (text: string) => void;
+  onDeleteReply?: (replyId: string) => void;
+}): React.JSX.Element {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-line p-2">
+      <p className="flex items-center gap-1.5 text-sm">
+        {/* kind shown as text so colour is never the sole signal (a11y #5). */}
+        <Chip tone="neutral" asStatic data-kind={a.kind}>
+          {a.kind}
+        </Chip>
+        <span className="text-ink">{a.text}</span>
+      </p>
+      <ul aria-label="replies thread" className="flex flex-col gap-1 pl-3">
+        {a.replies.map((r) => (
+          <li key={r.id} className="flex items-center gap-2 text-2xs text-ink-secondary">
+            <span>{r.text}</span>
+            {r.authorId === currentUserId && onDeleteReply && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => onDeleteReply(r.id)}>
+                delete reply
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {canReply && onReply && <ReplyBox onSend={onReply} />}
+    </div>
   );
 }
 
@@ -158,6 +249,7 @@ function ReplyBox({ onSend }: { onSend: (text: string) => void }): React.JSX.Ele
   return (
     <form
       aria-label="Reply"
+      className="flex items-center gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         const t = text.trim();
@@ -166,8 +258,16 @@ function ReplyBox({ onSend }: { onSend: (text: string) => void }): React.JSX.Ele
         setText("");
       }}
     >
-      <input aria-label="reply" value={text} onChange={(e) => setText(e.target.value)} />
-      <button type="submit">post reply</button>
+      <input
+        aria-label="reply"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Reply…"
+        className="flex-1 rounded-md border border-border-strong bg-surface-sunken px-3 text-sm text-ink placeholder:text-ink-faint min-h-[var(--bf-touch-target)] outline-none"
+      />
+      <Button type="submit" variant="secondary" size="sm" disabled={!text.trim()}>
+        post reply
+      </Button>
     </form>
   );
 }
