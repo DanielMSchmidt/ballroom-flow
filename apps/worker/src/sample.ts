@@ -1,10 +1,10 @@
 // apps/worker/src/sample.ts
-// US-045 — seed the app-owned READ-ONLY sample routine (a start-from-template
-// source). Projects the shared SAMPLE_ROUTINE fixture + its figures with
-// ownerId "app"; idempotent (seedDoc is no-clobber; registry inserts use ON
-// CONFLICT DO NOTHING). Distinct from the onboarding gift (starter.ts), which
-// FORKS this template into an owned copy.
-import { SAMPLE_FIGURE_LIBRARY, SAMPLE_ROUTINE } from "@ballroom/domain/fixtures";
+// US-045 — seed the app-owned READ-ONLY "Golden Waltz Basic" template (the
+// start-from-template source). Uses deterministic/stable ids (stableMinter) so
+// the seed is fully idempotent across cold starts: the same ids are produced on
+// every invocation, and seedDoc + ON CONFLICT DO NOTHING guard against clobbering.
+// Distinct from the onboarding gift (starter.ts) which FORKS this template.
+import { buildGoldenWaltzBasic } from "@ballroom/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { createFigureRows } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
@@ -13,32 +13,46 @@ import type { Env } from "./index";
 
 export const APP_OWNER = "app";
 
-/** Seed the app-owned sample routine; returns the routine's id. Idempotent. */
-export async function seedSampleRoutine(env: Env): Promise<string> {
-  const routine = SAMPLE_ROUTINE;
+/**
+ * A counter-based id minter whose sequence restarts at 0 on each call.
+ * Passing the same `prefix` always produces the same sequence of ids, making
+ * the app template seed deterministic across cold starts.
+ */
+function stableMinter(prefix: string): () => string {
+  let n = 0;
+  return () => `${prefix}_${++n}`;
+}
 
-  // Seed the figures that appear in the routine (figures first so the routine's
-  // placement edges + cascade access resolve). createFigureRows is upsert-safe.
-  const figureIds = new Set(routine.sections.flatMap((s) => s.placements.map((p) => p.figureRef)));
-  for (const id of figureIds) {
-    const fig = SAMPLE_FIGURE_LIBRARY[id];
-    if (!fig) continue;
-    await createFigureRows(env.DB, {
-      figureRef: fig.id,
-      ownerId: APP_OWNER,
-      name: fig.name,
-      dance: fig.dance,
-      figureType: fig.figureType,
-    });
-    await env.DOC_DO.get(env.DOC_DO.idFromName(fig.id)).seedDoc(
-      fig as unknown as Record<string, unknown>,
-    );
-    await linkPlacement(env.DB, routine.id, fig.id);
+/**
+ * Seed the app-owned Golden Waltz Basic template; returns the routine's stable
+ * id.  Idempotent: seedDoc is no-clobber; D1 inserts use ON CONFLICT DO NOTHING.
+ * Callers can capture the return value to get the stable template id without
+ * hardcoding it (the minter controls which call-position becomes the routine id).
+ */
+export async function seedSampleRoutine(env: Env): Promise<string> {
+  const { routine, figures, missing } = buildGoldenWaltzBasic(APP_OWNER, stableMinter("tpl_gw"));
+  if (missing.length) {
+    console.warn("app template: figures missing from library", { missing });
   }
 
-  // Seed the routine registry row + an owner membership for "app".
-  // Uses ON CONFLICT DO NOTHING so a re-run (e.g. across cold starts that both
-  // see sampleSeeded=false from module reset) is harmless.
+  // Seed the figure DOs + D1 rows FIRST so the routine's placement edges and
+  // cascade-access resolution work when the forker connects to the figures.
+  for (const figure of figures) {
+    await createFigureRows(env.DB, {
+      figureRef: figure.id,
+      ownerId: APP_OWNER,
+      name: figure.name,
+      dance: figure.dance,
+      figureType: figure.figureType,
+    });
+    await env.DOC_DO.get(env.DOC_DO.idFromName(figure.id)).seedDoc(
+      figure as unknown as Record<string, unknown>,
+    );
+    await linkPlacement(env.DB, routine.id, figure.id);
+  }
+
+  // Registry row + owner membership for "app". ON CONFLICT DO NOTHING so a
+  // concurrent cold-start re-run is a safe no-op.
   const now = Date.now();
   const d = drizzle(env.DB);
   await d.batch([
@@ -66,8 +80,7 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
       .onConflictDoNothing(),
   ]);
 
-  // Seed the routine's CRDT content (no-clobber; templateOf marks it as a
-  // start-from-template source per SAMPLE_ROUTINE fixture).
+  // Seed the routine DO with the full CRDT content (no-clobber).
   await env.DOC_DO.get(env.DOC_DO.idFromName(routine.id)).seedDoc({
     ...routine,
     ownerId: APP_OWNER,

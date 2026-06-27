@@ -183,6 +183,20 @@ export interface NewRoutine {
  * suspenders). The CRDT doc itself is created lazily by its DO on first open.
  * A fork passes `forkedFromRef` so the registry records its lineage (US-037).
  */
+/**
+ * Look up who owns a document (by the D1 registry PK — a fast PK lookup, no
+ * SCAN). Returns null if the doc doesn't exist. Used by the fork route to allow
+ * app-owned templates to be forked without a membership row (US-045/Task 6).
+ */
+export async function getDocOwner(db: D1Database, docRef: string): Promise<string | null> {
+  const row = await drizzle(db)
+    .select({ ownerId: documentRegistry.ownerId })
+    .from(documentRegistry)
+    .where(eq(documentRegistry.docRef, docRef))
+    .get();
+  return row?.ownerId ?? null;
+}
+
 export async function createOwnedRoutine(db: D1Database, r: NewRoutine): Promise<void> {
   const now = Date.now();
   const d = drizzle(db);
