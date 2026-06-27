@@ -350,8 +350,43 @@ describe("US-017 store/ seam (multi-doc)", () => {
   it("setFigureAttributes writes the timeline to the figure's own doc connection (US-028)", async () => {
     // Intent: the hero-flow mutation lands on the FIGURE doc (a separate DO), not
     //   the routine doc — and goes out as a change frame on that figure's socket.
+    //   The figure must be account-owned by the current user so the COW path (US-035)
+    //   doesn't intercept it — an unowned figure would trigger copy-on-write instead.
     const { opts, sockets } = fakeWiring();
-    const store = await openRoutine("rt_sample", opts);
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me" });
+
+    // Seed the routine so the placement referencing "fig1" exists.
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fig1", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Trigger the figure connection to open (it's lazy — opened by readPlacements).
+    store.readPlacements();
+
+    // Load "fig1" as account-owned by the current user → edits in place (no COW).
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me" }) as FigureDoc,
+    );
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(figDoc);
+    sockets.get("fig1")?.fireCaughtUp();
 
     store.setFigureAttributes("fig1", [
       { id: "step-2-T", kind: "step", count: 2, value: "T", role: null, deletedAt: null },
@@ -361,6 +396,78 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fig1")).toBeTruthy();
     expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(0);
     store.close();
+  });
+
+  it("copy-on-write: editing a NON-owned figure spawns an owned variant + re-points (US-035)", async () => {
+    // Intent: when the user edits a global/shared figure they don't own, the store
+    //   must silently spawn an owned variant, re-point the placement to it, and
+    //   notify the screen to toast — without touching the shared base (US-035).
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string; baseFigureRef?: string }) => {
+      created.push({ figureRef: m.figureRef, baseFigureRef: m.baseFigureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // Routine references a GLOBAL figure "fg" (owned by "app", not "me").
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "foxtrot",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    // Open the figure connection so we can load its doc.
+    store.readPlacements();
+
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    // Edit count-1 footwork HT→T on the non-owned figure → copy-on-write.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+
+    // A variant was projected with baseFigureRef = the global base…
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect(created[0]?.baseFigureRef).toBe("fg");
+    // …the placement was re-pointed to the new variant id…
+    const variantRef = created[0]?.figureRef as string;
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(variantRef);
+    // …and the screen was told to toast.
+    expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef);
   });
 });
 
