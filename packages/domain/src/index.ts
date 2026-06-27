@@ -2,6 +2,14 @@
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta } from "./dances";
+export {
+  addAccountReply,
+  addFamilyNote,
+  buildAccountDoc,
+  readAccount,
+  resolveFamilyNotesFor,
+  softDeleteAccountAnnotation,
+} from "./doc-account";
 export { buildFigureDoc, readFigure, softDeleteAttribute } from "./doc-figure";
 export { buildDoc } from "./doc-internal";
 export {
@@ -15,6 +23,7 @@ export {
   softDeleteSection,
 } from "./doc-routine";
 export type {
+  AccountDoc,
   Alignment,
   Anchor,
   Annotation,

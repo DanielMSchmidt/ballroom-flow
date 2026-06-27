@@ -105,6 +105,20 @@ export interface Annotation {
   deletedAt?: number | null;
 }
 
+/**
+ * A per-user account document (US-040). Holds the user's figure-FAMILY notes
+ * (`figureType` anchors) — account-scoped, authored by the owner only. Hosted by
+ * the same per-document DO machinery (DO name `account:<userId>`); its alarm
+ * projects a content-free index row per family note to D1 (US-041).
+ */
+export interface AccountDoc {
+  id: string;
+  ownerId: string;
+  annotations: Annotation[];
+  schemaVersion: number;
+  deletedAt?: number | null;
+}
+
 /** A routine document — sections → placements + routine-scoped annotations. */
 export interface RoutineDoc {
   id: string;
