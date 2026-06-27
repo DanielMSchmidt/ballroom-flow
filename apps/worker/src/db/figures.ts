@@ -14,6 +14,7 @@ export interface NewFigure {
   name: string;
   dance: string;
   figureType: string;
+  baseFigureRef?: string | null;
 }
 
 /**
@@ -37,6 +38,9 @@ export async function createFigureRows(db: D1Database, f: NewFigure): Promise<vo
         title: f.name,
         dance: f.dance,
         figureType: f.figureType,
+        // forkedFromRef carries the figure's baseFigureRef lineage (reused index
+        // column, no migration) — a variant has a base, a custom figure is null.
+        forkedFromRef: f.baseFigureRef ?? null,
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -77,14 +81,18 @@ export async function listGlobalFigures(
 }
 
 export interface MineFigureRow extends GlobalFigureRow {
+  baseFigureRef: string | null;
   usedInCount: number;
 }
 
 /** The caller's account figures (variants + custom) with a usage count from the edges. */
 export async function listMineFigures(db: D1Database, userId: string): Promise<MineFigureRow[]> {
+  // forkedFromRef carries the figure's baseFigureRef lineage (reused index column,
+  // no migration) — surfaced as baseFigureRef so the UI can badge variant vs custom.
   const res = await db
     .prepare(
       "SELECT r.docRef AS docRef, r.figureType AS figureType, r.dance AS dance, r.title AS title, " +
+        "r.forkedFromRef AS baseFigureRef, " +
         "(SELECT COUNT(*) FROM placement_edge pe WHERE pe.figureRef = r.docRef) AS usedInCount " +
         "FROM document_registry r WHERE r.ownerId = ?1 AND r.type = 'account-figure' AND r.deletedAt IS NULL " +
         "ORDER BY r.updatedAt DESC",

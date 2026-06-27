@@ -256,7 +256,14 @@ app.post("/api/figures", async (c) => {
     return c.json({ error: "invalid_attribute" }, 400);
   }
 
-  await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  await createFigureRows(c.env.DB, {
+    figureRef,
+    ownerId: user.sub,
+    name,
+    dance,
+    figureType,
+    baseFigureRef,
+  });
   // Record the routine→figure edge so the routine's co-members get read access to
   // this figure (cascade): figure docs are otherwise shared independently (US-020).
   await linkPlacement(c.env.DB, routineId, figureRef);
