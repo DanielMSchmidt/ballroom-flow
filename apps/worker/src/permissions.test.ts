@@ -1,6 +1,7 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { capabilitiesFor } from "@ballroom/domain";
 import { beforeAll, describe, expect, it } from "vitest";
+import { resolveEffectiveRole } from "./db/membership";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace } from "./test-support/doc-do-api";
@@ -363,10 +364,36 @@ describe("US-021 Permission boundary at the DO connection", () => {
     expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
   });
 
+  it("cascades EDITOR on a referenced figure to a routine EDITOR (editors may edit referenced figures)", async () => {
+    // Intent: a routine editor may EDIT the figures it references (decided
+    //   2026-06-27) — the cascade derives 'editor' from the routine role; a
+    //   commenter/viewer still gets read-only.
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    await seedDb({
+      users: [
+        { id: "u_ed2", displayName: "Ed2", identityColor: "#777", plan: "free" },
+        { id: "u_co2", displayName: "Co2", identityColor: "#888", plan: "free" },
+      ],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      memberships: [
+        { id: "m_ed2_rt", docRef: routineRef, userId: "u_ed2", role: "editor" },
+        { id: "m_co2_rt", docRef: routineRef, userId: "u_co2", role: "commenter" },
+      ],
+      placementEdges: [{ routineRef, figureRef }],
+    });
+    // A routine editor → EDITOR on the figure; a routine commenter → read-only viewer.
+    expect(await resolveEffectiveRole(env.DB, figureRef, "u_ed2")).toBe("editor");
+    expect(await resolveEffectiveRole(env.DB, figureRef, "u_co2")).toBe("viewer");
+  });
+
   it("uses INDEXES for the figure-access cascade lookup (EXPLAIN, no SCAN)", async () => {
     await expectIndexedQuery(
       env.DB,
-      "SELECT 1 AS ok FROM placement_edge WHERE figureRef = ?1 AND routineRef IN (SELECT docRef FROM membership WHERE userId = ?2 AND deletedAt IS NULL) LIMIT 1",
+      "SELECT m.role AS role FROM placement_edge pe JOIN membership m ON m.docRef = pe.routineRef WHERE pe.figureRef = ?1 AND m.userId = ?2 AND m.deletedAt IS NULL",
       ["fig_x", "u_x"],
     );
   });

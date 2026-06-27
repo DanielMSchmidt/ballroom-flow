@@ -15,22 +15,27 @@ export async function linkPlacement(
 }
 
 /**
- * The figure-access cascade: VIEWER if `userId` is an active member of ANY routine
- * that references `figureRef`, else null. Read-time + order-independent — never
- * escalates edit rights (editing a figure needs direct ownership / future COW).
- * Indexed: placement_edge by figureRef, membership by (userId, deletedAt).
+ * The figure-access cascade derived from the user's role on any routine that
+ * references `figureRef`: a routine EDITOR (or owner — whose membership row is
+ * `editor`) may EDIT the referenced figure; a commenter/viewer gets read-only
+ * VIEWER; a non-member of every referencing routine gets null. Takes the most
+ * permissive role across referencing routines. Read-time + order-independent;
+ * never grants `owner` (no figure delete). Indexed: placement_edge by figureRef,
+ * membership by (userId, deletedAt) / (docRef, userId).
  */
 export async function cascadeFigureRole(
   db: D1Database,
   figureRef: string,
   userId: string,
 ): Promise<EffectiveRole | null> {
-  const row = await db
+  const res = await db
     .prepare(
-      "SELECT 1 AS ok FROM placement_edge WHERE figureRef = ?1 AND routineRef IN " +
-        "(SELECT docRef FROM membership WHERE userId = ?2 AND deletedAt IS NULL) LIMIT 1",
+      "SELECT m.role AS role FROM placement_edge pe JOIN membership m ON m.docRef = pe.routineRef " +
+        "WHERE pe.figureRef = ?1 AND m.userId = ?2 AND m.deletedAt IS NULL",
     )
     .bind(figureRef, userId)
-    .first<{ ok: number }>();
-  return row ? "viewer" : null;
+    .all<{ role: string }>();
+  const roles = res.results ?? [];
+  if (roles.length === 0) return null;
+  return roles.some((r) => r.role === "editor") ? "editor" : "viewer";
 }

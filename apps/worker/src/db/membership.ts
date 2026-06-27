@@ -55,10 +55,11 @@ export async function resolveEffectiveRole(
   if (role) return role;
   const owner = await ownerOf(db, docRef);
   if (owner !== null && owner === userId) return "owner";
-  // Cascade (2026-06-27): a routine co-member gets VIEWER on the figures that
-  // routine references — so sharing a routine shares its figures (+ annotations,
-  // which already live in the routine doc). Inert for routine docs (a routineRef
-  // is never a figureRef in placement_edge), so this only ever ADDS figure reads.
+  // Cascade (2026-06-27): a routine member gets access to the figures that routine
+  // references — an EDITOR may edit them, a commenter/viewer reads — so sharing a
+  // routine shares its figures (+ annotations, which already live in the routine
+  // doc). Inert for routine docs (a routineRef is never a figureRef in
+  // placement_edge), so this only ever ADDS figure access.
   return cascadeFigureRole(db, docRef, userId);
 }
 
