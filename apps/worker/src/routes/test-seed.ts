@@ -19,6 +19,12 @@ interface SeedBody {
     title?: string | null;
     dance?: string | null;
     figureType?: string | null;
+    /** When type==="routine" and sections are present, the routine DO is server-seeded. */
+    sections?: {
+      id: string;
+      name: string;
+      placements: { id: string; figureRef: string }[];
+    }[];
   }[];
   memberships?: {
     id?: string;
@@ -33,6 +39,18 @@ interface SeedBody {
     expiresAt: number;
     redeemedAt?: number | null;
   }[];
+  /** Seed figure docs: D1 registry row + figure DO CRDT content. */
+  figures?: {
+    docRef: string;
+    scope: "global" | "account";
+    ownerId: string;
+    name: string;
+    dance: string;
+    figureType: string;
+    attributes?: unknown[];
+  }[];
+  /** Direct placement_edge rows (routine→figure) for the access cascade. */
+  placementEdges?: { routineRef: string; figureRef: string }[];
 }
 
 export const testSeed = new Hono<{ Bindings: Env }>();
@@ -48,6 +66,8 @@ testSeed.post("/api/test/reset", async (c) => {
   // same note across serial journeys/projects — raw SQL to stay independent of
   // the drizzle schema's merge timeline (mirrors `invite`).
   await c.env.DB.prepare("DELETE FROM figure_type_note_index").run();
+  // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
+  await c.env.DB.prepare("DELETE FROM placement_edge").run();
   await d.delete(membership);
   await d.delete(documentRegistry);
   await d.delete(users);
@@ -89,6 +109,28 @@ testSeed.post("/api/test/seed", async (c) => {
       })
       .onConflictDoNothing();
     seeded++;
+    // When a routine doc has explicit sections, server-seed the routine DO so
+    // the placements are persisted before E2E connects (mirrors the create flow).
+    if (doc.type === "routine" && doc.sections) {
+      await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(doc.docRef)).seedDoc({
+        id: doc.docRef,
+        title: doc.title ?? "",
+        dance: doc.dance ?? "waltz",
+        ownerId: doc.ownerId,
+        sections: doc.sections.map((s) => ({
+          id: s.id,
+          name: s.name,
+          placements: s.placements.map((p) => ({
+            id: p.id,
+            figureRef: p.figureRef,
+            deletedAt: null,
+          })),
+        })),
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      });
+    }
   }
   for (const m of body.memberships ?? []) {
     await d
@@ -109,6 +151,45 @@ testSeed.post("/api/test/seed", async (c) => {
       "INSERT OR IGNORE INTO invite (id, docRef, role, expiresAt, redeemedAt) VALUES (?, ?, ?, ?, ?)",
     )
       .bind(i.id, i.docRef, i.role, i.expiresAt, i.redeemedAt ?? null)
+      .run();
+    seeded++;
+  }
+  for (const f of body.figures ?? []) {
+    // Project the figure to D1 (global-figure or account-figure type).
+    await d
+      .insert(documentRegistry)
+      .values({
+        docRef: f.docRef,
+        type: f.scope === "global" ? "global-figure" : "account-figure",
+        ownerId: f.ownerId,
+        doName: f.docRef,
+        title: f.name,
+        dance: f.dance,
+        figureType: f.figureType,
+        updatedAt: now,
+      })
+      .onConflictDoNothing();
+    // Server-seed the figure DO (no-clobber) so the CRDT content is durable
+    // before E2E connects — same pattern as POST /api/figures.
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(f.docRef)).seedDoc({
+      id: f.docRef,
+      scope: f.scope,
+      ownerId: f.ownerId,
+      figureType: f.figureType,
+      dance: f.dance,
+      name: f.name,
+      source: f.scope === "global" ? "library" : "custom",
+      attributes: f.attributes ?? [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    seeded++;
+  }
+  for (const e of body.placementEdges ?? []) {
+    await c.env.DB.prepare(
+      "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
+    )
+      .bind(e.routineRef, e.figureRef)
       .run();
     seeded++;
   }

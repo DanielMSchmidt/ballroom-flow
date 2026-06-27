@@ -13,6 +13,12 @@ export interface SeedSpec {
     title?: string | null;
     dance?: string | null;
     figureType?: string | null;
+    /** When type==="routine" and sections present, the routine DO is server-seeded. */
+    sections?: {
+      id: string;
+      name: string;
+      placements: { id: string; figureRef: string }[];
+    }[];
   }[];
   memberships?: {
     id?: string;
@@ -27,6 +33,18 @@ export interface SeedSpec {
     expiresAt: number;
     redeemedAt?: number | null;
   }[];
+  /** Seed figure docs: D1 registry row + figure DO CRDT content. */
+  figures?: {
+    docRef: string;
+    scope: "global" | "account";
+    ownerId: string;
+    name: string;
+    dance: string;
+    figureType: string;
+    attributes?: unknown[];
+  }[];
+  /** Direct placement_edge rows (routine→figure) for the access cascade. */
+  placementEdges?: { routineRef: string; figureRef: string }[];
 }
 
 /** Wipe the D1 index (deterministic per-test starting point). */
