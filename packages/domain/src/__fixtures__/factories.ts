@@ -163,6 +163,7 @@ export function makeRoutineDoc(overrides: Partial<RoutineDoc> = {}): RoutineDoc 
     templateOf: overrides.templateOf ?? null,
     sections: overrides.sections ?? [makeSection()],
     annotations: overrides.annotations ?? [],
+    customKinds: overrides.customKinds ?? [],
     schemaVersion: overrides.schemaVersion ?? 1,
     deletedAt: overrides.deletedAt ?? null,
   };

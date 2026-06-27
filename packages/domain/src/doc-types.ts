@@ -9,6 +9,7 @@
 // mergeable flip, never a hard delete (§2.1), so a concurrent edit on a deleted
 // entity still merges cleanly and the deletion is itself a CRDT value.
 import type { DanceId } from "./dances";
+import type { RegistryKind } from "./vocabulary";
 
 /** leader / follower / both (null). */
 export type Role = "leader" | "follower" | null;
@@ -115,6 +116,7 @@ export interface AccountDoc {
   id: string;
   ownerId: string;
   annotations: Annotation[];
+  customKinds?: RegistryKind[];
   schemaVersion: number;
   deletedAt?: number | null;
 }
@@ -129,6 +131,7 @@ export interface RoutineDoc {
   templateOf?: string | null;
   sections: Section[];
   annotations: Annotation[];
+  customKinds?: RegistryKind[];
   schemaVersion: number;
   deletedAt?: number | null;
 }

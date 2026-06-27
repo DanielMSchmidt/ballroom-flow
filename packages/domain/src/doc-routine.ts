@@ -32,6 +32,7 @@ export function readRoutine(doc: A.Doc<RoutineDoc>, opts?: ReadOptions): Routine
       ...annotation,
       replies: filterDeleted(annotation.replies, opts),
     })),
+    customKinds: plain.customKinds ?? [],
   };
 }
 

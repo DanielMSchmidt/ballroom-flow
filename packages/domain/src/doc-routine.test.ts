@@ -1,5 +1,6 @@
 // US-039 — routine annotation mutators (PLAN §4.6).
 import { describe, expect, it } from "vitest";
+import { makeRoutineDoc } from "./__fixtures__/factories";
 import {
   addAnnotation,
   addReply,
@@ -75,5 +76,23 @@ describe("routine annotation mutators", () => {
     expect(readRoutine(doc, { includeDeleted: true }).annotations[0]?.deletedAt).toBeTypeOf(
       "number",
     );
+  });
+});
+
+describe("US-043 customKinds on the routine doc", () => {
+  it("round-trips embedded custom kinds and defaults to []", () => {
+    const energy = {
+      kind: "energy",
+      label: "Energy",
+      color: "#c0563f",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["low", "high"],
+      builtin: false,
+    };
+    const withKind = buildRoutineDoc(makeRoutineDoc({ customKinds: [energy] }));
+    expect(readRoutine(withKind).customKinds).toEqual([energy]);
+    const without = buildRoutineDoc(makeRoutineDoc({}));
+    expect(readRoutine(without).customKinds ?? []).toEqual([]);
   });
 });
