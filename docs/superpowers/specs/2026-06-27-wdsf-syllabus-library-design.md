@@ -44,9 +44,9 @@ Add only figures whose `(dance, name)` is **not** already in the 122-figure ISTD
 | viennese_waltz | 4 |
 | **total** | **125** |
 
-Existing ISTD entries are left untouched (they came from a syllabus with no per-count data, so they stay attribute-free — unchanged behavior).
+**Ratified during implementation (supersedes the earlier "ISTD entries stay attribute-free" wording):** figures present in BOTH syllabi are **enriched** with the WDSF step timeline rather than duplicated — an existing ISTD entry whose figure also appears in the WDSF seed gains that figure's WDSF attributes (so the fundamental figures — Natural Turn, Reverse Turn, etc. — carry step counts too, not just the obscure net-new ones). ISTD identity (figureType/name) always wins; only the per-step timeline is added. **Final catalog: 241 rows total; 184 carry step attributes** (119 net-new WDSF + 65 enriched ISTD overlaps); 57 ISTD-only figures with no WDSF match stay identity-only.
 
-Note: dedup is by `(dance, name)`, matching the existing generator key. A few net-new WDSF names share an ISTD `figureType` slug (e.g. `reverse-turn` in foxtrot) but have a distinct WDSF name (`"Reverse Turn"` vs ISTD `"Reverse Wave"`); these are correctly treated as new entries.
+Note: dedup uses a **diacritic-insensitive `(dance, name)`** key, so accent-twins (ISTD `"Chassé from PP"` / WDSF `"Chasse from PP"`, `"Hover Corté"` / `"Hover Corte"`) are recognized as the same figure — the ISTD accented name is kept and enriched, no duplicate row added. Figures that share a `figureType` slug but have genuinely different names (e.g. foxtrot `reverse-turn`: ISTD `"Reverse Wave"` vs WDSF `"Reverse Turn"`) are correctly kept as separate entries.
 
 ## Core logic: `parseWdsfTiming` (packages/domain, TDD)
 
