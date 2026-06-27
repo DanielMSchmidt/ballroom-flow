@@ -20,10 +20,16 @@ const wdsf = JSON.parse(
 );
 const DANCE_ORDER = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"];
 
+// Normalise a (dance, name) pair for dedup/enrichment lookup — strips diacritics
+// and lowercases so accent-twins (e.g. "Chassé" vs "Chasse") are treated as the
+// same figure. Used ONLY for map/set keys; emitted names keep the ISTD original.
+const normKey = (dance, name) =>
+  `${dance}::${name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase()}`;
+
 // Build a lookup of WDSF timing data by (dance, name).
 const wdsfByKey = new Map();
 for (const f of wdsf.figures) {
-  const key = `${f.dance}::${f.name}`;
+  const key = normKey(f.dance, f.name);
   wdsfByKey.set(key, f.wdsf ?? {});
 }
 
@@ -32,7 +38,7 @@ const rows = [];
 // ISTD first (system of record): identity fields from ISTD.
 // Enrich with WDSF timing/start/finish/notes when the WDSF seed has it.
 for (const f of istd.figures) {
-  const key = `${f.dance}::${f.name}`;
+  const key = normKey(f.dance, f.name);
   if (seen.has(key)) continue;
   seen.add(key);
   const w = wdsfByKey.get(key);
@@ -52,7 +58,7 @@ for (const f of istd.figures) {
 }
 // WDSF net-new: carry timing/start/finish/notes so library.ts can parse steps.
 for (const f of wdsf.figures) {
-  const key = `${f.dance}::${f.name}`;
+  const key = normKey(f.dance, f.name);
   if (seen.has(key)) continue;
   seen.add(key);
   rows.push({
@@ -122,5 +128,5 @@ ${body}
 const outPath = resolve(root, "packages/domain/src/library-data.ts");
 writeFileSync(outPath, out);
 // Normalise whitespace to satisfy Biome lint/format checks.
-execSync(`pnpm exec biome format --write ${outPath}`, { stdio: "inherit" });
+execSync(`pnpm exec biome format --write "${outPath}"`, { stdio: "inherit" });
 console.log(`wrote ${rows.length} figures to packages/domain/src/library-data.ts`);

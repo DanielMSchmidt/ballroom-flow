@@ -15,7 +15,7 @@ export interface LibraryFigureData {
   notes?: string[];
 }
 
-/** 247 canonical figures across the five Standard dances. */
+/** 241 canonical figures across the five Standard dances. */
 export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "waltz", figureType: "back-lock", name: "Back Lock" },
   {
@@ -65,13 +65,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "waltz",
     figureType: "chasse-from-pp",
-    name: "Chasse from PP",
+    name: "Chassé from PP",
     timing: "12&3",
     start: "RF fwd and across in CBMP (Promenade Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
     notes: [],
   },
-  { dance: "waltz", figureType: "chasse-from-pp", name: "Chassé from PP" },
   {
     dance: "waltz",
     figureType: "closed-change-on-lf",
@@ -175,7 +174,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "waltz",
     figureType: "hover-corte",
-    name: "Hover Corte",
+    name: "Hover Corté",
     timing: "123",
     start: "RF bwd and slightly to side (Closed Position)",
     finish: "Transfer weight to RF (Closed Position)",
@@ -184,7 +183,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - Couple Position: it may start in Promenade Position",
     ],
   },
-  { dance: "waltz", figureType: "hover-corte", name: "Hover Corté" },
   {
     dance: "waltz",
     figureType: "impetus",
@@ -323,7 +321,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "waltz",
     figureType: "progressive-chasse-to-r",
-    name: "Progressive Chasse to R",
+    name: "Progressive Chassé to R",
     timing: "12&3",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF to side and slightly bwd (Closed Position)",
@@ -331,7 +329,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE- Foot Placement/Couple Position: May start with LF fwd in CBMP in Wing Position.",
     ],
   },
-  { dance: "waltz", figureType: "progressive-chasse-to-r", name: "Progressive Chassé to R" },
   {
     dance: "waltz",
     figureType: "quick-open-reverse",
@@ -899,13 +896,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "quickstep",
     figureType: "cross-chasse",
-    name: "Cross Chasse",
+    name: "Cross Chassé",
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF closes to RF (Closed Position)",
     notes: [],
   },
-  { dance: "quickstep", figureType: "cross-chasse", name: "Cross Chassé" },
   {
     dance: "quickstep",
     figureType: "cross-swivel",
@@ -991,13 +987,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "quickstep",
     figureType: "hover-corte",
-    name: "Hover Corte",
+    name: "Hover Corté",
     timing: "SSS",
     start: "RF bwd (Closed Position)",
     finish: "transfer weight to RF (Closed Position)",
     notes: ["NOTE- Couple Position: may start in Promenade Position"],
   },
-  { dance: "quickstep", figureType: "hover-corte", name: "Hover Corté" },
   {
     dance: "quickstep",
     figureType: "impetus",
@@ -1140,13 +1135,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "quickstep",
     figureType: "progressive-chasse-to-r",
-    name: "Progressive Chasse to R",
+    name: "Progressive Chassé to R",
     timing: "SQQS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF to side and slightly Bwd (Closed Position)",
     notes: [],
   },
-  { dance: "quickstep", figureType: "progressive-chasse-to-r", name: "Progressive Chassé to R" },
   {
     dance: "quickstep",
     figureType: "quarter-turn-to-l",
