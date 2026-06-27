@@ -13,15 +13,30 @@ import {
   countOwnedRoutines,
   createOwnedRoutine,
   listRoutines,
+  listTemplates,
   searchReachable,
 } from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
 import { testSeed } from "./routes/test-seed";
+import { seedSampleRoutine } from "./sample";
 import { seedStarterRoutine } from "./starter";
 
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
 const FREE_ROUTINE_CAP = 3;
+
+// Module-level guard: seed the app-owned sample routine at most once per cold
+// start (the seed is idempotent, but why hit D1 every request?).
+let sampleSeeded = false;
+async function ensureSample(env: Env): Promise<void> {
+  if (sampleSeeded) return;
+  try {
+    await seedSampleRoutine(env);
+    sampleSeeded = true;
+  } catch (err) {
+    console.error("sample seed failed", err);
+  }
+}
 
 export type Env = {
   DB: D1Database;
@@ -436,6 +451,25 @@ app.get("/api/routines", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const routines = await listRoutines(c.env.DB, user.sub);
   return c.json({ routines });
+});
+
+// GET /api/templates — the app-owned start-from-template sources (US-045). Any
+// authenticated user may read them; templates are seeded lazily on first call
+// (ensureSample is idempotent). The response mirrors the RoutineListItem shape
+// with role:"viewer" (the caller can only read, not edit, app-owned templates).
+app.get("/api/templates", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  await ensureSample(c.env);
+  const rows = await listTemplates(c.env.DB);
+  const templates = rows.map((r) => ({
+    docRef: r.docRef,
+    title: r.title,
+    dance: r.dance,
+    role: "viewer" as const,
+    updatedAt: r.updatedAt,
+  }));
+  return c.json({ templates });
 });
 
 // GET /api/search — prefix search over the D1 index (US-046). Scoped to the

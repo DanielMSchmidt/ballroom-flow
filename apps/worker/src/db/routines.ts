@@ -134,6 +134,39 @@ export async function searchReachable(
   return rows.results;
 }
 
+/**
+ * App-owned sample/template routines (US-045). Indexed by document_registry_owner_idx
+ * (ownerId='app') — no SCAN. Returns the registry rows for all app-owned routines,
+ * which the `/api/templates` route exposes to authenticated users.
+ */
+export async function listTemplates(
+  db: D1Database,
+): Promise<{ docRef: string; title: string; dance: string; updatedAt: number }[]> {
+  const rows = await drizzle(db)
+    .select({
+      docRef: documentRegistry.docRef,
+      title: documentRegistry.title,
+      dance: documentRegistry.dance,
+      updatedAt: documentRegistry.updatedAt,
+    })
+    .from(documentRegistry)
+    .where(
+      and(
+        eq(documentRegistry.ownerId, "app"),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .orderBy(desc(documentRegistry.updatedAt))
+    .all();
+  return rows.map((r) => ({
+    docRef: r.docRef,
+    title: r.title ?? "Untitled routine",
+    dance: r.dance ?? "waltz",
+    updatedAt: r.updatedAt,
+  }));
+}
+
 export interface NewRoutine {
   docRef: string;
   ownerId: string;

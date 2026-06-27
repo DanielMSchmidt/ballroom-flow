@@ -21,7 +21,7 @@ it("health endpoint responds", async () => {
 // token AND be a member of the doc; the route forwards the Authorization header
 // and sets x-doc-name, then the DO authorizes.
 it("GET /docs/:id/connect upgrades to a websocket for an authorized member", async () => {
-  const docRef = "rt_sample";
+  const docRef = "rt_ws_test"; // distinct from "rt_sample" (reserved for the app-owned template fixture)
   const ctx = await authedContext({ keypair: kp, userId: "u_ed", docRef, role: "editor" });
   await seedDb({
     users: [{ id: "u_ed", displayName: "Ed", identityColor: "#111", plan: "free" }],
