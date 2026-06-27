@@ -6,7 +6,7 @@
 // section via a mergeable `deletedAt` flip.
 import type * as A from "@automerge/automerge";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
-import type { ReadOptions, RoutineDoc } from "./doc-types";
+import type { Anchor, AnnotationKind, ReadOptions, RoutineDoc } from "./doc-types";
 import { newId } from "./ids";
 
 /** Build an in-memory Automerge routine doc from its logical shape. */
@@ -28,7 +28,10 @@ export function readRoutine(doc: A.Doc<RoutineDoc>, opts?: ReadOptions): Routine
   return {
     ...plain,
     sections,
-    annotations: filterDeleted(plain.annotations, opts),
+    annotations: filterDeleted(plain.annotations, opts).map((annotation) => ({
+      ...annotation,
+      replies: filterDeleted(annotation.replies, opts),
+    })),
   };
 }
 
@@ -49,5 +52,79 @@ export function softDeleteSection(doc: A.Doc<RoutineDoc>, sectionId: string): A.
   return mutate(doc, (draft) => {
     const section = draft.sections.find((s) => s.id === sectionId);
     if (section) section.deletedAt = Date.now();
+  });
+}
+
+/**
+ * Add a routine-scoped annotation (US-039): a kinded note/lesson/practice
+ * anchored to a point or figure, visible to all members of the routine (it
+ * lives in the routine doc, so it syncs over the existing DO/WS path).
+ */
+export function addAnnotation(
+  doc: A.Doc<RoutineDoc>,
+  input: {
+    authorId: string;
+    kind: AnnotationKind;
+    text: string;
+    anchors: Anchor[];
+    tags?: string[];
+  },
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    draft.annotations.push({
+      id: newId(),
+      authorId: input.authorId,
+      kind: input.kind,
+      text: input.text,
+      tags: input.tags ?? [],
+      anchors: input.anchors,
+      replies: [],
+      createdAt: Date.now(),
+      deletedAt: null,
+    });
+  });
+}
+
+/** Append a reply to an annotation's ordered thread (US-039). */
+export function addReply(
+  doc: A.Doc<RoutineDoc>,
+  annotationId: string,
+  input: { authorId: string; text: string },
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    const annotation = draft.annotations.find((a) => a.id === annotationId);
+    if (annotation)
+      annotation.replies.push({
+        id: newId(),
+        authorId: input.authorId,
+        text: input.text,
+        createdAt: Date.now(),
+        deletedAt: null,
+      });
+  });
+}
+
+/** Soft-delete an annotation: tombstone flip, never a hard removal (US-039). */
+export function softDeleteAnnotation(
+  doc: A.Doc<RoutineDoc>,
+  annotationId: string,
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    const annotation = draft.annotations.find((a) => a.id === annotationId);
+    if (annotation) annotation.deletedAt = Date.now();
+  });
+}
+
+/** Soft-delete a reply: tombstone flip; delete is author-only (enforced in the UI). */
+export function softDeleteReply(
+  doc: A.Doc<RoutineDoc>,
+  annotationId: string,
+  replyId: string,
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    const reply = draft.annotations
+      .find((a) => a.id === annotationId)
+      ?.replies.find((r) => r.id === replyId);
+    if (reply) reply.deletedAt = Date.now();
   });
 }

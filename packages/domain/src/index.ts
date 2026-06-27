@@ -4,7 +4,16 @@
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta } from "./dances";
 export { buildFigureDoc, readFigure, softDeleteAttribute } from "./doc-figure";
 export { buildDoc } from "./doc-internal";
-export { addSection, buildRoutineDoc, readRoutine, softDeleteSection } from "./doc-routine";
+export {
+  addAnnotation,
+  addReply,
+  addSection,
+  buildRoutineDoc,
+  readRoutine,
+  softDeleteAnnotation,
+  softDeleteReply,
+  softDeleteSection,
+} from "./doc-routine";
 export type {
   Alignment,
   Anchor,
