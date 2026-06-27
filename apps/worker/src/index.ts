@@ -8,6 +8,7 @@ import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
+import { linkPlacement } from "./db/placement-edge";
 import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
@@ -205,9 +206,12 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId } = parsed.data;
 
   await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  // Record the routine→figure edge so the routine's co-members get read access to
+  // this figure (cascade): figure docs are otherwise shared independently (US-020).
+  await linkPlacement(c.env.DB, routineId, figureRef);
   // Server-seed the figure's CRDT content durably at create (#205), so the figure
   // name/attributes are DO-persisted before the client connects — no racy client
   // seed write that can be lost on a reload right after "Add figure".

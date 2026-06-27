@@ -7,6 +7,7 @@
 import type { EffectiveRole, MembershipRole } from "@ballroom/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { cascadeFigureRole } from "./placement-edge";
 import { documentRegistry, membership } from "./schema";
 
 /** The connecting user's active role on `docRef`, or null if not a member. */
@@ -53,7 +54,12 @@ export async function resolveEffectiveRole(
   const role = await roleFor(db, docRef, userId);
   if (role) return role;
   const owner = await ownerOf(db, docRef);
-  return owner !== null && owner === userId ? "owner" : null;
+  if (owner !== null && owner === userId) return "owner";
+  // Cascade (2026-06-27): a routine co-member gets VIEWER on the figures that
+  // routine references — so sharing a routine shares its figures (+ annotations,
+  // which already live in the routine doc). Inert for routine docs (a routineRef
+  // is never a figureRef in placement_edge), so this only ever ADDS figure reads.
+  return cascadeFigureRole(db, docRef, userId);
 }
 
 /** One member of a document (for the US-024 Share screen member list). */

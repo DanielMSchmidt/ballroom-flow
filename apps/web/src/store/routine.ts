@@ -113,6 +113,8 @@ export type CreateFigureFn = (figure: {
   name: string;
   dance: string;
   figureType: string;
+  /** The routine it's added to — records the cascade edge (co-members can read it). */
+  routineId: string;
 }) => Promise<void>;
 
 /** Injectable wiring so the seam is testable without a live worker. */
@@ -294,7 +296,7 @@ export async function openRoutine(
       // no racy client seed write that could be lost on an immediate reload. We
       // then just OPEN the figure connection so its (server-seeded) content
       // replays into the local store on catch-up.
-      createFigure({ figureRef, name, dance, figureType }).then(() => {
+      createFigure({ figureRef, name, dance, figureType, routineId }).then(() => {
         figureConn(figureRef);
       });
     },

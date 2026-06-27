@@ -49,7 +49,13 @@ describe("#187 figure-doc projection", () => {
     const res = await SELF.fetch("https://x/api/figures", {
       method: "POST",
       headers: { ...ctx.authHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({ figureRef, name: "Feather", dance: "foxtrot", figureType: "feather" }),
+      body: JSON.stringify({
+        figureRef,
+        name: "Feather",
+        dance: "foxtrot",
+        figureType: "feather",
+        routineId: "rt_test",
+      }),
     });
     expect(res.status).toBe(201);
 
@@ -90,7 +96,13 @@ describe("#187 figure-doc projection", () => {
     const res = await SELF.fetch("https://x/api/figures", {
       method: "POST",
       headers: { ...ctx.authHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({ figureRef, name: "Feather", dance: "foxtrot", figureType: "feather" }),
+      body: JSON.stringify({
+        figureRef,
+        name: "Feather",
+        dance: "foxtrot",
+        figureType: "feather",
+        routineId: "rt_test",
+      }),
     });
     expect(res.status).toBe(201);
 
@@ -126,6 +138,7 @@ describe("#187 figure-doc projection", () => {
         name: "Three Step",
         dance: "foxtrot",
         figureType: "three_step",
+        routineId: "rt_test",
       }),
     });
     const conn = await tryConnect(figureRef, stranger.authHeaders());
@@ -144,6 +157,7 @@ describe("#187 figure-doc projection", () => {
         name: "Reverse Wave",
         dance: "waltz",
         figureType: "reverse_wave",
+        routineId: "rt_test",
       }),
     });
     // The figure is NOT a routine: the routine list (and thus the quota count) excludes it.

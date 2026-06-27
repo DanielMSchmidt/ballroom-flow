@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace } from "./test-support/doc-do-api";
+import { expectIndexedQuery } from "./test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
 
@@ -319,6 +320,54 @@ describe("US-021 Permission boundary at the DO connection", () => {
         await inst.webSocketMessage(wsAs("viewer"), anno2.buffer as ArrayBuffer);
         expect(await inst.debugChangeRowCount()).toBe(rows2);
       },
+    );
+  });
+
+  it("cascades VIEWER on a referenced figure to a routine co-member (sharing a routine shares its figures)", async () => {
+    // Intent: a co-member of a routine can READ the figures it references, even
+    //   with NO direct figure membership — the placement_edge cascade. Decided
+    //   2026-06-27; figure docs are otherwise shared independently (US-020 AC-2).
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({ keypair: kp, userId: "u_co", docRef: figureRef, role: null });
+    await seedDb({
+      users: [{ id: "u_co", displayName: "Co", identityColor: "#555", plan: "free" }],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      // Member of the ROUTINE, not the figure — the edge cascades read access.
+      memberships: [{ id: "m_co_rt", docRef: routineRef, userId: "u_co", role: "commenter" }],
+      placementEdges: [{ routineRef, figureRef }],
+    });
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(101);
+  });
+
+  it("does NOT cascade figure access to a NON-member of the referencing routine", async () => {
+    const routineRef = uniqueDocName("rt");
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_out",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_out", displayName: "Out", identityColor: "#666", plan: "free" }],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
+      ],
+      placementEdges: [{ routineRef, figureRef }], // referenced, but u_out isn't a routine member
+    });
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
+  });
+
+  it("uses INDEXES for the figure-access cascade lookup (EXPLAIN, no SCAN)", async () => {
+    await expectIndexedQuery(
+      env.DB,
+      "SELECT 1 AS ok FROM placement_edge WHERE figureRef = ?1 AND routineRef IN (SELECT docRef FROM membership WHERE userId = ?2 AND deletedAt IS NULL) LIMIT 1",
+      ["fig_x", "u_x"],
     );
   });
 });
