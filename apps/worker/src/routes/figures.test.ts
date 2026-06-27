@@ -45,6 +45,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
         name: "Natural Turn",
         dance: "waltz",
         figureType: "natural-turn",
+        routineId: "rt_test",
         attributes: [
           {
             id: "wdsf-natural-turn-waltz-s1",
@@ -106,6 +107,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
         name: "X",
         dance: "waltz",
         figureType: "x",
+        routineId: "rt_test",
         attributes: [
           { id: "a1", kind: "step", count: 0.5, role: null, value: "x", deletedAt: null },
         ],
