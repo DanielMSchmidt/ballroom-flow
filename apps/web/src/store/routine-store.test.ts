@@ -264,6 +264,53 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("exposes annotation reads + mutations stamped with currentUserId (US-039)", async () => {
+    // Intent: the seam reads + creates/replies/deletes routine annotations, each
+    //   stamped with the open user's id. Annotations live in the routine doc, so
+    //   they ride the existing sync — the seam just exposes the verbs.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: "00bb00bb00bb00bb",
+    });
+    const seeded = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(seeded);
+
+    store.createAnnotation({
+      kind: "lesson",
+      text: "rise earlier",
+      anchors: [{ type: "figure", figureRef: "f1" }],
+    });
+    const created = store.readAnnotations();
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({ kind: "lesson", text: "rise earlier", authorId: "me" });
+
+    const id = created[0]?.id ?? "";
+    store.addReply(id, "try counting it");
+    expect(store.readAnnotations()[0]?.replies[0]).toMatchObject({
+      text: "try counting it",
+      authorId: "me",
+    });
+
+    const replyId = store.readAnnotations()[0]?.replies[0]?.id ?? "";
+    store.deleteReply(id, replyId);
+    expect(store.readAnnotations()[0]?.replies).toHaveLength(0);
+
+    store.deleteAnnotation(id);
+    expect(store.readAnnotations()).toHaveLength(0);
+    store.close();
+  });
+
   it("setFigureAttributes writes the timeline to the figure's own doc connection (US-028)", async () => {
     // Intent: the hero-flow mutation lands on the FIGURE doc (a separate DO), not
     //   the routine doc — and goes out as a change frame on that figure's socket.

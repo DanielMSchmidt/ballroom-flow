@@ -9,7 +9,12 @@
 import * as A from "@automerge/automerge";
 import {
   type Alignment,
+  type Anchor,
+  type Annotation,
+  type AnnotationKind,
   type Attribute,
+  addAnnotation,
+  addReply,
   addSection,
   type FigureDoc,
   newId,
@@ -18,6 +23,8 @@ import {
   readRoutine,
   redoLastChange,
   resolve,
+  softDeleteAnnotation,
+  softDeleteReply,
   softDeleteSection,
   undoLastChange,
 } from "@ballroom/domain";
@@ -71,6 +78,24 @@ export interface RoutineStore {
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
   /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
   setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
+  /** Routine-scoped annotations (US-039), tombstones dropped. */
+  readAnnotations(): Annotation[];
+  /**
+   * Create a note/lesson/practice anchored to a point or figure (US-039),
+   * stamped with the open user's id. Synced to all members via the routine doc.
+   */
+  createAnnotation(input: {
+    kind: AnnotationKind;
+    text: string;
+    anchors: Anchor[];
+    tags?: string[];
+  }): void;
+  /** Append a reply to an annotation's thread (US-039). */
+  addReply(annotationId: string, text: string): void;
+  /** Soft-delete an annotation (US-039). */
+  deleteAnnotation(annotationId: string): void;
+  /** Soft-delete a reply — author-only is enforced in the UI (US-039). */
+  deleteReply(annotationId: string, replyId: string): void;
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -98,6 +123,8 @@ export interface OpenOptions {
   openSocket?: SocketFactory;
   /** Per-tab Automerge actor id, so undo is per-user (US-010 / #70). */
   actor?: string;
+  /** The open user's id, stamped as `authorId` on annotations they create (US-039). */
+  currentUserId?: string;
   /** Project a new figure to D1 before opening it (default: POST /api/figures). */
   createFigure?: CreateFigureFn;
   /** Resolve a fresh Clerk token at each connection-open (#189), attached to the
@@ -149,6 +176,7 @@ export async function openRoutine(
   // nothing. Default one when the caller omits it (the screen does), so per-user
   // undo works out of the box — and two tabs/users get distinct actors.
   const actor = opts.actor ?? randomActorId();
+  const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
   // Default figure projection: POST /api/figures (authenticated with a fresh
   // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
@@ -311,6 +339,31 @@ export async function openRoutine(
         if (alignment) draft[key] = alignment;
         else delete draft[key];
       });
+    },
+
+    readAnnotations: () => readRoutineSafe().annotations,
+
+    createAnnotation: (input) => {
+      // Annotations live in the routine doc → they sync to all members for free
+      // (US-039 AC-3). The "annotation"-intent envelope that lets a commenter
+      // write this while refusing their structural edits lands in Task 4 (#117).
+      routineConn.commit(
+        addAnnotation(routineConn.current(), { authorId: currentUserId, ...input }),
+      );
+    },
+
+    addReply: (annotationId, text) => {
+      routineConn.commit(
+        addReply(routineConn.current(), annotationId, { authorId: currentUserId, text }),
+      );
+    },
+
+    deleteAnnotation: (annotationId) => {
+      routineConn.commit(softDeleteAnnotation(routineConn.current(), annotationId));
+    },
+
+    deleteReply: (annotationId, replyId) => {
+      routineConn.commit(softDeleteReply(routineConn.current(), annotationId, replyId));
     },
 
     undo: () => routineConn.commit(undoLastChange(routineConn.current(), actor ?? "local")),
