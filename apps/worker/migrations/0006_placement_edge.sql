@@ -5,11 +5,14 @@
 -- shared routine's figures.
 --
 -- This thin edge index records "routine R references figure F" — written when a
--- figure is added to a routine. Figure-doc authorization derives a VIEWER role
--- for any user who is a member of a routine that references the figure (read-time
--- cascade, so it's order-independent: works whether the figure or the member was
--- added first). It never escalates edit rights — editing a figure still needs
--- direct figure ownership (or a future copy-on-write).
+-- figure is added to a routine. Figure-doc authorization derives a role for any
+-- member of a routine that references the figure (read-time cascade, so it's
+-- order-independent: works whether the figure or the member was added first): a
+-- routine EDITOR may EDIT the referenced figure; a commenter/viewer gets a
+-- read-only VIEWER. The cascade never grants `owner` (no figure delete), and is
+-- inert for routine docs (a routineRef is never a figureRef here) — so it only
+-- ever ADDS figure access, never escalates a routine role or affects a routine's
+-- own boundary. See cascadeFigureRole in db/placement-edge.ts.
 
 CREATE TABLE IF NOT EXISTS placement_edge (
   routineRef TEXT NOT NULL,

@@ -231,12 +231,14 @@ app.post("/api/figures", async (c) => {
 });
 
 // GET /api/routines/:id/family-notes — the co-member family-note read (US-041,
-// option 2). A figure-FAMILY note's content lives in its author's account doc;
-// this surfaces the THIN index rows for notes authored by THIS routine's members
-// that apply to its dance, so the client can show a co-member's "every Feather"
-// note on the matching figure. The co-membership gate is the security boundary:
-// a NON-member is refused (403) and never reaches another account's data (AC-3/4);
-// only the thin index projection is returned — never a wholesale account browse.
+// option 2). Surfaces the family notes authored by THIS routine's members that
+// apply to its dance, so the client can show a co-member's "every Feather" note
+// on the matching figure. In v1 a note's content lives in the figure_type_note_
+// index row (server-mediated; see migration 0005), so this returns it directly —
+// the client never reads another user's account doc. The co-membership gate is
+// the security boundary: a NON-member is refused (403) before any note is read
+// (AC-3/4). The query is keyed by members(R) + dance scope; the client then
+// matches each note to the figures actually in R (resolveFamilyNotesFor).
 app.get("/api/routines/:id/family-notes", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);

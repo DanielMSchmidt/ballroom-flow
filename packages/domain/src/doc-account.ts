@@ -2,9 +2,17 @@
 //
 // A `figureType` note is account-scoped (owned by one user) and anchored to a
 // figure FAMILY rather than a specific figure doc, so it surfaces on every figure
-// of that family across the user's routines. The account doc holds these notes;
-// `resolveFamilyNotesFor` maps a set of figures to the family notes that apply to
-// each, using the pure identity match in `figuretype.ts`.
+// of that family across the user's routines. `resolveFamilyNotesFor` maps a set of
+// figures to the family notes that apply to each, using the pure identity match in
+// `figuretype.ts` — and IS the live runtime path: the worker returns family-note
+// rows, the store hands them here to match against the routine's figures.
+//
+// STORAGE NOTE: in v1 a family note's content lives in the worker's D1 index row
+// (figure_type_note_index; server-mediated — single-author reference data, no
+// concurrent edit). This account-doc CRDT (buildAccountDoc + the addFamilyNote/
+// addAccountReply/softDelete… mutators) is built + tested as the intended home if
+// family notes ever need offline/concurrent edit, but is NOT yet wired into a DO.
+// It is kept deliberately so that migration is a store-seam swap, not a rebuild.
 //
 // Whether ANOTHER user may see one of these notes (the option-2 co-membership
 // gate) is the worker's concern (US-041), never this module's.

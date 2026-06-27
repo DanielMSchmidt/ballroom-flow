@@ -156,13 +156,16 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
 
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {
     // Intent: the co-member family-note discovery query is indexed (NFR).
-    // Arrange: the lookup SQL (notes by members(R) matching the figures in R).
-    // Act: expectIndexedQuery. Assert: no SCAN.
+    // Arrange: the EXACT SQL the route runs — familyNotesForMembers filters by
+    //   `authorId IN (members(R))` + dance scope (NOT by figureType; the client
+    //   matches families post-hoc via resolveFamilyNotesFor). The test must mirror
+    //   the runtime query, or it proves an index for a path the code never takes.
+    // Act: expectIndexedQuery. Assert: no SCAN (uses idx_ftni_author on authorId).
     // Covers the §10.2 EXPLAIN coverage for this cross-account read path.
     await expectIndexedQuery(
       env.DB,
-      "SELECT accountDocRef, authorId, figureType, danceScope FROM figure_type_note_index WHERE figureType = ?1 AND (danceScope = ?2 OR danceScope = 'all') AND authorId IN (SELECT userId FROM membership WHERE docRef = ?3 AND deletedAt IS NULL)",
-      ["feather", "foxtrot", "rt"],
+      "SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text FROM figure_type_note_index WHERE deletedAt IS NULL AND (danceScope = ? OR danceScope = 'all') AND authorId IN (?, ?)",
+      ["foxtrot", "coach", "student"],
     );
   });
 });
