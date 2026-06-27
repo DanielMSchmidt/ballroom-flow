@@ -6,11 +6,17 @@
 // role for an open routine is resolved from their list (owner → editor); a
 // freshly-created or not-yet-listed routine opens optimistically as editor and
 // the server boundary stays the real gate.
+//
+// US-045/US-046: on mount, fetch templates + wire header search + fork.
+import type { RoutineListItem, SearchResult } from "@ballroom/contract";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
 import { useMe } from "../store/me";
 import { isQuotaError, useCreateRoutine, useForkRoutine, useRoutines } from "../store/routines";
+import { search } from "../store/search";
+import { forkTemplate, listTemplates } from "../store/templates";
 import { AccessDenied, Button, Spinner } from "../ui";
 import { Assemble, type MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
@@ -27,6 +33,9 @@ function roleForOpen(
   return "editor";
 }
 
+/** Debounce delay (ms) for the header search (US-046). */
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React.JSX.Element {
   const routinesQ = useRoutines();
   const me = useMe();
@@ -38,6 +47,57 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // rather than a connectivity-looking offline flash (DP #20).
   const access = useDocAccess(openRoutineId ?? "", { enabled: Boolean(openRoutineId) });
 
+  // US-045: template list (app-owned sample routines).
+  const [templates, setTemplates] = useState<RoutineListItem[]>([]);
+  // US-046: search results (empty until the user types).
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  // Debounce timer ref — cleared on each keystroke, fired after the delay.
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch templates once on mount (US-045).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const token = await getToken();
+      const list = await listTemplates(token).catch(() => ({ templates: [] }));
+      if (!cancelled) setTemplates(list.templates);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
+
+  // Debounced search handler (US-046).
+  const onSearch = useCallback(
+    (q: string) => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+      if (!q.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      searchTimer.current = setTimeout(() => {
+        void (async () => {
+          const token = await getToken();
+          const res = await search(token, q).catch(() => ({ results: [] }));
+          setSearchResults(res.results);
+        })();
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [getToken],
+  );
+
+  // Fork a template into a new owned routine and navigate there (US-045).
+  const onStartFromTemplate = useCallback(
+    (docRef: string) => {
+      void (async () => {
+        const token = await getToken();
+        const res = await forkTemplate(token, docRef);
+        navigate(`/routines/${res.docRef}`);
+      })();
+    },
+    [getToken],
+  );
+
   const items = routinesQ.data?.routines ?? [];
   const ownedCount = items.filter((r) => r.role === "owner").length;
   const plan = me.data?.plan ?? "free";
@@ -47,6 +107,9 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // A create blocked by the server quota (402) — surface the upsell even if the
   // instant gate was bypassed (e.g. another tab consumed the last slot).
   const quotaBlocked = isQuotaError(create.error);
+
+  // US-045: the sample is the first template (app currently publishes one).
+  const sample = templates[0];
 
   if (openRoutineId) {
     return (
@@ -101,6 +164,11 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         create.mutate(input, { onSuccess: (res) => navigate(`/routines/${res.docRef}`) })
       }
       onOpen={(docRef) => navigate(`/routines/${docRef}`)}
+      sample={sample}
+      templates={templates}
+      onStartFromTemplate={onStartFromTemplate}
+      onSearch={onSearch}
+      searchResults={searchResults}
     />
   );
 }

@@ -71,24 +71,60 @@ describe("US-025 Create a routine (UI)", () => {
 // `assemble.test.tsx` (describe "US-037 Choreo fork"). Frozen-independence is the
 // E2E test (`fork-and-figures.spec.ts`); the server endpoint is `fork.test.ts`.
 
-describe.skip("US-045 Sample routine + start-from-template", () => {
+describe("US-045 Sample routine + start-from-template", () => {
   it("shows the read-only sample + a template in the empty state", async () => {
     // Intent: an empty Choreo list offers the sample + a start-from-template option.
-    // Arrange: render <ChoreoList> with zero owned routines.
+    // Arrange: render <ChoreoList> with zero owned routines + a sample + templates.
     // Act/Assert: the read-only sample appears; a "start from template" action exists.
     // Covers US-045 AC-1 (sample in empty state) + AC-2 (start-from-template).
     const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
-    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    const sample = {
+      docRef: "rt_sample",
+      title: "Sample Foxtrot",
+      dance: "foxtrot",
+      role: "viewer",
+      updatedAt: 1,
+    };
+    renderUi(<ChoreoList ownedCount={0} plan="free" sample={sample} templates={[sample]} />);
     expect(screen.getByText(/sample/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /start from template/i })).toBeInTheDocument();
   });
 
   it("prevents editing the read-only sample", async () => {
     // Intent: the sample is read-only (cannot be edited in place).
-    // Arrange: open the sample from the list. Act/Assert: no edit affordances on it.
+    // Arrange: render <ChoreoList> with a sample in the empty state.
+    // Act/Assert: "Read-only sample" badge is present (no edit affordances).
     // Covers US-045 AC-3 (sample cannot be edited).
     const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
-    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    const sample = {
+      docRef: "rt_sample",
+      title: "Sample Foxtrot",
+      dance: "foxtrot",
+      role: "viewer",
+      updatedAt: 1,
+    };
+    renderUi(<ChoreoList ownedCount={0} plan="free" sample={sample} />);
     expect(screen.getByText(/read-only|sample/i)).toBeInTheDocument();
+  });
+});
+
+describe("US-046 Header search", () => {
+  it("calls onSearch as the user types in the header searchbox", async () => {
+    // Intent: the header search box calls onSearch on each keystroke.
+    // Covers US-046 AC-1 (search input wired to handler).
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    const onSearch = vi.fn();
+    renderUi(
+      <ChoreoList
+        ownedCount={1}
+        plan="free"
+        onSearch={onSearch}
+        routines={[
+          { docRef: "r1", title: "My Foxtrot", dance: "foxtrot", role: "owner", updatedAt: 1 },
+        ]}
+      />,
+    );
+    await userEvent.type(screen.getByRole("searchbox", { name: /search/i }), "Fox");
+    expect(onSearch).toHaveBeenCalled();
   });
 });
