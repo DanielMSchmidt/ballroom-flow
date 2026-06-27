@@ -23,7 +23,7 @@ interface AnchorPickerModule {
   AnchorPicker: ComponentType<Record<string, unknown>>;
 }
 
-describe.skip("US-039 Unified annotations: point + figure anchors", () => {
+describe("US-039 Unified annotations: point + figure anchors", () => {
   it("lets a commenter create a note/lesson/practice anchored to a point or a figure", async () => {
     // Intent: a commenter+ creates a kinded annotation anchored to a point or figure.
     // Arrange: render <AnnotationPanel role="commenter">. Act: choose kind=lesson,
@@ -62,7 +62,7 @@ describe.skip("US-039 Unified annotations: point + figure anchors", () => {
   });
 });
 
-describe.skip("US-040 figureType annotations (this-dance / all-dances)", () => {
+describe("US-040 figureType annotations (this-dance / all-dances)", () => {
   it("offers this-step / this-figure / this-figure-family with a dance-scope toggle", async () => {
     // Intent: the anchor picker offers a figure-FAMILY anchor with this-dance | all-dances.
     // Arrange: render <AnchorPicker> for a figure in a family.
@@ -79,7 +79,7 @@ describe.skip("US-040 figureType annotations (this-dance / all-dances)", () => {
   });
 });
 
-describe.skip("US-042 Annotation filters (all / lessons / practice / by figure)", () => {
+describe("US-042 Annotation filters (all / lessons / practice / by figure)", () => {
   it("shares one annotation set between timeline and journal and filters by kind + figure", async () => {
     // Intent: one annotation concept; filter by kind and by figure (client-side).
     // Arrange: render <AnnotationPanel> with a note, a lesson, and a practice on two figures.
