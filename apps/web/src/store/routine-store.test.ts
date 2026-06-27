@@ -147,6 +147,37 @@ describe("#187 figure projection on addPlacement", () => {
   });
 });
 
+describe("#205 addPlacement forwards library figure attributes to createFigure", () => {
+  it("forwards a library figure's attributes to createFigure on pick", async () => {
+    const { opts } = fakeWiring();
+    const seen: Array<{ figureType: string; attributes?: unknown[] }> = [];
+    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const store = await openRoutine("rt_sample", { ...opts, createFigure });
+    // "natural-turn" in waltz is a WDSF-enriched figure carrying 6 attributes.
+    // The default routine dance is "waltz" (from emptyRoutine), so this matches.
+    store.addPlacement("s1", "Natural Turn", "natural-turn");
+
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect(seen[0]!.figureType).toBe("natural-turn");
+    expect((seen[0]!.attributes ?? []).length).toBe(6);
+  });
+
+  it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {
+    const { opts } = fakeWiring();
+    const seen: Array<{ attributes?: unknown[] }> = [];
+    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const store = await openRoutine("rt_sample", { ...opts, createFigure });
+    store.addPlacement("s1", "My Move"); // no figureType → custom
+    expect((seen[0]!.attributes ?? []).length).toBe(0);
+  });
+});
+
 describe("US-017 store/ seam (multi-doc)", () => {
   it("loads a routine doc + each referenced figure doc and resolves variant overlays", async () => {
     // Intent: opening a routine fans out to the routine DO + each referenced
