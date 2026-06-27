@@ -28,14 +28,17 @@ import { seedStarterRoutine } from "./starter";
 /** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
 const FREE_ROUTINE_CAP = 3;
 
-// Module-level guard: seed the app-owned sample routine at most once per cold
-// start (the seed is idempotent, but why hit D1 every request?).
-let sampleSeeded = false;
+// Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
+// state (not a stale module boolean). A cheap indexed existence check (ownerId
+// ='app' via owner_idx) short-circuits in prod once the row persists, and
+// re-seeds if the row is ever gone (e.g. the E2E /api/test/reset wipes D1 — a
+// boolean guard would leave templates permanently empty after a reset).
+// seedSampleRoutine is idempotent, so a concurrent re-seed race is safe.
 async function ensureSample(env: Env): Promise<void> {
-  if (sampleSeeded) return;
   try {
+    const existing = await listTemplates(env.DB);
+    if (existing.length > 0) return;
     await seedSampleRoutine(env);
-    sampleSeeded = true;
   } catch (err) {
     console.error("sample seed failed", err);
   }

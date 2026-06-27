@@ -78,4 +78,34 @@ describe("US-045 templates", () => {
     const section = forkSnap.sections?.[0] as { placements?: unknown[] } | undefined;
     expect(section?.placements?.length).toBe(6);
   }, 15_000);
+
+  it("re-seeds the template after a D1 reset wipes it (self-healing ensureSample)", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_tpl3", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_tpl3", displayName: "U3", identityColor: "#333", plan: "free" }],
+    });
+
+    // First call seeds the app template.
+    const first = await SELF.fetch("https://x/api/templates", { headers: ctx.authHeaders() });
+    expect(first.status).toBe(200);
+    const firstBody = await first.json<{ templates: unknown[] }>();
+    expect(firstBody.templates.length).toBeGreaterThan(0);
+
+    // Simulate /api/test/reset: wipe the app-owned template rows from D1 the way
+    // resetDb does (DELETE FROM document_registry). A stale module boolean would
+    // leave the next GET permanently empty; the self-healing guard re-seeds.
+    await env.DB.prepare("DELETE FROM document_registry WHERE ownerId = 'app'").run();
+    // Confirm the wipe (read D1 directly, NOT via the API — a GET would re-seed).
+    const remaining = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = 'app' AND type = 'routine'",
+    ).first<{ n: number }>();
+    expect(remaining?.n).toBe(0);
+
+    // Next GET must RE-SEED (self-healing), not short-circuit on a stale guard.
+    const reSeeded = await SELF.fetch("https://x/api/templates", { headers: ctx.authHeaders() });
+    expect(reSeeded.status).toBe(200);
+    const body = await reSeeded.json<{ templates: Array<{ title: string; dance: string }> }>();
+    expect(body.templates.length).toBeGreaterThan(0);
+    expect(body.templates[0]).toMatchObject({ title: "Golden Waltz Basic", dance: "waltz" });
+  });
 });
