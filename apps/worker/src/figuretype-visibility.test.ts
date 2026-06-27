@@ -25,8 +25,13 @@ beforeAll(async () => {
 });
 
 /** Seed: coach authors a "feather/all" family note; coach+student co-own a
- *  Foxtrot routine referencing a Feather; stranger is NOT a member. */
+ *  Foxtrot routine referencing a Feather; stranger is NOT a member.
+ *  Seeds ONCE — D1 is shared across the run (isolatedStorage:false), so the
+ *  fixed doNames would collide if each test re-seeded them. */
+let scenarioSeeded = false;
 async function seedCoMembershipScenario() {
+  if (scenarioSeeded) return;
+  scenarioSeeded = true;
   await seedDb({
     users: [
       { id: "coach", displayName: "Coach", identityColor: "#c0563f", plan: "free" },
@@ -49,13 +54,22 @@ async function seedCoMembershipScenario() {
       { id: "m_coach", docRef: "rt", userId: "coach", role: "editor" },
       { id: "m_student", docRef: "rt", userId: "student", role: "commenter" },
     ],
+    // The thin FigureTypeNoteIndex row {accountDocRef, authorId, figureType,
+    // danceScope} = {acct_coach, coach, feather, all}. The note CONTENT stays in
+    // the coach's account doc; only this projection is queried cross-account.
+    familyNotes: [
+      {
+        noteId: "n_feather",
+        accountDocRef: "acct_coach",
+        authorId: "coach",
+        figureType: "feather",
+        danceScope: "all",
+      },
+    ],
   });
-  // M6 also writes a FigureTypeNoteIndex row {accountDocRef, authorId, figureType,
-  // danceScope} = {acct_coach, coach, feather, all}; the test seeds it once that
-  // table exists. The note CONTENT stays in the coach's account doc.
 }
 
-describe.skip("US-041 Co-member visibility of family notes (option 2)", () => {
+describe("US-041 Co-member visibility of family notes (option 2)", () => {
   it("surfaces a co-member's family note on a shared routine's matching figure", async () => {
     // Intent: the student (a co-member) sees the coach's "every Feather" note on the
     //   Feather in their shared routine.

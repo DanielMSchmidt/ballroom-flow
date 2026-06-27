@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
@@ -223,6 +224,34 @@ app.post("/api/figures", async (c) => {
     deletedAt: null,
   });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
+});
+
+// GET /api/routines/:id/family-notes — the co-member family-note read (US-041,
+// option 2). A figure-FAMILY note's content lives in its author's account doc;
+// this surfaces the THIN index rows for notes authored by THIS routine's members
+// that apply to its dance, so the client can show a co-member's "every Feather"
+// note on the matching figure. The co-membership gate is the security boundary:
+// a NON-member is refused (403) and never reaches another account's data (AC-3/4);
+// only the thin index projection is returned — never a wholesale account browse.
+app.get("/api/routines/:id/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+
+  // Gate on co-membership of the routine: a non-member resolves to null → 403.
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  // The routine's dance scopes which family notes apply (its dance, or "all").
+  const reg = await c.env.DB.prepare("SELECT dance FROM document_registry WHERE docRef = ?")
+    .bind(routineRef)
+    .first<{ dance: string | null }>();
+  const dance = reg?.dance ?? "waltz";
+
+  const members = await listMembers(c.env.DB, routineRef);
+  const authorIds = members.map((m) => m.userId);
+  const notes = await familyNotesForMembers(c.env.DB, authorIds, dance);
+  return c.json({ notes });
 });
 
 // POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only
