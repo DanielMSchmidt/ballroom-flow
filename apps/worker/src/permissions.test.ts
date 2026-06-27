@@ -282,4 +282,43 @@ describe("US-021 Permission boundary at the DO connection", () => {
       },
     );
   });
+
+  it("admits a commenter's annotation write but drops their structural write (US-039/#117)", async () => {
+    // Intent: a commenter (canAnnotate, !canEdit) may add an annotation over the
+    //   socket but NOT a structural edit. The DO classifies by EFFECT — a change
+    //   that touches only `annotations` is an annotation; anything else is
+    //   structural — so the client can't bypass the gate by mislabelling a frame.
+    //   Covers US-039 AC-4 (commenter+ annotates; viewer can't).
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_co", displayName: "Co", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(
+      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (inst) => {
+        const wsAs = (role: string) =>
+          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+
+        // A commenter's ANNOTATION change → applied.
+        const anno = await inst.buildChangeForTest({ op: "addAnnotation", text: "rise earlier" });
+        const rows0 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter"), anno.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+
+        // A commenter's STRUCTURAL change → dropped (touches sections, not just annotations).
+        const struct = await inst.buildChangeForTest({ op: "addSection", name: "Sneaky" });
+        const rows1 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter"), struct.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows1);
+
+        // A viewer's annotation change → dropped (viewer can't annotate).
+        const anno2 = await inst.buildChangeForTest({ op: "addAnnotation", text: "no" });
+        const rows2 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("viewer"), anno2.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows2);
+      },
+    );
+  });
 });
