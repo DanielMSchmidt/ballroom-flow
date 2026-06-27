@@ -404,7 +404,18 @@ export async function openRoutine(
     if (!figure) return null;
     if (figure.baseFigureRef && figure.overlay) {
       const base = readFigureDoc(figureConn(figure.baseFigureRef).current());
-      if (base) return resolve(base, figure.overlay);
+      if (base) {
+        // resolve() returns the BASE's identity by contract (overlay.ts) — stamp
+        // the variant's own identity back so re-points/edits target the variant doc.
+        return {
+          ...resolve(base, figure.overlay),
+          id: figure.id,
+          scope: figure.scope,
+          ownerId: figure.ownerId,
+          source: figure.source,
+          baseFigureRef: figure.baseFigureRef,
+        };
+      }
     }
     return figure;
   }

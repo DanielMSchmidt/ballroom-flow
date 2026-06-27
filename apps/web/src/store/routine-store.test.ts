@@ -249,6 +249,11 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // (resolve keeps base identity + variant name — the hybrid-identity contract.)
     expect(resolved[0]?.figure?.attributes.find((x) => x.id === "a1")?.value).toBe("rise");
     expect(resolved[0]?.figure?.name).toBe("My Turn");
+    // The resolved variant must carry the VARIANT's identity, not the base's
+    // (resolve() returns base identity by contract — the store stamps it back).
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === "fv");
+    expect(rp?.figure?.id).toBe("fv");
+    expect(rp?.figure?.baseFigureRef).toBe("fbase");
     store.close();
   });
 
