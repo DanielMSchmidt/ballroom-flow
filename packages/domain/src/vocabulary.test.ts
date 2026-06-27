@@ -170,3 +170,32 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(merged.rise.builtin).toBe(true); // builtins intact
   });
 });
+
+describe("US-043 custom kind slug helpers", () => {
+  it("slugifies a label to a safe kind id", async () => {
+    const { slugifyKind } = await import("./vocabulary");
+    expect(slugifyKind("Energy Level!")).toBe("energy_level");
+    expect(slugifyKind("  Foot  Pressure ")).toBe("foot_pressure");
+  });
+  it("flags builtin slugs as reserved", async () => {
+    const { isReservedKind } = await import("./vocabulary");
+    expect(isReservedKind("step")).toBe(true);
+    expect(isReservedKind("rise")).toBe(true);
+    expect(isReservedKind("energy")).toBe(false);
+  });
+  it("mergeRegistry ignores a custom kind colliding with a builtin", async () => {
+    const { mergeRegistry, ATTRIBUTE_REGISTRY } = await import("./vocabulary");
+    const merged = mergeRegistry(ATTRIBUTE_REGISTRY, [
+      {
+        kind: "rise",
+        label: "Hacked",
+        color: "#000",
+        cardinality: "single",
+        valueType: "enum",
+        values: [],
+        builtin: false,
+      },
+    ]);
+    expect(merged.rise.label).toBe("Rise & Fall"); // builtin wins
+  });
+});

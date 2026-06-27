@@ -167,3 +167,16 @@ export function mergeRegistry(
   }
   return merged;
 }
+
+/** Lowercase, collapse non-alphanumerics to `_`, trim `_` — a safe kind slug. */
+export function slugifyKind(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/** True when `slug` collides with a builtin kind (reserved — builtins win). */
+export function isReservedKind(slug: string): boolean {
+  return ATTRIBUTE_REGISTRY[slug]?.builtin === true;
+}

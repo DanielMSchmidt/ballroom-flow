@@ -68,9 +68,11 @@ export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timi
 export { redoLastChange, undoLastChange } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,
+  isReservedKind,
   mergeRegistry,
   normalizeValue,
   type RegistryKind,
   type StandardRegistry,
+  slugifyKind,
 } from "./vocabulary";
 export { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";
