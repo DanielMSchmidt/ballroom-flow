@@ -272,7 +272,7 @@ describe("US-030 Timeline role-view toggle", () => {
   });
 });
 
-describe.skip("US-044 Lanes (one kind across all counts)", () => {
+describe("US-044 Lanes (one kind across all counts)", () => {
   it("shows a single kind across every count and edits the same attributes as the timeline", async () => {
     // Intent: a lane lays out one kind across all counts; edits mirror the timeline.
     // Arrange: render <Lanes kind="sway"> for a figure with sway on counts 1 and 3.
@@ -280,8 +280,29 @@ describe.skip("US-044 Lanes (one kind across all counts)", () => {
     // Assert: a cell per count; editing updates the underlying attribute (onChange).
     // Covers US-044 AC-1 (one kind across counts) + AC-2 (same attributes).
     const { Lanes } = await importComponent<LanesModule>("../components/Lanes");
-    renderUi(<Lanes kind="sway" role="editor" />);
-    expect(screen.getAllByRole("gridcell").length).toBeGreaterThan(0);
+    const onChange = vi.fn();
+    const sway = (c: number, v: string): Attribute => ({
+      id: `sway-${c}`,
+      kind: "sway",
+      count: c,
+      value: v,
+      role: null,
+      deletedAt: null,
+    });
+    renderUi(
+      <Lanes
+        kind="sway"
+        role="editor"
+        counts={3}
+        dance="foxtrot"
+        attributes={[sway(1, "to_L"), sway(3, "to_R")]}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getAllByRole("gridcell").length).toBe(3);
+    await userEvent.click(screen.getByRole("button", { name: /count 2/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^to_R$/i }));
+    expect(onChange).toHaveBeenCalled();
   });
 
   it("honors the role-view toggle in the lane", async () => {
@@ -290,7 +311,27 @@ describe.skip("US-044 Lanes (one kind across all counts)", () => {
     // Act: flip to follower. Assert: the follower-only cell appears after the flip.
     // Covers US-044 AC-3 (lanes honor role toggle).
     const { Lanes } = await importComponent<LanesModule>("../components/Lanes");
-    renderUi(<Lanes kind="sway" role="editor" initialView="leader" />);
+    const follower: Attribute = {
+      id: "sway-2-f",
+      kind: "sway",
+      count: 2,
+      value: "to_R",
+      role: "follower",
+      deletedAt: null,
+    };
+    renderUi(
+      <Lanes
+        kind="sway"
+        role="editor"
+        counts={3}
+        dance="foxtrot"
+        initialView="leader"
+        attributes={[follower]}
+      />,
+    );
     expect(screen.getByRole("grid")).toBeInTheDocument();
+    expect(screen.queryByText("to_R")).toBeNull(); // hidden in leader view
+    await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
+    expect(screen.getByText("to_R")).toBeInTheDocument(); // shown in follower view
   });
 });
