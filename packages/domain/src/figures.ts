@@ -74,15 +74,26 @@ export interface LibraryFigure {
   dance: DanceId;
   name: string;
   level?: FigureLevel;
+  /**
+   * Footwork was derived from web research / standard ISTD conventions rather than confirmed
+   * against the official WDSF/ISTD technique books — accurate enough to start from, but worth
+   * a dancer's check. Confirmed figures (corroborated across multiple sources) omit this.
+   */
+  provisional?: boolean;
   entryAlignment?: Alignment | null;
   exitAlignment?: Alignment | null;
   leaderSteps: Step[];
   followerSteps: Step[];
 }
 
-/** True when the figure has verified charts (so adding it pre-fills the technique). */
+/** True when the figure has charts (so adding it pre-fills the technique). */
 export function isCharted(figure: LibraryFigure): boolean {
   return figure.leaderSteps.length > 0 || figure.followerSteps.length > 0;
+}
+
+/** Charted but not yet verified against the official technique books. */
+export function isProvisional(figure: LibraryFigure): boolean {
+  return isCharted(figure) && figure.provisional === true;
 }
 
 /** A figure as it lives inside a routine. `libraryFigureId === null` = composed from scratch. */
@@ -110,11 +121,17 @@ function chart(rows: ReadonlyArray<readonly [string, string, number]>): Step[] {
 
 // --- charted figures ------------------------------------------------------------------
 //
-// Figures with verified both-role footwork. Footwork follows ISTD/IDTA standard technique:
+// Figures with both-role footwork. The footwork model follows ISTD/IDTA standard technique:
 // forward walks = Heel-Toe (HT); back walks = Toe-Heel (TH); the closing/lowering step of a
-// figure = TH; a step taken "up" = Toe (T); the follower's heel turn = TH, HT, TH. The rest
-// of the syllabus is listed by name in catalog.ts (see STANDARD_CATALOG) and merged into
-// LIBRARY_FIGURES below as un-charted entries — never with invented footwork.
+// figure = TH; a step taken "up" = Toe (T); the follower's heel turn = TH, HT, TH.
+//
+// Entries WITHOUT `provisional` are corroborated across multiple sources (the original core).
+// Entries WITH `provisional: true` are research-derived (leader corroborated; follower from
+// the conventions above) and want a check against the official technique books — they are
+// accurate enough to start from, never authoritative. The rest of the syllabus is listed by
+// name in catalog.ts (STANDARD_CATALOG) and merged below as un-charted entries; figures whose
+// footwork can't be sourced reliably (Tango's edge/flat notation, heel-pull / pivot / lock
+// actions in Foxtrot & Quickstep) stay stubs rather than carry invented charts.
 
 const CHARTED_FIGURES: readonly LibraryFigure[] = [
   {
@@ -188,6 +205,7 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     dance: "waltz",
     name: "Closed Change (Reverse to Natural)",
     level: "bronze",
+    provisional: true,
     entryAlignment: f("backing", "DW"),
     exitAlignment: f("facing", "DW"),
     // Mirror of the Natural-to-Reverse change (opposite feet, same footwork).
@@ -207,6 +225,7 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     dance: "waltz",
     name: "Whisk",
     level: "bronze",
+    provisional: true,
     entryAlignment: f("facing", "DW"),
     exitAlignment: f("facing", "DW"),
     leaderSteps: chart([
@@ -225,6 +244,7 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     dance: "waltz",
     name: "Closed Impetus",
     level: "bronze",
+    provisional: true,
     entryAlignment: f("backing", "LOD"),
     exitAlignment: f("facing", "DC_against"),
     // Leader makes the heel turn (TH, HT, TH); follower moves around in three walks.
@@ -244,6 +264,7 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     dance: "waltz",
     name: "Outside Change",
     level: "bronze",
+    provisional: true,
     entryAlignment: f("backing", "DC"),
     exitAlignment: f("facing", "DW"),
     leaderSteps: chart([
@@ -262,6 +283,7 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     dance: "waltz",
     name: "Chasse from Promenade Position",
     level: "bronze",
+    provisional: true,
     entryAlignment: f("facing", "DW"),
     exitAlignment: f("facing", "DW"),
     // Chassé timing 1 2 & 3 — the third step is the quick close on the "&".
@@ -317,6 +339,99 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
       { action: "LF back", foot: "TH", timing: { beat: 3, value: "Q" } },
       { action: "RF back", foot: "T", timing: { beat: 4, value: "Q" } },
     ],
+  },
+
+  // --- Viennese Waltz (provisional) ---------------------------------------------------
+  // A fast rotary waltz: footwork follows the Waltz pattern (HT / T / TH) but with the
+  // reduced rise of Viennese — the closing steps are taken more "flat" (F). Charted from
+  // that convention, not yet book-checked.
+  {
+    id: "viennese_waltz.natural_turn",
+    dance: "viennese_waltz",
+    name: "Natural Turn",
+    level: "bronze",
+    provisional: true,
+    entryAlignment: f("facing", "DC"),
+    exitAlignment: f("facing", "DC"),
+    leaderSteps: chart([
+      ["RF forward", "HT", 1],
+      ["LF to side", "T", 2],
+      ["RF closes to LF", "F", 3],
+      ["LF back", "TH", 4],
+      ["RF to side", "T", 5],
+      ["LF closes to RF", "F", 6],
+    ]),
+    followerSteps: chart([
+      ["LF back", "TH", 1],
+      ["RF to side", "T", 2],
+      ["LF closes to RF", "F", 3],
+      ["RF forward", "HT", 4],
+      ["LF to side", "T", 5],
+      ["RF closes to LF", "F", 6],
+    ]),
+  },
+  {
+    id: "viennese_waltz.reverse_turn",
+    dance: "viennese_waltz",
+    name: "Reverse Turn",
+    level: "bronze",
+    provisional: true,
+    entryAlignment: f("facing", "DW"),
+    exitAlignment: f("facing", "DW"),
+    leaderSteps: chart([
+      ["LF forward", "HT", 1],
+      ["RF to side", "T", 2],
+      ["LF closes to RF", "F", 3],
+      ["RF back", "TH", 4],
+      ["LF to side", "T", 5],
+      ["RF closes to LF", "F", 6],
+    ]),
+    followerSteps: chart([
+      ["RF back", "TH", 1],
+      ["LF to side", "T", 2],
+      ["RF closes to LF", "F", 3],
+      ["LF forward", "HT", 4],
+      ["RF to side", "T", 5],
+      ["LF closes to RF", "F", 6],
+    ]),
+  },
+  {
+    id: "viennese_waltz.forward_change_natural_to_reverse",
+    dance: "viennese_waltz",
+    name: "Forward Change (Natural to Reverse)",
+    level: "bronze",
+    provisional: true,
+    entryAlignment: f("facing", "DC"),
+    exitAlignment: f("facing", "DW"),
+    leaderSteps: chart([
+      ["RF forward", "HT", 1],
+      ["LF to side", "T", 2],
+      ["RF closes to LF", "F", 3],
+    ]),
+    followerSteps: chart([
+      ["LF back", "TH", 1],
+      ["RF to side", "T", 2],
+      ["LF closes to RF", "F", 3],
+    ]),
+  },
+  {
+    id: "viennese_waltz.forward_change_reverse_to_natural",
+    dance: "viennese_waltz",
+    name: "Forward Change (Reverse to Natural)",
+    level: "bronze",
+    provisional: true,
+    entryAlignment: f("facing", "DW"),
+    exitAlignment: f("facing", "DC"),
+    leaderSteps: chart([
+      ["LF forward", "HT", 1],
+      ["RF to side", "T", 2],
+      ["LF closes to RF", "F", 3],
+    ]),
+    followerSteps: chart([
+      ["RF back", "TH", 1],
+      ["LF to side", "T", 2],
+      ["RF closes to LF", "F", 3],
+    ]),
   },
 ] as const;
 

@@ -5,6 +5,7 @@ import {
   getLibraryFigure,
   instantiateFigure,
   isCharted,
+  isProvisional,
   LIBRARY_FIGURES,
   libraryFiguresForDance,
 } from "./figures";
@@ -59,6 +60,22 @@ describe("library data quality", () => {
   it("ids are unique", () => {
     const ids = LIBRARY_FIGURES.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("provisional figures are charted; the corroborated core is not provisional", () => {
+    for (const fig of LIBRARY_FIGURES.filter(isProvisional)) {
+      expect(isCharted(fig), fig.id).toBe(true);
+    }
+    // The five hand-verified core figures must never be flagged provisional.
+    for (const id of [
+      "waltz.natural_turn",
+      "waltz.reverse_turn",
+      "waltz.closed_change",
+      "foxtrot.feather_step",
+      "foxtrot.three_step",
+    ]) {
+      expect(getLibraryFigure(id)?.provisional, id).toBeFalsy();
+    }
   });
 
   it("a charted figure suppresses its name-matched catalogue stub (no duplicate)", () => {
