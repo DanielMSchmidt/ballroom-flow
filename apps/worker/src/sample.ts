@@ -80,10 +80,13 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
       .onConflictDoNothing(),
   ]);
 
-  // Seed the routine DO with the full CRDT content (no-clobber).
+  // Seed the routine DO with the full CRDT content (no-clobber). `templateOf`
+  // is stamped on the doc so a CRDT reader can detect template provenance (D1
+  // still flags templates by ownerId='app'; this keeps the doc self-describing).
   await env.DOC_DO.get(env.DOC_DO.idFromName(routine.id)).seedDoc({
     ...routine,
     ownerId: APP_OWNER,
+    templateOf: routine.id,
     schemaVersion: 1,
     deletedAt: null,
   } as unknown as Record<string, unknown>);

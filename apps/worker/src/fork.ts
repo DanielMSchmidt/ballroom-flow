@@ -14,6 +14,8 @@ export interface ForkSuccess {
   title: string;
   dance: string;
   forkedFromRef: string;
+  /** The forker's plan — returned so the route needn't re-query it for the response. */
+  plan: string;
 }
 
 export interface ForkUpsell {
@@ -36,11 +38,14 @@ export async function forkRoutineFor(
   env: Env,
   { originRef, userId, skipQuota }: { originRef: string; userId: string; skipQuota?: boolean },
 ): Promise<ForkSuccess | ForkUpsell> {
+  // Resolve the forker's plan once (used for the quota gate AND returned to the
+  // caller for its response body, so the route needn't query it again).
+  const db = drizzle(env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).get();
+  const plan = me?.plan ?? "free";
+
   // Quota gate (unless caller explicitly bypasses for gifting).
   if (!skipQuota) {
-    const db = drizzle(env.DB);
-    const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).get();
-    const plan = me?.plan ?? "free";
     const owned = await countOwnedRoutines(env.DB, userId);
     if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
       return { upsell: true, cap: FREE_ROUTINE_CAP, owned, plan };
@@ -72,5 +77,5 @@ export async function forkRoutineFor(
     deletedAt: null,
   });
 
-  return { docRef, title, dance, forkedFromRef: originRef };
+  return { docRef, title, dance, forkedFromRef: originRef, plan };
 }

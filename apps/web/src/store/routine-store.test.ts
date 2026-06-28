@@ -669,6 +669,9 @@ describe("US-043 createCustomKind (routine CRDT + account REST) + customKinds()"
       builtin: false,
     });
     expect(store.customKinds().some((k) => k.kind === "rise")).toBe(false);
+    // The reserved slug is also NOT embedded into the routine doc (the guard
+    // fires before the CRDT write, not just at the merged-read layer).
+    expect(store.readRoutine().customKinds?.some((k) => k.kind === "rise") ?? false).toBe(false);
     expect(saveCustomKind).not.toHaveBeenCalled();
     store.close();
   });

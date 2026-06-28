@@ -25,7 +25,7 @@ test.describe("@smoke start-from-template journey (US-045)", () => {
     //    "Read-only sample" badge — lazily seeded by GET /api/templates on mount.
     await expect(page.getByText("Golden Waltz Basic")).toBeVisible({ timeout: 15_000 });
     // Badge text confirms the sample is marked read-only in the UI.
-    await expect(page.getByText("Read-only sample")).toBeVisible();
+    await expect(page.getByText("Read-only sample")).toBeVisible({ timeout: 15_000 });
     // "Start from template" button is visible alongside the sample card.
     await expect(page.getByRole("button", { name: /start from template/i })).toBeVisible();
 

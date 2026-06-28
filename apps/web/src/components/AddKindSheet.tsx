@@ -29,7 +29,9 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
   const [cardinality, setCardinality] = useState<"single" | "multi">("single");
   const [valueType, setValueType] = useState("enum");
   const [values, setValues] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Error is field-scoped so it renders on the input it refers to (the label vs
+  // the values field) and clears when that input changes.
+  const [error, setError] = useState<{ field: "label" | "values"; msg: string } | null>(null);
 
   // useCallback keeps handleClose stable across renders — Sheet's useOverlay
   // re-runs its focus effect when onClose changes identity, so an unstable arrow
@@ -50,7 +52,7 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
 
     const trimmedLabel = label.trim();
     if (!trimmedLabel) {
-      setError("Label is required");
+      setError({ field: "label", msg: "Label is required" });
       return;
     }
 
@@ -59,11 +61,11 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
     // check above but slugify strips non-alphanumeric chars → empty slug, which
     // would create a kind with an empty `kind` key (invalid). Block it early.
     if (!slug) {
-      setError("Enter a valid name");
+      setError({ field: "label", msg: "Enter a valid name" });
       return;
     }
     if (isReservedKind(slug)) {
-      setError("That name is reserved");
+      setError({ field: "label", msg: "That name is reserved" });
       return;
     }
 
@@ -73,7 +75,7 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
       .filter(Boolean);
 
     if (valueType === "enum" && parsedValues.length === 0) {
-      setError("At least one value is required for enum kinds");
+      setError({ field: "values", msg: "At least one value is required for enum kinds" });
       return;
     }
 
@@ -104,7 +106,7 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
           }}
           maxLength={80}
           required
-          error={error ?? undefined}
+          error={error?.field === "label" ? error.msg : undefined}
         />
         <Input
           label="Color"
@@ -128,8 +130,12 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
           label="Values"
           placeholder="e.g. low, medium, high"
           value={values}
-          onChange={(e) => setValues(e.target.value)}
+          onChange={(e) => {
+            setValues(e.target.value);
+            setError(null);
+          }}
           hint="Comma-separated list (used for enum kinds)"
+          error={error?.field === "values" ? error.msg : undefined}
         />
         <Button type="submit" variant="primary">
           Create

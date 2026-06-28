@@ -15,6 +15,11 @@ beforeAll(async () => {
 });
 
 describe("US-045 templates", () => {
+  it("rejects an unauthenticated GET /api/templates with 401", async () => {
+    const res = await SELF.fetch("https://x/api/templates");
+    expect(res.status).toBe(401);
+  });
+
   it("lists the app-owned Golden Waltz Basic template", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_tpl1", docRef: "n/a", role: null });
     await seedDb({

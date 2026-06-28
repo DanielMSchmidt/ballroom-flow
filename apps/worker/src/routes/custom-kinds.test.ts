@@ -43,6 +43,8 @@ describe("US-043 account custom-kind persistence", () => {
       body: JSON.stringify(sampleKind),
     });
     expect(post.status).toBe(201);
+    // The 201 echoes the created kind (the contract the client persists against).
+    expect(await post.json()).toMatchObject({ kind: "energy", label: "Energy", builtin: false });
 
     const get = await SELF.fetch("https://x/api/account/custom-kinds", {
       headers: ctx.authHeaders(),

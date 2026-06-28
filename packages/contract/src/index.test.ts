@@ -54,6 +54,19 @@ it("US-046 shapes search results", () => {
   expect(ok.success).toBe(true);
 });
 
+it("US-046 search result accepts a null dance (nullable, not optional)", () => {
+  // dance is .nullable() — a global figure may project a null dance, but the
+  // field must always be PRESENT. Lock both: null is accepted, omission is not.
+  const withNull = zSearchResults.safeParse({
+    results: [{ docRef: "f1", type: "global-figure", title: "Feather", dance: null }],
+  });
+  expect(withNull.success).toBe(true);
+  const omitted = zSearchResults.safeParse({
+    results: [{ docRef: "f1", type: "global-figure", title: "Feather" }],
+  });
+  expect(omitted.success).toBe(false);
+});
+
 it("US-045 shapes the template list", () => {
   const ok = zTemplateList.safeParse({
     templates: [{ docRef: "t1", title: "Sample", dance: "foxtrot", role: "viewer", updatedAt: 1 }],

@@ -480,7 +480,10 @@ export function Assemble({
       </Sheet>
 
       {/* Add a custom attribute kind (US-043): editor-only; persisted in the
-          routine doc and across all routines via accountKinds (US-043 AC-2). */}
+          routine doc and across all routines via accountKinds (US-043 AC-2).
+          NOTE: rendered AFTER the notation Sheet on purpose — both use the same
+          overlay z-index, so DOM source order decides stacking; this Sheet must
+          stay below the notation Sheet here to layer on top of it when open. */}
       <AddKindSheet
         open={addKindOpen}
         onClose={() => setAddKindOpen(false)}

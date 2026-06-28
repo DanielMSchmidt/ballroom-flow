@@ -4,17 +4,17 @@
 // Create EAGER-projects the registry row (+ the owner membership row) so the
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
 
-/**
- * Free-plan owned-routine cap — the ONE authoritative source. Imported by
- * fork.ts and index.ts so the constant is never duplicated (#176).
- */
-export const FREE_ROUTINE_CAP = 3;
-
 import type { RoutineListItem } from "@ballroom/contract";
 import type { DanceId } from "@ballroom/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { documentRegistry, membership } from "./schema";
+
+/**
+ * Free-plan owned-routine cap — the ONE authoritative source. Imported by
+ * fork.ts and index.ts so the constant is never duplicated (#176).
+ */
+export const FREE_ROUTINE_CAP = 3;
 
 /**
  * How many routines the user OWNS (not shared-in): the quota count. Counts
