@@ -43,37 +43,38 @@ describe("parseWdsfTiming", () => {
   });
 });
 
-describe("buildWdsfAttributes", () => {
-  const natural = buildWdsfAttributes({
-    figureType: "natural-turn",
+describe("buildWdsfAttributes — un-charted scaffold (no authored content)", () => {
+  // `hesitation-change` has no figure-steps.ts entry, so the scaffold path runs.
+  const scaffold = buildWdsfAttributes({
+    figureType: "hesitation-change",
     dance: "waltz",
     timing: "123 123",
     start: "RF fwd (Closed Position)",
     finish: "LF closes to RF",
   });
 
-  it("emits one step attribute per parsed count with deterministic ids", () => {
-    expect(natural).toHaveLength(6);
-    expect(natural.map((a) => a.id)).toEqual([
-      "wdsf-natural-turn-waltz-s1",
-      "wdsf-natural-turn-waltz-s2",
-      "wdsf-natural-turn-waltz-s3",
-      "wdsf-natural-turn-waltz-s4",
-      "wdsf-natural-turn-waltz-s5",
-      "wdsf-natural-turn-waltz-s6",
+  it("emits one footwork attribute per parsed count with deterministic ids", () => {
+    expect(scaffold).toHaveLength(6);
+    expect(scaffold.map((a) => a.id)).toEqual([
+      "wdsf-hesitation-change-waltz-s1",
+      "wdsf-hesitation-change-waltz-s2",
+      "wdsf-hesitation-change-waltz-s3",
+      "wdsf-hesitation-change-waltz-s4",
+      "wdsf-hesitation-change-waltz-s5",
+      "wdsf-hesitation-change-waltz-s6",
     ]);
-    expect(natural.every((a) => a.kind === "footwork")).toBe(true);
-    expect(natural.map((a) => a.count)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(scaffold.every((a) => a.kind === "footwork")).toBe(true);
+    expect(scaffold.map((a) => a.count)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it("puts start on step 1, finish on the last step, blanks between", () => {
-    expect(natural[0]?.value).toBe("RF fwd (Closed Position)");
-    expect(natural[5]?.value).toBe("LF closes to RF");
-    expect(natural.slice(1, 5).every((a) => a.value === "")).toBe(true);
+    expect(scaffold[0]?.value).toBe("RF fwd (Closed Position)");
+    expect(scaffold[5]?.value).toBe("LF closes to RF");
+    expect(scaffold.slice(1, 5).every((a) => a.value === "")).toBe(true);
   });
 
   it("produces only attributes the strict write schema accepts", () => {
-    for (const a of natural) {
+    for (const a of scaffold) {
       expect(() => parseAttributeWrite(a, { dance: "waltz" })).not.toThrow();
     }
   });
@@ -88,5 +89,46 @@ describe("buildWdsfAttributes", () => {
     });
     expect(one).toHaveLength(1);
     expect(one[0]?.value).toBe("LF fwd"); // start wins the lone step
+  });
+});
+
+describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
+  const natural = buildWdsfAttributes({
+    figureType: "natural-turn",
+    dance: "waltz",
+    timing: "123 123",
+    start: "RF fwd (Closed Position)",
+    finish: "LF closes to RF",
+  });
+
+  it("emits a direction + footwork attribute per role for each of the 6 counts", () => {
+    expect(natural).toHaveLength(6 * 2 * 2); // 6 counts × 2 roles × {direction, footwork}
+    expect(natural.map((a) => a.count)).toEqual(
+      [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3].concat([4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6]),
+    );
+    expect(new Set(natural.map((a) => a.kind))).toEqual(new Set(["direction", "footwork"]));
+    expect(new Set(natural.map((a) => a.role))).toEqual(new Set(["leader", "follower"]));
+  });
+
+  it("the leader's count-1 step is a forward Heel-Toe, the follower's is a back Toe-Heel", () => {
+    const at1 = (role: string, kind: string) =>
+      natural.find((a) => a.count === 1 && a.role === role && a.kind === kind)?.value;
+    expect(at1("leader", "direction")).toBe("forward");
+    expect(at1("leader", "footwork")).toBe("HT");
+    expect(at1("follower", "direction")).toBe("back");
+    expect(at1("follower", "footwork")).toBe("TH");
+  });
+
+  it("captures the follower's heel turn on count 2 (close, Heel-Toe)", () => {
+    const f2 = (kind: string) =>
+      natural.find((a) => a.count === 2 && a.role === "follower" && a.kind === kind)?.value;
+    expect(f2("direction")).toBe("close");
+    expect(f2("footwork")).toBe("HT");
+  });
+
+  it("every authored attribute passes the strict write schema", () => {
+    for (const a of natural) {
+      expect(() => parseAttributeWrite(a, { dance: "waltz" })).not.toThrow();
+    }
   });
 });
