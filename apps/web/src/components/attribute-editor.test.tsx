@@ -53,7 +53,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     );
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /count 2/i }));
+    await userEvent.click(screen.getByRole("button", { name: /beat 2/i }));
     await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
@@ -255,8 +255,9 @@ describe("US-030 Timeline role-view toggle", () => {
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
-    await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
-    expect(screen.getByRole("button", { name: /leader|follower/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
+    // The flip control now names the follower lens (the view switched).
+    expect(screen.getByRole("button", { name: /flip/i })).toHaveTextContent(/follower/i);
   });
 
   it("always shows both-role (role=null) attributes regardless of the toggle", async () => {
@@ -269,7 +270,7 @@ describe("US-030 Timeline role-view toggle", () => {
     );
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
     expect(screen.getByText(/both-role/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
     expect(screen.getByText(/both-role/i)).toBeInTheDocument();
   });
 
@@ -284,7 +285,7 @@ describe("US-030 Timeline role-view toggle", () => {
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
     expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
     expect(screen.queryByText(/follower-only/i)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
     expect(screen.queryByText(/leader-only/i)).toBeNull();
     expect(screen.getByText(/follower-only/i)).toBeInTheDocument();
   });
@@ -349,7 +350,7 @@ describe("US-044 Lanes (one kind across all counts)", () => {
     );
     expect(screen.getByRole("grid")).toBeInTheDocument();
     expect(screen.queryByText("to_R")).toBeNull(); // hidden in leader view
-    await userEvent.click(screen.getByRole("button", { name: /flip role|follower/i }));
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
     expect(screen.getByText("to_R")).toBeInTheDocument(); // shown in follower view
   });
 });

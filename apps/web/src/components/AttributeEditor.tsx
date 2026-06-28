@@ -36,6 +36,9 @@ export interface AttributeEditorProps {
   value?: Attribute[];
   /** User-defined kinds to merge into the registry (US-043). */
   customKinds?: RegistryKind[];
+  /** Start with the technique section ("More attributes") expanded — set when
+   *  opened from a ghost add-chip for a non-identity kind. */
+  defaultExpanded?: boolean;
   /** Emits the next attribute set for this count after an edit. */
   onChange?: (next: Attribute[]) => void;
 }
@@ -55,10 +58,11 @@ export function AttributeEditor({
   view = null,
   value = [],
   customKinds = [],
+  defaultExpanded = false,
   onChange,
 }: AttributeEditorProps) {
   const editable = role === "editor";
-  const [showMore, setShowMore] = useState(false);
+  const [showMore, setShowMore] = useState(defaultExpanded);
   const live = value.filter((a) => a.deletedAt == null);
   const selected = (kind: string, v: string): boolean =>
     live.some((a) => a.kind === kind && normalizeValue(kind, String(a.value)) === v);
