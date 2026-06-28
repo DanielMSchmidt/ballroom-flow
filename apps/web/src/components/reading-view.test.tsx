@@ -73,8 +73,8 @@ describe("RoutineReadingView — columnar reading table (.pen parity)", () => {
     for (const code of ["Ri", "Bo", "Fw", "Sw", "Tn"]) {
       expect(screen.getByText(code)).toBeInTheDocument();
     }
-    // Step headline derives the foot (steps alternate; leader starts right).
-    expect(screen.getByText("RF forward")).toBeInTheDocument();
+    // Step headline is the direction (no foot — that was a design mistake).
+    expect(screen.getByText("forward")).toBeInTheDocument();
     // Values render as tight column codes, not raw enum strings.
     expect(screen.getByText("com")).toBeInTheDocument(); // rise: commence
     expect(screen.getByText("¼R")).toBeInTheDocument(); // turn: quarter_R

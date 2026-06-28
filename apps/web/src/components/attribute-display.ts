@@ -8,7 +8,6 @@
 // headline ("RF forward"); foot (L/R) is not modelled — steps alternate feet
 // automatically (see vocabulary.ts) — so it's derived from the step's order.
 import type { AttributeKind } from "../ui/tokens";
-import type { RoleView } from "./role-view";
 
 /** A technique column in the reading table / editor header (design order). */
 export interface AttrColumn {
@@ -110,19 +109,10 @@ export function humanizeDirection(value: unknown): string {
   return DIRECTION_LABEL[raw] ?? raw.replace(/_/g, " ");
 }
 
-/** The foot for the step at `index` (0-based, in count order). Foot is not
- *  modelled (steps alternate); the leader starts on the right, the follower
- *  mirrors. */
-export function stepFoot(index: number, view: RoleView): "RF" | "LF" {
-  const leaderRight = index % 2 === 0;
-  const right = view === "follower" ? !leaderRight : leaderRight;
-  return right ? "RF" : "LF";
-}
-
-/** The step headline: "<foot> <direction>" (e.g. "RF forward"). With no
- *  direction it's just the foot. */
-export function stepAction(index: number, view: RoleView, direction: unknown | undefined): string {
-  const foot = stepFoot(index, view);
-  if (direction == null || direction === "") return foot;
-  return `${foot} ${humanizeDirection(direction)}`;
+/** The step headline — the (humanized) direction, e.g. "forward". An em dash
+ *  when the step has no direction yet. (Foot is intentionally NOT shown: it
+ *  isn't modelled and the design's "RF/LF" prefix was a mistake.) */
+export function stepAction(direction: unknown | undefined): string {
+  if (direction == null || direction === "") return "—";
+  return humanizeDirection(direction);
 }

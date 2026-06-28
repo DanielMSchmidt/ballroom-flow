@@ -51,13 +51,13 @@ describe("FigureTimeline — dance-aware bars & beats", () => {
     expect(screen.getAllByLabelText(/^bar \d/i)).toHaveLength(4);
   });
 
-  it("renders a step's direction as a foot + direction headline", async () => {
+  it("renders a step's direction as its headline", async () => {
     const { FigureTimeline } = await load();
     renderUi(
       <FigureTimeline role="editor" dance="waltz" attributes={[attr("direction", "forward", 1)]} />,
     );
     const headline = screen.getByTestId("step-headline-1");
-    expect(headline).toHaveTextContent(/RF forward/i);
+    expect(headline).toHaveTextContent(/^forward$/i);
   });
 });
 
@@ -74,7 +74,7 @@ describe("FigureTimeline — step-summary card + derived duration", () => {
     );
     await userEvent.click(screen.getByTestId("step-headline-1"));
     const summary = screen.getByTestId("step-summary");
-    expect(summary).toHaveTextContent(/RF forward/i); // the headline
+    expect(summary).toHaveTextContent(/forward/i); // the direction headline
     expect(summary).toHaveTextContent(/½ beat/i); // derived from the gap to 1.5
   });
 });

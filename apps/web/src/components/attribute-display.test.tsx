@@ -5,7 +5,6 @@ import {
   COLUMN_KINDS,
   humanizeDirection,
   stepAction,
-  stepFoot,
 } from "./attribute-display";
 
 describe("attribute-display — columns", () => {
@@ -53,16 +52,10 @@ describe("attribute-display — step headline", () => {
     expect(humanizeDirection("side")).toBe("side");
   });
 
-  it("alternates feet from the right for the leader, mirrored for the follower", () => {
-    expect(stepFoot(0, "leader")).toBe("RF");
-    expect(stepFoot(1, "leader")).toBe("LF");
-    expect(stepFoot(0, "follower")).toBe("LF");
-    expect(stepFoot(1, "follower")).toBe("RF");
-  });
-
-  it("builds a foot + direction headline, foot-only when no direction", () => {
-    expect(stepAction(0, "leader", "forward")).toBe("RF forward");
-    expect(stepAction(1, "leader", "side")).toBe("LF side");
-    expect(stepAction(2, "leader", undefined)).toBe("RF");
+  it("uses the direction as the headline, with an em dash when none is set", () => {
+    expect(stepAction("forward")).toBe("forward");
+    expect(stepAction("diag_forward")).toBe("diag fwd");
+    expect(stepAction(undefined)).toBe("—");
+    expect(stepAction("")).toBe("—");
   });
 });

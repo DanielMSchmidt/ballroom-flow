@@ -3,10 +3,10 @@
 // frame — a dance-aware BAR / BEAT layout of step cards rather than a flat strip.
 //
 // Each whole beat is a lane: a beat-tick on the left, then the step card(s) that
-// start in that beat. A step card shows its headline ("RF forward" — foot is not
-// stored; steps alternate feet, see vocabulary.ts), a duration pill that can be
-// dragged / arrowed to resize the step (snapped to the grid), and a lane of the
-// step's attribute chips with ghost "+ kind" add-chips for what's still empty.
+// start in that beat. A step card shows its headline (the direction, e.g.
+// "forward"), a duration pill that can be dragged / arrowed to resize the step
+// (snapped to the grid), and a lane of the step's attribute chips with ghost
+// "+ kind" add-chips for what's still empty.
 // Tapping a card/chip opens the per-count AttributeEditor (registry-driven,
 // US-003); editing is editor-only.
 //
@@ -270,13 +270,11 @@ export function FigureTimeline({
                         <StepCard
                           key={c}
                           count={c}
-                          orderIndex={placedCounts.indexOf(c)}
                           isLast={placedCounts.indexOf(c) === placedCounts.length - 1}
                           duration={stepDuration(c, placedCounts)}
                           attrs={filterByRoleView(byCount.get(c) ?? [], view)}
                           laneKinds={laneKinds}
                           editable={editable}
-                          view={view}
                           selected={openCount === c}
                           snap={snap}
                           onOpen={(expanded) => open(c, expanded)}
@@ -306,7 +304,6 @@ export function FigureTimeline({
           {(() => {
             const here = filterByRoleView(byCount.get(openCount) ?? [], view);
             const direction = here.find((a) => a.kind === "direction");
-            const orderIndex = placedCounts.indexOf(openCount);
             const slots = here.filter((a) => a.kind !== "direction");
             return (
               <div
@@ -316,13 +313,7 @@ export function FigureTimeline({
                 <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold text-ink">
                   {countLabel(openCount)}
                 </span>
-                <span className="text-2xs font-bold text-ink">
-                  {stepAction(
-                    orderIndex < 0 ? placedCounts.length : orderIndex,
-                    view,
-                    direction?.value,
-                  )}
-                </span>
+                <span className="text-2xs font-bold text-ink">{stepAction(direction?.value)}</span>
                 <span className="text-2xs text-ink-muted">
                   {durationLabel(stepDuration(openCount, placedCounts))}
                 </span>
@@ -365,13 +356,11 @@ function tokenForTone(tone: AttributeKind | "neutral", role: "base" | "ink" | "t
 
 interface StepCardProps {
   count: number;
-  orderIndex: number;
   isLast: boolean;
   duration: number;
   attrs: Attribute[];
   laneKinds: RegistryKind[];
   editable: boolean;
-  view: RoleView;
   selected: boolean;
   snap: SnapValue;
   onOpen: (expanded: boolean) => void;
@@ -381,13 +370,11 @@ interface StepCardProps {
 /** One step: headline + duration (resizable) + an attribute-chip lane. */
 function StepCard({
   count,
-  orderIndex,
   isLast,
   duration,
   attrs,
   laneKinds,
   editable,
-  view,
   selected,
   snap,
   onOpen,
@@ -408,7 +395,7 @@ function StepCard({
           onClick={() => onOpen(false)}
           className="min-w-0 flex-1 cursor-pointer truncate text-left text-xs font-bold text-ink"
         >
-          {stepAction(orderIndex, view, direction?.value)}
+          {stepAction(direction?.value)}
         </button>
         <DurationPill
           count={count}

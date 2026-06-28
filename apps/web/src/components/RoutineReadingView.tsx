@@ -1,7 +1,8 @@
 // Reading / timeline view (PLAN §4.3 "reading view", the .pen AssembleReading).
 // A read-only layout of the WHOLE routine. Each section is a labelled divider;
-// each figure is a compact TABLE: a count + step headline ("RF forward") on the
-// left, then five fixed technique columns (Rise · Body · Footwork · Sway · Turn)
+// each figure is a compact TABLE: a count + step headline (the direction, e.g.
+// "forward") on the left, then five technique columns (Rise · Body · Footwork ·
+// Sway · Turn)
 // where a placed attribute shows as a tight color-coded code and an empty slot
 // shows a small dot. Pure presentation over the same store reads; no editing.
 import { type Attribute, countLabel, type FigureDoc, type RoutineDoc } from "@ballroom/domain";
@@ -9,11 +10,7 @@ import type { ResolvedPlacement } from "../store/routine";
 import { kindVar, ScopeBadge } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { ATTR_COLUMNS, abbrevValue, COLUMN_KINDS, stepAction } from "./attribute-display";
-import { chipTone, type RoleView } from "./role-view";
-
-/** Read-side foot derivation uses the leader lens (the reading view has no role
- *  toggle; foot is cosmetic and mirrors per role elsewhere). */
-const READ_VIEW: RoleView = "leader";
+import { chipTone } from "./role-view";
 
 export function RoutineReadingView({
   routine,
@@ -83,8 +80,8 @@ function FigureReadout({ figure }: { figure: FigureDoc | null }) {
         <>
           <ColumnHeader />
           <ol className="flex flex-col gap-[6px]" aria-label={`${figure.name} steps`}>
-            {counts.map((count, i) => (
-              <StepRow key={count} index={i} count={count} attrs={live} />
+            {counts.map((count) => (
+              <StepRow key={count} count={count} attrs={live} />
             ))}
           </ol>
         </>
@@ -115,7 +112,7 @@ function ColumnHeader() {
 }
 
 /** One step row: count + headline (+ extra chips) + the five technique cells. */
-function StepRow({ index, count, attrs }: { index: number; count: number; attrs: Attribute[] }) {
+function StepRow({ count, attrs }: { count: number; attrs: Attribute[] }) {
   const here = attrs.filter((a) => a.count === count);
   const direction = here.find((a) => a.kind === "direction")?.value;
   // Kinds without a column (body actions, custom, legacy "step") ride along with
@@ -130,9 +127,7 @@ function StepRow({ index, count, attrs }: { index: number; count: number; attrs:
         {countLabel(count)}
       </span>
       <span className="flex min-w-0 flex-1 items-center gap-[5px]">
-        <span className="truncate text-[11px] font-bold text-ink">
-          {stepAction(index, READ_VIEW, direction)}
-        </span>
+        <span className="truncate text-[11px] font-bold text-ink">{stepAction(direction)}</span>
         {extras.map((a) => (
           <MiniChip key={a.id} kind={a.kind} value={a.value} />
         ))}
