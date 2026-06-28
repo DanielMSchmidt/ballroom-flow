@@ -60,9 +60,12 @@
   --color-accent-border: var(--bf-accent-border);
 
   /* attribute kinds */
-  --color-kind-step: var(--bf-kind-step);
-  --color-kind-step-ink: var(--bf-kind-step-ink);
-  --color-kind-step-tint: var(--bf-kind-step-tint);
+  --color-kind-footwork: var(--bf-kind-footwork);
+  --color-kind-footwork-ink: var(--bf-kind-footwork-ink);
+  --color-kind-footwork-tint: var(--bf-kind-footwork-tint);
+  --color-kind-direction: var(--bf-kind-direction);
+  --color-kind-direction-ink: var(--bf-kind-direction-ink);
+  --color-kind-direction-tint: var(--bf-kind-direction-tint);
   --color-kind-rise: var(--bf-kind-rise);
   --color-kind-rise-ink: var(--bf-kind-rise-ink);
   --color-kind-rise-tint: var(--bf-kind-rise-tint);

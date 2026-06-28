@@ -8,10 +8,18 @@
  * styles/tokens.css; here we only name them.
  */
 
-/** The five standard attribute-kind ids (PLAN §3). User-defined kinds
- *  extend the registry at runtime; the UI must not hardcode this list
- *  for rendering — it's here only to type the standard palette. */
-export const ATTRIBUTE_KINDS = ["step", "rise", "position", "sway", "turn"] as const;
+/** The standard attribute-kind ids with a token color family (PLAN §3;
+ *  2026-06-28 parity adds `direction`, renames `step`→`footwork`). User-defined
+ *  kinds extend the registry at runtime; the UI must not hardcode this list for
+ *  rendering — it's here only to type the standard palette. */
+export const ATTRIBUTE_KINDS = [
+  "direction",
+  "footwork",
+  "rise",
+  "position",
+  "sway",
+  "turn",
+] as const;
 export type AttributeKind = (typeof ATTRIBUTE_KINDS)[number];
 
 /** CSS-variable names for an attribute kind's color family. Use with

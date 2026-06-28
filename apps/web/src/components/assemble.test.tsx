@@ -507,13 +507,15 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // The count timeline shows; tap count 1, then pick footwork "T".
+    // The count timeline shows; tap count 1, then pick footwork "ball".
     await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^T$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
     expect(figureRef).toBe("feather");
-    expect(attrs.some((a) => a.kind === "step" && a.value === "T" && a.count === 1)).toBe(true);
+    expect(attrs.some((a) => a.kind === "footwork" && a.value === "ball" && a.count === 1)).toBe(
+      true,
+    );
   });
 
   it("lets a viewer open the step editor read-only (no value-edit affordance)", async () => {
