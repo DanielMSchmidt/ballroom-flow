@@ -21,7 +21,9 @@ import {
   buildRoutineDoc,
   can,
   type EffectiveRole,
+  type FigureDoc,
   type RoutineDoc,
+  readFigure,
   readRoutine,
 } from "@ballroom/domain";
 import { authenticateToken } from "./auth";
@@ -286,6 +288,22 @@ export class DocDO extends DurableObject<Env> {
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
     return readRoutine(this.getDoc());
+  }
+
+  /**
+   * Read this doc as a FIGURE snapshot (tombstoned attributes dropped) for the
+   * read-only HTTP snapshot path (the read/edit split): a single REST read hydrates
+   * a routine + its figures with NO per-figure WebSocket. Figure-shaped read —
+   * `getSnapshot` assumes a routine (it materializes `sections`).
+   *
+   * Uses `loadPersisted` (not `getDoc`) so a read NEVER auto-materializes +
+   * persists an empty placeholder: a not-yet-seeded figure returns null and the
+   * caller renders it as missing.
+   */
+  async getFigureSnapshot(): Promise<FigureDoc | null> {
+    const doc = this.loadPersisted();
+    if (!doc) return null;
+    return readFigure(doc as unknown as A.Doc<FigureDoc>);
   }
 
   // ── US-015: live WebSocket sync (custom Automerge change-sync, D13) ─────────

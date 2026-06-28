@@ -48,8 +48,32 @@ export interface ResolvedPlacement {
   figure: FigureDoc | null;
 }
 
+/**
+ * The READ-ONLY surface of a routine — the subset a component needs to *render*
+ * (never edit). Both the live WebSocket store and the lightweight HTTP snapshot
+ * model satisfy it, so a read-only screen can consume either (the read/edit
+ * split: open the cheap snapshot to read, upgrade to the live store to edit). A
+ * full `RoutineStore` is structurally a `RoutineReadModel`.
+ */
+export interface RoutineReadModel {
+  /** Placements across all sections, each with its resolved figure. */
+  readPlacements(): ResolvedPlacement[];
+  /** The materialized routine doc (tombstones dropped). */
+  readRoutine(): RoutineDoc;
+  /** Routine-scoped annotations (US-039), tombstones dropped. */
+  readAnnotations(): Annotation[];
+  /** All visible custom attribute kinds (US-043). */
+  customKinds(): RegistryKind[];
+  /** Subscribe to any change (refreshed snapshot, or synced/local edit). */
+  subscribe(fn: () => void): () => void;
+  /** Lifecycle, for a "syncing…"/"loading…" indicator (US-018). */
+  syncState(): SyncState;
+  /** Tear down (poll timer + listeners, or document connections). */
+  close(): void;
+}
+
 /** The reactive seam a component consumes. Read, mutate, undo — nothing else. */
-export interface RoutineStore {
+export interface RoutineStore extends RoutineReadModel {
   /** Placements across all sections, each with its resolved figure. */
   readPlacements(): ResolvedPlacement[];
   /** The materialized routine doc (tombstones dropped). */

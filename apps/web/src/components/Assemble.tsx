@@ -28,7 +28,8 @@ import { type FormEvent, useCallback, useEffect, useReducer, useState } from "re
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
-import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
+import type { ResolvedPlacement, RoutineStore } from "../store/routine";
+import { openRoutineView } from "../store/routine-view";
 import {
   Badge,
   Button,
@@ -107,7 +108,11 @@ function useRoutineStore(
         }
       }
       if (cancelled) return;
-      const opened = await openRoutine(routineId, {
+      // Read/edit split: open in read-only snapshot mode (one REST read, zero
+      // WebSockets). The facade upgrades to the live WS store lazily, only when
+      // the user actually edits — so reading a routine (the common case) never
+      // opens a socket. A viewer never triggers the upgrade (the UI gates edits).
+      const opened = openRoutineView(routineId, {
         getToken,
         currentUserId,
         accountKinds,
