@@ -30,6 +30,9 @@ export interface RoutineSnapshot {
 export interface RoutineSnapshotModel extends RoutineReadModel {
   /** Force an immediate refetch of the snapshot. */
   refetch(): void;
+  /** The (already-resolved) figure for a ref, or null — the live store's lazy
+   *  figure-content fallback in the read/edit hybrid. */
+  figureFor(figureRef: string): FigureDoc | null;
 }
 
 export interface OpenSnapshotOptions {
@@ -175,6 +178,7 @@ export function openRoutineSnapshot(
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
+    figureFor: (figureRef) => snapshot?.figures[figureRef] ?? null,
     refetch: load,
     close: () => {
       closed = true;

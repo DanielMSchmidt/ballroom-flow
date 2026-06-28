@@ -78,6 +78,14 @@ export interface RoutineStore extends RoutineReadModel {
   readPlacements(): ResolvedPlacement[];
   /** The materialized routine doc (tombstones dropped). */
   readRoutine(): RoutineDoc;
+  /**
+   * Open a figure's OWN live connection on demand (read/edit split): in lazy
+   * figure mode the timeline renders figures from the routine snapshot with no
+   * per-figure WebSocket — opening a figure's step editor calls this so THAT
+   * figure converges live (its notation/edits sync) while it's open. A no-op when
+   * the figure is already connected (or in eager mode, where all figures connect).
+   */
+  openFigure(figureRef: string): void;
   /** Add a new user-named section to the end of the routine (US-026). */
   addSection(name: string): void;
   /** Rename a section (US-026). */
@@ -171,6 +179,20 @@ export interface OpenOptions {
   actor?: string;
   /** The open user's id, stamped as `authorId` on annotations they create (US-039). */
   currentUserId?: string;
+  /**
+   * Eagerly open a live WebSocket for EVERY referenced figure on read (default
+   * true — the original behavior). Set false for the read/edit hybrid: figures
+   * render from `figureContent` (the routine snapshot) with NO per-figure socket,
+   * and a figure's own connection opens only when it's edited or `openFigure`d.
+   * This is what removes the per-figure socket fan-out for the common read path.
+   */
+  eagerFigures?: boolean;
+  /**
+   * Figure-content fallback used in lazy mode (`eagerFigures: false`) for figures
+   * whose own connection isn't open: returns the already-resolved figure (the
+   * facade wires this to the snapshot's `figureFor`). Ignored in eager mode.
+   */
+  figureContent?: (figureRef: string) => FigureDoc | null;
   /** Project a new figure to D1 before opening it (default: POST /api/figures). */
   createFigure?: CreateFigureFn;
   /** Resolve a fresh Clerk token at each connection-open (#189), attached to the
@@ -242,6 +264,11 @@ export async function openRoutine(
   const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
   const onCopyOnWrite = opts.onCopyOnWrite;
+  // Read/edit hybrid: in lazy figure mode the timeline renders figures from the
+  // snapshot (figureContent) with no per-figure socket; a figure connects only on
+  // edit / openFigure. Eager (default) keeps the original connect-every-figure path.
+  const eagerFigures = opts.eagerFigures ?? true;
+  const figureContent = opts.figureContent;
   // Default figure projection: POST /api/figures (authenticated with a fresh
   // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
   const createFigure: CreateFigureFn =
@@ -324,6 +351,15 @@ export async function openRoutine(
 
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
+
+    openFigure: (figureRef) => {
+      // Open this figure's own live connection (lazy mode) so it converges while
+      // its editor is open. Idempotent — figureConn caches; eager mode already
+      // connected it. The onAdvance wiring re-renders as its content hydrates.
+      if (pendingFigures.has(figureRef)) return;
+      figureConn(figureRef);
+      notify();
+    },
 
     readPlacements: () => {
       const routine = readRoutineSafe();
@@ -632,10 +668,19 @@ export async function openRoutine(
     // as loading (null) WITHOUT opening its DO — opening now would race the seed
     // (see pendingFigures). The createFigure resolution opens it + re-renders.
     if (pendingFigures.has(figureRef)) return null;
-    const conn = figureConn(figureRef);
-    const figure = readFigureDoc(conn.current());
-    if (!figure) return null;
+    // Eager mode opens the figure's connection; lazy mode only uses one that's
+    // ALREADY open (edited / openFigure'd), else falls back to the snapshot.
+    const conn = eagerFigures ? figureConn(figureRef) : (figureConns.get(figureRef) ?? null);
+    const figure = conn ? readFigureDoc(conn.current()) : null;
+    if (!figure) {
+      // No live content. In lazy mode fall back to the snapshot's resolved figure
+      // (already base ⊕ overlay, server-side); in eager mode it's simply loading.
+      return eagerFigures ? null : (figureContent?.(figureRef) ?? null);
+    }
     if (figure.baseFigureRef && figure.overlay) {
+      // A live variant: open its base too (even in lazy mode — only for an
+      // actively-open variant) so it resolves live; until the base hydrates, fall
+      // back to the snapshot's already-resolved copy rather than flashing empty.
       const base = readFigureDoc(figureConn(figure.baseFigureRef).current());
       if (base) {
         // resolve() returns the BASE's identity by contract (overlay.ts) — stamp
@@ -649,6 +694,7 @@ export async function openRoutine(
           baseFigureRef: figure.baseFigureRef,
         };
       }
+      return eagerFigures ? null : (figureContent?.(figureRef) ?? figure);
     }
     return figure;
   }

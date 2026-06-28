@@ -1,18 +1,21 @@
-// Read/edit split facade (PLAN §6, extends D10).
+// Read/edit split facade — role-aware hybrid (PLAN §6, extends D10).
 //
-// The behaviour the user feels: opening a routine costs a single REST read and
-// ZERO WebSockets — reading is the common case. The live per-document WS sync
-// (the edit path) is opened LAZILY, only when the user actually edits. Because
-// the UI already gates edit affordances by role, a viewer never triggers an
-// upgrade (stays on the cheap snapshot forever); an editor upgrades on their
-// first edit and stays live for the rest of the session (editing is bursty —
-// thrashing the socket per action would be worse).
+// The cost we cut is the per-document WebSocket fan-out for the common READ path,
+// WITHOUT giving up live collaboration (US-015):
 //
-// This facade implements the full `RoutineStore` surface so screens consume it
-// unchanged: reads delegate to the snapshot until the live store is hydrated,
-// then to the live store; every mutator first ensures the live store is open and
-// defers the actual write until it has hydrated (so an edit never lands on a
-// not-yet-replayed doc — the same hazard the store guards internally).
+//  • Viewers (read-only) open ZERO WebSockets — a single REST snapshot + light
+//    polling + refetch-on-focus.
+//  • Editors/owners/commenters open ONE live routine WS immediately (so a
+//    collaborator's section/placement/annotation edits converge LIVE), but
+//    figures still render from the snapshot — a figure's OWN socket opens only
+//    when its step editor is opened (`openFigure`) or it's edited. This removes
+//    the eager per-figure fan-out (the bulk of the sockets) for everyone.
+//
+// The facade implements the full `RoutineStore` surface so screens consume it
+// unchanged. In editable mode reads come from the snapshot until the live store
+// hydrates, then from the live store (which itself falls back to the snapshot for
+// not-yet-opened figures). In read-only mode mutators + openFigure are no-ops
+// (the UI never calls them for a viewer) and nothing live is ever opened.
 import type { Alignment, Anchor, AnnotationKind, Attribute, RegistryKind } from "@ballroom/domain";
 import type { SyncState } from "./doc-connection";
 import {
@@ -28,6 +31,12 @@ import {
 } from "./routine-snapshot";
 
 export interface OpenViewOptions extends OpenOptions {
+  /**
+   * Whether the viewer can edit (editor/owner/commenter). True → open ONE live
+   * routine WS for live convergence (figures stay lazy). False (default) → pure
+   * read-only snapshot, zero WebSockets.
+   */
+  editable?: boolean;
   /** Snapshot-path knobs (poll interval, injected fetch/timers — see openRoutineSnapshot). */
   snapshot?: Pick<
     OpenSnapshotOptions,
@@ -40,12 +49,13 @@ export interface OpenViewOptions extends OpenOptions {
 }
 
 /**
- * Open a routine read-first: a snapshot now, the live store on first edit.
- * Returns a `RoutineStore` facade (so the screen is agnostic to which is active).
+ * Open a routine through the read/edit hybrid. Returns a `RoutineStore` facade so
+ * the screen is agnostic to whether it's reading a snapshot or editing live.
  */
 export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): RoutineStore {
   const openLive = opts.openLive ?? defaultOpenRoutine;
   const openSnapshot = opts.openSnapshot ?? defaultOpenSnapshot;
+  const editable = opts.editable ?? false;
 
   const snapshot = openSnapshot(routineId, {
     baseUrl: opts.baseUrl,
@@ -64,25 +74,42 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
   let livePromise: Promise<RoutineStore> | null = null;
   let closed = false;
 
-  /** Reads come from the live store ONLY once it's hydrated; otherwise the snapshot. */
-  const readSource = (): RoutineStore | RoutineSnapshotModel =>
-    live && live.syncState() === "live" ? live : snapshot;
-
-  /** Open the live WS store once (idempotent), wiring its changes into our listeners. */
+  /** Open the live routine WS once (idempotent), in LAZY figure mode (figures come
+   *  from the snapshot until opened/edited). Wires its changes into our listeners. */
   const ensureLive = (): Promise<RoutineStore> => {
     if (livePromise) return livePromise;
-    livePromise = openLive(routineId, opts).then((s) => {
+    livePromise = openLive(routineId, {
+      baseUrl: opts.baseUrl,
+      openSocket: opts.openSocket,
+      actor: opts.actor,
+      currentUserId: opts.currentUserId,
+      createFigure: opts.createFigure,
+      getToken: opts.getToken,
+      accountKinds: opts.accountKinds,
+      saveCustomKind: opts.saveCustomKind,
+      onCopyOnWrite: opts.onCopyOnWrite,
+      eagerFigures: false,
+      figureContent: (ref) => snapshot.figureFor(ref),
+    }).then((s) => {
       if (closed) {
         s.close();
         return s;
       }
       live = s;
       s.subscribe(notify);
-      notify(); // syncState now reflects the (connecting) live store
+      notify();
       return s;
     });
     return livePromise;
   };
+
+  // Editors go live immediately so a collaborator's edits converge without an
+  // edit-first poke; viewers never open a socket.
+  if (editable) void ensureLive();
+
+  /** Reads come from the live store ONLY once it's hydrated; otherwise the snapshot. */
+  const readSource = (): RoutineStore | RoutineSnapshotModel =>
+    live && live.syncState() === "live" ? live : snapshot;
 
   /** Run `fn` once the live store is hydrated — so an edit never lands pre-replay. */
   const whenLive = (s: RoutineStore, fn: () => void): void => {
@@ -98,10 +125,11 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     });
   };
 
-  /** Build a mutator that upgrades to live, then applies once hydrated. */
-  const deferred =
+  /** A mutator that applies on the live store once hydrated; a no-op for viewers. */
+  const editAction =
     <A extends unknown[]>(pick: (s: RoutineStore) => (...a: A) => void) =>
     (...args: A): void => {
+      if (!editable) return; // viewers can't edit (UI gates this too)
       void ensureLive().then((s) => whenLive(s, () => pick(s)(...args)));
     };
 
@@ -111,7 +139,11 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     readRoutine: () => readSource().readRoutine(),
     readAnnotations: () => readSource().readAnnotations(),
     customKinds: (): RegistryKind[] => readSource().customKinds(),
-    syncState: (): SyncState => (live ? live.syncState() : snapshot.syncState()),
+    // Editors gate editing on the LIVE store's readiness (so canEdit never goes
+    // true before the live doc is hydrated); reads still come from the snapshot
+    // meanwhile (readSource). Viewers track the snapshot's lifecycle.
+    syncState: (): SyncState =>
+      editable ? (live ? live.syncState() : "connecting") : snapshot.syncState(),
     subscribe: (fn) => {
       listeners.add(fn);
       return () => listeners.delete(fn);
@@ -124,30 +156,36 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
       live?.close();
     },
 
-    // ── mutators (lazy upgrade to the live WS store, applied once hydrated) ──
-    addSection: deferred((s) => s.addSection),
-    renameSection: deferred((s) => s.renameSection),
-    moveSection: deferred((s) => s.moveSection),
-    deleteSection: deferred((s) => s.deleteSection),
-    addPlacement: deferred((s) => s.addPlacement),
-    movePlacement: deferred((s) => s.movePlacement),
-    deletePlacement: deferred((s) => s.deletePlacement),
-    setFigureAttributes: deferred((s) => s.setFigureAttributes),
-    setFigureAlignment: deferred(
+    // Open a figure's own live connection while its editor is open (lazy figures).
+    openFigure: (figureRef) => {
+      if (!editable) return; // a viewer reads figure content from the snapshot
+      void ensureLive().then((s) => s.openFigure(figureRef));
+    },
+
+    // ── mutators (apply on the live routine WS once hydrated) ────────────────
+    addSection: editAction((s) => s.addSection),
+    renameSection: editAction((s) => s.renameSection),
+    moveSection: editAction((s) => s.moveSection),
+    deleteSection: editAction((s) => s.deleteSection),
+    addPlacement: editAction((s) => s.addPlacement),
+    movePlacement: editAction((s) => s.movePlacement),
+    deletePlacement: editAction((s) => s.deletePlacement),
+    setFigureAttributes: editAction((s) => s.setFigureAttributes),
+    setFigureAlignment: editAction(
       (s) => s.setFigureAlignment as (...a: [string, "entry" | "exit", Alignment | null]) => void,
     ),
-    createAnnotation: deferred(
+    createAnnotation: editAction(
       (s) =>
         s.createAnnotation as (
           ...a: [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
         ) => void,
     ),
-    addReply: deferred((s) => s.addReply),
-    deleteAnnotation: deferred((s) => s.deleteAnnotation),
-    deleteReply: deferred((s) => s.deleteReply),
-    createCustomKind: deferred((s) => s.createCustomKind as (...a: [RegistryKind]) => void),
-    undo: deferred((s) => s.undo),
-    redo: deferred((s) => s.redo),
+    addReply: editAction((s) => s.addReply),
+    deleteAnnotation: editAction((s) => s.deleteAnnotation),
+    deleteReply: editAction((s) => s.deleteReply),
+    createCustomKind: editAction((s) => s.createCustomKind as (...a: [RegistryKind]) => void),
+    undo: editAction((s) => s.undo),
+    redo: editAction((s) => s.redo),
   };
 }
 

@@ -84,6 +84,7 @@ function useRoutineStore(
   routineId: string,
   injected: RoutineStore | undefined,
   enabled: boolean,
+  editable: boolean,
   getToken: TokenProvider | undefined,
   currentUserId: string | undefined,
   onCopyOnWrite?: (variantRef: string) => void,
@@ -113,6 +114,7 @@ function useRoutineStore(
       // the user actually edits — so reading a routine (the common case) never
       // opens a socket. A viewer never triggers the upgrade (the UI gates edits).
       const opened = openRoutineView(routineId, {
+        editable,
         getToken,
         currentUserId,
         accountKinds,
@@ -130,7 +132,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, getToken, currentUserId, onCopyOnWrite]);
+  }, [routineId, injected, enabled, editable, getToken, currentUserId, onCopyOnWrite]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -160,10 +162,15 @@ export function Assemble({
     setCopiedToast(true);
     setNotating(variantRef);
   }, []);
+  // Editable = can write to the routine doc (editor/owner edits, or commenter
+  // annotations). Drives the read/edit split: editable opens ONE live routine WS
+  // for live convergence; a pure viewer stays on the zero-socket snapshot.
+  const editable = can(role, "canEdit") || can(role, "canAnnotate");
   const store = useRoutineStore(
     routineId,
     injected,
     !offlineProp,
+    editable,
     getToken,
     currentUserId,
     onCopyOnWrite,
@@ -207,6 +214,13 @@ export function Assemble({
   useEffect(() => {
     void reloadFamilyNotes();
   }, [reloadFamilyNotes]);
+
+  // Read/edit split: opening a figure's step editor connects THAT figure's own
+  // live WS (lazy figures) so its notation converges while open; until then it
+  // rendered from the routine snapshot. No-op for viewers / already-open figures.
+  useEffect(() => {
+    if (notating && store) store.openFigure(notating);
+  }, [notating, store]);
 
   const offline = offlineProp || store?.syncState() === "closed";
   if (offline) return <OfflineState />;
