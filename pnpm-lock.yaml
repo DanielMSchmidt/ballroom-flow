@@ -17,6 +17,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ballroom/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@clerk/clerk-react':
         specifier: ^5.61.3
         version: 5.61.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
