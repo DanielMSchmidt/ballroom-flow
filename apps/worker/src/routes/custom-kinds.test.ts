@@ -62,6 +62,52 @@ describe("US-043 account custom-kind persistence", () => {
     });
   });
 
+  it("round-trips a free-text kind with NO values/appliesToDances (covers the null + freeText branches)", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_ckft", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_ckft", displayName: "FT", identityColor: "#111", plan: "free" }],
+    });
+
+    // freeText:true, valueType "text", no `values`, no `appliesToDances` — exercises
+    // the values→null, appliesToDances→null, and freeText→1 (read-back ===1→true) branches.
+    const textKind = {
+      kind: "mood",
+      label: "Mood",
+      color: "#3344ff",
+      cardinality: "single" as const,
+      valueType: "text",
+      freeText: true,
+      builtin: false,
+    };
+    const postTrue = await SELF.fetch("https://x/api/account/custom-kinds", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify(textKind),
+    });
+    expect(postTrue.status).toBe(201);
+
+    // freeText:false on a second kind — exercises the freeText→0 (read-back ===1→false) branch.
+    const postFalse = await SELF.fetch("https://x/api/account/custom-kinds", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ ...textKind, kind: "tempo", label: "Tempo", freeText: false }),
+    });
+    expect(postFalse.status).toBe(201);
+
+    const get = await SELF.fetch("https://x/api/account/custom-kinds", {
+      headers: ctx.authHeaders(),
+    });
+    const body = await get.json<{
+      kinds: { kind: string; freeText?: boolean; values?: string[]; appliesToDances?: string[] }[];
+    }>();
+    const mood = body.kinds.find((k) => k.kind === "mood");
+    const tempo = body.kinds.find((k) => k.kind === "tempo");
+    expect(mood?.freeText).toBe(true);
+    expect(mood?.values).toBeUndefined();
+    expect(mood?.appliesToDances).toBeUndefined();
+    expect(tempo?.freeText).toBe(false);
+  });
+
   it("POST a reserved/builtin slug → 400", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_ck2", docRef: "n/a", role: null });
     await seedDb({
