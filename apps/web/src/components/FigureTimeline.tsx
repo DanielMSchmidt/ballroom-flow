@@ -405,25 +405,28 @@ function StepCard({
           onResize={onResize}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <ul className="flex flex-wrap items-center gap-1.5" aria-label={`count ${count} attributes`}>
         {laneKinds.map((kind) => {
           const here = attrs.filter((a) => a.kind === kind.kind);
           if (here.length > 0) {
             return here.map((a) => (
-              <AttrChip
-                key={a.id}
-                kind={kind}
-                value={a.value}
-                onClick={() => editable && onOpen(true)}
-                editable={editable}
-              />
+              <li key={a.id}>
+                <AttrChip
+                  kind={kind}
+                  value={a.value}
+                  onClick={() => editable && onOpen(true)}
+                  editable={editable}
+                />
+              </li>
             ));
           }
           return editable ? (
-            <GhostChip key={kind.kind} label={kind.label} onClick={() => onOpen(true)} />
+            <li key={kind.kind}>
+              <GhostChip label={kind.label} onClick={() => onOpen(true)} />
+            </li>
           ) : null;
         })}
-      </div>
+      </ul>
     </div>
   );
 }

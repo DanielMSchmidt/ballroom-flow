@@ -56,7 +56,7 @@ test.describe("@smoke core authoring journey", () => {
     //     timeline, tap count 1, set the step's DIRECTION "forward" (the headline)
     //     and FOOTWORK "ball" (a slot). The headline + the chip show on count 1.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /^forward$/ }).click();
     await page.getByRole("button", { name: /^ball$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
@@ -123,7 +123,7 @@ test.describe("@smoke core authoring journey", () => {
 
     // open the figure's step timeline and a count editor
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
 
     // create a custom kind "Energy"
     await page.getByRole("button", { name: /add kind/i }).click();
@@ -147,7 +147,7 @@ test.describe("@smoke core authoring journey", () => {
     // persists across reload: re-open the figure + count 1, Energy still there
     await page.reload();
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
   });
