@@ -1,16 +1,17 @@
 // @ballroom/domain — Figure model + the static library catalog (design §2.1, §2.3).
 //
-// A library figure ships TWO authoritative step charts (leader + follower) and every step
-// carries at least its Footwork — the one technique attribute the owner requires to be
-// present on every catalog figure. When a figure is added to a routine it is *instantiated*
-// as a pristine copy of the library default; whether it then reads as "custom" is DERIVED by
-// diffing the instance against this default (see custom.ts), never set at add-time.
+// The catalog is the full ISTD/WDSF Standard syllabus (names + grade, see catalog.ts). A
+// *charted* figure ships TWO authoritative step charts (leader + follower) where every step
+// carries its Footwork; adding it to a routine instantiates a pristine copy of that default,
+// and whether it then reads as "custom" is DERIVED by diffing the instance against the
+// default (custom.ts), never set at add-time. Figures whose verified technique isn't yet in
+// hand are listed as un-charted entries (empty charts) so the catalogue is complete to pick
+// from — footwork is never invented.
 //
-// Footwork values follow ISTD / IDTA standard technique (Alex Moore; Guy Howard, *The
-// Technique of Ballroom Dancing*), cross-checked against Dance Central charts. They are the
-// catalog default; the custom-attribute mechanism exists precisely so a couple can correct
-// or extend them per routine without mutating the shared catalog.
+// Charted footwork follows ISTD / IDTA standard technique (Alex Moore; Guy Howard, *The
+// Technique of Ballroom Dancing*), cross-checked against Dance Central charts.
 
+import { catalogFigureId, STANDARD_CATALOG } from "./catalog";
 import type { DanceId } from "./vocabulary";
 
 export type { DanceId, StepRole } from "./vocabulary";
@@ -55,15 +56,33 @@ export interface Step {
   turn?: string | null;
 }
 
-/** A catalog figure: the default both-role charts a routine figure is instantiated from. */
+/** ISTD/WDSF syllabus grade. */
+export type FigureLevel = "bronze" | "silver" | "gold";
+
+/**
+ * A catalog figure: the default both-role charts a routine figure is instantiated from.
+ *
+ * The catalog covers the full ISTD/WDSF Standard syllabus by NAME + level (see catalog.ts).
+ * A figure is *charted* when it carries verified both-role step charts (footwork on every
+ * step) — those pre-fill in full when added. The remainder are listed so the catalogue is
+ * complete to pick from, but their charts are empty pending verified technique (the detailed
+ * per-step footwork lives in the copyrighted WDSF/ISTD technique books and is not openly
+ * sourceable). `isCharted()` reports which is which; no chart is ever fabricated.
+ */
 export interface LibraryFigure {
   id: string;
   dance: DanceId;
   name: string;
+  level?: FigureLevel;
   entryAlignment?: Alignment | null;
   exitAlignment?: Alignment | null;
   leaderSteps: Step[];
   followerSteps: Step[];
+}
+
+/** True when the figure has verified charts (so adding it pre-fills the technique). */
+export function isCharted(figure: LibraryFigure): boolean {
+  return figure.leaderSteps.length > 0 || figure.followerSteps.length > 0;
 }
 
 /** A figure as it lives inside a routine. `libraryFigureId === null` = composed from scratch. */
@@ -89,19 +108,20 @@ function chart(rows: ReadonlyArray<readonly [string, string, number]>): Step[] {
   return rows.map(([action, foot, beat]) => ({ action, foot, timing: { beat } }));
 }
 
-// --- the v1 library -------------------------------------------------------------------
+// --- charted figures ------------------------------------------------------------------
 //
-// Curated for fully-correct, both-role footwork rather than breadth. Tango is intentionally
-// absent: its walks are danced "foot flat", which the v1 Footwork vocabulary (§3.3) does not
-// yet model, so seeding it would violate the "every step has correct footwork" guarantee.
-// Forward walks = Heel-Toe (HT); back walks = Toe-Heel (TH); the closing/lowering step of a
-// figure = TH; a step taken "up" = Toe (T); the follower's heel turn = TH, HT, TH.
+// Figures with verified both-role footwork. Footwork follows ISTD/IDTA standard technique:
+// forward walks = Heel-Toe (HT); back walks = Toe-Heel (TH); the closing/lowering step of a
+// figure = TH; a step taken "up" = Toe (T); the follower's heel turn = TH, HT, TH. The rest
+// of the syllabus is listed by name in catalog.ts (see STANDARD_CATALOG) and merged into
+// LIBRARY_FIGURES below as un-charted entries — never with invented footwork.
 
-export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
+const CHARTED_FIGURES: readonly LibraryFigure[] = [
   {
     id: "waltz.natural_turn",
     dance: "waltz",
     name: "Natural Turn",
+    level: "bronze",
     entryAlignment: f("facing", "DW"),
     exitAlignment: f("facing", "DW"),
     leaderSteps: chart([
@@ -125,6 +145,7 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
     id: "waltz.reverse_turn",
     dance: "waltz",
     name: "Reverse Turn",
+    level: "bronze",
     entryAlignment: f("facing", "DC"),
     exitAlignment: f("facing", "DC"),
     leaderSteps: chart([
@@ -148,6 +169,7 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
     id: "waltz.closed_change",
     dance: "waltz",
     name: "Closed Change (Natural to Reverse)",
+    level: "bronze",
     entryAlignment: f("backing", "DC"),
     exitAlignment: f("facing", "DC"),
     leaderSteps: chart([
@@ -165,6 +187,7 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
     id: "foxtrot.feather_step",
     dance: "foxtrot",
     name: "Feather Step",
+    level: "bronze",
     entryAlignment: f("facing", "DC"),
     exitAlignment: f("facing", "DC"),
     leaderSteps: [
@@ -186,6 +209,7 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
     id: "foxtrot.three_step",
     dance: "foxtrot",
     name: "Three Step",
+    level: "bronze",
     entryAlignment: f("facing", "DC"),
     exitAlignment: f("facing", "DC"),
     leaderSteps: [
@@ -201,6 +225,37 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = [
   },
 ] as const;
 
+// --- the full catalogue ---------------------------------------------------------------
+//
+// Every charted figure above, plus the rest of the ISTD/WDSF Standard syllabus by name
+// (catalog.ts) as un-charted stubs (empty charts). A stub is skipped when a charted figure
+// already owns its id, so the charted technique always wins.
+
+function stubFigure(dance: DanceId, name: string, level: FigureLevel): LibraryFigure {
+  return {
+    id: catalogFigureId(dance, name),
+    dance,
+    name,
+    level,
+    leaderSteps: [],
+    followerSteps: [],
+  };
+}
+
+// Dedup by catalogue id so a charted figure always suppresses its name-matched stub, even
+// when the charted figure carries a shorter hand-written id (e.g. waltz.closed_change).
+const CHARTED_CATALOG_IDS = new Set(
+  CHARTED_FIGURES.map((fig) => catalogFigureId(fig.dance, fig.name)),
+);
+
+const CATALOG_STUBS: LibraryFigure[] = STANDARD_CATALOG.flatMap(([dance, name, level]) => {
+  const stub = stubFigure(dance, name, level);
+  return CHARTED_CATALOG_IDS.has(stub.id) ? [] : [stub];
+});
+
+/** The complete Standard catalogue: verified charted figures first, then un-charted stubs. */
+export const LIBRARY_FIGURES: readonly LibraryFigure[] = [...CHARTED_FIGURES, ...CATALOG_STUBS];
+
 const LIBRARY_BY_ID = new Map<string, LibraryFigure>(LIBRARY_FIGURES.map((fig) => [fig.id, fig]));
 
 export function getLibraryFigure(id: string): LibraryFigure | undefined {
@@ -209,6 +264,11 @@ export function getLibraryFigure(id: string): LibraryFigure | undefined {
 
 export function libraryFiguresForDance(dance: DanceId): LibraryFigure[] {
   return LIBRARY_FIGURES.filter((fig) => fig.dance === dance);
+}
+
+/** Charted figures for a dance — the ones that pre-fill their technique when added. */
+export function chartedFiguresForDance(dance: DanceId): LibraryFigure[] {
+  return libraryFiguresForDance(dance).filter(isCharted);
 }
 
 function cloneStep(step: Step): Step {

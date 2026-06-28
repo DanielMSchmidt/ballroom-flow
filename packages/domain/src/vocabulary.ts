@@ -100,6 +100,11 @@ export const SLOT_REGISTRY: readonly SlotDef[] = [
       { value: "TH", label: "Toe Heel" },
       { value: "heel_pull", label: "Heel Pull" },
       { value: "H", label: "Heel" },
+      // Additive set (design §3.3) — needed to chart Tango/Quickstep, whose walks are danced
+      // "foot flat" / on the ball rather than the swing-dance Heel-Toe transitions.
+      { value: "F", label: "Whole Foot", aliases: ["WF"] },
+      { value: "B", label: "Ball" },
+      { value: "BH", label: "Ball Heel" },
     ],
   },
   {
