@@ -66,6 +66,46 @@ describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
     expect((await stub.getSnapshot()).title).toBe("Server Seeded");
   });
 
+  it("a connect to a not-yet-seeded doc does not poison/block a later seedDoc", async () => {
+    // ROBUSTNESS — the collaborator seed race. If a client connects to a doc's DO
+    // BEFORE the create route's seedDoc runs (user B receives a synced placement
+    // and opens the new figure's DO before user A's POST /api/figures seeds it),
+    // the connect must NOT auto-materialize + persist an empty-routine placeholder:
+    // that used to trip seedDoc's no-clobber, leaving the doc permanently empty
+    // (the figure stuck null even after a reload). The seed must still win.
+    const { name, stub } = freshDoc("routine");
+    const ctx = await authedContext({ keypair: kp, userId: "u_ed", docRef: name, role: "editor" });
+    await seedDb({
+      users: [{ id: "u_ed", displayName: "Ed", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef: name, type: "routine", ownerId: "u_ed", doName: name }],
+      memberships: ctx.membership ? [ctx.membership] : [],
+    });
+
+    // A client connects BEFORE the doc is seeded.
+    const res = await stub.fetch(
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": name, ...ctx.authHeaders() },
+      }),
+    );
+    expect(res.status).toBe(101);
+    res.webSocket?.accept();
+
+    // NOW the create route seeds the doc — it must take effect, not be no-clobbered
+    // by a placeholder the connect persisted.
+    await stub.seedDoc({
+      id: name,
+      title: "Server Seeded",
+      dance: "foxtrot",
+      ownerId: "u_ed",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.reloadForTest(); // force the SQLite cold-load path
+    expect((await stub.getSnapshot()).title).toBe("Server Seeded");
+  });
+
   it("persists incremental changes to DO SQLite and rehydrates after eviction", async () => {
     // Intent: the DO keeps the doc in memory + persists INCREMENTAL changes; a
     //   cold DO (post-eviction) rebuilds the same doc from SQLite (M0.5 S1).
