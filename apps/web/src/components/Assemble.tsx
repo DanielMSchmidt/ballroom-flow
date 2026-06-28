@@ -28,7 +28,7 @@ import { type FormEvent, useCallback, useEffect, useReducer, useState } from "re
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
-import type { ResolvedPlacement, RoutineStore } from "../store/routine";
+import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import {
   Badge,
@@ -119,6 +119,10 @@ function useRoutineStore(
         currentUserId,
         accountKinds,
         onCopyOnWrite,
+        // Escalate a figure that hasn't hydrated within ~12s to a retryable error
+        // (with a Retry affordance) so it's never a forever skeleton; reconnect +
+        // the access preflight then settle it on live / error / missing.
+        hydrationTimeoutMs: 12_000,
       });
       if (cancelled) {
         opened.close();
@@ -233,8 +237,8 @@ export function Assemble({
   }
 
   const routine = store.readRoutine();
-  const figureByPlacement = new Map<string, FigureDoc | null>(
-    store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp.figure]),
+  const resolvedByPlacement = new Map<string, ResolvedPlacement>(
+    store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp]),
   );
   const syncing = store.syncState() === "connecting";
   // The figure whose step timeline is open — re-read live each render so a
@@ -348,13 +352,15 @@ export function Assemble({
                         <li key={placement.id}>
                           <PlacementCard
                             placement={placement}
-                            figure={figureByPlacement.get(placement.id) ?? null}
+                            figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
+                            status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                             canEdit={canEdit}
                             isFirst={pIndex === 0}
                             isLast={pIndex === section.placements.length - 1}
                             onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                            onRetry={() => store.retryFigure(placement.figureRef)}
                             onOpen={() => {
-                              const f = figureByPlacement.get(placement.id);
+                              const f = resolvedByPlacement.get(placement.id)?.figure;
                               if (f) setNotating(f.id);
                             }}
                             onDelete={() =>
@@ -702,27 +708,58 @@ function AddSection({ onAdd }: { onAdd: (name: string) => void }) {
 function PlacementCard({
   placement,
   figure,
+  status = figure ? "live" : "loading",
   canEdit = false,
   isFirst = false,
   isLast = false,
   onMove,
   onOpen,
   onDelete,
+  onRetry,
 }: {
   placement: Placement;
   figure: FigureDoc | null;
+  status?: FigureLoadStatus;
   canEdit?: boolean;
   isFirst?: boolean;
   isLast?: boolean;
   onMove?: (direction: "up" | "down") => void;
   onOpen?: () => void;
   onDelete?: () => void;
+  onRetry?: () => void;
 }) {
-  // A placement always references a real (server-created) figure, so a null
-  // `figure` means its per-document connection is still hydrating — LOADING, not
-  // missing. Show a skeleton + accessible status instead of the alarming
-  // "Unknown figure" flash a just-added figure used to show until reload.
+  // A figure is its own doc on its own connection, loaded lazily. Distinguish the
+  // transient states (just-added / still-hydrating) from genuine failures so a
+  // figure never reads as the alarming "Unknown figure": show a skeleton while it
+  // loads, an honest unavailable note if it's gone/forbidden, and a retry if it
+  // merely failed to load.
   if (figure == null) {
+    if (status === "missing") {
+      return (
+        <Card>
+          <p className="text-2xs text-ink-faint" role="status">
+            This figure is unavailable — it may have been removed, or you don’t have access.
+          </p>
+        </Card>
+      );
+    }
+    if (status === "error") {
+      return (
+        <Card>
+          <div className="flex items-center gap-2">
+            <span className="text-2xs text-ink-faint" role="status">
+              Couldn’t load this figure.
+            </span>
+            {onRetry && (
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={onRetry}>
+                Retry
+              </Button>
+            )}
+          </div>
+        </Card>
+      );
+    }
+    // pending / loading
     return (
       <Card>
         <div className="flex items-center gap-2" aria-busy="true">

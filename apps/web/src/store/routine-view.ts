@@ -90,6 +90,14 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
       onCopyOnWrite: opts.onCopyOnWrite,
       eagerFigures: false,
       figureContent: (ref) => snapshot.figureFor(ref),
+      // Forward the figure-load-robustness knobs (#94) so an OPENED figure still
+      // reconnects, times out → retryable error, and resolves missing-vs-error via
+      // the access preflight — the hybrid only changes WHEN a figure connects.
+      reconnect: opts.reconnect,
+      hydrationTimeoutMs: opts.hydrationTimeoutMs,
+      checkAccess: opts.checkAccess,
+      schedule: opts.schedule,
+      cancel: opts.cancel,
     }).then((s) => {
       if (closed) {
         s.close();
@@ -160,6 +168,16 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     openFigure: (figureRef) => {
       if (!editable) return; // a viewer reads figure content from the snapshot
       void ensureLive().then((s) => s.openFigure(figureRef));
+    },
+
+    // Retry a figure that surfaced as error/missing: an editor re-opens its live
+    // connection; a viewer just re-fetches the snapshot (its only figure source).
+    retryFigure: (figureRef) => {
+      if (editable) {
+        void ensureLive().then((s) => s.retryFigure(figureRef));
+      } else {
+        snapshot.refetch();
+      }
     },
 
     // ── mutators (apply on the live routine WS once hydrated) ────────────────

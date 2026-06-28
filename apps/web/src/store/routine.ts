@@ -32,20 +32,41 @@ import {
   softDeleteSection,
   undoLastChange,
 } from "@ballroom/domain";
-import { apiPost } from "../lib/rpc";
+import { ApiError, apiGet, apiPost } from "../lib/rpc";
 import {
   connectUrl,
   DocConnection,
+  type ReconnectPolicy,
   type SocketFactory,
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
 import { overlayFromAttributes } from "./overlay-diff";
 
+/**
+ * Load status of a placement's figure (each figure is its own Automerge doc on
+ * its own connection, loaded lazily). Distinguishing these is what stops a
+ * just-added or still-hydrating figure from reading as the alarming "Unknown
+ * figure" — the UI shows a skeleton for the transient states and an honest
+ * unavailable/retry affordance only for the genuine failures.
+ *
+ * - `pending` — just added; its server-side create (POST /api/figures) is in flight.
+ * - `loading` — exists; its per-doc connection is hydrating (or reconnecting).
+ * - `live`    — hydrated; `figure` carries its resolved content.
+ * - `missing` — genuinely unavailable: deleted, or the viewer lacks access
+ *               (confirmed via the `/api/docs/:id/access` registry preflight).
+ * - `error`   — the connection couldn't hydrate (timed out / gave up) but the
+ *               figure IS accessible — a transient failure the user can retry.
+ */
+export type FigureLoadStatus = "pending" | "loading" | "live" | "missing" | "error";
+
 /** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
 export interface ResolvedPlacement {
   placement: Placement;
+  /** The resolved figure when `status === "live"`, else null. */
   figure: FigureDoc | null;
+  /** Where this placement's figure is in its load lifecycle (see FigureLoadStatus). */
+  status: FigureLoadStatus;
 }
 
 /**
@@ -145,6 +166,12 @@ export interface RoutineStore extends RoutineReadModel {
    * by `kind` slug (routine-embedded wins on conflict), builtins excluded (US-043).
    */
   customKinds(): RegistryKind[];
+  /**
+   * Force a figure's connection to reconnect after it surfaced as `error`/`missing`
+   * — the user-facing "retry" affordance, so a figure that failed to load recovers
+   * without a full page reload.
+   */
+  retryFigure(figureRef: string): void;
   /** Per-actor history undo / redo (US-010). */
   undo(): void;
   redo(): void;
@@ -216,6 +243,31 @@ export interface OpenOptions {
   /** Called when an edit triggered copy-on-write (US-035), so the screen can
    *  toast "copied as your variant". Receives the new variant's id. */
   onCopyOnWrite?: (variantRef: string) => void;
+  /**
+   * Auto-reconnect policy for every doc connection (routine + figures). A dropped
+   * socket re-opens after this backoff so a blank figure self-heals without a
+   * page reload. Defaults to the DocConnection capped-backoff policy; pass
+   * `{ delays: [] }` to disable (tests that don't exercise reconnect).
+   */
+  reconnect?: ReconnectPolicy;
+  /**
+   * How long (ms) to wait for a figure connection to hydrate before surfacing it
+   * as `error` (retryable), so a figure never hangs on a skeleton forever. 0
+   * disables the timeout (the default — the production screen sets a real value;
+   * tests opt in with a small value + fake timers).
+   */
+  hydrationTimeoutMs?: number;
+  /**
+   * Registry-backed access preflight used to tell `missing` (deleted / no access)
+   * from `error` (accessible but failed to load) once a figure connection gives
+   * up. Resolves true when the figure is accessible, false when denied (a 403
+   * from `/api/docs/:id/access`). Default: GET that endpoint with a fresh token.
+   */
+  checkAccess?: (figureRef: string) => Promise<boolean>;
+  /** Schedule a delayed callback (default: global setTimeout) — injected for tests. */
+  schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
+  /** Cancel a scheduled callback (default: global clearTimeout) — injected for tests. */
+  cancel?: (handle: ReturnType<typeof setTimeout>) => void;
 }
 
 const defaultSocketFactory: SocketFactory = (url, protocols) =>
@@ -264,11 +316,34 @@ export async function openRoutine(
   const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
   const onCopyOnWrite = opts.onCopyOnWrite;
-  // Read/edit hybrid: in lazy figure mode the timeline renders figures from the
-  // snapshot (figureContent) with no per-figure socket; a figure connects only on
-  // edit / openFigure. Eager (default) keeps the original connect-every-figure path.
+  // Read/edit hybrid (#95): in lazy figure mode the timeline renders figures from
+  // the snapshot (figureContent) with no per-figure socket; a figure connects only
+  // on edit / openFigure. Eager (default) keeps the original connect-every-figure path.
   const eagerFigures = opts.eagerFigures ?? true;
   const figureContent = opts.figureContent;
+  // Figure-load robustness (#94): reconnect, a hydration timeout, and a registry
+  // access preflight, so a figure whose own connection IS open resolves to an
+  // honest loading / missing / error status rather than a blank "unknown figure".
+  const reconnect = opts.reconnect;
+  const hydrationTimeoutMs = opts.hydrationTimeoutMs ?? 0;
+  const schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
+  const cancel = opts.cancel ?? ((h) => clearTimeout(h));
+  // Registry-backed access preflight: GET /api/docs/:id/access mirrors the WS
+  // connect authorization (resolveEffectiveRole, incl. the routine→figure
+  // cascade), so a 403 means the figure is genuinely missing/denied — a browser
+  // WS can't read that off a 1006 close, so we ask REST (FE-2 / #178).
+  const checkAccess: (figureRef: string) => Promise<boolean> =
+    opts.checkAccess ??
+    (async (figureRef) => {
+      const token = getToken ? await getToken() : null;
+      try {
+        await apiGet<unknown>(`${baseUrl}/api/docs/${encodeURIComponent(figureRef)}/access`, token);
+        return true;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) return false;
+        throw err; // network / 5xx — unknown, not a denial: surfaces as retryable error
+      }
+    });
   // Default figure projection: POST /api/figures (authenticated with a fresh
   // token) so the fail-closed DO boundary can owner-resolve the new figure (#187).
   const createFigure: CreateFigureFn =
@@ -296,7 +371,7 @@ export async function openRoutine(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
     openSocket,
-    getToken,
+    { getToken, reconnect, schedule, cancel },
   );
 
   // Figures the client just minted (addPlacement) but whose server-side create
@@ -307,6 +382,64 @@ export async function openRoutine(
   // createFigure resolves, then open (the catch-up then includes the seed).
   const pendingFigures = new Set<string>();
 
+  // Per-figure load bookkeeping (drives FigureLoadStatus, separate from the
+  // connection's own sync state):
+  //  • hydrationTimers — the in-flight "still loading?" timer per figure.
+  //  • hydrationTimedOut — figures whose timer fired before they hydrated → error.
+  //  • accessResult — the registry preflight verdict, so a connection that gave
+  //    up resolves to `missing` (denied) vs `error` (accessible but failed).
+  const hydrationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const hydrationTimedOut = new Set<string>();
+  const accessResult = new Map<string, "accessible" | "denied">();
+  const accessInFlight = new Set<string>();
+
+  /** Cancel and forget a figure's hydration timer (it loaded, or we're retrying). */
+  const clearHydrationTimer = (figureRef: string): void => {
+    const t = hydrationTimers.get(figureRef);
+    if (t != null) {
+      cancel(t);
+      hydrationTimers.delete(figureRef);
+    }
+  };
+
+  /** Arm the "still hydrating?" timer: if it fires before content arrives and the
+   *  doc hasn't caught up, escalate to a retryable `error` so it's never a forever
+   *  skeleton. No-op when the timeout is disabled (hydrationTimeoutMs ≤ 0). */
+  const startHydrationTimer = (figureRef: string): void => {
+    if (hydrationTimeoutMs <= 0) return;
+    clearHydrationTimer(figureRef);
+    hydrationTimers.set(
+      figureRef,
+      schedule(() => {
+        hydrationTimers.delete(figureRef);
+        const conn = figureConns.get(figureRef);
+        if (!conn) return;
+        if (resolveFigure(figureRef)) return; // hydrated in time — nothing to do
+        if (conn.state() === "live") return; // caught up but empty → handled as missing
+        hydrationTimedOut.add(figureRef);
+        notify();
+      }, hydrationTimeoutMs),
+    );
+  };
+
+  /** Kick off the registry access preflight ONCE for a figure whose connection
+   *  gave up, so we can tell `missing` (denied) from `error` (accessible). */
+  const requestAccessCheck = (figureRef: string): void => {
+    if (accessResult.has(figureRef) || accessInFlight.has(figureRef)) return;
+    accessInFlight.add(figureRef);
+    Promise.resolve(checkAccess(figureRef))
+      .then((ok) => {
+        accessResult.set(figureRef, ok ? "accessible" : "denied");
+      })
+      .catch(() => {
+        // Unknown (network/5xx) — leave unset so it reads as a retryable error.
+      })
+      .finally(() => {
+        accessInFlight.delete(figureRef);
+        notify();
+      });
+  };
+
   // One connection per referenced figure doc, opened on demand and cached.
   const figureConns = new Map<string, DocConnection<FigureDoc>>();
   const figureConn = (figureRef: string): DocConnection<FigureDoc> => {
@@ -316,12 +449,57 @@ export async function openRoutine(
         A.init<FigureDoc>(),
         connectUrl(baseUrl, figureRef),
         openSocket,
-        getToken, // a FRESH token at THIS (lazy) figure conn's open (#189)
+        { getToken, reconnect, schedule, cancel }, // a FRESH token at each (re)open (#189)
       );
-      conn.onAdvance(() => notify());
+      const c = conn;
+      conn.onAdvance(() => {
+        // Real content arrived (or merged in) → this figure is no longer loading:
+        // clear any pending hydration timeout/escalation so it reads as `live`.
+        if (readFigureDoc(c.current())) {
+          clearHydrationTimer(figureRef);
+          hydrationTimedOut.delete(figureRef);
+        }
+        notify();
+      });
       figureConns.set(figureRef, conn);
+      startHydrationTimer(figureRef);
     }
     return conn;
+  };
+
+  /** The load status of a placement's figure (see FigureLoadStatus). */
+  const figureStatus = (figureRef: string): FigureLoadStatus => {
+    // A just-minted figure whose server-side create is still in flight.
+    if (pendingFigures.has(figureRef)) return "pending";
+    if (resolveFigure(figureRef)) return "live"; // resolved content (live conn, or snapshot in lazy)
+    // No content. Inspect a per-figure connection only if one is (or, in eager
+    // mode, should be) open — in LAZY mode we must NOT open a socket here, or the
+    // read path would re-grow the per-figure fan-out the hybrid removes.
+    const conn = eagerFigures ? figureConn(figureRef) : figureConns.get(figureRef);
+    if (!conn) {
+      // Lazy mode, figure not connected: it renders from the routine snapshot. No
+      // snapshot content yet → still loading (the snapshot read model is what
+      // surfaces a genuine 'missing' for the read-only path).
+      return "loading";
+    }
+    const selfDoc = readFigureDoc(conn.current());
+    // A variant whose own doc loaded but whose base is still loading: resolveFigure
+    // returns null until the base arrives — that's still loading, not missing.
+    if (selfDoc?.baseFigureRef) return "loading";
+    const state = conn.state();
+    if (state === "live") return "missing"; // caught up, yet no content → gone/empty
+    if (state === "closed") {
+      // The connection gave up. Ask the registry whether it's denied vs accessible.
+      const verdict = accessResult.get(figureRef);
+      if (verdict === "denied") return "missing";
+      if (verdict === "accessible") return "error";
+      requestAccessCheck(figureRef);
+      // While the preflight is in flight, keep showing a skeleton; once it (or a
+      // missing checker) resolves we settle on missing/error.
+      return accessInFlight.has(figureRef) ? "loading" : "error";
+    }
+    // connecting / reconnecting
+    return hydrationTimedOut.has(figureRef) ? "error" : "loading";
   };
 
   const listeners = new Set<() => void>();
@@ -366,7 +544,12 @@ export async function openRoutine(
       const out: ResolvedPlacement[] = [];
       for (const section of routine.sections) {
         for (const placement of section.placements) {
-          out.push({ placement, figure: resolveFigure(placement.figureRef) });
+          const status = figureStatus(placement.figureRef);
+          out.push({
+            placement,
+            figure: status === "live" ? resolveFigure(placement.figureRef) : null,
+            status,
+          });
         }
       }
       return out;
@@ -632,6 +815,16 @@ export async function openRoutine(
       return [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
     },
 
+    retryFigure: (figureRef) => {
+      // Clear the prior failure verdict + timeout, force an immediate reconnect,
+      // and re-arm the hydration timer so a failed figure recovers in place.
+      hydrationTimedOut.delete(figureRef);
+      accessResult.delete(figureRef);
+      figureConns.get(figureRef)?.reconnectNow();
+      startHydrationTimer(figureRef);
+      notify();
+    },
+
     undo: () => routineConn.commit(undoLastChange(routineConn.current(), actor ?? "local")),
     redo: () => routineConn.commit(redoLastChange(routineConn.current(), actor ?? "local")),
 
@@ -645,6 +838,8 @@ export async function openRoutine(
     syncState: () => routineConn.state(),
 
     close: () => {
+      for (const t of hydrationTimers.values()) cancel(t);
+      hydrationTimers.clear();
       routineConn.close();
       for (const conn of figureConns.values()) conn.close();
     },

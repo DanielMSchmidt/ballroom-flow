@@ -42,7 +42,7 @@ function renderReading(fig: FigureDoc) {
     schemaVersion: 1,
   };
   const placements: ResolvedPlacement[] = [
-    { placement: { id: "p1", figureRef: fig.id }, figure: fig },
+    { placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" },
   ];
   return renderReadingView(routine, placements);
 }

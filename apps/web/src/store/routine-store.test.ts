@@ -761,6 +761,97 @@ describe("US-043 createCustomKind (routine CRDT + account REST) + customKinds()"
   });
 });
 
+describe("figure load status — loading vs missing vs error (the 'unknown figure' fix)", () => {
+  /** A routine with one section + one placement referencing `figureRef`. */
+  const routineWithFigure = (figureRef: string): RoutineDoc =>
+    buildRoutineDoc({
+      id: "rt_status",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    }) as RoutineDoc;
+
+  const statusOf = (store: Awaited<ReturnType<typeof openRoutine>>, figureRef: string) =>
+    store.readPlacements().find((p) => p.placement.figureRef === figureRef)?.status;
+
+  it("a figure whose connection gives up + is DENIED by the access preflight reads as 'missing'", async () => {
+    const { opts, sockets } = fakeWiring();
+    const checkAccess = vi.fn(async () => false); // 403 → denied/gone
+    const store = await openRoutine("rt_status", {
+      ...opts,
+      checkAccess,
+      reconnect: { delays: [1000], maxColdAttempts: 1 }, // one cold failure → terminal
+    });
+    sockets.get("rt_status")?.load(routineWithFigure("fgone"));
+
+    // Reading opens the figure connection (lazy). Its handshake then fails cold.
+    expect(statusOf(store, "fgone")).toBe("loading");
+    sockets.get("fgone")?.close(); // closed before ever opening → cold → terminal
+
+    // The preflight is consulted; once it resolves "denied", the figure is missing.
+    await vi.waitFor(() => expect(statusOf(store, "fgone")).toBe("missing"));
+    expect(checkAccess).toHaveBeenCalledWith("fgone");
+    store.close();
+  });
+
+  it("a figure that times out hydrating reads as 'error' and retryFigure recovers it to 'live'", async () => {
+    vi.useFakeTimers();
+    try {
+      const { opts, sockets } = fakeWiring();
+      const store = await openRoutine("rt_status", {
+        ...opts,
+        hydrationTimeoutMs: 5000,
+        // Keep reconnect from going terminal so the state stays "connecting".
+        reconnect: { delays: [1000], maxColdAttempts: 99 },
+      });
+      sockets.get("rt_status")?.load(routineWithFigure("fslow"));
+
+      // Opens the figure connection + arms the hydration timer; it never hydrates.
+      expect(statusOf(store, "fslow")).toBe("loading");
+
+      // The hydration timeout fires → escalates to a retryable error.
+      vi.advanceTimersByTime(5000);
+      expect(statusOf(store, "fslow")).toBe("error");
+
+      // Retry forces a fresh connection; this time the figure hydrates → live.
+      store.retryFigure("fslow");
+      const figDoc = buildFigureDoc(aFigure({ id: "fslow", name: "Slow Turn" }) as FigureDoc);
+      sockets.get("fslow")?.fireOpen();
+      sockets.get("fslow")?.load(figDoc);
+      sockets.get("fslow")?.fireCaughtUp();
+      expect(statusOf(store, "fslow")).toBe("live");
+      store.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a connection that catches up with NO content reads as 'missing' (empty/nonexistent doc)", async () => {
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_status", opts);
+    sockets.get("rt_status")?.load(routineWithFigure("fempty"));
+
+    expect(statusOf(store, "fempty")).toBe("loading");
+    // The figure DO replays an EMPTY history then signals caught-up: hydrated, but
+    // there's no figure content → genuinely missing, not a perpetual skeleton.
+    sockets.get("fempty")?.fireOpen();
+    sockets.get("fempty")?.fireCaughtUp();
+    expect(statusOf(store, "fempty")).toBe("missing");
+    store.close();
+  });
+});
+
 describe("US-017 architecture boundary (components import only from store/)", () => {
   it("no component imports @automerge/automerge or the RPC client directly", () => {
     // Intent: components must reach Automerge / the worker only THROUGH store/

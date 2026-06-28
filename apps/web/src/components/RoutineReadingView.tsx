@@ -5,9 +5,11 @@
 // Sway · Turn)
 // where a placed attribute shows as a tight color-coded code and an empty slot
 // shows a small dot. Pure presentation over the same store reads; no editing.
+// A null figure is rendered honestly per its load status (skeleton / unavailable),
+// never silently dropped (#94).
 import { type Attribute, countLabel, type FigureDoc, type RoutineDoc } from "@ballroom/domain";
-import type { ResolvedPlacement } from "../store/routine";
-import { kindVar, ScopeBadge } from "../ui";
+import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
+import { Card, kindVar, ScopeBadge, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { ATTR_COLUMNS, abbrevValue, COLUMN_KINDS, stepAction } from "./attribute-display";
 import { chipTone } from "./role-view";
@@ -19,7 +21,7 @@ export function RoutineReadingView({
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
 }) {
-  const figureByPlacement = new Map(placements.map((p) => [p.placement.id, p.figure]));
+  const resolvedByPlacement = new Map(placements.map((p) => [p.placement.id, p]));
   return (
     <div data-testid="reading-view" className="flex flex-col gap-5">
       {routine.sections.length === 0 ? (
@@ -36,9 +38,16 @@ export function RoutineReadingView({
             {section.placements.length === 0 ? (
               <p className="text-2xs text-ink-faint">No figures in this section.</p>
             ) : (
-              section.placements.map((pl) => (
-                <FigureReadout key={pl.id} figure={figureByPlacement.get(pl.id) ?? null} />
-              ))
+              section.placements.map((pl) => {
+                const rp = resolvedByPlacement.get(pl.id);
+                return (
+                  <FigureReadout
+                    key={pl.id}
+                    figure={rp?.figure ?? null}
+                    status={rp?.status ?? "loading"}
+                  />
+                );
+              })
             )}
           </section>
         ))
@@ -54,8 +63,31 @@ function figureScope(figure: FigureDoc): FigureScope {
 }
 
 /** One figure's notation, read-only: a compact count × technique-column table. */
-function FigureReadout({ figure }: { figure: FigureDoc | null }) {
-  if (!figure) return null;
+function FigureReadout({ figure, status }: { figure: FigureDoc | null; status: FigureLoadStatus }) {
+  if (!figure) {
+    // A loading figure shows a skeleton (never silently vanishes); a genuinely
+    // unavailable one says so plainly. A transient error reads as unavailable
+    // too — this is the read-only view, so there's no retry affordance here.
+    if (status === "missing" || status === "error") {
+      return (
+        <Card>
+          <p className="text-2xs text-ink-faint" role="status">
+            This figure is unavailable.
+          </p>
+        </Card>
+      );
+    }
+    return (
+      <Card>
+        <div aria-busy="true">
+          <Skeleton className="w-32" />
+          <span className="sr-only" role="status">
+            Loading figure…
+          </span>
+        </div>
+      </Card>
+    );
+  }
   const live = figure.attributes.filter((a) => a.deletedAt == null);
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   return (

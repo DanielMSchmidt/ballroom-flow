@@ -38,14 +38,52 @@ export function connectUrl(base: string, docId: string): string {
 }
 
 /**
+ * Auto-reconnect policy. A dropped socket re-opens after a backoff so a figure
+ * (or the routine) self-heals on a sleep/wake, network blip, or DO eviction —
+ * the gap that used to require a full page reload to recover a blank figure.
+ */
+export interface ReconnectPolicy {
+  /**
+   * Backoff delays (ms) per successive attempt; the last entry repeats for all
+   * later attempts. An empty array disables reconnect entirely.
+   */
+  delays?: number[];
+  /**
+   * Max CONSECUTIVE cold failures (a socket that closed before it ever opened —
+   * a rejected handshake: missing doc, revoked access, or server down) before we
+   * give up and go terminally "closed". A connection that has opened at least
+   * once treats later drops as transient and keeps retrying (capped backoff).
+   */
+  maxColdAttempts?: number;
+}
+
+/** Injectable timers so reconnect/backoff is deterministic under test. */
+export interface DocConnectionOptions {
+  /** Fresh-token provider attached as the `ballroom.auth` subprotocol (#189). */
+  getToken?: TokenProvider;
+  /** Auto-reconnect policy (default: a capped exponential backoff). */
+  reconnect?: ReconnectPolicy;
+  /** Schedule a delayed callback (default: global setTimeout). */
+  schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
+  /** Cancel a scheduled callback (default: global clearTimeout). */
+  cancel?: (handle: ReturnType<typeof setTimeout>) => void;
+}
+
+const DEFAULT_RECONNECT: Required<ReconnectPolicy> = {
+  delays: [1000, 2000, 5000, 10000],
+  maxColdAttempts: 4,
+};
+
+/**
  * A live connection to one document's DO. Owns the in-memory Automerge doc and
  * notifies a listener whenever it advances (from a local edit or a peer frame).
  */
 /**
  * Where one document's connection is in its lifecycle (drives the UI indicator
- * and the edit gate). "connecting" = socket opening OR open-but-not-yet-hydrated;
- * "live" = the DO's full catch-up replay has been APPLIED (hydrated, safe to
- * edit, #202); "closed" = socket closed/offline.
+ * and the edit gate). "connecting" = socket opening, reconnecting, OR
+ * open-but-not-yet-hydrated; "live" = the DO's full catch-up replay has been
+ * APPLIED (hydrated, safe to edit, #202); "closed" = TERMINAL — either disposed
+ * by the owner, or reconnect gave up after exhausting its cold attempts.
  */
 export type SyncState = "connecting" | "live" | "closed";
 
@@ -54,32 +92,73 @@ export class DocConnection<T> {
   private socket: SocketLike | null = null;
   private onChange: (() => void) | null = null;
   private syncState: SyncState = "connecting";
-  private closed = false;
+  /** Owner called close() — permanent; never reconnects again. */
+  private disposed = false;
+  /** This connection has opened a socket at least once (distinguishes cold vs warm). */
+  private everOpened = false;
+  /** Consecutive cold failures (closes with no intervening open) since the last open. */
+  private coldFailures = 0;
+  /** Reconnect attempt counter — indexes into the backoff delays. */
+  private attempt = 0;
+  /** Pending reconnect timer handle, so close()/reconnectNow() can cancel it. */
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   // Outgoing changes produced before the socket is open (e.g. while the #189
-  // token resolves, or during the CONNECTING window) are buffered here and
-  // flushed once it opens — otherwise a brand-new doc's seed change (a figure's
-  // name/attributes) is silently dropped and never reaches its DO, so it's lost
-  // on the next reload. (A precursor to full reconnect resend, #161.)
+  // token resolves, during the CONNECTING window, or while reconnecting) are
+  // buffered here and flushed once it opens — otherwise a brand-new doc's seed
+  // change (a figure's name/attributes), or an edit made during a reconnect gap,
+  // is silently dropped and never reaches its DO, so it's lost on the next
+  // reload. (A precursor to full reconnect resend, #161.)
   private pendingSends: Uint8Array[] = [];
+
+  private readonly url: string;
+  private readonly openSocket: SocketFactory;
+  private readonly getToken?: TokenProvider;
+  private readonly reconnectPolicy: Required<ReconnectPolicy>;
+  private readonly schedule: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
+  private readonly cancel: (handle: ReturnType<typeof setTimeout>) => void;
 
   /**
    * `getToken` (#189): when provided, a FRESH token is fetched at THIS
-   * connection's open and offered as the `ballroom.auth` WS subprotocol, so the
-   * fail-closed DO boundary (US-021) authenticates it. Resolving per-open (not
-   * once for the whole session) means a lazily-opened figure conn gets a current
-   * token, not a stale cached one. Mid-session re-auth of an open socket is #161.
-   * Without `getToken` the socket opens immediately (tests / open-boundary).
+   * connection's open (and at every reconnect) and offered as the `ballroom.auth`
+   * WS subprotocol, so the fail-closed DO boundary (US-021) authenticates it.
+   * Resolving per-open (not once for the whole session) means a lazily-opened or
+   * reconnected figure conn gets a current token, not a stale cached one. Without
+   * `getToken` the socket opens immediately (tests / open-boundary).
+   *
+   * Accepts either a plain `TokenProvider` (back-compat) or a full options object.
    */
-  constructor(initial: A.Doc<T>, url: string, openSocket: SocketFactory, getToken?: TokenProvider) {
+  constructor(
+    initial: A.Doc<T>,
+    url: string,
+    openSocket: SocketFactory,
+    optsOrToken?: TokenProvider | DocConnectionOptions,
+  ) {
     this.doc = initial;
-    if (getToken) {
-      void getToken().then((token) => {
-        if (this.closed) return; // closed before the token resolved
+    this.url = url;
+    this.openSocket = openSocket;
+    const opts: DocConnectionOptions =
+      typeof optsOrToken === "function" ? { getToken: optsOrToken } : (optsOrToken ?? {});
+    this.getToken = opts.getToken;
+    this.reconnectPolicy = {
+      delays: opts.reconnect?.delays ?? DEFAULT_RECONNECT.delays,
+      maxColdAttempts: opts.reconnect?.maxColdAttempts ?? DEFAULT_RECONNECT.maxColdAttempts,
+    };
+    this.schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
+    this.cancel = opts.cancel ?? ((h) => clearTimeout(h));
+    this.connect();
+  }
+
+  /** Open (or re-open) the socket: fetch a fresh token, then attach. */
+  private connect(): void {
+    if (this.disposed) return;
+    if (this.getToken) {
+      void this.getToken().then((token) => {
+        if (this.disposed) return; // disposed before the token resolved
         const protocols = token ? [AUTH_SUBPROTOCOL, token] : undefined;
-        this.attach(openSocket(url, protocols));
+        this.attach(this.openSocket(this.url, protocols));
       });
     } else {
-      this.attach(openSocket(url));
+      this.attach(this.openSocket(this.url));
     }
   }
 
@@ -93,8 +172,76 @@ export class DocConnection<T> {
     // applied), signalled by the SYNC_CAUGHT_UP marker in receive() (#202), so
     // the UI never enables editing on a not-yet-replayed doc. Until then the
     // state stays "connecting" (US-018 "syncing…").
-    socket.addEventListener("open", () => this.flush());
-    socket.addEventListener("close", () => this.setState("closed"));
+    socket.addEventListener("open", () => {
+      this.everOpened = true;
+      this.coldFailures = 0; // a successful open clears the cold-failure streak
+      this.flush();
+    });
+    socket.addEventListener("close", () => this.onSocketClosed());
+  }
+
+  /**
+   * A socket closed. Decide whether to reconnect (transient) or give up (a
+   * persistently rejected/unreachable connection), unless the owner disposed us.
+   */
+  private onSocketClosed(): void {
+    if (this.disposed) {
+      this.setState("closed");
+      return;
+    }
+    this.socket = null; // so buffered sends queue cleanly until the next open
+    const reconnectDisabled = this.reconnectPolicy.delays.length === 0;
+    if (reconnectDisabled) {
+      this.setState("closed");
+      return;
+    }
+    if (this.everOpened) {
+      // Warm drop (we'd connected before): a transient blip — keep retrying with
+      // a capped backoff so the figure/routine self-heals without a reload.
+      this.everOpened = false; // re-armed on the next successful open
+      this.scheduleReconnect();
+      return;
+    }
+    // Cold failure: the handshake never opened (missing doc, revoked access, or
+    // server down). Retry a bounded number of times, then give up terminally —
+    // the store then confirms missing-vs-error via the access preflight.
+    this.coldFailures += 1;
+    if (this.coldFailures >= this.reconnectPolicy.maxColdAttempts) {
+      // Give up: terminally "closed" until a manual reconnectNow(). The store
+      // then confirms missing-vs-error via the access preflight.
+      this.setState("closed");
+      return;
+    }
+    this.scheduleReconnect();
+  }
+
+  /** Arm the next reconnect after the policy's backoff for this attempt. */
+  private scheduleReconnect(): void {
+    this.setState("connecting"); // reconnecting reads as "connecting", not "closed"
+    const { delays } = this.reconnectPolicy;
+    const delay = delays[Math.min(this.attempt, delays.length - 1)] ?? 1000;
+    this.attempt += 1;
+    if (this.reconnectTimer != null) this.cancel(this.reconnectTimer);
+    this.reconnectTimer = this.schedule(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
+  }
+
+  /**
+   * Force an immediate reconnect, clearing a terminal give-up. Used by the store's
+   * "retry" affordance when a figure surfaced as errored/unavailable, so the user
+   * can recover without reloading the page.
+   */
+  reconnectNow(): void {
+    if (this.disposed) return;
+    if (this.reconnectTimer != null) {
+      this.cancel(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.attempt = 0;
+    this.coldFailures = 0;
+    this.connect();
   }
 
   /** The current immutable doc. */
@@ -162,6 +309,7 @@ export class DocConnection<T> {
     // The DO's catch-up-complete marker (a TEXT frame): the full replay has been
     // applied, so this connection is HYDRATED → go "live" (#202).
     if (data === SYNC_CAUGHT_UP) {
+      this.attempt = 0; // a clean hydration resets the backoff schedule
       this.setState("live");
       return;
     }
@@ -186,8 +334,9 @@ export class DocConnection<T> {
         // Socket attached but not open yet (CONNECTING) — fall through to buffer.
       }
     }
-    // Not attached (token still resolving) or not open — buffer for the flush on
-    // "open" so a brand-new doc's changes aren't lost before its first sync.
+    // Not attached (token still resolving, or reconnecting) or not open — buffer
+    // for the flush on "open" so a brand-new doc's changes, or an edit made
+    // during a reconnect gap, aren't lost before the next sync.
     this.pendingSends.push(change);
   }
 
@@ -207,7 +356,11 @@ export class DocConnection<T> {
   }
 
   close(): void {
-    this.closed = true;
+    this.disposed = true;
+    if (this.reconnectTimer != null) {
+      this.cancel(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.socket?.close();
   }
 }
