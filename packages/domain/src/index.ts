@@ -5,4 +5,5 @@
 export * from "./catalog";
 export * from "./custom";
 export * from "./figures";
+export * from "./routine";
 export * from "./vocabulary";
