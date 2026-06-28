@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { Attribute } from "./doc-types";
 import {
+  figureMatchesLibraryOrigin,
   LIBRARY_FIGURES,
   type LibraryFigure,
   libraryFiguresForDance,
@@ -74,5 +76,66 @@ describe("figure library catalog", () => {
         expect(() => parseAttributeWrite(a, { dance: f.dance })).not.toThrow();
       }
     }
+  });
+});
+
+describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom", () => {
+  const origin = libraryFiguresForDance("waltz").find(
+    (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
+  );
+  if (!origin) throw new Error("fixture missing");
+  // A figure freshly picked from the library copies the origin's attributes verbatim.
+  const picked = {
+    dance: "waltz" as const,
+    figureType: "natural-turn",
+    name: "Natural Turn",
+    attributes: (origin.attributes ?? []).map((a) => ({ ...a })) as Attribute[],
+  };
+
+  it("matches when the placed figure equals its catalog origin", () => {
+    expect(figureMatchesLibraryOrigin(picked)).toBe(true);
+  });
+
+  it("does NOT match once a configured attribute value is changed", () => {
+    const edited = {
+      ...picked,
+      attributes: picked.attributes.map((a, i) =>
+        i === 0 ? { ...a, value: "completely-different" } : a,
+      ),
+    };
+    expect(figureMatchesLibraryOrigin(edited)).toBe(false);
+  });
+
+  it("does NOT match once a new attribute is added", () => {
+    const added = {
+      ...picked,
+      attributes: [
+        ...picked.attributes,
+        { id: "extra", kind: "sway", count: 1, role: "leader", value: "left", deletedAt: null },
+      ] as Attribute[],
+    };
+    expect(figureMatchesLibraryOrigin(added)).toBe(false);
+  });
+
+  it("ignores deleted attributes (compares only the live set)", () => {
+    // Deleting an attribute diverges from the origin → no longer a pristine pick.
+    const withDeletion = {
+      ...picked,
+      attributes: picked.attributes.map((a, i) =>
+        i === 0 ? { ...a, deletedAt: 123 } : a,
+      ) as Attribute[],
+    };
+    expect(figureMatchesLibraryOrigin(withDeletion)).toBe(false);
+  });
+
+  it("a typed custom figure (name not in the catalog) never matches", () => {
+    expect(
+      figureMatchesLibraryOrigin({
+        dance: "waltz",
+        figureType: "my-move",
+        name: "My Move",
+        attributes: [],
+      }),
+    ).toBe(false);
   });
 });

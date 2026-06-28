@@ -18,6 +18,7 @@ import {
   can,
   type DanceId,
   type FigureDoc,
+  figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
   type RegistryKind,
@@ -924,7 +925,11 @@ function AlignmentEdge({
 /** Variant / custom / library tag from the figure's scope + lineage. */
 function ScopeTag({ figure }: { figure: FigureDoc }) {
   if (figure.scope === "account") {
-    return <Badge tone="accent">{figure.baseFigureRef ? "Variant" : "Custom"}</Badge>;
+    if (figure.baseFigureRef) return <Badge tone="accent">Variant</Badge>;
+    // An unchanged library pick isn't "custom" — only badge Custom once it actually
+    // diverges from the catalog figure it was added from.
+    if (figureMatchesLibraryOrigin(figure)) return <Badge tone="neutral">Library</Badge>;
+    return <Badge tone="accent">Custom</Badge>;
   }
   return <Badge tone="neutral">Library</Badge>;
 }

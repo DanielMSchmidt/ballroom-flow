@@ -70,3 +70,34 @@ export function libraryGroupsForDance(dance: DanceId): LibraryGroup[] {
   }
   return [...groups.values()];
 }
+
+// Compare two attributes by their meaning (kind/count/role/value), ignoring ids and the
+// deletedAt marker — a picked figure copies the library's attribute ids verbatim, but we
+// want a content comparison, not an identity one.
+const attrKey = (a: Attribute): string =>
+  `${a.kind}|${a.count}|${a.role ?? ""}|${JSON.stringify(a.value)}`;
+
+/**
+ * True when a placed figure still matches the library figure it was picked from — same
+ * (dance, figureType, name) AND the same live attributes. Used to decide whether a figure is
+ * an unchanged library pick (so the UI does NOT badge it "custom") versus one the dancer has
+ * actually diverged. A figure whose name is not in the catalog (a typed custom figure) never
+ * matches.
+ */
+export function figureMatchesLibraryOrigin(figure: {
+  dance: DanceId;
+  figureType: string;
+  name: string;
+  attributes: Attribute[];
+}): boolean {
+  const origin = LIBRARY_FIGURES.find(
+    (l) => l.dance === figure.dance && l.figureType === figure.figureType && l.name === figure.name,
+  );
+  if (!origin) return false;
+  const live = figure.attributes
+    .filter((a) => a.deletedAt == null)
+    .map(attrKey)
+    .sort();
+  const base = (origin.attributes ?? []).map(attrKey).sort();
+  return live.length === base.length && live.every((v, i) => v === base[i]);
+}

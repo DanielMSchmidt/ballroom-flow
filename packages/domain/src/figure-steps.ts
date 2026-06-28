@@ -73,6 +73,27 @@ export const FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     s("forward", "HT", "back", "TH"),
     s("forward", "TH", "back", "T"),
   ],
+
+  // Research-derived (leader corroborated; follower from the standard conventions). Worth a
+  // check against the technique books, like the rest — kept here so the Bronze Waltz set is
+  // more complete. The Whisk's third step crosses behind into PP (modeled as a side step).
+  "waltz:whisk": [
+    s("forward", "HT", "back", "TH"),
+    s("side", "T", "side", "T"),
+    s("side", "T", "side", "TH"),
+  ],
+  "waltz:outside-change": [
+    s("back", "TH", "forward", "HT"),
+    s("back", "T", "forward", "T"),
+    s("side", "TH", "side", "TH"),
+  ],
+  // Chassé from PP — timing 1 2 & 3, so the close lands on the "&".
+  "waltz:chasse-from-pp": [
+    s("forward", "HT", "forward", "HT"),
+    s("side", "T", "side", "T"),
+    s("close", "T", "close", "T"),
+    s("side", "TH", "side", "TH"),
+  ],
 };
 
 /** Authored per-count steps for a figure, or `undefined` when none are verified yet. */
