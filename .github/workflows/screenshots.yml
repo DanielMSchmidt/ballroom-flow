@@ -61,15 +61,19 @@ jobs:
         run: pnpm --filter web screenshots
 
       - name: Diff vs base + build comment
-        if: steps.guard.outputs.run == 'true'
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'
         id: diff
         run: |
           base="${{ github.event.pull_request.base.sha }}"
           node scripts/screenshot-diff.mjs "$base" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$GITHUB_SHA" | tee diff-out.txt
-          grep -q 'changed=true' diff-out.txt && echo "changed=true" >> "$GITHUB_OUTPUT" || echo "changed=false" >> "$GITHUB_OUTPUT"
+          if grep -q 'changed=true' diff-out.txt; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Auto-commit regenerated screenshots
-        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true'
+        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true' && github.event_name == 'pull_request'
         run: |
           git config user.name "screenshot-bot"
           git config user.email "screenshot-bot@users.noreply.github.com"
@@ -78,13 +82,13 @@ jobs:
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
       - name: Re-point comment to pushed commit
-        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true'
+        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true' && github.event_name == 'pull_request'
         run: |
           head="$(git rev-parse HEAD)"
           node scripts/screenshot-diff.mjs "${{ github.event.pull_request.base.sha }}" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$head"
 
       - name: Upsert PR comment
-        if: steps.guard.outputs.run == 'true'
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
