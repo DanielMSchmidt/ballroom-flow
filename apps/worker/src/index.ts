@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
-import { createFigureRows } from "./db/figures";
+import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
@@ -226,12 +226,31 @@ app.post("/api/routines/:id/fork", async (c) => {
   return c.json({ ...result, plan }, 201);
 });
 
+// GET /api/figures?dance= — the global figure library list (US-032), from the
+// D1 index (no CRDT scan). Open to any authenticated user.
+app.get("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const dance = c.req.query("dance") || undefined;
+  const figures = await listGlobalFigures(c.env.DB, dance);
+  return c.json({ figures });
+});
+
+// GET /api/figures/mine — the caller's account variants + custom figures with a
+// "used in N routines" count (US-033), from the D1 index.
+app.get("/api/figures/mine", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const figures = await listMineFigures(c.env.DB, user.sub);
+  return c.json({ figures });
+});
+
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).
 // The client mints the figureRef + metadata; the SERVER stamps ownerId from the
 // verified JWT (never a client field). Projecting the registry row + owner
 // membership is what lets the fail-closed DO boundary (US-021) owner-resolve a
 // connect to that figure (101, not 403). Idempotent on figureRef. Figures are
-// NOT counted against the routine quota (type="figure" ≠ "routine").
+// NOT counted against the routine quota (type="account-figure" ≠ "routine").
 app.post("/api/figures", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
@@ -240,7 +259,7 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType, routineId, attributes } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId, attributes, baseFigureRef } = parsed.data;
 
   // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
   // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
@@ -251,7 +270,14 @@ app.post("/api/figures", async (c) => {
     return c.json({ error: "invalid_attribute" }, 400);
   }
 
-  await createFigureRows(c.env.DB, { figureRef, ownerId: user.sub, name, dance, figureType });
+  await createFigureRows(c.env.DB, {
+    figureRef,
+    ownerId: user.sub,
+    name,
+    dance,
+    figureType,
+    baseFigureRef,
+  });
   // Record the routine→figure edge so the routine's co-members get read access to
   // this figure (cascade): figure docs are otherwise shared independently (US-020).
   await linkPlacement(c.env.DB, routineId, figureRef);
@@ -267,6 +293,9 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
+    ...(baseFigureRef
+      ? { baseFigureRef, overlay: { overrides: {}, tombstones: [], additions: [] } }
+      : {}),
     schemaVersion: 1,
     deletedAt: null,
   });

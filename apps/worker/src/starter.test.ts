@@ -44,10 +44,11 @@ describe("seedStarterRoutine", () => {
     expect(routineRow?.forkedFromRef).not.toBeNull();
     expect(routineRow?.forkedFromRef).not.toBe(routineId);
 
-    // Figures are NOT per-user anymore — they are app-owned (shared global).
-    // The user should have 0 figure rows under their own ownerId.
+    // Figures are NOT per-user anymore — the gift is a FORK of the app template,
+    // so its placements reference the app-owned figures. The user should own 0
+    // figure rows. (Figure rows are typed `account-figure` post-FE-3 taxonomy.)
     const userFigureCount = await typedEnv.DB.prepare(
-      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'figure' AND ownerId = ?",
+      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'account-figure' AND ownerId = ?",
     )
       .bind("u_starter2")
       .first<{ n: number }>();
@@ -55,7 +56,7 @@ describe("seedStarterRoutine", () => {
 
     // App-owned figures were seeded by the template seed (6 waltz figures).
     const appFigureCount = await typedEnv.DB.prepare(
-      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'figure' AND ownerId = 'app'",
+      "SELECT COUNT(*) AS n FROM document_registry WHERE type = 'account-figure' AND ownerId = 'app'",
     )
       .bind()
       .first<{ n: number }>();

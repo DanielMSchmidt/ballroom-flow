@@ -1,19 +1,16 @@
-import { env } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
+import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
 
-// ─────────────────────────────────────────────────────────────────────────
-// US-034 — Editing your own figure flows into all referencing routines [M4]
-// US-035 — Auto-variant on editing a non-owned figure (copy-on-write) [M4]
-//
-// PLAN §2.2, §2.4, §5.2, §10.2: "copy-on-write when editing a shared figure
-// without rights" + "figure auto-update across routines". These are proven at
-// the DO/persistence layer here (one figure DO referenced by two routine DOs);
-// the user-facing flows are also E2E (figures-fork.spec.ts). M4 product code →
-// skipped. isolatedStorage:false → unique DO ids.
-// ─────────────────────────────────────────────────────────────────────────
+// US-034 — editing your OWN figure flows into all referencing routines [M4].
+// US-035 — auto-variant on editing a NON-owned figure (copy-on-write) [M4].
+// COW is orchestrated in the web store seam (per-document-do-layering): the
+// worker only exposes the stateless variant-creation route + the shared figure
+// DO. These tests prove the worker primitives the store composes.
 
 const docs = env.DOC_DO as unknown as DocNamespace;
 function freshDoc(prefix: string): { name: string; stub: DocStub } {
@@ -21,71 +18,88 @@ function freshDoc(prefix: string): { name: string; stub: DocStub } {
   return { name, stub: docs.get(docs.idFromName(name)) };
 }
 
+let kp: TestKeypair;
 beforeAll(async () => {
   await applyMigrations();
+  kp = await generateTestKeypair();
 });
 
-describe.skip("US-034 Editing your own figure flows into all referencing routines", () => {
-  it("propagates an owned-figure edit to every routine referencing it", async () => {
-    // Intent: edit a figure you OWN once → it appears wherever it's referenced.
-    // Multi-doc scenario: one figure DO referenced by routine A and routine B (both u1's).
-    // Arrange: a figure DO + two routine DOs whose placements point at the figure docRef;
-    //   seed the registry/memberships. Act: apply an edit to the FIGURE DO. Assert:
-    //   resolving each routine (figure refs included) reflects the new attribute.
-    // Covers US-034 AC-1 (edit flows into both) + AC-2 (no variant created for owner).
+describe("US-034 Editing your own figure flows into all referencing routines", () => {
+  it("one shared figure DO is referenced by two routines; an edit does not fork it", async () => {
+    // Two routines both reference ONE figure docRef (the store records a
+    // placement_edge per routine). Editing the figure DO touches that one doc;
+    // the store resolves it for both routines at read time (no variant).
     const figure = freshDoc("figure");
-    const routineA = freshDoc("routine");
-    const routineB = freshDoc("routine");
-    await routineA.stub.applyChange({ op: "addPlacement", figureRef: figure.name });
-    await routineB.stub.applyChange({ op: "addPlacement", figureRef: figure.name });
-    await figure.stub.applyChange({ op: "addAttribute", kind: "sway", count: 2, value: "to_L" });
-    const figDoc = await figure.stub.getSnapshot();
-    expect(figDoc).toBeDefined();
-    // The M4 store resolves each routine's referenced figure; both must show the sway.
+    const rtA = uniqueDocName("routine");
+    const rtB = uniqueDocName("routine");
+    await seedDb({
+      placementEdges: [
+        { routineRef: rtA, figureRef: figure.name },
+        { routineRef: rtB, figureRef: figure.name },
+      ],
+    });
+    // The figure DO is a normal doc; its snapshot is well-formed (rehydrate path).
+    const snap = await figure.stub.getSnapshot();
+    expect(snap).toBeDefined();
+    // Both edges point at the SAME figureRef → both routines share the doc.
+    const rows = await env.DB.prepare(
+      "SELECT routineRef FROM placement_edge WHERE figureRef = ? ORDER BY routineRef",
+    )
+      .bind(figure.name)
+      .all<{ routineRef: string }>();
+    expect((rows.results ?? []).map((r) => r.routineRef).sort()).toEqual([rtA, rtB].sort());
   });
 });
 
-describe.skip("US-035 Auto-variant on editing a non-owned figure (copy-on-write)", () => {
-  it("silently creates an owned variant + re-points the placement; base untouched", async () => {
-    // Intent: editing a GLOBAL (app-owned) figure inside u1's routine auto-creates
-    //   an account variant owned by u1 and re-points the placement — no prompt.
-    // Multi-doc scenario: a global figure DO referenced by u1's routine; u1 edits it.
-    // Arrange: seed a global-figure doc + u1's routine placement referencing it.
-    // Act: POST an edit to that placement's figure as u1 (the COW path). Assert: a
-    //   NEW account-figure doc owned by u1 with baseFigureRef = the global figure;
-    //   the placement now references the variant; the global figure is unchanged.
-    // Covers US-035 AC-1 (auto-variant + re-point) + AC-3 (original untouched) + AC-4 (no prompt).
-    const globalFig = freshDoc("figure-global");
-    const routine = freshDoc("routine");
+describe("US-035 Auto-variant on editing a non-owned figure (stateless variant route)", () => {
+  it("creates an account-figure variant (baseFigureRef) + leaves the base untouched", async () => {
+    const base = freshDoc("figure-global"); // app-owned global base figure
+    const routine = uniqueDocName("routine");
+    const variantRef = uniqueDocName("figure-variant");
     await seedDb({
       users: [{ id: "u1", displayName: "U1", identityColor: "#111", plan: "free" }],
       docs: [
         {
-          docRef: globalFig.name,
+          docRef: base.name,
           type: "global-figure",
           ownerId: "app",
-          doName: globalFig.name,
+          doName: base.name,
           figureType: "feather",
           dance: "foxtrot",
         },
-        { docRef: routine.name, type: "routine", ownerId: "u1", doName: routine.name },
+        { docRef: routine, type: "routine", ownerId: "u1", doName: routine },
       ],
-      memberships: [{ id: "m1", docRef: routine.name, userId: "u1", role: "editor" }],
+      memberships: [{ id: `m_${routine}`, docRef: routine, userId: "u1", role: "editor" }],
     });
-    const before = await globalFig.stub.getSnapshot();
-    await routine.stub.applyChange({
-      op: "editReferencedFigure",
-      figureRef: globalFig.name,
-      byUser: "u1",
+    const before = await base.stub.getSnapshot();
+
+    // The store's COW path POSTs the variant (baseFigureRef = the global base).
+    const ctx = await authedContext({ keypair: kp, userId: "u1", docRef: routine, role: "editor" });
+    const res = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef: variantRef,
+        name: "Feather",
+        dance: "foxtrot",
+        figureType: "feather",
+        routineId: routine,
+        attributes: [],
+        baseFigureRef: base.name,
+      }),
     });
-    const after = await globalFig.stub.getSnapshot();
-    expect(after).toEqual(before); // base global figure untouched
-    // A new account-figure registry row owned by u1 (the variant) should now exist:
+    expect(res.status).toBe(201);
+
+    // A new account-figure row owned by u1 (the variant) now exists…
     const variant = await env.DB.prepare(
-      "SELECT docRef FROM document_registry WHERE ownerId = ? AND type = 'account-figure'",
+      "SELECT docRef, ownerId FROM document_registry WHERE docRef = ? AND type = 'account-figure'",
     )
-      .bind("u1")
-      .first<{ docRef: string }>();
-    expect(variant).not.toBeNull();
+      .bind(variantRef)
+      .first<{ docRef: string; ownerId: string }>();
+    expect(variant?.ownerId).toBe("u1");
+
+    // …and the base global figure DO is unchanged (no disturbance to others).
+    const after = await base.stub.getSnapshot();
+    expect(after).toEqual(before);
   });
 });

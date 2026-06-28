@@ -59,6 +59,9 @@ export const zCreateFigure = z.object({
    *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
   routineId: z.string().min(1),
   attributes: z.array(zAttribute).default([]),
+  /** Set when this figure is a copy-on-write VARIANT of a shared base (US-035):
+   *  the figure inherits the base live via an overlay. Omitted for a fresh custom figure. */
+  baseFigureRef: z.string().min(1).optional(),
 });
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 
