@@ -46,6 +46,7 @@ export { matchesFigureType } from "./figuretype";
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export {
+  figureMatchesLibraryOrigin,
   LIBRARY_FIGURES,
   type LibraryFigure,
   type LibraryGroup,
