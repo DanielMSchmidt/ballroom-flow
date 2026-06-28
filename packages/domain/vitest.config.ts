@@ -12,14 +12,15 @@ export default defineConfig({
       provider: "istanbul",
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.test.ts", "src/**/*.d.ts"],
-      // PLAN.md §10.3: domain ≥ 95%. Not enforced until tests exist (a 95%
-      // gate on zero code fails an empty suite). The test engineer uncomments
-      // these once the M1 domain suites land.
+      // PLAN.md §10.3 targets domain ≥ 95%. ARMED at the current measured floor
+      // so coverage can't silently regress; ratchet these UP toward 95 as the
+      // remaining branches (overlay/undo edge cases, the generated library data
+      // blob) get covered. A drop below these fails CI.
       thresholds: {
-        // lines: 95,
-        // functions: 95,
-        // branches: 95,
-        // statements: 95,
+        lines: 90,
+        functions: 90,
+        branches: 65,
+        statements: 90,
       },
     },
   },

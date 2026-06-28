@@ -29,8 +29,10 @@ jobs:
         run: pnpm -r typecheck
 
       # 2. Unit / property (pure domain, in-memory Automerge + fast-check).
-      - name: Unit / property (domain)
-        run: pnpm --filter @ballroom/domain test
+      #    Runs via `coverage` so the armed thresholds (vitest.config.ts) gate the
+      #    PR — coverage can't silently regress.
+      - name: Unit / property + coverage (domain)
+        run: pnpm --filter @ballroom/domain coverage
 
       # Build the SPA so the Worker's static-assets dir (apps/web/dist) and the
       # E2E preview server have something to serve.
@@ -38,9 +40,10 @@ jobs:
         run: pnpm -r build
 
       # 3. Worker / DO / D1 in real workerd (incl. the EXPLAIN QUERY PLAN gate
-      #    once the test engineer wires expectIndexedQuery into a D1 test).
-      - name: Worker / DO / D1 (workerd)
-        run: pnpm --filter worker test
+      #    once the test engineer wires expectIndexedQuery into a D1 test). Runs
+      #    via `coverage` so the armed thresholds (vitest.config.ts) gate the PR.
+      - name: Worker / DO / D1 + coverage (workerd)
+        run: pnpm --filter worker coverage
 
       # 4. Component + axe (jsdom + Testing Library + vitest-axe).
       - name: Component + a11y (web)
