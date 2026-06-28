@@ -526,7 +526,9 @@ export async function openRoutine(
       }
       // (c) Persist account-wide — best-effort, never block the UI on the network.
       void Promise.resolve(saveCustomKind(kind)).catch(() => {});
-      notify();
+      // No explicit notify(): routineConn.change above already fired onAdvance →
+      // notify, and the kind is visible immediately via the routine-embedded copy
+      // (the in-memory account set is updated synchronously before that re-render).
     },
 
     customKinds: () => {

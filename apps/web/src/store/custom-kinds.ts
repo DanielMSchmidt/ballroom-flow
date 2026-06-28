@@ -12,8 +12,11 @@ export async function listAccountKinds(
   baseUrl = "",
 ): Promise<RegistryKind[]> {
   const raw = await apiGet<unknown>(`${baseUrl}/api/account/custom-kinds`, token);
+  // zAccountCustomKinds validates to the same shape as the domain RegistryKind
+  // (kind/label/color/cardinality/valueType/values?/freeText?/appliesToDances?/builtin),
+  // so the parsed result is assignable directly — no cast needed.
   const { kinds } = zAccountCustomKinds.parse(raw);
-  return kinds as RegistryKind[];
+  return kinds;
 }
 
 /** Persist a newly-created custom kind account-wide (US-043). */

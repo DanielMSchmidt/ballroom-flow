@@ -215,15 +215,13 @@ app.post("/api/routines/:id/fork", async (c) => {
   const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
   if (!role && owner !== "app") return c.json({ error: "forbidden" }, 403);
 
-  const db = drizzle(c.env.DB);
-  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
-  const plan = me?.plan ?? "free";
-
+  // forkRoutineFor resolves the plan itself and returns it (in both the success
+  // and upsell shapes), so the route doesn't re-query users.plan here.
   const result = await forkRoutineFor(c.env, { originRef, userId: user.sub });
   if ("upsell" in result) {
     return c.json({ ...result, reason: "quota" }, 402);
   }
-  return c.json({ ...result, plan }, 201);
+  return c.json(result, 201);
 });
 
 // GET /api/figures?dance= — the global figure library list (US-032), from the

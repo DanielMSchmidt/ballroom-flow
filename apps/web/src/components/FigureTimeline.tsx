@@ -17,26 +17,17 @@
 
 import { type Attribute, countLabel, type DanceId, type RegistryKind } from "@ballroom/domain";
 import { useMemo, useState } from "react";
-import { ATTRIBUTE_KINDS, type AttributeKind, Button, Card, Chip, CountLabel, cx } from "../ui";
+import { Button, Card, Chip, CountLabel, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
-import { filterByRoleView } from "./role-view";
-
-type RoleView = "leader" | "follower";
-
-/** The other side of a leader/follower toggle. */
-const flipped = (v: RoleView): RoleView => (v === "leader" ? "follower" : "leader");
-
-/** Capitalize a role for display ("leader" → "Leader"). */
-const roleLabel = (v: RoleView): string => v.charAt(0).toUpperCase() + v.slice(1);
-
-/** Tint a value chip by its attribute kind when that kind has a token color. */
-const chipTone = (kind: string): AttributeKind | "neutral" =>
-  (ATTRIBUTE_KINDS as readonly string[]).includes(kind) ? (kind as AttributeKind) : "neutral";
-
-/** A displayable label for an attribute value (string, or a joined set). */
-const displayValue = (value: unknown): string =>
-  Array.isArray(value) ? value.map(String).join(", ") : String(value);
+import {
+  chipTone,
+  displayValue,
+  filterByRoleView,
+  flipped,
+  type RoleView,
+  roleLabel,
+} from "./role-view";
 
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */

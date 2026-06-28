@@ -31,6 +31,13 @@ const fig = (id: string, figureType: string, dance: DanceId): FigureDoc => ({
 });
 
 describe("account doc + family-note resolution", () => {
+  it("US-043 readAccount defaults customKinds to [] for a doc without the field", () => {
+    // Forward-compatible read: an account doc authored before custom kinds existed
+    // (no `customKinds` field) must read back as an empty list, not undefined.
+    const doc = buildAccountDoc(acct());
+    expect(readAccount(doc).customKinds).toEqual([]);
+  });
+
   it("adds an all-dances family note that matches the family in any dance", () => {
     let doc = buildAccountDoc(acct());
     doc = addFamilyNote(doc, {
