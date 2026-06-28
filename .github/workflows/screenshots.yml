@@ -60,32 +60,29 @@ jobs:
         if: steps.guard.outputs.run == 'true'
         run: pnpm --filter web screenshots
 
-      - name: Diff vs base + build comment
+      - name: Commit & push regenerated screenshots
         if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'
-        id: diff
-        run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          node scripts/screenshot-diff.mjs "$base" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$GITHUB_SHA" | tee diff-out.txt
-          if grep -q 'changed=true' diff-out.txt; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Auto-commit regenerated screenshots
-        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true' && github.event_name == 'pull_request'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git config user.name "screenshot-bot"
           git config user.email "screenshot-bot@users.noreply.github.com"
           git add apps/web/src/marketing/screenshots
-          git commit -m "chore(screenshots): regenerate landing imagery [skip ci]"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          if git diff --cached --quiet; then
+            echo "No screenshot changes to commit."
+          else
+            git commit -m "chore(screenshots): regenerate landing imagery [skip ci]"
+            git push origin "HEAD:$BRANCH"
+          fi
 
-      - name: Re-point comment to pushed commit
-        if: steps.guard.outputs.run == 'true' && steps.diff.outputs.changed == 'true' && github.event_name == 'pull_request'
+      - name: Build before/after comment
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'
         run: |
-          head="$(git rev-parse HEAD)"
-          node scripts/screenshot-diff.mjs "${{ github.event.pull_request.base.sha }}" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$head"
+          node scripts/screenshot-diff.mjs \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.repository_owner }}" \
+            "${{ github.event.repository.name }}" \
+            "$(git rev-parse HEAD)"
 
       - name: Upsert PR comment
         if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'

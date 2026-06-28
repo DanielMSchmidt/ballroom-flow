@@ -178,9 +178,9 @@ regeneration. A root alias may be added for convenience.
 - **Removed key:** flagged "removed"; file deleted in the auto-commit; the
   manifest must be updated in the same PR (CI surfaces a mismatch if a manifest
   entry has no file or vice versa).
-- **Fork PRs:** auto-commit/push won't have write scope; the job degrades to
-  generating + commenting (artifact link) without pushing. (Repo is effectively
-  single-owner, so this is a documented fallback, not a primary path.)
+- **Fork PRs:** out of scope for this single-owner repo. Both the push and the PR
+  comment steps require a same-repo write token; on a fork PR both will fail or
+  be skipped by GitHub. There is no artifact fallback.
 
 ## 6. Testing
 
