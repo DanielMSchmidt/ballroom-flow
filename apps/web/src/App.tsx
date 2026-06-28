@@ -3,6 +3,8 @@ import { AccountControls, useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
+import { Landing } from "./components/Landing";
+import { shouldShowLanding } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
 import { loadMineFigures } from "./store/figures";
@@ -54,6 +56,8 @@ function AppHome(): React.JSX.Element {
   // is pointed at Profile, so they aren't shown as a raw id to co-editors.
   const needsOnboarding =
     isSignedIn && me.data?.onboarded === false && tab !== "profile" && route.name !== "invite";
+
+  if (shouldShowLanding(isSignedIn, route.name)) return <Landing />;
 
   return (
     <AppShell

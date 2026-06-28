@@ -16,12 +16,15 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r typecheck",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "screenshots:diff": "node scripts/screenshot-diff.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",
     "concurrently": "^9.1.2",
     "lefthook": "^1.10.10",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "typescript": "^6.0.3"
   },
   "pnpm": {
