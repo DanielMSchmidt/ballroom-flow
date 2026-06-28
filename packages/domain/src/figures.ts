@@ -184,6 +184,101 @@ const CHARTED_FIGURES: readonly LibraryFigure[] = [
     ]),
   },
   {
+    id: "waltz.closed_change_reverse_to_natural",
+    dance: "waltz",
+    name: "Closed Change (Reverse to Natural)",
+    level: "bronze",
+    entryAlignment: f("backing", "DW"),
+    exitAlignment: f("facing", "DW"),
+    // Mirror of the Natural-to-Reverse change (opposite feet, same footwork).
+    leaderSteps: chart([
+      ["LF forward", "HT", 1],
+      ["RF to side", "T", 2],
+      ["LF closes to RF", "TH", 3],
+    ]),
+    followerSteps: chart([
+      ["RF back", "TH", 1],
+      ["LF to side", "T", 2],
+      ["RF closes to LF", "TH", 3],
+    ]),
+  },
+  {
+    id: "waltz.whisk",
+    dance: "waltz",
+    name: "Whisk",
+    level: "bronze",
+    entryAlignment: f("facing", "DW"),
+    exitAlignment: f("facing", "DW"),
+    leaderSteps: chart([
+      ["LF forward", "HT", 1],
+      ["RF to side and slightly forward", "T", 2],
+      ["LF crosses behind RF in PP", "T", 3],
+    ]),
+    followerSteps: chart([
+      ["RF back", "TH", 1],
+      ["LF to side and slightly forward, turning to PP", "T", 2],
+      ["RF crosses behind LF in PP", "TH", 3],
+    ]),
+  },
+  {
+    id: "waltz.closed_impetus",
+    dance: "waltz",
+    name: "Closed Impetus",
+    level: "bronze",
+    entryAlignment: f("backing", "LOD"),
+    exitAlignment: f("facing", "DC_against"),
+    // Leader makes the heel turn (TH, HT, TH); follower moves around in three walks.
+    leaderSteps: chart([
+      ["LF back", "TH", 1],
+      ["RF closes to LF (heel turn)", "HT", 2],
+      ["RF diagonally forward, having brushed to LF", "TH", 3],
+    ]),
+    followerSteps: chart([
+      ["RF forward", "HT", 1],
+      ["LF to side", "T", 2],
+      ["RF forward, brushing to LF", "TH", 3],
+    ]),
+  },
+  {
+    id: "waltz.outside_change",
+    dance: "waltz",
+    name: "Outside Change",
+    level: "bronze",
+    entryAlignment: f("backing", "DC"),
+    exitAlignment: f("facing", "DW"),
+    leaderSteps: chart([
+      ["LF back", "TH", 1],
+      ["RF back", "T", 2],
+      ["LF to side and slightly forward", "TH", 3],
+    ]),
+    followerSteps: chart([
+      ["RF forward", "HT", 1],
+      ["LF forward", "T", 2],
+      ["RF to side and slightly forward, outside partner", "TH", 3],
+    ]),
+  },
+  {
+    id: "waltz.chasse_from_promenade_position",
+    dance: "waltz",
+    name: "Chasse from Promenade Position",
+    level: "bronze",
+    entryAlignment: f("facing", "DW"),
+    exitAlignment: f("facing", "DW"),
+    // Chassé timing 1 2 & 3 — the third step is the quick close on the "&".
+    leaderSteps: [
+      { action: "RF forward and across in PP and CBMP", foot: "HT", timing: { beat: 1 } },
+      { action: "LF to side", foot: "T", timing: { beat: 2 } },
+      { action: "RF closes to LF", foot: "T", timing: { beat: 2, sub: "&" } },
+      { action: "LF to side and slightly forward", foot: "TH", timing: { beat: 3 } },
+    ],
+    followerSteps: [
+      { action: "LF forward and across in PP and CBMP", foot: "HT", timing: { beat: 1 } },
+      { action: "RF to side", foot: "T", timing: { beat: 2 } },
+      { action: "LF closes to RF", foot: "T", timing: { beat: 2, sub: "&" } },
+      { action: "RF to side and slightly forward", foot: "TH", timing: { beat: 3 } },
+    ],
+  },
+  {
     id: "foxtrot.feather_step",
     dance: "foxtrot",
     name: "Feather Step",
