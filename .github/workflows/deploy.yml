@@ -37,6 +37,18 @@ jobs:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
       - run: pnpm -r test
 
+      # E2E smoke — the same @smoke Playwright gate CI runs on PRs, mirrored here
+      # so a push to development/main can't deploy on a red journey. (deploy.yml
+      # runs on push, which CI — pull_request only — never sees, so without this
+      # a merge could ship a broken journey to staging. The full 3-device matrix
+      # still runs nightly.)
+      - name: Install Playwright (chromium)
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: E2E smoke (chromium)
+        run: pnpm --filter web exec playwright test --project=chromium-desktop --grep @smoke
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+
       - name: Resolve target environment
         id: target
         run: echo "name=${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}" >> "$GITHUB_OUTPUT"
