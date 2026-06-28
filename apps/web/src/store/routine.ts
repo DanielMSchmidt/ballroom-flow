@@ -248,6 +248,14 @@ export async function openRoutine(
     getToken,
   );
 
+  // Figures the client just minted (addPlacement) but whose server-side create
+  // (POST /api/figures → seedDoc) hasn't resolved yet. A render must NOT open
+  // their DO connection while they're pending: connecting before the seed is
+  // persisted gets an empty catch-up, and since seedDoc doesn't broadcast, the
+  // seed never arrives — the figure stays null until a reload. We hold off until
+  // createFigure resolves, then open (the catch-up then includes the seed).
+  const pendingFigures = new Set<string>();
+
   // One connection per referenced figure doc, opened on demand and cached.
   const figureConns = new Map<string, DocConnection<FigureDoc>>();
   const figureConn = (figureRef: string): DocConnection<FigureDoc> => {
@@ -342,6 +350,11 @@ export async function openRoutine(
       const figureType = figureTypeArg ?? (slugify(name) || figureRef);
       const dance = readRoutineSafe().dance;
 
+      // Mark the figure pending BEFORE the placement appears, so the re-render
+      // this change triggers shows the placement as loading without eagerly
+      // opening (and racing the seed of) its not-yet-created DO.
+      pendingFigures.add(figureRef);
+
       // Add the placement to the routine immediately (it only references figureRef).
       // `sections?` guards the not-yet-synced (empty A.init) doc edge.
       routineConn.change((draft) => {
@@ -365,9 +378,23 @@ export async function openRoutine(
       // no racy client seed write that could be lost on an immediate reload. We
       // then just OPEN the figure connection so its (server-seeded) content
       // replays into the local store on catch-up.
-      createFigure({ figureRef, name, dance, figureType, routineId, attributes }).then(() => {
-        figureConn(figureRef);
-      });
+      createFigure({ figureRef, name, dance, figureType, routineId, attributes })
+        .then(() => {
+          // Created server-side (DO seeded) → safe to open: the catch-up replay
+          // now carries the seed, so the figure hydrates deterministically.
+          pendingFigures.delete(figureRef);
+          figureConn(figureRef);
+          notify(); // re-render so resolveFigure now opens + reads the figure
+        })
+        .catch((err) => {
+          // Create failed (auth/network/quota): stop gating so the placement
+          // isn't a permanent skeleton — a later render falls back to the normal
+          // lazy connect (and the figure simply reads empty if it truly doesn't
+          // exist), rather than hanging on "loading" forever.
+          pendingFigures.delete(figureRef);
+          console.warn("figure create failed; placement will retry connecting lazily", err);
+          notify();
+        });
     },
 
     movePlacement: (sectionId, placementId, direction) => {
@@ -571,6 +598,10 @@ export async function openRoutine(
 
   /** Resolve a placement's figure: a variant (baseFigureRef + overlay) resolves to base ⊕ overlay. */
   function resolveFigure(figureRef: string): FigureDoc | null {
+    // A just-minted figure whose server-side create is still in flight: render it
+    // as loading (null) WITHOUT opening its DO — opening now would race the seed
+    // (see pendingFigures). The createFigure resolution opens it + re-renders.
+    if (pendingFigures.has(figureRef)) return null;
     const conn = figureConn(figureRef);
     const figure = readFigureDoc(conn.current());
     if (!figure) return null;
