@@ -2,9 +2,9 @@
 // MEMBERSHIP role prop, not an ARIA role.
 import type { Attribute } from "@ballroom/domain";
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen } from "../test-support/render";
+import { renderUi, screen, userEvent } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Notation parity (2026-06-28): the figure timeline is a dance-aware BEAT RULER,
@@ -62,5 +62,50 @@ describe("FigureTimeline — dance-aware beat ruler", () => {
     );
     const headline = screen.getByTestId("step-headline-1");
     expect(headline).toHaveTextContent(/forward/i);
+  });
+});
+
+describe("FigureTimeline — step-summary card + derived duration", () => {
+  it("opening a count shows a summary card with its direction headline and derived duration", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    // A step on count 1, with the next step on the off-beat 1& → it lasts half a beat.
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        attributes={[attr("direction", "forward", 1), attr("footwork", "heel", 1.5)]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "count 1" }));
+    const summary = screen.getByTestId("step-summary");
+    expect(summary).toHaveTextContent(/forward/i); // the direction headline
+    expect(summary).toHaveTextContent(/half beat/i); // derived from the gap to 1&
+  });
+});
+
+describe("FigureTimeline — off-beat (&) entry", () => {
+  it("lets an editor place a step on the off-beat (count n.5)", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
+    // Tap the "&" after beat 1, then pick footwork — the attribute lands on 1.5.
+    await userEvent.click(screen.getByRole("button", { name: "off-beat 1&" }));
+    await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "footwork",
+    );
+    expect(added?.count).toBe(1.5);
+  });
+
+  it("does not offer empty off-beat add targets to a viewer", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    renderUi(<FigureTimeline role="viewer" dance="waltz" />);
+    expect(screen.queryByRole("button", { name: "off-beat 1&" })).toBeNull();
   });
 });

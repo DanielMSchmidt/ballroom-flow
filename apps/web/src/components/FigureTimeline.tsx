@@ -36,6 +36,21 @@ import {
   roleLabel,
 } from "./role-view";
 
+/** A step's duration = the gap to the next placed count, else a whole beat. */
+function stepDuration(count: number, allCounts: number[]): number {
+  const next = allCounts.filter((c) => c > count).sort((a, b) => a - b)[0];
+  return next != null ? Math.round((next - count) * 8) / 8 : 1;
+}
+
+/** Human label for a step duration in beats (derived, never stored). */
+function durationLabel(beats: number): string {
+  if (beats === 0.25) return "quarter beat";
+  if (beats === 0.5) return "half beat";
+  if (beats === 0.75) return "three-quarter beat";
+  if (beats === 1) return "1 beat";
+  return `${beats} beats`;
+}
+
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
   role: MembershipRole;
@@ -87,6 +102,8 @@ export function FigureTimeline({
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const isGlobal = figureScope === "global";
+  // Only an editor gets empty off-beat (&) add targets; everyone sees occupied ones.
+  const editable = role === "editor";
 
   const byCount = useMemo(() => {
     const map = new Map<number, Attribute[]>();
@@ -122,6 +139,64 @@ export function FigureTimeline({
     const others = attrs.filter((a) => a.count !== count || a.deletedAt != null);
     if (isGlobal && !copied) setCopied(true);
     onChange?.([...others, ...next]);
+  };
+
+  const allCounts = [...byCount.keys()];
+
+  /** One position on the ruler — a whole beat, or an `offbeat` (&) sub-beat. */
+  const renderCell = (count: number, offbeat: boolean) => {
+    const onCount = byCount.get(count) ?? [];
+    const visible = filterByRoleView(onCount, view);
+    const has = onCount.length > 0;
+    // An empty off-beat is an add target — only editors get those (keeps the
+    // ruler uncluttered for viewers; occupied off-beats always show).
+    if (offbeat && !editable && !has) return null;
+    const direction = visible.find((a) => a.kind === "direction");
+    const slots = visible.filter((a) => a.kind !== "direction");
+    return (
+      <li key={count} className="flex flex-col items-center gap-1">
+        <button
+          type="button"
+          aria-label={offbeat ? `off-beat ${countLabel(count)}` : `count ${count}`}
+          aria-expanded={openCount === count}
+          onClick={() => setOpenCount(openCount === count ? null : count)}
+          className={cx(
+            "relative flex min-h-[44px] items-center justify-center rounded-md border",
+            offbeat ? "min-w-[32px] text-ink-muted opacity-80" : "min-w-[44px]",
+            openCount === count ? "border-accent" : "border-line",
+          )}
+        >
+          <CountLabel value={countLabel(count)} />
+          {has && (
+            <span
+              aria-hidden="true"
+              className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
+            />
+          )}
+        </button>
+        {direction && (
+          <span data-testid={`step-headline-${count}`}>
+            <Chip asStatic tone="direction">
+              {displayValue(direction.value)}
+            </Chip>
+          </span>
+        )}
+        {slots.length > 0 && (
+          <ul
+            className="flex flex-col items-center gap-0.5"
+            aria-label={`count ${count} attributes`}
+          >
+            {slots.map((a) => (
+              <li key={a.id}>
+                <Chip asStatic tone={chipTone(a.kind)}>
+                  {displayValue(a.value)}
+                </Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
   };
 
   return (
@@ -166,59 +241,10 @@ export function FigureTimeline({
           <li key={`bar-${i}`}>
             <ol
               aria-label={`bar ${i + 1}`}
-              className="flex gap-1 rounded-lg bg-surface-sunken/40 p-1"
+              className="flex items-start gap-1 rounded-lg bg-surface-sunken/40 p-1"
             >
-              {bar.map((count) => {
-                const onCount = byCount.get(count) ?? [];
-                const visible = filterByRoleView(onCount, view);
-                const has = onCount.length > 0;
-                // The step's direction is its headline (the rest are slots below).
-                const direction = visible.find((a) => a.kind === "direction");
-                const slots = visible.filter((a) => a.kind !== "direction");
-                return (
-                  <li key={count} className="flex min-w-[44px] flex-col items-center gap-1">
-                    <button
-                      type="button"
-                      aria-label={`count ${count}`}
-                      aria-expanded={openCount === count}
-                      onClick={() => setOpenCount(openCount === count ? null : count)}
-                      className={cx(
-                        "relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
-                        openCount === count ? "border-accent" : "border-line",
-                      )}
-                    >
-                      <CountLabel value={countLabel(count)} />
-                      {has && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
-                        />
-                      )}
-                    </button>
-                    {direction && (
-                      <span data-testid={`step-headline-${count}`}>
-                        <Chip asStatic tone="direction">
-                          {displayValue(direction.value)}
-                        </Chip>
-                      </span>
-                    )}
-                    {slots.length > 0 && (
-                      <ul
-                        className="flex flex-col items-center gap-0.5"
-                        aria-label={`count ${count} attributes`}
-                      >
-                        {slots.map((a) => (
-                          <li key={a.id}>
-                            <Chip asStatic tone={chipTone(a.kind)}>
-                              {displayValue(a.value)}
-                            </Chip>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
+              {/* Each whole beat, plus its off-beat (&) for syncopated steps. */}
+              {bar.flatMap((count) => [renderCell(count, false), renderCell(count + 0.5, true)])}
             </ol>
           </li>
         ))}
@@ -226,6 +252,39 @@ export function FigureTimeline({
 
       {openCount !== null && (
         <Card>
+          {/* Step-summary card (design parity): what this step IS at a glance —
+              its count, direction headline, derived duration, and slot chips —
+              so the pickers below stay in context. */}
+          {(() => {
+            const here = filterByRoleView(byCount.get(openCount) ?? [], view);
+            const direction = here.find((a) => a.kind === "direction");
+            const slots = here.filter((a) => a.kind !== "direction");
+            return (
+              <div
+                data-testid="step-summary"
+                className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3"
+              >
+                <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold text-ink">
+                  {countLabel(openCount)}
+                </span>
+                {direction ? (
+                  <Chip asStatic tone="direction">
+                    {displayValue(direction.value)}
+                  </Chip>
+                ) : (
+                  <span className="text-2xs text-ink-muted">No direction yet</span>
+                )}
+                <span className="text-2xs text-ink-muted">
+                  {durationLabel(stepDuration(openCount, allCounts))}
+                </span>
+                {slots.map((a) => (
+                  <Chip key={a.id} asStatic tone={chipTone(a.kind)}>
+                    {displayValue(a.value)}
+                  </Chip>
+                ))}
+              </div>
+            );
+          })()}
           <AttributeEditor
             count={openCount}
             role={role}
