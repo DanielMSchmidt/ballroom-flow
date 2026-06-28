@@ -61,6 +61,15 @@ export function renderComment(rows, ctx) {
   return lines.join("\n");
 }
 
+/** Parse manifest source into {key, file}[] pairs. Exported for tests. */
+export function parseManifestEntries(src) {
+  // [^{}]*? stays within a single object literal — it cannot cross into the next
+  // entry's braces, so a stray key: field in an unrelated object won't shift pairings.
+  return [...src.matchAll(/key:\s*"([^"]+)"[^{}]*?file:\s*"([^"]+\.png)"/g)].map(
+    ([, key, file]) => ({ key, file }),
+  );
+}
+
 /** Read a file from a git ref, or null if it doesn't exist there. */
 function gitShow(ref, file) {
   try {
@@ -82,10 +91,9 @@ async function main() {
   ).href;
   // The manifest is TS; read its file list with a tolerant regex (no TS loader in CI node).
   const manifestSrc = readFileSync(new URL(manifestUrl), "utf8");
-  const files = [...manifestSrc.matchAll(/file:\s*"([^"]+\.png)"/g)].map((m) => m[1]);
-  const keys = [...manifestSrc.matchAll(/key:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const entries = parseManifestEntries(manifestSrc);
 
-  const rows = files.map((file, i) => {
+  const rows = entries.map(({ key, file }) => {
     const rel = `${SCREENSHOT_DIR}/${file}`;
     const baseBuf = gitShow(baseSha, rel);
     let headBuf = null;
@@ -94,7 +102,7 @@ async function main() {
     } catch {
       headBuf = null;
     }
-    return { key: keys[i] ?? file, file, status: classify(baseBuf, headBuf).status };
+    return { key, file, status: classify(baseBuf, headBuf).status };
   });
 
   const ctx = { owner, repo, baseSha, headSha, basePath: SCREENSHOT_DIR };
