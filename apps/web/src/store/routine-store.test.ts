@@ -147,6 +147,66 @@ describe("#187 figure projection on addPlacement", () => {
   });
 });
 
+describe("figure hydration race — a just-added figure's DO opens only after it's created", () => {
+  it("does not open the new figure's DO from a render before createFigure resolves", async () => {
+    // ROOT CAUSE (the bug this fixes): addPlacement adds the placement to the
+    // routine immediately, so the next render's readPlacements → resolveFigure
+    // used to open the figure DO EAGERLY — before createFigure (POST /api/figures
+    // → seedDoc) seeded it. That connection got an empty catch-up + SYNC_CAUGHT_UP,
+    // and since seedDoc doesn't broadcast, the seed never arrived → the figure
+    // stayed null until a reload. The fix: defer opening the new figure's
+    // connection until it's been created server-side, so the catch-up always
+    // includes the seed.
+    const { opts, sockets } = fakeWiring();
+    let resolveCreate: () => void = () => {};
+    const seen: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn((meta: { figureRef: string }) => {
+      seen.push(meta);
+      return new Promise<void>((r) => {
+        resolveCreate = r;
+      });
+    });
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      createFigure,
+      actor: "00cc00cc00cc00cc",
+    });
+
+    // A synced routine with one section, so the new placement has somewhere to land.
+    const withSection = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(withSection);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    store.addPlacement("s1", "Feather");
+    const figureRef = seen[0]?.figureRef ?? "";
+    expect(figureRef).not.toBe("");
+
+    // A render happens while createFigure is still in flight: the placement shows
+    // as loading (figure null) but its DO is NOT connected yet (no seed race).
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === figureRef);
+    expect(rp).toBeDefined();
+    expect(rp?.figure).toBeNull();
+    expect(sockets.has(figureRef)).toBe(false);
+
+    // Once it's created server-side (so its DO is seeded), the connection opens and
+    // a subsequent render hydrates it from the catch-up replay.
+    resolveCreate();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sockets.has(figureRef)).toBe(true);
+  });
+});
+
 describe("#205 addPlacement forwards library figure attributes to createFigure", () => {
   it("forwards a library figure's attributes to createFigure on pick", async () => {
     const { opts } = fakeWiring();
