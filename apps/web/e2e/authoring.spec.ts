@@ -42,17 +42,20 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").press("Enter");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
 
-    // 4. Add a figure "Feather Step" to the section (US-027): mints a custom
-    //    figure doc + a placement; the card shows the figure name.
+    // 4. Add a figure "My Step" to the section (US-027): mints a custom
+    //    figure doc + a placement; the card shows the figure name. NOTE: use a
+    //    NON-catalog name — a typed catalog name (e.g. "Feather Step") now resolves
+    //    to the library figure and arrives pre-filled, which would break the
+    //    empty-figure manual-notation flow this test exercises.
     await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Feather Step");
+    await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
     // 4b. Notate the figure (US-028 hero flow + 2026-06-28 parity): open its step
     //     timeline, tap count 1, set the step's DIRECTION "forward" (the headline)
     //     and FOOTWORK "ball" (a slot). The headline + the chip show on count 1.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
     await page.getByRole("button", { name: /^forward$/ }).click();
     await page.getByRole("button", { name: /^ball$/ }).click();
@@ -69,13 +72,13 @@ test.describe("@smoke core authoring journey", () => {
     //    that the server owns the figure seed (no racy client write).
     await page.reload();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
     // The entry-alignment chip persisted too (figure doc).
     await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
     await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
       timeout: 15_000,
@@ -114,12 +117,12 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
     await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Feather Step");
+    await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
     // open the figure's step timeline and a count editor
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
 
     // create a custom kind "Energy"
@@ -143,7 +146,7 @@ test.describe("@smoke core authoring journey", () => {
 
     // persists across reload: re-open the figure + count 1, Energy still there
     await page.reload();
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
     await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
