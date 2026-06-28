@@ -131,7 +131,10 @@ test.describe("@smoke core authoring journey", () => {
     await kindDialog.getByPlaceholder("e.g. low, medium, high").fill("low, high");
     await kindDialog.getByRole("button", { name: "Create" }).click();
 
-    // the Energy section appears in the still-open count 1 editor
+    // the Energy section appears in the still-open count 1 editor — under the
+    // "More attributes" disclosure (the editor leads with direction + footwork;
+    // technique + custom kinds are revealed there, 2026-06-28 parity).
+    await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
 
     // view Energy in a lane grid
@@ -142,6 +145,7 @@ test.describe("@smoke core authoring journey", () => {
     await page.reload();
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
   });
 
