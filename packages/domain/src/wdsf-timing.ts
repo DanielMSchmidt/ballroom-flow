@@ -42,11 +42,13 @@ export function parseWdsfTiming(timing: string): number[] {
 }
 
 /**
- * Build a figure's per-step `step` attributes from its WDSF timing + actions.
+ * Build a figure's per-step `footwork` attributes from its WDSF timing + actions.
  * The public syllabus gives only the first action (`start`) and last (`finish`);
- * intermediate steps get their count but a blank action (footwork lives in the
- * paid technique books — left for the content workstream). Ids are deterministic
- * so the generated catalog is stable and reproducible.
+ * intermediate steps get their count but a blank action (detailed footwork lives
+ * in the paid technique books — left for the content workstream). The action is a
+ * free-text `footwork` value (the public syllabus states it as one descriptive
+ * phrase, e.g. "RF fwd (Closed Position)", not the structured direction/foot-part
+ * split). Ids are deterministic so the generated catalog is stable.
  */
 export function buildWdsfAttributes(input: {
   figureType: string;
@@ -59,7 +61,7 @@ export function buildWdsfAttributes(input: {
   const last = counts.length - 1;
   return counts.map((count, i) => ({
     id: `wdsf-${input.figureType}-${input.dance}-s${i + 1}`,
-    kind: "step",
+    kind: "footwork",
     count,
     role: null,
     value: i === 0 ? (input.start ?? "") : i === last ? (input.finish ?? "") : "",
