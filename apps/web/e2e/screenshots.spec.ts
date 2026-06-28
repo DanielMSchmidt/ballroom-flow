@@ -45,6 +45,7 @@ test.describe("@screenshots landing imagery", () => {
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("Bronze Waltz");
     await page.getByLabel("Dance").selectOption("waltz");
+    await expect(page.getByRole("dialog", { name: "New routine" })).toBeVisible();
     await page.screenshot({ path: shot("create.png") });
     await page.getByRole("button", { name: "Create" }).click();
 
@@ -71,6 +72,13 @@ test.describe("@screenshots landing imagery", () => {
         await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
       }
     }
+    // Hero: ASSEMBLE editor overview — "Your whole routine, figure by figure."
+    // Captured at default viewport (punchy top-of-routine shot, not fullPage).
+    await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible();
+    await expect(page.getByText("Natural Spin Turn").first()).toBeVisible();
+    await page.screenshot({ path: shot("hero.png") });
+
+    // Full-page assemble view showing both Long + Short sections.
     await page.screenshot({ path: shot("sections.png"), fullPage: true });
 
     // 3. Notate the Natural Spin Turn across technique dimensions.
@@ -93,10 +101,9 @@ test.describe("@screenshots landing imagery", () => {
     // Close the notation sheet before navigating to reading view.
     await page.keyboard.press("Escape");
 
-    // 5. Reading view (read-only share surface) → also the hero image.
+    // 5. Reading view (read-only share surface).
     await page.getByRole("button", { name: /reading view/i }).click();
     await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: shot("reading.png"), fullPage: true });
-    await page.screenshot({ path: shot("hero.png"), fullPage: true });
   });
 });
