@@ -15,7 +15,14 @@
 // edit via `onChange` (the screen wires it to the store's setAttribute mutation;
 // tests pass it directly or omit it).
 
-import { type Attribute, countLabel, type DanceId, type RegistryKind } from "@ballroom/domain";
+import {
+  type Attribute,
+  barsForFigure,
+  countLabel,
+  DANCES,
+  type DanceId,
+  type RegistryKind,
+} from "@ballroom/domain";
 import { useMemo, useState } from "react";
 import { Button, Card, Chip, CountLabel, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
@@ -36,7 +43,9 @@ export interface FigureTimelineProps {
   dance?: DanceId;
   /** The figure's current attributes (controlled-with-fallback). */
   attributes?: Attribute[];
-  /** How many whole counts to lay out (default one 8-count phrase). */
+  /** Override the whole-count count. When omitted, the count is dance-aware:
+   *  one phrase from the dance (Waltz 6 / others 8), extended to cover any
+   *  attribute placed in a later phrase. */
   counts?: number;
   /** The viewed role lens (US-030); new values inherit it. */
   initialView?: "leader" | "follower";
@@ -57,7 +66,7 @@ export function FigureTimeline({
   role,
   dance,
   attributes,
-  counts = 8,
+  counts,
   initialView,
   customKinds = [],
   onChange,
@@ -90,7 +99,23 @@ export function FigureTimeline({
     return map;
   }, [attrs]);
 
-  const cells = Array.from({ length: counts }, (_, i) => i + 1);
+  // Dance-aware beat ruler (2026-06-28 parity): instead of a flat 8-count strip,
+  // lay out the dance's phrase (Waltz = a 6-beat phrase of two 3-beat bars; 4/4
+  // dances = 8), extended to cover any attribute placed in a later phrase. An
+  // explicit `counts` prop still wins (e.g. a fixed read-only render).
+  const meta = dance ? DANCES[dance] : undefined;
+  const beatsPerBar = meta?.beatsPerBar ?? 4;
+  const phraseBeats = meta?.phraseBeats ?? 8;
+  const { bars } = useMemo(() => {
+    const liveCounts = attrs.filter((a) => a.deletedAt == null).map((a) => a.count);
+    const maxWhole = liveCounts.reduce((m, c) => Math.max(m, Math.ceil(c)), 0);
+    const phrases = dance ? barsForFigure(liveCounts, dance) : 1;
+    const total = counts ?? Math.max(phraseBeats * phrases, maxWhole, beatsPerBar);
+    const list = Array.from({ length: total }, (_, i) => i + 1);
+    const grouped: number[][] = [];
+    for (let i = 0; i < list.length; i += beatsPerBar) grouped.push(list.slice(i, i + beatsPerBar));
+    return { bars: grouped };
+  }, [attrs, counts, dance, phraseBeats, beatsPerBar]);
 
   /** Replace this count's attributes within the figure's full set + emit. */
   const onCountChange = (count: number, next: Attribute[]): void => {
@@ -134,48 +159,69 @@ export function FigureTimeline({
         </div>
       )}
 
-      <ol className="flex flex-wrap gap-1" aria-label="Count timeline">
-        {cells.map((count) => {
-          const onCount = byCount.get(count) ?? [];
-          const visible = filterByRoleView(onCount, view);
-          const has = onCount.length > 0;
-          return (
-            <li key={count} className="flex min-w-[44px] flex-col items-center gap-1">
-              <button
-                type="button"
-                aria-label={`count ${count}`}
-                aria-expanded={openCount === count}
-                onClick={() => setOpenCount(openCount === count ? null : count)}
-                className={cx(
-                  "relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
-                  openCount === count ? "border-accent" : "border-line",
-                )}
-              >
-                <CountLabel value={countLabel(count)} />
-                {has && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
-                  />
-                )}
-              </button>
-              {visible.length > 0 && (
-                <ul
-                  className="flex flex-col items-center gap-0.5"
-                  aria-label={`count ${count} attributes`}
-                >
-                  {visible.map((a) => (
-                    <li key={a.id}>
-                      <Chip asStatic tone={chipTone(a.kind)}>
-                        {displayValue(a.value)}
-                      </Chip>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
+      {/* Dance-aware beat ruler: beats grouped into bars (Waltz → bars of 3). */}
+      <ol className="flex flex-wrap items-start gap-3" aria-label="Count timeline">
+        {bars.map((bar, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: bars are a stable positional grid
+          <li key={`bar-${i}`}>
+            <ol
+              aria-label={`bar ${i + 1}`}
+              className="flex gap-1 rounded-lg bg-surface-sunken/40 p-1"
+            >
+              {bar.map((count) => {
+                const onCount = byCount.get(count) ?? [];
+                const visible = filterByRoleView(onCount, view);
+                const has = onCount.length > 0;
+                // The step's direction is its headline (the rest are slots below).
+                const direction = visible.find((a) => a.kind === "direction");
+                const slots = visible.filter((a) => a.kind !== "direction");
+                return (
+                  <li key={count} className="flex min-w-[44px] flex-col items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label={`count ${count}`}
+                      aria-expanded={openCount === count}
+                      onClick={() => setOpenCount(openCount === count ? null : count)}
+                      className={cx(
+                        "relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
+                        openCount === count ? "border-accent" : "border-line",
+                      )}
+                    >
+                      <CountLabel value={countLabel(count)} />
+                      {has && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
+                        />
+                      )}
+                    </button>
+                    {direction && (
+                      <span data-testid={`step-headline-${count}`}>
+                        <Chip asStatic tone="direction">
+                          {displayValue(direction.value)}
+                        </Chip>
+                      </span>
+                    )}
+                    {slots.length > 0 && (
+                      <ul
+                        className="flex flex-col items-center gap-0.5"
+                        aria-label={`count ${count} attributes`}
+                      >
+                        {slots.map((a) => (
+                          <li key={a.id}>
+                            <Chip asStatic tone={chipTone(a.kind)}>
+                              {displayValue(a.value)}
+                            </Chip>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </li>
+        ))}
       </ol>
 
       {openCount !== null && (

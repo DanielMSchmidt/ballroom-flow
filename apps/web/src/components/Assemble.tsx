@@ -467,7 +467,7 @@ export function Assemble({
               </div>
               {lanesOpen && (
                 <Lanes
-                  kind={store.customKinds()[0]?.kind ?? "step"}
+                  kind={store.customKinds()[0]?.kind ?? "footwork"}
                   role={canEdit ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
