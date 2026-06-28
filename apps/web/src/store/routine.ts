@@ -345,10 +345,22 @@ export async function openRoutine(
     addPlacement: (sectionId, figureName, figureTypeArg) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
-      // A library pick supplies the catalog's canonical figureType (cross-routine
-      // identity); a custom figure slugs one from the name. Immutable once set (#91).
-      const figureType = figureTypeArg ?? (slugify(name) || figureRef);
       const dance = readRoutineSafe().dance;
+      // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
+      // canonical figureType → match on (figureType, name). A *typed* name (no figureType) is
+      // matched by name alone: the catalog figureType is hyphenated and a name-slug can't
+      // reproduce it for multi-word figures, so a typed "Reverse Turn" would otherwise miss
+      // its catalog entry and land as a blank custom. Only a name with no catalog match is
+      // truly custom.
+      const preset =
+        figureTypeArg != null
+          ? LIBRARY_FIGURES.find(
+              (f) => f.dance === dance && f.figureType === figureTypeArg && f.name === name,
+            )
+          : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
+      // figureType is immutable once set (#91): the matched preset's canonical slug, else the
+      // explicit arg, else a slug derived from the custom name.
+      const figureType = preset?.figureType ?? figureTypeArg ?? (slugify(name) || figureRef);
 
       // Mark the figure pending BEFORE the placement appears, so the re-render
       // this change triggers shows the placement as loading without eagerly
@@ -362,13 +374,7 @@ export async function openRoutine(
         if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
       });
 
-      // A library pick carries the catalog's per-step timeline (US-032 + WDSF seed);
-      // a custom figure has none. Match on (dance, figureType, name) — the picked
-      // identity. A few figureType slugs are shared by different figures (e.g.
-      // foxtrot "reverse-turn"), so we also match on name to be precise.
-      const preset = LIBRARY_FIGURES.find(
-        (f) => f.dance === dance && f.figureType === figureType && f.name === name,
-      );
+      // A catalog pick carries the per-step timeline (US-032 + WDSF seed); a custom has none.
       const attributes = preset?.attributes ?? [];
 
       // Project the figure to D1 + an owner membership AND server-seed its CRDT

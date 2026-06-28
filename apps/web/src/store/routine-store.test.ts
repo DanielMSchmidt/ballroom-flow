@@ -236,6 +236,21 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
     store.addPlacement("s1", "My Move"); // no figureType → custom
     expect((seen[0]?.attributes ?? []).length).toBe(0);
   });
+
+  it("resolves a TYPED multi-word catalog name to its canonical figureType + attributes", async () => {
+    const { opts } = fakeWiring();
+    const seen: Array<{ figureType: string; attributes?: unknown[] }> = [];
+    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const store = await openRoutine("rt_sample", { ...opts, createFigure });
+    // Typed name, NO figureType arg — a name-slug would be "natural_turn" (underscore) and
+    // miss the hyphenated catalog "natural-turn"; the name lookup must still resolve it.
+    store.addPlacement("s1", "Natural Turn");
+    expect(seen[0]?.figureType).toBe("natural-turn");
+    expect((seen[0]?.attributes ?? []).length).toBe(24);
+  });
 });
 
 describe("US-017 store/ seam (multi-doc)", () => {
