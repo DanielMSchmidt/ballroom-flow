@@ -117,6 +117,31 @@ export class DocDO extends DurableObject<Env> {
   private getDoc(): A.Doc<RoutineDoc> {
     if (this.doc) return this.doc;
 
+    const persisted = this.loadPersisted();
+    if (persisted) {
+      this.doc = persisted;
+      return persisted;
+    }
+
+    // First touch with nothing persisted: auto-materialize an empty routine and
+    // persist its creation changes so a later cold-load rebuilds it from SQLite.
+    // NB: only callers that need a doc to MUTATE (applyChange/webSocketMessage)
+    // go through here. The connect catch-up deliberately does NOT — see fetch() —
+    // so a connect-before-seed never persists this placeholder and blocks seedDoc.
+    const seeded = buildRoutineDoc(emptyRoutine());
+    this.persist(A.getAllChanges(seeded));
+    this.doc = seeded;
+    return seeded;
+  }
+
+  /**
+   * Load the doc from SQLite, or `null` if this DO has never been seeded (no
+   * snapshot and no changes). Unlike {@link getDoc} this NEVER auto-materializes
+   * a placeholder — so the connect catch-up can read a not-yet-seeded doc without
+   * persisting an empty routine that would (a) trip seedDoc's no-clobber and
+   * (b) push a bogus empty routine to the client.
+   */
+  private loadPersisted(): A.Doc<RoutineDoc> | null {
     const sql = this.ctx.storage.sql;
     const snapRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
@@ -124,15 +149,7 @@ export class DocDO extends DurableObject<Env> {
     const changeRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq ASC")
       .toArray();
-
-    if (snapRows.length === 0 && changeRows.length === 0) {
-      // First touch: seed an empty routine and persist its creation changes so a
-      // later cold-load rebuilds the identical doc from SQLite alone.
-      const seeded = buildRoutineDoc(emptyRoutine());
-      this.persist(A.getAllChanges(seeded));
-      this.doc = seeded;
-      return seeded;
-    }
+    if (snapRows.length === 0 && changeRows.length === 0) return null;
 
     // Start from the compacted snapshot (if the alarm has run), then replay any
     // incremental changes recorded after it. Without a snapshot, replay all
@@ -145,7 +162,6 @@ export class DocDO extends DurableObject<Env> {
       const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
       [doc] = A.applyChanges(doc, changes);
     }
-    this.doc = doc;
     return doc;
   }
 
@@ -183,6 +199,12 @@ export class DocDO extends DurableObject<Env> {
     const seeded = buildDoc(content) as A.Doc<RoutineDoc>;
     this.persist(A.getAllChanges(seeded));
     this.doc = seeded;
+    // Push the seed to any client already connected (e.g. a collaborator who
+    // opened this doc's DO before the create route seeded it): without this, that
+    // socket got an empty catch-up and would never see the content until it
+    // reconnects (a reload). Mirrors the applyChange broadcast; a no-op when no
+    // sockets are connected.
+    this.broadcast(A.getAllChanges(seeded), null);
   }
 
   /**
@@ -323,8 +345,18 @@ export class DocDO extends DurableObject<Env> {
     // then signal catch-up-complete (#202) so the client knows the doc is
     // HYDRATED — not merely socket-open — and may safely begin editing. The
     // marker is a TEXT frame, distinct from the binary change frames above.
-    const snapshot = A.getAllChanges(this.getDoc());
-    for (const change of snapshot) server.send(change as Uint8Array);
+    //
+    // IMPORTANT: read via loadPersisted(), NOT getDoc() — a connect to a
+    // not-yet-seeded doc must NOT auto-materialize + persist an empty-routine
+    // placeholder. Doing so used to no-clobber a subsequent seedDoc, so a
+    // collaborator who connected before the create's seed left the doc empty
+    // forever. Here an unseeded doc just sends an empty catch-up; when seedDoc
+    // runs it broadcasts the seed to this already-connected socket (below).
+    const current = this.doc ?? this.loadPersisted();
+    if (current) {
+      this.doc = current;
+      for (const change of A.getAllChanges(current)) server.send(change as Uint8Array);
+    }
     server.send(SYNC_CAUGHT_UP);
 
     return new Response(null, { status: 101, webSocket: client });
