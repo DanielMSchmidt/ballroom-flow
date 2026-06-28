@@ -15,11 +15,12 @@
 // edit via `onChange` (the screen wires it to the store's setAttribute mutation;
 // tests pass it directly or omit it).
 
-import { type Attribute, countLabel, type DanceId } from "@ballroom/domain";
+import { type Attribute, countLabel, type DanceId, type RegistryKind } from "@ballroom/domain";
 import { useMemo, useState } from "react";
 import { ATTRIBUTE_KINDS, type AttributeKind, Button, Card, Chip, CountLabel, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
+import { filterByRoleView } from "./role-view";
 
 type RoleView = "leader" | "follower";
 
@@ -37,12 +38,6 @@ const chipTone = (kind: string): AttributeKind | "neutral" =>
 const displayValue = (value: unknown): string =>
   Array.isArray(value) ? value.map(String).join(", ") : String(value);
 
-/**
- * An attribute is visible in a role lens when it applies to BOTH roles
- * (role=null, AC-2 — always shown) or to the selected role (AC-3).
- */
-const visibleInView = (a: Attribute, view: RoleView): boolean => a.role == null || a.role === view;
-
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
   role: MembershipRole;
@@ -54,6 +49,8 @@ export interface FigureTimelineProps {
   counts?: number;
   /** The viewed role lens (US-030); new values inherit it. */
   initialView?: "leader" | "follower";
+  /** User-defined kinds to merge into the attribute registry (US-043). */
+  customKinds?: RegistryKind[];
   /** Emits the figure's next full attribute set after an edit. */
   onChange?: (next: Attribute[]) => void;
   /** Whether the figure is the user's own ("owned") or a non-owned global/shared
@@ -71,6 +68,7 @@ export function FigureTimeline({
   attributes,
   counts = 8,
   initialView,
+  customKinds = [],
   onChange,
   figureScope,
   onForkIntoVariant,
@@ -148,7 +146,7 @@ export function FigureTimeline({
       <ol className="flex flex-wrap gap-1" aria-label="Count timeline">
         {cells.map((count) => {
           const onCount = byCount.get(count) ?? [];
-          const visible = onCount.filter((a) => visibleInView(a, view));
+          const visible = filterByRoleView(onCount, view);
           const has = onCount.length > 0;
           return (
             <li key={count} className="flex min-w-[44px] flex-col items-center gap-1">
@@ -196,6 +194,7 @@ export function FigureTimeline({
             role={role}
             dance={dance}
             view={view}
+            customKinds={customKinds}
             value={byCount.get(openCount) ?? []}
             onChange={(next) => onCountChange(openCount, next)}
           />

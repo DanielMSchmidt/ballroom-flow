@@ -1,22 +1,46 @@
-import { zCreateFigure, zCreateRoutine, zIssueInvite } from "@ballroom/contract";
-import { can, newId, parseAttributeWrite } from "@ballroom/domain";
+import { zCreateFigure, zCreateRoutine, zIssueInvite, zRegistryKind } from "@ballroom/contract";
+import { can, isReservedKind, newId, parseAttributeWrite } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
-import { countOwnedRoutines, createOwnedRoutine, listRoutines } from "./db/routines";
+import {
+  countOwnedRoutines,
+  createOwnedRoutine,
+  FREE_ROUTINE_CAP,
+  getDocOwner,
+  listRoutines,
+  listTemplates,
+  searchReachable,
+} from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
+import { forkRoutineFor } from "./fork";
 import { testSeed } from "./routes/test-seed";
+import { seedSampleRoutine } from "./sample";
 import { seedStarterRoutine } from "./starter";
 
-/** Free accounts may OWN at most this many routines (D21); the 4th upsells. */
-const FREE_ROUTINE_CAP = 3;
+// Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
+// state (not a stale module boolean). A cheap indexed existence check (ownerId
+// ='app' via owner_idx) short-circuits in prod once the row persists, and
+// re-seeds if the row is ever gone (e.g. the E2E /api/test/reset wipes D1 — a
+// boolean guard would leave templates permanently empty after a reset).
+// seedSampleRoutine is idempotent, so a concurrent re-seed race is safe.
+async function ensureSample(env: Env): Promise<void> {
+  try {
+    const existing = await listTemplates(env.DB);
+    if (existing.length > 0) return;
+    await seedSampleRoutine(env);
+  } catch (err) {
+    console.error("sample seed failed", err);
+  }
+}
 
 export type Env = {
   DB: D1Database;
@@ -163,53 +187,43 @@ app.post("/api/routines", async (c) => {
 
 // POST /api/routines/:id/fork — choreo fork, "make it your own" (US-037). Any
 // MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
-// it into a NEW owned routine. The fork is FROZEN + INDEPENDENT: we snapshot the
-// origin's CRDT content and seed a brand-new doc with it (no shared history), so
-// later origin edits never appear in the fork. `forkedFromRef` records lineage
-// (provenance only — nothing pulls from it). Referenced figures stay shared (the
-// placements keep their figureRefs). A fork COUNTS against the forker's quota.
+// it into a NEW owned routine. App-owned templates (ownerId="app") may also be
+// forked by any authenticated user without a membership row (US-045/Task 6).
+// The fork is FROZEN + INDEPENDENT: we snapshot the origin's CRDT content and
+// seed a brand-new doc with it (no shared history), so later origin edits never
+// appear in the fork. `forkedFromRef` records lineage (provenance only).
+// Referenced figures stay shared (placements keep their figureRefs).
+// A fork COUNTS against the forker's quota.
 app.post("/api/routines/:id/fork", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
   const originRef = c.req.param("id");
-  // Must be able to read the origin to fork it (member/owner) — else 403.
-  const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
-  if (!role) return c.json({ error: "forbidden" }, 403);
 
-  // A fork is a new OWNED routine → subject to the same server-side quota as create.
+  // Fast PK lookup — tells us if this is an app-owned template before any heavy work.
+  const owner = await getDocOwner(c.env.DB, originRef);
+
+  // Only app-template forks need the seed: user-routine forks never call getSnapshot
+  // on an app-owned DO, so the extra existence check is wasteful on every user fork.
+  if (owner === "app") {
+    // Ensure the app template DO content exists before getSnapshot is called inside
+    // forkRoutineFor (idempotent; re-seeds if the E2E reset wiped D1).
+    await ensureSample(c.env);
+  }
+
+  // Must be able to read the origin to fork it (member/owner — or app-owned template).
+  const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
+  if (!role && owner !== "app") return c.json({ error: "forbidden" }, 403);
+
   const db = drizzle(c.env.DB);
   const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
   const plan = me?.plan ?? "free";
-  const owned = await countOwnedRoutines(c.env.DB, user.sub);
-  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
-    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
-  }
 
-  // Snapshot the origin's resolved content and clone it into a fresh, owned doc.
-  const origin = await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(originRef)).getSnapshot();
-  const docRef = newId();
-  const title = origin.title ?? "Untitled routine";
-  const dance = origin.dance ?? "waltz";
-  await createOwnedRoutine(c.env.DB, {
-    docRef,
-    ownerId: user.sub,
-    title,
-    dance,
-    forkedFromRef: originRef,
-  });
-  // Seed the new DO with the cloned content: keep sections/placements/annotations
-  // (figures stay shared via their figureRefs); re-stamp identity (new id, owner,
-  // lineage). No shared Automerge history ⇒ the fork is frozen from the origin.
-  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).seedDoc({
-    ...origin,
-    id: docRef,
-    ownerId: user.sub,
-    forkedFromRef: originRef,
-    schemaVersion: origin.schemaVersion ?? 1,
-    deletedAt: null,
-  });
-  return c.json({ docRef, forkedFromRef: originRef, title, dance, plan }, 201);
+  const result = await forkRoutineFor(c.env, { originRef, userId: user.sub });
+  if ("upsell" in result) {
+    return c.json({ ...result, reason: "quota" }, 402);
+  }
+  return c.json({ ...result, plan }, 201);
 });
 
 // GET /api/figures?dance= — the global figure library list (US-032), from the
@@ -370,6 +384,28 @@ app.post("/api/account/family-notes", async (c) => {
   return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
 });
 
+// GET /api/account/custom-kinds — the caller's account-wide custom kinds (US-043).
+app.get("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const kinds = await listAccountKinds(c.env.DB, user.sub);
+  return c.json({ kinds });
+});
+
+// POST /api/account/custom-kinds — create/update a custom kind (US-043).
+app.post("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const parsed = zRegistryKind.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success)
+    return c.json({ error: "invalid_kind", issues: parsed.error.flatten() }, 400);
+  const kind = parsed.data;
+  // Builtins are reserved — a custom kind may never be builtin or collide with one.
+  if (kind.builtin || isReservedKind(kind.kind)) return c.json({ error: "reserved_kind" }, 400);
+  await upsertAccountKind(c.env.DB, user.sub, kind, Date.now());
+  return c.json(kind, 201);
+});
+
 // POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only
 // a member who can invite (owner/editor via resolveEffectiveRole + can()) may
 // mint one; everyone else → 403 (a non-member resolves to null → also 403). The
@@ -480,6 +516,54 @@ app.get("/api/routines", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const routines = await listRoutines(c.env.DB, user.sub);
   return c.json({ routines });
+});
+
+// GET /api/templates — the app-owned start-from-template sources (US-045). Any
+// authenticated user may read them; templates are seeded lazily on first call
+// (ensureSample is idempotent). The response mirrors the RoutineListItem shape
+// with role:"viewer" (the caller can only read, not edit, app-owned templates).
+app.get("/api/templates", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  await ensureSample(c.env);
+  const rows = await listTemplates(c.env.DB);
+  const templates = rows.map((r) => ({
+    docRef: r.docRef,
+    title: r.title,
+    dance: r.dance,
+    role: "viewer" as const,
+    updatedAt: r.updatedAt,
+  }));
+  return c.json({ templates });
+});
+
+// GET /api/search — prefix search over the D1 index (US-046). Scoped to the
+// caller's reachable docs (owned routines + owned/app-owned figures). Indexed
+// (EXPLAIN no-SCAN gate, ops.test). Annotation/content search is v1.1.
+// NOTE: shared-in routines (membership, not ownership) are out of v1 search
+// scope to keep the query single-index; add a UNION over membership_user_idx later.
+app.get("/api/search", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const q = (c.req.query("q") ?? "").trim();
+  if (!q) return c.json({ results: [] });
+  const dance = c.req.query("dance") ?? undefined;
+  const rows = await searchReachable(c.env.DB, { userId: user.sub, q, dance });
+  const results = rows.map((r) => ({
+    docRef: r.docRef,
+    // Production figures are stored as type="figure" in the DB (createFigureRows).
+    // Map to the contract-valid types ("global-figure" / "account-figure") here so
+    // the web client's zSearchResults.parse never sees the raw "figure" value and
+    // silently empties the results list via a ZodError that .catch swallows.
+    type: (r.type === "figure"
+      ? r.ownerId === "app"
+        ? "global-figure"
+        : "account-figure"
+      : r.type) as "routine" | "global-figure" | "account-figure",
+    title: r.title ?? "",
+    dance: r.dance,
+  }));
+  return c.json({ results });
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a

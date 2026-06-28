@@ -3,6 +3,13 @@
 // D1 is the source of truth for the owned-routine count (quota) and the list.
 // Create EAGER-projects the registry row (+ the owner membership row) so the
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
+
+/**
+ * Free-plan owned-routine cap — the ONE authoritative source. Imported by
+ * fork.ts and index.ts so the constant is never duplicated (#176).
+ */
+export const FREE_ROUTINE_CAP = 3;
+
 import type { RoutineListItem } from "@ballroom/contract";
 import type { DanceId } from "@ballroom/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
@@ -145,6 +152,75 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
   return items.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+/**
+ * The exact SQL `searchReachable` runs (US-046). Exported so the EXPLAIN-gate
+ * test asserts the REAL query (no drift). Scoped to owned docs + app-owned
+ * globals via `(ownerId = ?1 OR ownerId = 'app')` — the planner serves each
+ * branch from an index (owner_idx + title_idx COLLATE NOCASE), no full SCAN.
+ * `withDance` appends the optional `AND dance = ?3` filter.
+ */
+export function buildSearchSql(withDance: boolean): string {
+  return (
+    "SELECT docRef, type, ownerId, title, dance FROM document_registry " +
+    "WHERE deletedAt IS NULL AND title LIKE ?2 AND (ownerId = ?1 OR ownerId = 'app')" +
+    (withDance ? " AND dance = ?3" : "") +
+    " ORDER BY updatedAt DESC LIMIT 50"
+  );
+}
+
+/** Prefix search over the caller's reachable docs (US-046). Indexed: routines by
+ *  owner (owner_idx), figures by owner IN (user,'app') (title_idx COLLATE NOCASE).
+ *  NOTE: shared-in routines (membership, not ownership) are out of v1 search scope
+ *  to keep the query single-index; add a UNION over membership_user_idx in v1.1. */
+export async function searchReachable(
+  db: D1Database,
+  { userId, q, dance }: { userId: string; q: string; dance?: string },
+): Promise<
+  { docRef: string; type: string; ownerId: string; title: string; dance: string | null }[]
+> {
+  const prefix = `${q}%`;
+  const params = dance ? [userId, prefix, dance] : [userId, prefix];
+  // Owned routines + figures the user owns or that are app-owned globals.
+  const rows = await db
+    .prepare(buildSearchSql(Boolean(dance)))
+    .bind(...params)
+    .all<{ docRef: string; type: string; ownerId: string; title: string; dance: string | null }>();
+  return rows.results;
+}
+
+/**
+ * App-owned sample/template routines (US-045). Indexed by document_registry_owner_idx
+ * (ownerId='app') — no SCAN. Returns the registry rows for all app-owned routines,
+ * which the `/api/templates` route exposes to authenticated users.
+ */
+export async function listTemplates(
+  db: D1Database,
+): Promise<{ docRef: string; title: string; dance: string; updatedAt: number }[]> {
+  const rows = await drizzle(db)
+    .select({
+      docRef: documentRegistry.docRef,
+      title: documentRegistry.title,
+      dance: documentRegistry.dance,
+      updatedAt: documentRegistry.updatedAt,
+    })
+    .from(documentRegistry)
+    .where(
+      and(
+        eq(documentRegistry.ownerId, "app"),
+        eq(documentRegistry.type, "routine"),
+        isNull(documentRegistry.deletedAt),
+      ),
+    )
+    .orderBy(desc(documentRegistry.updatedAt))
+    .all();
+  return rows.map((r) => ({
+    docRef: r.docRef,
+    title: r.title ?? "Untitled routine",
+    dance: r.dance ?? "waltz",
+    updatedAt: r.updatedAt,
+  }));
+}
+
 export interface NewRoutine {
   docRef: string;
   ownerId: string;
@@ -161,6 +237,20 @@ export interface NewRoutine {
  * suspenders). The CRDT doc itself is created lazily by its DO on first open.
  * A fork passes `forkedFromRef` so the registry records its lineage (US-037).
  */
+/**
+ * Look up who owns a document (by the D1 registry PK — a fast PK lookup, no
+ * SCAN). Returns null if the doc doesn't exist. Used by the fork route to allow
+ * app-owned templates to be forked without a membership row (US-045/Task 6).
+ */
+export async function getDocOwner(db: D1Database, docRef: string): Promise<string | null> {
+  const row = await drizzle(db)
+    .select({ ownerId: documentRegistry.ownerId })
+    .from(documentRegistry)
+    .where(eq(documentRegistry.docRef, docRef))
+    .get();
+  return row?.ownerId ?? null;
+}
+
 export async function createOwnedRoutine(db: D1Database, r: NewRoutine): Promise<void> {
   const now = Date.now();
   const d = drizzle(db);

@@ -37,6 +37,7 @@ export function readAccount(doc: A.Doc<AccountDoc>, opts?: ReadOptions): Account
       ...annotation,
       replies: filterDeleted(annotation.replies, opts),
     })),
+    customKinds: plain.customKinds ?? [],
   };
 }
 

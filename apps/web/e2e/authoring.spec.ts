@@ -89,6 +89,58 @@ test.describe("@smoke core authoring journey", () => {
     await expect(page.getByText("E2E Foxtrot")).toBeVisible();
   });
 
+  test("create a custom kind, see it in the editor + a lane, persists on reload", async ({
+    page,
+  }) => {
+    const user = "user_kinds";
+    await resetDb(page);
+    await seedDb(page, { users: [{ id: user, displayName: "Kinds", identityColor: "#33aa55" }] });
+    await seedAuth(page, user);
+    await page.goto("/");
+
+    // create routine → section → figure (reuse the existing pattern)
+    await page.getByRole("button", { name: /new choreo/i }).click();
+    await page.getByLabel("Routine name").fill("E2E Kinds");
+    await page.getByLabel("Dance").selectOption("foxtrot");
+    await page.getByRole("button", { name: "Create" }).click();
+    await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: "Add section" }).click();
+    await page.getByLabel("Section name").fill("Intro");
+    await page.getByLabel("Section name").press("Enter");
+    await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByLabel("Figure name").fill("Feather Step");
+    await page.getByLabel("Figure name").press("Enter");
+    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // open the figure's step timeline and a count editor
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /count 1/i }).click();
+
+    // create a custom kind "Energy"
+    await page.getByRole("button", { name: /add kind/i }).click();
+    // Scope to the dialog to avoid ambiguity; use placeholder selectors to
+    // avoid the required-asterisk suffix that breaks getByLabel exact regex.
+    const kindDialog = page.getByRole("dialog", { name: /add attribute kind/i });
+    await kindDialog.getByPlaceholder("e.g. Energy").fill("Energy");
+    await kindDialog.getByPlaceholder("e.g. low, medium, high").fill("low, high");
+    await kindDialog.getByRole("button", { name: "Create" }).click();
+
+    // the Energy section appears in the still-open count 1 editor
+    await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
+
+    // view Energy in a lane grid
+    await page.getByRole("button", { name: "Lanes" }).click();
+    await expect(page.getByRole("grid")).toBeVisible();
+
+    // persists across reload: re-open the figure + count 1, Energy still there
+    await page.reload();
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    await page.getByRole("button", { name: /count 1/i }).click();
+    await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
+  });
+
   test("a viewer sees the routine read-only (no edit affordances)", async ({ page }) => {
     const owner = "user_owner";
     const viewer = "user_viewer";

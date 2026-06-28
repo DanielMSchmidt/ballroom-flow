@@ -20,9 +20,11 @@ import {
   type FigureDoc,
   libraryFiguresForDance,
   type Placement,
+  type RegistryKind,
   type Section,
 } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useReducer, useState } from "react";
+import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import { openRoutine, type ResolvedPlacement, type RoutineStore } from "../store/routine";
@@ -40,9 +42,11 @@ import {
   Spinner,
   useToast,
 } from "../ui";
+import { AddKindSheet } from "./AddKindSheet";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
+import { Lanes } from "./Lanes";
 import { RoutineReadingView } from "./RoutineReadingView";
 import { Share } from "./Share";
 
@@ -88,14 +92,33 @@ function useRoutineStore(
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
-    openRoutine(routineId, { getToken, currentUserId, onCopyOnWrite }).then((opened) => {
+    const doOpen = async () => {
+      // Fetch account-wide custom kinds for cross-routine reuse (US-043 AC-2).
+      // Best-effort: a failure must never block the routine open.
+      let accountKinds: RegistryKind[] = [];
+      if (getToken) {
+        try {
+          const token = await getToken();
+          accountKinds = await listAccountKinds(token);
+        } catch {
+          // Non-blocking; reload-persistence works via the routine-embedded copy.
+        }
+      }
+      if (cancelled) return;
+      const opened = await openRoutine(routineId, {
+        getToken,
+        currentUserId,
+        accountKinds,
+        onCopyOnWrite,
+      });
       if (cancelled) {
         opened.close();
         return;
       }
       live = opened;
       setStore(opened);
-    });
+    };
+    void doOpen();
     return () => {
       cancelled = true;
       live?.close();
@@ -150,6 +173,10 @@ export function Assemble({
   const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
   const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
+  // Custom-kind sheet (US-043) + Lanes view (US-044) — local to the notation panel.
+  // (`notating` itself is declared above, alongside the copy-on-write handler.)
+  const [addKindOpen, setAddKindOpen] = useState(false);
+  const [lanesOpen, setLanesOpen] = useState(false);
   // "read" lays the whole routine out as a read-only timeline (the payoff view).
   const [mode, setMode] = useState<"edit" | "read">("edit");
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
@@ -357,6 +384,8 @@ export function Assemble({
         open={notating !== null}
         onClose={() => {
           setNotating(null);
+          setLanesOpen(false);
+          setAddKindOpen(false);
           setCopiedToast(false);
         }}
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
@@ -367,6 +396,7 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              customKinds={store.customKinds()}
               figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
@@ -421,9 +451,41 @@ export function Assemble({
                 await reloadFamilyNotes();
               }}
             />
+            {/* Custom kinds + Lanes (US-043/044): Add-kind (editor only) + a lane
+                grid view for one attribute kind across all counts. */}
+            <div className="flex flex-col gap-3 border-t border-line pt-3">
+              <div className="flex items-center gap-2">
+                {canEdit && (
+                  <Button variant="secondary" size="sm" onClick={() => setAddKindOpen(true)}>
+                    Add kind
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => setLanesOpen((prev) => !prev)}>
+                  Lanes
+                </Button>
+              </div>
+              {lanesOpen && (
+                <Lanes
+                  kind={store.customKinds()[0]?.kind ?? "step"}
+                  role={canEdit ? role : "viewer"}
+                  counts={8}
+                  attributes={notatingFigure.attributes}
+                  customKinds={store.customKinds()}
+                  onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+                />
+              )}
+            </div>
           </div>
         )}
       </Sheet>
+
+      {/* Add a custom attribute kind (US-043): editor-only; persisted in the
+          routine doc and across all routines via accountKinds (US-043 AC-2). */}
+      <AddKindSheet
+        open={addKindOpen}
+        onClose={() => setAddKindOpen(false)}
+        onCreate={(k) => store.createCustomKind(k)}
+      />
 
       {/* Placement delete confirm (principle #28); soft-delete tombstone. */}
       <Sheet

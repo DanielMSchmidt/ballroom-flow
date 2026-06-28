@@ -86,3 +86,36 @@ export type IssueInvite = z.infer<typeof zIssueInvite>;
  * (A minimal precursor to the fully typed WS envelope, #117.)
  */
 export const SYNC_CAUGHT_UP = "ballroom:sync:caught-up";
+
+/** A merged-registry attribute kind (US-003/US-043), shared shape. */
+export const zRegistryKind = z.object({
+  kind: z.string().min(1),
+  label: z.string().min(1),
+  color: z.string().min(1),
+  cardinality: z.enum(["single", "multi"]),
+  valueType: z.string().min(1),
+  values: z.array(z.string()).optional(),
+  freeText: z.boolean().optional(),
+  appliesToDances: z.array(z.enum(DANCE_IDS)).optional(),
+  builtin: z.boolean(),
+});
+export type RegistryKindDto = z.infer<typeof zRegistryKind>;
+
+/** One search hit (US-046) — projected from D1, no CRDT content. */
+export const zSearchResult = z.object({
+  docRef: z.string(),
+  type: z.enum(["routine", "global-figure", "account-figure"]),
+  title: z.string(),
+  dance: z.enum(DANCE_IDS).nullable(),
+});
+export type SearchResult = z.infer<typeof zSearchResult>;
+export const zSearchResults = z.object({ results: z.array(zSearchResult) });
+export type SearchResults = z.infer<typeof zSearchResults>;
+
+/** Templates list (US-045) — app-owned routines flagged templateOf. */
+export const zTemplateList = z.object({ templates: z.array(zRoutineListItem) });
+export type TemplateList = z.infer<typeof zTemplateList>;
+
+/** Account custom-kinds response (US-043) — the caller's account-wide custom attribute kinds. */
+export const zAccountCustomKinds = z.object({ kinds: z.array(zRegistryKind) });
+export type AccountCustomKinds = z.infer<typeof zAccountCustomKinds>;

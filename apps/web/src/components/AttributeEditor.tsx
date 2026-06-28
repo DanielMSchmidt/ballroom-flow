@@ -11,7 +11,14 @@
 // Controlled: `value` is this count's current attributes; every edit emits the
 // next attribute set via `onChange`. The screen wires `onChange` to the store's
 // setAttribute mutation; component tests pass it directly.
-import { ATTRIBUTE_REGISTRY, type Attribute, type DanceId, normalizeValue } from "@ballroom/domain";
+import {
+  ATTRIBUTE_REGISTRY,
+  type Attribute,
+  type DanceId,
+  mergeRegistry,
+  normalizeValue,
+  type RegistryKind,
+} from "@ballroom/domain";
 import { type FormEvent, useState } from "react";
 import { Button, Chip, Input } from "../ui";
 import type { MembershipRole } from "./Assemble";
@@ -27,13 +34,16 @@ export interface AttributeEditorProps {
   view?: "leader" | "follower" | null;
   /** This count's current attributes (controlled). */
   value?: Attribute[];
+  /** User-defined kinds to merge into the registry (US-043). */
+  customKinds?: RegistryKind[];
   /** Emits the next attribute set for this count after an edit. */
   onChange?: (next: Attribute[]) => void;
 }
 
 /** Registry kinds that apply to `dance` (drops e.g. rise for Tango). */
-function kindsFor(dance: DanceId | undefined) {
-  return Object.values(ATTRIBUTE_REGISTRY).filter(
+function kindsFor(dance: DanceId | undefined, customKinds: RegistryKind[]) {
+  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+  return Object.values(reg).filter(
     (k) => !k.appliesToDances || dance === undefined || k.appliesToDances.includes(dance),
   );
 }
@@ -44,6 +54,7 @@ export function AttributeEditor({
   dance,
   view = null,
   value = [],
+  customKinds = [],
   onChange,
 }: AttributeEditorProps) {
   const editable = role === "editor";
@@ -78,7 +89,7 @@ export function AttributeEditor({
 
   return (
     <section className="flex flex-col gap-3" aria-label={`Attributes for count ${count}`}>
-      {kindsFor(dance).map((kind) => {
+      {kindsFor(dance, customKinds).map((kind) => {
         const suggestions = kind.values ?? [];
         // Selected values not in the suggestion list (e.g. a free-text step) still
         // render as chips so a custom value is visible + clearable.
