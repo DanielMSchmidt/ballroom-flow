@@ -49,12 +49,15 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // 4b. Notate the figure (US-028 hero flow): open its step timeline, tap
-    //     count 1, set footwork "T"; the chip shows on that count.
+    // 4b. Notate the figure (US-028 hero flow + 2026-06-28 parity): open its step
+    //     timeline, tap count 1, set the step's DIRECTION "forward" (the headline)
+    //     and FOOTWORK "ball" (a slot). The headline + the chip show on count 1.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
-    await page.getByRole("button", { name: /^T$/ }).click();
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible();
+    await page.getByRole("button", { name: /^forward$/ }).click();
+    await page.getByRole("button", { name: /^ball$/ }).click();
+    await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible();
     // 4c. Set the figure's entry alignment (US-031): a facing-direction → a chip.
     await page.getByLabel(/entry direction/i).selectOption("DW");
     await page.keyboard.press("Escape");
@@ -71,17 +74,18 @@ test.describe("@smoke core authoring journey", () => {
     await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
-    //     timeline → count 1 still carries "T".
+    //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("T")).toBeVisible({
+    await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
       timeout: 15_000,
     });
     await page.keyboard.press("Escape");
 
     // 5c. The reading view lays the whole routine out read-only — the notated
-    //     step ("T") shows as a chip in the timeline.
+    //     footwork ("ball") shows as a chip in the timeline.
     await page.getByRole("button", { name: /reading view/i }).click();
-    await expect(page.getByTestId("reading-view").getByText("T", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("reading-view").getByText("ball", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
@@ -127,7 +131,10 @@ test.describe("@smoke core authoring journey", () => {
     await kindDialog.getByPlaceholder("e.g. low, medium, high").fill("low, high");
     await kindDialog.getByRole("button", { name: "Create" }).click();
 
-    // the Energy section appears in the still-open count 1 editor
+    // the Energy section appears in the still-open count 1 editor — under the
+    // "More attributes" disclosure (the editor leads with direction + footwork;
+    // technique + custom kinds are revealed there, 2026-06-28 parity).
+    await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
 
     // view Energy in a lane grid
@@ -138,6 +145,7 @@ test.describe("@smoke core authoring journey", () => {
     await page.reload();
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
   });
 

@@ -39,6 +39,7 @@ import {
   Select,
   ShareIcon,
   Sheet,
+  Skeleton,
   Spinner,
   useToast,
 } from "../ui";
@@ -466,7 +467,7 @@ export function Assemble({
               </div>
               {lanesOpen && (
                 <Lanes
-                  kind={store.customKinds()[0]?.kind ?? "step"}
+                  kind={store.customKinds()[0]?.kind ?? "footwork"}
                   role={canEdit ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
@@ -697,7 +698,24 @@ function PlacementCard({
   onOpen?: () => void;
   onDelete?: () => void;
 }) {
-  const label = figure?.name ?? "Unknown figure";
+  // A placement always references a real (server-created) figure, so a null
+  // `figure` means its per-document connection is still hydrating — LOADING, not
+  // missing. Show a skeleton + accessible status instead of the alarming
+  // "Unknown figure" flash a just-added figure used to show until reload.
+  if (figure == null) {
+    return (
+      <Card>
+        <div className="flex items-center gap-2" aria-busy="true">
+          <Skeleton className="w-32" />
+          <span className="sr-only" role="status">
+            Loading figure…
+          </span>
+        </div>
+      </Card>
+    );
+  }
+
+  const label = figure.name;
   return (
     <Card>
       <div className="flex items-center gap-2">

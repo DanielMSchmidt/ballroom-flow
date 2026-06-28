@@ -491,6 +491,29 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     };
   };
 
+  it("shows a loading placeholder, not 'Unknown figure', while a placement's figure resolves", async () => {
+    // Intent: a just-placed figure's per-document connection hydrates asynchronously,
+    //   so its resolved figure is briefly null. A placement always references a real
+    //   (server-created) figure, so null means LOADING, never missing — show a
+    //   skeleton/loading state, not the alarming "Unknown figure".
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const resolved: ResolvedPlacement[] = [{ placement: p, figure: null }];
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    expect(screen.queryByText(/unknown figure/i)).toBeNull();
+    expect(screen.getByText(/loading figure/i)).toBeInTheDocument();
+  });
+
   it("opens a placement's step editor and persists an attribute edit via the store (AC-1)", async () => {
     // Intent: the hero flow — an editor opens a figure's step timeline from Assemble,
     //   taps a count, picks a value, and the edit is written to THAT figure's doc.
@@ -507,13 +530,15 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // The count timeline shows; tap count 1, then pick footwork "T".
+    // The count timeline shows; tap count 1, then pick footwork "ball".
     await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^T$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
     expect(figureRef).toBe("feather");
-    expect(attrs.some((a) => a.kind === "step" && a.value === "T" && a.count === 1)).toBe(true);
+    expect(attrs.some((a) => a.kind === "footwork" && a.value === "ball" && a.count === 1)).toBe(
+      true,
+    );
   });
 
   it("lets a viewer open the step editor read-only (no value-edit affordance)", async () => {

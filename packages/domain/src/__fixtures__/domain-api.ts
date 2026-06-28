@@ -46,7 +46,8 @@ export interface RegistryKind {
 
 /** The statically-known standard attribute kinds + a string index for custom kinds. */
 export interface StandardRegistry extends Record<string, RegistryKind> {
-  step: RegistryKind;
+  direction: RegistryKind;
+  footwork: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;

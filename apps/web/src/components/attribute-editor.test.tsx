@@ -31,12 +31,12 @@ interface LanesModule {
   Lanes: ComponentType<Record<string, unknown>>;
 }
 
-/** A step="T" attribute on the given count (footwork value from the registry). */
-const stepT = (count: number): Attribute => ({
-  id: `step-${count}-T`,
-  kind: "step",
+/** A footwork="ball" attribute on the given count (a value from the registry). */
+const footworkBall = (count: number): Attribute => ({
+  id: `footwork-${count}-ball`,
+  kind: "footwork",
   count,
-  value: "T",
+  value: "ball",
   role: null,
   deletedAt: null,
 });
@@ -44,9 +44,9 @@ const stepT = (count: number): Attribute => ({
 describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () => {
   it("opens the editor on tapping a count and adds an attribute for that count", async () => {
     // Intent: tapping a count opens the editor; choosing a value adds an attribute.
-    // User scenario: an editor taps count 2 and picks footwork "T".
-    // Act: click the count-2 cell, then the "T" footwork option.
-    // Assert: onChange fires with a step="T" attribute on count 2 (the add).
+    // User scenario: an editor taps count 2 and picks footwork "ball".
+    // Act: click the count-2 cell, then the "ball" footwork option.
+    // Assert: onChange fires with a footwork="ball" attribute on count 2 (the add).
     // Covers US-028 AC-1 (tap a count → add) — hero flow.
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
@@ -54,40 +54,42 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /count 2/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^T$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "step" && a.count === 2,
+      (a) => a.kind === "footwork" && a.count === 2,
     );
-    expect(added?.value).toBe("T");
+    expect(added?.value).toBe("ball");
   });
 
   it("clears a value when its selected option is re-tapped", async () => {
     // Intent: re-tapping a selected value clears it (toggle-off).
-    // Arrange: render the editor with count 2 already = "T".
-    // Act: tap "T" again. Assert: aria-pressed flips off + onChange emits an empty set.
+    // Arrange: render the editor with count 2 already = "ball".
+    // Act: tap "ball" again. Assert: aria-pressed flips off + onChange emits an empty set.
     // Covers US-028 AC-2 (re-tap clears).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const onChange = vi.fn();
-    renderUi(<AttributeEditor count={2} role="editor" value={[stepT(2)]} onChange={onChange} />);
-    const t = screen.getByRole("button", { name: /^T$/, pressed: true });
+    renderUi(
+      <AttributeEditor count={2} role="editor" value={[footworkBall(2)]} onChange={onChange} />,
+    );
+    const t = screen.getByRole("button", { name: /^ball$/, pressed: true });
     await userEvent.click(t);
-    expect(onChange).toHaveBeenCalledWith([]); // the step="T" was cleared
+    expect(onChange).toHaveBeenCalledWith([]); // the footwork="ball" was cleared
   });
 
   it("does not allow a commenter/viewer to edit", async () => {
     // Intent: edit affordances are gated by role (commenter/viewer read-only).
-    // Arrange: render the editor (role=commenter) with an existing step="T".
-    // Act/Assert: "T" shows but is NOT an interactive button (no toggle).
+    // Arrange: render the editor (role=commenter) with an existing footwork="ball".
+    // Act/Assert: "ball" shows but is NOT an interactive button (no toggle).
     // Covers US-028 AC-4 (commenter/viewer cannot edit).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor count={2} role="commenter" value={[stepT(2)]} />);
-    expect(screen.queryByRole("button", { name: /^T$/ })).toBeNull();
-    expect(screen.getByText("T")).toBeInTheDocument(); // shown read-only
+    renderUi(<AttributeEditor count={2} role="commenter" value={[footworkBall(2)]} />);
+    expect(screen.queryByRole("button", { name: /^ball$/ })).toBeNull();
+    expect(screen.getByText("ball")).toBeInTheDocument(); // shown read-only
   });
 });
 
@@ -104,27 +106,37 @@ const attr = (kind: string, value: string, c = 1): Attribute => ({
 describe("US-029 Attribute editor (registry-derived sections)", () => {
   it("renders sections from the merged ATTRIBUTE_REGISTRY", async () => {
     // Intent: editor sections derive from the merged registry (one vocabulary).
-    // Assert: step/turn/sway/position section headings are present (Foxtrot).
+    // The step IDENTITY (direction + footwork) leads; the technique kinds live
+    // behind a "More attributes" disclosure (progressive disclosure parity).
     // Covers US-029 AC-1 (sections from registry) — §10.2.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
-    for (const name of [/step/i, /turn/i, /sway/i, /position/i]) {
+    // Identity kinds are always shown.
+    for (const name of [/direction/i, /footwork/i]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+    // Technique kinds appear once "More attributes" is expanded.
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
+    for (const name of [/turn/i, /sway/i, /position/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
 
   it("hides the rise section for Tango (but shows it for a rise dance)", async () => {
     // Intent: Tango omits rise (appliesToDances) so the editor hides that section.
+    // Rise is a technique kind, so reveal "More attributes" first.
     // Covers US-029 AC-2 (Tango hides rise) — §10.2 "Tango omits rise".
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const { unmount } = renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.getByRole("heading", { name: /rise/i })).toBeInTheDocument(); // shown for foxtrot
     unmount();
     renderUi(<AttributeEditor count={1} dance="tango" role="editor" />);
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.queryByRole("heading", { name: /rise/i })).toBeNull(); // hidden for tango
   });
 
@@ -145,6 +157,8 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         onChange={onSingle}
       />,
     );
+    // position + bodyActions are technique kinds — reveal them first.
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
     const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
     expect(afterSingle.filter((a) => a.kind === "position")).toHaveLength(1);
@@ -162,6 +176,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         onChange={onMulti}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^CBMP$/ }));
     const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
     expect(
@@ -187,30 +202,33 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         value={[attr("bodyActions", "CBP")]}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("adds a free-text step value (suggestions are not a closed enum, §3/#83)", async () => {
-    // Intent: step is free-text — typing a custom action adds it alongside the
-    //   footwork suggestions.
-    // Covers #83 (step free-text on the editor side).
+  it("adds a free-text footwork value (suggestions are not a closed enum, §3/#83)", async () => {
+    // Intent: footwork is free-text — typing a custom action adds it alongside the
+    //   readable footwork suggestions.
+    // Covers #83 (footwork free-text on the editor side).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const onChange = vi.fn();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
-    await userEvent.type(screen.getByPlaceholderText(/custom step/i), "brush_tap");
+    await userEvent.type(screen.getByPlaceholderText(/custom footwork/i), "brush_tap");
     await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find((a) => a.kind === "step");
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "footwork",
+    );
     expect(added?.value).toBe("brush_tap");
   });
 });
 
 describe("US-030 Timeline role-view toggle", () => {
-  /** A free-text step attribute on count 1 scoped to `role` (null = both). */
+  /** A free-text footwork attribute on count 1 scoped to `role` (null = both). */
   const roleStep = (value: string, role: Attribute["role"]): Attribute => ({
-    id: `step-1-${value}`,
-    kind: "step",
+    id: `footwork-1-${value}`,
+    kind: "footwork",
     count: 1,
     value,
     role,

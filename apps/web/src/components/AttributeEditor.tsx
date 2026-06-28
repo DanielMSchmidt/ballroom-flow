@@ -58,6 +58,7 @@ export function AttributeEditor({
   onChange,
 }: AttributeEditorProps) {
   const editable = role === "editor";
+  const [showMore, setShowMore] = useState(false);
   const live = value.filter((a) => a.deletedAt == null);
   const selected = (kind: string, v: string): boolean =>
     live.some((a) => a.kind === kind && normalizeValue(kind, String(a.value)) === v);
@@ -87,57 +88,79 @@ export function AttributeEditor({
     onChange(next);
   };
 
+  /** One registry kind → a labelled fieldset of value chips (+ free-text add). */
+  const renderKind = (kind: RegistryKind) => {
+    const suggestions = kind.values ?? [];
+    // Selected values not in the suggestion list (e.g. a free-text footwork) still
+    // render as chips so a custom value is visible + clearable.
+    const customSelected = live
+      .filter((a) => a.kind === kind.kind)
+      .map((a) => normalizeValue(kind.kind, String(a.value)))
+      .filter((v) => !suggestions.includes(v));
+
+    return (
+      // A <fieldset> is implicitly role="group", named by its <legend> — so
+      // both `getByRole("heading")` (the <h3>) and `getByRole("group", { name })`
+      // resolve per kind (US-029).
+      <fieldset key={kind.kind} className="flex flex-wrap items-center gap-1">
+        <legend className="mb-1 w-full">
+          <h3 className="text-2xs font-bold text-ink-faint">{kind.label}</h3>
+        </legend>
+
+        {[...suggestions, ...customSelected].map((v) => {
+          const on = selected(kind.kind, v);
+          if (!editable) {
+            // Read-only: show only the selected values, as static chips.
+            return on ? (
+              <Chip key={v} tone="neutral" asStatic>
+                {v}
+              </Chip>
+            ) : null;
+          }
+          return (
+            <Chip
+              key={v}
+              tone="neutral"
+              selected={on}
+              onClick={() => toggle(kind.kind, kind.cardinality, v)}
+            >
+              {v}
+            </Chip>
+          );
+        })}
+
+        {editable && kind.freeText && (
+          <FreeTextAdd label={kind.label} onAdd={(v) => toggle(kind.kind, kind.cardinality, v)} />
+        )}
+      </fieldset>
+    );
+  };
+
+  // Progressive disclosure (design parity): the step IDENTITY — direction
+  // (headline) + footwork — leads; the technique kinds (rise/position/sway/turn/
+  // body actions + custom) sit behind a "More attributes" toggle so the common
+  // case is one focused choice, not a wall of every kind at once.
+  const kinds = kindsFor(dance, customKinds);
+  const IDENTITY = new Set(["direction", "footwork"]);
+  const primary = kinds.filter((k) => IDENTITY.has(k.kind));
+  const secondary = kinds.filter((k) => !IDENTITY.has(k.kind));
+
   return (
     <section className="flex flex-col gap-3" aria-label={`Attributes for count ${count}`}>
-      {kindsFor(dance, customKinds).map((kind) => {
-        const suggestions = kind.values ?? [];
-        // Selected values not in the suggestion list (e.g. a free-text step) still
-        // render as chips so a custom value is visible + clearable.
-        const customSelected = live
-          .filter((a) => a.kind === kind.kind)
-          .map((a) => normalizeValue(kind.kind, String(a.value)))
-          .filter((v) => !suggestions.includes(v));
-
-        return (
-          // A <fieldset> is implicitly role="group", named by its <legend> — so
-          // both `getByRole("heading")` (the <h3>) and `getByRole("group", { name })`
-          // resolve per kind (US-029).
-          <fieldset key={kind.kind} className="flex flex-wrap items-center gap-1">
-            <legend className="mb-1 w-full">
-              <h3 className="text-2xs font-bold text-ink-faint">{kind.label}</h3>
-            </legend>
-
-            {[...suggestions, ...customSelected].map((v) => {
-              const on = selected(kind.kind, v);
-              if (!editable) {
-                // Read-only: show only the selected values, as static chips.
-                return on ? (
-                  <Chip key={v} tone="neutral" asStatic>
-                    {v}
-                  </Chip>
-                ) : null;
-              }
-              return (
-                <Chip
-                  key={v}
-                  tone="neutral"
-                  selected={on}
-                  onClick={() => toggle(kind.kind, kind.cardinality, v)}
-                >
-                  {v}
-                </Chip>
-              );
-            })}
-
-            {editable && kind.freeText && (
-              <FreeTextAdd
-                label={kind.label}
-                onAdd={(v) => toggle(kind.kind, kind.cardinality, v)}
-              />
-            )}
-          </fieldset>
-        );
-      })}
+      {primary.map(renderKind)}
+      {secondary.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-line pt-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={showMore}
+            onClick={() => setShowMore((v) => !v)}
+          >
+            {showMore ? "Fewer attributes" : "More attributes"}
+          </Button>
+          {showMore && secondary.map(renderKind)}
+        </div>
+      )}
     </section>
   );
 }

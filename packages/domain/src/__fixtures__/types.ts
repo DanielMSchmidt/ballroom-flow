@@ -41,7 +41,15 @@ export type {
 
 /** Standard + user-defined attribute kinds (product `Attribute.kind` is a bare
  *  string; this narrows the standard kinds for legible fixtures). */
-export type AttributeKind = "step" | "rise" | "position" | "bodyActions" | "sway" | "turn" | string;
+export type AttributeKind =
+  | "direction"
+  | "footwork"
+  | "rise"
+  | "position"
+  | "bodyActions"
+  | "sway"
+  | "turn"
+  | string;
 
 /** Per-document membership role (worker permission layer, US-020). */
 export type MembershipRole = "viewer" | "commenter" | "editor";

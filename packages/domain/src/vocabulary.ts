@@ -42,7 +42,10 @@ export interface RegistryKind {
 
 /** The statically-known standard kinds, plus a string index for custom kinds. */
 export interface StandardRegistry extends Record<string, RegistryKind> {
-  step: RegistryKind;
+  /** The step's travel direction — its headline (forward/back/side/…). */
+  direction: RegistryKind;
+  /** The foot part of the step (ball/heel/…). Renamed from the old `step` kind. */
+  footwork: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;
@@ -57,15 +60,30 @@ const RISE_DANCES: DanceId[] = ["waltz", "viennese_waltz", "quickstep", "foxtrot
 
 /** The standard (builtin) attribute vocabulary. */
 export const ATTRIBUTE_REGISTRY: StandardRegistry = {
-  step: {
-    kind: "step",
-    label: "Step",
-    color: "#a9742c",
-    cardinality: "multi",
+  // The step's travel direction — the step headline (2026-06-28 parity spec).
+  // Foot (L/R) is never modelled: steps alternate feet automatically. A closed
+  // enum (no freeText) — direction is a controlled vocabulary.
+  direction: {
+    kind: "direction",
+    label: "Direction",
+    color: "#2f5d8f",
+    cardinality: "single",
     valueType: "enum",
-    // Footwork SUGGESTIONS; `freeText` lets a custom action through too (§3,
-    // #83) — the value list isn't a closed enum for step.
-    values: ["HT", "T", "TH", "heel_pull", "H"],
+    values: ["forward", "back", "side", "close", "diag_forward", "diag_back", "in_place"],
+    builtin: true,
+  },
+  // The foot part of the step (renamed from the old `step` kind, which held the
+  // same foot-part pressure tokens). Readable value set; `freeText` keeps the
+  // classic ISTD tokens (HT/TH/heel_pull) and one-offs valid, and the read-side
+  // aliases below normalize the clean singles (H→heel, T→toe). Single-select:
+  // a step has one foot part (a roll is one compound token, e.g. ball_flat).
+  footwork: {
+    kind: "footwork",
+    label: "Footwork",
+    color: "#a9742c",
+    cardinality: "single",
+    valueType: "enum",
+    values: ["ball", "ball_flat", "flat", "heel", "heel_ball", "toe", "tap"],
     freeText: true,
     builtin: true,
   },
@@ -131,6 +149,10 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
 // values that aren't aliases pass through untouched (forward-compatible reads).
 const VALUE_ALIASES: Record<string, Record<string, string>> = {
   bodyActions: { CBP: "CBMP" },
+  // Legacy ISTD single tokens → the readable footwork values (2026-06-28 parity).
+  // The compound tokens (HT/TH/heel_pull) have no clean readable equivalent, so
+  // they pass through as free-text rather than being lossily rewritten.
+  footwork: { H: "heel", T: "toe" },
 };
 
 /**

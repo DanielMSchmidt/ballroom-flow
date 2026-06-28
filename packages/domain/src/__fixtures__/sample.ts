@@ -40,9 +40,9 @@ export const FEATHER_FOXTROT: Readonly<FigureDoc> = Object.freeze(
     dance: "foxtrot",
     name: "Feather",
     attributes: [
-      makeAttribute({ id: "a_ff_1", kind: "step", count: 1, value: "HT" }),
-      makeAttribute({ id: "a_ff_2", kind: "step", count: 2, value: "T" }),
-      makeAttribute({ id: "a_ff_3", kind: "step", count: 3, value: "TH" }),
+      makeAttribute({ id: "a_ff_1", kind: "footwork", count: 1, value: "HT" }),
+      makeAttribute({ id: "a_ff_2", kind: "footwork", count: 2, value: "T" }),
+      makeAttribute({ id: "a_ff_3", kind: "footwork", count: 3, value: "TH" }),
     ],
   }),
 );
@@ -54,7 +54,7 @@ export const FEATHER_WALTZ: Readonly<FigureDoc> = Object.freeze(
     dance: "waltz",
     name: "Feather (Waltz)",
     attributes: [
-      makeAttribute({ id: "a_fw_1", kind: "step", count: 1, value: "HT" }),
+      makeAttribute({ id: "a_fw_1", kind: "footwork", count: 1, value: "HT" }),
       makeAttribute({ id: "a_fw_2", kind: "rise", count: 1, value: "commence" }),
     ],
   }),
@@ -67,8 +67,8 @@ export const THREE_STEP_FOXTROT: Readonly<FigureDoc> = Object.freeze(
     dance: "foxtrot",
     name: "Three Step",
     attributes: [
-      makeAttribute({ id: "a_ts_1", kind: "step", count: 1, value: "HT" }),
-      makeAttribute({ id: "a_ts_2", kind: "step", count: 2, value: "T" }),
+      makeAttribute({ id: "a_ts_1", kind: "footwork", count: 1, value: "HT" }),
+      makeAttribute({ id: "a_ts_2", kind: "footwork", count: 2, value: "T" }),
     ],
   }),
 );

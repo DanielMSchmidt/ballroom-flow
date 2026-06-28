@@ -15,7 +15,14 @@
 // edit via `onChange` (the screen wires it to the store's setAttribute mutation;
 // tests pass it directly or omit it).
 
-import { type Attribute, countLabel, type DanceId, type RegistryKind } from "@ballroom/domain";
+import {
+  type Attribute,
+  barsForFigure,
+  countLabel,
+  DANCES,
+  type DanceId,
+  type RegistryKind,
+} from "@ballroom/domain";
 import { useMemo, useState } from "react";
 import { Button, Card, Chip, CountLabel, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
@@ -29,6 +36,21 @@ import {
   roleLabel,
 } from "./role-view";
 
+/** A step's duration = the gap to the next placed count, else a whole beat. */
+function stepDuration(count: number, allCounts: number[]): number {
+  const next = allCounts.filter((c) => c > count).sort((a, b) => a - b)[0];
+  return next != null ? Math.round((next - count) * 8) / 8 : 1;
+}
+
+/** Human label for a step duration in beats (derived, never stored). */
+function durationLabel(beats: number): string {
+  if (beats === 0.25) return "quarter beat";
+  if (beats === 0.5) return "half beat";
+  if (beats === 0.75) return "three-quarter beat";
+  if (beats === 1) return "1 beat";
+  return `${beats} beats`;
+}
+
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
   role: MembershipRole;
@@ -36,7 +58,9 @@ export interface FigureTimelineProps {
   dance?: DanceId;
   /** The figure's current attributes (controlled-with-fallback). */
   attributes?: Attribute[];
-  /** How many whole counts to lay out (default one 8-count phrase). */
+  /** Override the whole-count count. When omitted, the count is dance-aware:
+   *  one phrase from the dance (Waltz 6 / others 8), extended to cover any
+   *  attribute placed in a later phrase. */
   counts?: number;
   /** The viewed role lens (US-030); new values inherit it. */
   initialView?: "leader" | "follower";
@@ -57,7 +81,7 @@ export function FigureTimeline({
   role,
   dance,
   attributes,
-  counts = 8,
+  counts,
   initialView,
   customKinds = [],
   onChange,
@@ -78,6 +102,8 @@ export function FigureTimeline({
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const isGlobal = figureScope === "global";
+  // Only an editor gets empty off-beat (&) add targets; everyone sees occupied ones.
+  const editable = role === "editor";
 
   const byCount = useMemo(() => {
     const map = new Map<number, Attribute[]>();
@@ -90,13 +116,87 @@ export function FigureTimeline({
     return map;
   }, [attrs]);
 
-  const cells = Array.from({ length: counts }, (_, i) => i + 1);
+  // Dance-aware beat ruler (2026-06-28 parity): instead of a flat 8-count strip,
+  // lay out the dance's phrase (Waltz = a 6-beat phrase of two 3-beat bars; 4/4
+  // dances = 8), extended to cover any attribute placed in a later phrase. An
+  // explicit `counts` prop still wins (e.g. a fixed read-only render).
+  const meta = dance ? DANCES[dance] : undefined;
+  const beatsPerBar = meta?.beatsPerBar ?? 4;
+  const phraseBeats = meta?.phraseBeats ?? 8;
+  const { bars } = useMemo(() => {
+    const liveCounts = attrs.filter((a) => a.deletedAt == null).map((a) => a.count);
+    const maxWhole = liveCounts.reduce((m, c) => Math.max(m, Math.ceil(c)), 0);
+    const phrases = dance ? barsForFigure(liveCounts, dance) : 1;
+    const total = counts ?? Math.max(phraseBeats * phrases, maxWhole, beatsPerBar);
+    const list = Array.from({ length: total }, (_, i) => i + 1);
+    const grouped: number[][] = [];
+    for (let i = 0; i < list.length; i += beatsPerBar) grouped.push(list.slice(i, i + beatsPerBar));
+    return { bars: grouped };
+  }, [attrs, counts, dance, phraseBeats, beatsPerBar]);
 
   /** Replace this count's attributes within the figure's full set + emit. */
   const onCountChange = (count: number, next: Attribute[]): void => {
     const others = attrs.filter((a) => a.count !== count || a.deletedAt != null);
     if (isGlobal && !copied) setCopied(true);
     onChange?.([...others, ...next]);
+  };
+
+  const allCounts = [...byCount.keys()];
+
+  /** One position on the ruler — a whole beat, or an `offbeat` (&) sub-beat. */
+  const renderCell = (count: number, offbeat: boolean) => {
+    const onCount = byCount.get(count) ?? [];
+    const visible = filterByRoleView(onCount, view);
+    const has = onCount.length > 0;
+    // An empty off-beat is an add target — only editors get those (keeps the
+    // ruler uncluttered for viewers; occupied off-beats always show).
+    if (offbeat && !editable && !has) return null;
+    const direction = visible.find((a) => a.kind === "direction");
+    const slots = visible.filter((a) => a.kind !== "direction");
+    return (
+      <li key={count} className="flex flex-col items-center gap-1">
+        <button
+          type="button"
+          aria-label={offbeat ? `off-beat ${countLabel(count)}` : `count ${count}`}
+          aria-expanded={openCount === count}
+          onClick={() => setOpenCount(openCount === count ? null : count)}
+          className={cx(
+            "relative flex min-h-[44px] items-center justify-center rounded-md border",
+            offbeat ? "min-w-[32px] text-ink-muted opacity-80" : "min-w-[44px]",
+            openCount === count ? "border-accent" : "border-line",
+          )}
+        >
+          <CountLabel value={countLabel(count)} />
+          {has && (
+            <span
+              aria-hidden="true"
+              className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
+            />
+          )}
+        </button>
+        {direction && (
+          <span data-testid={`step-headline-${count}`}>
+            <Chip asStatic tone="direction">
+              {displayValue(direction.value)}
+            </Chip>
+          </span>
+        )}
+        {slots.length > 0 && (
+          <ul
+            className="flex flex-col items-center gap-0.5"
+            aria-label={`count ${count} attributes`}
+          >
+            {slots.map((a) => (
+              <li key={a.id}>
+                <Chip asStatic tone={chipTone(a.kind)}>
+                  {displayValue(a.value)}
+                </Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
   };
 
   return (
@@ -134,52 +234,57 @@ export function FigureTimeline({
         </div>
       )}
 
-      <ol className="flex flex-wrap gap-1" aria-label="Count timeline">
-        {cells.map((count) => {
-          const onCount = byCount.get(count) ?? [];
-          const visible = filterByRoleView(onCount, view);
-          const has = onCount.length > 0;
-          return (
-            <li key={count} className="flex min-w-[44px] flex-col items-center gap-1">
-              <button
-                type="button"
-                aria-label={`count ${count}`}
-                aria-expanded={openCount === count}
-                onClick={() => setOpenCount(openCount === count ? null : count)}
-                className={cx(
-                  "relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border",
-                  openCount === count ? "border-accent" : "border-line",
-                )}
-              >
-                <CountLabel value={countLabel(count)} />
-                {has && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent"
-                  />
-                )}
-              </button>
-              {visible.length > 0 && (
-                <ul
-                  className="flex flex-col items-center gap-0.5"
-                  aria-label={`count ${count} attributes`}
-                >
-                  {visible.map((a) => (
-                    <li key={a.id}>
-                      <Chip asStatic tone={chipTone(a.kind)}>
-                        {displayValue(a.value)}
-                      </Chip>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
+      {/* Dance-aware beat ruler: beats grouped into bars (Waltz → bars of 3). */}
+      <ol className="flex flex-wrap items-start gap-3" aria-label="Count timeline">
+        {bars.map((bar, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: bars are a stable positional grid
+          <li key={`bar-${i}`}>
+            <ol
+              aria-label={`bar ${i + 1}`}
+              className="flex items-start gap-1 rounded-lg bg-surface-sunken/40 p-1"
+            >
+              {/* Each whole beat, plus its off-beat (&) for syncopated steps. */}
+              {bar.flatMap((count) => [renderCell(count, false), renderCell(count + 0.5, true)])}
+            </ol>
+          </li>
+        ))}
       </ol>
 
       {openCount !== null && (
         <Card>
+          {/* Step-summary card (design parity): what this step IS at a glance —
+              its count, direction headline, derived duration, and slot chips —
+              so the pickers below stay in context. */}
+          {(() => {
+            const here = filterByRoleView(byCount.get(openCount) ?? [], view);
+            const direction = here.find((a) => a.kind === "direction");
+            const slots = here.filter((a) => a.kind !== "direction");
+            return (
+              <div
+                data-testid="step-summary"
+                className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3"
+              >
+                <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold text-ink">
+                  {countLabel(openCount)}
+                </span>
+                {direction ? (
+                  <Chip asStatic tone="direction">
+                    {displayValue(direction.value)}
+                  </Chip>
+                ) : (
+                  <span className="text-2xs text-ink-muted">No direction yet</span>
+                )}
+                <span className="text-2xs text-ink-muted">
+                  {durationLabel(stepDuration(openCount, allCounts))}
+                </span>
+                {slots.map((a) => (
+                  <Chip key={a.id} asStatic tone={chipTone(a.kind)}>
+                    {displayValue(a.value)}
+                  </Chip>
+                ))}
+              </div>
+            );
+          })()}
           <AttributeEditor
             count={openCount}
             role={role}

@@ -62,7 +62,7 @@ describe("buildWdsfAttributes", () => {
       "wdsf-natural-turn-waltz-s5",
       "wdsf-natural-turn-waltz-s6",
     ]);
-    expect(natural.every((a) => a.kind === "step")).toBe(true);
+    expect(natural.every((a) => a.kind === "footwork")).toBe(true);
     expect(natural.map((a) => a.count)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 

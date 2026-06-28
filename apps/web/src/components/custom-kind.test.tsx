@@ -73,6 +73,8 @@ describe("US-043 Custom attribute-kind creation UI", () => {
       builtin: false,
     };
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" customKinds={[energy]} />);
+    // A custom kind is a technique kind — revealed under "More attributes".
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.getByRole("heading", { name: /energy/i })).toBeInTheDocument();
   });
 });

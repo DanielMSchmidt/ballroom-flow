@@ -31,11 +31,17 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     border: "var(--bf-accent-border)",
     solid: "var(--bf-accent)",
   },
-  step: {
-    tint: "var(--bf-kind-step-tint)",
-    ink: "var(--bf-kind-step-ink)",
-    border: "var(--bf-kind-step-border)",
-    solid: "var(--bf-kind-step)",
+  direction: {
+    tint: "var(--bf-kind-direction-tint)",
+    ink: "var(--bf-kind-direction-ink)",
+    border: "var(--bf-kind-direction-border)",
+    solid: "var(--bf-kind-direction)",
+  },
+  footwork: {
+    tint: "var(--bf-kind-footwork-tint)",
+    ink: "var(--bf-kind-footwork-ink)",
+    border: "var(--bf-kind-footwork-border)",
+    solid: "var(--bf-kind-footwork)",
   },
   rise: {
     tint: "var(--bf-kind-rise-tint)",

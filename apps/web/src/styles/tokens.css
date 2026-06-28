@@ -49,11 +49,17 @@
    * text on its tint), -tint (chip background), -border.
    * ============================================================= */
 
-  /* step / footwork — amber */
-  --bf-kind-step: #a9742c;
-  --bf-kind-step-ink: #6b4a16;
-  --bf-kind-step-tint: #f3e6d2;
-  --bf-kind-step-border: #a9742c;
+  /* footwork (foot part) — amber */
+  --bf-kind-footwork: #a9742c;
+  --bf-kind-footwork-ink: #6b4a16;
+  --bf-kind-footwork-tint: #f3e6d2;
+  --bf-kind-footwork-border: #a9742c;
+
+  /* direction (step headline) — blue */
+  --bf-kind-direction: #2f5d8f;
+  --bf-kind-direction-ink: #1d3a5a;
+  --bf-kind-direction-tint: #e1ebf5;
+  --bf-kind-direction-border: #2f5d8f;
 
   /* rise & fall — green */
   --bf-kind-rise: #1f8a5b;
