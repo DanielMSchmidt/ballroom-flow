@@ -106,27 +106,37 @@ const attr = (kind: string, value: string, c = 1): Attribute => ({
 describe("US-029 Attribute editor (registry-derived sections)", () => {
   it("renders sections from the merged ATTRIBUTE_REGISTRY", async () => {
     // Intent: editor sections derive from the merged registry (one vocabulary).
-    // Assert: step/turn/sway/position section headings are present (Foxtrot).
+    // The step IDENTITY (direction + footwork) leads; the technique kinds live
+    // behind a "More attributes" disclosure (progressive disclosure parity).
     // Covers US-029 AC-1 (sections from registry) — §10.2.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
-    for (const name of [/direction/i, /footwork/i, /turn/i, /sway/i, /position/i]) {
+    // Identity kinds are always shown.
+    for (const name of [/direction/i, /footwork/i]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+    // Technique kinds appear once "More attributes" is expanded.
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
+    for (const name of [/turn/i, /sway/i, /position/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
 
   it("hides the rise section for Tango (but shows it for a rise dance)", async () => {
     // Intent: Tango omits rise (appliesToDances) so the editor hides that section.
+    // Rise is a technique kind, so reveal "More attributes" first.
     // Covers US-029 AC-2 (Tango hides rise) — §10.2 "Tango omits rise".
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const { unmount } = renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.getByRole("heading", { name: /rise/i })).toBeInTheDocument(); // shown for foxtrot
     unmount();
     renderUi(<AttributeEditor count={1} dance="tango" role="editor" />);
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.queryByRole("heading", { name: /rise/i })).toBeNull(); // hidden for tango
   });
 
@@ -147,6 +157,8 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         onChange={onSingle}
       />,
     );
+    // position + bodyActions are technique kinds — reveal them first.
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
     const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
     expect(afterSingle.filter((a) => a.kind === "position")).toHaveLength(1);
@@ -164,6 +176,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         onChange={onMulti}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^CBMP$/ }));
     const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
     expect(
@@ -189,6 +202,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         value={[attr("bodyActions", "CBP")]}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
   });
 
