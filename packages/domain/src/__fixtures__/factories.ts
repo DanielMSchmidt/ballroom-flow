@@ -43,7 +43,7 @@ export function resetTestIds(): void {
 export function makeAttribute(overrides: Partial<Attribute> = {}): Attribute {
   return {
     id: overrides.id ?? testId("attr"),
-    kind: overrides.kind ?? ("step" as AttributeKind),
+    kind: overrides.kind ?? ("footwork" as AttributeKind),
     count: overrides.count ?? 1,
     role: overrides.role ?? null,
     value: "value" in overrides ? overrides.value : "HT",
@@ -80,9 +80,9 @@ export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
     entryAlignment: overrides.entryAlignment,
     exitAlignment: overrides.exitAlignment,
     attributes: overrides.attributes ?? [
-      makeAttribute({ kind: "step", count: 1, value: "HT" }),
-      makeAttribute({ kind: "step", count: 2, value: "T" }),
-      makeAttribute({ kind: "step", count: 3, value: "TH" }),
+      makeAttribute({ kind: "footwork", count: 1, value: "HT" }),
+      makeAttribute({ kind: "footwork", count: 2, value: "T" }),
+      makeAttribute({ kind: "footwork", count: 3, value: "TH" }),
     ],
     baseFigureRef: overrides.baseFigureRef ?? null,
     overlay: overrides.overlay,

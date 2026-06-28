@@ -13,14 +13,18 @@ import { importDomain } from "./__fixtures__";
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
-  it("ships the standard kinds with their footwork/rise/turn values", async () => {
-    // Intent: standard vocabulary present (step footwork, rise incl. NFR, turn).
+  it("ships the standard kinds with their direction/footwork/rise/turn values", async () => {
+    // Intent: standard vocabulary present (direction headline, footwork foot-part,
+    // rise incl. NFR, turn). The old `step` kind was renamed to `footwork`
+    // (2026-06-28 parity spec).
     // Arrange: import the registry. Act: read each standard kind's values.
-    // Assert: step has HT/T/TH/heel_pull/H; rise has NFR; turn has eighth_L…half_R.
     // Covers AC-1 (standard kinds + values).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    expect(ATTRIBUTE_REGISTRY.step.values).toEqual(
-      expect.arrayContaining(["HT", "T", "TH", "heel_pull", "H"]),
+    expect(ATTRIBUTE_REGISTRY.footwork.values).toEqual(
+      expect.arrayContaining(["ball", "heel", "toe", "tap"]),
+    );
+    expect(ATTRIBUTE_REGISTRY.direction.values).toEqual(
+      expect.arrayContaining(["forward", "back", "side", "close"]),
     );
     expect(ATTRIBUTE_REGISTRY.rise.values).toEqual(expect.arrayContaining(["NFR"]));
     expect(ATTRIBUTE_REGISTRY.turn.values).toEqual(expect.arrayContaining(["eighth_L", "half_R"]));
@@ -79,11 +83,11 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
 
   // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
 
-  it("ships all six standard kinds, every one builtin", async () => {
+  it("ships all seven standard kinds, every one builtin", async () => {
     // Intent: the standard tier is complete and flagged builtin (so the merge
     // and the creation UI can distinguish standard from user-defined kinds).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    for (const k of ["step", "rise", "position", "bodyActions", "sway", "turn"]) {
+    for (const k of ["direction", "footwork", "rise", "position", "bodyActions", "sway", "turn"]) {
       expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
       expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);
     }
@@ -179,7 +183,8 @@ describe("US-043 custom kind slug helpers", () => {
   });
   it("flags builtin slugs as reserved", async () => {
     const { isReservedKind } = await import("./vocabulary");
-    expect(isReservedKind("step")).toBe(true);
+    expect(isReservedKind("footwork")).toBe(true);
+    expect(isReservedKind("direction")).toBe(true);
     expect(isReservedKind("rise")).toBe(true);
     expect(isReservedKind("energy")).toBe(false);
   });

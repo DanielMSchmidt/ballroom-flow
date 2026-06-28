@@ -20,7 +20,7 @@
 // with no caller changes.
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -37,7 +37,33 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
  * doc to v`n+1`. Empty today (no schema change since v1); add `1: (doc) => …`
  * here when v2 lands.
  */
-const MIGRATIONS: Record<number, MigrationStep> = {};
+const MIGRATIONS: Record<number, MigrationStep> = {
+  // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
+  // to `footwork`. Retag every `kind:"step"` attribute → `footwork`, in both a
+  // figure's own timeline and a variant overlay's additions. STRUCTURE-ONLY:
+  // values are preserved verbatim (lossless — the read-side aliases handle the
+  // legacy single tokens H/T), unknown values survive, and `figureType`/`dance`
+  // are untouched (the ladder guard enforces that). Docs without `attributes`
+  // (routine docs) pass through unchanged but for the version bump.
+  1: (doc) => {
+    const retag = (a: unknown): unknown =>
+      a && typeof a === "object" && (a as { kind?: unknown }).kind === "step"
+        ? { ...(a as object), kind: "footwork" }
+        : a;
+    // Only touch keys that already exist — NEVER spread back an absent key as
+    // `undefined` (Automerge cannot store `undefined`; doing so corrupts routine
+    // docs and broke template forks).
+    const out: VersionedDoc = { ...doc };
+    if (Array.isArray(doc.attributes)) out.attributes = doc.attributes.map(retag);
+    if (doc.overlay && typeof doc.overlay === "object") {
+      const ov = doc.overlay as { additions?: unknown };
+      if (Array.isArray(ov.additions)) {
+        out.overlay = { ...ov, additions: ov.additions.map(retag) };
+      }
+    }
+    return out;
+  },
+};
 
 /**
  * Run a `ladder` over `doc` up to `target`, applying each step in version order.
