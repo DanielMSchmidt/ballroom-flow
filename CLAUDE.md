@@ -30,6 +30,12 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | [`research/*.md`](research/) | Deep-dive research behind the plan. `extensibility-crdt.md` & `critique-sync.md` are load-bearing for the architecture. | Deep questions the plan summarizes but doesn't fully reproduce. |
 | [`PROVISIONING.md`](PROVISIONING.md) | Accounts & secrets (Clerk, Cloudflare) needed to run/deploy. | Running the real app or deploying. |
 
+> **`docs/PLAN.md` is the canonical, living source of truth — keep it that way.** When a
+> decision is made or changes (an attribute model, a locked decision, a roadmap shift),
+> **refine `PLAN.md` in the same change** so it never drifts from the code. Treat a divergence
+> between `PLAN.md` and the implementation as a bug. The plan is meant to be continuously
+> refined, not frozen.
+
 ---
 
 ## 2. By task — where to look
@@ -89,3 +95,20 @@ pnpm coverage         # coverage (thresholds: domain ≥95%, worker ≥90% — u
 - **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey — see `docs/USER-STORIES.md` § "Feature epics (E2E-anchored delivery)". `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
 - **Now:** **#191 — wire E2E auth-mode so the journeys actually run** (the verification keystone), starting with `authoring.spec`. Then build feature-at-a-time (FE-2 share UI, FE-3 figures/fork, …) per the feature-epic table.
 - **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves.
+
+---
+
+## 7. Git flow & releases (read before branching)
+
+We use a **git-flow style** with a long-lived integration branch:
+
+- **`development`** is the **active branch** — all feature work, fixes, and docs land here.
+  **Branch off `development`** for new work and open your PR back into `development`.
+  (`development` deploys to **staging**.)
+- **`main`** is the **release branch** — `development` is merged into `main` only when we cut a
+  **release**. `main` deploys to **production**. Don't develop directly on `main`; it should
+  only ever receive `development` (or a hotfix that is also back-merged to `development`).
+
+So: **start from `development`, not `main`.** A change made on `main` that isn't a release will
+diverge from the real codebase and conflict at the next release. If you're unsure which branch
+you're on, check before you start — the wrong base is expensive to unwind.
