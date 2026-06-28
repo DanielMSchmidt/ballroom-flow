@@ -216,13 +216,13 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
       return Promise.resolve();
     });
     const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    // "natural-turn" in waltz is a WDSF-enriched figure carrying 6 attributes.
-    // The default routine dance is "waltz" (from emptyRoutine), so this matches.
+    // "natural-turn" in waltz is a charted figure: 6 counts × 2 roles × {direction,
+    // footwork} = 24 attributes. The default routine dance is "waltz" (from emptyRoutine).
     store.addPlacement("s1", "Natural Turn", "natural-turn");
 
     expect(createFigure).toHaveBeenCalledTimes(1);
     expect(seen[0]?.figureType).toBe("natural-turn");
-    expect((seen[0]?.attributes ?? []).length).toBe(6);
+    expect((seen[0]?.attributes ?? []).length).toBe(24);
   });
 
   it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {

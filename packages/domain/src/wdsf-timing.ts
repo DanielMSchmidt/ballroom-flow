@@ -1,5 +1,6 @@
 import type { DanceId } from "./dances";
 import type { Attribute } from "./doc-types";
+import { authoredSteps } from "./figure-steps";
 
 // Parse a WDSF syllabus timing string into one float beat-count per step.
 //
@@ -42,13 +43,16 @@ export function parseWdsfTiming(timing: string): number[] {
 }
 
 /**
- * Build a figure's per-step `footwork` attributes from its WDSF timing + actions.
- * The public syllabus gives only the first action (`start`) and last (`finish`);
- * intermediate steps get their count but a blank action (detailed footwork lives
- * in the paid technique books — left for the content workstream). The action is a
- * free-text `footwork` value (the public syllabus states it as one descriptive
- * phrase, e.g. "RF fwd (Closed Position)", not the structured direction/foot-part
- * split). Ids are deterministic so the generated catalog is stable.
+ * Build a figure's per-step timeline attributes from its WDSF timing.
+ *
+ * When the figure has VERIFIED content (figure-steps.ts) whose step count matches the parsed
+ * timing, emit the real per-count `direction` (headline) + `footwork` (foot part) for BOTH
+ * roles — so the figure arrives with a full timeline. Otherwise fall back to the public-
+ * syllabus scaffold: one free-text `footwork` attribute per count, carrying the `start` phrase
+ * on the first step and `finish` on the last, blank between (detailed footwork lives in the
+ * paid technique books — the content workstream fills it in via figure-steps.ts over time).
+ *
+ * Ids are deterministic so the generated catalog is stable.
  */
 export function buildWdsfAttributes(input: {
   figureType: string;
@@ -58,6 +62,36 @@ export function buildWdsfAttributes(input: {
   finish?: string;
 }): Attribute[] {
   const counts = parseWdsfTiming(input.timing);
+
+  const authored = authoredSteps(input.dance, input.figureType);
+  if (authored && authored.length === counts.length) {
+    const out: Attribute[] = [];
+    counts.forEach((count, i) => {
+      const step = authored[i];
+      if (!step) return;
+      for (const role of ["leader", "follower"] as const) {
+        const base = `fig-${input.figureType}-${input.dance}-${role}-s${i + 1}`;
+        out.push({
+          id: `${base}-dir`,
+          kind: "direction",
+          count,
+          role,
+          value: step[role].direction,
+          deletedAt: null,
+        });
+        out.push({
+          id: `${base}-foot`,
+          kind: "footwork",
+          count,
+          role,
+          value: step[role].footwork,
+          deletedAt: null,
+        });
+      }
+    });
+    return out;
+  }
+
   const last = counts.length - 1;
   return counts.map((count, i) => ({
     id: `wdsf-${input.figureType}-${input.dance}-s${i + 1}`,

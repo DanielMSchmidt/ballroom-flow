@@ -50,10 +50,22 @@ describe("figure library catalog", () => {
     const natural = libraryFiguresForDance("waltz").find(
       (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
     );
+    // Verified content (figure-steps.ts): a direction + footwork per role for each of the
+    // 6 counts, so the figure arrives with a full timeline.
     expect(natural?.attributes).toBeDefined();
-    expect(natural?.attributes).toHaveLength(6); // "123 123"
-    expect(natural?.attributes?.[0]?.value).toBe("RF fwd (Closed Position)");
-    expect(natural?.attributes?.at(-1)?.value).toBe("LF closes to RF");
+    expect(natural?.attributes).toHaveLength(6 * 2 * 2);
+    const leaderS1Foot = natural?.attributes?.find(
+      (a) => a.count === 1 && a.role === "leader" && a.kind === "footwork",
+    );
+    expect(leaderS1Foot?.value).toBe("HT");
+
+    // An un-charted figure still falls back to the WDSF start/finish scaffold.
+    const change = libraryFiguresForDance("waltz").find(
+      (f) => f.figureType === "hesitation-change",
+    );
+    if (change?.attributes?.length) {
+      expect(change.attributes.every((a) => a.kind === "footwork")).toBe(true);
+    }
   });
 
   it("every catalog attribute is a valid strict-write attribute for its dance", () => {
