@@ -58,8 +58,14 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // path as a create 402 (the ChoreoList upsell Sheet opens on `quotaBlocked`).
   const [forkQuotaBlocked, setForkQuotaBlocked] = useState(false);
 
-  // Fetch templates once on mount (US-045).
+  // Fetch templates ONLY when the routine list has loaded and is empty — the
+  // empty state is the only place the sample + start-from-template UI shows
+  // (US-045). Gating this avoids triggering the server-side template seed
+  // (`ensureSample`) on every home load, which is wasted work when the user
+  // already has routines (and, under E2E, is re-done after each resetDb).
+  const hasRoutines = (routinesQ.data?.routines.length ?? 0) > 0;
   useEffect(() => {
+    if (routinesQ.isLoading || hasRoutines) return;
     let cancelled = false;
     void (async () => {
       const token = await getToken();
@@ -69,7 +75,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, [getToken, routinesQ.isLoading, hasRoutines]);
 
   // Clear a pending debounce on unmount so a route change mid-type doesn't fire
   // a stale search / setState after the component is gone.
