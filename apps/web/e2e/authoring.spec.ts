@@ -88,13 +88,12 @@ test.describe("@smoke core authoring journey", () => {
     });
     await page.keyboard.press("Escape");
 
-    // 5c. The reading view lays the whole routine out read-only as a columnar
-    //     table — the step's direction is the headline ("forward") and footwork
-    //     "ball" shows as its tight column code ("B").
+    // 5c. The reading view lays the whole routine out read-only as a per-figure
+    //     used-columns table — the step's direction + footwork MERGE into one
+    //     blue Step chip (frame 1.6): "forward" + "ball" → "fwd·B".
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
-    await expect(reading.getByText("forward", { exact: true })).toBeVisible();
-    await expect(reading.getByText("B", { exact: true })).toBeVisible();
+    await expect(reading.getByText("fwd·B")).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.

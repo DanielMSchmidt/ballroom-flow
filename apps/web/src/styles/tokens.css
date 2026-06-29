@@ -111,6 +111,21 @@
   --bf-scope-custom-border: #e3cda6;
 
   /* =============================================================
+   * Editing-lens "section" green family (Assemble EDITING, frames
+   * 1.7–1.9). Distinct from the rise-kind green: this is the
+   * structural/organisational green of section headers + the
+   * add-figure / add-section affordances + the inline name panel.
+   * ============================================================= */
+  --bf-section-ink: #2f4f2f; /* section title + solid add-section button bg */
+  --bf-section-label: #3f6b3f; /* "NAME THIS SECTION" eyebrow + chevron */
+  --bf-section-meta: #5b8a5b; /* "6 bars" / "3 figs" meta + add-section dash */
+  --bf-section-action: #4a7c4a; /* dashed "＋ add figure / section" label */
+  --bf-section-caption: #7a9a7a; /* add-section caption (Caveat) */
+  --bf-section-tint: #eaf2ea; /* section header + name-panel surface */
+  --bf-section-border: #b9d2b9; /* name-panel input + cancel border */
+  --bf-section-dash: #9fc09f; /* add-figure dashed border + empty-state glyph */
+
+  /* =============================================================
    * Semantic status roles (always paired with icon/label — #5, #8).
    * ============================================================= */
   --bf-success: #1f8a5b;

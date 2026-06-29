@@ -146,9 +146,6 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   if (openRoutineId) {
     return (
       <div className="flex flex-col gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-          ← All routines
-        </Button>
         {access.state === "denied" ? (
           <AccessDenied
             action={
@@ -169,6 +166,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             role={roleForOpen(items, openRoutineId)}
             currentUserId={me.data?.sub}
             getToken={() => getToken()}
+            onBack={() => navigate("/")}
             forking={fork.isPending}
             onFork={() =>
               // Fork → a new owned, frozen copy; deep-link to it once created.
