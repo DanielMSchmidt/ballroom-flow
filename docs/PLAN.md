@@ -133,7 +133,7 @@ The canonical, checkable rules for attributes. Items marked **⟳** were changed
 10. A kind's **cardinality** is `single` (one value per count) or `multi` (a set per count).
 11. **enum** kinds constrain values to their declared set; **freeText** kinds treat values as suggestions and also accept free text (e.g. `footwork`). Closed-enum write-rejection lives in the Zod layer; freeText skips it.
 12. Reads are **forward-compatible**: unknown persisted values pass through; known aliases normalize on read (`CBP→CBMP`, `H→heel`, `T→toe`).
-13. `appliesToDances` gates a kind to specific dances (rise omits Tango), declared explicitly.
+13. `appliesToDances` gates a kind to specific dances (rise omits Tango), declared explicitly. The gate is enforced on the **write path** (the Zod strict-write layer rejects an attribute whose kind's `appliesToDances` excludes the figure's dance — `dance_not_applicable`), so a `rise` value can never be persisted onto a Tango figure; the reading/edit views additionally hide the inapplicable kind. The store seam drops such attributes before writing; the DO seed route rejects them 400.
 
 **Copies & provenance** ⟳
 14. A figure carries its **own** attributes. There is **no live overlay** against another doc — `resolve(base, overlay)` and base-addition flow-up are **retired**. ⟳
@@ -189,7 +189,7 @@ Scopes:  application = global library (FigureDocs, app-owned) ;  account = chore
 
 ## 3. Controlled Vocabularies — the ATTRIBUTE_REGISTRY
 
-Two tiers, merged everywhere (editor, lanes, info-sheet, chips, Zod): **standard kinds** ship in `packages/domain/src/vocabulary.ts` (`{ kind, label, color, cardinality, valueType, values?, appliesToDances?, builtin:true }`); **user-defined kinds** are created in-app (**creation UI in v1**) and stored in the relevant document. Forward-compatible reads: registry version + value aliases; unknown values pass through on read; aliases normalize (`CBP→CBMP`); unknown-value writes to a known kind rejected.
+Two tiers, merged everywhere (editor, lanes, info-sheet, chips, Zod): **standard kinds** ship in `packages/domain/src/vocabulary.ts` (`{ kind, label, color, cardinality, valueType, values?, appliesToDances?, builtin:true }`); **user-defined kinds** are created in-app (**creation UI in v1**) and stored in the relevant document. Forward-compatible reads: registry version + value aliases; unknown values pass through on read; aliases normalize (`CBP→CBMP`); unknown-value writes to a known kind rejected, and a write of a kind whose `appliesToDances` excludes the figure's dance is rejected (`dance_not_applicable` — e.g. `rise` on Tango).
 
 Standard kinds (v1): **`direction`** (the step headline — **closed enum** `forward`/`back`/`side`/`close`/`diag_forward`/`diag_back`/`in_place`) `#2f5d8f`; **`footwork`** (the foot part — **free-text**, suggested `heel`/`heel_ball`/`ball`/`ball_flat`/`flat`/`toe`/`tap`; classic ISTD tokens `HT`/`TH`/`heel_pull` pass through as free-text, and single `H`→`heel` / `T`→`toe` normalize on read) `#a9742c`; **`rise`** (`commence`/`body_rise`/`foot_rise`/`up`/`continue`/`lowering`/`NFR`; **Tango omits** via `appliesToDances`) `#1f8a5b`; **`position`** (single: `closed`/`promenade`/`wing`) + **`bodyActions`** (multi: `CBM`/`CBMP`; "CBP"→CBMP **[confirm] Q-D4**) `#8a5cab`; **`sway`** (`to_L`/`to_R`/`none`) `#c0563f`; **`turn`** (`eighth_L`…`half_R`/`none`) `#5b6b8a`.
 

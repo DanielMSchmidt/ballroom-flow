@@ -102,6 +102,25 @@ export function parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): 
         }
       }
 
+      // Dance gate: a kind whose `appliesToDances` EXCLUDES this figure's dance is
+      // rejected (e.g. `rise` omits Tango, §3/§10.2). Only checked when the dance is
+      // known — the DO seed route and the store seam both supply it, so this closes
+      // the WRITE-path gap the reading view only HID before (T9a). A kind with no
+      // `appliesToDances` applies to every dance and is never gated here.
+      if (ctx?.dance && kind?.appliesToDances && !kind.appliesToDances.includes(ctx.dance)) {
+        refineCtx.addIssue({
+          code: "custom",
+          path: ["kind"],
+          message: `Kind "${attr.kind}" does not apply to ${ctx.dance}`,
+          params: {
+            code: "dance_not_applicable",
+            kind: attr.kind,
+            dance: ctx.dance,
+            appliesToDances: kind.appliesToDances,
+          },
+        });
+      }
+
       // Timing: a valid position is ≥ 1 and on the 1/8 grid. Counts MAY exceed
       // phraseBeats (multi-phrase figures wrap, §2.5/US-004) — no phrase cap.
       if (ctx?.dance) {

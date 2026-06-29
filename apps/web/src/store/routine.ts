@@ -19,6 +19,7 @@ import {
   copyOnWrite,
   type FigureDoc,
   isReservedKind,
+  kindAppliesToDance,
   LIBRARY_FIGURES,
   newId,
   type Placement,
@@ -685,8 +686,16 @@ export async function openRoutine(
       });
     },
 
-    setFigureAttributes: (figureRef, attributes) => {
+    setFigureAttributes: (figureRef, rawAttributes) => {
       const figure = readFigureDoc(figureConn(figureRef).current());
+      // Dance gate (write path): drop any attribute whose kind does not apply to
+      // this figure's dance — e.g. a `rise` value can never land on a Tango figure
+      // (§3/§10.2). This mirrors the domain `parseAttributeWrite` rejection at the
+      // DO seed boundary, so the rule holds whether an attribute set arrives through
+      // the store seam (in-place / copy-on-write below) or the worker route. The
+      // reading view already HID inapplicable columns; this stops the bad value at
+      // the source instead of relying on every reader to defend.
+      const attributes = rawAttributes.filter((a) => kindAppliesToDance(a.kind, figure?.dance));
       if (figure?.scope !== "global") {
         // Account figures edit IN PLACE — whether you own it, or it's a co-member's
         // figure you can edit via the routine cascade (the shared doc converges to
