@@ -575,7 +575,7 @@ Not in v1. Annotations carry `media[]`; UI "coming soon". When built: R2 presign
 | Document | What it adds | Status |
 |---|---|---|
 | [`docs/superpowers/specs/2026-06-24-testing-plan.md`](superpowers/specs/2026-06-24-testing-plan.md) | Verbatim per-screen surface checklist | Predates v2–v4; surface only. |
-| [`docs/design/Ballroom Builder.dc.html`](design/Ballroom%20Builder.dc.html) | Wireframe prototype | Sketch. |
+| [`docs/design/project/Ballroom Builder.dc.html`](design/project/Ballroom%20Builder.dc.html) | Wireframe prototype (Pencil) | **Design-parity program (2026-06-29) brought the shipped UI to full parity with this and [`docs/design/project/Ballroom Wireframes v4.dc.html`](design/project/Ballroom%20Wireframes%20v4.dc.html); these wireframes are now the authoritative design reference.** |
 | `research/domain.md` | Ballroom domain reference | Behind §3. |
 | `research/platform.md` | Platform/architecture research | Behind §6/§8. |
 | `research/extensibility-crdt.md`, `research/critique-sync.md` | CRDT + sync reviews | **Load-bearing** for §6 (document graph, per-doc permission boundary). |
