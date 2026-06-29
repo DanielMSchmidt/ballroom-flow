@@ -50,6 +50,56 @@ describe("US-053 Account / profile + plan status", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// T7 — Profile design parity (frame 4.1). The profile-colour picker is the
+// identity colour that tints every note/reply across shared routines; it's the
+// six IDENTITY_COLORS slots (not an ad-hoc palette), and it persists the chosen
+// colour as the hex the onboarding endpoint stores (§4.8, server validates hex).
+// ─────────────────────────────────────────────────────────────────────────
+describe("T7 Profile design parity (frame 4.1)", () => {
+  it("labels the profile colour and explains it tints every note across shared routines", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} />);
+    expect(screen.getByText(/profile colour/i)).toBeInTheDocument();
+    // The tint microcopy (DP #5: colour carries authorship across shared routines).
+    expect(screen.getByText(/tinted with this/i)).toBeInTheDocument();
+    expect(screen.getByText(/shared routines/i)).toBeInTheDocument();
+  });
+
+  it("offers exactly the six identity-colour swatches", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} />);
+    expect(screen.getAllByRole("button", { name: /use colou?r/i })).toHaveLength(6);
+  });
+
+  it("persists the picked swatch as a hex identity colour via onSave", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    const onSave = vi.fn();
+    renderUi(<Profile plan="free" ownedRoutineCount={0} displayName="Daniel" onSave={onSave} />);
+    const swatches = screen.getAllByRole("button", { name: /use colou?r/i });
+    const third = swatches[2]; // pick the third identity slot
+    if (!third) throw new Error("expected six identity swatches");
+    await userEvent.click(third);
+    expect(third).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(onSave).toHaveBeenCalledWith("Daniel", expect.stringMatching(/^#[0-9a-fA-F]{3,8}$/));
+  });
+
+  it("clarifies that Leader/Follower is a per-figure timeline toggle, not a profile setting", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} />);
+    expect(screen.getByText(/leader\s*\/\s*follower/i)).toBeInTheDocument();
+    expect(screen.getByText(/per-figure/i)).toBeInTheDocument();
+    expect(screen.getByText(/not a profile setting/i)).toBeInTheDocument();
+  });
+
+  it("renders the identity avatar with the user's initial", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} displayName="Daniel" />);
+    expect(screen.getAllByText("D").length).toBeGreaterThan(0);
+  });
+});
+
 // US-038 Per-user undo / redo UX: the undo/redo affordances + "Undone" toast live
 // on the OPEN routine (the Assemble header), not on a standalone <UndoControls> or
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe
