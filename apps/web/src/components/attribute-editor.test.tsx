@@ -5,7 +5,7 @@ import type { Attribute } from "@ballroom/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen, userEvent } from "../test-support/render";
+import { renderUi, screen, userEvent, within } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-028 — Figure timeline: place/edit/remove attributes [M2, user] (hero)
@@ -101,6 +101,117 @@ const attr = (kind: string, value: string, c = 1): Attribute => ({
   value,
   role: null,
   deletedAt: null,
+});
+
+/** A role-scoped attribute of `kind`=`value` on count `c`. */
+const roleAttr = (kind: string, value: string, role: Attribute["role"], c = 1): Attribute => ({
+  id: `${kind}-${c}-${value}-${role ?? "both"}`,
+  kind,
+  count: c,
+  value,
+  role,
+  deletedAt: null,
+});
+
+describe("Attribute editor ROLES toggle (frame 1.12)", () => {
+  it("offers a 'Same for both | Per role' roles toggle, defaulting to Same for both", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
+    expect(screen.getByRole("radio", { name: /same for both/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: /per role/i })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("in 'Same for both' a chosen value is written to both roles (role=null)", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn();
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /^forward$/i }));
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "direction",
+    );
+    expect(added?.role).toBeNull();
+  });
+
+  it("'Per role' splits into a Leader + Follower section; a follower pick is role-scoped", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn();
+    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("radio", { name: /per role/i }));
+    // Two rails appear.
+    expect(screen.getByRole("group", { name: /leader/i })).toBeInTheDocument();
+    const follower = screen.getByRole("group", { name: /follower/i });
+    // Picking a direction inside the Follower rail writes role="follower".
+    await userEvent.click(within(follower).getByRole("button", { name: /^back$/i }));
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "direction",
+    );
+    expect(added?.role).toBe("follower");
+  });
+
+  it("defaults to 'Per role' when the count already has role-scoped values", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        value={[roleAttr("direction", "forward", "leader")]}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: /per role/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("'remove attribute' clears this count's values for the active role scope", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        value={[roleAttr("direction", "forward", null), roleAttr("footwork", "ball", null)]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /remove attribute/i }));
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it("hides the roles toggle + remove from a non-editor (read-only)", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="commenter"
+        value={[roleAttr("footwork", "ball", null)]}
+      />,
+    );
+    expect(screen.queryByRole("radio", { name: /per role/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /remove attribute/i })).toBeNull();
+    expect(screen.getByText("ball")).toBeInTheDocument(); // still shown read-only
+  });
 });
 
 describe("US-029 Attribute editor (registry-derived sections)", () => {
