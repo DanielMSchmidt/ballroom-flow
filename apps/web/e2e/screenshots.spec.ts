@@ -44,10 +44,13 @@ test.describe("@screenshots landing imagery", () => {
     // 1. Create-routine modal (Waltz).
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("Bronze Waltz");
-    await page.getByLabel("Dance").selectOption("waltz");
-    await expect(page.getByRole("dialog", { name: "New routine" })).toBeVisible();
+    // Waltz is the pre-selected chip in the New-choreo sheet.
+    await expect(page.getByRole("dialog", { name: "New choreography" })).toBeVisible();
     await page.screenshot({ path: shot("create.png") });
-    await page.getByRole("button", { name: "Create" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
 
     // Editor ready.
     await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({

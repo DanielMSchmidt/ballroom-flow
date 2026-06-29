@@ -26,8 +26,11 @@ test.describe("@smoke core authoring journey", () => {
     // 1. Create a routine (US-025) — server-side create + quota gate.
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("E2E Foxtrot");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
 
     // 2. The new routine opens in Assemble as an editor (owner → editor): the
     //    add-section affordance is the proof we connected with edit rights.
@@ -111,8 +114,11 @@ test.describe("@smoke core authoring journey", () => {
     // create routine → section → figure (reuse the existing pattern)
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("E2E Kinds");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
     await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
       timeout: 15_000,
     });
