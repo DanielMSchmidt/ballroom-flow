@@ -7,7 +7,9 @@ import { defineConfig, devices } from "@playwright/test";
 //
 // CI runs the SMOKE subset on PRs (grep @smoke); the full matrix runs
 // nightly / on merge (see .github/workflows/ci.yml + nightly.yml).
-const PORT = 4173;
+// Default 4173 (CI); overridable via E2E_PORT so a local/agent run can pick a
+// unique port and avoid colliding with another worktree's server.
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: "./e2e",

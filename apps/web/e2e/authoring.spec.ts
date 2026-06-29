@@ -133,9 +133,14 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
 
-    // create a custom kind "Energy"
+    // create a custom kind "Energy". "add kind" opens the type PICKER (frame
+    // 1.15); the "＋ new attribute type" footer opens the builder (frame 1.16).
     await page.getByRole("button", { name: /add kind/i }).click();
-    // Scope to the dialog to avoid ambiguity; use placeholder selectors to
+    await page
+      .getByRole("dialog", { name: /add an attribute/i })
+      .getByRole("button", { name: /new attribute type/i })
+      .click();
+    // Scope to the builder dialog to avoid ambiguity; use placeholder selectors to
     // avoid the required-asterisk suffix that breaks getByLabel exact regex.
     const kindDialog = page.getByRole("dialog", { name: /add attribute kind/i });
     await kindDialog.getByPlaceholder("e.g. Energy").fill("Energy");

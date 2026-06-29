@@ -111,6 +111,9 @@ export function AddKindPicker({
         onCreate={(k) => {
           onCreate?.(k);
           setBuilding(false);
+          // Dismiss the picker too, so the (now-merged) kind is usable in the
+          // editor underneath rather than hidden behind this overlay.
+          onClose();
         }}
       />
     </Sheet>
