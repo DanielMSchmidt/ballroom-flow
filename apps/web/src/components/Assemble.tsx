@@ -741,15 +741,10 @@ function SectionHeader({
         {meta}
       </span>
       {canEdit && (
-        <div className="flex flex-none items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Rename ${section.name}`}
-            onClick={() => setRenaming(true)}
-          >
-            Rename
-          </Button>
+        <div className="-mr-1 flex flex-none items-center">
+          <IconButton label={`Rename ${section.name}`} onClick={() => setRenaming(true)}>
+            ✎
+          </IconButton>
           <IconButton
             label={`Move ${section.name} up`}
             disabled={isFirst}
@@ -764,14 +759,9 @@ function SectionHeader({
           >
             ↓
           </IconButton>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Delete ${section.name}`}
-            onClick={onDelete}
-          >
-            Delete
-          </Button>
+          <IconButton label={`Delete ${section.name}`} onClick={onDelete}>
+            ✕
+          </IconButton>
         </div>
       )}
     </div>
@@ -1031,7 +1021,7 @@ function PlacementCard({
           ⠿
         </span>
         {canEdit && (
-          <div className="flex flex-none items-center gap-0.5">
+          <div className="-mr-1 flex flex-none items-center">
             <IconButton
               label={`Move ${label} up`}
               disabled={isFirst}
@@ -1046,9 +1036,9 @@ function PlacementCard({
             >
               ↓
             </IconButton>
-            <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
-              Remove
-            </Button>
+            <IconButton label={`Remove ${label}`} onClick={onDelete}>
+              ✕
+            </IconButton>
           </div>
         )}
       </div>
