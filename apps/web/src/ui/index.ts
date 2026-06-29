@@ -23,6 +23,7 @@ export { Modal, type ModalAction, type ModalProps } from "./Modal";
 export { OfflineState, type OfflineStateProps } from "./OfflineState";
 export { ScopeBadge, type ScopeBadgeProps } from "./ScopeBadge";
 export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";
+export { SectionDivider, type SectionDividerProps } from "./SectionDivider";
 export { SegmentedToggle, type SegmentedToggleProps } from "./SegmentedToggle";
 export { Select, type SelectOption, type SelectProps } from "./Select";
 export { Sheet, type SheetProps } from "./Sheet";
