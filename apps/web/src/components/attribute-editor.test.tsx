@@ -225,7 +225,8 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
 });
 
 describe("US-030 Timeline role-view toggle", () => {
-  /** A free-text footwork attribute on count 1 scoped to `role` (null = both). */
+  /** A free-text footwork attribute on count 1 scoped to `role` (null = both).
+   *  Values avoid underscores so they survive the editor-summary humanize pass. */
   const roleStep = (value: string, role: Attribute["role"]): Attribute => ({
     id: `footwork-1-${value}`,
     kind: "footwork",
@@ -235,59 +236,59 @@ describe("US-030 Timeline role-view toggle", () => {
     deletedAt: null,
   });
 
-  // A figure carrying one both-role + one leader-only + one follower-only value,
-  // so the lens has something to show/hide in each view.
+  // A figure carrying one both-role + one leader-only + one follower-only value
+  // on count 1, so the lens has something to show/hide in each view. The open
+  // editor's "count 1 attributes" summary reflects the active lens.
   const roleSeeded: Attribute[] = [
-    roleStep("both-role", null),
-    roleStep("leader-only", "leader"),
-    roleStep("follower-only", "follower"),
+    roleStep("bothside", null),
+    roleStep("leadside", "leader"),
+    roleStep("follside", "follower"),
   ];
 
-  it("flips the viewed role on the dedicated toggle (per-device preference)", async () => {
-    // Intent: the role lens flips on a dedicated, labelled toggle; the choice is a
-    //   per-device pref (no stored User.defaultRole) — local UI state only.
-    // Design note: AC-1 says "tap a step flips role"; we use a dedicated labelled
-    //   toggle instead (clearer a11y) — count taps stay bound to opening the editor.
-    // Arrange: render the timeline with view=leader. Act: click the flip toggle.
-    // Assert: the toggle now names the leader→follower flip (view switched).
+  const openCount1 = async () => userEvent.click(screen.getByRole("button", { name: /^beat 1$/i }));
+  const summary = () => screen.getByLabelText(/count 1 attributes/i);
+
+  it("flips the viewed role on the 'Steps for' segmented lens (per-device preference)", async () => {
+    // Intent: the role lens flips on the dedicated "Steps for" SegmentedToggle
+    //   (frame 1.11); the choice is a per-device pref — local UI state only.
     // Covers US-030 AC-1 (flip; per-device pref).
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
-    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
-    // The flip control now names the follower lens (the view switched).
-    expect(screen.getByRole("button", { name: /flip/i })).toHaveTextContent(/follower/i);
+    await userEvent.click(screen.getByRole("radio", { name: /follower/i }));
+    expect(screen.getByRole("radio", { name: /follower/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 
-  it("always shows both-role (role=null) attributes regardless of the toggle", async () => {
+  it("always shows both-role (role=null) attributes regardless of the lens", async () => {
     // Intent: attributes with role=null show in EVERY view.
-    // Arrange: render with a both-role attr, view=leader. Act: flip to follower.
-    // Assert: the both-role attribute is visible before AND after the flip.
     // Covers US-030 AC-2 (both-role always shown).
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
-    expect(screen.getByText(/both-role/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
-    expect(screen.getByText(/both-role/i)).toBeInTheDocument();
+    await openCount1();
+    expect(summary()).toHaveTextContent(/bothside/i);
+    await userEvent.click(screen.getByRole("radio", { name: /follower/i }));
+    expect(summary()).toHaveTextContent(/bothside/i);
   });
 
   it("shows role-specific attributes only for the selected role", async () => {
     // Intent: a leader-only attribute shows in the leader view and hides in follower.
-    // Arrange: render with a leader-only + a follower-only attr, view=leader.
-    // Act: flip to follower. Assert: leader-only hidden, follower-only shown.
     // Covers US-030 AC-3 (role-specific filtered by the selected role).
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" initialView="leader" attributes={roleSeeded} />);
-    expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
-    expect(screen.queryByText(/follower-only/i)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
-    expect(screen.queryByText(/leader-only/i)).toBeNull();
-    expect(screen.getByText(/follower-only/i)).toBeInTheDocument();
+    await openCount1();
+    expect(summary()).toHaveTextContent(/leadside/i);
+    expect(summary()).not.toHaveTextContent(/follside/i);
+    await userEvent.click(screen.getByRole("radio", { name: /follower/i }));
+    expect(summary()).not.toHaveTextContent(/leadside/i);
+    expect(summary()).toHaveTextContent(/follside/i);
   });
 });
 
@@ -304,9 +305,9 @@ describe("QUAL-5 role lens is controllable (unified with the reading view)", () 
     deletedAt: null,
   });
   const seeded: Attribute[] = [
-    roleStep("both-role", null),
-    roleStep("leader-only", "leader"),
-    roleStep("follower-only", "follower"),
+    roleStep("bothside", null),
+    roleStep("leadside", "leader"),
+    roleStep("follside", "follower"),
   ];
 
   it("FigureTimeline renders the controlled roleView and emits flips via onRoleViewChange", async () => {
@@ -323,14 +324,16 @@ describe("QUAL-5 role lens is controllable (unified with the reading view)", () 
         attributes={seeded}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: /^beat 1$/i }));
+    const summary = () => screen.getByLabelText(/count 1 attributes/i);
     // Controlled: leader view shows the leader-only value, hides follower-only.
-    expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
-    expect(screen.queryByText(/follower-only/i)).toBeNull();
+    expect(summary()).toHaveTextContent(/leadside/i);
+    expect(summary()).not.toHaveTextContent(/follside/i);
     // Flipping does NOT mutate internal state — it asks the owner to change.
-    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
+    await userEvent.click(screen.getByRole("radio", { name: /follower/i }));
     expect(onRoleViewChange).toHaveBeenCalledWith("follower");
     // Still leader until the controlled prop changes (truly controlled).
-    expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
+    expect(summary()).toHaveTextContent(/leadside/i);
     // Owner pushes the new value back in → follower view now applies.
     rerender(
       <FigureTimeline
@@ -341,8 +344,8 @@ describe("QUAL-5 role lens is controllable (unified with the reading view)", () 
         attributes={seeded}
       />,
     );
-    expect(screen.getByText(/follower-only/i)).toBeInTheDocument();
-    expect(screen.queryByText(/leader-only/i)).toBeNull();
+    expect(summary()).toHaveTextContent(/follside/i);
+    expect(summary()).not.toHaveTextContent(/leadside/i);
   });
 
   it("Lanes renders the controlled roleView and emits flips via onRoleViewChange", async () => {
