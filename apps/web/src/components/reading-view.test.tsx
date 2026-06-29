@@ -12,6 +12,7 @@ interface ReadingProps {
   roleView: RoleView;
   onRoleViewChange: (v: RoleView) => void;
   annotations?: Annotation[];
+  canComment?: boolean;
   onOpenFigure?: (id: string) => void;
   onOpenThread?: (id: string) => void;
 }
@@ -194,5 +195,84 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     );
     await userEvent.click(screen.getByText("heads stay left"));
     expect(onOpenThread).toHaveBeenCalledWith("f1");
+  });
+
+  it("shows '+ add comment' with ZERO comments when the user can comment", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const fig = figure({ attributes: [attr(1, "direction", "forward")] });
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: fig.id }] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    const onOpenThread = vi.fn();
+    renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
+        roleView="leader"
+        onRoleViewChange={vi.fn()}
+        annotations={[]} // ZERO comments
+        canComment
+        onOpenThread={onOpenThread}
+      />,
+    );
+    const add = screen.getByRole("button", { name: /add comment/i });
+    expect(add).toBeInTheDocument();
+    await userEvent.click(add);
+    expect(onOpenThread).toHaveBeenCalledWith("f1");
+  });
+
+  it("hides '+ add comment' for a viewer (cannot comment)", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const fig = figure({ attributes: [attr(1, "direction", "forward")] });
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: fig.id }] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
+        roleView="leader"
+        onRoleViewChange={vi.fn()}
+        annotations={[
+          {
+            id: "an1",
+            authorId: "u2",
+            kind: "note",
+            text: "keep posture",
+            tags: [],
+            anchors: [{ type: "point", figureRef: fig.id, count: 1 }],
+            replies: [],
+            createdAt: 1,
+          },
+        ]}
+        canComment={false} // a pure viewer
+        onOpenThread={vi.fn()}
+      />,
+    );
+    // A viewer still READS the comment…
+    expect(screen.getByText("keep posture")).toBeInTheDocument();
+    // …but never sees the add affordance.
+    expect(screen.queryByRole("button", { name: /add comment/i })).toBeNull();
   });
 });

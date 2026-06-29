@@ -7,7 +7,7 @@
 // the merged Step chip. Pure presentation helpers over the store's Attribute
 // reads (no I/O), shared by RoutineReadingView so the column logic is testable
 // in isolation.
-import type { Attribute } from "@ballroom/domain";
+import { ATTRIBUTE_REGISTRY, type Attribute, type DanceId } from "@ballroom/domain";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
 
@@ -75,13 +75,26 @@ function titleCase(kind: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Whether a builtin kind applies to a dance (e.g. `rise` omits Tango via the
+ *  registry's `appliesToDances`). The write path does NOT strictly enforce this
+ *  (`setFigureAttributes` stores attributes unvalidated — the dance gate is a UI
+ *  affordance in AttributeEditor/FigureTimeline), so the reading view defends
+ *  against a stray value (e.g. a rise persisted onto a Tango figure) by hiding
+ *  the inapplicable column. */
+function kindAppliesToDance(kind: string, dance: DanceId | undefined): boolean {
+  if (dance === undefined) return true;
+  const reg = (ATTRIBUTE_REGISTRY as Record<string, { appliesToDances?: DanceId[] }>)[kind];
+  return !reg?.appliesToDances || reg.appliesToDances.includes(dance);
+}
+
 /**
  * The ordered set of columns a figure actually uses (frame 1.6: "only what's
  * set"). Always leads with the merged "Step" column when the figure has any
- * direction/footwork, then each standard technique kind that has ≥1 live value,
- * then any custom kinds (e.g. a user-defined "Head") in first-seen order.
+ * direction/footwork, then each standard technique kind that has ≥1 live value
+ * AND applies to the dance (Tango omits Rise), then any custom kinds (e.g. a
+ * user-defined "Head") in first-seen order.
  */
-export function usedColumns(attrs: Attribute[]): ReadingColumn[] {
+export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[] {
   const live = attrs.filter((a) => a.deletedAt == null);
   const present = new Set(live.map((a) => a.kind));
   const cols: ReadingColumn[] = [];
@@ -89,7 +102,9 @@ export function usedColumns(attrs: Attribute[]): ReadingColumn[] {
     cols.push({ id: "step", label: "Step", kind: "direction", isStep: true });
   }
   for (const k of ORDERED_KINDS) {
-    if (present.has(k)) cols.push({ id: k, label: COLUMN_LABEL[k] ?? titleCase(k), kind: k });
+    if (present.has(k) && kindAppliesToDance(k, dance)) {
+      cols.push({ id: k, label: COLUMN_LABEL[k] ?? titleCase(k), kind: k });
+    }
   }
   const known = new Set([...STEP_KINDS, ...ORDERED_KINDS]);
   // Custom / non-standard kinds, in stable first-seen order.
