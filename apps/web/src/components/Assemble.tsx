@@ -296,8 +296,10 @@ export function Assemble({
             >
               <EditIcon size={16} />
             </IconButton>
-            {/* Share (↗) sits on the reading programme (frame 1.6). */}
-            {mode === "read" && canShare && (
+            {/* Share (↗) — on the reading programme in the design (frame 1.6);
+                also kept on the editing header so an editor can share without
+                first switching lenses (US-024). */}
+            {canShare && (
               <IconButton label="Share" onClick={() => setShareOpen(true)}>
                 <ShareIcon size={16} />
               </IconButton>
@@ -1009,7 +1011,7 @@ function PlacementCard({
               color: "var(--bf-scope-custom-ink)",
             }}
           >
-            custom
+            Custom
           </span>
         )}
         {/* Drag handle affordance (frame 1.7 ⠿). Reorder is the up/down controls. */}
