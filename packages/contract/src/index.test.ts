@@ -1,5 +1,64 @@
 import { describe, expect, it } from "vitest";
-import { zCreateFigure, zRegistryKind, zSearchResults, zTemplateList } from "./index";
+import { zCreateFigure, zJournalList, zRegistryKind, zSearchResults, zTemplateList } from "./index";
+
+describe("zJournalList (T6)", () => {
+  it("parses a UNION of routine + account journal entries with resolved anchor labels", () => {
+    const parsed = zJournalList.parse({
+      entries: [
+        {
+          id: "a1",
+          routineRef: "rt_1",
+          authorId: "coach",
+          kind: "lesson",
+          text: "head left through the natural turn",
+          anchors: [
+            { type: "point", figureRef: "fig_nt", count: 1, label: "Natural Turn · step 2" },
+            { type: "figureType", figureType: "whisk", danceScope: "all", label: "all Whisks" },
+          ],
+          createdAt: 1000,
+          displayName: "Anna",
+          identityColor: "#1f8a5b",
+          source: "routine",
+        },
+        {
+          id: "n1",
+          routineRef: "account:me",
+          authorId: "me",
+          kind: "practice",
+          text: "spin not rushing",
+          anchors: [{ type: "figureType", figureType: "whisk", danceScope: "waltz" }],
+          createdAt: 900,
+          displayName: null,
+          identityColor: null,
+          source: "account",
+        },
+      ],
+    });
+    expect(parsed.entries).toHaveLength(2);
+    expect(parsed.entries[0]?.anchors[0]?.label).toBe("Natural Turn · step 2");
+  });
+
+  it("rejects a non-lesson/practice kind (journal is lesson|practice only)", () => {
+    expect(
+      zJournalList.safeParse({
+        entries: [
+          {
+            id: "x",
+            routineRef: "rt",
+            authorId: "u",
+            kind: "note",
+            text: "t",
+            anchors: [],
+            createdAt: 1,
+            displayName: null,
+            identityColor: null,
+            source: "routine",
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("zCreateFigure", () => {
   it("accepts an optional attributes timeline, defaulting to []", () => {

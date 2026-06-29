@@ -165,7 +165,8 @@ Routine anchors (`point`/`figure`) live in the **routine doc** and are visible t
 - **Membership** `{ id, docRef, userId, role (viewer|commenter|editor) }` — **per document** (a routine doc; an account figure can also be shared).
 - **DocumentRegistry** `{ docRef, type (routine | global-figure | account-figure | account), ownerId, doName, figureType?, dance?, updatedAt, + list/search projection }` — routes each doc to its DO and powers list/search without reading CRDT content. (`account` = the per-user **account doc** that holds `figureType` annotations and the index of the user's account figures.)
 - **FigureType catalog (reference data, bundle):** the family ids (e.g. `feather`) and which dances each exists in — drives the all-dances annotation scope and library browsing.
-- **FigureTypeNoteIndex** `{ accountDocRef, authorId, figureType, danceScope }` — lets a routine view discover **co-members'** `figureType` notes matching the figures present (Q-FIGNOTE-VIS option 2) without scanning account docs; reading a note's content is gated by **co-membership of a routine containing that figure**.
+- **FigureTypeNoteIndex** `{ accountDocRef, authorId, figureType, danceScope, kind, text }` — lets a routine view discover **co-members'** `figureType` notes matching the figures present (Q-FIGNOTE-VIS option 2) without scanning account docs; reading a note's content is gated by **co-membership of a routine containing that figure**. Its `kind ∈ {note,lesson,practice}`, so a `figureType` **lesson/practice** note is also an account-scoped **Journal** entry (T6).
+- **JournalEntry** `{ entryId, routineRef, authorId, kind (lesson|practice), text, anchors (with resolved chip labels), createdAt, deletedAt }` — the **cross-routine projection of routine-scoped lesson/practice annotations**, written by the **routine DO alarm** (mirroring `DocumentRegistry`). The **Journal** read (`GET /api/journal`, T6) UNIONs it with the account-scoped `figureType` lesson/practice rows in **FigureTypeNoteIndex**. Read gate (LOCKED): the routine arm is **co-membership of the routine** (a co-member's entry surfaces, author-coloured); the account arm is the **accessible-authors set** (self + co-members/owners of the user's accessible routines) — symmetric. Soft-delete only.
 - **Invite** `{ id, docRef, role, expiresAt, redeemedAt? }`.
 
 ### 2.8 Entity-relationship summary
@@ -226,6 +227,8 @@ Standard kinds (v1): **`direction`** (the step headline — **closed enum** `for
 ### 4.4 Figure Timeline (hero surface) — a figure as a count timeline: attributes per count as chips; tap to edit; tap a step to flip viewed role. Add/edit/remove attributes; **Lanes** (one kind across all counts). Edit alignment. Editing a figure from outside the choreo makes a **frozen choreo-owned copy** (copy-on-write, toast "copied into this choreo"); **save to personal library** for cross-routine reuse.
 ### 4.5 Attribute Editor (hero flow) — sections render from the merged ATTRIBUTE_REGISTRY (Tango omits rise; single/multi from the registry); re-tap clears; **"add a kind"** affordance (v1).
 ### 4.6 Annotation (timeline + journal) — one concept; anchors **point / figure / figureType**; reply thread; filters (all/lessons/practice/by figure). The anchor picker offers, for a figure: "this step", "this figure here", or "this **figure family**" with a **dance scope toggle (this dance | all dances it exists in)**. `figureType` notes surface on every matching figure across your routines. Predicate query anchors → v1.1.
+
+**Journal tab — IMPLEMENTED (T6).** A **cross-doc VIEW** over lesson/practice annotations (NOT a separate store): the routine-scoped ones (routine doc → `JournalEntry`) UNIONed with the account-scoped `figureType` ones (account doc → `FigureTypeNoteIndex`), read via `GET /api/journal`. The list (frames 3.1/3.2) shows author-coloured cards with kind pills, server-resolved link chips, filter pills (all/lessons/practice/by figure), and a designed empty state. The **entry editor** (frame 3.3) has a Lesson/Practice toggle, handwritten text, the link chips, and a **disabled media affordance** (v1.1). The **link picker** (frames 3.4/3.5/3.7) is **full-parity (LOCKED)**: a routine-scoped link ("Specific place" / "This choreo only") opens a **routine chooser** + figure-in-routine chooser → `createAnnotation` on that routine; a `figureType` link ("All <dance>" / "Every dance") → `createFamilyNote`. The **attribute-predicate** link + **media** are visibly disabled → v1.1.
 ### 4.7 Share — per-document member list + roles; invite by link; remove member (editor/owner); **fork** action. Microcopy explains roles + that edits to a shared figure affect every routine using it (else fork).
 ### 4.8 Profile — identity; editable name; note-color picker (global); **plan status + owned-routine count**; sign out.
 ### 4.9 Overlays — Add/fork-figure sheet; New Choreo sheet (quota-checked); Add-kind sheet; Info sheet (registry-derived); Toast (incl. "Undone", quota upsell, and **"copied into this choreo"** on copy-on-write).
@@ -280,7 +283,7 @@ A **graph of Automerge documents**, each hosted + persisted in its own Durable O
        – hosts the Automerge doc; persists it via an automerge-repo STORAGE ADAPTER in DO SQLite
        – automerge-repo NETWORK ADAPTER over (Hibernatable) WebSockets
        – authenticates each connection (Clerk JWT) + checks that doc's Membership/role (permission boundary)
-       – alarm: compaction + project a thin index row to D1 + invite expiry
+       – alarm: compaction + project a thin index row to D1 + project the routine's lesson/practice annotations to the journal_entry index (T6) + invite expiry
         │
         ▼
 [ D1 (Drizzle) ]  index only: users, memberships (per doc), DocumentRegistry, invites
@@ -299,8 +302,8 @@ A **graph of Automerge documents**, each hosted + persisted in its own Durable O
 1. Clerk JWT.
 2. Opening a routine: the client repo connects to the **routine doc's DO**, reads its placements, then connects to each **referenced figure doc's DO** (each figure carries its own attributes — no overlay resolution); UI binds via `store/`.
 3. Each DO verifies the JWT + that document's role, then syncs Automerge changes; it persists incoming changes to its SQLite (storage adapter).
-4. **List/search/invite/quota** are REST over the D1 index/registry.
-5. Each DO's **alarm** compacts history, projects a thin index row to D1, and expires invites — off the request path.
+4. **List/search/invite/quota/journal** are REST over the D1 index/registry (`GET /api/journal` UNIONs the `journal_entry` projection + the account `figureType` lesson/practice rows, T6).
+5. Each DO's **alarm** compacts history, projects a thin index row to D1, **projects its routine's lesson/practice annotations to the `journal_entry` index** (armed coalesced on annotation edits so the Journal is timely, T6), and expires invites — off the request path.
 
 ### 6.3 File structure
 ```
@@ -358,7 +361,7 @@ apps/web/src/
 | D20 | Annotations | **Unified**; v1 anchors **point + figure**; predicate query anchors deferred. |
 | D21 | Plans/quota | **Free cap 3 owned routines**; pro/billing deferred. |
 | D22 | Custom attribute kinds | **Creation UI in v1**. |
-| D24 | Snapshot/cleanup | **DO alarms** for compaction + D1 index projection + invite expiry. |
+| D24 | Snapshot/cleanup | **DO alarms** for compaction + D1 index projection + **journal_entry projection (T6)** + invite expiry. |
 | D25 | Edge placement | **Smart Placement**. |
 | D26 | Product analytics | **Analytics Engine** alongside Sentry. |
 | D27 | Async backbone (v1.1) | **Queues** reserved (media, billing webhooks, email). |

@@ -413,3 +413,88 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
     expect(row?.redeemedAt).not.toBeNull(); // expiry ran despite the projection failing
   });
 });
+
+describe("T6 DO alarm: projects routine lesson/practice annotations to journal_entry", () => {
+  async function journalCount(routineRef: string): Promise<number> {
+    return (
+      (
+        await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM journal_entry WHERE routineRef = ? AND deletedAt IS NULL",
+        )
+          .bind(routineRef)
+          .first<{ n: number }>()
+      )?.n ?? 0
+    );
+  }
+
+  it("projects ONLY lesson/practice annotations (a plain note is not a journal entry)", async () => {
+    const { name, stub } = freshDoc("routine");
+    await stub.setMetadata({ doName: name, docRef: name, type: "routine", ownerId: "u_j" });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "lesson",
+      authorId: "u_j",
+      text: "L",
+      anchors: [],
+    });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "practice",
+      authorId: "u_j",
+      text: "P",
+      anchors: [],
+    });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "note",
+      authorId: "u_j",
+      text: "N",
+      anchors: [],
+    });
+    await stub.runAlarmForTest();
+    expect(await journalCount(name)).toBe(2); // lesson + practice; the note is skipped
+  });
+
+  it("a non-routine (figure) DO projects NO journal rows (scoping, #per-doc-layering)", async () => {
+    const { name, stub } = freshDoc("figure");
+    // type 'global-figure' → projectJournalToD1 short-circuits even with annotations.
+    await stub.setMetadata({ doName: name, docRef: name, type: "global-figure", ownerId: "u_j" });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "lesson",
+      authorId: "u_j",
+      text: "L",
+      anchors: [],
+    });
+    await stub.runAlarmForTest();
+    expect(await journalCount(name)).toBe(0);
+  });
+
+  it("an annotation edit arms a coalesced alarm that projects without an explicit run", async () => {
+    const { name, stub } = freshDoc("routine");
+    await stub.setMetadata({ doName: name, docRef: name, type: "routine", ownerId: "u_j" });
+    // Burst of edits → one coalesced alarm; do NOT call runAlarmForTest — the
+    // scheduled alarm (run by workerd) must project the rows on its own.
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "lesson",
+      authorId: "u_j",
+      text: "A",
+      anchors: [],
+    });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "practice",
+      authorId: "u_j",
+      text: "B",
+      anchors: [],
+    });
+    // Poll until the scheduled alarm fires and projects (eventually consistent).
+    let n = 0;
+    for (let i = 0; i < 50 && n < 2; i++) {
+      n = await journalCount(name);
+      if (n < 2) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(n).toBe(2);
+  });
+});

@@ -45,6 +45,17 @@ export interface SeedSpec {
   }[];
   /** Direct placement_edge rows (routine→figure) for the access cascade. */
   placementEdges?: { routineRef: string; figureRef: string }[];
+  /** Direct journal_entry rows (T6) — the routine-scoped projection. */
+  journalEntries?: {
+    entryId: string;
+    routineRef: string;
+    authorId: string;
+    kind: "lesson" | "practice";
+    text: string;
+    anchors?: unknown[];
+    createdAt?: number;
+    deletedAt?: number | null;
+  }[];
 }
 
 /** Wipe the D1 index (deterministic per-test starting point). */

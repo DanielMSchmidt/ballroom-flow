@@ -69,3 +69,24 @@ export const invite = sqliteTable("invite", {
 });
 
 export type InviteRow = typeof invite.$inferSelect;
+
+/**
+ * T6 — the cross-routine JournalEntry index (migration 0009). The routine DO's
+ * alarm projects each lesson/practice annotation here so the Journal list reads
+ * the user's accessible routines without fanning out to N routine DOs. Typed in
+ * Drizzle only for the reset/seed path; the projection + read use raw SQL like
+ * db/journal.ts (mirrors family-notes). Soft-delete via `deletedAt`.
+ */
+export const journalEntry = sqliteTable("journal_entry", {
+  entryId: text("entryId").primaryKey(),
+  routineRef: text("routineRef").notNull(),
+  authorId: text("authorId").notNull(),
+  kind: text("kind", { enum: ["lesson", "practice"] }).notNull(),
+  text: text("text").notNull(),
+  anchors: text("anchors").notNull().default("[]"),
+  createdAt: integer("createdAt").notNull(),
+  updatedAt: integer("updatedAt").notNull(),
+  deletedAt: integer("deletedAt"),
+});
+
+export type JournalEntryRow = typeof journalEntry.$inferSelect;

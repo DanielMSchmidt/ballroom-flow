@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
 //
 // CI runs the SMOKE subset on PRs (grep @smoke); the full matrix runs
 // nightly / on merge (see .github/workflows/ci.yml + nightly.yml).
-const PORT = 4173;
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: "./e2e",
