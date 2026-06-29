@@ -536,6 +536,55 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("setFigureAttributes drops a kind that doesn't apply to the figure's dance (rise omits Tango, §3/§10.2)", async () => {
+    // Intent: the store seam enforces the dance gate on the WRITE path — a `rise`
+    //   value can never be persisted onto a Tango figure (T9a). A valid kind in the
+    //   same batch still lands; only the inapplicable attribute is dropped.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me" });
+
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "tango",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "figT", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "figT", scope: "account", ownerId: "me", dance: "tango" }) as FigureDoc,
+    );
+    sockets.get("figT")?.fireOpen();
+    sockets.get("figT")?.load(figDoc);
+    sockets.get("figT")?.fireCaughtUp();
+
+    store.setFigureAttributes("figT", [
+      { id: "rise-1", kind: "rise", count: 1, value: "up", role: null, deletedAt: null },
+      { id: "pos-1", kind: "position", count: 1, value: "closed", role: null, deletedAt: null },
+    ]);
+
+    // The rise attribute was dropped; the (dance-applicable) position attribute persisted.
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    const kinds = (rp?.figure?.attributes ?? []).map((a) => a.kind);
+    expect(kinds).toContain("position");
+    expect(kinds).not.toContain("rise");
+    store.close();
+  });
+
   it("copy-on-write: editing a NON-owned figure spawns an owned variant + re-points (US-035)", async () => {
     // Intent: when the user edits a global/shared figure they don't own, the store
     //   must silently spawn an owned variant, re-point the placement to it, and

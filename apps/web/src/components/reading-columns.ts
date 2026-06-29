@@ -11,6 +11,7 @@ import {
   ATTRIBUTE_REGISTRY,
   type Attribute,
   type DanceId,
+  kindAppliesToDance,
   mergeRegistry,
   type RegistryKind,
 } from "@ballroom/domain";
@@ -79,18 +80,6 @@ const STEP_KINDS = new Set(["direction", "footwork"]);
 function titleCase(kind: string): string {
   const s = kind.replace(/_/g, " ");
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-/** Whether a builtin kind applies to a dance (e.g. `rise` omits Tango via the
- *  registry's `appliesToDances`). The write path does NOT strictly enforce this
- *  (`setFigureAttributes` stores attributes unvalidated — the dance gate is a UI
- *  affordance in AttributeEditor/FigureTimeline), so the reading view defends
- *  against a stray value (e.g. a rise persisted onto a Tango figure) by hiding
- *  the inapplicable column. */
-function kindAppliesToDance(kind: string, dance: DanceId | undefined): boolean {
-  if (dance === undefined) return true;
-  const reg = (ATTRIBUTE_REGISTRY as Record<string, { appliesToDances?: DanceId[] }>)[kind];
-  return !reg?.appliesToDances || reg.appliesToDances.includes(dance);
 }
 
 /**

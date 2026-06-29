@@ -202,3 +202,17 @@ export function slugifyKind(label: string): string {
 export function isReservedKind(slug: string): boolean {
   return ATTRIBUTE_REGISTRY[slug]?.builtin === true;
 }
+
+/**
+ * Whether a builtin kind applies to a dance — `rise` omits Tango via its
+ * `appliesToDances` (§3/§10.2). A kind with no `appliesToDances` applies to every
+ * dance; an unknown dance (`undefined`) is permissive. The single source the
+ * reading view (hide the inapplicable column) and the write paths (reject/drop an
+ * inapplicable value — the store seam + the domain `parseAttributeWrite` gate)
+ * share, so the rule lives in exactly one place.
+ */
+export function kindAppliesToDance(kind: string, dance: DanceId | undefined): boolean {
+  if (dance === undefined) return true;
+  const reg = ATTRIBUTE_REGISTRY[kind];
+  return !reg?.appliesToDances || reg.appliesToDances.includes(dance);
+}

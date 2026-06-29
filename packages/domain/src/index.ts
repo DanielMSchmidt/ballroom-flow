@@ -71,6 +71,7 @@ export { redoLastChange, undoLastChange, wasSupersededByOthers } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,
   isReservedKind,
+  kindAppliesToDance,
   mergeRegistry,
   normalizeValue,
   type RegistryKind,

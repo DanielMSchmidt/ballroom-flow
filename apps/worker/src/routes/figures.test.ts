@@ -120,6 +120,43 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
     const changeRows = await stub.debugChangeRowCount();
     expect(changeRows).toBe(0);
   });
+
+  it("rejects a kind that doesn't apply to the figure's dance (rise on Tango) with 400 (T9a)", async () => {
+    // The DO write boundary enforces the §3/§10.2 dance gate: `rise` omits Tango
+    // (appliesToDances), so seeding a rise attribute onto a Tango figure is rejected
+    // BEFORE any seedDoc — the write-path analog of the reading view hiding the column.
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({
+      keypair: kp2,
+      userId: "u_tango",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_tango", displayName: "T", identityColor: "#111", plan: "free" }],
+    });
+
+    const res = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "X",
+        dance: "tango",
+        figureType: "x",
+        routineId: "rt_test",
+        attributes: [
+          { id: "a1", kind: "rise", count: 1, role: null, value: "up", deletedAt: null },
+        ],
+      }),
+    });
+    expect(res.status).toBe(400);
+
+    // The DO must NOT have been seeded — the dance gate rejected before seedDoc.
+    const stub = docs2.get(docs2.idFromName(figureRef));
+    const changeRows = await stub.debugChangeRowCount();
+    expect(changeRows).toBe(0);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
