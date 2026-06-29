@@ -7,7 +7,13 @@
 // the merged Step chip. Pure presentation helpers over the store's Attribute
 // reads (no I/O), shared by RoutineReadingView so the column logic is testable
 // in isolation.
-import { ATTRIBUTE_REGISTRY, type Attribute, type DanceId } from "@ballroom/domain";
+import {
+  ATTRIBUTE_REGISTRY,
+  type Attribute,
+  type DanceId,
+  mergeRegistry,
+  type RegistryKind,
+} from "@ballroom/domain";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
 
@@ -112,6 +118,39 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
     if (!known.has(a.kind) && !cols.some((c) => c.id === a.kind)) {
       cols.push({ id: a.kind, label: COLUMN_LABEL[a.kind] ?? titleCase(a.kind), kind: a.kind });
     }
+  }
+  return cols;
+}
+
+/** The technique kinds the EDIT grid offers a column for, in left-to-right
+ *  order (frame 1.11). Unlike the reading view (only-used), the edit grid shows
+ *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
+ *  "Body" column alongside `position` is NOT done here — each kind is its own
+ *  column so a cell maps 1:1 to a (count, kind) editor target. */
+const EDIT_ORDERED_KINDS = ["rise", "position", "sway", "turn", "bodyActions"];
+
+/**
+ * Every column the EDIT grid should show for a figure's dance (frame 1.11:
+ * "EDIT grid · every type"). Always leads with the merged Step column, then each
+ * standard technique kind that APPLIES to the dance (Tango omits Rise), then any
+ * user-defined custom kinds (in registry order) applicable to the dance. This is
+ * the all-applicable counterpart to `usedColumns` (only-used, reading view): the
+ * edit grid renders empty cells so a value can be added to any applicable kind.
+ */
+export function allColumns(dance?: DanceId, customKinds: RegistryKind[] = []): ReadingColumn[] {
+  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+  const cols: ReadingColumn[] = [{ id: "step", label: "Step", kind: "direction", isStep: true }];
+  for (const k of EDIT_ORDERED_KINDS) {
+    if (kindAppliesToDance(k, dance)) {
+      cols.push({ id: k, label: COLUMN_LABEL[k] ?? titleCase(k), kind: k });
+    }
+  }
+  // Custom (non-builtin) kinds, in stable registry order, honoring appliesToDances.
+  for (const k of Object.values(reg)) {
+    if (k.builtin || STEP_KINDS.has(k.kind) || EDIT_ORDERED_KINDS.includes(k.kind)) continue;
+    if (k.appliesToDances && dance !== undefined && !k.appliesToDances.includes(dance)) continue;
+    if (cols.some((c) => c.id === k.kind)) continue;
+    cols.push({ id: k.kind, label: COLUMN_LABEL[k.kind] ?? k.label, kind: k.kind });
   }
   return cols;
 }

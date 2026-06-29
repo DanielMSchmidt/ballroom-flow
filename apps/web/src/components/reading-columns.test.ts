@@ -1,6 +1,12 @@
-import type { Attribute } from "@ballroom/domain";
+import type { Attribute, RegistryKind } from "@ballroom/domain";
 import { describe, expect, it } from "vitest";
-import { cellValue, isOffBeatCount, stepChipLabel, usedColumns } from "./reading-columns";
+import {
+  allColumns,
+  cellValue,
+  isOffBeatCount,
+  stepChipLabel,
+  usedColumns,
+} from "./reading-columns";
 
 const attr = (
   count: number,
@@ -97,6 +103,45 @@ describe("cellValue", () => {
     if (!turnCol) throw new Error("turn column expected");
     expect(cellValue([attr(1, "turn", "quarter_R")], turnCol)).toBe("¼R");
     expect(cellValue([], turnCol)).toBeNull();
+  });
+});
+
+describe("allColumns — every applicable kind for the EDIT grid", () => {
+  it("always leads with Step then every standard technique kind for a rise dance", () => {
+    expect(allColumns("waltz").map((c) => c.label)).toEqual([
+      "Step",
+      "Rise",
+      "Pos",
+      "Sway",
+      "Turn",
+      "Body",
+    ]);
+  });
+
+  it("offers all-applicable columns even with no attributes placed (empty cells are addable)", () => {
+    // Unlike usedColumns (only-used), the edit grid shows kinds with no value yet.
+    expect(allColumns("foxtrot").map((c) => c.id)).toContain("rise");
+    expect(allColumns("foxtrot").map((c) => c.id)).toContain("turn");
+  });
+
+  it("omits the Rise column for Tango (registry appliesToDances)", () => {
+    const labels = allColumns("tango").map((c) => c.label);
+    expect(labels).not.toContain("Rise");
+    expect(labels).toContain("Turn");
+  });
+
+  it("appends an applicable custom kind as its own column after the standards", () => {
+    const head: RegistryKind = {
+      kind: "head",
+      label: "Head",
+      color: "#445566",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["left", "right"],
+      builtin: false,
+    };
+    const cols = allColumns("waltz", [head]);
+    expect(cols.at(-1)).toMatchObject({ id: "head", label: "Head" });
   });
 });
 
