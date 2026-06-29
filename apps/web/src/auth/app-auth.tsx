@@ -21,6 +21,13 @@ import { E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
 export interface AppAuth {
   /** A fresh bearer token for the API/WS, or null when signed out. */
   getToken: () => Promise<string | null>;
+  /**
+   * Whether auth has resolved. Until this is true, `isSignedIn` is not yet
+   * known (Clerk is still loading), so the shell must hold off deciding between
+   * the marketing Landing and the app — otherwise a signed-in user is flashed
+   * the logged-out Landing before Clerk reports them in.
+   */
+  isLoaded: boolean;
   /** Whether a user is signed in (gates the signed-in/out UI). */
   isSignedIn: boolean;
   /** Sign the user out (Clerk in prod; clears the injected session in E2E). */
@@ -38,11 +45,12 @@ export function useAppAuth(): AppAuth {
 
 /** Bridge live Clerk auth into the context (prod/dev). Rendered inside ClerkProvider. */
 function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Element {
-  const { getToken, isSignedIn, signOut } = useAuth();
+  const { getToken, isLoaded, isSignedIn, signOut } = useAuth();
   return (
     <AppAuthContext.Provider
       value={{
         getToken: () => getToken(),
+        isLoaded,
         isSignedIn: Boolean(isSignedIn),
         signOut: () => signOut(),
       }}
@@ -59,6 +67,8 @@ function E2EAuthBridge({ children }: { children: ReactNode }): React.JSX.Element
     <AppAuthContext.Provider
       value={{
         getToken: async () => session?.token ?? null,
+        // The injected session is read synchronously, so E2E is never "loading".
+        isLoaded: true,
         isSignedIn: session !== null,
         // No Clerk in E2E: drop the injected session + reload to the signed-out shell.
         signOut: async () => {

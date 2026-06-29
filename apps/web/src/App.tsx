@@ -4,13 +4,13 @@ import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
 import { Landing } from "./components/Landing";
-import { shouldShowLanding } from "./components/landing-visibility";
+import { appGate } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
 import { loadMineFigures } from "./store/figures";
 import { useMe } from "./store/me";
 import { Styleguide } from "./styleguide/Styleguide";
-import { AppShell, Button, Card, type NavItem, Tabs, ToastProvider } from "./ui";
+import { AppShell, Button, Card, type NavItem, Spinner, Tabs, ToastProvider } from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
 
 /**
@@ -45,7 +45,7 @@ export function App(): React.JSX.Element {
  */
 function AppHome(): React.JSX.Element {
   const route = useRoute();
-  const { isSignedIn, getToken } = useAppAuth();
+  const { isLoaded, isSignedIn, getToken } = useAppAuth();
   const me = useMe();
   const [tab, setTab] = useState("choreo");
   // US-033: "My figures" toggle — stable so FigureLibrary's effect deps don't refetch on every render.
@@ -57,7 +57,11 @@ function AppHome(): React.JSX.Element {
   const needsOnboarding =
     isSignedIn && me.data?.onboarded === false && tab !== "profile" && route.name !== "invite";
 
-  if (shouldShowLanding(isSignedIn, route.name)) return <Landing />;
+  // Hold the marketing Landing until auth resolves so a signed-in user is taken
+  // straight to the choreo list instead of flashing the logged-out page.
+  const gate = appGate(isLoaded, isSignedIn, route.name);
+  if (gate === "loading") return <AuthLoading />;
+  if (gate === "landing") return <Landing />;
 
   return (
     <AppShell
@@ -122,5 +126,18 @@ function AppHome(): React.JSX.Element {
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * Neutral full-screen state shown while auth resolves. Renders neither the
+ * marketing Landing nor the app shell, so the signed-in/out decision is made
+ * exactly once — no logged-out flash for a returning signed-in user.
+ */
+function AuthLoading(): React.JSX.Element {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-surface text-ink-muted">
+      <Spinner size={24} label="Loading Ballroom Flow" />
+    </div>
   );
 }
