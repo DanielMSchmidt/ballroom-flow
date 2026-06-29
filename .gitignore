@@ -12,3 +12,4 @@ test-results/
 .parity-audit/
 apps/web/_parity_capture.mjs
 apps/web/e2e/parity-capture.spec.ts
+.superpowers/
