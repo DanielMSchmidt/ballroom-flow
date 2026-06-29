@@ -154,6 +154,61 @@ describe("US-010 History-based per-user undo", () => {
     expect(undone.title).toBe("Intro"); // restored, NOT ""
   });
 
+  // ── US-038 AC-3 — soft "superseded by others" hint (advisory; undo proceeds) ──
+  //
+  // Detection only: `wasSupersededByOthers` reports whether another actor has
+  // BUILT ON (causally depends on) my next undo target. It NEVER blocks undo —
+  // it drives a soft toast at most (PLAN §5.4: "no hard refusal; a soft
+  // 'superseded' hint at most"). "Built on" = transitive dependency in the
+  // Automerge change graph, which is the precise causal relation (see undo.ts).
+
+  it("flags superseded when another actor built ON my last change (depends on it)", async () => {
+    // Intent: B saw A's change (merged it) THEN edited, so B's change causally
+    // depends on A's target — the "others built on this" case the hint warns about.
+    const A = await loadAutomerge();
+    const { wasSupersededByOthers } = await importDomain();
+    let aDoc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    aDoc = A.change(aDoc, (d) => (d.counts.a = 1)); // A's last change = the undo target
+    // B starts from A's doc (sees A's change), then edits → B's change deps ⊇ target.
+    let bDoc = A.merge(A.init<CountsDoc>(), A.clone(aDoc));
+    bDoc = A.change(A.clone(bDoc, { actor: ACTOR_B }), (d) => (d.counts.b = 2));
+    const merged = A.merge(A.merge(A.init<CountsDoc>(), A.clone(aDoc)), A.clone(bDoc));
+    expect(wasSupersededByOthers(merged, ACTOR_A)).toBe(true);
+  });
+
+  it("does NOT flag superseded when only I have edited", async () => {
+    // Intent: no other actor present → the hint must stay quiet (plain "Undone").
+    const A = await loadAutomerge();
+    const { wasSupersededByOthers } = await importDomain();
+    let doc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    doc = A.change(doc, (d) => (d.counts.a = 1));
+    doc = A.change(doc, (d) => (d.counts.b = 2));
+    expect(wasSupersededByOthers(doc, ACTOR_A)).toBe(false);
+  });
+
+  it("does NOT flag superseded for a purely CONCURRENT edit (B did not build on mine)", async () => {
+    // Intent: B's edit is concurrent (branched from the same base, never saw A's
+    // change), so B did not "build on" A's change — the hint stays quiet even
+    // though both edited. (This is distinct from the Q-UNDO same-cell clobber,
+    // which is a separate phenomenon and intentionally NOT flagged here.)
+    const A = await loadAutomerge();
+    const { wasSupersededByOthers } = await importDomain();
+    const base = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    const aEdit = A.change(A.clone(base, { actor: ACTOR_A }), (d) => (d.counts.a = 1));
+    const bEdit = A.change(A.clone(base, { actor: ACTOR_B }), (d) => (d.counts.b = 2));
+    const merged = A.merge(A.merge(A.init<CountsDoc>(), A.clone(aEdit)), A.clone(bEdit));
+    expect(wasSupersededByOthers(merged, ACTOR_A)).toBe(false);
+  });
+
+  it("does NOT flag superseded when the actor has nothing to undo", async () => {
+    // Intent: no undo target (B never edited) → no hint, mirroring undo's no-op.
+    const A = await loadAutomerge();
+    const { wasSupersededByOthers } = await importDomain();
+    let doc = A.from<CountsDoc>({ counts: {} }, ACTOR_A);
+    doc = A.change(doc, (d) => (d.counts.a = 1));
+    expect(wasSupersededByOthers(doc, ACTOR_B)).toBe(false);
+  });
+
   it("restores A's string on undo while preserving B's concurrent disjoint string edit", async () => {
     // String-field revert composes with merge: A's rename is reverted to the
     // prior string while B's concurrent edit to a different field survives.

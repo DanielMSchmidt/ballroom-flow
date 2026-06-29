@@ -113,6 +113,9 @@ export interface DomainApi {
   // US-010 undo.ts
   undoLastChange<T>(doc: T, actorId: string): T;
   redoLastChange<T>(doc: T, actorId: string): T;
+  // US-038 AC-3 — soft "superseded" hint: did another actor build on (causally
+  // depend on) my next undo target? Advisory only; undo still always proceeds.
+  wasSupersededByOthers<T>(doc: T, actorId: string): boolean;
 
   // US-011 figureType note matching
   matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean;

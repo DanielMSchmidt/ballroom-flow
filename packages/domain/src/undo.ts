@@ -146,10 +146,76 @@ function invertChange<T>(doc: A.Doc<T>, target: ChangeMeta, message: string): A.
  * hard refusal; US-038's UI shows a soft "superseded" hint precisely here.
  */
 export function undoLastChange<T>(doc: A.Doc<T>, actorId: string): A.Doc<T> {
-  const mine = changesByActor(doc, actorId);
-  const target = [...mine].reverse().find((c) => c.message !== UNDO_MESSAGE);
+  const target = undoTarget(doc, actorId);
   if (!target) return doc;
   return invertChange(doc, target, UNDO_MESSAGE);
+}
+
+/** The change a call to `undoLastChange(doc, actorId)` would revert: the actor's
+ *  last *editing* change (not itself an undo). undefined when there's nothing to
+ *  undo — shared by `undoLastChange` and `wasSupersededByOthers` so the hint and
+ *  the action always agree on the target. */
+function undoTarget<T>(doc: A.Doc<T>, actorId: string): ChangeMeta | undefined {
+  const mine = changesByActor(doc, actorId);
+  return [...mine].reverse().find((c) => c.message !== UNDO_MESSAGE);
+}
+
+/**
+ * US-038 AC-3 — the soft "superseded by others" hint (advisory, PLAN §5.4).
+ *
+ * Reports whether ANOTHER actor has BUILT ON the change `undoLastChange(doc,
+ * actorId)` would revert — i.e. some change by a different actor causally
+ * DEPENDS ON (is a transitive successor of) the undo target in the Automerge
+ * change graph. This is a pure read of history; it NEVER blocks undo — undo
+ * always proceeds (the CRDT merges). The UI uses it only to soften the "Undone"
+ * toast to "Undone — others had built on this change".
+ *
+ * PRECISION: this is the EXACT causal "built on" relation, not a heuristic — it
+ * walks the real dependency DAG (`deps`/`hash`), so it is true iff a different
+ * actor's change has the target in its causal history. False positives are
+ * therefore essentially nil for the "built on" meaning.
+ *
+ * SCOPE / KNOWN LIMITS (deliberate, documented):
+ *  • A purely CONCURRENT edit by another actor (one that never saw the target,
+ *    so does NOT depend on it) is NOT flagged — it didn't "build on" the change.
+ *    The separate Q-UNDO same-cell LWW clobber (undo restoring a cell another
+ *    actor concurrently overwrote, see `undoLastChange` doc) is a DISTINCT
+ *    phenomenon and is intentionally out of this hint's scope.
+ *  • Single-level, like undo: only the next undo target is inspected, not the
+ *    full history walk-back.
+ * Returns false when there is nothing to undo.
+ */
+export function wasSupersededByOthers<T>(doc: A.Doc<T>, actorId: string): boolean {
+  const target = undoTarget(doc, actorId);
+  if (!target) return false;
+
+  // Build successor edges (dep → dependant) across the whole change graph, then
+  // walk forward from the target: any reachable change authored by a DIFFERENT
+  // actor causally built on the target.
+  const all = A.getAllChanges(doc).map((c) => A.decodeChange(c));
+  const successors = new Map<string, { actor: string; hash: string }[]>();
+  for (const c of all) {
+    if (c.hash == null) continue;
+    const node = { actor: c.actor, hash: c.hash };
+    for (const dep of c.deps) {
+      const list = successors.get(dep);
+      if (list) list.push(node);
+      else successors.set(dep, [node]);
+    }
+  }
+
+  const seen = new Set<string>();
+  const queue = [target.hash];
+  while (queue.length > 0) {
+    const hash = queue.pop() as string;
+    for (const succ of successors.get(hash) ?? []) {
+      if (seen.has(succ.hash)) continue;
+      seen.add(succ.hash);
+      if (succ.actor !== actorId) return true; // another actor built on the target
+      queue.push(succ.hash);
+    }
+  }
+  return false;
 }
 
 /**
