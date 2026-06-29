@@ -38,5 +38,6 @@ export {
   FIGURE_SCOPES,
   type FigureScope,
   IDENTITY_COLORS,
+  IDENTITY_HEX,
   kindVar,
 } from "./tokens";
