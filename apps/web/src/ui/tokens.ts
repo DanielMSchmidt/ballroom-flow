@@ -31,11 +31,14 @@ export function kindVar(kind: AttributeKind, role: "base" | "ink" | "tint" | "bo
   return `var(--bf-kind-${kind}${suffix})`;
 }
 
-/** The three figure scopes (DESIGN-PRINCIPLES #11). */
-export const FIGURE_SCOPES = ["global", "variant", "custom"] as const;
+/** The two figure scopes — by content divergence (PLAN §4.3, DESIGN-PRINCIPLES #11):
+ *  - `library` — matches the app-owned catalog (global or account copy that still agrees)
+ *  - `custom`  — diverged from or unrelated to the catalog (user's own edits) */
+export const FIGURE_SCOPES = ["library", "custom"] as const;
 export type FigureScope = (typeof FIGURE_SCOPES)[number];
 
-/** Identity color slots (member note colors / avatars). */
+/** Identity color slots (member note colors / avatars). CSS variable names — use
+ *  with `var(...)` to paint swatches so components never hard-code hex. */
 export const IDENTITY_COLORS = [
   "var(--bf-identity-1)",
   "var(--bf-identity-2)",
@@ -43,4 +46,16 @@ export const IDENTITY_COLORS = [
   "var(--bf-identity-4)",
   "var(--bf-identity-5)",
   "var(--bf-identity-6)",
+] as const;
+
+/** Canonical hex values for the identity colour slots — the single source of
+ *  truth that the onboarding endpoint validates and that authorship tints read
+ *  back as.  Mirrors `--bf-identity-1..6` in `styles/tokens.css`. */
+export const IDENTITY_HEX = [
+  "#3b7dd8", // slot 1 — blue
+  "#1f8a5b", // slot 2 — green
+  "#c0563f", // slot 3 — terracotta
+  "#8a5cab", // slot 4 — violet
+  "#d99a2b", // slot 5 — gold
+  "#4a9d9a", // slot 6 — teal
 ] as const;

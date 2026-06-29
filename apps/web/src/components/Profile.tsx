@@ -12,23 +12,23 @@ import { useEffect, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { useMe, useOnboard } from "../store/me";
 import { useRoutines } from "../store/routines";
-import { Badge, Button, Card, IDENTITY_COLORS, Input, ScreenHeader } from "../ui";
+import { Badge, Button, Card, IDENTITY_COLORS, IDENTITY_HEX, Input, ScreenHeader } from "../ui";
 
 /**
  * The six identity-colour swatches (PLAN §4.8 — colour is consistent per user).
  * Each pairs the design *token* (a CSS variable, used to paint the swatch so the
  * UI never hardcodes a palette hex) with the canonical hex the onboarding
  * endpoint persists — the server validates identityColor as `^#…` and authorship
- * tint reads back as that hex. The hex values mirror the identity slots in
- * styles/tokens.css (the single source of truth for the palette).
+ * tint reads back as that hex. Hex values come from `IDENTITY_HEX` in tokens.ts,
+ * which mirrors `--bf-identity-1..6` in `styles/tokens.css` (single source of truth).
  */
 const IDENTITY_SWATCHES = [
-  { token: IDENTITY_COLORS[0], value: "#3b7dd8" },
-  { token: IDENTITY_COLORS[1], value: "#1f8a5b" },
-  { token: IDENTITY_COLORS[2], value: "#c0563f" },
-  { token: IDENTITY_COLORS[3], value: "#8a5cab" },
-  { token: IDENTITY_COLORS[4], value: "#d99a2b" },
-  { token: IDENTITY_COLORS[5], value: "#4a9d9a" },
+  { token: IDENTITY_COLORS[0], value: IDENTITY_HEX[0] },
+  { token: IDENTITY_COLORS[1], value: IDENTITY_HEX[1] },
+  { token: IDENTITY_COLORS[2], value: IDENTITY_HEX[2] },
+  { token: IDENTITY_COLORS[3], value: IDENTITY_HEX[3] },
+  { token: IDENTITY_COLORS[4], value: IDENTITY_HEX[4] },
+  { token: IDENTITY_COLORS[5], value: IDENTITY_HEX[5] },
 ] as const;
 
 const DEFAULT_COLOR = IDENTITY_SWATCHES[0].value;

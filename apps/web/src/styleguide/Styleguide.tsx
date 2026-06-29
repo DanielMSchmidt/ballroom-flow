@@ -131,11 +131,11 @@ export function Styleguide() {
 
       <Section
         title="ScopeBadge"
-        note="Three figure scopes — text + icon + color (#11), with lineage (#12)"
+        note="Two figure scopes by content divergence — text + icon + color (#11)"
       >
         <Row>
           {FIGURE_SCOPES.map((s) => (
-            <ScopeBadge key={s} scope={s} lineage={s === "variant" ? "Open Telemark" : undefined} />
+            <ScopeBadge key={s} scope={s} />
           ))}
         </Row>
         <Row>
@@ -280,20 +280,7 @@ export function Styleguide() {
             }
             title="Natural Turn"
             subtitle="1st Long Side · 3 counts"
-            trailing={<ScopeBadge scope="global" compact />}
-          />
-          <ListRow
-            leading={
-              <span
-                className="flex size-10 items-center justify-center rounded-md text-ink-inverse"
-                style={{ background: "var(--bf-scope-variant)" }}
-              >
-                <StepsIcon size={18} />
-              </span>
-            }
-            title="Open Telemark"
-            subtitle="used in 2 routines"
-            trailing={<ScopeBadge scope="variant" lineage="Telemark" compact />}
+            trailing={<ScopeBadge scope="library" compact />}
           />
         </List>
       </Section>
@@ -383,12 +370,12 @@ export function Styleguide() {
         <List className="mt-3">
           <ListRow
             title="Natural Turn"
-            trailing={<ScopeBadge scope="global" compact />}
+            trailing={<ScopeBadge scope="library" compact />}
             showChevron={false}
           />
           <ListRow
             title="Whisk"
-            trailing={<ScopeBadge scope="global" compact />}
+            trailing={<ScopeBadge scope="library" compact />}
             showChevron={false}
           />
           <ListRow

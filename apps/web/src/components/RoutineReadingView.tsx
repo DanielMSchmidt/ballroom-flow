@@ -114,8 +114,8 @@ export function RoutineReadingView({
  *  is provenance only — an account figure still matching its catalog origin reads
  *  Library, otherwise Custom (§2.5.1 #19–20). */
 function figureScope(figure: FigureDoc): FigureScope {
-  if (figure.scope === "global") return "global";
-  return figureMatchesLibraryOrigin(figure) ? "global" : "custom";
+  if (figure.scope === "global") return "library";
+  return figureMatchesLibraryOrigin(figure) ? "library" : "custom";
 }
 
 /** One figure's notation, read-only: a compact count × used-columns table. */
@@ -364,7 +364,7 @@ function identityColor(authorId: string): string {
 /** The figure's scope dot — blue (library) / amber (custom). The visible scope
  *  word rides as sr-only text so the cue isn't color-only (#5). */
 function ScopeDot({ scope }: { scope: FigureScope }) {
-  const color = scope === "global" ? kindVar("direction") : kindVar("footwork");
+  const color = scope === "library" ? kindVar("direction") : kindVar("footwork");
   return (
     <span className="inline-flex flex-none items-center">
       <span
@@ -372,7 +372,7 @@ function ScopeDot({ scope }: { scope: FigureScope }) {
         className="h-[9px] w-[9px] rounded-full"
         style={{ background: color }}
       />
-      <span className="bf-sr-only">{scope === "global" ? "Library" : "Custom"} figure</span>
+      <span className="bf-sr-only">{scope === "library" ? "Library" : "Custom"} figure</span>
     </span>
   );
 }

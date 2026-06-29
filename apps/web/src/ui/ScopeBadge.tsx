@@ -1,16 +1,10 @@
 import { cx } from "./cx";
-import { BranchIcon, CustomIcon, GlobeIcon } from "./icons";
+import { CustomIcon, GlobeIcon } from "./icons";
 import type { FigureScope } from "./tokens";
 
 export interface ScopeBadgeProps {
   scope: FigureScope;
-  /**
-   * Variant lineage / provenance line, e.g. "Open Telemark" — shown as
-   * "based on <lineage>" for a variant (DESIGN-PRINCIPLES #12). Ignored
-   * for global/custom.
-   */
-  lineage?: string;
-  /** Compact form: icon + short word only (for dense rows). */
+  /** Compact form: icon only, no word label (for dense trailing slots). */
   compact?: boolean;
   className?: string;
 }
@@ -26,19 +20,12 @@ interface ScopeMeta {
 // Each scope = a distinct, consistent treatment carried by WORD + ICON
 // + COLOR together — color is never the only signal (#5, #11).
 const META: Record<FigureScope, ScopeMeta> = {
-  global: {
+  library: {
     word: "Library",
     Icon: GlobeIcon,
     bg: "var(--bf-scope-global-tint)",
     fg: "var(--bf-scope-global-ink)",
     bd: "var(--bf-scope-global-border)",
-  },
-  variant: {
-    word: "Variant",
-    Icon: BranchIcon,
-    bg: "var(--bf-scope-variant-tint)",
-    fg: "var(--bf-scope-variant-ink)",
-    bd: "var(--bf-scope-variant-border)",
   },
   custom: {
     word: "Custom",
@@ -50,20 +37,18 @@ const META: Record<FigureScope, ScopeMeta> = {
 };
 
 /**
- * ScopeBadge — encodes the three figure scopes (global library /
- * account variant / routine-scoped custom) with a consistent
- * text + icon + color treatment everywhere a figure appears
- * (DESIGN-PRINCIPLES #11). For a variant it can also render the base
- * lineage ("based on …", #12).
+ * ScopeBadge — encodes the two figure scopes (library / custom) by content
+ * divergence (PLAN §4.3): a figure whose attributes still match the catalog
+ * reads "Library"; one that has diverged reads "Custom". Each scope is a
+ * consistent text + icon + color treatment (DESIGN-PRINCIPLES #11).
  */
-export function ScopeBadge({ scope, lineage, compact, className }: ScopeBadgeProps) {
+export function ScopeBadge({ scope, compact, className }: ScopeBadgeProps) {
   const m = META[scope];
   const { Icon } = m;
-  const showLineage = !compact && scope === "variant" && Boolean(lineage);
 
-  // Meaning is carried by visible text (the scope word, plus the lineage
-  // line when shown) — no aria-label needed (#5). An sr-only " figure"
-  // gives screen readers context without changing the visual.
+  // Meaning is carried by visible text (the scope word) — no aria-label needed
+  // (#5). In compact (icon-only) mode the scope word moves to sr-only so AT
+  // users still get the label. An sr-only " figure" gives screen readers context.
   return (
     <span
       className={cx(
@@ -75,9 +60,14 @@ export function ScopeBadge({ scope, lineage, compact, className }: ScopeBadgePro
       <span aria-hidden="true" className="inline-flex">
         <Icon size={12} />
       </span>
-      <span>{m.word}</span>
-      <span className="bf-sr-only"> figure</span>
-      {showLineage && <span className="font-medium opacity-80"> · based on {lineage}</span>}
+      {compact ? (
+        <span className="bf-sr-only">{m.word} figure</span>
+      ) : (
+        <>
+          <span>{m.word}</span>
+          <span className="bf-sr-only"> figure</span>
+        </>
+      )}
     </span>
   );
 }
