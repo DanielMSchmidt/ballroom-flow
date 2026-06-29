@@ -23,9 +23,7 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | How to install, run locally, run each test layer, manage env/secrets, and **the test-harness conventions you must follow**. | Setting up; running things; writing tests. |
 | [`docs/TOOLING.md`](docs/TOOLING.md) | What dev/test tooling exists, why, and what's deferred (Sentry/Analytics → M8, Lighthouse → M9). | Touching CI, configs, or test infra. |
 | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) | Token reference, primitive component inventory (`apps/web/src/ui`), responsive/a11y conventions, how to add a component. | Building any UI. |
-| [`docs/design/DESIGN-PRINCIPLES.md`](docs/design/DESIGN-PRINCIPLES.md) | 28 **checkable** design principles used to review every UI PR. | Building or reviewing UI — these are acceptance criteria. |
-| [`docs/design/PROTOTYPE-ADDITIONS.md`](docs/design/PROTOTYPE-ADDITIONS.md) | Screen-by-screen gap analysis of the wireframe vs the plan; `docs/design/exports/` has rendered screens. | Designing a screen's content/layout. |
-| [`docs/design/Ballroom Builder.dc.html`](docs/design/Ballroom%20Builder.dc.html) | The original wireframe prototype. **A sketch, not requirements.** | Visual language reference only. |
+| **[`docs/design/`](docs/design/)** | **The canonical design source** — a Claude Design (claude.ai/design) handoff bundle. `docs/design/project/*.dc.html` are the HTML/CSS/JS prototypes the UI is recreated from (start with `Ballroom Wireframes v4.dc.html`); read [`docs/design/README.md`](docs/design/README.md) first. | Building or reviewing any UI — match these pixel-for-pixel. |
 | [`docs/spike/SPIKE-FINDINGS.md`](docs/spike/SPIKE-FINDINGS.md) | M0.5 spike results: Automerge-in-DO proven; **sharp edges** (testing/persistence gotchas). | Working on the DO/sync/persistence layer (M2). |
 | [`research/*.md`](research/) | Deep-dive research behind the plan. `extensibility-crdt.md` & `critique-sync.md` are load-bearing for the architecture. | Deep questions the plan summarizes but doesn't fully reproduce. |
 | [`PROVISIONING.md`](PROVISIONING.md) | Accounts & secrets (Clerk, Cloudflare) needed to run/deploy. | Running the real app or deploying. |
@@ -36,6 +34,12 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 > between `PLAN.md` and the implementation as a bug. The plan is meant to be continuously
 > refined, not frozen.
 
+> **`docs/design/` is the canonical design source — prototype there first.** Any change that
+> affects the UI **starts in Claude Design** (claude.ai/design): update the `docs/design/project/*.dc.html`
+> prototype, then recreate it pixel-for-pixel in the app. Don't design net-new UI directly in
+> React — sketch it in the design bundle first so the prototype stays the source of truth, then
+> implement. Treat a divergence between the shipped UI and the design bundle as a bug.
+
 ---
 
 ## 2. By task — where to look
@@ -43,7 +47,7 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 - **Implementing a backlog story** → `USER-STORIES.md` (the story + its "unskip when done" tests) → unskip those tests → make them pass (TDD, §4) → check `PLAN.md` for the precise rule.
 - **Domain logic** (`packages/domain`: doc schemas, overlay resolution, fork/copy-on-write, undo, registry, timing) → `PLAN.md` §2/§3/§5 + the matching `*.test.ts` (already written, skipped).
 - **Worker / Durable Object / sync / permissions / D1** → `PLAN.md` §6 + `SPIKE-FINDINGS.md` + `DEVELOPMENT.md` (harness conventions) + the skipped `apps/worker/src/**/*.test.ts`.
-- **UI / components / screens** → `DESIGN-SYSTEM.md` (use the primitives in `apps/web/src/ui`) + `DESIGN-PRINCIPLES.md` (acceptance criteria) + `PROTOTYPE-ADDITIONS.md` + `PLAN.md` §4.
+- **UI / components / screens** → **prototype the change in Claude Design first** (update `docs/design/project/*.dc.html`), then `DESIGN-SYSTEM.md` (use the primitives in `apps/web/src/ui`) + the `docs/design/` bundle (the canonical visual source — recreate it pixel-for-pixel) + `PLAN.md` §4.
 - **Tests / fixtures / E2E** → `TEST-MAP.md` + `DEVELOPMENT.md` (§ harness) + existing fixtures in `packages/domain/src/__fixtures__`, `apps/worker/src/test-support`, `apps/web/e2e/support`.
 - **Tooling / CI / config** → `TOOLING.md` (and don't break the layered CI gate).
 - **A locked decision feels wrong** → `PLAN.md` §8 + §12 (open/resolved questions). Decisions are cheap to revisit *before* code exists; surface it rather than silently diverging.
