@@ -1,6 +1,7 @@
 // biome-ignore-all lint/a11y/useSemanticElements: a native <input type="radio">
 // can't host the segmented fill + ≥44px touch-target styling; we implement the
 // ARIA radiogroup pattern on buttons (roving focus + Arrow keys) instead.
+import { useRef } from "react";
 import { cx } from "./cx";
 
 export interface SegmentedToggleProps<T extends string> {
@@ -29,13 +30,19 @@ export function SegmentedToggle<T extends string>({
   ariaLabel,
   className,
 }: SegmentedToggleProps<T>) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+
   function onKeyDown(e: React.KeyboardEvent, idx: number) {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();
     const dir = e.key === "ArrowRight" ? 1 : -1;
     const next = (idx + dir + options.length) % options.length;
     const opt = options[next];
-    if (opt) onChange(opt.value);
+    if (!opt) return;
+    onChange(opt.value);
+    // Roving focus: move DOM focus to the now-selected segment so keyboard
+    // users stay on the active radio (ARIA radiogroup pattern, #7).
+    buttons.current[next]?.focus();
   }
 
   return (
@@ -52,6 +59,9 @@ export function SegmentedToggle<T extends string>({
         return (
           <button
             key={opt.value}
+            ref={(el) => {
+              buttons.current[idx] = el;
+            }}
             type="button"
             role="radio"
             aria-checked={selected}

@@ -61,7 +61,7 @@ describe("SegmentedToggle", () => {
     expect(onChange).toHaveBeenCalledWith("follower");
   });
 
-  it("moves selection with arrow keys (roving focus)", async () => {
+  it("moves selection and focus with ArrowRight (roving focus)", async () => {
     const onChange = vi.fn();
     renderUi(
       <SegmentedToggle
@@ -71,10 +71,26 @@ describe("SegmentedToggle", () => {
         onChange={onChange}
       />,
     );
-    const selected = screen.getByRole("radio", { name: "Leader" });
-    selected.focus();
+    screen.getByRole("radio", { name: "Leader" }).focus();
     await userEvent.keyboard("{ArrowRight}");
     expect(onChange).toHaveBeenCalledWith("follower");
+    expect(screen.getByRole("radio", { name: "Follower" })).toHaveFocus();
+  });
+
+  it("moves selection and focus with ArrowLeft (roving focus)", async () => {
+    const onChange = vi.fn();
+    renderUi(
+      <SegmentedToggle
+        ariaLabel="Steps for"
+        options={OPTIONS}
+        value="follower"
+        onChange={onChange}
+      />,
+    );
+    screen.getByRole("radio", { name: "Follower" }).focus();
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(onChange).toHaveBeenCalledWith("leader");
+    expect(screen.getByRole("radio", { name: "Leader" })).toHaveFocus();
   });
 
   it("only the selected segment is in the tab order", () => {

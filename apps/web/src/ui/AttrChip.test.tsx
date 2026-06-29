@@ -19,7 +19,9 @@ describe("AttrChip", () => {
   });
 
   it("uses an explicit color for a user-defined kind not in the standard palette", () => {
-    renderUi(<AttrChip kind="head" label="left" color="#0f8a8a" />);
+    // A clearly synthetic, non-promotable kind id — so this stays valid even if
+    // real kinds (e.g. Head) are later added to the standard palette.
+    renderUi(<AttrChip kind="custom-x" label="left" color="#0f8a8a" />);
     expect(screen.getByText("left")).toHaveStyle({ background: "#0f8a8a" });
   });
 
@@ -39,7 +41,7 @@ describe("AttrChip", () => {
       <div>
         <AttrChip kind="direction" label="fwd·HT" />
         <AttrChip kind="rise" label="up" />
-        <AttrChip kind="head" label="left" color="#0f8a8a" dimmed />
+        <AttrChip kind="custom-x" label="left" color="#0f8a8a" dimmed />
       </div>,
     );
     expect(await axeCheck(container)).toHaveNoViolations();
