@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AccountControls, useAppAuth } from "./auth/app-auth";
+import { useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
@@ -40,8 +40,9 @@ export function App(): React.JSX.Element {
 
 /**
  * AppHome — the signed-in/out shell. Auth flows through the app's auth seam
- * (useAppAuth / AccountControls), so the live-Clerk and E2E paths share one
- * surface. The open routine and invite redemption are URL-driven (lib/router.ts).
+ * (useAppAuth), so the live-Clerk and E2E paths share one surface. Account /
+ * sign-out lives on the Profile tab (T1: no persistent app-name bar on inner
+ * screens). The open routine and invite redemption are URL-driven (lib/router.ts).
  */
 function AppHome(): React.JSX.Element {
   const route = useRoute();
@@ -72,13 +73,6 @@ function AppHome(): React.JSX.Element {
         navigate("/"); // leaving an open routine returns to the list
       }}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:border-b-0 lg:px-0">
-        <h1 className="text-lg font-bold tracking-tight text-ink lg:hidden">Ballroom Flow</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <AccountControls />
-        </div>
-      </div>
-
       <div className="flex flex-1 flex-col gap-3 p-4 lg:p-0 lg:pt-4">
         {needsOnboarding && (
           <Card>
