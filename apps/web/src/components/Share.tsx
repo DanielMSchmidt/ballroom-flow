@@ -17,8 +17,6 @@ import {
   useRemoveMember,
 } from "../store/share";
 import {
-  Badge,
-  type BadgeTone,
   Button,
   Card,
   IDENTITY_COLORS,
@@ -29,16 +27,39 @@ import {
   useToast,
 } from "../ui";
 
-/** Human label + one-line explanation for each role (the role microcopy, DP #15). */
-const ROLE_INFO: Record<
-  Member["role"] | "owner",
-  { label: string; blurb: string; tone: BadgeTone }
-> = {
-  owner: { label: "Owner", blurb: "Full control, including sharing.", tone: "accent" },
-  editor: { label: "Editor", blurb: "Can edit structure, figures, and timing.", tone: "accent" },
-  commenter: { label: "Commenter", blurb: "Can add annotations, but not edit.", tone: "neutral" },
-  viewer: { label: "Viewer", blurb: "Can view the routine, read-only.", tone: "neutral" },
-};
+/** Human label + one-line explanation for each role (the role microcopy, DP #15).
+ *  `pill` is the lowercase label shown in the role pill (frame 4.2 design). */
+const ROLE_INFO: Record<Member["role"] | "owner", { label: string; pill: string; blurb: string }> =
+  {
+    owner: { label: "Owner", pill: "owner", blurb: "Full control, including sharing." },
+    editor: { label: "Editor", pill: "editor", blurb: "Can edit structure, figures, and timing." },
+    commenter: {
+      label: "Commenter",
+      pill: "commenter",
+      blurb: "Can add annotations, but not edit.",
+    },
+    viewer: { label: "Viewer", pill: "viewer", blurb: "Can view the routine, read-only." },
+  };
+
+/** Role pill (frame 4.2): lowercase role label, with ▾ indicator for roles that
+ *  may be changed (editor / commenter). The ▾ is a visual affordance for a
+ *  future role-change flow; it is not interactive in this release. */
+function RolePill({ role }: { role: Member["role"] }) {
+  const changeable = role === "editor" || role === "commenter";
+  return (
+    <span
+      className="ml-auto inline-flex flex-none items-center gap-[3px] rounded-[5px] border px-2 py-0.5 text-2xs font-medium text-ink-secondary"
+      style={{ borderColor: "var(--bf-border-strong)" }}
+    >
+      {ROLE_INFO[role].pill}
+      {changeable && (
+        <span aria-hidden="true" className="text-[9px] leading-none text-ink-faint">
+          ▾
+        </span>
+      )}
+    </span>
+  );
+}
 
 /** A stable identity colour (one of the six IDENTITY_COLORS slots) for a user,
  *  so each avatar reads consistently — the roster carries no stored colour. */
@@ -117,6 +138,7 @@ export function ShareView({
 }: ShareViewProps) {
   const canManage = can(viewerRole, "canInvite");
   const [inviteRole, setInviteRole] = useState<Member["role"]>("viewer");
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<Member | null>(null);
   const toast = useToast();
 
@@ -131,9 +153,12 @@ export function ShareView({
         className="border-b-0 px-0"
       />
 
-      {/* Member roster + roles (US-024 AC-1). */}
+      {/* Member roster + roles (US-024 AC-1). Frame 4.2: "PARTNERS ON THIS ROUTINE"
+          section header, lowercase role pills with ▾ for changeable roles. */}
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-bold text-ink">People with access</h2>
+        <h2 className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+          Partners on this routine
+        </h2>
         {/* The current viewer, surfaced first as the "you" row (frame 4.2). */}
         {viewer && (
           <div className="flex min-h-[44px] items-center gap-3 rounded-md border border-line px-3 py-2">
@@ -147,9 +172,7 @@ export function ShareView({
             <Spinner /> <span className="text-2xs">Loading members…</span>
           </div>
         ) : members.length === 0 && !viewer ? (
-          <p className="text-2xs text-ink-faint">
-            Just you so far. Invite someone with a link below.
-          </p>
+          <p className="text-2xs text-ink-faint">Just you so far. Invite someone below.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {members.map((m) => (
@@ -157,19 +180,19 @@ export function ShareView({
                 key={m.userId}
                 className="flex min-h-[44px] items-center gap-3 rounded-md border border-line px-3 py-2"
               >
-                <Avatar label={m.userId} userId={m.userId} />
+                <Avatar label={m.displayName ?? m.userId} userId={m.userId} />
                 <span className="flex min-w-0 flex-col">
-                  <span className="font-medium text-ink">{m.userId}</span>
+                  <span className="font-medium text-ink">{m.displayName ?? m.userId}</span>
                   <span className="text-2xs text-ink-muted">{ROLE_INFO[m.role].blurb}</span>
                 </span>
-                <Badge tone={ROLE_INFO[m.role].tone} className="ml-auto">
-                  {ROLE_INFO[m.role].label}
-                </Badge>
+                {/* Role pill: lowercase label, ▾ indicator for changeable roles
+                    (editor/commenter may be downgraded — future role-change flow). */}
+                <RolePill role={m.role} />
                 {canManage && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={`Remove ${m.userId}`}
+                    aria-label={`Remove ${m.displayName ?? m.userId}`}
                     onClick={() => setPendingRemove(m)}
                   >
                     Remove
@@ -181,52 +204,17 @@ export function ShareView({
         )}
       </div>
 
-      {/* Invite by link (US-023 reused) — manage-capable roles only. */}
-      {canManage && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-bold text-ink">Invite with a link</h2>
-          <div className="flex items-end gap-2">
-            <Select
-              label="Role"
-              options={INVITE_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as Member["role"])}
-            />
-            <Button variant="primary" loading={issuing} onClick={() => onIssueInvite?.(inviteRole)}>
-              Create link
-            </Button>
-          </div>
-          {issuedInvite && (
-            <div className="flex items-center gap-2 rounded-md border border-line px-3 py-2">
-              <code className="flex-1 truncate text-2xs text-ink-secondary">
-                {inviteUrl(issuedInvite.token)}
-              </code>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(inviteUrl(issuedInvite.token));
-                  toast.show("Invite link copied", { tone: "success" });
-                }}
-              >
-                Copy
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Shared-edit microcopy (DP #15): make the CRDT-shared-figure consequence
           explicit, so an editor knows a figure edit ripples to every routine. */}
       <Card className="border-info bg-info-tint">
         <p className="text-2xs text-info-ink">
-          <span className="font-medium">Heads up:</span> editing a shared figure changes it for
-          every routine that uses it. To branch off on your own, fork the routine — you'll get a
-          frozen, independent copy. To change it in just one place, make a variant instead.
+          Editing a shared figure changes it for every routine that uses it. To branch off on your
+          own, fork the routine — you'll get a frozen, independent copy.
         </p>
       </Card>
 
-      {/* Fork — a frozen, independent copy (DP #15 escape hatch; frame 4.2 CTA). */}
+      {/* Fork — a frozen, independent copy (DP #15 escape hatch; frame 4.2 CTA ②).
+          Dark full-width button rendered only when the host wires onFork. */}
       {onFork && (
         <Button
           variant="primary"
@@ -239,6 +227,52 @@ export function ShareView({
         </Button>
       )}
 
+      {/* Invite by link (US-023 reused; frame 4.2 CTA ③) — manage-capable roles only.
+          "+ invite someone" toggles the inline invite form (hidden until first tap). */}
+      {canManage && (
+        <>
+          {inviteOpen && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
+                <Select
+                  label="Role"
+                  options={INVITE_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as Member["role"])}
+                />
+                <Button
+                  variant="primary"
+                  loading={issuing}
+                  onClick={() => onIssueInvite?.(inviteRole)}
+                >
+                  Create link
+                </Button>
+              </div>
+              {issuedInvite && (
+                <div className="flex items-center gap-2 rounded-md border border-line px-3 py-2">
+                  <code className="flex-1 truncate text-2xs text-ink-secondary">
+                    {inviteUrl(issuedInvite.token)}
+                  </code>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(inviteUrl(issuedInvite.token));
+                      toast.show("Invite link copied", { tone: "success" });
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          <Button variant="secondary" fullWidth onClick={() => setInviteOpen(true)}>
+            + invite someone
+          </Button>
+        </>
+      )}
+
       {/* Remove confirm (principle #28: confirm a destructive action). */}
       <Sheet
         open={pendingRemove !== null}
@@ -247,8 +281,8 @@ export function ShareView({
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            {pendingRemove?.userId} will lose access to this routine. You can invite them again with
-            a new link.
+            {pendingRemove?.displayName ?? pendingRemove?.userId} will lose access to this routine.
+            You can invite them again with a new link.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingRemove(null)}>

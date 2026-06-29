@@ -37,6 +37,7 @@ export function RoutineReadingView({
   placements,
   annotations = [],
   canComment = false,
+  memberColors,
   roleView,
   onRoleViewChange,
   onOpenFigure,
@@ -49,6 +50,10 @@ export function RoutineReadingView({
   /** Whether THIS member may add a comment (commenter/editor — NOT a viewer).
    *  Gates the inline "+ add comment" affordance (a viewer reads comments only). */
   canComment?: boolean;
+  /** Real `authorId → stored hex` map built from `useMembers` + `useMe` by the
+   *  caller (Assemble). When an authorId is found here, the inline dot uses the
+   *  stored colour directly. Unknown authors fall back to the hash. */
+  memberColors?: Record<string, string>;
   /** The active Leader/Follower lens (controlled — persisted by the caller). */
   roleView: RoleView;
   onRoleViewChange: (view: RoleView) => void;
@@ -98,6 +103,7 @@ export function RoutineReadingView({
                     roleView={roleView}
                     annotations={annotations}
                     canComment={canComment}
+                    memberColors={memberColors}
                     onOpenFigure={onOpenFigure}
                     onOpenThread={onOpenThread}
                   />
@@ -128,6 +134,7 @@ function FigureReadout({
   roleView,
   annotations,
   canComment,
+  memberColors,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -137,6 +144,7 @@ function FigureReadout({
   roleView: RoleView;
   annotations: Annotation[];
   canComment: boolean;
+  memberColors?: Record<string, string>;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
@@ -212,6 +220,7 @@ function FigureReadout({
                 )}
                 figureId={figure.id}
                 canComment={canComment}
+                memberColors={memberColors}
                 onOpenThread={onOpenThread}
               />
             ))}
@@ -258,6 +267,7 @@ function StepRow({
   comments,
   figureId,
   canComment,
+  memberColors,
   onOpenThread,
 }: {
   count: number;
@@ -266,6 +276,7 @@ function StepRow({
   comments: Annotation[];
   figureId: string;
   canComment: boolean;
+  memberColors?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const offBeat = isOffBeatCount(count);
@@ -299,6 +310,7 @@ function StepRow({
           figureId={figureId}
           count={count}
           canComment={canComment}
+          memberColors={memberColors}
           onOpenThread={onOpenThread}
         />
       )}
@@ -317,12 +329,16 @@ function InlineComments({
   figureId,
   count,
   canComment,
+  memberColors,
   onOpenThread,
 }: {
   comments: Annotation[];
   figureId: string;
   count: number;
   canComment: boolean;
+  /** Real `authorId → stored hex` map — use this first; hash-fallback only for
+   *  unknown authors (e.g. very old annotations before T8 wired identity). */
+  memberColors?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const latest = comments.slice(-2);
@@ -339,7 +355,7 @@ function InlineComments({
           <span
             aria-hidden="true"
             className="h-[7px] w-[7px] flex-none rounded-full"
-            style={{ background: identityColor(c.authorId) }}
+            style={{ background: memberColors?.[c.authorId] ?? identityColor(c.authorId) }}
           />
           <span
             className="flex-1 truncate text-[13px] text-ink-secondary"

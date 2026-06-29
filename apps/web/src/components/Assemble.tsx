@@ -26,7 +26,7 @@ import {
   type RegistryKind,
   type Section,
 } from "@ballroom/domain";
-import { type FormEvent, useCallback, useEffect, useReducer, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
@@ -235,6 +235,23 @@ export function Assemble({
   } | null>(null);
   const toast = useToast();
 
+  // Identity colour map for reading-view inline dots (T9b): build from the
+  // members query + the current user's own identity so dots use real colours.
+  // React Query caches the request; calling it here (for reading view) and in
+  // ThreadSheetContents (for the thread panel) costs zero extra network hops.
+  const me = useMe();
+  const membersQ = useMembers(routineId);
+  const memberColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of membersQ.data?.members ?? []) {
+      if (m.identityColor) map[m.userId] = m.identityColor;
+    }
+    if (currentUserId && me.data?.identityColor) {
+      map[currentUserId] = me.data.identityColor;
+    }
+    return map;
+  }, [membersQ.data, me.data, currentUserId]);
+
   // Family notes (US-040/041) come from the worker (co-member visibility gate),
   // not the routine doc — load them for this routine + reload after authoring one.
   // No-ops without a token (tests / open boundary) → an empty list.
@@ -378,9 +395,15 @@ export function Assemble({
           </p>
         )}
 
-        {/* Share screen: roster + roles, remove (confirmed), invite link (US-024). */}
+        {/* Share screen: roster + roles, remove (confirmed), invite link (US-024).
+            T9b: wire routineName + onFork so the design's subtitle + Fork CTA show. */}
         <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
-          <Share docRef={routineId} viewerRole={role} />
+          <Share
+            docRef={routineId}
+            viewerRole={role}
+            routineName={routine.title || "Untitled routine"}
+            onFork={onFork}
+          />
         </Sheet>
 
         {mode === "read" ? (
@@ -389,6 +412,7 @@ export function Assemble({
             placements={store.readPlacements()}
             annotations={store.readAnnotations()}
             canComment={can(role, "canAnnotate")}
+            memberColors={memberColorMap}
             roleView={roleView}
             onRoleViewChange={setRoleView}
             onOpenFigure={(figureId) => setNotating(figureId)}

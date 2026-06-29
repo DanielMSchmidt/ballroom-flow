@@ -34,9 +34,19 @@ describe("US-024 Share screen (member list + roles)", () => {
     renderShare({ viewerRole: "editor", members: MEMBERS });
     expect(screen.getByText("u_co")).toBeInTheDocument();
     expect(screen.getByText("u_vw")).toBeInTheDocument();
-    // Roles are shown, not just the ids.
-    expect(screen.getByText("Commenter")).toBeInTheDocument();
-    expect(screen.getByText("Viewer")).toBeInTheDocument();
+    // Frame 4.2: roles shown as lowercase pills.
+    expect(screen.getByText("commenter")).toBeInTheDocument();
+    expect(screen.getByText("viewer")).toBeInTheDocument();
+    // Section heading is "Partners on this routine" (uppercase via CSS).
+    expect(screen.getByText(/partners on this routine/i)).toBeInTheDocument();
+  });
+
+  it("shows displayName in the member row when available", () => {
+    const membersWithName: Member[] = [
+      { userId: "u_co", role: "commenter", displayName: "Coach Lena" },
+    ];
+    renderShare({ viewerRole: "editor", members: membersWithName });
+    expect(screen.getByText("Coach Lena")).toBeInTheDocument();
   });
 
   it("lets an editor remove a member, behind a destructive confirm (AC-2, DP #28)", async () => {
@@ -51,8 +61,10 @@ describe("US-024 Share screen (member list + roles)", () => {
     expect(onRemove).toHaveBeenCalledWith("u_co");
   });
 
-  it("offers the invite-by-link affordance to an editor", () => {
+  it("offers the invite-by-link affordance to an editor via '+ invite someone'", async () => {
     renderShare({ viewerRole: "editor", members: MEMBERS, onIssueInvite: vi.fn() });
+    // Frame 4.2: invite form is hidden behind "+ invite someone" button (CTA ③).
+    await userEvent.click(screen.getByRole("button", { name: /\+ invite someone/i }));
     expect(screen.getByRole("button", { name: /create link/i })).toBeInTheDocument();
   });
 
@@ -60,19 +72,19 @@ describe("US-024 Share screen (member list + roles)", () => {
     renderShare({ viewerRole: "viewer", members: MEMBERS, onRemove: vi.fn() });
     // No remove control and no invite affordance for a non-managing role.
     expect(screen.queryByRole("button", { name: /remove u_co/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /create link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /invite someone/i })).not.toBeInTheDocument();
     // …but they still see the roster + roles (read access).
-    expect(screen.getByText("Commenter")).toBeInTheDocument();
+    expect(screen.getByText("commenter")).toBeInTheDocument();
   });
 
   it("explains the roles and the shared-figure consequence (DP #15)", () => {
     renderShare({ viewerRole: "editor", members: MEMBERS });
-    // Role explanations (the microcopy that makes roles legible).
+    // Role blurbs (the microcopy that makes roles legible).
     expect(screen.getByText(/can add annotations, but not edit/i)).toBeInTheDocument();
     expect(screen.getByText(/can view the routine, read-only/i)).toBeInTheDocument();
-    // The shared-figure ripple warning + the variant escape hatch (DP #15).
+    // The shared-figure ripple warning (DP #15) — info card copy (no variant line
+    // in frame 4.2 — card was trimmed to the fork CTA).
     expect(screen.getByText(/editing a shared figure changes it/i)).toBeInTheDocument();
-    expect(screen.getByText(/make a variant instead/i)).toBeInTheDocument();
   });
 
   // ───────────────────────────────────────────────────────────────────────

@@ -24,6 +24,8 @@ vi.mock("./auth/app-auth", () => ({
   // AccountControls is rendered inside the now-removed persistent header;
   // returning null is fine for this unit test.
   AccountControls: () => null,
+  // NullAuthProvider is used by renderUi's Providers wrapper — pass children through.
+  NullAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("./store/me", () => ({
