@@ -150,7 +150,8 @@ test.describe("@smoke share screen (roster + invite from the UI)", () => {
     const shareSheet = page.getByRole("dialog", { name: /share this routine/i });
     // Frame 4.2: section heading is "PARTNERS ON THIS ROUTINE" (CSS uppercase).
     await expect(shareSheet.getByText(/partners on this routine/i)).toBeVisible();
-    await expect(shareSheet.getByText(member)).toBeVisible();
+    // Frame 4.2: the member row shows their displayName (T9b: m.displayName ?? m.userId).
+    await expect(shareSheet.getByText("Member")).toBeVisible();
     // Frame 4.2: role pill is lowercase "viewer" (not "Viewer" Badge; the invite
     // <option> reads "Viewer — can view", so exact match still distinguishes them).
     await expect(shareSheet.getByText("viewer", { exact: true })).toBeVisible();
