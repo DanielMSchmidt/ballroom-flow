@@ -43,6 +43,24 @@ export function useAppAuth(): AppAuth {
   return ctx;
 }
 
+/** No-op auth provider for component unit tests. Provides a signed-out context so
+ *  hooks that call `useAppAuth()` work without a real Clerk or E2E setup. Queries
+ *  that call `getToken()` receive `null` and fail gracefully (no network in jsdom). */
+export function NullAuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  return (
+    <AppAuthContext.Provider
+      value={{
+        getToken: async () => null,
+        isLoaded: true,
+        isSignedIn: false,
+        signOut: async () => {},
+      }}
+    >
+      {children}
+    </AppAuthContext.Provider>
+  );
+}
+
 /** Bridge live Clerk auth into the context (prod/dev). Rendered inside ClerkProvider. */
 function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Element {
   const { getToken, isLoaded, isSignedIn, signOut } = useAuth();

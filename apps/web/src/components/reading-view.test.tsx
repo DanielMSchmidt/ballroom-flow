@@ -13,6 +13,7 @@ interface ReadingProps {
   onRoleViewChange: (v: RoleView) => void;
   annotations?: Annotation[];
   canComment?: boolean;
+  memberColors?: Record<string, string>;
   onOpenFigure?: (id: string) => void;
   onOpenThread?: (id: string) => void;
 }
@@ -274,5 +275,55 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     expect(screen.getByText("keep posture")).toBeInTheDocument();
     // …but never sees the add affordance.
     expect(screen.queryByRole("button", { name: /add comment/i })).toBeNull();
+  });
+
+  it("uses the real member identity colour for inline comment dots (T9b)", async () => {
+    // TDD: prove the dot uses the member's stored hex, not the hash fallback.
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const fig = figure({ attributes: [attr(2, "direction", "side")] });
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: fig.id }] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
+        roleView="leader"
+        onRoleViewChange={vi.fn()}
+        memberColors={{ u2: "#1f8a5b" }} // real stored identity hex
+        annotations={[
+          {
+            id: "an1",
+            authorId: "u2",
+            kind: "note",
+            text: "watch the rise",
+            tags: [],
+            anchors: [{ type: "point", figureRef: fig.id, count: 2 }],
+            replies: [],
+            createdAt: 1,
+          },
+        ]}
+      />,
+    );
+    // The comment text must render.
+    expect(screen.getByText("watch the rise")).toBeInTheDocument();
+    // The dot beside the comment must use the real stored hex, not a CSS var from the hash.
+    // jsdom may normalise hex → rgb(); accept either form so the assertion stays stable.
+    const commentBtn = screen.getByText("watch the rise").closest("button");
+    const dot = commentBtn?.querySelector("span[aria-hidden='true']") as HTMLElement | null;
+    expect(dot).not.toBeNull();
+    const bg = dot?.style.background;
+    // #1f8a5b === rgb(31, 138, 91) — accept both representations.
+    expect(bg === "#1f8a5b" || bg === "rgb(31, 138, 91)").toBe(true);
   });
 });
