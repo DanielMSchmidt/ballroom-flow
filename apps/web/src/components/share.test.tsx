@@ -74,4 +74,33 @@ describe("US-024 Share screen (member list + roles)", () => {
     expect(screen.getByText(/editing a shared figure changes it/i)).toBeInTheDocument();
     expect(screen.getByText(/make a variant instead/i)).toBeInTheDocument();
   });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // T7 — Share design parity (frame 4.2): a per-screen header, the dark
+  // "Fork — make it your own" CTA (a frozen, independent copy), and the
+  // current viewer surfaced as the "you" row.
+  // ───────────────────────────────────────────────────────────────────────
+  it("shows a Share header with the routine name as the subtitle (frame 4.2)", () => {
+    renderShare({ viewerRole: "editor", members: MEMBERS, routineName: "Gold Waltz" });
+    expect(screen.getByRole("heading", { name: "Share" })).toBeInTheDocument();
+    expect(screen.getByText("Gold Waltz")).toBeInTheDocument();
+  });
+
+  it("offers a Fork CTA that forks an independent copy", async () => {
+    const onFork = vi.fn();
+    renderShare({ viewerRole: "commenter", members: MEMBERS, onFork });
+    const fork = screen.getByRole("button", { name: /fork/i });
+    await userEvent.click(fork);
+    expect(onFork).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces the current viewer as the 'you' row with their role", () => {
+    renderShare({
+      viewerRole: "owner",
+      members: MEMBERS,
+      viewer: { userId: "u_me", displayName: "Daniel" },
+    });
+    expect(screen.getByText("Daniel")).toBeInTheDocument();
+    expect(screen.getByText(/you · owner/i)).toBeInTheDocument();
+  });
 });
