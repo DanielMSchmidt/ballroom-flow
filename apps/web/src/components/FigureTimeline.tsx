@@ -1,60 +1,42 @@
 // US-028 / US-030 — the figure timeline (the hero flow). PLAN §4.4/§4.5, §1.5.
-// 2026-06-28 parity: rebuilt to the docs/design/ballroom-flow.pen "FigureEditor"
-// frame — a dance-aware BAR / BEAT layout of step cards rather than a flat strip.
+// 2026-06-29 design parity (frame 1.11 "Figure detail EDIT grid"): the EDIT view
+// is a scrollable COLUMN GRID — a sticky count column on the left (count cell
+// tinted to the direction family; off-beat rows dimmed) and one column per
+// attribute kind APPLICABLE to the figure's dance (Step* required, then Rise ·
+// Pos · Sway · Turn · Body · custom). A cell shows an AttrChip when the count
+// carries that kind's value (the Step cell merges direction + footwork, e.g.
+// "fwd·B"), else a faint ＋ placeholder. Tapping any cell opens the per-count
+// AttributeEditor (a filled cell edits, a ＋ adds). A dashed "＋ add an
+// in-between timing" reveals an on-count chooser to place a sub-beat.
 //
-// Each whole beat is a lane: a beat-tick on the left, then the step card(s) that
-// start in that beat. A step card shows its headline (the direction, e.g.
-// "forward"), a duration pill that can be dragged / arrowed to resize the step
-// (snapped to the grid), and a lane of the step's attribute chips with ghost
-// "+ kind" add-chips for what's still empty.
-// Tapping a card/chip opens the per-count AttributeEditor (registry-driven,
-// US-003); editing is editor-only.
+// Unlike the READING view (only-used columns), the EDIT grid shows every
+// applicable kind so empty cells are addable — `allColumns` honors
+// `appliesToDances` (Tango omits Rise), shared with the reading-view column model.
 //
 // Role is a VIEW, not an identity (US-030, principle #25): a per-device lens
-// toggle, never a stored role. role=null ("both") values always show; role
-// values show only for the selected lens; new values inherit the lens.
+// (the "Steps for" SegmentedToggle), never a stored role. role=null ("both")
+// values always show; role values show only for the selected lens.
 //
 // Fully controlled (#151): the rendered attributes derive from the `attributes`
 // prop; edits go out via `onChange` and return as the next prop. Only transient
-// UI (open count, lens, snap grid) is local state.
+// UI (open count, lens, chooser) is local state. The RENDER changed here, not the
+// timing model — float counts are untouched.
 
 import {
-  ATTRIBUTE_REGISTRY,
   type Attribute,
   barsForFigure,
   countLabel,
   DANCES,
   type DanceId,
-  mergeRegistry,
   type RegistryKind,
 } from "@ballroom/domain";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  useMemo,
-  useState,
-} from "react";
-import { Button, Card, cx, kindVar, PlusIcon } from "../ui";
-import type { AttributeKind } from "../ui/tokens";
+import { useMemo, useState } from "react";
+import { AttrChip, Button, Card, cx, kindVar, PlusIcon, SegmentedToggle } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
-import { shortKindLabel, stepAction } from "./attribute-display";
-import {
-  chipTone,
-  displayValue,
-  filterByRoleView,
-  flipped,
-  type RoleView,
-  roleLabel,
-} from "./role-view";
-import {
-  durationLabel,
-  resizeStepDuration,
-  SNAP_OPTIONS,
-  type SnapValue,
-  snapTo,
-  stepDuration,
-} from "./timeline-ops";
+import { stepAction } from "./attribute-display";
+import { allColumns, cellValue, isOffBeatCount, type ReadingColumn } from "./reading-columns";
+import { displayValue, filterByRoleView, type RoleView } from "./role-view";
 
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
@@ -70,7 +52,7 @@ export interface FigureTimelineProps {
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
    *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
   roleView?: RoleView;
-  /** Emits the next role lens when the flip toggle is used (controlled mode). */
+  /** Emits the next role lens when the toggle is used (controlled mode). */
   onRoleViewChange?: (next: RoleView) => void;
   /** User-defined kinds to merge into the attribute registry (US-043). */
   customKinds?: RegistryKind[];
@@ -90,6 +72,14 @@ export interface FigureTimelineProps {
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
 const humanize = (value: unknown): string => displayValue(value).replace(/_/g, " ");
 
+/** A column's header/text color — the kind's base token, slate for custom. */
+function columnColor(col: ReadingColumn): string {
+  const standard = ["direction", "footwork", "rise", "position", "sway", "turn"];
+  return standard.includes(col.kind)
+    ? kindVar(col.kind as Parameters<typeof kindVar>[0])
+    : "var(--bf-ink-secondary)";
+}
+
 export function FigureTimeline({
   role,
   dance,
@@ -108,6 +98,7 @@ export function FigureTimeline({
   const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
   const [openExpanded, setOpenExpanded] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
   // `bb_role`) when provided; otherwise local UI state seeded from initialView.
   const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
@@ -116,7 +107,6 @@ export function FigureTimeline({
     onRoleViewChange?.(next);
     if (roleView === undefined) setLocalView(next);
   };
-  const [snap, setSnap] = useState<SnapValue>(0.125);
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const isGlobal = figureScope === "global";
@@ -133,38 +123,47 @@ export function FigureTimeline({
     return map;
   }, [attrs]);
 
-  // Sorted distinct counts that actually carry a step (for headlines + ordering).
+  // Sorted distinct counts that actually carry a value (drives off-beat rows).
   const placedCounts = useMemo(() => [...byCount.keys()].sort((a, b) => a - b), [byCount]);
 
-  // Dance-aware beat ruler: the dance's phrase (Waltz 6 / 4-4 dances 8) grouped
-  // into bars, extended to cover any attribute placed in a later phrase.
+  // Dance-aware beat ruler: the dance's phrase (Waltz 6 / 4-4 dances 8), extended
+  // to cover any attribute placed in a later phrase. Drives the whole-beat rows.
   const meta = dance ? DANCES[dance] : undefined;
   const beatsPerBar = meta?.beatsPerBar ?? 4;
   const phraseBeats = meta?.phraseBeats ?? 8;
-  const timeSignature = meta?.timeSignature ?? "4/4";
-  const bars = useMemo(() => {
+  const totalBeats = useMemo(() => {
     const live = attrs.filter((a) => a.deletedAt == null).map((a) => a.count);
     const maxWhole = live.reduce((m, c) => Math.max(m, Math.ceil(c)), 0);
     const phrases = dance ? barsForFigure(live, dance) : 1;
-    const total = counts ?? Math.max(phraseBeats * phrases, maxWhole, beatsPerBar);
-    const list = Array.from({ length: total }, (_, i) => i + 1);
-    const grouped: number[][] = [];
-    for (let i = 0; i < list.length; i += beatsPerBar) grouped.push(list.slice(i, i + beatsPerBar));
-    return grouped;
+    return counts ?? Math.max(phraseBeats * phrases, maxWhole, beatsPerBar);
   }, [attrs, counts, dance, phraseBeats, beatsPerBar]);
 
-  const totalBeats = bars.reduce((n, b) => n + b.length, 0);
+  // The grid columns: every kind applicable to the dance (all-applicable, so empty
+  // cells are addable) — the EDIT counterpart to the reading view's used-columns.
+  const columns = useMemo(() => allColumns(dance, customKinds), [dance, customKinds]);
+  const colorByKind = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const k of customKinds) map.set(k.kind, k.color);
+    return map;
+  }, [customKinds]);
 
-  // The technique kinds for this dance (drives the chip lane + ghost add-chips).
-  // Direction is the headline, so it's excluded from the lane.
-  const laneKinds = useMemo(() => {
-    const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
-    return Object.values(reg).filter(
-      (k) =>
-        k.kind !== "direction" &&
-        (!k.appliesToDances || dance === undefined || k.appliesToDances.includes(dance)),
-    );
-  }, [customKinds, dance]);
+  // The grid rows: every whole beat of the ruler, plus any placed off-beat counts,
+  // in count order. Whole beats give the addable ruler; off-beats appear once used.
+  const rowCounts = useMemo(() => {
+    const set = new Set<number>();
+    for (let b = 1; b <= totalBeats; b++) set.add(b);
+    for (const c of placedCounts) if (isOffBeatCount(c)) set.add(c);
+    return [...set].sort((a, b) => a - b);
+  }, [totalBeats, placedCounts]);
+
+  // Candidate in-between (sub-beat) positions for the chooser: the "&" of each
+  // whole beat that isn't already a row.
+  const offBeatChoices = useMemo(() => {
+    const present = new Set(rowCounts);
+    const out: number[] = [];
+    for (let b = 1; b <= totalBeats; b++) if (!present.has(b + 0.5)) out.push(b + 0.5);
+    return out;
+  }, [rowCounts, totalBeats]);
 
   /** Replace one count's attributes within the full set + emit (COW on first
    *  edit of a non-owned global figure). */
@@ -174,56 +173,29 @@ export function FigureTimeline({
     onChange?.([...others, ...next]);
   };
 
-  /** Open the per-count editor (optionally with the technique section expanded). */
+  /** Open the per-count editor (optionally with the technique section expanded —
+   *  set when adding via a non-identity column cell). */
   const open = (count: number, expanded = false): void => {
     setOpenExpanded(expanded);
     setOpenCount((cur) => (cur === count && !expanded ? null : count));
   };
 
-  /** Resize the step at `count` to `newDuration` beats (snapped, ≥ one grid). */
-  const resize = (count: number, newDuration: number): void => {
-    const d = Math.max(snap, snapTo(newDuration));
-    onChange?.(resizeStepDuration(attrs, count, d));
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Control strip: meta + role lens + snap grid (design parity). */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-sunken px-3 py-2">
-        <div className="flex items-center gap-2 text-2xs">
-          <span className="font-bold text-ink">{timeSignature}</span>
-          <span aria-hidden="true" className="text-ink-faint">
-            ·
-          </span>
-          <span className="text-ink-muted">
-            {bars.length} bars · {totalBeats} beats
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setView(flipped(view))}>
-            {roleLabel(view)} · flip
-          </Button>
-          {editable && (
-            <div className="flex items-center gap-0.5 rounded-md bg-surface p-0.5">
-              {/* Snap grid — each option is labelled "Snap ¼/⅛/1". */}
-              {SNAP_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  aria-pressed={snap === o.value}
-                  aria-label={`Snap ${o.label}`}
-                  onClick={() => setSnap(o.value)}
-                  className={cx(
-                    "min-h-[28px] min-w-[28px] rounded px-2 text-2xs font-bold",
-                    snap === o.value ? "bg-accent text-ink-inverse" : "text-ink-muted",
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* "Steps for" role lens (frame 1.11). A per-device VIEW, not a stored role. */}
+      <div className="flex items-center gap-2">
+        <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+          Steps for
+        </span>
+        <SegmentedToggle<RoleView>
+          ariaLabel="Steps for"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "leader", label: "Leader" },
+            { value: "follower", label: "Follower" },
+          ]}
+        />
       </div>
 
       {isGlobal && (
@@ -248,104 +220,138 @@ export function FigureTimeline({
         </div>
       )}
 
-      {/* Bars → beat lanes → step cards. */}
-      <div className="flex flex-col gap-4">
-        {bars.map((bar, barIdx) => (
-          <section
-            key={`bar-${bar[0] ?? barIdx}`}
-            aria-label={`bar ${barIdx + 1}`}
-            className="flex flex-col gap-2"
-          >
-            <div className="flex items-center gap-2 px-0.5">
-              <span className="text-[9px] font-bold uppercase tracking-[1px] text-ink-faint">
-                Bar {barIdx + 1}
-              </span>
-              <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
-            </div>
-            {bar.map((beat) => {
-              const inBeat = placedCounts.filter((c) => c >= beat && c < beat + 1);
+      {/* The column grid: sticky count column + one column per applicable kind. */}
+      <div className="overflow-x-auto">
+        <table className="w-max border-separate border-spacing-y-1" aria-label="Step grid">
+          <thead>
+            <tr>
+              <th scope="col" className="sticky left-0 z-10 bg-surface">
+                <span className="bf-sr-only">Count</span>
+              </th>
+              {columns.map((col) => (
+                <th
+                  key={col.id}
+                  scope="col"
+                  className="px-1.5 pb-1 text-center text-[10px] font-bold"
+                  style={{ color: columnColor(col) }}
+                >
+                  {col.label}
+                  {col.isStep && <span aria-hidden="true">*</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rowCounts.map((count) => {
+              const offBeat = isOffBeatCount(count);
+              const here = filterByRoleView(byCount.get(count) ?? [], view);
               return (
-                <div key={beat} className="flex items-start gap-2.5">
-                  <button
-                    type="button"
-                    aria-label={`beat ${beat}`}
-                    onClick={() => open(beat)}
-                    className={cx(
-                      "mt-0.5 flex size-[26px] flex-none cursor-pointer items-center justify-center",
-                      "rounded-full bg-surface-sunken text-sm font-bold tabular-nums text-ink",
-                    )}
-                  >
-                    {beat}
-                  </button>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    {inBeat.length === 0 ? (
-                      editable ? (
-                        <AddStep onClick={() => open(beat)} label="Add step" />
-                      ) : null
-                    ) : (
-                      inBeat.map((c) => (
-                        <StepCard
-                          key={c}
-                          count={c}
-                          isLast={placedCounts.indexOf(c) === placedCounts.length - 1}
-                          duration={stepDuration(c, placedCounts)}
-                          attrs={filterByRoleView(byCount.get(c) ?? [], view)}
-                          laneKinds={laneKinds}
-                          editable={editable}
-                          selected={openCount === c}
-                          snap={snap}
-                          onOpen={(expanded) => open(c, expanded)}
-                          onResize={(d) => resize(c, d)}
-                        />
-                      ))
-                    )}
-                    {/* Off-beat add: next grid position after this beat. */}
-                    {editable && inBeat.length > 0 && (
-                      <AddStep
-                        onClick={() => open(snapTo(Math.max(...inBeat) + snap))}
-                        label="Add off-beat"
-                        subtle
+                <tr key={count}>
+                  <th scope="row" className="sticky left-0 z-10 bg-surface p-0 pr-1.5 align-middle">
+                    <CountCell
+                      count={count}
+                      offBeat={offBeat}
+                      selected={openCount === count}
+                      onOpen={() => open(count)}
+                    />
+                  </th>
+                  {columns.map((col) => (
+                    <td key={col.id} className="px-0.5 align-middle">
+                      <GridCell
+                        column={col}
+                        count={count}
+                        label={cellValue(here, col)}
+                        offBeat={offBeat}
+                        editable={editable}
+                        color={colorByKind.get(col.kind)}
+                        onOpen={() => open(count, !col.isStep)}
                       />
-                    )}
-                  </div>
-                </div>
+                    </td>
+                  ))}
+                </tr>
               );
             })}
-          </section>
-        ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* The per-count editor (design: a step-detail tag sheet). */}
+      {/* Add a sub-beat ("in-between timing") — frame 1.11's dashed affordance +
+          on-count chooser. */}
+      {editable && offBeatChoices.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            aria-expanded={chooserOpen}
+            onClick={() => setChooserOpen((o) => !o)}
+            className="flex items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border-strong py-2.5 text-2xs font-bold text-ink-muted"
+          >
+            <PlusIcon size={12} />
+            add an in-between timing
+          </button>
+          {chooserOpen && (
+            <div className="flex flex-wrap gap-1.5">
+              {offBeatChoices.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-label={`add in-between count ${countLabel(c)}`}
+                  onClick={() => {
+                    setChooserOpen(false);
+                    open(c);
+                  }}
+                  className="min-h-[32px] rounded-md bg-surface-sunken px-3 text-2xs font-bold tabular-nums text-ink"
+                >
+                  {countLabel(c)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Helper caption (frame 1.11). */}
+      <p className="text-2xs italic text-ink-faint">
+        tap a cell to add / edit · * required · scroll → Head &amp; custom types
+      </p>
+
+      {/* Always-visible per-count recap (the headline word + this count's value
+          words). The grid's cells are abbreviated; this readable recap is what the
+          authoring journey reads (step-headline-N, "count N attributes") — present
+          as soon as the figure opens, without first opening the editor. */}
+      {rowCounts.map((count) => {
+        const here = filterByRoleView(byCount.get(count) ?? [], view);
+        if (here.length === 0) return null;
+        const direction = here.find((a) => a.kind === "direction");
+        const slots = here.filter((a) => a.kind !== "direction");
+        return (
+          <div
+            key={`detail-${count}`}
+            data-testid={`step-detail-${count}`}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
+              {countLabel(count)}
+            </span>
+            <span data-testid={`step-headline-${count}`} className="text-2xs font-bold text-ink">
+              {stepAction(direction?.value)}
+            </span>
+            <ul
+              aria-label={`count ${count} attributes`}
+              className="flex flex-wrap items-center gap-2"
+            >
+              {slots.map((a) => (
+                <li key={a.id} className="text-2xs text-ink-muted">
+                  {humanize(a.value)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+
+      {/* The per-count editor (frame 1.12), opened by tapping a count/cell. */}
       {openCount !== null && (
         <Card>
-          {(() => {
-            const here = filterByRoleView(byCount.get(openCount) ?? [], view);
-            const direction = here.find((a) => a.kind === "direction");
-            const slots = here.filter((a) => a.kind !== "direction");
-            return (
-              <div
-                data-testid="step-summary"
-                className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3"
-              >
-                <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold text-ink">
-                  {countLabel(openCount)}
-                </span>
-                <span className="text-2xs font-bold text-ink">{stepAction(direction?.value)}</span>
-                <span className="text-2xs text-ink-muted">
-                  {durationLabel(stepDuration(openCount, placedCounts))}
-                </span>
-                {slots.map((a) => (
-                  <span
-                    key={a.id}
-                    className="text-2xs text-ink-muted"
-                    style={{ color: tokenForTone(chipTone(a.kind), "ink") }}
-                  >
-                    {humanize(a.value)}
-                  </span>
-                ))}
-              </div>
-            );
-          })()}
           <AttributeEditor
             key={`${openCount}-${openExpanded}`}
             count={openCount}
@@ -365,232 +371,91 @@ export function FigureTimeline({
   );
 }
 
-/** A token color for a chip tone (kind families or neutral). */
-function tokenForTone(tone: AttributeKind | "neutral", role: "base" | "ink" | "tint") {
-  if (tone === "neutral") {
-    return role === "tint" ? "var(--bf-surface-sunken)" : "var(--bf-ink-secondary)";
-  }
-  return kindVar(tone, role);
-}
-
-interface StepCardProps {
-  count: number;
-  isLast: boolean;
-  duration: number;
-  attrs: Attribute[];
-  laneKinds: RegistryKind[];
-  editable: boolean;
-  selected: boolean;
-  snap: SnapValue;
-  onOpen: (expanded: boolean) => void;
-  onResize: (duration: number) => void;
-}
-
-/** One step: headline + duration (resizable) + an attribute-chip lane. */
-function StepCard({
+/** The sticky left count cell — a tappable beat token (frame 1.11) that opens the
+ *  per-count editor (read-only for a viewer). The count column is tinted to the
+ *  direction family; off-beat rows read dimmed. */
+function CountCell({
   count,
-  isLast,
-  duration,
-  attrs,
-  laneKinds,
-  editable,
+  offBeat,
   selected,
-  snap,
   onOpen,
-  onResize,
-}: StepCardProps) {
-  const direction = attrs.find((a) => a.kind === "direction");
-  return (
-    <div
-      className={cx(
-        "flex flex-col gap-2 rounded-[11px] border bg-surface-sunken/60 p-2.5",
-        selected ? "border-accent" : "border-transparent",
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          data-testid={`step-headline-${count}`}
-          onClick={() => onOpen(false)}
-          className="min-w-0 flex-1 cursor-pointer truncate text-left text-xs font-bold text-ink"
-        >
-          {stepAction(direction?.value)}
-        </button>
-        <DurationPill
-          count={count}
-          duration={duration}
-          editable={editable && !isLast}
-          snap={snap}
-          onResize={onResize}
-        />
-      </div>
-      <ul className="flex flex-wrap items-center gap-1.5" aria-label={`count ${count} attributes`}>
-        {laneKinds.map((kind) => {
-          const here = attrs.filter((a) => a.kind === kind.kind);
-          if (here.length > 0) {
-            return here.map((a) => (
-              <li key={a.id}>
-                <AttrChip
-                  kind={kind}
-                  value={a.value}
-                  onClick={() => editable && onOpen(true)}
-                  editable={editable}
-                />
-              </li>
-            ));
-          }
-          return editable ? (
-            <li key={kind.kind}>
-              <GhostChip label={kind.label} onClick={() => onOpen(true)} />
-            </li>
-          ) : null;
-        })}
-      </ul>
-    </div>
-  );
-}
-
-/** A set attribute chip: KIND label + value, tinted to the kind family. */
-function AttrChip({
-  kind,
-  value,
-  onClick,
-  editable,
 }: {
-  kind: RegistryKind;
-  value: unknown;
-  onClick: () => void;
-  editable: boolean;
+  count: number;
+  offBeat: boolean;
+  selected: boolean;
+  onOpen: () => void;
 }) {
-  const tone = chipTone(kind.kind);
-  const style = {
-    background: tokenForTone(tone, "tint"),
-    borderColor: tone === "neutral" ? "var(--bf-border-strong)" : kindVar(tone),
-  };
-  const Tag = editable ? "button" : "span";
-  return (
-    <Tag
-      type={editable ? "button" : undefined}
-      onClick={editable ? onClick : undefined}
-      className={cx(
-        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5",
-        editable && "cursor-pointer",
-      )}
-      style={style}
-    >
-      <span
-        className="text-[7px] font-bold uppercase tracking-[0.5px]"
-        style={{ color: tokenForTone(tone, "base") }}
-      >
-        {shortKindLabel(kind.label)}
-      </span>
-      <span className="text-[10px] font-bold leading-none text-ink">{humanize(value)}</span>
-    </Tag>
-  );
-}
-
-/** A ghost add-chip for an empty attribute kind ("+ rise"). */
-function GhostChip({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button"
-      aria-label={`Add ${label}`}
-      onClick={onClick}
-      className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-dashed border-border-strong px-1.5 py-1 text-2xs font-bold text-ink-faint"
+      aria-label={`beat ${countLabel(count)}`}
+      onClick={onOpen}
+      className={cx(
+        "flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-md",
+        "text-sm font-bold tabular-nums",
+        selected && "ring-2 ring-accent",
+      )}
+      style={{
+        background: "var(--bf-kind-direction-tint)",
+        color: offBeat ? "var(--bf-offbeat-ink)" : "var(--bf-kind-direction-ink)",
+        opacity: offBeat ? 0.7 : undefined,
+      }}
     >
-      <PlusIcon size={8} />
-      <span className="lowercase">{shortKindLabel(label)}</span>
+      {countLabel(count)}
     </button>
   );
 }
 
-/** The duration pill — a resizable slider (keyboard + pointer drag). */
-function DurationPill({
+/** One grid cell: a filled AttrChip (Step = merged direction·footwork) or a faint
+ *  ＋ placeholder. Tapping a filled cell edits; tapping a ＋ adds. */
+function GridCell({
+  column,
   count,
-  duration,
+  label,
+  offBeat,
   editable,
-  snap,
-  onResize,
+  color,
+  onOpen,
 }: {
+  column: ReadingColumn;
   count: number;
-  duration: number;
+  label: string | null;
+  offBeat: boolean;
   editable: boolean;
-  snap: SnapValue;
-  onResize: (duration: number) => void;
+  color?: string;
+  onOpen: () => void;
 }) {
-  const label = durationLabel(duration);
+  const verb = label ? "Edit" : "Add";
+  const cellLabel = `${verb} ${column.label} at count ${countLabel(count)}`;
+  const content = label ? (
+    <AttrChip kind={column.kind} label={label} color={color} dimmed={offBeat} />
+  ) : (
+    <span
+      aria-hidden="true"
+      className="inline-flex items-center justify-center text-sm font-bold text-ink-faint"
+    >
+      ＋
+    </span>
+  );
+  const base = "flex min-h-[34px] w-[68px] items-center justify-center rounded-md";
+  const fillStyle = { background: label ? undefined : "var(--bf-surface-sunken)" };
   if (!editable) {
-    return (
-      <span className="flex-none rounded-md bg-surface px-1.5 py-0.5 text-2xs font-bold text-ink-muted">
-        {label}
-      </span>
+    // Read grid: values only, no add affordances.
+    return label ? (
+      <span className={base}>{content}</span>
+    ) : (
+      <span className={base} style={fillStyle} aria-hidden="true" />
     );
   }
-  // Pointer drag: ~24px per grid step; commit on each crossed step.
-  const onPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startDur = duration;
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => {
-      const steps = Math.round((ev.clientX - startX) / 24);
-      onResize(startDur + steps * snap);
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-  };
-  const onKeyDown = (e: ReactKeyboardEvent) => {
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-      e.preventDefault();
-      onResize(duration + snap);
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-      e.preventDefault();
-      onResize(duration - snap);
-    }
-  };
   return (
     <button
       type="button"
-      role="slider"
-      aria-label={`Resize step ${countLabel(count)}`}
-      aria-valuenow={duration}
-      aria-valuemin={snap}
-      aria-valuetext={label}
-      onPointerDown={onPointerDown}
-      onKeyDown={onKeyDown}
-      className="flex-none cursor-ew-resize touch-none rounded-md bg-surface px-1.5 py-0.5 text-2xs font-bold text-ink-muted"
+      aria-label={cellLabel}
+      onClick={onOpen}
+      className={cx(base, "cursor-pointer")}
+      style={fillStyle}
     >
-      {label}
-    </button>
-  );
-}
-
-/** A dashed "+ Add step" affordance for an empty beat / off-beat. */
-function AddStep({
-  onClick,
-  label,
-  subtle,
-}: {
-  onClick: () => void;
-  label: string;
-  subtle?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "flex items-center justify-center gap-1 rounded-[11px] border border-dashed border-border-strong py-2 text-2xs font-bold",
-        subtle ? "text-ink-faint" : "text-ink-muted",
-      )}
-    >
-      <PlusIcon size={12} />
-      {label}
+      {content}
     </button>
   );
 }
