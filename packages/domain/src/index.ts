@@ -54,7 +54,6 @@ export {
   libraryGroupsForDance,
 } from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
-export { resolve } from "./overlay";
 export {
   type Capabilities,
   type Capability,

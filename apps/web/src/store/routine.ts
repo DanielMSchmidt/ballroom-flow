@@ -2,8 +2,8 @@
 //
 // The ONLY thing components touch to read/edit a routine. It wraps Automerge +
 // the WS sync (DocConnection) behind a typed, reactive interface: open a
-// routine, fan out to its referenced figure docs, resolve variant overlays
-// (US-006), expose reactive reads + mutations + per-actor undo (US-010).
+// routine, fan out to its referenced figure docs (each carries its own
+// attributes), expose reactive reads + mutations + per-actor undo (US-010).
 // Components never import @automerge/automerge or the RPC client directly — an
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
@@ -26,7 +26,6 @@ import {
   type RoutineDoc,
   readRoutine,
   redoLastChange,
-  resolve,
   softDeleteAnnotation,
   softDeleteReply,
   softDeleteSection,
@@ -41,7 +40,6 @@ import {
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
-import { overlayFromAttributes } from "./overlay-diff";
 
 /**
  * Load status of a placement's figure (each figure is its own Automerge doc on
@@ -60,7 +58,7 @@ import { overlayFromAttributes } from "./overlay-diff";
  */
 export type FigureLoadStatus = "pending" | "loading" | "live" | "missing" | "error";
 
-/** A placement with its figure resolved to effective attributes (base ⊕ overlay). */
+/** A placement with its figure resolved to effective attributes (its own attributes). */
 export interface ResolvedPlacement {
   placement: Placement;
   /** The resolved figure when `status === "live"`, else null. */
@@ -299,7 +297,7 @@ function emptyRoutine(id: string): RoutineDoc {
 /**
  * Open a routine: connect to its DO, fan out to each referenced figure doc, and
  * return the reactive store. The figure connections load lazily as placements
- * reference them; overlays resolve on read.
+ * reference them; each figure carries its own attributes (no overlay resolution).
  */
 export async function openRoutine(
   routineId: string,
@@ -482,10 +480,6 @@ export async function openRoutine(
       // surfaces a genuine 'missing' for the read-only path).
       return "loading";
     }
-    const selfDoc = readFigureDoc(conn.current());
-    // A variant whose own doc loaded but whose base is still loading: resolveFigure
-    // returns null until the base arrives — that's still loading, not missing.
-    if (selfDoc?.baseFigureRef) return "loading";
     const state = conn.state();
     if (state === "live") return "missing"; // caught up, yet no content → gone/empty
     if (state === "closed") {
@@ -683,9 +677,10 @@ export async function openRoutine(
         });
         return;
       }
-      // Copy-on-write: editing a global (app-owned library) figure spawns an owned
-      // variant, re-points the placement, and stores the edit as an overlay against
-      // the live base (US-035 / US-008). The base is untouched.
+      // Copy-on-write: editing a global (app-owned library) figure spawns an owned,
+      // FROZEN copy that carries its OWN attributes (a snapshot, no overlay, no
+      // flow-up — §5.2 / §2.5.1 #14–18), re-points the placement, and stores the
+      // user's edited attributes directly. The base is untouched.
       const base = figure;
       const loc = findPlacement(figureRef);
       if (!loc) return;
@@ -695,28 +690,28 @@ export async function openRoutine(
       // M2: guard against duplicate orphan variants on rapid double-edits.
       if (cowInFlight.has(figureRef)) return;
       cowInFlight.add(figureRef);
-      // 1) Project the variant (account-figure row + variant DO seeded w/ base ref).
-      //    Only AFTER it succeeds do we write the overlay, re-point the placement,
-      //    and toast — so a failed POST never leaves the placement pointing at a
-      //    variant doc that was never created (consistent state; the edit drops).
+      // 1) Project the copy (account-figure row + copy DO seeded w/ base ref as
+      //    provenance). Only AFTER it succeeds do we write the attributes, re-point
+      //    the placement, and toast — so a failed POST never leaves the placement
+      //    pointing at a copy doc that was never created (consistent state; the
+      //    edit drops).
       createFigure({
         figureRef: variant.id,
         name: variant.name,
         dance: variant.dance,
         figureType: variant.figureType,
         routineId,
-        attributes: [],
+        attributes,
         baseFigureRef: base.id,
       })
         .then(() => {
           const conn = figureConn(variant.id);
-          // 2) Write the edit as an overlay against the live base — deferred until
-          //    the variant DO's catch-up replay has been applied (#202 / C1). Without
-          //    onceLive the overlay races the empty server seed: both writes are
-          //    causally independent, so ~50% of the time the server's empty overlay
-          //    wins and the user's edit is silently lost. With onceLive the client
-          //    write lands causally AFTER the seed, so it always wins.
-          const overlay = overlayFromAttributes(base.attributes, attributes);
+          // 2) Write the user's edited attributes directly onto the copy — deferred
+          //    until the copy DO's catch-up replay has been applied (#202 / C1).
+          //    Without onceLive the write races the server seed: both writes are
+          //    causally independent, so ~50% of the time the server's seed wins and
+          //    the user's edit is silently lost. With onceLive the client write
+          //    lands causally AFTER the seed, so it always wins.
           conn.onceLive(() => {
             conn.change((draft) => {
               draft.id = variant.id;
@@ -726,9 +721,8 @@ export async function openRoutine(
               draft.figureType = variant.figureType;
               draft.dance = variant.dance;
               draft.name = variant.name;
-              draft.baseFigureRef = base.id;
-              draft.overlay = overlay;
-              draft.attributes = [];
+              draft.baseFigureRef = base.id; // provenance only — frozen, no overlay
+              draft.attributes = attributes;
               draft.schemaVersion = base.schemaVersion;
               draft.deletedAt = null;
             });
@@ -857,7 +851,8 @@ export async function openRoutine(
     return null;
   }
 
-  /** Resolve a placement's figure: a variant (baseFigureRef + overlay) resolves to base ⊕ overlay. */
+  /** Resolve a placement's figure: a figure's effective content is its OWN attributes
+   *  (frozen copies carry their own attributes — no live overlay against a base). */
   function resolveFigure(figureRef: string): FigureDoc | null {
     // A just-minted figure whose server-side create is still in flight: render it
     // as loading (null) WITHOUT opening its DO — opening now would race the seed
@@ -868,29 +863,12 @@ export async function openRoutine(
     const conn = eagerFigures ? figureConn(figureRef) : (figureConns.get(figureRef) ?? null);
     const figure = conn ? readFigureDoc(conn.current()) : null;
     if (!figure) {
-      // No live content. In lazy mode fall back to the snapshot's resolved figure
-      // (already base ⊕ overlay, server-side); in eager mode it's simply loading.
+      // No live content. In lazy mode fall back to the snapshot; in eager mode
+      // it's simply loading.
       return eagerFigures ? null : (figureContent?.(figureRef) ?? null);
     }
-    if (figure.baseFigureRef && figure.overlay) {
-      // A live variant: open its base too (even in lazy mode — only for an
-      // actively-open variant) so it resolves live; until the base hydrates, fall
-      // back to the snapshot's already-resolved copy rather than flashing empty.
-      const base = readFigureDoc(figureConn(figure.baseFigureRef).current());
-      if (base) {
-        // resolve() returns the BASE's identity by contract (overlay.ts) — stamp
-        // the variant's own identity back so re-points/edits target the variant doc.
-        return {
-          ...resolve(base, figure.overlay),
-          id: figure.id,
-          scope: figure.scope,
-          ownerId: figure.ownerId,
-          source: figure.source,
-          baseFigureRef: figure.baseFigureRef,
-        };
-      }
-      return eagerFigures ? null : (figureContent?.(figureRef) ?? figure);
-    }
+    // A figure's content is its own attributes — a copy is a frozen snapshot, so
+    // there is no base resolution (§5.2). `baseFigureRef` is provenance only.
     return figure;
   }
 

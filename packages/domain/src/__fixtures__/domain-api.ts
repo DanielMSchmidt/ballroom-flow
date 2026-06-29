@@ -27,7 +27,6 @@ import type {
   DanceId,
   FigureDoc,
   MembershipRole,
-  Overlay,
   Placement,
   RoutineDoc,
 } from "./types";
@@ -102,9 +101,6 @@ export interface DomainApi {
   softDeleteSection(doc: DocHandle, sectionId: string): DocHandle;
   softDeleteAttribute(doc: DocHandle, attributeId: string): DocHandle;
   addSection(doc: DocHandle, section: { name: string }): DocHandle;
-
-  // US-006 overlay.ts
-  resolve(base: FigureDoc, overlay: Overlay): FigureDoc;
 
   // US-007 / US-008 fork.ts
   cloneRoutine(doc: DocHandle, opts: { byUser: string }): DocHandle;

@@ -11,12 +11,13 @@ import { type OpenOptions, openRoutine } from "./routine";
 // US-017 — store/ seam (multi-doc) [M2, system]
 // PLAN §6.1/§6.2, D6, §10.2: the typed store seam wraps Automerge: opening a
 // routine connects to the routine doc's DO then to each referenced figure
-// doc's DO; resolves variant overlays client-side; exposes typed reactive reads
-// + mutations + history-based undo. Components import ONLY from store/.
+// doc's DO; each figure carries its own attributes (frozen copies — no overlay);
+// exposes typed reactive reads + mutations + history-based undo. Components import
+// ONLY from store/.
 //
 // The store wraps the WS sync via an injectable SocketFactory — these tests
 // drive a FAKE socket (jsdom has no WS server) and feed it the change frames a
-// DO would replay, so the seam's multi-doc load + overlay resolve + reactive
+// DO would replay, so the seam's multi-doc load + figure reads + reactive
 // reads/undo are exercised for real. (Live multi-doc sync over real DOs is the
 // worker doc-do.test.ts + the #116 wrangler-dev smoke.)
 // ─────────────────────────────────────────────────────────────────────────
@@ -254,10 +255,11 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
 });
 
 describe("US-017 store/ seam (multi-doc)", () => {
-  it("loads a routine doc + each referenced figure doc and resolves variant overlays", async () => {
+  it("loads a routine doc + each referenced figure doc, each carrying its own attributes", async () => {
     // Intent: opening a routine fans out to the routine DO + each referenced
-    //   figure DO and resolves variant overlays client-side via resolve().
-    // Covers US-017 AC-1 (connect routine + figure docs) + AC-2 (overlays resolve).
+    //   figure DO; a frozen copy carries its OWN attributes (no overlay, no base
+    //   fan-out resolution — §5.2). `baseFigureRef` is provenance only.
+    // Covers US-017 AC-1 (connect routine + figure docs) + AC-2 (figure content read).
     const { opts, sockets } = fakeWiring();
     const store = await openRoutine("rt_sample", opts);
     expect(Array.isArray(store.readPlacements())).toBe(true);
@@ -272,7 +274,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
     sockets.get("rt_sample")?.fireCaughtUp();
     expect(store.syncState()).toBe("live");
 
-    // The routine DO replays a section with a placement referencing variant "fv".
+    // The routine DO replays a section with a placement referencing the copy "fv".
     const routineFull = buildRoutineDoc({
       id: "rt_sample",
       title: "Sample",
@@ -292,9 +294,9 @@ describe("US-017 store/ seam (multi-doc)", () => {
     });
     sockets.get("rt_sample")?.load(routineFull);
 
-    // Reading placements opens the variant figure's connection (the placement
-    // references "fv"). Load the variant — once it reports a baseFigureRef, the
-    // next read opens the base figure's connection, which we then load too.
+    // Reading placements opens the copy figure's connection (the placement
+    // references "fv"). Load it — a frozen copy carries its OWN attributes, with
+    // `baseFigureRef` as provenance only (no base resolution).
     store.readPlacements();
     const varFull = buildFigureDoc(
       aFigure({
@@ -302,30 +304,17 @@ describe("US-017 store/ seam (multi-doc)", () => {
         name: "My Turn",
         scope: "account",
         baseFigureRef: "fbase",
-        overlay: { overrides: { a1: "rise" }, tombstones: [], additions: [], rename: "My Turn" },
+        attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
       }) as FigureDoc,
     );
     sockets.get("fv")?.load(varFull);
 
-    // Reading again opens the base connection (fv now declares baseFigureRef).
-    store.readPlacements();
-    const baseFull = buildFigureDoc(
-      aFigure({
-        id: "fbase",
-        attributes: [{ id: "a1", kind: "rise", count: 1, value: "NFR", deletedAt: null }],
-      }) as FigureDoc,
-    );
-    sockets.get("fbase")?.load(baseFull);
-
     const resolved = store.readPlacements();
     expect(resolved).toHaveLength(1);
-    // The variant resolved to base ⊕ overlay (US-006): the base attribute a1 is
-    // present with the overlay's overridden value, and the variant rename applies.
-    // (resolve keeps base identity + variant name — the hybrid-identity contract.)
+    // The copy resolves to its OWN attributes + name — no base fan-out.
     expect(resolved[0]?.figure?.attributes.find((x) => x.id === "a1")?.value).toBe("rise");
     expect(resolved[0]?.figure?.name).toBe("My Turn");
-    // The resolved variant must carry the VARIANT's identity, not the base's
-    // (resolve() returns base identity by contract — the store stamps it back).
+    // The copy keeps its own identity and its provenance ref.
     const rp = store.readPlacements().find((p) => p.placement.figureRef === "fv");
     expect(rp?.figure?.id).toBe("fv");
     expect(rp?.figure?.baseFigureRef).toBe("fbase");
@@ -551,14 +540,13 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 
-  it("C1: onceLive defers the variant overlay write until after the DO seed replay, preventing silent edit loss", async () => {
+  it("C1: onceLive defers the copy's attribute write until after the DO seed replay, preventing silent edit loss", async () => {
     // Without onceLive, conn.change fires on an A.init() doc immediately in .then(),
-    // BEFORE the variant DO's catch-up replay has been applied. When the DO's empty
-    // seed overlay arrives and is applied via applyChanges, the two writes are
-    // causally independent — Automerge resolves the conflict non-deterministically
-    // (~50% of the time the server's empty overlay wins → the user's "T" edit is
-    // silently lost). With onceLive the client write lands causally AFTER the seed,
-    // so it always wins (C1).
+    // BEFORE the copy DO's catch-up replay has been applied. When the DO's seed
+    // arrives and is applied via applyChanges, the two writes are causally
+    // independent — Automerge resolves the conflict non-deterministically (~50% of
+    // the time the server seed wins → the user's "T" edit is silently lost). With
+    // onceLive the client write lands causally AFTER the seed, so it always wins (C1).
     const { opts, sockets } = fakeWiring();
     const created: Array<{ figureRef: string; baseFigureRef?: string }> = [];
     const createFigure = vi.fn(async (m: { figureRef: string; baseFigureRef?: string }) => {
@@ -619,10 +607,12 @@ describe("US-017 store/ seam (multi-doc)", () => {
     await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
     const variantRef = created[0]?.figureRef as string;
 
-    // Simulate the server seed of the variant DO: POST /api/figures seeds the DO
-    // with an EMPTY overlay (no overrides). Without onceLive, conn.change already
-    // ran on an A.init() doc, making the T-overlay and the empty-seed concurrent.
-    // With onceLive the T-overlay fires here (causally after fireCaughtUp), so T wins.
+    // Simulate the server seed of the copy DO: POST /api/figures seeds the DO as a
+    // FROZEN copy carrying its OWN attributes (the forwarded edit — count-1 "T"),
+    // with `baseFigureRef` as provenance only (no overlay). Without onceLive,
+    // conn.change already ran on an A.init() doc, making the client write and the
+    // seed concurrent. With onceLive the client write fires here (causally after
+    // fireCaughtUp), so the "T" attribute always wins.
     const seeded = buildFigureDoc({
       id: variantRef,
       scope: "account",
@@ -631,21 +621,20 @@ describe("US-017 store/ seam (multi-doc)", () => {
       dance: "foxtrot",
       name: "Feather",
       source: "custom",
-      attributes: [],
+      attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }],
       baseFigureRef: "fg",
-      overlay: { overrides: {}, tombstones: [], additions: [] },
       schemaVersion: 1,
       deletedAt: null,
     });
 
-    // Drive the variant socket: open → seed replay → caught-up.
+    // Drive the copy socket: open → seed replay → caught-up.
     // onceLive fires on fireCaughtUp: the deferred conn.change runs here,
-    // causally on top of the seed → the "T" overlay always wins.
+    // causally on top of the seed → the "T" attribute always wins.
     sockets.get(variantRef)?.fireOpen();
     sockets.get(variantRef)?.load(seeded);
     sockets.get(variantRef)?.fireCaughtUp();
 
-    // The re-pointed placement now resolves base ⊕ overlay: count-1 must be "T".
+    // The re-pointed placement now reads the copy's OWN attributes: count-1 = "T".
     await vi.waitFor(() => {
       const rp = store.readPlacements().find((p) => p.placement.figureRef === variantRef);
       expect(rp?.figure?.attributes.find((a) => a.id === "b1")?.value).toBe("T");

@@ -82,10 +82,11 @@ describe("US-005 Routine + figure document schemas", () => {
 
   // ── Extra edge cases (in the spirit of US-005, beyond the listed ACs) ──
 
-  it("round-trips a variant figure's baseFigureRef + overlay", async () => {
-    // Intent: variant fields (overlay overrides/tombstones/additions/rename) and
-    // baseFigureRef survive the Automerge build/read round-trip (US-006 depends
-    // on this).
+  it("round-trips a figure's baseFigureRef + legacy overlay field", async () => {
+    // Intent: a figure's `baseFigureRef` provenance survives the Automerge
+    // build/read round-trip, and the LEGACY `overlay` field (retained only for
+    // old persisted docs — no longer resolved, §2.5.1 #14) round-trips
+    // structurally so a pre-reconciliation doc still reads back intact.
     const { buildFigureDoc, readFigure } = await importDomain();
     const variant = {
       ...FEATHER_FOXTROT,

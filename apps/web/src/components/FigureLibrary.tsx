@@ -58,7 +58,7 @@ export function FigureLibrary({
               <Card>
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="font-medium text-ink">{f.title ?? f.figureType}</h2>
-                  <Badge tone="accent">{f.baseFigureRef ? "Variant" : "Custom"}</Badge>
+                  <Badge tone="accent">Custom</Badge>
                 </div>
                 <p className="mt-0.5 text-2xs text-ink-faint">
                   used in {f.usedInCount} {f.usedInCount === 1 ? "routine" : "routines"}

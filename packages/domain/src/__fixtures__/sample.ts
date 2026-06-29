@@ -4,14 +4,14 @@
 // (incl. a variant) defined once and reused").
 //
 // This is the canonical fixture every layer leans on:
-//   • domain  — overlay/fork/figureType-resolution inputs;
+//   • domain  — fork/copy/figureType-resolution inputs;
 //   • worker  — seedDb(...) projects these into D1 + seeded Automerge docs;
 //   • E2E      — start-from-template / sample-routine journeys (US-045) mirror it.
 //
 // It deliberately includes a cross-dance figure family (Feather in Foxtrot AND
-// Waltz, same `figureType`), a global figure, and an account VARIANT of a
-// global figure — the minimum to exercise inheritance (US-006), copy-on-write
-// (US-008), and figureType note resolution across dances (US-011/040/041).
+// Waltz, same `figureType`), a global figure, and a frozen account COPY of a
+// global figure — the minimum to exercise copy-on-write (US-008) and figureType
+// note resolution across dances (US-011/040/041).
 //
 // Frozen so a test can never mutate the shared fixture (each test should clone
 // via the factories if it needs to mutate). Treat as READ-ONLY.
@@ -19,7 +19,6 @@
 import {
   makeAttribute,
   makeFigureDoc,
-  makeOverlay,
   makePlacement,
   makeRoutineDoc,
   makeSection,
@@ -73,10 +72,13 @@ export const THREE_STEP_FOXTROT: Readonly<FigureDoc> = Object.freeze(
   }),
 );
 
-// ── Account variant ─────────────────────────────────────────────────────
-// SAMPLE_STUDENT's variant of the global Foxtrot Feather: overrides count-2's
-// value, drops count-3, adds a sway. Inherits figureType `feather` + dance
-// `foxtrot` from the base (US-006/US-011).
+// ── Account copy (frozen) ─────────────────────────────────────────────────
+// SAMPLE_STUDENT's choreo-owned copy of the global Foxtrot Feather. It is a
+// FROZEN SNAPSHOT carrying its OWN attributes (§5.2, §2.5.1 #14–18): it has
+// re-valued count-2, dropped count-3, and added a sway relative to the base, but
+// stores those as plain attributes — there is no live overlay and no flow-up.
+// `baseFigureRef` is provenance only. Inherits figureType `feather` + dance
+// `foxtrot` from the base it was copied from (US-011).
 export const STUDENT_FEATHER_VARIANT: Readonly<FigureDoc> = Object.freeze(
   makeFigureDoc({
     id: "fig_feather_variant_student",
@@ -86,14 +88,12 @@ export const STUDENT_FEATHER_VARIANT: Readonly<FigureDoc> = Object.freeze(
     dance: "foxtrot",
     name: "My Feather",
     source: "custom",
-    attributes: [],
-    baseFigureRef: FEATHER_FOXTROT.id,
-    overlay: makeOverlay({
-      overrides: { a_ff_2: "TH" },
-      tombstones: ["a_ff_3"],
-      additions: [makeAttribute({ id: "a_var_sway", kind: "sway", count: 2, value: "to_L" })],
-      rename: "My Feather",
-    }),
+    attributes: [
+      makeAttribute({ id: "a_ff_1", kind: "footwork", count: 1, value: "HT" }),
+      makeAttribute({ id: "a_ff_2", kind: "footwork", count: 2, value: "TH" }),
+      makeAttribute({ id: "a_var_sway", kind: "sway", count: 2, value: "to_L" }),
+    ],
+    baseFigureRef: FEATHER_FOXTROT.id, // provenance only — frozen, no overlay
   }),
 );
 
