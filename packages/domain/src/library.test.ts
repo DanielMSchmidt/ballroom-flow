@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
 import {
   figureMatchesLibraryOrigin,
+  globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
   libraryFiguresForDance,
   libraryGroupsForDance,
+  libraryGroupsForFilter,
 } from "./library";
 import { parseAttributeWrite } from "./schemas";
 
@@ -75,6 +77,39 @@ describe("figure library catalog", () => {
       for (const a of f.attributes ?? []) {
         expect(() => parseAttributeWrite(a, { dance: f.dance })).not.toThrow();
       }
+    }
+  });
+});
+
+describe("globalFigureRef — canonical provenance ref for a catalog figure (T5)", () => {
+  it("encodes (dance, figureType) as a stable global: ref", () => {
+    // The save-to-library promotion records this as the frozen copy's baseFigureRef
+    // (PLAN §5.2, provenance only). It must be deterministic for idempotency.
+    expect(globalFigureRef("waltz", "natural-turn")).toBe("global:waltz:natural-turn");
+    expect(globalFigureRef("foxtrot", "feather-step")).toBe("global:foxtrot:feather-step");
+  });
+
+  it("distinguishes the same figureType across dances (cross-dance identity)", () => {
+    // A Feather in Foxtrot vs Quickstep is its own global FigureDoc (§2.2), so the
+    // refs must differ — saving the Foxtrot one must not dedupe against the Quickstep one.
+    expect(globalFigureRef("foxtrot", "feather")).not.toBe(globalFigureRef("quickstep", "feather"));
+  });
+});
+
+describe("libraryGroupsForFilter — global browse grouping incl. the All filter (T5)", () => {
+  it("groups a single dance like libraryGroupsForDance", () => {
+    expect(libraryGroupsForFilter("waltz")).toEqual(libraryGroupsForDance("waltz"));
+  });
+
+  it("groups every dance's figures by figureType when filter = all", () => {
+    const all = libraryGroupsForFilter("all");
+    // The All view spans all five dances — a figureType family can hold figures of
+    // several dances (the cross-dance identity).
+    const dances = new Set(all.flatMap((g) => g.figures.map((f) => f.dance)));
+    expect(dances).toEqual(new Set(["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"]));
+    // Every figure in a group shares the group's figureType.
+    for (const g of all) {
+      expect(g.figures.every((f) => f.figureType === g.figureType)).toBe(true);
     }
   });
 });
