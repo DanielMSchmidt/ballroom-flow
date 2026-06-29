@@ -22,11 +22,26 @@ test.describe("@smoke figure library", () => {
     await page.goto("/");
 
     // 1. Browse the library (US-032): the Library tab lists a dance's figures.
+    //    The dance filter is a chip row (frames 2.1/2.2) — pick the Foxtrot chip.
     await page.getByRole("button", { name: "Library" }).click();
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await expect(page.getByRole("heading", { name: /feather step/i })).toBeVisible({
+    await page
+      .getByRole("group", { name: /filter by dance/i })
+      .getByRole("button", { name: /^foxtrot$/i })
+      .click();
+    await expect(page.getByRole("heading", { name: /feather step/i }).first()).toBeVisible({
       timeout: 15_000,
     });
+
+    // 1b. Save a global figure to the personal library (T5) and confirm it lands in
+    //     "My figures" (a frozen account-figure copy — PLAN §5.2).
+    await page.getByRole("button", { name: /save/i }).first().click();
+    await expect(page.getByText(/saved to your library/i)).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("tab", { name: /my figures/i }).click();
+    await expect(page.getByText(/used in 0 routines/i).first()).toBeVisible({ timeout: 15_000 });
+    // Re-saving the same figure is idempotent — no duplicate, a gentle toast instead.
+    await page.getByRole("tab", { name: /^all$/i }).click();
+    await page.getByRole("button", { name: /save/i }).first().click();
+    await expect(page.getByText(/already in your library/i)).toBeVisible({ timeout: 15_000 });
 
     // 2. Create a Foxtrot routine and add the Feather Step FROM the library.
     await page.getByRole("button", { name: "Choreo" }).click();

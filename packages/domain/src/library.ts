@@ -71,6 +71,34 @@ export function libraryGroupsForDance(dance: DanceId): LibraryGroup[] {
   return [...groups.values()];
 }
 
+/**
+ * The canonical provenance ref for a global-catalog figure (T5 / PLAN §5.2). A
+ * bundled catalog figure has no Automerge URL of its own (it's reference data, not
+ * a DO), so the cross-dance identity `(dance × figureType)` is its stable id — the
+ * value recorded as a saved copy's `baseFigureRef` (provenance only) and used to
+ * make "save to my library" idempotent.
+ */
+export function globalFigureRef(dance: DanceId, figureType: string): string {
+  return `global:${dance}:${figureType}`;
+}
+
+/**
+ * The grouped global browse for one filter: a specific dance (delegates to
+ * {@link libraryGroupsForDance}) or `"all"` — every dance's figures grouped by
+ * figureType, preserving first-seen order. The Library tab's "All" chip renders
+ * this; a figureType family can then span several dances (cross-dance identity).
+ */
+export function libraryGroupsForFilter(filter: DanceId | "all"): LibraryGroup[] {
+  if (filter !== "all") return libraryGroupsForDance(filter);
+  const groups = new Map<string, LibraryGroup>();
+  for (const figure of LIBRARY_FIGURES) {
+    const group = groups.get(figure.figureType);
+    if (group) group.figures.push(figure);
+    else groups.set(figure.figureType, { figureType: figure.figureType, figures: [figure] });
+  }
+  return [...groups.values()];
+}
+
 // Compare two attributes by their meaning (kind/count/role/value), ignoring ids and the
 // deletedAt marker — a picked figure copies the library's attribute ids verbatim, but we
 // want a content comparison, not an identity one.

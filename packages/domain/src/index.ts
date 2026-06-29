@@ -47,11 +47,13 @@ export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export {
   figureMatchesLibraryOrigin,
+  globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
   type LibraryGroup,
   libraryFiguresForDance,
   libraryGroupsForDance,
+  libraryGroupsForFilter,
 } from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export {
