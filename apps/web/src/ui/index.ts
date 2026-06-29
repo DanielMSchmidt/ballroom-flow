@@ -20,6 +20,7 @@ export { List, ListRow, type ListRowProps } from "./List";
 export { Modal, type ModalAction, type ModalProps } from "./Modal";
 export { OfflineState, type OfflineStateProps } from "./OfflineState";
 export { ScopeBadge, type ScopeBadgeProps } from "./ScopeBadge";
+export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";
 export { Select, type SelectOption, type SelectProps } from "./Select";
 export { Sheet, type SheetProps } from "./Sheet";
 export { Skeleton, type SkeletonProps, SkeletonRow } from "./Skeleton";
