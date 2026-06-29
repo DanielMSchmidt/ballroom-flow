@@ -483,6 +483,7 @@ export function Assemble({
               attributes={notatingFigure.attributes}
               roleView={roleView}
               onRoleViewChange={setRoleView}
+              scopeLabel={routine.title || notatingFigure.name}
               customKinds={store.customKinds()}
               figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>

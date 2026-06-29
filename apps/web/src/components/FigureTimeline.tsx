@@ -83,6 +83,8 @@ export interface FigureTimelineProps {
   onForkIntoVariant?: () => void;
   /** The base figure's display name, for the "Variant of …" lineage badge. */
   baseName?: string;
+  /** The choreo/figure name, for the attribute info sheet footer (frame 1.13). */
+  scopeLabel?: string;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -101,6 +103,7 @@ export function FigureTimeline({
   figureScope,
   onForkIntoVariant,
   baseName,
+  scopeLabel,
 }: FigureTimelineProps) {
   const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
@@ -352,6 +355,8 @@ export function FigureTimeline({
             customKinds={customKinds}
             defaultExpanded={openExpanded}
             value={byCount.get(openCount) ?? []}
+            figureAttributes={attrs}
+            scopeLabel={scopeLabel}
             onChange={(next) => onCountChange(openCount, next)}
           />
         </Card>

@@ -20,8 +20,9 @@ import {
   type RegistryKind,
 } from "@ballroom/domain";
 import { type FormEvent, useState } from "react";
-import { Button, Chip, Input } from "../ui";
+import { Button, Chip, IconButton, InfoIcon, Input } from "../ui";
 import type { MembershipRole } from "./Assemble";
+import { AttributeInfoSheet } from "./AttributeInfoSheet";
 
 export interface AttributeEditorProps {
   /** The float count these attributes sit on. */
@@ -39,6 +40,11 @@ export interface AttributeEditorProps {
   /** Start with the technique section ("More attributes") expanded — set when
    *  opened from a ghost add-chip for a non-identity kind. */
   defaultExpanded?: boolean;
+  /** The whole figure's attributes — used to count "Used in N steps" in the info
+   *  sheet (frame 1.13). Defaults to just this count's `value`. */
+  figureAttributes?: Attribute[];
+  /** The choreo/figure name for the info sheet's "across …" footer. */
+  scopeLabel?: string;
   /** Emits the next attribute set for this count after an edit. */
   onChange?: (next: Attribute[]) => void;
 }
@@ -59,10 +65,21 @@ export function AttributeEditor({
   value = [],
   customKinds = [],
   defaultExpanded = false,
+  figureAttributes,
+  scopeLabel,
   onChange,
 }: AttributeEditorProps) {
   const editable = role === "editor";
   const [showMore, setShowMore] = useState(defaultExpanded);
+  // The kind whose info reference is open (frame 1.13), or null.
+  const [infoKind, setInfoKind] = useState<RegistryKind | null>(null);
+  // "Used in N steps": distinct counts that carry a (live) value of this kind,
+  // across the whole figure when provided (else just this count's value).
+  const usageFor = (k: string): number => {
+    const source = figureAttributes ?? value;
+    return new Set(source.filter((a) => a.deletedAt == null && a.kind === k).map((a) => a.count))
+      .size;
+  };
   const live = value.filter((a) => a.deletedAt == null);
   const selected = (kind: string, v: string): boolean =>
     live.some((a) => a.kind === kind && normalizeValue(kind, String(a.value)) === v);
@@ -107,8 +124,12 @@ export function AttributeEditor({
       // both `getByRole("heading")` (the <h3>) and `getByRole("group", { name })`
       // resolve per kind (US-029).
       <fieldset key={kind.kind} className="flex flex-wrap items-center gap-1">
-        <legend className="mb-1 w-full">
+        <legend className="mb-1 flex w-full items-center gap-1">
           <h3 className="text-2xs font-bold text-ink-faint">{kind.label}</h3>
+          {/* Per-kind info affordance → the plain-language reference (frame 1.13). */}
+          <IconButton label={`About ${kind.label}`} onClick={() => setInfoKind(kind)}>
+            <InfoIcon size={14} />
+          </IconButton>
         </legend>
 
         {[...suggestions, ...customSelected].map((v) => {
@@ -164,6 +185,18 @@ export function AttributeEditor({
           </Button>
           {showMore && secondary.map(renderKind)}
         </div>
+      )}
+
+      {/* The plain-language reference for one kind (frame 1.13), reachable from
+          every kind's info affordance. Registry-derived; works for custom kinds. */}
+      {infoKind && (
+        <AttributeInfoSheet
+          open
+          kind={infoKind}
+          usageCount={usageFor(infoKind.kind)}
+          scopeLabel={scopeLabel}
+          onClose={() => setInfoKind(null)}
+        />
       )}
     </section>
   );
