@@ -35,6 +35,7 @@
   --bf-ink-muted: #9a958c; /* muted labels / metadata (AA large only) */
   --bf-ink-faint: #c0bab0; /* faint hints (decorative, non-essential) */
   --bf-ink-inverse: #ffffff; /* text on charcoal surfaces */
+  --bf-offbeat-ink: #9aa7bb; /* off-beat count tokens (&,a,e,i) — muted slate (#5) */
 
   /* ---- Brand / interactive accent (studio blue) ---- */
   --bf-accent: #2f5d8f; /* default UI accent (links, focus, selected) */

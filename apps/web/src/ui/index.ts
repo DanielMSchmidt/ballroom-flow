@@ -10,6 +10,7 @@ export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from ".
 export { Card, type CardProps } from "./Card";
 export { Chip, type ChipProps, type ChipTone } from "./Chip";
 export { CountLabel, type CountLabelProps } from "./CountLabel";
+export { CountPill, type CountPillProps } from "./CountPill";
 export { cx } from "./cx";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Field, type FieldProps, type FieldRenderArgs } from "./Field";
