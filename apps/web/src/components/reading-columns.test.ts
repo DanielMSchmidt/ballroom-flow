@@ -2,7 +2,12 @@ import type { Attribute } from "@ballroom/domain";
 import { describe, expect, it } from "vitest";
 import { cellValue, isOffBeatCount, stepChipLabel, usedColumns } from "./reading-columns";
 
-const attr = (count: number, kind: string, value: unknown, role: Attribute["role"] = null): Attribute => ({
+const attr = (
+  count: number,
+  kind: string,
+  value: unknown,
+  role: Attribute["role"] = null,
+): Attribute => ({
   id: `${kind}-${count}-${String(value)}`,
   kind,
   count,
