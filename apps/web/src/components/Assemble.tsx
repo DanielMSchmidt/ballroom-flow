@@ -30,8 +30,10 @@ import { type FormEvent, useCallback, useEffect, useReducer, useState } from "re
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import { useMe } from "../store/me";
 import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
+import { useMembers } from "../store/share";
 import {
   Button,
   Card,
@@ -209,6 +211,12 @@ export function Assemble({
   // "read" lays the whole routine out as the clean read-only programme (frame
   // 1.6); "edit" is the section/figure builder (frames 1.7–1.9).
   const [mode, setMode] = useState<"edit" | "read">("edit");
+  // The anchor whose thread is open from the reading view (T8 QUAL-2 fix).
+  // When set, the thread sheet shows the AnnotationPanel for that step's anchor.
+  const [threadAnchor, setThreadAnchor] = useState<{
+    figureRef: string;
+    count: number;
+  } | null>(null);
   // The Leader/Follower lens for the reading view — persisted across routines.
   const [roleView, setRoleView] = useStoredRoleView();
   // Which sections are collapsed in the editing view (frame 1.9: ▾/▸).
@@ -375,7 +383,7 @@ export function Assemble({
             roleView={roleView}
             onRoleViewChange={setRoleView}
             onOpenFigure={(figureId) => setNotating(figureId)}
-            onOpenThread={(figureId) => setNotating(figureId)}
+            onOpenThread={(anchor) => setThreadAnchor(anchor)}
           />
         ) : routine.sections.length === 0 ? (
           // Empty state (frame 1.8): a freshly created/forked-empty routine.
@@ -446,6 +454,33 @@ export function Assemble({
           </>
         )}
       </div>
+
+      {/* Thread panel (T8 QUAL-2 fix): opens the annotation thread for a
+          specific step anchor from the reading view. Uses a child component so
+          the identity data hooks (useMe/useMembers) are only mounted when open. */}
+      <Sheet open={threadAnchor !== null} onClose={() => setThreadAnchor(null)} title="Thread">
+        {threadAnchor && (
+          <ThreadSheetContents
+            routineId={routineId}
+            anchor={threadAnchor}
+            annotations={store.readAnnotations()}
+            placements={store.readPlacements()}
+            role={role}
+            currentUserId={currentUserId}
+            onCreate={({ kind, text }) =>
+              store.createAnnotation({
+                kind,
+                text,
+                anchors: [
+                  { type: "point", figureRef: threadAnchor.figureRef, count: threadAnchor.count },
+                ],
+              })
+            }
+            onReply={(annotationId, text) => store.addReply(annotationId, text)}
+            onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+          />
+        )}
+      </Sheet>
 
       {/* Add a figure: mints a fresh owned custom figure + a placement (US-027). */}
       <Sheet
@@ -1234,5 +1269,94 @@ function AlignmentChips({ placement, figure }: { placement: Placement; figure: F
         </Chip>
       ))}
     </div>
+  );
+}
+
+// ── T8 Thread Sheet (QUAL-2 fix) ──────────────────────────────────────────────
+
+/**
+ * The annotation thread panel that opens when a user taps an inline comment or
+ * "+ add comment" in the reading view. Rendered only when the Sheet is open
+ * (the Sheet's `if (!open) return null` ensures this component is unmounted
+ * when closed). This lets the identity data hooks (useMe/useMembers) be called
+ * safely without touching the rest of the Assemble render tree.
+ *
+ * Author colour data path: `useMembers(routineId)` → `Member.identityColor`
+ * (T8 extended the members endpoint to LEFT JOIN users). Current user: `useMe`
+ * → `Me.identityColor`.
+ *
+ * Gap documented: the `InlineComments` author dots in RoutineReadingView still
+ * use the hash fallback (identityColor(authorId)). To fix those too would
+ * require threading authorColorMap through RoutineReadingView → FigureReadout
+ * → StepRow → InlineComments; deferred (dots in the panel use real colours).
+ */
+function ThreadSheetContents({
+  routineId,
+  anchor,
+  annotations,
+  placements,
+  role,
+  currentUserId,
+  onCreate,
+  onReply,
+  onDeleteReply,
+}: {
+  routineId: string;
+  anchor: { figureRef: string; count: number };
+  annotations: import("@ballroom/domain").Annotation[];
+  placements: ResolvedPlacement[];
+  role: MembershipRole;
+  currentUserId?: string;
+  onCreate: (input: { kind: import("@ballroom/domain").AnnotationKind; text: string }) => void;
+  onReply: (annotationId: string, text: string) => void;
+  onDeleteReply: (annotationId: string, replyId: string) => void;
+}) {
+  // Only called when the Sheet is open (component is mounted) — see note above.
+  const me = useMe();
+  const membersQ = useMembers(routineId);
+
+  // Build authorId → identity maps from the members list (T8 extended endpoint).
+  const authorColorMap: Record<string, string> = {};
+  const authorNameMap: Record<string, string> = {};
+  for (const m of membersQ.data?.members ?? []) {
+    if (m.identityColor) authorColorMap[m.userId] = m.identityColor;
+    if (m.displayName) authorNameMap[m.userId] = m.displayName;
+  }
+  // Current user's own identity (useMe — always real; overrides any member row).
+  const currentUserColor = me.data?.identityColor;
+  const currentUserName = me.data?.displayName;
+  if (currentUserId && currentUserColor) authorColorMap[currentUserId] = currentUserColor;
+  if (currentUserId && currentUserName) authorNameMap[currentUserId] = currentUserName;
+
+  // Thread title: "Figure Name · step N" (frame 1.14 header).
+  const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
+  const figureName = figure?.name ?? anchor.figureRef;
+  const threadTitle = `${figureName} · step ${anchor.count}`;
+
+  // Only annotations anchored to this exact step (point anchor).
+  const threadAnnotations = annotations.filter(
+    (a) =>
+      a.deletedAt == null &&
+      a.anchors.some(
+        (an) =>
+          an.type === "point" && an.figureRef === anchor.figureRef && an.count === anchor.count,
+      ),
+  );
+
+  return (
+    <AnnotationPanel
+      role={role}
+      currentUserId={currentUserId}
+      annotations={threadAnnotations}
+      composeAnchor={{ type: "point", figureRef: anchor.figureRef, count: anchor.count }}
+      threadTitle={threadTitle}
+      authorColorMap={authorColorMap}
+      authorNameMap={authorNameMap}
+      currentUserColor={currentUserColor}
+      currentUserName={currentUserName}
+      onCreate={onCreate}
+      onReply={onReply}
+      onDeleteReply={onDeleteReply}
+    />
   );
 }

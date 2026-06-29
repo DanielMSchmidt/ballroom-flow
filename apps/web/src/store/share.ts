@@ -9,10 +9,17 @@ import { apiDelete, apiGet, apiPost } from "../lib/rpc";
 /** A stored membership role (never "owner" — ownership isn't a membership row). */
 export type StoredRole = "editor" | "commenter" | "viewer";
 
-/** One member of a document, as the Share roster shows them. */
+/** One member of a document, as the Share roster shows them.
+ *  T8: `identityColor` + `displayName` are included when available (the server
+ *  joins `users` on the members query) so annotation threads can resolve real
+ *  identity colours without a separate fetch. */
 export interface Member {
   userId: string;
   role: StoredRole;
+  /** The member's stored identity colour hex (e.g. "#3b7dd8"). */
+  identityColor?: string;
+  /** The member's display name. */
+  displayName?: string;
 }
 
 interface MembersResponse {

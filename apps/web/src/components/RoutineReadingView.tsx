@@ -54,8 +54,10 @@ export function RoutineReadingView({
   onRoleViewChange: (view: RoleView) => void;
   /** Tap a figure name → Figure detail (existing open-figure flow). */
   onOpenFigure?: (figureId: string) => void;
-  /** Tap a comment / "+ add comment" → open the thread for that figure. */
-  onOpenThread?: (figureId: string) => void;
+  /** Tap a comment / "+ add comment" → open the annotation thread for that
+   *  anchor (QUAL-2 fix: passes the specific figureRef + count, not just the
+   *  figure id, so the caller can focus the panel on the right anchor). */
+  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const resolvedByPlacement = new Map(placements.map((p) => [p.placement.id, p]));
   const dance = routine.dance as DanceId;
@@ -136,7 +138,7 @@ function FigureReadout({
   annotations: Annotation[];
   canComment: boolean;
   onOpenFigure?: (figureId: string) => void;
-  onOpenThread?: (figureId: string) => void;
+  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   if (!figure) {
     // A loading figure shows a skeleton (never silently vanishes); a genuinely
@@ -264,7 +266,7 @@ function StepRow({
   comments: Annotation[];
   figureId: string;
   canComment: boolean;
-  onOpenThread?: (figureId: string) => void;
+  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const offBeat = isOffBeatCount(count);
   return (
@@ -295,6 +297,7 @@ function StepRow({
         <InlineComments
           comments={comments}
           figureId={figureId}
+          count={count}
           canComment={canComment}
           onOpenThread={onOpenThread}
         />
@@ -306,19 +309,24 @@ function StepRow({
 /** Inline comments under a step: the latest ~2 read-only (truncated,
  *  profile-colored dot + Caveat text), plus a "+ add comment" affordance shown
  *  only to a member who may comment (commenter/editor — never a pure viewer).
- *  Tapping any of them opens the thread. */
+ *  Tapping any of them opens the annotation thread for this specific anchor
+ *  (QUAL-2 fix: passes { figureRef, count } so the thread panel opens on the
+ *  right anchor — not the figure timeline). */
 function InlineComments({
   comments,
   figureId,
+  count,
   canComment,
   onOpenThread,
 }: {
   comments: Annotation[];
   figureId: string;
+  count: number;
   canComment: boolean;
-  onOpenThread?: (figureId: string) => void;
+  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const latest = comments.slice(-2);
+  const anchor = { figureRef: figureId, count };
   return (
     <div className="ml-[22px] flex flex-col gap-[2px]">
       {latest.map((c) => (
@@ -326,7 +334,7 @@ function InlineComments({
           key={c.id}
           type="button"
           className="flex items-center gap-[5px] text-left"
-          onClick={() => onOpenThread?.(figureId)}
+          onClick={() => onOpenThread?.(anchor)}
         >
           <span
             aria-hidden="true"
@@ -345,7 +353,7 @@ function InlineComments({
         <button
           type="button"
           className="text-left text-[8px] font-semibold text-ink-faint"
-          onClick={() => onOpenThread?.(figureId)}
+          onClick={() => onOpenThread?.(anchor)}
         >
           + add comment
         </button>
