@@ -196,6 +196,21 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         create.mutate(input, { onSuccess: (res) => navigate(`/routines/${res.docRef}`) })
       }
       onOpen={(docRef) => navigate(`/routines/${docRef}`)}
+      onFork={(docRef) =>
+        // Fork from the list's ⋯ sheet → a NEW owned, frozen copy; deep-link to it
+        // and confirm with a toast. A 402 means the routine cap is hit → drive the
+        // SAME upsell path as a create/template-fork quota block.
+        fork.mutate(docRef, {
+          onSuccess: (res) => {
+            toast.show("Forked — independent copy");
+            navigate(`/routines/${res.docRef}`);
+          },
+          onError: (err) => {
+            if (isQuotaError(err)) setForkQuotaBlocked(true);
+            else toast.show("Couldn't fork this routine. Please try again.", { tone: "danger" });
+          },
+        })
+      }
       sample={sample}
       templates={templates}
       onStartFromTemplate={onStartFromTemplate}
