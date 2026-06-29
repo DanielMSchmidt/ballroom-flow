@@ -31,7 +31,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
     <div className="flex min-h-dvh flex-col bg-backdrop lg:flex-row">
       {/* Desktop side rail (lg+) */}
       <nav
-        aria-label="Primary"
+        aria-label="Primary navigation"
         className={cx(
           "hidden shrink-0 border-r border-border-subtle bg-surface-raised px-2 py-4",
           "lg:flex lg:w-56 lg:flex-col lg:gap-1",
@@ -68,7 +68,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
 
         {/* Mobile bottom nav (hidden on lg+) */}
         <nav
-          aria-label="Primary"
+          aria-label="Tab bar"
           className={cx(
             "sticky bottom-0 flex border-t border-border-subtle bg-surface-raised lg:hidden",
           )}
