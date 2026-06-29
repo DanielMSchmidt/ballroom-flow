@@ -158,7 +158,7 @@ The canonical, checkable rules for attributes. Items marked **⟳** were changed
 - `figure {figureRef}` — a whole figure instance in a routine.
 - **`figureType {figureType, danceScope: <DanceId> | "all"}` *(new — figure-level notes across dances)*** — a note on a whole library figure **family**: this dance only, or **all dances the figure exists in** (e.g. one note on every *Feather*, whether Waltz, Foxtrot, or Quickstep). Applies to global-library figures and to account figures (which inherit `figureType`).
 
-Routine anchors (`point`/`figure`) live in the **routine doc** and are visible to all members of that routine. A **`figureType` annotation is *owned* in your account doc** (account-scoped — it follows the family across all your routines), but per **Q-FIGNOTE-VIS = option 2** it is **visible to co-members of any shared routine where that figure appears** — so a coach's "on every Feather, keep the head left" surfaces for the student on their Feathers (this-dance or all-dances). This needs a small **scoped cross-account read path** (§2.7, §5.1). Predicate **query anchors** ("all rising steps") remain v1.1; `figureType` is *identity-based*, not a predicate, which is why it ships in v1.
+Routine anchors (`point`/`figure`) live in the **routine doc** and are visible to all members of that routine. A **`figureType` annotation is *owned* in your account doc** (account-scoped — it follows the family across all your routines), but per **Q-FIGNOTE-VIS = option 2** it is **visible to co-members of any shared routine where that figure appears** — so a coach's "on every Feather, keep the head left" surfaces for the student on their Feathers (this-dance or all-dances). This needs a small **scoped cross-account read path** (§2.7, §5.1). Predicate **query anchors** ("all rising steps") remain v1.1; `figureType` is *identity-based*, not a predicate, which is why it ships in v1. The deferred **attribute-predicate** anchor — `attributePredicate { kind, value, role?, scope }` — is spec'd precisely in **§11.1** so it can be built later without re-deriving it.
 
 ### 2.7 D1 index (not document content)
 - **User** `{ id (Clerk sub), displayName, identityColor, plan }`.
@@ -493,7 +493,7 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 ## 11. Out of Scope (v1) — additive on the document-graph foundation
 
 - **Offline *editing*** (local Automerge persistence + sync-on-reconnect) — online-first in v1; additive (Automerge is local-first).
-- **Query anchors** for annotations ("all rising steps") — predicate language; v1.1.
+- **Attribute-predicate annotation anchors** ("all left sways", "all CBMPs", "all rising steps") — a note targeting a *dynamic set* of steps that match an attribute condition, not a single address or identity; v1.1. **Precise spec below — §11.1.**
 - **Billing integration / payment provider** — quota enforced in v1; charging deferred. **Ownership transfer** deferred.
 - **Latin / spot dances** — `travelling` flag present; v1 Standard only.
 - **Per-step alignment** (could be a user-defined kind), finer turn/footwork magnitudes beyond the confirmed set.
@@ -504,6 +504,29 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 - **Themes/backdrop settings**, fine-grained per-member access editing, **native app wrapper.**
 
 > Fork (choreo + figure copy), the global figure library, and **cross-dance `figureType` annotations** are **in v1** (no longer deferred). Fork behavior is resolved: **choreo forks are frozen** from their origin (independent copy); editing a figure from **outside the current choreo** (global / personal library) is **copy-on-write to a frozen choreo-owned copy**; personal-library figures **reused** across a user's routines auto-update in place (US-034). Live overlays / cross-routine figure flow-up are **retired** (reconciled 2026-06). Only **predicate** query anchors ("all rising steps") remain deferred — identity-based `figureType` anchors ship in v1.
+
+### 11.1 Deferred spec — attribute-predicate annotation anchors (v1.1)
+
+*(Captured precisely so the feature can be executed later without re-deriving it. Deferred, not undecided — confirmed v1.1 on 2026-06-29.)*
+
+**What it is.** A fourth annotation anchor type that targets **every step whose notation matches an attribute condition**, rather than one fixed spot (`point`), one figure instance (`figure`), or one figure family by id (`figureType`). It is the natural generalization of `figureType` from an **identity** match to an arbitrary **predicate** over attributes. Examples: *"soften every left-side sway"*, *"watch CBMP on every step that has it"*, *"all rising steps"*, *"every step with **no** sway logged"*.
+
+**Anchor shape.** `attributePredicate { kind, value, role?, scope }`
+- `kind` — an attribute kind from the merged ATTRIBUTE_REGISTRY (builtin **or** user-defined): `sway` / `position` / `bodyActions` / `turn` / `rise` / `direction` / `footwork` / a custom kind.
+- `value` — a value of that kind to match, **including the sentinel `none`** ("every step with no sway logged" — `none`/absence is an explicit, selectable match value, per the design's link picker). Matched **by meaning**, normalized through the registry's read aliases (`CBP→CBMP`, `H→heel`, …) — the **same content comparison the "custom" badge uses** (§2.5.1 #20). Unknown persisted values pass through and do not match a known value.
+- `role?` — optional: match leader-only, follower-only, or either (`null` = either/both), mirroring an attribute's own `role`.
+- `scope` — how wide the predicate ranges (the design's 3-way picker, frames 3.6→3.7):
+  - `routine` — *this choreo only*. Cheapest: resolvable entirely client-side from the open routine's figures.
+  - `<DanceId>` — *all of this user's routines in that dance*.
+  - `all` — *every dance* the value can appear in.
+
+**Resolution semantics.** The match set is **dynamic — re-evaluated on read**: adding a step whose attribute matches makes the note surface there automatically; retagging/removing makes it drop. (Contrast: `point`/`figure` are fixed addresses, `figureType` is a fixed id — all static.) Matching is content-based (`kind | value`, optional `role`), normalized via registry aliases.
+
+**Ownership & visibility.** Same model as `figureType` notes (Q-FIGNOTE-VIS = option 2): **owned in the author's account doc** (account-scoped) and **visible to co-members of any shared routine where a matching step appears**. Building it means extending the §2.7 index from `FigureTypeNoteIndex` to an analogous **attribute-predicate index** keyed by `{ kind, value, role?, scope }`, so a routine view can discover co-members' predicate notes matching the steps present without scanning account docs — same co-membership read gate.
+
+**UI is already designed.** The v4 wireframes mock the full flow end-to-end: link picker "An attribute" → family→value (frame 3.6) → scope (frame 3.7) → chip *"↳ all left sways · every dance"*. So the screen work is **design-complete**; only the engine + index + the v1.1 gate are deferred.
+
+**Why it's the one annotation capability deferred.** `figureType` ships in v1 because it's an **identity** match — a stored id on the figure, `O(1)`, no query layer, static set. An attribute predicate additionally needs (a) a small **matching/query layer** over notation, (b) **dynamic re-resolution** as content changes, and (c) for `<dance>`/`all` scopes, a new **cross-account index** like the figureType one. Those land together in v1.1. When built, the three link-picker target types (place / figure / attribute) and the figure/attribute scope toggles unify into one "target → scope" flow (as the design already shows), with `figureType` becoming a special case (a figure-identity predicate).
 
 ---
 
