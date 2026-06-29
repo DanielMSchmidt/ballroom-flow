@@ -35,6 +35,7 @@ function fakeStore(
   return {
     readRoutine: () => routine,
     readPlacements: () => resolved,
+    openFigure: () => {},
     addSection: () => {},
     renameSection: () => {},
     moveSection: () => {},

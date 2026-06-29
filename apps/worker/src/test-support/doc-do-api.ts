@@ -25,6 +25,8 @@ export interface DocStub {
   applyRawChange(change: Uint8Array): Promise<void>;
   /** Resolve + return the current doc snapshot (POJO view). */
   getSnapshot(): Promise<DocSnapshot>;
+  /** Figure-shaped read-only snapshot (read/edit split); null if never seeded. */
+  getFigureSnapshot(): Promise<DocSnapshot | null>;
   /** Server-seed a never-before-used doc's initial content at create (#205); no-clobber. */
   seedDoc(content: Record<string, unknown>): Promise<void>;
   /** Set the D1-projected metadata (title/dance/owner/figureType). */
