@@ -65,8 +65,13 @@ export interface FigureTimelineProps {
   attributes?: Attribute[];
   /** Override the whole-count count (else dance-aware). */
   counts?: number;
-  /** The viewed role lens (US-030); new values inherit it. */
+  /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
   initialView?: "leader" | "follower";
+  /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
+   *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
+  roleView?: RoleView;
+  /** Emits the next role lens when the flip toggle is used (controlled mode). */
+  onRoleViewChange?: (next: RoleView) => void;
   /** User-defined kinds to merge into the attribute registry (US-043). */
   customKinds?: RegistryKind[];
   /** Emits the figure's next full attribute set after an edit. */
@@ -89,6 +94,8 @@ export function FigureTimeline({
   attributes,
   counts,
   initialView,
+  roleView,
+  onRoleViewChange,
   customKinds = [],
   onChange,
   figureScope,
@@ -98,7 +105,14 @@ export function FigureTimeline({
   const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
   const [openExpanded, setOpenExpanded] = useState(false);
-  const [view, setView] = useState<RoleView>(initialView ?? "leader");
+  // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
+  // `bb_role`) when provided; otherwise local UI state seeded from initialView.
+  const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
+  const view = roleView ?? localView;
+  const setView = (next: RoleView): void => {
+    onRoleViewChange?.(next);
+    if (roleView === undefined) setLocalView(next);
+  };
   const [snap, setSnap] = useState<SnapValue>(0.125);
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);

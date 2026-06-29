@@ -50,8 +50,13 @@ export interface LanesProps {
   counts?: number;
   /** The figure's current full attribute set (controlled). */
   attributes?: Attribute[];
-  /** The viewed role lens (US-030); new values inherit it. */
+  /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
   initialView?: "leader" | "follower";
+  /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
+   *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
+  roleView?: RoleView;
+  /** Emits the next role lens when the flip toggle is used (controlled mode). */
+  onRoleViewChange?: (next: RoleView) => void;
   /** User-defined kinds to merge into the attribute registry (US-043). */
   customKinds?: RegistryKind[];
   /** Emits the figure's next full attribute set after an edit. */
@@ -64,6 +69,8 @@ export function Lanes({
   counts = 8,
   attributes,
   initialView,
+  roleView,
+  onRoleViewChange,
   customKinds = [],
   onChange,
 }: LanesProps) {
@@ -72,8 +79,14 @@ export function Lanes({
   // lives in the component.
   const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
-  // The role lens is local UI state (US-030, principle #25).
-  const [view, setView] = useState<RoleView>(initialView ?? "leader");
+  // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
+  // `bb_role`) when provided; otherwise local UI state (US-030, principle #25).
+  const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
+  const view = roleView ?? localView;
+  const setView = (next: RoleView): void => {
+    onRoleViewChange?.(next);
+    if (roleView === undefined) setLocalView(next);
+  };
 
   // Resolve the kind descriptor from the merged registry (custom kinds first).
   const kindDescriptor = useMemo(() => {

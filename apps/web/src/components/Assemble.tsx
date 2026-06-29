@@ -481,6 +481,8 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              roleView={roleView}
+              onRoleViewChange={setRoleView}
               customKinds={store.customKinds()}
               figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>
@@ -555,6 +557,8 @@ export function Assemble({
                   role={canEdit ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
+                  roleView={roleView}
+                  onRoleViewChange={setRoleView}
                   customKinds={store.customKinds()}
                   onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
                 />
