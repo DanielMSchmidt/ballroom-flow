@@ -314,42 +314,44 @@ export function FigureTimeline({
         tap a cell to add / edit · * required · scroll → Head &amp; custom types
       </p>
 
-      {/* The per-count editor (frame 1.12). The summary above it carries the step
-          headline + this count's value chips — the contract the authoring journey
-          reads (step-headline-N, "count N attributes"). */}
+      {/* Always-visible per-count recap (the headline word + this count's value
+          words). The grid's cells are abbreviated; this readable recap is what the
+          authoring journey reads (step-headline-N, "count N attributes") — present
+          as soon as the figure opens, without first opening the editor. */}
+      {rowCounts.map((count) => {
+        const here = filterByRoleView(byCount.get(count) ?? [], view);
+        if (here.length === 0) return null;
+        const direction = here.find((a) => a.kind === "direction");
+        const slots = here.filter((a) => a.kind !== "direction");
+        return (
+          <div
+            key={`detail-${count}`}
+            data-testid={`step-detail-${count}`}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
+              {countLabel(count)}
+            </span>
+            <span data-testid={`step-headline-${count}`} className="text-2xs font-bold text-ink">
+              {stepAction(direction?.value)}
+            </span>
+            <ul
+              aria-label={`count ${count} attributes`}
+              className="flex flex-wrap items-center gap-2"
+            >
+              {slots.map((a) => (
+                <li key={a.id} className="text-2xs text-ink-muted">
+                  {humanize(a.value)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+
+      {/* The per-count editor (frame 1.12), opened by tapping a count/cell. */}
       {openCount !== null && (
         <Card>
-          {(() => {
-            const here = filterByRoleView(byCount.get(openCount) ?? [], view);
-            const direction = here.find((a) => a.kind === "direction");
-            const slots = here.filter((a) => a.kind !== "direction");
-            return (
-              <div
-                data-testid="step-summary"
-                className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3"
-              >
-                <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold text-ink">
-                  {countLabel(openCount)}
-                </span>
-                <span
-                  data-testid={`step-headline-${openCount}`}
-                  className="text-2xs font-bold text-ink"
-                >
-                  {stepAction(direction?.value)}
-                </span>
-                <ul
-                  aria-label={`count ${openCount} attributes`}
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  {slots.map((a) => (
-                    <li key={a.id} className="text-2xs text-ink-muted">
-                      {humanize(a.value)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })()}
           <AttributeEditor
             key={`${openCount}-${openExpanded}`}
             count={openCount}
