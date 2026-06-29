@@ -1,6 +1,7 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
+import type { Annotation } from "@ballroom/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
 import { importComponent } from "../test-support/import-component";
@@ -95,5 +96,78 @@ describe("US-042 Annotation filters (all / lessons / practice / by figure)", () 
       "aria-pressed",
       "true",
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// T8 — Thread parity (frame 1.14): thread header, identity colours, reply
+// composer gating. QUAL-2 follow-up from T3 review.
+// ─────────────────────────────────────────────────────────────────────────
+
+const ann = (over: Partial<Annotation>): Annotation => ({
+  id: "a1",
+  authorId: "u1",
+  kind: "note",
+  text: "note text",
+  tags: [],
+  anchors: [],
+  replies: [],
+  createdAt: 0,
+  ...over,
+});
+
+describe("T8 Thread parity — AnnotationPanel (frame 1.14)", () => {
+  it("renders thread header with the supplied title and comment count", async () => {
+    // Intent: when threadTitle is provided, the panel shows a header with that
+    // title and the total visible annotation count.
+    // Covers T8 requirement: "Spin Turn · step 2" + "N comments".
+    const { AnnotationPanel } = await importComponent<AnnotationsModule>(
+      "../components/AnnotationPanel",
+    );
+    renderUi(
+      <AnnotationPanel
+        role="viewer"
+        threadTitle="Spin Turn · step 2"
+        annotations={[ann({ id: "a1" }), ann({ id: "a2", text: "second note" })]}
+      />,
+    );
+    expect(screen.getByText("Spin Turn · step 2")).toBeInTheDocument();
+    expect(screen.getByText(/2 comments/i)).toBeInTheDocument();
+  });
+
+  it("renders the author name in the identity colour from authorColorMap", async () => {
+    // Intent: in thread mode, the comment row shows the author's real name in
+    // their identity colour (from authorColorMap) — not an authorId hash.
+    // Covers T8 QUAL-2: author dots/names use real identity colours.
+    const { AnnotationPanel } = await importComponent<AnnotationsModule>(
+      "../components/AnnotationPanel",
+    );
+    renderUi(
+      <AnnotationPanel
+        role="viewer"
+        threadTitle="Spin Turn · step 2"
+        authorColorMap={{ u1: "#3b7dd8" }}
+        authorNameMap={{ u1: "Daniel" }}
+        annotations={[ann({ authorId: "u1", text: "feels rushed" })]}
+      />,
+    );
+    const name = screen.getByText("Daniel");
+    expect(name).toHaveStyle({ color: "#3b7dd8" });
+  });
+
+  it("shows an 'add a reply' footer composer for a commenter but not for a viewer", async () => {
+    // Intent: the thread's footer reply composer (frame 1.14 ③) is gated on
+    // role — commenter/editor see it; a pure viewer does not.
+    // Covers T8 requirement: role-gated composer.
+    const { AnnotationPanel } = await importComponent<AnnotationsModule>(
+      "../components/AnnotationPanel",
+    );
+    const { rerender } = renderUi(
+      <AnnotationPanel role="commenter" threadTitle="Spin Turn · step 2" />,
+    );
+    expect(screen.getByPlaceholderText(/add a reply/i)).toBeInTheDocument();
+
+    rerender(<AnnotationPanel role="viewer" threadTitle="Spin Turn · step 2" />);
+    expect(screen.queryByPlaceholderText(/add a reply/i)).toBeNull();
   });
 });

@@ -194,7 +194,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
       />,
     );
     await userEvent.click(screen.getByText("heads stay left"));
-    expect(onOpenThread).toHaveBeenCalledWith("f1");
+    expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1", count: 2 });
   });
 
   it("shows '+ add comment' with ZERO comments when the user can comment", async () => {
@@ -229,7 +229,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     const add = screen.getByRole("button", { name: /add comment/i });
     expect(add).toBeInTheDocument();
     await userEvent.click(add);
-    expect(onOpenThread).toHaveBeenCalledWith("f1");
+    expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1", count: 1 });
   });
 
   it("hides '+ add comment' for a viewer (cannot comment)", async () => {
