@@ -264,6 +264,71 @@ describe("T6 GET /api/journal", () => {
     expect(body.entries.some((e) => e.source === "routine")).toBe(true);
   });
 
+  it("account arm: a co-member's figureType lesson surfaces ONLY for a family present in a shared routine (family-note model)", async () => {
+    const routineRef = "rt_acct_shared";
+    await seedDb({
+      users: [
+        { id: "coach5", displayName: "Coach5", identityColor: "#c0563f", plan: "free" },
+        { id: "student5", displayName: "Student5", identityColor: "#1f8a5b", plan: "free" },
+      ],
+      docs: [
+        {
+          docRef: routineRef,
+          type: "routine",
+          ownerId: "coach5",
+          doName: routineRef,
+          dance: "waltz",
+        },
+        // A Whisk figure the shared routine references (registry row + placement edge);
+        // its figureType is what the family-note join matches against.
+        {
+          docRef: "fig_whisk5",
+          type: "global-figure",
+          ownerId: "app",
+          doName: "fig_whisk5",
+          title: "Whisk",
+          dance: "waltz",
+          figureType: "whisk5",
+        },
+      ],
+      memberships: [
+        { id: "m_coach5", docRef: routineRef, userId: "coach5", role: "editor" },
+        { id: "m_student5", docRef: routineRef, userId: "student5", role: "commenter" },
+      ],
+      placementEdges: [{ routineRef, figureRef: "fig_whisk5" }],
+    });
+
+    const coachTok = await makeTestJWT(kp, { sub: "coach5" });
+    // (i) a figureType lesson for a family PRESENT in the shared routine → visible to the student.
+    await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...authHeaders(coachTok), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "lesson",
+        text: "whisk5 cross more",
+        figureType: "whisk5",
+        danceScope: "waltz",
+      }),
+    });
+    // (ii) a figureType lesson for a family that appears in NO shared routine → hidden from the student.
+    await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...authHeaders(coachTok), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "lesson",
+        text: "absent5 note",
+        figureType: "absent5",
+        danceScope: "all",
+      }),
+    });
+
+    const studentTok = await makeTestJWT(kp, { sub: "student5" });
+    const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(studentTok) });
+    const body = (await res.json()) as { entries: Array<{ text: string }> };
+    expect(body.entries.some((e) => e.text === "whisk5 cross more")).toBe(true); // family present in shared routine
+    expect(body.entries.some((e) => e.text === "absent5 note")).toBe(false); // family absent → not surfaced
+  });
+
   it("requires auth (401 with no token)", async () => {
     const res = await SELF.fetch("https://x/api/journal");
     expect(res.status).toBe(401);

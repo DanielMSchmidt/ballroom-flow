@@ -269,19 +269,30 @@ export class DocDO extends DurableObject<Env> {
   private async ingestChange(change: Uint8Array, from: WebSocket | null): Promise<boolean> {
     const before = this.getDoc();
     const beforeHeads = A.getHeads(before);
-    const annotationsBefore = this.annotationsFingerprint(before);
-    const [after] = A.applyChanges(before, [change as A.Change]);
+    // Detect whether this change touches `annotations` via Automerge's patch
+    // stream — O(patches), NOT a full-doc JSON serialization. This keeps the
+    // US-015 hot sync path cheap: a structural-only change pays nothing extra and
+    // never arms the journal-projection alarm.
+    let touchedAnnotations = false;
+    const [after] = A.applyChanges(before, [change as A.Change], {
+      patchCallback: (patches) => {
+        if (touchedAnnotations) return;
+        for (const p of patches) {
+          if (p.path[0] === "annotations") {
+            touchedAnnotations = true;
+            return;
+          }
+        }
+      },
+    });
     this.doc = after;
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change as A.Change]);
     await this.maybeScheduleCompaction();
     // Project the journal promptly only when this change touched annotations
-    // (the live WS path for lesson/practice authoring); a structural-only edit
-    // doesn't arm the projection alarm. See applyChange for the same gate.
-    if (this.annotationsFingerprint(after) !== annotationsBefore) {
-      await this.maybeScheduleProjection();
-    }
+    // (the live WS path for lesson/practice authoring). See applyChange's gate.
+    if (touchedAnnotations) await this.maybeScheduleProjection();
     this.broadcast([change as A.Change], from);
     return true;
   }
@@ -462,15 +473,6 @@ export class DocDO extends DurableObject<Env> {
     const nonAnnotation = (doc: A.Doc<RoutineDoc>): string =>
       JSON.stringify({ ...readRoutine(doc, { includeDeleted: true }), annotations: [] });
     return nonAnnotation(before) === nonAnnotation(after);
-  }
-
-  /**
-   * A cheap fingerprint of the doc's annotations (tombstones included) so the
-   * ingest path can tell whether a change touched annotations — and thus whether
-   * to arm the journal projection. Compared by value, not identity (T6 §3).
-   */
-  private annotationsFingerprint(doc: A.Doc<RoutineDoc>): string {
-    return JSON.stringify(readRoutine(doc, { includeDeleted: true }).annotations);
   }
 
   /** The connection's resolved role from its socket attachment, or null. */

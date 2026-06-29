@@ -117,12 +117,28 @@ async function bindAll<T>(db: D1Database, sql: string, binds: unknown[]): Promis
  * The signed-in user's journal: routine-scoped + account-scoped lesson/practice
  * entries, newest-first, tombstones excluded, author display/colour joined.
  */
+interface AccountNoteRow {
+  id: string;
+  routineRef: string;
+  authorId: string;
+  kind: string;
+  text: string;
+  figureType: string;
+  danceScope: string;
+  createdAt: number;
+  displayName: string | null;
+  identityColor: string | null;
+}
+
 export async function journalForUser(db: D1Database, userId: string): Promise<JournalEntryOut[]> {
-  // The routines the user can access (member rows + owned-without-membership, the
-  // #168 owner arm — same model as resolveEffectiveRole).
+  // The ROUTINES the user can access (member rows restricted to type='routine' +
+  // owned-without-membership, the #168 owner arm) — consistent with
+  // resolveEffectiveRole; a shared account-figure membership is never a routine.
   const accessible = await bindAll<{ docRef: string }>(
     db,
-    `SELECT docRef FROM membership WHERE userId = ? AND deletedAt IS NULL
+    `SELECT m.docRef FROM membership m
+       JOIN document_registry r ON r.docRef = m.docRef AND r.type = 'routine' AND r.deletedAt IS NULL
+       WHERE m.userId = ? AND m.deletedAt IS NULL
      UNION
      SELECT docRef FROM document_registry WHERE ownerId = ? AND type = 'routine' AND deletedAt IS NULL`,
     [userId, userId],
@@ -142,9 +158,6 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
     displayName: string | null;
     identityColor: string | null;
   }> = [];
-  // The accessible-AUTHORS set for the account arm: self + co-members/owners of
-  // every accessible routine (symmetric co-membership visibility, T6 LOCKED #2).
-  const authorSet = new Set<string>([userId]);
   if (routineRefs.length > 0) {
     const ph = routineRefs.map(() => "?").join(",");
     routineRows = await bindAll(
@@ -156,43 +169,43 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
        WHERE j.deletedAt IS NULL AND j.routineRef IN (${ph})`,
       routineRefs,
     );
-    const members = await bindAll<{ userId: string }>(
-      db,
-      `SELECT DISTINCT userId FROM membership WHERE deletedAt IS NULL AND docRef IN (${ph})`,
-      routineRefs,
-    );
-    for (const m of members) authorSet.add(m.userId);
-    const owners = await bindAll<{ ownerId: string }>(
-      db,
-      `SELECT DISTINCT ownerId FROM document_registry WHERE type = 'routine' AND deletedAt IS NULL AND docRef IN (${ph})`,
-      routineRefs,
-    );
-    for (const o of owners) authorSet.add(o.ownerId);
   }
 
-  // (b) account-scoped figureType lesson/practice entries for the accessible authors.
-  const authorIds = [...authorSet];
-  const aph = authorIds.map(() => "?").join(",");
-  const accountRows = await bindAll<{
-    id: string;
-    routineRef: string;
-    authorId: string;
-    kind: string;
-    text: string;
-    figureType: string;
-    danceScope: string;
-    createdAt: number;
-    displayName: string | null;
-    identityColor: string | null;
-  }>(
+  // (b) account-scoped figureType lesson/practice entries. Two strictly-bounded
+  //     arms, deduped — NO broad author set (T6 LOCKED #2 ≡ the family-note model):
+  //   • the user's OWN figureType lesson/practice notes (their personal cross-dance
+  //     journal — their own data, always shown), and
+  //   • a CO-MEMBER's figureType note ONLY when that family appears in a routine the
+  //     user shares with the author and the danceScope covers that routine's dance —
+  //     symmetric with familyNotesForMembers (db/family-notes.ts). This does not
+  //     expand the family-note privacy model.
+  const ownNotes = await bindAll<AccountNoteRow>(
     db,
     `SELECT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
             f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
      FROM figure_type_note_index f
      LEFT JOIN users u ON u.id = f.authorId
-     WHERE f.deletedAt IS NULL AND f.kind IN ('lesson','practice') AND f.authorId IN (${aph})`,
-    authorIds,
+     WHERE f.deletedAt IS NULL AND f.kind IN ('lesson','practice') AND f.authorId = ?`,
+    [userId],
   );
+  const sharedNotes = await bindAll<AccountNoteRow>(
+    db,
+    `SELECT DISTINCT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
+            f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
+     FROM figure_type_note_index f
+     JOIN membership ma ON ma.userId = f.authorId AND ma.deletedAt IS NULL
+     JOIN membership me ON me.docRef = ma.docRef AND me.userId = ? AND me.deletedAt IS NULL
+     JOIN document_registry rt ON rt.docRef = ma.docRef AND rt.type = 'routine' AND rt.deletedAt IS NULL
+     JOIN placement_edge pe ON pe.routineRef = rt.docRef
+     JOIN document_registry fig ON fig.docRef = pe.figureRef AND fig.figureType = f.figureType
+     LEFT JOIN users u ON u.id = f.authorId
+     WHERE f.deletedAt IS NULL AND f.kind IN ('lesson','practice')
+       AND (f.danceScope = rt.dance OR f.danceScope = 'all')`,
+    [userId],
+  );
+  const accountById = new Map<string, AccountNoteRow>();
+  for (const r of [...ownNotes, ...sharedNotes]) accountById.set(r.id, r);
+  const accountRows = [...accountById.values()];
 
   const entries: JournalEntryOut[] = [
     ...routineRows.map((r) => ({

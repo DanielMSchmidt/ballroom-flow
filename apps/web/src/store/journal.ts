@@ -21,15 +21,20 @@ export async function loadJournal(token: string | null, baseUrl = ""): Promise<J
   return entries;
 }
 
-/** The user's routines as link-picker options (docRef + title + dance). */
+/** The user's ANNOTATE-CAPABLE routines as link-picker options (docRef + title +
+ *  dance). A routine-anchored entry is authored via createAnnotation, which the DO
+ *  admits only for commenter+/editor/owner — so a VIEWER routine is filtered out
+ *  here (else the optimistic write is silently dropped → phantom success). */
 export async function loadRoutineOptions(
   token: string | null,
   baseUrl = "",
 ): Promise<{ docRef: string; title: string; dance: string }[]> {
   const { routines } = await apiGet<{
-    routines: { docRef: string; title: string; dance: string }[];
+    routines: { docRef: string; title: string; dance: string; role: string }[];
   }>(`${baseUrl}/api/routines`, token);
-  return routines.map((r) => ({ docRef: r.docRef, title: r.title, dance: r.dance }));
+  return routines
+    .filter((r) => r.role !== "viewer")
+    .map((r) => ({ docRef: r.docRef, title: r.title, dance: r.dance }));
 }
 
 /** A routine's placed figures as link-picker options (from its REST snapshot). */
