@@ -371,6 +371,7 @@ export function Assemble({
             routine={routine}
             placements={store.readPlacements()}
             annotations={store.readAnnotations()}
+            canComment={can(role, "canAnnotate")}
             roleView={roleView}
             onRoleViewChange={setRoleView}
             onOpenFigure={(figureId) => setNotating(figureId)}

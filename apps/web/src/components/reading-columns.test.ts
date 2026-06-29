@@ -66,6 +66,15 @@ describe("usedColumns — only the kinds a figure actually uses", () => {
   it("omits Step entirely when an attribute sits with no direction/footwork", () => {
     expect(usedColumns([attr(1.5, "position", "promenade")]).map((c) => c.label)).toEqual(["Pos"]);
   });
+
+  it("excludes the Rise column for Tango (registry appliesToDances), even with a stray value", () => {
+    // The write path does not strictly block a rise value on a Tango figure, so
+    // the reading view defends against one by hiding the inapplicable column.
+    const attrs = [attr(1, "direction", "forward"), attr(1, "rise", "up"), attr(1, "turn", "none")];
+    expect(usedColumns(attrs, "tango").map((c) => c.label)).toEqual(["Step", "Turn"]);
+    // The same figure in Waltz keeps Rise.
+    expect(usedColumns(attrs, "waltz").map((c) => c.label)).toEqual(["Step", "Rise", "Turn"]);
+  });
 });
 
 describe("cellValue", () => {

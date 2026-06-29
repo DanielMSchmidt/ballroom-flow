@@ -36,6 +36,7 @@ export function RoutineReadingView({
   routine,
   placements,
   annotations = [],
+  canComment = false,
   roleView,
   onRoleViewChange,
   onOpenFigure,
@@ -45,6 +46,9 @@ export function RoutineReadingView({
   placements: ResolvedPlacement[];
   /** Annotations on this routine — surfaced as inline comments under their step. */
   annotations?: Annotation[];
+  /** Whether THIS member may add a comment (commenter/editor — NOT a viewer).
+   *  Gates the inline "+ add comment" affordance (a viewer reads comments only). */
+  canComment?: boolean;
   /** The active Leader/Follower lens (controlled — persisted by the caller). */
   roleView: RoleView;
   onRoleViewChange: (view: RoleView) => void;
@@ -91,6 +95,7 @@ export function RoutineReadingView({
                     dance={dance}
                     roleView={roleView}
                     annotations={annotations}
+                    canComment={canComment}
                     onOpenFigure={onOpenFigure}
                     onOpenThread={onOpenThread}
                   />
@@ -120,6 +125,7 @@ function FigureReadout({
   dance,
   roleView,
   annotations,
+  canComment,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -128,6 +134,7 @@ function FigureReadout({
   dance: DanceId;
   roleView: RoleView;
   annotations: Annotation[];
+  canComment: boolean;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (figureId: string) => void;
 }) {
@@ -158,7 +165,7 @@ function FigureReadout({
     roleView,
   );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
-  const columns = usedColumns(live);
+  const columns = usedColumns(live, dance);
   const bars = barsForFigure(counts, dance);
   // Inline comments anchored to a specific step (point) of this figure.
   const figureComments = annotations.filter(
@@ -202,6 +209,7 @@ function FigureReadout({
                   a.anchors.some((an) => an.type === "point" && an.count === count),
                 )}
                 figureId={figure.id}
+                canComment={canComment}
                 onOpenThread={onOpenThread}
               />
             ))}
@@ -247,6 +255,7 @@ function StepRow({
   here,
   comments,
   figureId,
+  canComment,
   onOpenThread,
 }: {
   count: number;
@@ -254,6 +263,7 @@ function StepRow({
   here: Attribute[];
   comments: Annotation[];
   figureId: string;
+  canComment: boolean;
   onOpenThread?: (figureId: string) => void;
 }) {
   const offBeat = isOffBeatCount(count);
@@ -279,25 +289,35 @@ function StepRow({
           );
         })}
       </div>
-      {(comments.length > 0 || onOpenThread) && (
-        <InlineComments comments={comments} figureId={figureId} onOpenThread={onOpenThread} />
+      {/* Render the comment block whenever there's something to read OR the user
+          may add the FIRST comment — so "+ add comment" is reachable at zero. */}
+      {(comments.length > 0 || canComment) && (
+        <InlineComments
+          comments={comments}
+          figureId={figureId}
+          canComment={canComment}
+          onOpenThread={onOpenThread}
+        />
       )}
     </li>
   );
 }
 
-/** Inline comments under a step: the latest ~2 (truncated, profile-colored dot +
- *  Caveat text) and a "+ add comment" affordance. Tapping opens the thread. */
+/** Inline comments under a step: the latest ~2 read-only (truncated,
+ *  profile-colored dot + Caveat text), plus a "+ add comment" affordance shown
+ *  only to a member who may comment (commenter/editor — never a pure viewer).
+ *  Tapping any of them opens the thread. */
 function InlineComments({
   comments,
   figureId,
+  canComment,
   onOpenThread,
 }: {
   comments: Annotation[];
   figureId: string;
+  canComment: boolean;
   onOpenThread?: (figureId: string) => void;
 }) {
-  if (comments.length === 0) return null;
   const latest = comments.slice(-2);
   return (
     <div className="ml-[22px] flex flex-col gap-[2px]">
@@ -321,13 +341,15 @@ function InlineComments({
           </span>
         </button>
       ))}
-      <button
-        type="button"
-        className="text-left text-[8px] font-semibold text-ink-faint"
-        onClick={() => onOpenThread?.(figureId)}
-      >
-        + add comment
-      </button>
+      {canComment && (
+        <button
+          type="button"
+          className="text-left text-[8px] font-semibold text-ink-faint"
+          onClick={() => onOpenThread?.(figureId)}
+        >
+          + add comment
+        </button>
+      )}
     </div>
   );
 }
