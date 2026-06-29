@@ -65,7 +65,7 @@ export {
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { buildGoldenWaltzBasic } from "./starter-routine";
 export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
-export { redoLastChange, undoLastChange } from "./undo";
+export { redoLastChange, undoLastChange, wasSupersededByOthers } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,
   isReservedKind,

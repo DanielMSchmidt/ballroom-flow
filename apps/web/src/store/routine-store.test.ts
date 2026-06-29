@@ -364,6 +364,80 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("undo() returns a supersededByOthers signal when another actor built on my change (US-038 AC-3)", async () => {
+    // Intent: the soft "superseded" hint flows through the seam. undo ALWAYS
+    //   proceeds (CRDT merges, no refusal); undo() just REPORTS whether another
+    //   actor causally built on the reverted change so the UI can soften the toast.
+    const ACTOR_A = "00aa00aa00aa00aa";
+    const ACTOR_B = "00bb00bb00bb00bb";
+    const base: RoutineDoc = {
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    // A authors the undo target; B merges A's change THEN edits → B depends on A.
+    let aDoc = A.from(
+      base as unknown as Record<string, unknown>,
+      ACTOR_A,
+    ) as unknown as A.Doc<RoutineDoc>;
+    aDoc = A.change(aDoc, (d) => {
+      const s = d.sections[0];
+      if (s) s.name = "Verse";
+    });
+    let bDoc = A.merge(A.init<RoutineDoc>(), A.clone(aDoc));
+    bDoc = A.change(A.clone(bDoc, { actor: ACTOR_B }), (d) => {
+      d.sections.push({ id: "s2", name: "FromB", placements: [], deletedAt: null });
+    });
+    const merged = A.merge(A.merge(A.init<RoutineDoc>(), A.clone(aDoc)), A.clone(bDoc));
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, actor: ACTOR_A });
+    sockets.get("rt_sample")?.load(merged);
+
+    const result = store.undo();
+    expect(result.undone).toBe(true);
+    expect(result.supersededByOthers).toBe(true);
+    store.close();
+  });
+
+  it("undo() reports supersededByOthers:false when only I have edited (US-038 AC-3)", async () => {
+    // Intent: with no other actor's dependent change, the hint stays quiet so the
+    //   UI shows the plain "Undone" toast.
+    const ACTOR_A = "00aa00aa00aa00aa";
+    const base: RoutineDoc = {
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    let aDoc = A.from(
+      base as unknown as Record<string, unknown>,
+      ACTOR_A,
+    ) as unknown as A.Doc<RoutineDoc>;
+    aDoc = A.change(aDoc, (d) => {
+      const s = d.sections[0];
+      if (s) s.name = "Verse";
+    });
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, actor: ACTOR_A });
+    sockets.get("rt_sample")?.load(aDoc);
+
+    const result = store.undo();
+    expect(result.undone).toBe(true);
+    expect(result.supersededByOthers).toBe(false);
+    store.close();
+  });
+
   it("exposes annotation reads + mutations stamped with currentUserId (US-039)", async () => {
     // Intent: the seam reads + creates/replies/deletes routine annotations, each
     //   stamped with the open user's id. Annotations live in the routine doc, so

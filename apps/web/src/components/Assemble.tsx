@@ -333,8 +333,17 @@ export function Assemble({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    store.undo();
-                    toast.show("Undone");
+                    // Undo always proceeds (CRDT merges). When another actor had
+                    // built on the reverted change, soften the toast — advisory
+                    // only, no modal, no refusal (US-038 AC-3, PLAN §5.4).
+                    const supersededByOthers = store.undo()?.supersededByOthers ?? false;
+                    if (supersededByOthers) {
+                      toast.show("Undone — others had built on this change", {
+                        tone: "warning",
+                      });
+                    } else {
+                      toast.show("Undone");
+                    }
                   }}
                 >
                   Undo

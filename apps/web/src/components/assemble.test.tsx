@@ -53,7 +53,7 @@ function fakeStore(
     createCustomKind: () => {},
     customKinds: () => [],
     retryFigure: () => {},
-    undo: () => {},
+    undo: () => ({ undone: false, supersededByOthers: false }),
     redo: () => {},
     subscribe: () => () => {},
     syncState: () => "live",
