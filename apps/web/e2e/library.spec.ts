@@ -32,8 +32,11 @@ test.describe("@smoke figure library", () => {
     await page.getByRole("button", { name: "Choreo" }).click();
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("Library Foxtrot");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
     await page.getByRole("button", { name: "Add section" }).click({ timeout: 15_000 });
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");

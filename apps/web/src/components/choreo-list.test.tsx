@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen, userEvent } from "../test-support/render";
+import { renderUi, screen, userEvent, within } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-022 — Quota upsell (UI) [M3, user]
@@ -55,12 +55,16 @@ describe("US-025 Create a routine (UI)", () => {
     // Intent: New Choreo (under cap) opens a create form; submitting calls onCreate
     //   with the title + chosen dance (the store wires this to POST /api/routines).
     // Covers US-025 AC-1/AC-2 (create) at the UI.
+    // T2: the create form is the design's New-choreo sheet (Waltz pre-selected
+    // chip, "create choreo" CTA). Scope the CTA to the dialog — the empty state
+    // also carries a "Create choreo" button.
     const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
     const onCreate = vi.fn();
     renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={onCreate} />);
     await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
-    await userEvent.type(screen.getByLabelText(/routine name/i), "Showcase");
-    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    const sheet = await screen.findByRole("dialog", { name: /new choreography/i });
+    await userEvent.type(within(sheet).getByLabelText(/routine name/i), "Showcase");
+    await userEvent.click(within(sheet).getByRole("button", { name: /create choreo/i }));
     expect(onCreate).toHaveBeenCalledWith({ title: "Showcase", dance: "waltz" });
   });
 });

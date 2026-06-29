@@ -25,8 +25,11 @@ test.describe("@smoke annotations journey", () => {
     // Create a routine and add a figure to notate (US-025/026/027).
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("E2E Annotations");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
 
     const addSection = page.getByRole("button", { name: "Add section" });
     await expect(addSection).toBeVisible({ timeout: 15_000 });

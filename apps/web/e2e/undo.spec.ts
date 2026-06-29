@@ -20,8 +20,11 @@ async function createRoutineAsOwner(page: Page, title: string): Promise<string> 
   await page.goto("/");
   await page.getByRole("button", { name: /new choreo/i }).click();
   await page.getByLabel("Routine name").fill(title);
-  await page.getByLabel("Dance").selectOption("waltz");
-  await page.getByRole("button", { name: "Create" }).click();
+  // Waltz is the pre-selected chip in the New-choreo sheet, so no dance pick needed.
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /create choreo/i })
+    .click();
   await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({ timeout: 15_000 });
   const docRef = new URL(page.url()).pathname.split("/").pop() ?? "";
   expect(docRef, "expected a created routine id in the URL").toBeTruthy();

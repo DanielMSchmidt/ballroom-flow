@@ -1,17 +1,20 @@
 // US-022/US-025 — the Choreo list: your routines + create, with the quota upsell.
+// T2 (design parity, frames 1.1–1.5): "My Choreos" header + round studio-blue +;
+// dance-coloured routine cards with a ⋯ menu → Open/Fork sheet; designed empty
+// state; New-choreo sheet with dance CHIPS (not a Select).
 //
 // Presentational (the §3 seam): it takes the routine list + handlers as props and
-// renders + collects input; the screen wrapper wires the store (list query +
-// create mutation) and navigation. The free plan owns at most FREE_ROUTINE_CAP
-// routines (D21) — the server is authoritative (POST → 402 upsell) and this
-// screen mirrors the cap so a capped user sees the upsell without a round-trip.
-// Sample/template empty state + fork are US-045/US-037.
-// Header search is US-046.
+// renders + collects input; the screen wrapper (ChoreoFlow) wires the store (list
+// query + create/fork mutations) and navigation. The free plan owns at most the
+// server-sourced cap (D21) — the server is authoritative (POST → 402 upsell) and
+// this screen mirrors the cap so a capped user sees the upsell without a round-trip.
+// Sample/template empty state + fork are US-045/US-037. Header search is US-046.
 
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
-import { DANCE_IDS, DANCES, type DanceId } from "@ballroom/domain";
+import { DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { Badge, Button, Card, Input, Select, Sheet } from "../ui";
+import { Badge, Button, Chip, EmptyState, IconButton, Input, ScreenHeader, Sheet } from "../ui";
+import { BranchIcon, EditIcon, PlusIcon, StepsIcon } from "../ui/icons";
 
 /** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
 function danceLabel(dance: DanceId): string {
@@ -21,11 +24,57 @@ function danceLabel(dance: DanceId): string {
     .join(" ");
 }
 
-const DANCE_OPTIONS = DANCE_IDS.map((id) => ({ value: id, label: danceLabel(id) }));
+/**
+ * Dance → identity colour, mapped onto existing design tokens (no new hex):
+ * waltz = studio-blue, viennese = slate, quickstep = green, foxtrot = violet,
+ * tango = terracotta/red. Used for the card's glyph tile (frame 1.1/1.3).
+ */
+const DANCE_COLOR: Record<DanceId, string> = {
+  waltz: "var(--bf-accent)",
+  viennese_waltz: "var(--bf-kind-turn)",
+  quickstep: "var(--bf-kind-rise)",
+  foxtrot: "var(--bf-kind-position)",
+  tango: "var(--bf-kind-sway)",
+};
+
+/** Dances offered as chips in the New-choreo sheet (frame 1.5). */
+const NEW_CHOREO_DANCES: readonly DanceId[] = DANCE_IDS;
+
+/**
+ * Human "month year" / "today" stamp (frame 1.1: "Jun 2025" / "today"), never a
+ * raw locale date like 6/29/2026. Fixed en-US so screenshots stay deterministic.
+ */
+function formatUpdated(ms: number): string {
+  const d = new Date(ms);
+  const now = new Date();
+  if (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  ) {
+    return "today";
+  }
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+/**
+ * A Choreo-list row. Extends the D1-projected {@link RoutineListItem} with the
+ * OPTIONAL parity fields (derived bar count / figure count / fork lineage) that
+ * aren't in the list projection yet — rendered only when present so the card
+ * degrades gracefully until the store exposes them (see T2 report data gaps).
+ */
+export interface ChoreoRoutineItem extends RoutineListItem {
+  /** Derived bar count, when available without loading the routine doc. */
+  bars?: number;
+  /** Figure count, when available — drives the "no figures yet" label. */
+  figureCount?: number;
+  /** Title of the routine this one was forked from (lineage line, frame 1.3). */
+  forkedFromTitle?: string;
+}
 
 export interface ChoreoListProps {
   /** The viewer's routines (owned + shared-in). */
-  routines?: RoutineListItem[];
+  routines?: ChoreoRoutineItem[];
   /** How many routines the viewer OWNS (drives the quota gate). */
   ownedCount: number;
   /** The viewer's plan; only "free" is capped. */
@@ -39,6 +88,8 @@ export interface ChoreoListProps {
   onCreate?: (input: { title: string; dance: DanceId }) => void;
   /** Open a routine (navigate to its Assemble screen). */
   onOpen?: (docRef: string) => void;
+  /** Fork a routine into a new owned, frozen copy (US-037, from the ⋯ sheet). */
+  onFork?: (docRef: string) => void;
   /** A create is in flight. */
   creating?: boolean;
   /** US-045: the read-only sample routine to display in the empty state. */
@@ -53,6 +104,19 @@ export interface ChoreoListProps {
   searchResults?: SearchResult[];
 }
 
+/** The choreo glyph tile (vertical-bars Steps mark on a dance-coloured square). */
+function GlyphTile({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] text-ink-inverse"
+      style={{ background: color }}
+    >
+      <StepsIcon size={18} />
+    </span>
+  );
+}
+
 export function ChoreoList({
   routines = [],
   ownedCount,
@@ -61,6 +125,7 @@ export function ChoreoList({
   quotaBlocked,
   onCreate,
   onOpen,
+  onFork,
   creating,
   sample,
   templates = [],
@@ -72,6 +137,8 @@ export function ChoreoList({
   const [formOpen, setFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dance, setDance] = useState<DanceId>("waltz");
+  // Which routine's ⋯ Open/Fork sheet is open (null = closed).
+  const [menuFor, setMenuFor] = useState<ChoreoRoutineItem | null>(null);
   const atCap = plan === "free" && cap != null && ownedCount >= cap;
   // If the server refuses a create with a 402 (a race past the instant gate),
   // open the upsell so the user still sees why the routine wasn't created.
@@ -80,10 +147,10 @@ export function ChoreoList({
   }, [quotaBlocked]);
   // Stable close handlers: Sheet's useOverlay re-runs its focus effect when
   // onClose identity changes, so an inline arrow would re-focus the panel on
-  // every keystroke and drop input. (useOverlay should depend on `open` alone —
-  // flagged as a follow-up; this keeps the form usable now.)
+  // every keystroke and drop input.
   const closeForm = useCallback(() => setFormOpen(false), []);
   const closeUpsell = useCallback(() => setUpsellOpen(false), []);
+  const closeMenu = useCallback(() => setMenuFor(null), []);
 
   const onNew = (): void => {
     // Mirror the server cap for instant feedback; the server still enforces it.
@@ -101,29 +168,45 @@ export function ChoreoList({
   };
 
   // The "Start from template" button forks the first template (or the sample
-  // itself if no dedicated template list is provided). Server-side enforces the
-  // fork — the client just fires the callback.
+  // itself if no dedicated template list is provided).
   const templateTarget = templates[0] ?? sample;
 
   return (
     <section aria-label="Your choreography" className="flex flex-col gap-3">
-      <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-medium text-ink">Choreography</h1>
-          <Button variant="primary" onClick={onNew}>
-            New Choreo
-          </Button>
-        </div>
-        {/* US-046: search box — always present so the user can filter at any list size */}
-        {onSearch && (
-          <Input
-            label="Search"
-            type="search"
-            placeholder="Search routines…"
-            onChange={(e) => onSearch(e.target.value)}
-          />
-        )}
-      </header>
+      <ScreenHeader
+        title="My Choreos"
+        className="border-b-0 px-0 py-0"
+        actions={
+          <IconButton
+            label="New choreo"
+            onClick={onNew}
+            style={{
+              background: "var(--bf-accent)",
+              color: "var(--bf-ink-inverse)",
+              borderRadius: "var(--bf-radius-md)",
+            }}
+          >
+            <PlusIcon size={20} />
+          </IconButton>
+        }
+      />
+
+      {/* Region heading for the routines list (sr-only). Keeps the heading order
+          valid (h1 screen → h2 section → h3 EmptyState) without a visible label
+          the design doesn't show. */}
+      <h2 className="bf-sr-only">Your choreography</h2>
+
+      {/* US-046: search box — kept available but visually subordinate (not in the
+          design frame). It filters at any list size without dominating the header. */}
+      {onSearch && (
+        <Input
+          label="Search"
+          hideLabel
+          type="search"
+          placeholder="Search routines…"
+          onChange={(e) => onSearch(e.target.value)}
+        />
+      )}
 
       {/* US-046: search results rendered above the routine cards */}
       {searchResults.length > 0 && (
@@ -133,10 +216,10 @@ export function ChoreoList({
               <button
                 type="button"
                 onClick={() => onOpen?.(r.docRef)}
-                className="flex min-h-[44px] w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-left"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-md border border-border-default px-3 py-2 text-left"
               >
                 <span className="flex flex-col">
-                  <span className="font-medium text-ink">{r.title}</span>
+                  <span className="font-bold text-ink">{r.title}</span>
                   {r.dance && (
                     <span className="text-2xs text-ink-muted">{danceLabel(r.dance)}</span>
                   )}
@@ -149,37 +232,34 @@ export function ChoreoList({
 
       {routines.length === 0 ? (
         <div className="flex flex-col gap-3">
-          {/* US-045: read-only sample in empty state */}
-          {sample ? (
+          {/* Frame 1.2 — the designed empty state. */}
+          <EmptyState
+            icon={<StepsIcon size={28} />}
+            title="No choreos yet"
+            description="Each dance gets its own routine — plus extras for practice. Start your first."
+            actions={
+              <Button variant="primary" leadingIcon={<PlusIcon size={16} />} onClick={onNew}>
+                Create choreo
+              </Button>
+            }
+          />
+          {/* US-045: read-only sample + start-from-template, when the app publishes one. */}
+          {sample && (
             <button
               type="button"
               onClick={() => onOpen?.(sample.docRef)}
-              className="flex min-h-[44px] w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-left"
+              className="flex min-h-[44px] w-full items-center gap-3 rounded-lg border border-border-default px-3 py-2 text-left"
             >
-              <span
-                aria-hidden="true"
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ background: `var(--bf-dance-${sample.dance}, var(--bf-accent))` }}
-              />
+              <GlyphTile color={DANCE_COLOR[sample.dance]} />
               <span className="flex flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">
-                  <span className="font-medium text-ink">{sample.title}</span>
+                  <span className="font-bold text-ink">{sample.title}</span>
                   <Badge tone="neutral">Read-only sample</Badge>
                 </span>
-                <span className="text-2xs text-ink-muted">
-                  {danceLabel(sample.dance)} · {DANCES[sample.dance].timeSignature}
-                </span>
+                <span className="text-2xs text-ink-muted">{danceLabel(sample.dance)}</span>
               </span>
             </button>
-          ) : (
-            <Card>
-              <p className="text-sm text-ink-secondary">
-                No routines yet. Tap <span className="font-medium text-ink">New Choreo</span> to
-                start your first one.
-              </p>
-            </Card>
           )}
-          {/* US-045: "Start from template" only when a template target is available */}
           {templateTarget && (
             <Button
               variant="secondary"
@@ -190,53 +270,171 @@ export function ChoreoList({
           )}
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {routines.map((r) => (
-            <li key={r.docRef}>
-              <button
-                type="button"
-                onClick={() => onOpen?.(r.docRef)}
-                className="flex min-h-[44px] w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-left"
-              >
-                <span
-                  aria-hidden="true"
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: `var(--bf-dance-${r.dance}, var(--bf-accent))` }}
-                />
-                <span className="flex flex-col">
-                  <span className="font-medium text-ink">{r.title}</span>
-                  <span className="text-2xs text-ink-muted">
-                    {danceLabel(r.dance)} · {DANCES[r.dance].timeSignature} ·{" "}
-                    {new Date(r.updatedAt).toLocaleDateString()}
+        <ul className="flex flex-col gap-2.5">
+          {routines.map((r) => {
+            const forked = Boolean(r.forkedFromTitle);
+            // Meta segments (frame 1.1): Dance · <bars|no figures> · <date>.
+            // Bars/figure-count come from the OPTIONAL parity fields; absent until
+            // the store exposes them, in which case the segment is simply omitted.
+            const barsLabel =
+              r.figureCount === 0
+                ? "no figures yet"
+                : r.bars != null
+                  ? `${r.bars} bars`
+                  : undefined;
+            const meta = [danceLabel(r.dance), barsLabel, formatUpdated(r.updatedAt)]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <li key={r.docRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => onOpen?.(r.docRef)}
+                  className="flex min-h-[64px] w-full items-center gap-3 rounded-lg border bg-surface py-3 pl-3 pr-12 text-left"
+                  style={
+                    forked
+                      ? {
+                          background: "var(--bf-scope-custom-tint)",
+                          borderColor: "var(--bf-scope-custom-border)",
+                        }
+                      : { borderColor: "var(--bf-border)" }
+                  }
+                >
+                  <GlyphTile color={forked ? "var(--bf-scope-custom)" : DANCE_COLOR[r.dance]} />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span
+                      className="truncate text-xs font-bold"
+                      style={{ color: forked ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+                    >
+                      {r.title}
+                    </span>
+                    {forked ? (
+                      <span
+                        className="truncate text-2xs"
+                        style={{ color: "var(--bf-scope-custom-ink)" }}
+                      >
+                        <span aria-hidden="true">⑂ </span>
+                        forked from {r.forkedFromTitle}
+                      </span>
+                    ) : (
+                      <span className="truncate text-2xs text-ink-muted">{meta}</span>
+                    )}
                   </span>
-                </span>
-              </button>
-            </li>
-          ))}
+                </button>
+                <IconButton
+                  label={`More options for ${r.title}`}
+                  onClick={() => setMenuFor(r)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2"
+                >
+                  <span className="text-base leading-none">⋯</span>
+                </IconButton>
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {/* Create form */}
-      <Sheet open={formOpen} onClose={closeForm} title="New routine">
-        <form className="flex flex-col gap-3" onSubmit={submit}>
+      {/* New-choreo sheet (frame 1.5) */}
+      <Sheet open={formOpen} onClose={closeForm} title="New choreography">
+        <form className="flex flex-col gap-4" onSubmit={submit}>
+          <fieldset className="flex flex-col gap-2 border-0 p-0">
+            <legend className="mb-1.5 text-2xs font-bold uppercase tracking-wide text-ink-muted">
+              Dance
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {NEW_CHOREO_DANCES.map((d) => (
+                <Chip key={d} tone="accent" selected={dance === d} onClick={() => setDance(d)}>
+                  {danceLabel(d)}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
           <Input
             label="Routine name"
-            placeholder="e.g. Showcase Waltz"
+            placeholder="e.g. Gold Waltz — comp routine"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
             required
           />
-          <Select
-            label="Dance"
-            options={DANCE_OPTIONS}
-            value={dance}
-            onChange={(e) => setDance(e.target.value as DanceId)}
-          />
-          <Button type="submit" variant="primary" loading={creating} disabled={!title.trim()}>
-            Create
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={closeForm} className="flex-1">
+              cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={creating}
+              disabled={!title.trim()}
+              className="flex-1"
+            >
+              create choreo
+            </Button>
+          </div>
         </form>
+      </Sheet>
+
+      {/* Open / Fork sheet (frame 1.4) */}
+      <Sheet open={menuFor != null} onClose={closeMenu} title={menuFor?.title ?? ""}>
+        <p
+          className="mb-3 text-ink-secondary"
+          style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-note)" }}
+        >
+          Choose what to do with this routine
+        </p>
+        <div className="flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (menuFor) onOpen?.(menuFor.docRef);
+              closeMenu();
+            }}
+            className="flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface p-3 text-left"
+          >
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md text-accent"
+              style={{ background: "var(--bf-accent-tint)" }}
+            >
+              <EditIcon size={16} />
+            </span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-bold text-ink">Open</span>
+              <span className="text-2xs text-ink-muted">view &amp; edit this routine</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (menuFor) onFork?.(menuFor.docRef);
+              closeMenu();
+            }}
+            className="flex w-full items-center gap-3 rounded-lg border p-3 text-left"
+            style={{
+              background: "var(--bf-scope-custom-tint)",
+              borderColor: "var(--bf-scope-custom-border)",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md"
+              style={{
+                background: "var(--bf-scope-custom-border)",
+                color: "var(--bf-scope-custom-ink)",
+              }}
+            >
+              <BranchIcon size={16} />
+            </span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-bold" style={{ color: "var(--bf-scope-custom-ink)" }}>
+                Fork — make it your own
+              </span>
+              <span className="text-2xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
+                a frozen, independent copy you fully own
+              </span>
+            </span>
+          </button>
+        </div>
       </Sheet>
 
       {/* Quota upsell */}
