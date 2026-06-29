@@ -144,7 +144,9 @@ Grouped (PLAN + USER-STORIES citations in the inventory). Many already covered; 
 - **Copy-on-write/fork:** outside-choreo edit → auto frozen copy + re-point + toast, source untouched;
   choreo-owned edit → in place; fork frozen (origin edits don't appear); no cross-doc undo of a COW.
 - **Undo:** reverts only your last change; other client's concurrent edit survives; new edit clears redo;
-  ⚠ "superseded" soft-hint (US-038 AC-3) **never built** — design it or explicitly defer in PLAN.
+  ⚠ "superseded" soft-hint (US-038 AC-3) **never built** — **build a minimal soft hint** ("others built on
+  this change") so the AC is satisfied; CRDT still merges (no hard refusal). Design the smallest surface that
+  fits the studio-paper system; record it in PLAN as the v1 realization of AC-3.
 - **Offline/connectivity:** offline → explicit "you're offline" state, no silent stale edits; no offline
   editing in v1; denied vs offline distinguished by REST preflight, not WS close.
 - **Conflict/convergence:** concurrent edits merge (no LWW); duplicate change idempotent; ⚠ section
