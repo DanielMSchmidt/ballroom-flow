@@ -3,11 +3,19 @@ import { useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
 import { FigureLibrary } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
+import { Journal } from "./components/Journal";
 import { Landing } from "./components/Landing";
 import { appGate } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
+import { createFamilyNote } from "./store/family-notes";
 import { loadMineFigures } from "./store/figures";
+import {
+  createRoutineJournalEntry,
+  loadJournal,
+  loadRoutineFigureOptions,
+  loadRoutineOptions,
+} from "./store/journal";
 import { useMe } from "./store/me";
 import { Styleguide } from "./styleguide/Styleguide";
 import { AppShell, Button, Card, type NavItem, Spinner, Tabs, ToastProvider } from "./ui";
@@ -52,6 +60,43 @@ function AppHome(): React.JSX.Element {
   // US-033: "My figures" toggle — stable so FigureLibrary's effect deps don't refetch on every render.
   const [libTab, setLibTab] = useState<"all" | "mine">("all");
   const loadMine = useCallback(async () => loadMineFigures(await getToken()), [getToken]);
+  // T6 — Journal data + create wiring through the store seam. `createRoutineEntry`
+  // opens the chosen routine's editable store and createAnnotation (full parity);
+  // `createFamilyEntry` authors an account figureType note (createFamilyNote).
+  const currentUserId = me.data?.sub;
+  const loadJournalEntries = useCallback(async () => loadJournal(await getToken()), [getToken]);
+  const createFamilyEntry = useCallback(
+    async (input: {
+      figureType: string;
+      danceScope: string;
+      kind: "note" | "lesson" | "practice";
+      text: string;
+    }) => {
+      await createFamilyNote(input, await getToken());
+    },
+    [getToken],
+  );
+  const createRoutineEntry = useCallback(
+    async (
+      routineRef: string,
+      input: { kind: "note" | "lesson" | "practice"; text: string; anchors: unknown[] },
+    ) => {
+      await createRoutineJournalEntry(
+        routineRef,
+        { kind: input.kind, text: input.text, anchors: input.anchors as never },
+        { getToken: () => getToken(), currentUserId },
+      );
+    },
+    [getToken, currentUserId],
+  );
+  const loadJournalRoutineOptions = useCallback(
+    async () => loadRoutineOptions(await getToken()),
+    [getToken],
+  );
+  const loadJournalRoutineFigures = useCallback(
+    async (routineRef: string) => loadRoutineFigureOptions(routineRef, await getToken()),
+    [getToken],
+  );
   const openRoutineId = route.name === "routine" ? route.id : undefined;
   // First-run nudge: a signed-in user who hasn't set a name/colour yet (US-019)
   // is pointed at Profile, so they aren't shown as a raw id to co-editors.
@@ -110,6 +155,15 @@ function AppHome(): React.JSX.Element {
             />
             <FigureLibrary tab={libTab} loadMine={loadMine} />
           </>
+        ) : tab === "journal" ? (
+          <Journal
+            loadEntries={loadJournalEntries}
+            createFamilyEntry={createFamilyEntry}
+            createRoutineEntry={createRoutineEntry}
+            loadRoutineOptions={loadJournalRoutineOptions}
+            loadRoutineFigures={loadJournalRoutineFigures}
+            currentUserId={currentUserId}
+          />
         ) : tab === "profile" ? (
           <ProfileScreen />
         ) : (

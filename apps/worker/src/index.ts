@@ -8,6 +8,7 @@ import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
+import { journalForUser } from "./db/journal";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import {
@@ -380,6 +381,21 @@ app.post("/api/account/family-notes", async (c) => {
     text,
   });
   return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
+});
+
+// GET /api/journal — the signed-in user's cross-routine Journal (T6, PLAN §2.6/
+// §2.7/§4.6). The UNION of routine-scoped lesson/practice annotations (projected
+// to journal_entry by the routine DO alarm) and account-scoped figureType
+// lesson/practice notes (figure_type_note_index), newest-first, tombstones
+// excluded, author display/colour joined. VISIBILITY (T6 LOCKED): both arms are
+// gated to the user PLUS their co-members on shared routines — the routine arm by
+// routine-accessibility, the account arm by the accessible-AUTHORS set (see
+// db/journal.ts). Missing/invalid token → 401 (fail-closed) before any read.
+app.get("/api/journal", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const entries = await journalForUser(c.env.DB, user.sub);
+  return c.json({ entries });
 });
 
 // GET /api/account/custom-kinds — the caller's account-wide custom kinds (US-043).
