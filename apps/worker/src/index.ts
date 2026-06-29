@@ -1,12 +1,31 @@
-import { zCreateFigure, zCreateRoutine, zIssueInvite, zRegistryKind } from "@ballroom/contract";
-import { can, type FigureDoc, isReservedKind, newId, parseAttributeWrite } from "@ballroom/domain";
+import {
+  zCreateFigure,
+  zCreateRoutine,
+  zIssueInvite,
+  zRegistryKind,
+  zSaveToLibrary,
+} from "@ballroom/contract";
+import {
+  can,
+  type FigureDoc,
+  globalFigureRef,
+  isReservedKind,
+  LIBRARY_FIGURES,
+  newId,
+  parseAttributeWrite,
+} from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
-import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
+import {
+  createFigureRows,
+  findSavedLibraryFigure,
+  listGlobalFigures,
+  listMineFigures,
+} from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
@@ -299,6 +318,69 @@ app.post("/api/figures", async (c) => {
     deletedAt: null,
   });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
+});
+
+// POST /api/figures/save-to-library — "↟ Save to my library" (T5). Promotes a
+// GLOBAL-catalog figure into the CALLER'S personal library as a FROZEN account-
+// figure copy (PLAN §5.2): `baseFigureRef = globalFigureRef(dance, figureType)`,
+// provenance only. The server resolves the catalog figure from the bundled
+// reference data (never trusts client attributes) and stamps ownerId from the
+// verified JWT — no cross-user writes. Idempotent on `(owner, baseFigureRef)`:
+// re-saving returns the existing copy (200) instead of minting a duplicate.
+app.post("/api/figures/save-to-library", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const parsed = zSaveToLibrary.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_save", issues: parsed.error.flatten() }, 400);
+  }
+  const { dance, figureType, name } = parsed.data;
+
+  // Resolve the catalog figure SERVER-SIDE from the bundled reference data — the
+  // attributes seeded into the copy are the catalog's, not anything the client sent.
+  const origin = LIBRARY_FIGURES.find(
+    (f) => f.dance === dance && f.figureType === figureType && f.name === name,
+  );
+  if (!origin) return c.json({ error: "unknown_figure" }, 404);
+
+  const baseFigureRef = globalFigureRef(dance, figureType);
+
+  // Idempotency: a prior save from the SAME global figure resolves the existing copy.
+  const existing = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
+  if (existing) {
+    return c.json({ figureRef: existing, baseFigureRef, alreadySaved: true }, 200);
+  }
+
+  const figureRef = newId();
+  const attributes = (origin.attributes ?? []).map((a) => ({ ...a }));
+
+  await createFigureRows(c.env.DB, {
+    figureRef,
+    ownerId: user.sub,
+    name,
+    dance,
+    figureType,
+    baseFigureRef,
+  });
+  // Seed the figure's CRDT content durably (#205): a FROZEN snapshot of the
+  // catalog figure's attributes; `source: "library"` + `baseFigureRef` provenance
+  // (no live overlay — §5.2). No placement edge: a saved figure isn't in a routine
+  // yet, so `usedInCount` starts at 0 until it's placed.
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
+    id: figureRef,
+    scope: "account",
+    ownerId: user.sub,
+    figureType,
+    dance,
+    name,
+    source: "library",
+    attributes,
+    baseFigureRef,
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  return c.json({ figureRef, baseFigureRef, alreadySaved: false }, 201);
 });
 
 // GET /api/routines/:id/family-notes — the co-member family-note read (US-041,

@@ -102,6 +102,28 @@ export async function listMineFigures(db: D1Database, userId: string): Promise<M
   return res.results ?? [];
 }
 
+/**
+ * The caller's existing account-figure that was saved FROM a given global-catalog
+ * figure, identified by its provenance `baseFigureRef` (stored in forkedFromRef).
+ * Returns the copy's docRef, or null. This is what makes "save to my library"
+ * idempotent — re-saving the same global figure resolves the prior copy instead of
+ * minting a duplicate. Scoped to the owner so it never reads another user's copy.
+ */
+export async function findSavedLibraryFigure(
+  db: D1Database,
+  userId: string,
+  baseFigureRef: string,
+): Promise<string | null> {
+  const row = await db
+    .prepare(
+      "SELECT docRef FROM document_registry WHERE ownerId = ?1 AND type = 'account-figure' " +
+        "AND forkedFromRef = ?2 AND deletedAt IS NULL LIMIT 1",
+    )
+    .bind(userId, baseFigureRef)
+    .first<{ docRef: string }>();
+  return row?.docRef ?? null;
+}
+
 /** Count a user's OWNED figures (for tests/quota separation — figures are uncapped). */
 export async function countOwnedFigures(db: D1Database, userId: string): Promise<number> {
   const row = await drizzle(db)

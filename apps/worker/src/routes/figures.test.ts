@@ -296,3 +296,179 @@ describe("#187 figure-doc projection", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// T5 — "↟ Save to my library" (POST /api/figures/save-to-library).
+//
+// Promotes a GLOBAL-catalog figure into the caller's personal library as a FROZEN
+// account-figure copy (PLAN §5.2): owner = caller (from the JWT, never a client
+// field), baseFigureRef = globalFigureRef(dance, figureType) provenance. Idempotent
+// on (owner, baseFigureRef). The catalog figure is resolved server-side.
+// ─────────────────────────────────────────────────────────────────────────
+
+const NAT_TURN = { dance: "waltz", figureType: "natural-turn", name: "Natural Turn" } as const;
+
+async function saveToLibrary(
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  return SELF.fetch("https://x/api/figures/save-to-library", {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("T5 save-to-library promotion", () => {
+  it("creates a frozen account-figure copy owned by the caller, with provenance", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_save", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_save", displayName: "S", identityColor: "#111", plan: "free" }],
+    });
+
+    const res = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
+    expect(res.status).toBe(201);
+    const { figureRef, baseFigureRef, alreadySaved } = (await res.json()) as {
+      figureRef: string;
+      baseFigureRef: string;
+      alreadySaved: boolean;
+    };
+    expect(alreadySaved).toBe(false);
+    expect(baseFigureRef).toBe("global:waltz:natural-turn");
+
+    // The registry row is an account-figure owned by the verified sub, carrying the
+    // global figure's provenance in forkedFromRef (the reused lineage column).
+    const row = await env.DB.prepare(
+      "SELECT type, ownerId, forkedFromRef, dance, figureType FROM document_registry WHERE docRef = ?",
+    )
+      .bind(figureRef)
+      .first<{
+        type: string;
+        ownerId: string;
+        forkedFromRef: string;
+        dance: string;
+        figureType: string;
+      }>();
+    expect(row).toMatchObject({
+      type: "account-figure",
+      ownerId: "u_save",
+      forkedFromRef: "global:waltz:natural-turn",
+      dance: "waltz",
+      figureType: "natural-turn",
+    });
+
+    // It surfaces in the caller's "mine" list as a saved (baseFigureRef-set) figure.
+    const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
+    const { figures } = (await mine.json()) as {
+      figures: Array<{ docRef: string; baseFigureRef: string | null; usedInCount: number }>;
+    };
+    const saved = figures.find((f) => f.docRef === figureRef);
+    expect(saved?.baseFigureRef).toBe("global:waltz:natural-turn");
+    expect(saved?.usedInCount).toBe(0);
+  });
+
+  it("is idempotent — re-saving the same global figure returns the existing copy", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_idem", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_idem", displayName: "I", identityColor: "#111", plan: "free" }],
+    });
+
+    const first = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
+    const firstBody = (await first.json()) as { figureRef: string };
+
+    const second = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
+    expect(second.status).toBe(200);
+    const secondBody = (await second.json()) as { figureRef: string; alreadySaved: boolean };
+    expect(secondBody.alreadySaved).toBe(true);
+    expect(secondBody.figureRef).toBe(firstBody.figureRef);
+
+    // Exactly ONE copy exists for this (owner, base) — no duplicate row.
+    const cnt = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND type = 'account-figure' AND forkedFromRef = ? AND deletedAt IS NULL",
+    )
+      .bind("u_idem", "global:waltz:natural-turn")
+      .first<{ n: number }>();
+    expect(cnt?.n).toBe(1);
+  });
+
+  it("refuses an unauthenticated save (401) and writes nothing", async () => {
+    const res = await SELF.fetch("https://x/api/figures/save-to-library", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(NAT_TURN),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a figure not in the global catalog (404)", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_404", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_404", displayName: "N", identityColor: "#111", plan: "free" }],
+    });
+    const res = await saveToLibrary(ctx.authHeaders(), {
+      dance: "waltz",
+      figureType: "not-a-real-figure",
+      name: "Nope",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("scopes idempotency per-owner — two users each get their own copy", async () => {
+    const a = await authedContext({ keypair: kp, userId: "u_a", docRef: "x", role: null });
+    const b = await authedContext({ keypair: kp, userId: "u_b", docRef: "x", role: null });
+    await seedDb({
+      users: [
+        { id: "u_a", displayName: "A", identityColor: "#111", plan: "free" },
+        { id: "u_b", displayName: "B", identityColor: "#222", plan: "free" },
+      ],
+    });
+    const ra = (await (await saveToLibrary(a.authHeaders(), NAT_TURN)).json()) as {
+      figureRef: string;
+    };
+    const rb = (await (await saveToLibrary(b.authHeaders(), NAT_TURN)).json()) as {
+      figureRef: string;
+    };
+    // Distinct copies, each owned by its caller — no cross-user dedupe/write.
+    expect(ra.figureRef).not.toBe(rb.figureRef);
+    const owners = await env.DB.prepare(
+      "SELECT docRef, ownerId FROM document_registry WHERE forkedFromRef = 'global:waltz:natural-turn' AND ownerId IN ('u_a','u_b')",
+    ).all<{ docRef: string; ownerId: string }>();
+    expect(new Set(owners.results?.map((r) => r.ownerId))).toEqual(new Set(["u_a", "u_b"]));
+    expect(owners.results).toHaveLength(2);
+  });
+
+  it("US-034 edit-ripple: one saved figure is referenced by many routines (no duplication)", async () => {
+    // A personal-library figure reused across the user's routines is ONE doc — editing
+    // it flows into every referencing routine (the routines reference its docRef; the
+    // figure is never duplicated on edit). We prove the reuse shape: a single saved
+    // figure row, referenced by two routines, surfaces as usedInCount=2.
+    const ctx = await authedContext({ keypair: kp, userId: "u_rip", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_rip", displayName: "R", identityColor: "#111", plan: "free" }],
+    });
+    const saved = (await (await saveToLibrary(ctx.authHeaders(), NAT_TURN)).json()) as {
+      figureRef: string;
+    };
+
+    // Two of the user's routines reference the SAME saved figure doc (placement edges).
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
+    )
+      .bind("rt_one", saved.figureRef)
+      .run();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
+    )
+      .bind("rt_two", saved.figureRef)
+      .run();
+
+    const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
+    const { figures } = (await mine.json()) as {
+      figures: Array<{ docRef: string; usedInCount: number }>;
+    };
+    const refs = figures.filter((f) => f.docRef === saved.figureRef);
+    // Exactly one figure doc, reused by two routines — not two copies.
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.usedInCount).toBe(2);
+  });
+});

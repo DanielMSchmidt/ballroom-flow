@@ -67,6 +67,22 @@ export const zCreateFigure = z.object({
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
+ * Save-to-library request (T5 / US-034 reuse). Promotes a GLOBAL-catalog figure
+ * into the caller's personal library as a FROZEN account-figure copy (PLAN §5.2):
+ * the client identifies the catalog figure by its cross-dance identity
+ * `(dance, figureType, name)`; the SERVER resolves it from the bundled catalog,
+ * stamps ownerId from the verified JWT sub, mints the copy's figureRef, and
+ * records `baseFigureRef = globalFigureRef(dance, figureType)` as provenance. The
+ * promotion is idempotent on `(owner, baseFigureRef)` — re-saving is a no-op.
+ */
+export const zSaveToLibrary = z.object({
+  dance: z.enum(DANCE_IDS),
+  figureType: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(80),
+});
+export type SaveToLibrary = z.infer<typeof zSaveToLibrary>;
+
+/**
  * Issue-invite request (US-023). An editor/owner mints a shareable link granting
  * a chosen role. `role` is one of the three STORED membership roles — never
  * "owner" (ownership isn't transferable by link). The granted role is read back
