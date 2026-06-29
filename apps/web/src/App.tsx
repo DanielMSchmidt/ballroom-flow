@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
-import { FigureLibrary } from "./components/FigureLibrary";
+import { FigureLibrary, type SaveLibraryInput } from "./components/FigureLibrary";
 import { InviteRedeem } from "./components/InviteRedeem";
 import { Journal } from "./components/Journal";
 import { Landing } from "./components/Landing";
@@ -9,7 +9,7 @@ import { appGate } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
 import { navigate, useRoute } from "./lib/router";
 import { createFamilyNote } from "./store/family-notes";
-import { loadMineFigures } from "./store/figures";
+import { loadMineFigures, saveFigureToLibrary } from "./store/figures";
 import {
   createRoutineJournalEntry,
   loadJournal,
@@ -60,6 +60,12 @@ function AppHome(): React.JSX.Element {
   // US-033: "My figures" toggle — stable so FigureLibrary's effect deps don't refetch on every render.
   const [libTab, setLibTab] = useState<"all" | "mine">("all");
   const loadMine = useCallback(async () => loadMineFigures(await getToken()), [getToken]);
+  // T5: "↟ Save to my library" — promote a global figure into the user's personal
+  // library (frozen account-figure copy). Stable identity so cards don't rebind.
+  const onSaveToLibrary = useCallback(
+    async (input: SaveLibraryInput) => saveFigureToLibrary(await getToken(), input),
+    [getToken],
+  );
   // T6 — Journal data + create wiring through the store seam. `createRoutineEntry`
   // opens the chosen routine's editable store and createAnnotation (full parity);
   // `createFamilyEntry` authors an account figureType note (createFamilyNote).
@@ -153,7 +159,7 @@ function AppHome(): React.JSX.Element {
               value={libTab}
               onChange={(v) => setLibTab(v as "all" | "mine")}
             />
-            <FigureLibrary tab={libTab} loadMine={loadMine} />
+            <FigureLibrary tab={libTab} loadMine={loadMine} onSaveToLibrary={onSaveToLibrary} />
           </>
         ) : tab === "journal" ? (
           <Journal

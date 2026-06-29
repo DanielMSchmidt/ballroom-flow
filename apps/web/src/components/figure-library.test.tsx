@@ -2,7 +2,7 @@
 // component props (membership role, figure scope), not ARIA roles — Biome's a11y
 // rule mis-flags them.
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent } from "../test-support/render";
 
@@ -26,69 +26,125 @@ interface FigureTimelineModule {
 }
 
 describe("US-032 Application-global figure library browse", () => {
-  it("groups global figures by figureType and filters by dance", async () => {
-    // Intent: the library shows canonical figures grouped by family, dance-filterable.
-    // Arrange: render <FigureLibrary> seeded with Feather (foxtrot+waltz) + Three Step.
-    // Act: select the dance filter = Foxtrot. Assert: a "Feather" group + a "Three Step"
-    //   group show; the Waltz Feather is filtered out.
+  it("groups global figures by figureType and filters by dance (chips)", async () => {
+    // Intent: the library shows canonical figures grouped by family, dance-filterable
+    // via chips (frames 2.1/2.2). Act: click the Foxtrot dance chip. Assert: the
+    // Feather Step family surfaces.
     // Covers US-032 AC-1 (grouped by figureType, filter by dance).
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
     renderUi(<FigureLibrary />);
-    await userEvent.selectOptions(screen.getByLabelText(/dance/i), "foxtrot");
-    // The Feather Step is the canonical Foxtrot opener; selecting Foxtrot surfaces
-    // its family heading (several figures mention "feather", so match it exactly).
-    expect(screen.getByRole("heading", { name: /feather step/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^foxtrot$/i }));
+    // The Feather Step is the canonical Foxtrot opener; it appears as a family heading
+    // and a card name (several figures mention "feather", so match it exactly).
+    expect(screen.getAllByRole("heading", { name: /feather step/i }).length).toBeGreaterThan(0);
   });
 
-  it("marks global figures as not directly editable (auto-variant on edit)", async () => {
-    // Intent: a global figure is app-owned; the UI signals editing creates a variant.
-    // Arrange: render the library; open a global figure. Act: inspect its edit affordance.
-    // Assert: an "edit → creates your variant" affordance, not a direct in-place edit.
-    // Covers US-032 AC-2 (global not directly editable).
+  it("renders the catalogue as grouped lists (read-only browse)", async () => {
+    // Intent: a global figure is app-owned and not directly editable here; the browse
+    // is a set of grouped lists. Covers US-032 AC-2 (global not directly editable).
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
-    renderUi(<FigureLibrary />);
-    expect(screen.getByRole("list")).toBeInTheDocument();
+    renderUi(<FigureLibrary initialDance="waltz" />);
+    expect(screen.getAllByRole("list").length).toBeGreaterThan(0);
   });
 });
 
-describe("US-033 Account figures (copies + custom) in library", () => {
-  it("badges every account figure Custom + shows 'used in N routines'", async () => {
-    // Intent: account figures (a frozen copy of a library figure, and a from-scratch
-    //   custom) both badge "Custom" — "Variant" is no longer a concept (§2.5.1 #19,
-    //   §5.2). Usage count is shown.
-    // Arrange: render <FigureLibrary tab="mine"> injecting data — a copy (baseFigureRef
-    //   set, usedInCount 2) and a custom figure (baseFigureRef null). No auth/query
-    //   provider needed.
-    // Act: await async load. Assert: "used in 2 routines"; both figures badge "Custom".
-    // Covers US-033 AC-1 (custom badge) + AC-2 ("used in N").
+describe("T5 — ↟ Save to my library (promote a global figure)", () => {
+  it("calls onSaveToLibrary with the figure identity + toasts on success", async () => {
+    // Intent: each global card carries a "↟ save" affordance that promotes the figure
+    // into the user's personal library (PLAN §5.2). Act: click the first save button.
+    // Assert: the mutation is invoked and a success toast shows.
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
-    const loadMine = async () => [
-      {
-        docRef: "v1",
-        title: "My Feather",
-        figureType: "feather",
-        baseFigureRef: "fg",
-        usedInCount: 2,
+    const onSaveToLibrary = vi.fn(
+      async (input: { dance: string; figureType: string; name: string }) => {
+        void input;
+        return { alreadySaved: false };
       },
-      {
-        docRef: "c1",
-        title: "My Spin",
-        figureType: "custom_move",
-        baseFigureRef: null,
-        usedInCount: 0,
-      },
-    ];
+    );
+    renderUi(<FigureLibrary initialDance="waltz" onSaveToLibrary={onSaveToLibrary} />);
+    const [saveButton] = await screen.findAllByRole("button", { name: /save/i });
+    if (!saveButton) throw new Error("no save button rendered");
+    await userEvent.click(saveButton);
+    expect(onSaveToLibrary).toHaveBeenCalledTimes(1);
+    expect(onSaveToLibrary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dance: expect.any(String),
+        figureType: expect.any(String),
+        name: expect.any(String),
+      }),
+    );
+    expect(await screen.findByText(/saved to your library/i)).toBeInTheDocument();
+  });
+
+  it("toasts 'already in your library' when the figure was already saved (idempotent)", async () => {
+    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
+      "../components/FigureLibrary",
+    );
+    const onSaveToLibrary = vi.fn(async () => ({ alreadySaved: true }));
+    renderUi(<FigureLibrary initialDance="waltz" onSaveToLibrary={onSaveToLibrary} />);
+    const [saveButton] = await screen.findAllByRole("button", { name: /save/i });
+    if (!saveButton) throw new Error("no save button rendered");
+    await userEvent.click(saveButton);
+    expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
+  });
+});
+
+describe("US-033 Personal library (saved copies + custom) — lineage + badge", () => {
+  const loadMine = async () => [
+    {
+      docRef: "v1",
+      title: "My Feather",
+      figureType: "feather",
+      dance: "foxtrot",
+      baseFigureRef: "global:foxtrot:feather",
+      usedInCount: 2,
+    },
+    {
+      docRef: "c1",
+      title: "Hover Corté",
+      figureType: "custom_move",
+      dance: "waltz",
+      baseFigureRef: null,
+      usedInCount: 1,
+    },
+  ];
+
+  it("shows lineage, 'used in N', and the two-state scope badge per figure", async () => {
+    // Intent: a saved (baseFigureRef) figure reads its lineage ("based on …") + a
+    // Library-derived badge; a from-scratch figure reads "your own figure" + Custom
+    // (frame 2.3). Usage count is shown. Covers US-033 AC-1/AC-2 + the §4.2 two-state badge.
+    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
+      "../components/FigureLibrary",
+    );
     renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
     expect(await screen.findByText(/used in 2 routines/i)).toBeInTheDocument();
-    // Both account figures badge "Custom" (no "Variant" badge anymore).
-    expect(screen.getAllByText(/custom/i)).toHaveLength(2);
+    expect(screen.getByText(/used in 1 routine$/i)).toBeInTheDocument();
+    // Lineage copy (frame 2.3): saved → "based on …"; own → "your own figure".
+    expect(screen.getByText(/based on/i)).toBeInTheDocument();
+    expect(screen.getByText(/your own figure/i)).toBeInTheDocument();
+    // Two-state ScopeBadge: one Library (saved), one Custom (own) — "Variant" is gone.
+    expect(screen.getByText(/^Library$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Custom$/)).toBeInTheDocument();
     expect(screen.queryByText(/^variant$/i)).toBeNull();
+    // Each figure offers an edit affordance.
+    expect(screen.getAllByRole("button", { name: /edit/i }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("filters the personal library by dance and shows the empty per-dance prompt (2.4)", async () => {
+    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
+      "../components/FigureLibrary",
+    );
+    renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
+    await screen.findByText(/used in 2 routines/i);
+    // Filter to a dance with nothing saved → the guided empty state (exact copy).
+    await userEvent.click(screen.getByRole("button", { name: /^tango$/i }));
+    expect(screen.getByText(/nothing saved for this dance yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/save a figure from the library to reuse it/i)).toBeInTheDocument();
   });
 });
 
