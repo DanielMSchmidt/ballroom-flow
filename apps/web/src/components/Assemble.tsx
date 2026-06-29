@@ -54,7 +54,7 @@ import {
   Spinner,
   useToast,
 } from "../ui";
-import { AddKindSheet } from "./AddKindSheet";
+import { AddKindPicker } from "./AddKindPicker";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
@@ -516,6 +516,9 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              roleView={roleView}
+              onRoleViewChange={setRoleView}
+              scopeLabel={routine.title || notatingFigure.name}
               customKinds={store.customKinds()}
               figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>
@@ -590,6 +593,8 @@ export function Assemble({
                   role={canEdit ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
+                  roleView={roleView}
+                  onRoleViewChange={setRoleView}
                   customKinds={store.customKinds()}
                   onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
                 />
@@ -599,14 +604,19 @@ export function Assemble({
         )}
       </Sheet>
 
-      {/* Add a custom attribute kind (US-043): editor-only; persisted in the
-          routine doc and across all routines via accountKinds (US-043 AC-2).
+      {/* Add an attribute kind (frame 1.15 + US-043): a picker over the standard
+          + custom kinds with a "＋ new attribute type" route to the builder
+          (frame 1.16). Editor-only; a created kind persists in the routine doc
+          and across routines via accountKinds (US-043 AC-2).
           NOTE: rendered AFTER the notation Sheet on purpose — both use the same
           overlay z-index, so DOM source order decides stacking; this Sheet must
           stay below the notation Sheet here to layer on top of it when open. */}
-      <AddKindSheet
+      <AddKindPicker
         open={addKindOpen}
         onClose={() => setAddKindOpen(false)}
+        dance={routine.dance as DanceId}
+        customKinds={store.customKinds()}
+        onSelectKind={() => setAddKindOpen(false)}
         onCreate={(k) => store.createCustomKind(k)}
       />
 

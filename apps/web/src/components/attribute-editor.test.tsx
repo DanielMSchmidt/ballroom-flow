@@ -291,6 +291,100 @@ describe("US-030 Timeline role-view toggle", () => {
   });
 });
 
+describe("QUAL-5 role lens is controllable (unified with the reading view)", () => {
+  // The reading view persists the Leader/Follower lens via the store (bb_role).
+  // FigureTimeline + Lanes must accept that SAME role as a controlled prop so the
+  // choice is consistent across reading + timeline + lanes (not ephemeral).
+  const roleStep = (value: string, role: Attribute["role"]): Attribute => ({
+    id: `footwork-1-${value}`,
+    kind: "footwork",
+    count: 1,
+    value,
+    role,
+    deletedAt: null,
+  });
+  const seeded: Attribute[] = [
+    roleStep("both-role", null),
+    roleStep("leader-only", "leader"),
+    roleStep("follower-only", "follower"),
+  ];
+
+  it("FigureTimeline renders the controlled roleView and emits flips via onRoleViewChange", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const onRoleViewChange = vi.fn();
+    const { rerender } = renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        roleView="leader"
+        onRoleViewChange={onRoleViewChange}
+        attributes={seeded}
+      />,
+    );
+    // Controlled: leader view shows the leader-only value, hides follower-only.
+    expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/follower-only/i)).toBeNull();
+    // Flipping does NOT mutate internal state — it asks the owner to change.
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
+    expect(onRoleViewChange).toHaveBeenCalledWith("follower");
+    // Still leader until the controlled prop changes (truly controlled).
+    expect(screen.getByText(/leader-only/i)).toBeInTheDocument();
+    // Owner pushes the new value back in → follower view now applies.
+    rerender(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        roleView="follower"
+        onRoleViewChange={onRoleViewChange}
+        attributes={seeded}
+      />,
+    );
+    expect(screen.getByText(/follower-only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/leader-only/i)).toBeNull();
+  });
+
+  it("Lanes renders the controlled roleView and emits flips via onRoleViewChange", async () => {
+    const { Lanes } = await importComponent<LanesModule>("../components/Lanes");
+    const onRoleViewChange = vi.fn();
+    const follower: Attribute = {
+      id: "sway-2-f",
+      kind: "sway",
+      count: 2,
+      value: "to_R",
+      role: "follower",
+      deletedAt: null,
+    };
+    const { rerender } = renderUi(
+      <Lanes
+        kind="sway"
+        role="editor"
+        counts={3}
+        dance="foxtrot"
+        roleView="leader"
+        onRoleViewChange={onRoleViewChange}
+        attributes={[follower]}
+      />,
+    );
+    expect(screen.queryByText("to_R")).toBeNull(); // hidden in the controlled leader view
+    await userEvent.click(screen.getByRole("button", { name: /flip/i }));
+    expect(onRoleViewChange).toHaveBeenCalledWith("follower");
+    rerender(
+      <Lanes
+        kind="sway"
+        role="editor"
+        counts={3}
+        dance="foxtrot"
+        roleView="follower"
+        onRoleViewChange={onRoleViewChange}
+        attributes={[follower]}
+      />,
+    );
+    expect(screen.getByText("to_R")).toBeInTheDocument();
+  });
+});
+
 describe("US-044 Lanes (one kind across all counts)", () => {
   it("shows a single kind across every count and edits the same attributes as the timeline", async () => {
     // Intent: a lane lays out one kind across all counts; edits mirror the timeline.

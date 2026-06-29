@@ -100,6 +100,47 @@ describe("T7 Profile design parity (frame 4.1)", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// T4 — Profile · Attribute types manager (frame 1.17). A section UNDER the
+// Profile identity area (not a replacement): lists the standard (locked) kinds
+// and any custom (choreo-scoped) kinds, with a "＋ new type" affordance.
+// ─────────────────────────────────────────────────────────────────────────
+describe("T4 Profile attribute-types manager (frame 1.17)", () => {
+  const headKind = {
+    kind: "head",
+    label: "Head",
+    color: "#4a9d9a",
+    cardinality: "single" as const,
+    valueType: "enum",
+    values: ["left", "right", "closed"],
+    builtin: false,
+  };
+
+  it("keeps the identity area AND lists standard + custom attribute types", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} customKinds={[headKind]} />);
+    // The identity area is still present (not clobbered).
+    expect(screen.getByText(/profile colour/i)).toBeInTheDocument();
+    // The new manager section.
+    expect(screen.getByText(/attribute types/i)).toBeInTheDocument();
+    // Standard kinds are listed and marked standard.
+    expect(screen.getByText("Rise & Fall")).toBeInTheDocument();
+    expect(screen.getByText("Position")).toBeInTheDocument();
+    expect(screen.getAllByText(/standard/i).length).toBeGreaterThan(0);
+    // The custom kind is listed and marked as choreo-scoped.
+    expect(screen.getByText("Head")).toBeInTheDocument();
+    expect(screen.getByText(/this choreo/i)).toBeInTheDocument();
+  });
+
+  it("opens the new-type builder from the ＋ new type affordance", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} />);
+    await userEvent.click(screen.getByRole("button", { name: /new type/i }));
+    // The builder (AddKindSheet) is now open — its Label field is present.
+    expect(screen.getByLabelText(/label/i)).toBeInTheDocument();
+  });
+});
+
 // US-038 Per-user undo / redo UX: the undo/redo affordances + "Undone" toast live
 // on the OPEN routine (the Assemble header), not on a standalone <UndoControls> or
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe
