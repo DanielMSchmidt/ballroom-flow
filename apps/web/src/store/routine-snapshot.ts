@@ -17,7 +17,7 @@ import {
 } from "@ballroom/domain";
 import { apiGet } from "../lib/rpc";
 import type { TokenProvider } from "./doc-connection";
-import type { ResolvedPlacement, RoutineReadModel } from "./routine";
+import type { FigureLoadStatus, ResolvedPlacement, RoutineReadModel } from "./routine";
 
 /** The shape returned by `GET /api/routines/:id/snapshot`. */
 export interface RoutineSnapshot {
@@ -160,7 +160,12 @@ export function openRoutineSnapshot(
       const out: ResolvedPlacement[] = [];
       for (const section of routine.sections) {
         for (const placement of section.placements) {
-          out.push({ placement, figure: figures[placement.figureRef] ?? null });
+          const figure = figures[placement.figureRef] ?? null;
+          // The snapshot resolves every referenced figure server-side: present →
+          // live; absent → genuinely missing (deleted / no access). Before the
+          // first snapshot lands the whole view reads "connecting" (syncState).
+          const status: FigureLoadStatus = figure ? "live" : snapshot ? "missing" : "loading";
+          out.push({ placement, figure, status });
         }
       }
       return out;

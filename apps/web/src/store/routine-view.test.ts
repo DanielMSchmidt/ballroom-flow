@@ -58,6 +58,7 @@ function fakeLive() {
     },
     close: vi.fn(),
     openFigure,
+    retryFigure: vi.fn(),
     addSection,
     renameSection: vi.fn(),
     moveSection: vi.fn(),

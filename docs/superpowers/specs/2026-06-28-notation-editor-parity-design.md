@@ -137,6 +137,25 @@ mostly **editor UI** plus **one vocabulary change**, not a domain rebuild.
    until reload. Fix: distinguish *loading* from *genuinely missing* — render a
    name **skeleton/placeholder** while the figure doc is connecting; only show a
    true "missing" state if it resolves absent.
+   **Implemented (2026-06-28) as the full RemoteData pattern**, since the root
+   cause was broader than a flash — each figure is its own Automerge doc on its
+   own connection, and a dropped/never-hydrated connection left a figure blank
+   until a full page reload. The store now exposes a per-figure
+   `FigureLoadStatus` (`pending | loading | live | missing | error`) on each
+   `ResolvedPlacement` (`store/routine.ts`), and:
+   - **`DocConnection` auto-reconnects** with capped backoff (`store/
+     doc-connection.ts`): a warm drop self-heals; a handshake that never opens
+     (missing/forbidden/server-down) retries a bounded number of times then goes
+     terminally `closed`. This removes the whole "had to reload" class.
+   - **Registry-backed missing detection**: a connection that gives up is
+     disambiguated via the existing `GET /api/docs/:id/access` preflight (it
+     mirrors the WS authorization incl. the routine→figure cascade) — a 403 →
+     `missing`, accessible-but-failed → `error`.
+   - **Hydration timeout** escalates a figure that never loads to a retryable
+     `error` (no forever-skeleton); `store.retryFigure(ref)` forces a reconnect.
+   - **Both surfaces render the states**: `PlacementCard` (skeleton / unavailable
+     / retry) and `RoutineReadingView` (skeleton / unavailable, no retry in the
+     read-only view) — no figure ever silently vanishes or reads "Unknown".
 2. **Reflow-on-tap mis-taps** — resolved by the §2.2 progressive flow (no more
    list-shifting summary row). No separate fix needed.
 3. **Library figure shows "Custom"** (`Assemble.tsx:742`): placing a catalog

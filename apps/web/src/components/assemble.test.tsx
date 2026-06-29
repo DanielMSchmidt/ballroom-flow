@@ -52,6 +52,7 @@ function fakeStore(
     deleteReply: () => {},
     createCustomKind: () => {},
     customKinds: () => [],
+    retryFigure: () => {},
     undo: () => {},
     redo: () => {},
     subscribe: () => () => {},
@@ -104,7 +105,7 @@ describe("Reading view (read-only routine timeline)", () => {
       <Assemble
         routineId="rt_sample"
         role="editor"
-        store={fakeStore(routine, [{ placement: p, figure: fig }])}
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /reading view/i }));
@@ -141,8 +142,16 @@ describe("US-018 Open & view a routine", () => {
       deletedAt: null,
     };
     const resolved: ResolvedPlacement[] = [
-      { placement: placement("p1", "feather"), figure: figure("feather", "Feather") },
-      { placement: placement("p2", "threestep"), figure: figure("threestep", "Three Step") },
+      {
+        placement: placement("p1", "feather"),
+        figure: figure("feather", "Feather"),
+        status: "live",
+      },
+      {
+        placement: placement("p2", "threestep"),
+        figure: figure("threestep", "Three Step"),
+        status: "live",
+      },
     ];
     const { container } = renderUi(
       <Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />,
@@ -269,8 +278,8 @@ describe("US-027 Add / reorder / delete figure placements", () => {
         deletedAt: null,
       },
       resolved: [
-        { placement: p1, figure: figure("feather", "Feather") },
-        { placement: p2, figure: figure("threestep", "Three Step") },
+        { placement: p1, figure: figure("feather", "Feather"), status: "live" },
+        { placement: p2, figure: figure("threestep", "Three Step"), status: "live" },
       ],
     };
   };
@@ -488,7 +497,7 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
         schemaVersion: 1,
         deletedAt: null,
       },
-      resolved: [{ placement: p, figure: figure("feather", "Feather") }],
+      resolved: [{ placement: p, figure: figure("feather", "Feather"), status: "live" }],
     };
   };
 
@@ -509,10 +518,55 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
       schemaVersion: 1,
       deletedAt: null,
     };
-    const resolved: ResolvedPlacement[] = [{ placement: p, figure: null }];
+    const resolved: ResolvedPlacement[] = [{ placement: p, figure: null, status: "loading" }];
     renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
     expect(screen.queryByText(/unknown figure/i)).toBeNull();
     expect(screen.getByText(/loading figure/i)).toBeInTheDocument();
+  });
+
+  it("shows an honest 'unavailable' note for a genuinely missing figure", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "fgone");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const resolved: ResolvedPlacement[] = [{ placement: p, figure: null, status: "missing" }];
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    expect(screen.queryByText(/loading figure/i)).toBeNull();
+    expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
+  });
+
+  it("offers Retry for a figure that failed to load, calling store.retryFigure", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "ferr");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const retryFigure = vi.fn();
+    const resolved: ResolvedPlacement[] = [{ placement: p, figure: null, status: "error" }];
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { retryFigure })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(retryFigure).toHaveBeenCalledWith("ferr");
   });
 
   it("opens a placement's step editor and persists an attribute edit via the store (AC-1)", async () => {
@@ -569,7 +623,7 @@ describe("US-031 Edit per-figure alignment", () => {
         schemaVersion: 1,
         deletedAt: null,
       },
-      resolved: [{ placement: p, figure: figure("feather", "Feather") }],
+      resolved: [{ placement: p, figure: figure("feather", "Feather"), status: "live" }],
     };
   };
 
