@@ -471,4 +471,161 @@ describe("T5 save-to-library promotion", () => {
     expect(refs).toHaveLength(1);
     expect(refs[0]?.usedInCount).toBe(2);
   });
+
+  it("US-034 edit-ripple (LIVE): an edit to the saved figure shows in BOTH routines that reference it", async () => {
+    // The stronger proof the structural test can't give: a REAL edit to the saved
+    // account-figure's DO (ingested via the same applyRawChange sync path an editor's
+    // change takes) surfaces — once, identically — in every routine that references
+    // it. Two routines reference ONE figure doc; we edit that doc and read both
+    // routines' read-only snapshots. Single source, no duplication, no per-routine copy.
+    const ctx = await authedContext({ keypair: kp, userId: "u_live", docRef: "x", role: null });
+    const rtA = uniqueDocName("rt");
+    const rtB = uniqueDocName("rt");
+    await seedDb({
+      users: [{ id: "u_live", displayName: "L", identityColor: "#111", plan: "free" }],
+      docs: [
+        {
+          docRef: rtA,
+          type: "routine",
+          ownerId: "u_live",
+          doName: rtA,
+          dance: "waltz",
+          title: "A",
+        },
+        {
+          docRef: rtB,
+          type: "routine",
+          ownerId: "u_live",
+          doName: rtB,
+          dance: "waltz",
+          title: "B",
+        },
+      ],
+      memberships: [
+        { id: `m_${rtA}`, docRef: rtA, userId: "u_live", role: "editor" },
+        { id: `m_${rtB}`, docRef: rtB, userId: "u_live", role: "editor" },
+      ],
+    });
+
+    // Save the global figure → ONE account-figure doc (its DO seeded with name "Natural Turn").
+    const saved = (await (await saveToLibrary(ctx.authHeaders(), NAT_TURN)).json()) as {
+      figureRef: string;
+    };
+    const figureRef = saved.figureRef;
+
+    // Seed both routine DOs with a placement that references the SAME saved figure.
+    for (const ref of [rtA, rtB]) {
+      await docs.get(docs.idFromName(ref)).seedDoc({
+        id: ref,
+        title: ref,
+        dance: "waltz",
+        ownerId: "u_live",
+        sections: [
+          {
+            id: `sec_${ref}`,
+            name: "Intro",
+            placements: [{ id: `pl_${ref}`, figureRef, deletedAt: null }],
+            deletedAt: null,
+          },
+        ],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      });
+    }
+
+    // A LIVE edit to the figure doc: rename it via the real change-ingest path
+    // (applyRawChange = the US-015 sync entrypoint an editor's WebSocket change hits).
+    const figStub = docs.get(docs.idFromName(figureRef));
+    await runInDurableObject(
+      figStub as unknown as DurableObjectStub<import("../doc-do").DocDO>,
+      async (instance) => {
+        const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
+        const rows = doState.storage.sql
+          .exec("SELECT data FROM changes ORDER BY seq")
+          .toArray() as Array<{ data: ArrayBuffer }>;
+        let doc = A.init<Record<string, unknown>>();
+        [doc] = A.applyChanges(
+          doc,
+          rows.map((r) => new Uint8Array(r.data) as A.Change),
+        );
+        const edited = A.change(doc, (d: Record<string, unknown>) => {
+          d.name = "Natural Turn (edited)";
+        });
+        const changeBytes = A.getChanges(doc, edited);
+        const applyRaw = (
+          instance as unknown as { applyRawChange: (c: Uint8Array) => Promise<boolean> }
+        ).applyRawChange;
+        for (const ch of changeBytes) await applyRaw.call(instance, ch);
+      },
+    );
+
+    // Read BOTH routines' read-only snapshots; each hydrates the figure from its single DO.
+    const readFigureName = async (routineRef: string) => {
+      const res = await SELF.fetch(`https://x/api/routines/${routineRef}/snapshot`, {
+        headers: ctx.authHeaders(),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        figures: Record<string, { name?: string } | undefined>;
+      };
+      return { figureKeys: Object.keys(body.figures), name: body.figures[figureRef]?.name };
+    };
+
+    const a = await readFigureName(rtA);
+    const b = await readFigureName(rtB);
+    // The edit rippled to BOTH — single source of truth.
+    expect(a.name).toBe("Natural Turn (edited)");
+    expect(b.name).toBe("Natural Turn (edited)");
+    // No duplication: each routine references the one figure doc by the same ref.
+    expect(a.figureKeys).toEqual([figureRef]);
+    expect(b.figureKeys).toEqual([figureRef]);
+  });
+
+  it("the DB partial unique index forbids a duplicate copy for the same (owner, base)", async () => {
+    // Deterministic proof of the TOCTOU guard (migration 0010): a second account-figure
+    // row with the SAME (ownerId, forkedFromRef) and deletedAt IS NULL is rejected by
+    // the partial unique index — the app-level SELECT is no longer the only line of defence.
+    await seedDb({
+      users: [{ id: "u_uniq", displayName: "U", identityColor: "#111", plan: "free" }],
+    });
+    const base = "global:waltz:reverse-turn";
+    const insert = (docRef: string) =>
+      env.DB.prepare(
+        "INSERT INTO document_registry (docRef, type, ownerId, doName, forkedFromRef, updatedAt) VALUES (?, 'account-figure', 'u_uniq', ?, ?, 1)",
+      )
+        .bind(docRef, docRef, base)
+        .run();
+    await insert("af_uniq_1");
+    await expect(insert("af_uniq_2")).rejects.toThrow();
+  });
+
+  it("concurrent saves of the same figure never duplicate and never 500 (race-safe)", async () => {
+    // Two saves issued together race the SELECT→INSERT window. The DB unique index is
+    // the real guard; the route catches the conflict and returns the existing copy.
+    // Invariant under any interleaving: both responses are 2xx for the SAME figureRef,
+    // and exactly ONE row exists — never a duplicate, never a 500.
+    const ctx = await authedContext({ keypair: kp, userId: "u_race", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_race", displayName: "C", identityColor: "#111", plan: "free" }],
+    });
+    const fig = { dance: "waltz", figureType: "reverse-turn", name: "Reverse Turn" } as const;
+
+    const [r1, r2] = await Promise.all([
+      saveToLibrary(ctx.authHeaders(), fig),
+      saveToLibrary(ctx.authHeaders(), fig),
+    ]);
+    expect(r1.status).toBeLessThan(300);
+    expect(r2.status).toBeLessThan(300);
+    expect(r1.status).not.toBe(500);
+    expect(r2.status).not.toBe(500);
+    const b1 = (await r1.json()) as { figureRef: string };
+    const b2 = (await r2.json()) as { figureRef: string };
+    expect(b1.figureRef).toBe(b2.figureRef);
+
+    const cnt = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = 'u_race' AND type = 'account-figure' AND forkedFromRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
+    ).first<{ n: number }>();
+    expect(cnt?.n).toBe(1);
+  });
 });

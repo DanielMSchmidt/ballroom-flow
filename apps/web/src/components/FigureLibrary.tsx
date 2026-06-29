@@ -265,6 +265,7 @@ export function FigureLibrary({
                         {onSaveToLibrary && (
                           <button
                             type="button"
+                            aria-label={`Save ${fig.name} to my library`}
                             onClick={() => handleSave(fig)}
                             disabled={saving === key}
                             className="inline-flex shrink-0 items-center gap-1 rounded-pill border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"

@@ -355,14 +355,28 @@ app.post("/api/figures/save-to-library", async (c) => {
   const figureRef = newId();
   const attributes = (origin.attributes ?? []).map((a) => ({ ...a }));
 
-  await createFigureRows(c.env.DB, {
-    figureRef,
-    ownerId: user.sub,
-    name,
-    dance,
-    figureType,
-    baseFigureRef,
-  });
+  // The SELECT above narrows the window but doesn't close it: two concurrent saves
+  // can both pass it. The DB partial unique index `account_figure_base_idx`
+  // (migration 0010, on `(ownerId, forkedFromRef)`) is the real guard. On a
+  // conflict, resolve the row the winning request inserted and return it as
+  // alreadySaved — never a 500. (seedDoc runs only after the rows commit, so a
+  // loser never seeds an orphan DO.)
+  try {
+    await createFigureRows(c.env.DB, {
+      figureRef,
+      ownerId: user.sub,
+      name,
+      dance,
+      figureType,
+      baseFigureRef,
+    });
+  } catch (err) {
+    const winner = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
+    if (winner) {
+      return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
+    }
+    throw err;
+  }
   // Seed the figure's CRDT content durably (#205): a FROZEN snapshot of the
   // catalog figure's attributes; `source: "library"` + `baseFigureRef` provenance
   // (no live overlay — §5.2). No placement edge: a saved figure isn't in a routine

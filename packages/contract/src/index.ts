@@ -77,7 +77,7 @@ export type CreateFigure = z.infer<typeof zCreateFigure>;
  */
 export const zSaveToLibrary = z.object({
   dance: z.enum(DANCE_IDS),
-  figureType: z.string().trim().min(1),
+  figureType: z.string().trim().min(1).max(120),
   name: z.string().trim().min(1).max(80),
 });
 export type SaveToLibrary = z.infer<typeof zSaveToLibrary>;
