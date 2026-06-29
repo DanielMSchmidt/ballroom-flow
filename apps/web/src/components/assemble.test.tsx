@@ -532,7 +532,7 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
     // The count timeline shows; tap count 1, then pick footwork "ball".
-    await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
+    await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
     await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
@@ -549,7 +549,7 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     const { routine, resolved } = oneFigureRoutine();
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    await userEvent.click(screen.getByRole("button", { name: /count 1/i }));
+    await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
     expect(screen.queryByRole("button", { name: /^T$/ })).toBeNull();
   });
 });

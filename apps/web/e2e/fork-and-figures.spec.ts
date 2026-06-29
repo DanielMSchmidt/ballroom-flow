@@ -115,7 +115,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
 
     // Open the figure's step timeline and set count-1 footwork "T".
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /^ball$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
     await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
@@ -184,7 +184,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
 
     // Open the figure's steps and trigger copy-on-write by editing count 1.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
     // "T" is a suggestion in the Step kind; clicking it on a global figure triggers COW.
     await page.getByRole("button", { name: /^ball$/ }).click();
 
@@ -328,7 +328,7 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     await editor.page.goto(`/routines/${docRef}`);
     await expect(editor.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await editor.page.getByRole("button", { name: /count 1/i }).click();
+    await editor.page.getByRole("button", { name: /beat 1/i }).click();
     await editor.page.getByRole("button", { name: /^ball$/ }).click();
     await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
       timeout: 15_000,

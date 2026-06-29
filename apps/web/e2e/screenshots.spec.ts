@@ -87,7 +87,7 @@ test.describe("@screenshots landing imagery", () => {
       .getByRole("button", { name: /edit steps: Natural Spin Turn/i })
       .first()
       .click();
-    await page.getByRole("button", { name: /count 1/i }).click();
+    await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /^forward$/ }).click(); // direction headline
     await page.getByRole("button", { name: /^ball$/ }).click(); // footwork slot
     // Reveal technique kinds (rise & fall, sway, turn, body actions, position).
