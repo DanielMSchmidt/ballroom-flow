@@ -978,12 +978,14 @@ function AlignmentEdge({
   );
 }
 
-/** Variant / custom / library tag from the figure's scope + lineage. */
+/** Custom / library tag, derived by content DIVERGENCE (not the copy mechanism).
+ *  A frozen account copy carries its own attributes; `baseFigureRef` is provenance
+ *  only. An account figure still matching its catalog origin reads Library; once it
+ *  diverges (or is a from-scratch custom) it reads Custom (§2.5.1 #19–20). */
 function ScopeTag({ figure }: { figure: FigureDoc }) {
   if (figure.scope === "account") {
-    if (figure.baseFigureRef) return <Badge tone="accent">Variant</Badge>;
     // An unchanged library pick isn't "custom" — only badge Custom once it actually
-    // diverges from the catalog figure it was added from.
+    // diverges from the catalog figure it was added/copied from.
     if (figureMatchesLibraryOrigin(figure)) return <Badge tone="neutral">Library</Badge>;
     return <Badge tone="accent">Custom</Badge>;
   }

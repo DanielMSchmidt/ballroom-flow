@@ -2,6 +2,7 @@ import * as A from "@automerge/automerge";
 import { describe, expect, it } from "vitest";
 import {
   FEATHER_FOXTROT,
+  type FigureDoc,
   importDomain,
   makePlacement,
   SAMPLE_COACH,
@@ -113,14 +114,17 @@ describe("US-007 Choreo fork (clone)", () => {
   });
 });
 
-describe("US-008 Copy-on-write (auto-variant)", () => {
-  it("spawns an owned variant (baseFigureRef + empty overlay) and re-points the placement", async () => {
-    // Intent: editing a non-owned figure diverges only that figure into an owned variant.
+describe("US-008 Copy-on-write (frozen copy)", () => {
+  it("spawns an owned frozen copy (own attributes + baseFigureRef provenance) and re-points the placement", async () => {
+    // Intent: editing a non-owned figure diverges only that figure into an owned,
+    // FROZEN copy carrying its own attributes — no overlay, no flow-up (§5.2,
+    // §2.5.1 #14–18).
     // Arrange: a placement pointing at the global FEATHER_FOXTROT; editor = student.
     // Act: copyOnWrite(placement, FEATHER_FOXTROT, student).
-    // Assert: new figure doc has scope:account, ownerId:student,
-    //   baseFigureRef:FEATHER_FOXTROT.id, empty overlay; placement.figureRef re-points to it.
-    // Covers US-008 AC-1 (variant fields) + AC-2 (placement re-pointed) — §10.2 "placement re-point".
+    // Assert: new figure doc has scope:account, ownerId:student, source:custom,
+    //   baseFigureRef:FEATHER_FOXTROT.id, its OWN attributes (== base by content),
+    //   and NO overlay; placement.figureRef re-points to it.
+    // Covers US-008 AC-1 (copy fields) + AC-2 (placement re-pointed) — §10.2 "placement re-point".
     const { copyOnWrite } = await importDomain();
     const placement = makePlacement(FEATHER_FOXTROT.id, { id: "plc_cow" });
     const { variant, placement: repointed } = copyOnWrite(
@@ -131,9 +135,13 @@ describe("US-008 Copy-on-write (auto-variant)", () => {
     expect(variant).toMatchObject({
       scope: "account",
       ownerId: SAMPLE_STUDENT,
+      source: "custom",
       baseFigureRef: FEATHER_FOXTROT.id,
     });
-    expect(variant?.overlay).toMatchObject({ overrides: {}, tombstones: [], additions: [] });
+    // The copy carries its OWN attributes, equal by content to the source's.
+    expect(variant?.attributes).toEqual(FEATHER_FOXTROT.attributes);
+    // No overlay — the live-overlay model is retired.
+    expect(variant?.overlay).toBeUndefined();
     expect(repointed.figureRef).toBe(variant?.id);
   });
 
@@ -188,19 +196,28 @@ describe("US-008 Copy-on-write (auto-variant)", () => {
     expect(variant?.baseFigureRef).toBe(coachOwned.id);
   });
 
-  it("produces a variant whose empty overlay resolves to the base content", async () => {
-    // Intent: an auto-variant diverges NOTHING initially — resolving its empty
-    // overlay against the base yields the base's attributes (US-006 contract).
-    const { copyOnWrite, resolve } = await importDomain();
-    const { variant } = copyOnWrite(
-      makePlacement(FEATHER_FOXTROT.id),
-      FEATHER_FOXTROT,
-      SAMPLE_STUDENT,
-    );
+  it("is a frozen snapshot — a later change to the SOURCE does not change the copy", async () => {
+    // Intent: the copy is a frozen snapshot of the source's attributes at copy
+    // time; later edits to the source never flow into the copy (§5.2, §2.5.1
+    // #15). Build a MUTABLE source (the shared fixture is frozen), copy from it,
+    // then mutate the source's attributes and assert the copy is unchanged.
+    const { copyOnWrite } = await importDomain();
+    const source: FigureDoc = {
+      ...FEATHER_FOXTROT,
+      attributes: FEATHER_FOXTROT.attributes.map((a) => ({ ...a })),
+    };
+    const { variant } = copyOnWrite(makePlacement(source.id), source, SAMPLE_STUDENT);
     expect(variant).not.toBeNull();
-    if (variant?.overlay) {
-      const eff = resolve(FEATHER_FOXTROT, variant.overlay);
-      expect(eff.attributes.map((a) => a.id)).toEqual(FEATHER_FOXTROT.attributes.map((a) => a.id));
+    const copySnapshot = JSON.stringify(variant?.attributes);
+
+    // A later edit to the SOURCE: retime + revalue every step, append a new one.
+    for (const a of source.attributes) {
+      a.count += 10;
+      a.value = "changed";
     }
+    source.attributes.push({ id: "a_new_source", kind: "sway", count: 99, value: "to_R" });
+
+    // The copy's attributes are untouched by the later source edit.
+    expect(JSON.stringify(variant?.attributes)).toBe(copySnapshot);
   });
 });

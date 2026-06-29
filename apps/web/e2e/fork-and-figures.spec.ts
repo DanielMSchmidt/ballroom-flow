@@ -7,8 +7,9 @@ import { closeUsers, expectAbsent, openTwoUsers, openUser } from "./support/two-
 // Fork + inheritance journeys (PLAN §10.2 E2E). Covers:
 //   US-037 — choreo fork → frozen/independent (origin edit does NOT appear);
 //   US-034 — edit your own shared figure → flows into a SECOND routine;
-//   US-035 — auto-variant: edit a global/non-owned figure → variant created,
-//            original untouched, "copied as your variant" toast.
+//   US-035 — copy-on-write: edit a global/non-owned figure → frozen copy created
+//            (its own attributes, no overlay), original untouched, "copied as your
+//            variant" toast.
 //
 // @smoke includes one fork/copy-on-write journey (PLAN §10.3). The choreo-fork
 // journey (US-037) is LIVE; the figure auto-update / COW (US-034/035) and
@@ -136,13 +137,14 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     });
   });
 
-  test("@smoke editing a GLOBAL figure auto-creates your variant; original untouched (US-035)", async ({
+  test("@smoke editing a GLOBAL figure auto-creates your frozen copy; original untouched (US-035)", async ({
     page,
   }) => {
     // Intent: editing a global (app-owned library) figure silently spawns an owned
-    // variant, re-points the placement, and shows "Copied as your variant" (US-035).
-    // The base global figure is untouched — proved at the worker layer (COW stores an
-    // overlay against the base; this test verifies the UI observables: toast + badge).
+    // FROZEN copy (its own attributes, no overlay), re-points the placement, and shows
+    // "Copied as your variant" (US-035). The base global figure is untouched — proved
+    // at the worker layer (the copy carries its own attributes; this test verifies the
+    // UI observables: toast + the divergence-derived "Custom" badge).
     await resetDb(page);
     await seedDb(page, {
       users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
@@ -196,9 +198,10 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     });
 
     // After the async COW (POST /api/figures + re-point) the placement card shows
-    // a "Variant" badge (scope=account + baseFigureRef set). The card is in the DOM
-    // behind the sheet overlay (not hidden/display:none) so toBeVisible resolves.
-    await expect(page.getByText(/^Variant$/)).toBeVisible({ timeout: 15_000 });
+    // a "Custom" badge — the copy's attributes have diverged from the catalog origin
+    // (§2.5.1 #19; "Variant" is no longer a concept). The card is in the DOM behind
+    // the sheet overlay (not hidden/display:none) so toBeVisible resolves.
+    await expect(page.getByText(/^Custom$/)).toBeVisible({ timeout: 15_000 });
     // The global figure's base data is not asserted here from a second UI context
     // (no in-app path to read a raw global figure); the COW unit tests prove it.
   });

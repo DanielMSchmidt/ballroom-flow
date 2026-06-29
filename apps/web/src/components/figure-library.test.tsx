@@ -55,13 +55,16 @@ describe("US-032 Application-global figure library browse", () => {
   });
 });
 
-describe("US-033 Account variants + custom figures in library", () => {
-  it("shows a variant lineage badge + a custom badge + 'used in N routines'", async () => {
-    // Intent: my variants show base lineage; custom figures a custom badge; usage count.
-    // Arrange: render <FigureLibrary tab="mine"> injecting data — a variant (baseFigureRef set,
-    //   usedInCount 2) and a custom figure (baseFigureRef null). No auth/query provider needed.
-    // Act: await async load. Assert: "used in 2 routines"; a "Variant" badge; a "Custom" badge.
-    // Covers US-033 AC-1 (variant/custom badges) + AC-2 ("used in N").
+describe("US-033 Account figures (copies + custom) in library", () => {
+  it("badges every account figure Custom + shows 'used in N routines'", async () => {
+    // Intent: account figures (a frozen copy of a library figure, and a from-scratch
+    //   custom) both badge "Custom" — "Variant" is no longer a concept (§2.5.1 #19,
+    //   §5.2). Usage count is shown.
+    // Arrange: render <FigureLibrary tab="mine"> injecting data — a copy (baseFigureRef
+    //   set, usedInCount 2) and a custom figure (baseFigureRef null). No auth/query
+    //   provider needed.
+    // Act: await async load. Assert: "used in 2 routines"; both figures badge "Custom".
+    // Covers US-033 AC-1 (custom badge) + AC-2 ("used in N").
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
@@ -83,8 +86,9 @@ describe("US-033 Account variants + custom figures in library", () => {
     ];
     renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
     expect(await screen.findByText(/used in 2 routines/i)).toBeInTheDocument();
-    expect(screen.getByText(/variant/i)).toBeInTheDocument();
-    expect(screen.getByText(/custom/i)).toBeInTheDocument();
+    // Both account figures badge "Custom" (no "Variant" badge anymore).
+    expect(screen.getAllByText(/custom/i)).toHaveLength(2);
+    expect(screen.queryByText(/^variant$/i)).toBeNull();
   });
 });
 

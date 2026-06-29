@@ -7,7 +7,13 @@
 // shows a small dot. Pure presentation over the same store reads; no editing.
 // A null figure is rendered honestly per its load status (skeleton / unavailable),
 // never silently dropped (#94).
-import { type Attribute, countLabel, type FigureDoc, type RoutineDoc } from "@ballroom/domain";
+import {
+  type Attribute,
+  countLabel,
+  type FigureDoc,
+  figureMatchesLibraryOrigin,
+  type RoutineDoc,
+} from "@ballroom/domain";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import { Card, kindVar, ScopeBadge, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
@@ -56,10 +62,13 @@ export function RoutineReadingView({
   );
 }
 
-/** The figure's scope, for the header badge (variant wins over its base scope). */
+/** The figure's badge scope, derived by content DIVERGENCE (not the copy
+ *  mechanism): a frozen account copy carries its own attributes and `baseFigureRef`
+ *  is provenance only — an account figure still matching its catalog origin reads
+ *  Library, otherwise Custom (§2.5.1 #19–20). */
 function figureScope(figure: FigureDoc): FigureScope {
-  if (figure.baseFigureRef) return "variant";
-  return figure.scope === "global" ? "global" : "custom";
+  if (figure.scope === "global") return "global";
+  return figureMatchesLibraryOrigin(figure) ? "global" : "custom";
 }
 
 /** One figure's notation, read-only: a compact count × technique-column table. */

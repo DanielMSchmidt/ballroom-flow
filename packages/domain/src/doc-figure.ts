@@ -1,10 +1,11 @@
 // US-005 — Figure document schema (PLAN §2.2–2.5).
 //
 // A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source,
-// optional alignment), a float-count attribute timeline, optional variant fields
-// (baseFigureRef + overlay), and a schemaVersion. Build it from a plain
-// FigureDoc, read it back (dropping tombstoned attributes by default), and
-// soft-delete an attribute via a mergeable `deletedAt` flip.
+// optional alignment), a float-count attribute timeline, an optional
+// `baseFigureRef` provenance pointer (a frozen copy carries its own attributes —
+// no overlay), and a schemaVersion. Build it from a plain FigureDoc, read it
+// back (dropping tombstoned attributes by default), and soft-delete an attribute
+// via a mergeable `deletedAt` flip.
 import type * as A from "@automerge/automerge";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
 import type { FigureDoc, ReadOptions } from "./doc-types";

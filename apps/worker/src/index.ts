@@ -1,12 +1,5 @@
 import { zCreateFigure, zCreateRoutine, zIssueInvite, zRegistryKind } from "@ballroom/contract";
-import {
-  can,
-  type FigureDoc,
-  isReservedKind,
-  newId,
-  parseAttributeWrite,
-  resolve,
-} from "@ballroom/domain";
+import { can, type FigureDoc, isReservedKind, newId, parseAttributeWrite } from "@ballroom/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
@@ -298,9 +291,9 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
-    ...(baseFigureRef
-      ? { baseFigureRef, overlay: { overrides: {}, tombstones: [], additions: [] } }
-      : {}),
+    // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
+    // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
+    ...(baseFigureRef ? { baseFigureRef } : {}),
     schemaVersion: 1,
     deletedAt: null,
   });
@@ -513,8 +506,9 @@ app.get("/api/docs/:id/access", async (c) => {
 });
 
 // GET /api/routines/:id/snapshot — the READ-ONLY snapshot path (read/edit split).
-// A single REST read hydrates a routine + ALL its referenced figures (variant
-// overlays resolved server-side) with NO per-document WebSocket — so opening a
+// A single REST read hydrates a routine + ALL its referenced figures (each
+// carrying its own attributes — frozen copies, no overlay) with NO per-document
+// WebSocket — so opening a
 // routine to *read* it (the common case) costs one request and zero persistent
 // sockets, instead of one live WS per routine + per figure. The live WS sync
 // (US-015) is reserved for the EDIT path. Same gate as /access: a non-member 403s
@@ -538,9 +532,10 @@ app.get("/api/routines/:id/snapshot", async (c) => {
     }
   }
 
-  // Fan out figure reads in parallel; resolve each variant (base ⊕ overlay) the
-  // same way the live store does client-side, so the read model needs no overlay
-  // logic. A never-seeded/empty figure is omitted → the client renders it missing.
+  // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes —
+  // a copy is a frozen snapshot (no overlay, no base resolution; §5.2), mirroring
+  // the client store's resolveFigure. A never-seeded/empty figure is omitted → the
+  // client renders it missing.
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
@@ -548,22 +543,6 @@ app.get("/api/routines/:id/snapshot", async (c) => {
       // own getFigureSnapshot, so re-assert the real shape here.
       const fig = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
       if (!fig?.figureType) return;
-      if (fig.baseFigureRef && fig.overlay) {
-        const base = (await doc(fig.baseFigureRef).getFigureSnapshot()) as FigureDoc | null;
-        if (base?.figureType) {
-          // resolve() returns the BASE's identity by contract — stamp the variant's
-          // own identity back (mirrors the client store's resolveFigure).
-          figures[ref] = {
-            ...resolve(base, fig.overlay),
-            id: fig.id,
-            scope: fig.scope,
-            ownerId: fig.ownerId,
-            source: fig.source,
-            baseFigureRef: fig.baseFigureRef,
-          };
-          return;
-        }
-      }
       figures[ref] = fig;
     }),
   );

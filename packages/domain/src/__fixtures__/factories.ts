@@ -21,7 +21,6 @@ import type {
   DanceId,
   FigureDoc,
   FigureType,
-  Overlay,
   Placement,
   Role,
   RoutineDoc,
@@ -58,16 +57,7 @@ export function makeAlignment(overrides: Partial<Alignment> = {}): Alignment {
   };
 }
 
-export function makeOverlay(overrides: Partial<Overlay> = {}): Overlay {
-  return {
-    overrides: overrides.overrides ?? {},
-    tombstones: overrides.tombstones ?? [],
-    additions: overrides.additions ?? [],
-    rename: overrides.rename ?? null,
-  };
-}
-
-/** A global-library figure doc (app-owned, not a variant). */
+/** A global-library figure doc (app-owned, not a copy). */
 export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
   return {
     id: overrides.id ?? testId("fig"),
@@ -85,13 +75,17 @@ export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
       makeAttribute({ kind: "footwork", count: 3, value: "TH" }),
     ],
     baseFigureRef: overrides.baseFigureRef ?? null,
-    overlay: overrides.overlay,
     schemaVersion: overrides.schemaVersion ?? 1,
     deletedAt: overrides.deletedAt ?? null,
   };
 }
 
-/** An account-scoped variant figure doc (baseFigureRef + overlay). */
+/**
+ * An account-scoped frozen-copy figure doc: it carries its OWN attributes (no
+ * overlay) with `baseFigureRef` as provenance only (§5.2, §2.5.1 #14–18). Pass
+ * `attributes` in `overrides` for the copy's content; defaults to the global
+ * library template's attributes.
+ */
 export function makeVariantDoc(
   baseFigureRef: string,
   byUser: string,
@@ -101,9 +95,7 @@ export function makeVariantDoc(
     scope: "account",
     ownerId: byUser,
     source: "custom",
-    attributes: [], // a variant stores no base attributes — only its overlay
     baseFigureRef,
-    overlay: makeOverlay(overrides.overlay),
     ...overrides,
   });
 }

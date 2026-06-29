@@ -2,8 +2,8 @@
 //
 // The logical shapes of the Automerge document graph: a routine doc (sections →
 // placements + annotations) and a figure doc (metadata + a float-count attribute
-// timeline, optionally a variant overlay). These are the product types the
-// builders/readers in doc-routine.ts / doc-figure.ts produce and consume.
+// timeline). These are the product types the builders/readers in doc-routine.ts
+// / doc-figure.ts produce and consume.
 //
 // Every entity carries an optional `deletedAt` tombstone — removal is ALWAYS a
 // mergeable flip, never a hard delete (§2.1), so a concurrent edit on a deleted
@@ -29,7 +29,13 @@ export interface Attribute {
   deletedAt?: number | null;
 }
 
-/** The overlay a variant stores instead of duplicating the base (§2.2, US-006). */
+/**
+ * LEGACY — no longer resolved. The earlier live-overlay variant model is retired
+ * (§5.2, §2.5.1 #14–18): provenance copies now carry their OWN attributes (a
+ * frozen snapshot), so nothing resolves an overlay against a base anymore. The
+ * type is retained only so legacy persisted docs / migrations can be read
+ * defensively; new copies never set it.
+ */
 export interface Overlay {
   /** base attribute id → replacement value. */
   overrides: Record<string, unknown>;
@@ -58,8 +64,13 @@ export interface FigureDoc {
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
   attributes: Attribute[];
-  /** Set ⇒ this doc is a variant storing only an overlay against the base. */
+  /**
+   * Provenance only (§2.2, §5.2): the figure this doc was copied from, for
+   * lineage display and the "custom" badge. NOT resolved live — a copy is a
+   * frozen snapshot carrying its own `attributes`.
+   */
   baseFigureRef?: string | null;
+  /** LEGACY — no longer resolved; see {@link Overlay}. Retained for old docs. */
   overlay?: Overlay;
   schemaVersion: number;
   deletedAt?: number | null;

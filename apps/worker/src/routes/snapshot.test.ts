@@ -8,8 +8,9 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // GET /api/routines/:id/snapshot — the READ-ONLY snapshot path (read/edit split).
-// One REST read hydrates a routine + ALL its referenced figures (variant overlays
-// resolved server-side) with NO per-document WebSocket — the common "I'm just
+// One REST read hydrates a routine + ALL its referenced figures (each carrying
+// its own attributes — frozen copies, no overlay) with NO per-document
+// WebSocket — the common "I'm just
 // reading" case, at one request and zero persistent sockets. Gated like /access:
 // a non-member 403s. The live WS sync (US-021 boundary) stays the EDIT path.
 // ─────────────────────────────────────────────────────────────────────────
@@ -86,7 +87,11 @@ describe("GET /api/routines/:id/snapshot", () => {
     expect(body.figures[figRef]?.attributes[0]?.value).toBe("forward");
   });
 
-  it("resolves a variant figure (base ⊕ overlay) server-side", async () => {
+  it("returns a copy figure's OWN attributes (frozen snapshot, no base resolution)", async () => {
+    // A copy-on-write figure is a FROZEN snapshot carrying its own attributes;
+    // `baseFigureRef` is provenance only — the snapshot route does NOT resolve
+    // against the base (§5.2). So the copy's edited value comes straight from its
+    // own doc, even if the base still carries the original value.
     const routineRef = uniqueDocName("rt_var");
     const baseRef = uniqueDocName("fig_base");
     const variantRef = uniqueDocName("fig_var");
@@ -119,7 +124,8 @@ describe("GET /api/routines/:id/snapshot", () => {
       schemaVersion: 1,
       deletedAt: null,
     });
-    // Base figure carries the real attribute (id a1, value HT).
+    // Base figure still carries the ORIGINAL attribute (id a1, value HT). A later
+    // edit to the base must never reach the frozen copy.
     await docs.get(docs.idFromName(baseRef)).seedDoc({
       id: baseRef,
       scope: "global",
@@ -134,7 +140,8 @@ describe("GET /api/routines/:id/snapshot", () => {
       schemaVersion: 1,
       deletedAt: null,
     });
-    // Variant overrides a1 → T (base ⊕ overlay should resolve count-1 to "T").
+    // The frozen copy carries its OWN edited attributes (a1 → "T"); baseFigureRef
+    // is provenance only.
     await docs.get(docs.idFromName(variantRef)).seedDoc({
       id: variantRef,
       scope: "account",
@@ -143,9 +150,10 @@ describe("GET /api/routines/:id/snapshot", () => {
       dance: "foxtrot",
       name: "My Feather",
       source: "custom",
-      attributes: [],
+      attributes: [
+        { id: "a1", kind: "footwork", count: 1, role: null, value: "T", deletedAt: null },
+      ],
       baseFigureRef: baseRef,
-      overlay: { overrides: { a1: "T" }, tombstones: [], additions: [] },
       schemaVersion: 1,
       deletedAt: null,
     });
@@ -161,7 +169,7 @@ describe("GET /api/routines/:id/snapshot", () => {
       >;
     };
     const resolved = body.figures[variantRef];
-    // The variant keeps its OWN identity but resolves base ⊕ overlay (a1 → "T").
+    // The copy keeps its own identity, provenance ref, and OWN attributes (a1 → "T").
     expect(resolved?.id).toBe(variantRef);
     expect(resolved?.baseFigureRef).toBe(baseRef);
     expect(resolved?.attributes.find((a) => a.id === "a1")?.value).toBe("T");
