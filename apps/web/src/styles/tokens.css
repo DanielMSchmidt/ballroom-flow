@@ -28,6 +28,7 @@
   --bf-border: #e1dcd2; /* default card border */
   --bf-border-strong: #d6d0c6; /* inputs, dividers that need weight */
   --bf-border-subtle: #ece8e0; /* header hairlines */
+  --bf-hairline: #e8e3da; /* 1px rule filling a section-label row (reading view) */
 
   /* ---- Ink (text) ---- */
   --bf-ink: #1c1c1e; /* primary text on paper (AA on #fff & paper) */
@@ -35,6 +36,7 @@
   --bf-ink-muted: #9a958c; /* muted labels / metadata (AA large only) */
   --bf-ink-faint: #c0bab0; /* faint hints (decorative, non-essential) */
   --bf-ink-inverse: #ffffff; /* text on charcoal surfaces */
+  --bf-offbeat-ink: #9aa7bb; /* off-beat count tokens (&,a,e,i) — muted slate (#5) */
 
   /* ---- Brand / interactive accent (studio blue) ---- */
   --bf-accent: #2f5d8f; /* default UI accent (links, focus, selected) */

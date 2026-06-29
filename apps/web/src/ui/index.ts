@@ -5,11 +5,13 @@
  */
 export { AccessDenied, type AccessDeniedProps } from "./AccessDenied";
 export { AppShell, type AppShellProps, type NavItem } from "./AppShell";
+export { AttrChip, type AttrChipProps } from "./AttrChip";
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";
 export { Card, type CardProps } from "./Card";
 export { Chip, type ChipProps, type ChipTone } from "./Chip";
 export { CountLabel, type CountLabelProps } from "./CountLabel";
+export { CountPill, type CountPillProps } from "./CountPill";
 export { cx } from "./cx";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Field, type FieldProps, type FieldRenderArgs } from "./Field";
@@ -20,6 +22,9 @@ export { List, ListRow, type ListRowProps } from "./List";
 export { Modal, type ModalAction, type ModalProps } from "./Modal";
 export { OfflineState, type OfflineStateProps } from "./OfflineState";
 export { ScopeBadge, type ScopeBadgeProps } from "./ScopeBadge";
+export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";
+export { SectionDivider, type SectionDividerProps } from "./SectionDivider";
+export { SegmentedToggle, type SegmentedToggleProps } from "./SegmentedToggle";
 export { Select, type SelectOption, type SelectProps } from "./Select";
 export { Sheet, type SheetProps } from "./Sheet";
 export { Skeleton, type SkeletonProps, SkeletonRow } from "./Skeleton";
