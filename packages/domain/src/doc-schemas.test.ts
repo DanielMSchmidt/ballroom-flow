@@ -82,11 +82,10 @@ describe("US-005 Routine + figure document schemas", () => {
 
   // ── Extra edge cases (in the spirit of US-005, beyond the listed ACs) ──
 
-  it("round-trips a figure's baseFigureRef + legacy overlay field", async () => {
+  it("round-trips a figure's baseFigureRef provenance field", async () => {
     // Intent: a figure's `baseFigureRef` provenance survives the Automerge
-    // build/read round-trip, and the LEGACY `overlay` field (retained only for
-    // old persisted docs — no longer resolved, §2.5.1 #14) round-trips
-    // structurally so a pre-reconciliation doc still reads back intact.
+    // build/read round-trip. Provenance is the only link to a source figure —
+    // copies carry their OWN attributes (no overlay, §2.5.1 #14–18, §5.2).
     const { buildFigureDoc, readFigure } = await importDomain();
     const variant = {
       ...FEATHER_FOXTROT,
@@ -96,19 +95,9 @@ describe("US-005 Routine + figure document schemas", () => {
       source: "custom" as const,
       attributes: [],
       baseFigureRef: FEATHER_FOXTROT.id,
-      overlay: {
-        overrides: { a_ff_2: "TH" },
-        tombstones: ["a_ff_3"],
-        additions: [makeAttribute({ id: "a_add", kind: "sway", count: 2, value: "to_L" })],
-        rename: "My Feather",
-      },
     };
     const read = readFigure(buildFigureDoc(variant));
     expect(read.baseFigureRef).toBe(FEATHER_FOXTROT.id);
-    expect(read.overlay?.overrides).toEqual({ a_ff_2: "TH" });
-    expect(read.overlay?.tombstones).toEqual(["a_ff_3"]);
-    expect(read.overlay?.additions.map((a) => a.id)).toEqual(["a_add"]);
-    expect(read.overlay?.rename).toBe("My Feather");
   });
 
   it("soft-deletes a single placement, leaving siblings live", async () => {

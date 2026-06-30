@@ -14,13 +14,12 @@
 // (US-041) depend on them being stable for life. The ladder enforces this — a
 // step that changes either throws.
 //
-// There are no schema changes yet, so CURRENT is 1 and the ladder is empty — but
-// the machinery is in place so a future v2 step plugs in with TWO localized edits
-// in this file (add a `MIGRATIONS[1]` entry AND bump CURRENT_SCHEMA_VERSION = 2),
-// with no caller changes.
+// CURRENT is 3 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key).
+// A future v4 step adds TWO localized edits here (add a `MIGRATIONS[3]` entry
+// AND bump CURRENT_SCHEMA_VERSION = 4), with no caller changes.
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -39,12 +38,12 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
  */
 const MIGRATIONS: Record<number, MigrationStep> = {
   // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
-  // to `footwork`. Retag every `kind:"step"` attribute → `footwork`, in both a
-  // figure's own timeline and a variant overlay's additions. STRUCTURE-ONLY:
-  // values are preserved verbatim (lossless — the read-side aliases handle the
-  // legacy single tokens H/T), unknown values survive, and `figureType`/`dance`
-  // are untouched (the ladder guard enforces that). Docs without `attributes`
-  // (routine docs) pass through unchanged but for the version bump.
+  // to `footwork`. Retag every `kind:"step"` attribute → `footwork` in a
+  // figure's own timeline. STRUCTURE-ONLY: values are preserved verbatim
+  // (lossless — the read-side aliases handle the legacy single tokens H/T),
+  // unknown values survive, and `figureType`/`dance` are untouched (the ladder
+  // guard enforces that). Docs without `attributes` (routine docs) pass through
+  // unchanged but for the version bump.
   1: (doc) => {
     const retag = (a: unknown): unknown =>
       a && typeof a === "object" && (a as { kind?: unknown }).kind === "step"
@@ -55,13 +54,18 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     // docs and broke template forks).
     const out: VersionedDoc = { ...doc };
     if (Array.isArray(doc.attributes)) out.attributes = doc.attributes.map(retag);
-    if (doc.overlay && typeof doc.overlay === "object") {
-      const ov = doc.overlay as { additions?: unknown };
-      if (Array.isArray(ov.additions)) {
-        out.overlay = { ...ov, additions: ov.additions.map(retag) };
-      }
-    }
     return out;
+  },
+
+  // v2 → v3 (2026-06-30 overlay removal): the `Overlay` interface and the
+  // `overlay?` field on `FigureDoc` are retired. Strip any stray `overlay` key
+  // that a pre-removal doc carries so it does not linger in persisted documents.
+  // CRITICAL: never assign `undefined` — Automerge cannot store it. Build a new
+  // object WITHOUT the key rather than setting it to undefined.
+  2: (doc) => {
+    if (!("overlay" in doc)) return doc;
+    const { overlay: _dropped, ...rest } = doc;
+    return rest as VersionedDoc;
   },
 };
 

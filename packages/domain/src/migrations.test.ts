@@ -110,4 +110,64 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     expect(result.schemaVersion).toBe(2);
     expect(result.upgraded).toBe(true);
   });
+
+  it("strips a stray `overlay` key from an old doc on migration (v2→v3)", async () => {
+    // Intent: the `Overlay` type and `overlay?` field on `FigureDoc` are retired
+    // (§5.2, §2.5.1 #14–18). Old persisted docs may carry a stray `overlay` key.
+    // The v2→v3 step must silently strip it so it does not linger; attributes and
+    // identity fields must survive intact. CRITICAL: the strip must NEVER assign
+    // `undefined` (Automerge cannot store it) — it builds a new object without
+    // the key instead.
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+
+    // A v1 figure doc that previously had an overlay (the pre-v2 shape).
+    const oldFigure = {
+      schemaVersion: 1,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [{ id: "a1", kind: "footwork", count: 1, value: "HT" }],
+      overlay: {
+        overrides: { a1: "T" },
+        tombstones: [],
+        additions: [{ id: "v1", kind: "sway", count: 2, value: "left" }],
+        rename: "My Natural Turn",
+      },
+    };
+    const migrated = migrate(oldFigure) as Record<string, unknown>;
+
+    // Migrated to current version.
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+
+    // overlay key is gone — not set to undefined, just absent.
+    expect("overlay" in migrated).toBe(false);
+
+    // Automerge-safety: no undefined values written.
+    for (const v of Object.values(migrated)) {
+      expect(v).not.toBeUndefined();
+    }
+
+    // Identity fields and attributes survive intact.
+    expect(migrated.figureType).toBe("natural-turn");
+    expect(migrated.dance).toBe("waltz");
+    expect((migrated.attributes as Array<{ id: string }>)[0]?.id).toBe("a1");
+  });
+
+  it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
+    // Intent: docs already at schemaVersion 2 (migrated before this PR) may still
+    // carry a stray `overlay` key. The v2→v3 step must strip it on read.
+    const { migrate } = await importDomain();
+
+    const v2DocWithOverlay = {
+      schemaVersion: 2,
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+    };
+    const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
+
+    expect(migrated.schemaVersion).toBe(3);
+    expect("overlay" in migrated).toBe(false);
+    expect(migrated.figureType).toBe("feather");
+  });
 });
