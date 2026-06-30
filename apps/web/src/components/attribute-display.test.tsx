@@ -33,7 +33,11 @@ describe("attribute-display — abbrevValue", () => {
     expect(abbrevValue("rise", "commence")).toBe("com");
     expect(abbrevValue("turn", "quarter_R")).toBe("¼R");
     expect(abbrevValue("position", "closed")).toBe("Cl");
-    expect(abbrevValue("footwork", "heel")).toBe("H");
+    expect(abbrevValue("position", "CBMP")).toBe("CBP"); // CBMP is now a position
+    expect(abbrevValue("footwork", "heel")).toBe("H"); // legacy anatomical still maps
+    // Canonical footwork picker codes render verbatim (no stale remapping).
+    expect(abbrevValue("footwork", "HT")).toBe("HT");
+    expect(abbrevValue("footwork", "heel pull")).toBe("HP");
   });
 
   it("joins a multi-set value", () => {
@@ -48,13 +52,16 @@ describe("attribute-display — abbrevValue", () => {
 
 describe("attribute-display — step headline", () => {
   it("humanizes directions", () => {
-    expect(humanizeDirection("diag_forward")).toBe("diag fwd");
+    expect(humanizeDirection("diagonal")).toBe("diagonal");
+    expect(humanizeDirection("behind")).toBe("behind");
     expect(humanizeDirection("side")).toBe("side");
+    // A legacy split-diagonal value still renders sensibly.
+    expect(humanizeDirection("diag_forward")).toBe("diagonal");
   });
 
   it("uses the direction as the headline, with an em dash when none is set", () => {
     expect(stepAction("forward")).toBe("forward");
-    expect(stepAction("diag_forward")).toBe("diag fwd");
+    expect(stepAction("diagonal")).toBe("diagonal");
     expect(stepAction(undefined)).toBe("—");
     expect(stepAction("")).toBe("—");
   });

@@ -45,8 +45,15 @@ const ABBREV: Record<string, Record<string, string>> = {
     lowering: "low",
     NFR: "NFR",
   },
-  position: { closed: "Cl", promenade: "PP", wing: "W" },
+  position: { closed: "Cl", promenade: "PP", wing: "W", CBMP: "CBP" },
   footwork: {
+    // Canonical picker codes (already short — explicit so no fallback mangles them).
+    HT: "HT",
+    T: "T",
+    TH: "TH",
+    H: "H",
+    "heel pull": "HP",
+    // Legacy anatomical tokens still render for old data.
     ball: "B",
     ball_flat: "BF",
     flat: "F",
@@ -55,6 +62,7 @@ const ABBREV: Record<string, Record<string, string>> = {
     toe: "T",
     tap: "tap",
   },
+  // CBMP moved to `position`; the legacy bodyActions abbrev stays for old data.
   bodyActions: { CBM: "CB", CBMP: "CBP" },
   sway: { to_L: "L", to_R: "R", none: "–" },
   turn: {
@@ -75,10 +83,14 @@ const DIRECTION_LABEL: Record<string, string> = {
   forward: "forward",
   back: "back",
   side: "side",
+  behind: "behind",
   close: "close",
-  diag_forward: "diag fwd",
-  diag_back: "diag back",
+  diagonal: "diagonal",
   in_place: "in place",
+  // Legacy split-diagonal values (normalize to `diagonal` on read; kept so an
+  // un-normalized legacy value still renders sensibly).
+  diag_forward: "diagonal",
+  diag_back: "diagonal",
 };
 
 /** A short, column-friendly code for one attribute value. Falls back to a

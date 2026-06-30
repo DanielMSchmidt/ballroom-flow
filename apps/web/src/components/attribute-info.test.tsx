@@ -33,12 +33,12 @@ describe("AttributeInfoSheet (frame 1.13)", () => {
     // Title (the human label) + a VALUES section.
     expect(screen.getByRole("heading", { name: /footwork/i })).toBeInTheDocument();
     expect(screen.getByText(/values/i)).toBeInTheDocument();
-    // A chip per registry value (heel is a footwork value).
-    expect(screen.getByText("heel")).toBeInTheDocument();
+    // A chip per registry value (HT is a footwork value — the compound ISTD code).
+    expect(screen.getByText("HT")).toBeInTheDocument();
     // The prose description is registry-derived (RegistryKind.description, T5).
     expect(screen.getByText(/in order of contact/i)).toBeInTheDocument();
     // A per-value definition is registry-derived (RegistryKind.valueDefs, T5).
-    expect(screen.getByText(/heel leads/i)).toBeInTheDocument();
+    expect(screen.getByText(/heel-toe/i)).toBeInTheDocument();
     // Footer counts usage.
     expect(screen.getByText(/used in 9 steps/i)).toBeInTheDocument();
     expect(screen.getByText(/gold waltz/i)).toBeInTheDocument();

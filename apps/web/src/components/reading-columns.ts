@@ -25,10 +25,13 @@ const DIRECTION_ABBREV: Record<string, string> = {
   forward: "fwd",
   back: "back",
   side: "side",
+  behind: "beh",
   close: "close",
-  diag_forward: "diag↗",
-  diag_back: "diag↘",
+  diagonal: "diag",
   in_place: "in pl",
+  // Legacy split-diagonal values (normalize to `diagonal` on read).
+  diag_forward: "diag",
+  diag_back: "diag",
 };
 
 /** A short, chip-friendly code for a `direction` value. */

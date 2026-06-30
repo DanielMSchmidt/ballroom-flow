@@ -5,7 +5,7 @@ import { importDomain } from "./__fixtures__";
 // ─────────────────────────────────────────────────────────────────────────
 // US-012 — Zod schemas (lenient read / strict write) [M1, system/developer]
 // PLAN §3, D7, §10.2 invariant: "unknown passthrough-on-read vs reject-on-write;
-// CBP→CBMP; timing range per meter". Schemas are derived from the merged registry.
+// diag_*→diagonal; timing range per meter". Schemas are derived from the merged registry.
 //
 // Product `schemas.ts` (M1 §9 1.10) doesn't exist yet → dynamic import, skipped.
 // RED→GREEN: export `zAttributeRead`/`zAttributeWrite` (or read/write parsers).
@@ -86,14 +86,26 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toBe(9);
   });
 
-  it("normalizes CBP→CBMP on read", async () => {
+  it("normalizes the split diagonal → `diagonal` on read", async () => {
     // Intent: alias normalization happens at the schema boundary too.
-    // Arrange: a bodyActions attribute with value "CBP".
-    // Act: parse with the read schema. Assert: normalized to "CBMP".
-    // Covers US-012 AC-4 (CBP→CBMP normalizes on read).
+    // Arrange: a direction attribute with the legacy value "diag_forward".
+    // Act: parse with the read schema. Assert: normalized to "diagonal".
+    const { parseAttributeRead } = await importDomain();
+    const parsed = parseAttributeRead({
+      id: "a1",
+      kind: "direction",
+      count: 1,
+      value: "diag_back",
+    });
+    expect(parsed.value).toBe("diagonal");
+  });
+
+  it("passes a legacy CBP value through on read (CBP is no longer recognized)", async () => {
+    // Intent: "remove CBP." The CBP→CBMP alias is gone; a legacy bodyActions
+    // "CBP" survives a read unchanged (lenient read), it is NOT rewritten.
     const { parseAttributeRead } = await importDomain();
     const parsed = parseAttributeRead({ id: "a1", kind: "bodyActions", count: 1, value: "CBP" });
-    expect(parsed.value).toBe("CBMP");
+    expect(parsed.value).toBe("CBP");
   });
 
   // ── Extra edge cases (in the spirit of US-012, beyond the listed ACs) ──
@@ -115,12 +127,33 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     expect(ok.count).toBe(5.5);
   });
 
-  it("normalizes CBP→CBMP on write, then accepts it (alias is a known value)", async () => {
-    // Intent: the alias normalizes before the strict enum check, so writing the
-    // alias of a known value succeeds (and is stored canonical).
+  it("accepts CBMP as a position value, and rejects it (and CBP) as a body action", async () => {
+    // Intent: "CBMP is a position; remove CBP." CBMP is a known `position` value
+    // (write accepted); `bodyActions` now closes to CBM only, so writing CBMP or
+    // the removed CBP to bodyActions is rejected by the strict enum check.
     const { parseAttributeWrite } = await importDomain();
-    const ok = parseAttributeWrite({ id: "a1", kind: "bodyActions", count: 1, value: "CBP" });
-    expect(ok.value).toBe("CBMP");
+    expect(parseAttributeWrite({ id: "a1", kind: "position", count: 1, value: "CBMP" }).value).toBe(
+      "CBMP",
+    );
+    expect(() =>
+      parseAttributeWrite({ id: "a2", kind: "bodyActions", count: 1, value: "CBMP" }),
+    ).toThrow();
+    expect(() =>
+      parseAttributeWrite({ id: "a3", kind: "bodyActions", count: 1, value: "CBP" }),
+    ).toThrow();
+  });
+
+  it("normalizes the split diagonal → `diagonal` on write, then accepts it", async () => {
+    // Intent: the alias normalizes before the strict enum check, so writing a
+    // legacy diag_forward to the closed `direction` enum succeeds, stored canonical.
+    const { parseAttributeWrite } = await importDomain();
+    const ok = parseAttributeWrite({
+      id: "a1",
+      kind: "direction",
+      count: 1,
+      value: "diag_forward",
+    });
+    expect(ok.value).toBe("diagonal");
   });
 
   it("rejects a kind whose appliesToDances EXCLUDES the figure's dance on write (rise omits Tango)", async () => {

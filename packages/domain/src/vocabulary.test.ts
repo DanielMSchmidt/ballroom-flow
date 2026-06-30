@@ -20,9 +20,9 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     // Arrange: import the registry. Act: read each standard kind's values.
     // Covers AC-1 (standard kinds + values).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    expect(ATTRIBUTE_REGISTRY.footwork.values).toEqual(
-      expect.arrayContaining(["ball", "heel", "toe", "tap"]),
-    );
+    // Footwork's pickable set is the design's compound ISTD codes (freeText still
+    // accepts legacy anatomical values).
+    expect(ATTRIBUTE_REGISTRY.footwork.values).toEqual(["HT", "T", "TH", "H", "heel pull"]);
     expect(ATTRIBUTE_REGISTRY.direction.values).toEqual(
       expect.arrayContaining(["forward", "back", "side", "close"]),
     );
@@ -49,13 +49,37 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(ATTRIBUTE_REGISTRY.bodyActions.cardinality).toBe("multi");
   });
 
-  it("normalizes the CBP alias to CBMP on read", async () => {
-    // Intent: forward-compatible alias normalization (Q-D4).
-    // Arrange: import the normalize helper. Act: normalize "CBP" for bodyActions.
-    // Assert: result is "CBMP".
-    // Covers AC-4 (CBP→CBMP) — §10.2 "CBP→CBMP" invariant.
+  it("normalizes the split diagonal to a single `diagonal` on read", async () => {
+    // Intent: forward-compatible alias normalization (Q-D4). The split
+    // diag_forward/diag_back collapsed into one `diagonal` value; legacy docs
+    // read through without a doc migration.
+    // Arrange: import the normalize helper. Act: normalize each legacy value.
+    // Assert: both map to "diagonal".
     const { normalizeValue } = await importDomain();
-    expect(normalizeValue("bodyActions", "CBP")).toBe("CBMP");
+    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal");
+    expect(normalizeValue("direction", "diag_back")).toBe("diagonal");
+  });
+
+  it("models CBMP as a position (not a body action) and drops CBP entirely", async () => {
+    // Intent: "CBMP is a position; remove CBP." CBMP lives under `position`;
+    // `bodyActions` keeps only CBM; CBP is no longer recognized anywhere (read is
+    // lenient, so it passes through unchanged rather than aliasing to CBMP).
+    const { ATTRIBUTE_REGISTRY, normalizeValue } = await importDomain();
+    expect(ATTRIBUTE_REGISTRY.position.values).toContain("CBMP");
+    expect(ATTRIBUTE_REGISTRY.bodyActions.values).toEqual(["CBM"]);
+    expect(ATTRIBUTE_REGISTRY.bodyActions.values).not.toContain("CBMP");
+    expect(normalizeValue("bodyActions", "CBP")).toBe("CBP"); // alias removed
+  });
+
+  it("collapses the split diagonal and adds `behind` to the direction enum", async () => {
+    // D1: one `diagonal` value (the design's single diagonal); `behind` (a step
+    // crossing behind) added; the split diag_forward/diag_back are gone.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    expect(ATTRIBUTE_REGISTRY.direction.values).toEqual(
+      expect.arrayContaining(["diagonal", "behind"]),
+    );
+    expect(ATTRIBUTE_REGISTRY.direction.values).not.toContain("diag_forward");
+    expect(ATTRIBUTE_REGISTRY.direction.values).not.toContain("diag_back");
   });
 
   it("merges a user-defined kind so it is indistinguishable downstream", async () => {
@@ -106,7 +130,8 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     const { normalizeValue } = await importDomain();
     expect(normalizeValue("bodyActions", "CBM")).toBe("CBM"); // known, not an alias
     expect(normalizeValue("bodyActions", "future_value")).toBe("future_value"); // unknown
-    expect(normalizeValue("step", "CBP")).toBe("CBP"); // alias scoped to bodyActions only
+    expect(normalizeValue("footwork", "HT")).toBe("HT"); // canonical, not an alias
+    expect(normalizeValue("footwork", "diag_forward")).toBe("diag_forward"); // alias scoped to direction only
   });
 
   it("merge does not mutate the base registry", async () => {

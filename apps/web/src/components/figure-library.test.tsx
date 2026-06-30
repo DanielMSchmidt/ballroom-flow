@@ -161,7 +161,7 @@ describe("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast
     );
     renderUi(<FigureTimeline role="editor" figureScope="global" />);
     await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^heel$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
     expect(await screen.findByText(/copied as your variant/i)).toBeInTheDocument();
   });
 });

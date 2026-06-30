@@ -61,9 +61,9 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /^forward$/ }).click();
-    await page.getByRole("button", { name: /^ball$/ }).click();
+    await page.getByRole("button", { name: /^HT$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
     // 4c. Set the figure's entry alignment (US-031): a facing-direction → a chip.
     await page.getByLabel(/entry direction/i).selectOption("DW");
     await page.keyboard.press("Escape");
@@ -86,17 +86,17 @@ test.describe("@smoke core authoring journey", () => {
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
     await page.keyboard.press("Escape");
 
     // 5c. The reading view lays the whole routine out read-only as a per-figure
     //     used-columns table — the step's direction + footwork MERGE into one
-    //     blue Step chip (frame 1.6): "forward" + "ball" → "fwd·B".
+    //     blue Step chip (frame 1.6): "forward" + "HT" → "fwd·HT".
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
-    await expect(reading.getByText("fwd·B")).toBeVisible();
+    await expect(reading.getByText("fwd·HT")).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.

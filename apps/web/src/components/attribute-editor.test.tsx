@@ -44,9 +44,9 @@ const footworkBall = (count: number): Attribute => ({
 describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () => {
   it("opens the editor on tapping a count and adds an attribute for that count", async () => {
     // Intent: tapping a count opens the editor; choosing a value adds an attribute.
-    // User scenario: an editor taps count 2 and picks footwork "ball".
-    // Act: click the count-2 cell, then the "ball" footwork option.
-    // Assert: onChange fires with a footwork="ball" attribute on count 2 (the add).
+    // User scenario: an editor taps count 2 and picks footwork "HT".
+    // Act: click the count-2 cell, then the "HT" footwork option.
+    // Assert: onChange fires with a footwork="HT" attribute on count 2 (the add).
     // Covers US-028 AC-1 (tap a count → add) — hero flow.
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
@@ -54,12 +54,12 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /beat 2/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork" && a.count === 2,
     );
-    expect(added?.value).toBe("ball");
+    expect(added?.value).toBe("HT");
   });
 
   it("clears a value when its selected option is re-tapped", async () => {
@@ -251,8 +251,11 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     expect(screen.queryByRole("heading", { name: /rise/i })).toBeNull(); // hidden for tango
   });
 
-  it("honors single (position) vs multi (bodyActions) selection cardinality", async () => {
+  it("honors single (position) vs multi (custom kind) selection cardinality", async () => {
     // Intent: single-select replaces; multi-select accumulates (registry cardinality).
+    // The only builtin multi kind (bodyActions) now closes to a single value
+    // (CBM), so accumulation is demonstrated via a custom multi kind — the same
+    // editor code path drives both.
     // Covers US-029 AC-3 (single vs multi cardinality).
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
@@ -268,7 +271,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         onChange={onSingle}
       />,
     );
-    // position + bodyActions are technique kinds — reveal them first.
+    // position is a technique kind — reveal it first.
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
     const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
@@ -276,32 +279,42 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     expect(afterSingle.find((a) => a.kind === "position")?.value).toBe("promenade");
     single.unmount();
 
-    // MULTI (bodyActions): start with "CBM"; picking "CBMP" keeps BOTH.
+    // MULTI (custom kind "hands"): start with "L"; picking "R" keeps BOTH.
+    const handsKind = {
+      kind: "hands",
+      label: "Hands",
+      color: "#123456",
+      cardinality: "multi" as const,
+      valueType: "enum",
+      values: ["L", "R"],
+      builtin: false,
+    };
     const onMulti = vi.fn();
     renderUi(
       <AttributeEditor
         count={1}
         dance="foxtrot"
         role="editor"
-        value={[attr("bodyActions", "CBM")]}
+        customKinds={[handsKind]}
+        value={[attr("hands", "L")]}
         onChange={onMulti}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^CBMP$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^R$/ }));
     const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
     expect(
       afterMulti
-        .filter((a) => a.kind === "bodyActions")
+        .filter((a) => a.kind === "hands")
         .map((a) => a.value)
         .sort(),
-    ).toEqual(["CBM", "CBMP"]);
+    ).toEqual(["L", "R"]);
   });
 
-  it("normalizes a stored CBP value to CBMP (read alias, Q-D4)", async () => {
-    // Intent: a legacy bodyActions value "CBP" reads as "CBMP" — the CBMP chip
-    //   shows selected for a figure that stored "CBP".
-    // Covers US-029 AC-4 (CBP→CBMP).
+  it("offers CBMP as a position value (CBMP is a position; CBP removed)", async () => {
+    // Intent: "CBMP is a position; remove CBP." A figure that stored position
+    //   "CBMP" shows the CBMP chip selected under Position; bodyActions no longer
+    //   offers a CBMP option at all.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
@@ -310,11 +323,16 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
         count={1}
         dance="foxtrot"
         role="editor"
-        value={[attr("bodyActions", "CBP")]}
+        value={[attr("position", "CBMP")]}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
+    // The CBMP chip (now a position value) shows selected.
     expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
+    // Body Actions only offers CBM now (CBMP migrated to position).
+    const bodyGroup = screen.getByRole("group", { name: /body actions/i });
+    expect(within(bodyGroup).getByRole("button", { name: /^CBM$/ })).toBeInTheDocument();
+    expect(within(bodyGroup).queryByRole("button", { name: /^CBMP$/ })).toBeNull();
   });
 
   it("adds a free-text footwork value (suggestions are not a closed enum, §3/#83)", async () => {

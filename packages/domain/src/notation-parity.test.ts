@@ -8,9 +8,10 @@ import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 // Steps alternate feet automatically (foot is never stored). A step's two real
 // dimensions are `direction` (the headline) and `footwork` (the foot part). The
 // old `step` kind held foot-part pressure tokens (HT/T/TH/…), so it is renamed
-// to `footwork` with a readable value set; a new `direction` kind is the
-// headline. Legacy `kind:"step"` attributes are retagged → `footwork` by the v2
-// migration; legacy single tokens normalize on read (H→heel, T→toe).
+// to `footwork` whose pickable set is the design's compound ISTD codes
+// (HT/T/TH/H/heel pull); a new `direction` kind is the headline. Legacy
+// `kind:"step"` attributes are retagged → `footwork` by the v2 migration; H and
+// T are now canonical picker values (no longer rewritten on read).
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("vocabulary — footwork + direction kinds", () => {
@@ -23,9 +24,9 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(footwork.cardinality).toBe("single");
     expect(footwork.freeText).toBe(true);
     expect(footwork.builtin).toBe(true);
-    expect(footwork.values).toEqual(
-      expect.arrayContaining(["ball", "ball_flat", "flat", "heel", "heel_ball", "toe", "tap"]),
-    );
+    // The pickable set is the design's compound ISTD codes; freeText still
+    // accepts legacy anatomical values (ball/heel/…) on write + display.
+    expect(footwork.values).toEqual(["HT", "T", "TH", "H", "heel pull"]);
   });
 
   it("adds a `direction` kind as the step headline (single, closed enum)", () => {
@@ -36,23 +37,36 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(direction.builtin).toBe(true);
     // A closed enum (NOT free-text): direction is a controlled vocabulary.
     expect(direction.freeText ?? false).toBe(false);
+    // One `diagonal` (the split diag_forward/diag_back collapsed) + `behind`.
     expect(direction.values).toEqual(
       expect.arrayContaining([
         "forward",
         "back",
         "side",
+        "behind",
         "close",
-        "diag_forward",
-        "diag_back",
+        "diagonal",
         "in_place",
       ]),
     );
+    expect(direction.values).not.toContain("diag_forward");
+    expect(direction.values).not.toContain("diag_back");
   });
 
-  it("normalizes legacy single footwork tokens on read (H→heel, T→toe)", () => {
-    expect(normalizeValue("footwork", "H")).toBe("heel");
-    expect(normalizeValue("footwork", "T")).toBe("toe");
-    // A readable value passes through unchanged; an unknown one too.
+  it("normalizes the split diagonal to a single `diagonal` on read", () => {
+    // The split diag_forward/diag_back collapsed into one `diagonal` value.
+    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal");
+    expect(normalizeValue("direction", "diag_back")).toBe("diagonal");
+    // A canonical value passes through unchanged; an unknown one too.
+    expect(normalizeValue("direction", "forward")).toBe("forward");
+    expect(normalizeValue("direction", "behind")).toBe("behind");
+  });
+
+  it("leaves H and T unrewritten — they are canonical footwork picker values now", () => {
+    // The old H→heel / T→toe aliases are removed; H/T are pickable codes.
+    expect(normalizeValue("footwork", "H")).toBe("H");
+    expect(normalizeValue("footwork", "T")).toBe("T");
+    // Legacy anatomical + unknown values still pass through (freeText).
     expect(normalizeValue("footwork", "ball")).toBe("ball");
     expect(normalizeValue("footwork", "brush")).toBe("brush");
   });
