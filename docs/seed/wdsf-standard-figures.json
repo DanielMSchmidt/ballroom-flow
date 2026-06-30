@@ -8,7 +8,7 @@
     "extractedFields": "figure name, dance, WDSF start/finish/timing/notes, cross-references.",
     "notProvidedBySource": "Per-count footwork (HT/T/TH/H/heel_pull), sway, rise, turn amount and alignment timelines are NOT in the WDSF syllabus document — those live in the paid technique books (Laird/ISTD). They are left as an empty `attributes` array to be populated by the accuracy-validated content workstream (PLAN §9: best-effort now, refine with testers).",
     "planDiscrepancy": "PLAN.md D30/Q-LIBSEED names ISTD as the seed source; this file is WDSF (per the request). The two syllabi overlap heavily in figure names; if ISTD is the system of record, treat this as a cross-reference / starting enumeration.",
-    "figureCount": 184
+    "figureCount": 147
   },
   "captureLevels": {
     "figureIdentity": {
@@ -357,24 +357,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.1.12",
-      "figureType": "open-natural-turn",
-      "name": "Open Natural Turn",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd and across in CBMP (Promenade Position)",
-        "finish": "RF bwd R Side leading (Closed Position)",
-        "timing": "123",
-        "notes": [
-          "NOTE - Foot Placement/Couple Position: may start RF fwd in CBMP in Outside Partner position"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.1.13",
       "figureType": "hesitation-change",
       "name": "Hesitation Change",
@@ -661,44 +643,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.1.29",
-      "figureType": "fallaway-natural-turn",
-      "name": "Fallaway Natural Turn",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd and across in CBMP (Promenade Position)",
-        "finish": "LF to side and slightly fwd (Closed Position)",
-        "timing": "123 123",
-        "notes": [
-          "NOTE - Foot Placement/ Couple Position: may start RF fwd in CBMP in Outside Partner position. It"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.1.30",
-      "figureType": "running-weave-from-pp",
-      "name": "Running Weave from PP",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd and across in CBMP (Promenade Position)",
-        "finish": "RF crosses behind LF (Closed Position)",
-        "timing": "1&23 123",
-        "notes": [
-          "NOTE - General: steps 1-4 or 5-7 only may be used.",
-          "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position",
-          "NOTE - Timing: alternative timing of 12&3 may be used on steps 1-4."
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.1.31",
       "figureType": "running-spin-turn",
       "name": "Running Spin Turn",
@@ -712,26 +656,6 @@
         "timing": "123 1&23",
         "notes": [
           "NOTE - Timing: alternative timing of 123 112&3 may be used.",
-          "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.1.32",
-      "figureType": "overturned-running-spin-turn",
-      "name": "Overturned Running Spin Turn",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "LF closes to RF w/o weight, weight on RF (Wing Position)",
-        "timing": "123 1&23 12&3",
-        "notes": [
-          "NOTE - Couple Position/ Timing: From step 8 (instead of quick Wing) both partners may dance two",
-          "NOTE - Timing: alternative timing of 12&3 may be used on steps 4-7.",
           "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position"
         ]
       },
@@ -767,7 +691,7 @@
       "wdsf": {
         "start": "LF fwd and slightly to side (Closed position)",
         "finish": "RF bwd (Slip Pivot) weight on RF, LF held in position (Closed Position)",
-        "timing": "1&23",
+        "timing": "123&",
         "notes": [
           "NOTE- Foot Placement/Couple Position: May start with LF fwd in CBMP in Wing Position.",
           "NOTE- Quantity of Turn: may be danced with less or no turn (when danced into a corner).",
@@ -796,24 +720,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.1.36",
-      "figureType": "curved-feather",
-      "name": "Curved Feather",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "SLOW FOX",
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "RF fwd in CBMP (Outside Partner Position)",
-        "timing": "123",
-        "notes": [
-          "NOTE - Foot Placement/ Couple Position: step 1 may be danced RF fwd in CBMP in Outside Partner"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.1.37",
       "figureType": "running-finish",
       "name": "Running Finish",
@@ -827,58 +733,6 @@
         "timing": "123",
         "notes": [
           "NOTE - Couple Position: may end in Promenade Position"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.1.38",
-      "figureType": "outside-swivel",
-      "name": "Outside Swivel",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "SLOW FOX",
-      "wdsf": {
-        "start": "LF back in CBMP (Outside Partner Position)",
-        "finish": "Weight on LF (Promenade position)",
-        "timing": "1 (23)",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.1.39",
-      "figureType": "progressive-chasse-to-l",
-      "name": "Progressive Chasse to L",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "QUICKSTEP",
-      "wdsf": {
-        "start": "RF bwd (Closed Position)",
-        "finish": "LF side and slightly fwd (Closed Position)",
-        "timing": "12&3",
-        "notes": [
-          "NOTE - Quantity of Turn: may turn up to 3/8 to L."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.1.40",
-      "figureType": "bounce-fallaway-weave-ending",
-      "name": "Bounce Fallaway Weave Ending",
-      "dance": "waltz",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "SLOW FOX",
-      "wdsf": {
-        "start": "LF fwd and slightly to side (Closed Position)",
-        "finish": "LF side and slightly fwd (Closed Position)",
-        "timing": "1&23 123",
-        "notes": [
-          "NOTE - General: dance steps 1-4 of bounce fallaway followed by steps 4-6 of weave from PP"
         ]
       },
       "attributes": []
@@ -969,22 +823,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.2.5",
-      "figureType": "over-feather",
-      "name": "Over Feather",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF diag fwd L side leading (Closed Position)",
-        "finish": "RF fwd in CBMP (Outside Partner Position)",
-        "timing": "QQ",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.2.6",
       "figureType": "natural-turn",
       "name": "Natural Turn",
@@ -1066,7 +904,7 @@
       "wdsf": {
         "start": "LF fwd and slightly to side (Closed Position)",
         "finish": "LF fwd (Closed Position)",
-        "timing": "SSSS",
+        "timing": "SSS",
         "notes": [
           "NOTE - Quantity of turn: It may turn ½ to L when danced into a corner."
         ]
@@ -1084,7 +922,7 @@
       "wdsf": {
         "start": "LF bwd (Closed Position)",
         "finish": "LF fwd (Closed Position)",
-        "timing": "QSQ",
+        "timing": "SSS",
         "notes": [
           "NOTE - General: Steps 1-2 only may be used (Timing QQS-Hesitation).",
           "NOTE - Timing: Alternative timing SSS or QQS may be used."
@@ -1275,7 +1113,7 @@
       "wdsf": {
         "start": "LF bwd and slightly to side (Closed Position)",
         "finish": "LF to side and slightly bwd (Closed Position)",
-        "timing": "SSS",
+        "timing": "SQQ",
         "notes": []
       },
       "attributes": []
@@ -1369,25 +1207,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.2.28",
-      "figureType": "outside-spin",
-      "name": "Outside Spin",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd in CBMP (Outside Partner Position)",
-        "finish": "LF to side (Closed Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Timing: alternative timing &QQ may be used.",
-          "NOTE - Quantity of turn: When the outside Spin is underturned (no Pivot on step 3) the following"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.2.29",
       "figureType": "reverse-wave",
       "name": "Reverse Wave",
@@ -1420,60 +1239,6 @@
         "timing": "SQ&Q SQQ",
         "notes": [
           "NOTE - Couple position: it may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.2.31",
-      "figureType": "natural-twist-turn-with-natural-weave",
-      "name": "Natural Twist Turn with Natural Weave",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "RF fwd in CBMP (Outside Partner Position)",
-        "timing": "SQ&Q SQQ QQQQ",
-        "notes": [
-          "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.2.32",
-      "figureType": "natural-twist-turn-with-impetus-and-feather-finish",
-      "name": "Natural Twist Turn with Impetus and Feather Finish",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "RF fwd in CBMP (Outside Partner Position)",
-        "timing": "SQ&Q QQ SQQ",
-        "notes": [
-          "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.2.33",
-      "figureType": "natural-twist-turn-with-impetus-to-p-p",
-      "name": "Natural Twist Turn with Impetus to P.P",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "LF to side (Promenade Position)",
-        "timing": "SQ&Q QQ",
-        "notes": [
-          "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside"
         ]
       },
       "attributes": []
@@ -1598,25 +1363,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.2.41",
-      "figureType": "running-weave-from-p-p",
-      "name": "Running Weave from P.P.",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd in CBMP (Promenade Position)",
-        "finish": "RFfwd in CBMP (Outside Partner Position)",
-        "timing": "SQ&Q SQQ",
-        "notes": [
-          "NOTE - General: Steps 1-4 only may be used.",
-          "NOTE - Couple position: Step 1 may be danced FWD in CBMP (Man) in Outside Partner Position."
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.2.42",
       "figureType": "quick-open-reverse-turn",
       "name": "Quick Open Reverse Turn",
@@ -1627,28 +1373,10 @@
       "wdsf": {
         "start": "RF fwd in CBMP (Outside Partner Position)",
         "finish": "Weight on R foot (Outside Partner Position)",
-        "timing": "SQ&Q SQQ",
+        "timing": "SQ&QQQ",
         "notes": [
           "NOTE - General: Steps 1-4 only may be used. The figure can start from step 2.",
           "NOTE - Couple position: The figure may start from Promenade Position."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.2.43",
-      "figureType": "extended-reverse-wave",
-      "name": "Extended Reverse Wave",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF fwd and slightly to side (Closed Position)",
-        "finish": "LF fwd (Closed Position)",
-        "timing": "SQQ SQQ SQQ SQQ QSQ",
-        "notes": [
-          "NOTE - General: Steps 1-9, 1-12, 6-12 or 6-15 only may be used."
         ]
       },
       "attributes": []
@@ -1686,24 +1414,6 @@
         "notes": [
           "NOTE - Timing: alternative timing SSS may be used",
           "NOTE - Couple Position: it may start in Promenade Position",
-          "NOTE - General: follow with Weave Ending (3-6 Basic Weave)"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.2.46",
-      "figureType": "progressive-chasse-to-r",
-      "name": "Progressive Chasse to R",
-      "dance": "foxtrot",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "WALTZ",
-      "wdsf": {
-        "start": "LF fwd and slightly to side (Closed Position)",
-        "finish": "RF to side and slightly bwd (Closed Position)",
-        "timing": "S Q&Q",
-        "notes": [
           "NOTE - General: follow with Weave Ending (3-6 Basic Weave)"
         ]
       },
@@ -1810,40 +1520,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.3.7",
-      "figureType": "quarter-turn-to-l",
-      "name": "Quarter Turn to L",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF bwd and slightly to side (Closed Position)",
-        "finish": "RF closes to LF (Closed Position)",
-        "timing": "SQQ",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.3.8",
-      "figureType": "outside-change",
-      "name": "Outside Change",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd in CBMP (Outside Partner Position)",
-        "finish": "LF to side and slightly fwd (Closed Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Couple Position: May end in Promenade Position"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.3.9",
       "figureType": "natural-pivot",
       "name": "Natural Pivot",
@@ -1917,24 +1593,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.3.13",
-      "figureType": "open-natural-turn",
-      "name": "Open Natural Turn",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF Fwd and across in CBMP (Promenade Position)",
-        "finish": "RF bwd R side leading (Closed Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.3.14",
       "figureType": "natural-spin-turn",
       "name": "Natural Spin Turn",
@@ -1950,25 +1608,6 @@
           "NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position",
           "NOTE - Timing: Alternative timing SQQ SQQ may be used",
           "NOTE - Quantity of Turn: It may be underturned (ending backing DC against LOD) or overturned"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.3.15",
-      "figureType": "hesitation-change",
-      "name": "Hesitation Change",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd and slightly to side (Closed Position)",
-        "finish": "Weight on RF, LF closes to RF without weight (Closed Position)",
-        "timing": "SSS",
-        "notes": [
-          "NOTE - Couple Position: Step 1 may be taken in CBMP in Outside Partner Position.",
-          "NOTE - General: Steps 1 -2 only may be used"
         ]
       },
       "attributes": []
@@ -2155,25 +1794,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.3.26",
-      "figureType": "tipple-chasse-to-l",
-      "name": "Tipple Chasse to L",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd in CBMP (Outside Partner Position)",
-        "finish": "LF to side and slightly fwd (Closed Position)",
-        "timing": "SQQS",
-        "notes": [
-          "NOTE - Couple Position: May start RF fwd in Closed Position",
-          "NOTE - General: Steps 2-4 only may be used"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.3.27",
       "figureType": "four-quick-run",
       "name": "Four Quick Run",
@@ -2218,28 +1838,9 @@
       "wdsf": {
         "start": "LF bwd (Closed Position)",
         "finish": "LF to side and slightly fwd (Closed Position)",
-        "timing": "SQQS QQS",
+        "timing": "SQQS SQQ",
         "notes": [
           "NOTE-General: it may start from step 2."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.3.30",
-      "figureType": "outside-spin",
-      "name": "Outside Spin",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd in CBMP (Outside Partner Position)",
-        "finish": "LF to side (Closed Position)",
-        "timing": "SSS",
-        "notes": [
-          "NOTE-Timing: Alternative timing SQQ may be used",
-          "NOTE- Foot Placement/Quantity of Turn: it may be underturned (no turn on step3) in which case"
         ]
       },
       "attributes": []
@@ -2256,42 +1857,6 @@
         "start": "RF diag bwd (Closed Position)",
         "finish": "Weight on RF (Closed Position)",
         "timing": "S",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.3.32",
-      "figureType": "natural-turning-lock",
-      "name": "Natural Turning Lock",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF bwd with R side leading (Closed Position)",
-        "finish": "LF diag fwd L side leading (Promenade Position)",
-        "timing": "QQSS",
-        "notes": [
-          "NOTE- Timing: alternative timing QQQQ may be used.",
-          "NOTE- Couple Position/ Foot Placement: may end in closed position, the following step is taken RF",
-          "NOTE- Quantity of Turn/ Couple Position: May be overturned to end in Closed Position (Man backing"
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.3.33",
-      "figureType": "drag-hesitation",
-      "name": "Drag Hesitation",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF fwd and slightly to side (Closed Position)",
-        "finish": "LF closes to RF w/o weight (Closed Position)",
-        "timing": "SSS",
         "notes": []
       },
       "attributes": []
@@ -2472,24 +2037,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.3.44",
-      "figureType": "natural-fallaway-turn",
-      "name": "Natural Fallaway Turn",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "WALTZ",
-      "wdsf": {
-        "start": "RF fwd and across in CBMP (Promenade Position)",
-        "finish": "LF to side and slightly fwd (Closed Position)",
-        "timing": "SQQ SQQ",
-        "notes": [
-          "NOTE - Foot Placement/ Couple Position: may start RF fwd in CBMP in Outside Partner position. It"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.3.45",
       "figureType": "wing",
       "name": "Wing",
@@ -2522,24 +2069,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.3.47",
-      "figureType": "curved-feather",
-      "name": "Curved Feather",
-      "dance": "quickstep",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": "SLOW FOX",
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "RF fwd in CBMP (Outside Partner Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Foot Placement/Couple position: Step 1 may be taken fwd in CBMP in Outside Partner"
-        ]
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.3.48",
       "figureType": "running-spin-turn",
       "name": "Running Spin Turn",
@@ -2550,7 +2079,7 @@
       "wdsf": {
         "start": "RF fwd (Closed Position)",
         "finish": "RF bwd R side leading (Closed Position)",
-        "timing": "SQQ SQQS",
+        "timing": "SSQQS",
         "notes": [
           "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position"
         ]
@@ -2571,25 +2100,6 @@
         "timing": "SS",
         "notes": [
           "NOTE - General: LF or RF walk only may be used."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.2",
-      "figureType": "tap-alternative-entries-to-pp",
-      "name": "Tap - Alternative Entries to PP",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "Weight on R foot (Promenade Position)",
-        "timing": "S&",
-        "notes": [
-          "NOTE - General: Tap can be danced after any Closed or Open Finish.",
-          "NOTE - Timing: Alternative timing, including also the preceding step could be SS."
         ]
       },
       "attributes": []
@@ -2906,38 +2416,6 @@
       "attributes": []
     },
     {
-      "wdsfRef": "2.4.20",
-      "figureType": "whisk",
-      "name": "Whisk",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF fwd (Closed Position)",
-        "finish": "LF crosses behind RF (Promenade Position)",
-        "timing": "QQS",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.21",
-      "figureType": "back-whisk",
-      "name": "Back Whisk",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd in CBMP (Outside Partner Position)",
-        "finish": "LF crosses behind RF (Promenade Position)",
-        "timing": "QQS",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
       "wdsfRef": "2.4.22",
       "figureType": "progressive-side-step-reverse-turn",
       "name": "Progressive Side Step Reverse Turn",
@@ -3129,66 +2607,10 @@
       "wdsf": {
         "start": "LF fwd and slightly to side (Closed Position)",
         "finish": "LF to side (Prom Position)",
-        "timing": "QQS",
+        "timing": "QQQQ",
         "notes": [
           "NOTE - Quantity of Turn: when danced into a corner there will be no turn on step 4 (Pivot). The",
           "NOTE - Timing: alternative timings may be used: QQS&, S&QQ, SQ&Q, SQQ&, SQQS."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.33",
-      "figureType": "open-natural-turn",
-      "name": "Open Natural Turn",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF to side (Promenade Position)",
-        "finish": "RF bwd R side leading (Closed Position)",
-        "timing": "SQQS",
-        "notes": [
-          "NOTE - Timing: alternative timing including the Preceding Step S&QQ may be used",
-          "NOTE -General: May start from step 2."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.34",
-      "figureType": "outside-spin",
-      "name": "Outside Spin",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF bwd in CBMP (Outside Partner Position)",
-        "finish": "LF to side (Closed Position)",
-        "timing": "QQS",
-        "notes": [
-          "NOTE - Quantity of Turn: when the figure is underturned (no pivot on step 3) the following step will",
-          "NOTE - Timing: alternative timing could be used: &QQ."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.35",
-      "figureType": "natural-twist-turn",
-      "name": "Natural Twist Turn",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "RF fwd (Closed Position)",
-        "finish": "Feet almost closed, weight on RF, LF placed to side w/o weight (Promenade Position)",
-        "timing": "SQ&QS",
-        "notes": [
-          "NOTE - Couple Position/Quantity of Turn: it may end in Closed Position. The Man will turn 5/8 to R"
         ]
       },
       "attributes": []
@@ -3208,76 +2630,6 @@
         "notes": [
           "NOTE - General: it may start from step 2. It may finish in Closed Position, Lady will turn only 5/8 to R",
           "NOTE - Timing: alternative timing could be used: SQQQQS&."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.37",
-      "figureType": "chase-alternative-endings-chase-chasse",
-      "name": "Chase Alternative Endings - Chase, Chasse",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF to side (Promenade Position)",
-        "finish": "RF to side (Closed Position)",
-        "timing": "SQQ QQ Q&Q",
-        "notes": []
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.38",
-      "figureType": "chase-alternative-endings-method-1-whisk-fwd",
-      "name": "Chase Alternative Endings - Method 1: Whisk, Fwd",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF crosses behind RF (Promenade Position)",
-        "finish": "RF fwd and across in CBMP, LF placed to side w/o weight (Promenade Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Timing: alternative timing could be used: QQS."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.39",
-      "figureType": "chase-alternative-endings-method-2-whisk",
-      "name": "Chase Alternative Endings - Method 2: Whisk,",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF crosses behind RF (Promenade Position)",
-        "finish": "RF fwd and across in CBMP, LF placed to side w/o weight (Closed Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Timing: alternative timing could be used: QQS."
-        ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.40",
-      "figureType": "chase-alternative-endings-method-3-whisk-close",
-      "name": "Chase Alternative Endings - Method 3: Whisk, Close",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": "LF crosses behind RF (Promenade Position)",
-        "finish": "RF closes to LF slightly bwd, LF placed to side w/o weight (Promenade Position)",
-        "timing": "SQQ",
-        "notes": [
-          "NOTE - Timing: alternative timing could be used: S&S."
         ]
       },
       "attributes": []
@@ -3313,22 +2665,6 @@
         "notes": [
           "NOTE - Timing: alternative timing of S or Q may be used"
         ]
-      },
-      "attributes": []
-    },
-    {
-      "wdsfRef": "2.4.43",
-      "figureType": "in-out",
-      "name": "IN - OUT",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "seeAlso": null,
-      "wdsf": {
-        "start": null,
-        "finish": null,
-        "timing": "&S",
-        "notes": []
       },
       "attributes": []
     },
@@ -3427,7 +2763,7 @@
       "wdsf": {
         "start": "LF bwd (Open Opp.; LH to RH and RH to LH hold)",
         "finish": "Weight on RF (Open Prom; LH to RH and RH to LH Hold)",
-        "timing": "QQQQ QQQQ QQQQ QQQQ Q(Q Q)aQ",
+        "timing": "123",
         "notes": [
           "NOTE -FOOT ACTION/GENERAL: a series of forward or backward changes may be",
           "NOTE - General: Steps 1-5 or 6 - 10 only may be used.",

@@ -45,7 +45,7 @@ const ABBREV: Record<string, Record<string, string>> = {
     lowering: "low",
     NFR: "NFR",
   },
-  position: { closed: "Cl", promenade: "PP", wing: "W", CBMP: "CBP" },
+  position: { closed: "Cl", promenade: "PP", wing: "W", CBMP: "CBMP" },
   footwork: {
     // Canonical picker codes (already short — explicit so no fallback mangles them).
     HT: "HT",

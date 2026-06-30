@@ -4,7 +4,7 @@
     "source": "ISTD Modern Ballroom Dance Faculty Qualifications — Syllabus Outline, September 2024.",
     "sourcePdf": "https://www.istd.org/documents/modern-ballroom-syllabus-outline/modern-ballroom-syllabus-september-24.pdf",
     "note": "ISTD is the seed system named in PLAN.md D30/Q-LIBSEED. Figures carry a Bronze/Silver/Gold level (istdLevel) + the exam-grade label (istdGrade). Per-count attribute timelines are NOT in this outline (technique books are paid) — `attributes` left empty for the content workstream. Viennese Waltz is a separate optional exam (Licentiate/Fellowship).",
-    "figureCount": 122,
+    "figureCount": 121,
     "levelMapping": {
       "bronze": "Student Teacher/Bronze + Associate/Bronze",
       "silver": "Licentiate / Diploma III / Silver",
@@ -1027,17 +1027,6 @@
     {
       "figureType": "lf-and-rf-rocks",
       "name": "LF and RF Rocks",
-      "dance": "tango",
-      "scope": "global",
-      "source": "library",
-      "istdLevel": "bronze",
-      "istdGrade": "Associate / Bronze",
-      "additional": false,
-      "attributes": []
-    },
-    {
-      "figureType": "natural-twist-turn",
-      "name": "Natural Twist Turn",
       "dance": "tango",
       "scope": "global",
       "source": "library",

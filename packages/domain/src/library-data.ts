@@ -15,7 +15,7 @@ export interface LibraryFigureData {
   notes?: string[];
 }
 
-/** 241 canonical figures across the five Standard dances. */
+/** 204 canonical figures across the five Standard dances. */
 export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "waltz", figureType: "back-lock", name: "Back Lock" },
   {
@@ -49,17 +49,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used.",
       "NOTE-Couple Position: may end in Promenade Position",
-    ],
-  },
-  {
-    dance: "waltz",
-    figureType: "bounce-fallaway-weave-ending",
-    name: "Bounce Fallaway Weave Ending",
-    timing: "1&23 123",
-    start: "LF fwd and slightly to side (Closed Position)",
-    finish: "LF side and slightly fwd (Closed Position)",
-    notes: [
-      "NOTE - General: dance steps 1-4 of bounce fallaway followed by steps 4-6 of weave from PP",
     ],
   },
   {
@@ -105,17 +94,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "waltz",
-    figureType: "curved-feather",
-    name: "Curved Feather",
-    timing: "123",
-    start: "RF fwd (Closed Position)",
-    finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [
-      "NOTE - Foot Placement/ Couple Position: step 1 may be danced RF fwd in CBMP in Outside Partner",
-    ],
-  },
-  {
-    dance: "waltz",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
     timing: "123 (12&3 Lady)",
@@ -137,20 +115,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "waltz",
-    figureType: "fallaway-natural-turn",
-    name: "Fallaway Natural Turn",
-    timing: "123 123",
-    start: "RF fwd and across in CBMP (Promenade Position)",
-    finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [
-      "NOTE - Foot Placement/ Couple Position: may start RF fwd in CBMP in Outside Partner position. It",
-    ],
-  },
-  {
-    dance: "waltz",
     figureType: "fallaway-reverse-and-slip-pivot",
     name: "Fallaway Reverse and Slip Pivot",
-    timing: "1&23",
+    timing: "123&",
     start: "LF fwd and slightly to side (Closed position)",
     finish: "RF bwd (Slip Pivot) weight on RF, LF held in position (Closed Position)",
     notes: [
@@ -250,17 +217,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "waltz", figureType: "open-impetus-and-wing", name: "Open Impetus and Wing" },
   {
     dance: "waltz",
-    figureType: "open-natural-turn",
-    name: "Open Natural Turn",
-    timing: "123",
-    start: "RF fwd and across in CBMP (Promenade Position)",
-    finish: "RF bwd R Side leading (Closed Position)",
-    notes: [
-      "NOTE - Foot Placement/Couple Position: may start RF fwd in CBMP in Outside Partner position",
-    ],
-  },
-  {
-    dance: "waltz",
     figureType: "open-telemark-and-cross-hesitation",
     name: "Open Telemark and Cross Hesitation",
   },
@@ -286,37 +242,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: may be underturned (no Pivot on step3) in which case the exit is RF bwd",
     ],
-  },
-  {
-    dance: "waltz",
-    figureType: "outside-swivel",
-    name: "Outside Swivel",
-    timing: "1 (23)",
-    start: "LF back in CBMP (Outside Partner Position)",
-    finish: "Weight on LF (Promenade position)",
-    notes: [],
-  },
-  {
-    dance: "waltz",
-    figureType: "overturned-running-spin-turn",
-    name: "Overturned Running Spin Turn",
-    timing: "123 1&23 12&3",
-    start: "RF fwd (Closed Position)",
-    finish: "LF closes to RF w/o weight, weight on RF (Wing Position)",
-    notes: [
-      "NOTE - Couple Position/ Timing: From step 8 (instead of quick Wing) both partners may dance two",
-      "NOTE - Timing: alternative timing of 12&3 may be used on steps 4-7.",
-      "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position",
-    ],
-  },
-  {
-    dance: "waltz",
-    figureType: "progressive-chasse-to-l",
-    name: "Progressive Chasse to L",
-    timing: "12&3",
-    start: "RF bwd (Closed Position)",
-    finish: "LF side and slightly fwd (Closed Position)",
-    notes: ["NOTE - Quantity of Turn: may turn up to 3/8 to L."],
   },
   {
     dance: "waltz",
@@ -403,19 +328,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: alternative timing of 123 112&3 may be used.",
       "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position",
-    ],
-  },
-  {
-    dance: "waltz",
-    figureType: "running-weave-from-pp",
-    name: "Running Weave from PP",
-    timing: "1&23 123",
-    start: "RF fwd and across in CBMP (Promenade Position)",
-    finish: "RF crosses behind LF (Closed Position)",
-    notes: [
-      "NOTE - General: steps 1-4 or 5-7 only may be used.",
-      "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position",
-      "NOTE - Timing: alternative timing of 12&3 may be used on steps 1-4.",
     ],
   },
   {
@@ -525,7 +437,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "viennese_waltz",
     figureType: "rf-backward-change-step-reverse-to-natural",
     name: "RF Backward Change Step Reverse to Natural",
-    timing: "QQQQ QQQQ QQQQ QQQQ Q(Q Q)aQ",
+    timing: "123",
     start: "LF bwd (Open Opp.; LH to RH and RH to LH hold)",
     finish: "Weight on RF (Open Prom; LH to RH and RH to LH Hold)",
     notes: [
@@ -913,31 +825,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "quickstep",
-    figureType: "curved-feather",
-    name: "Curved Feather",
-    timing: "SQQ",
-    start: "RF fwd (Closed Position)",
-    finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [
-      "NOTE - Foot Placement/Couple position: Step 1 may be taken fwd in CBMP in Outside Partner",
-    ],
-  },
-  {
-    dance: "quickstep",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
     timing: "SSS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "Weight on RF, LF closes to RF without weight (Closed Position)",
-    notes: [],
-  },
-  {
-    dance: "quickstep",
-    figureType: "drag-hesitation",
-    name: "Drag Hesitation",
-    timing: "SSS",
-    start: "LF fwd and slightly to side (Closed Position)",
-    finish: "LF closes to RF w/o weight (Closed Position)",
     notes: [],
   },
   {
@@ -974,18 +866,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "quickstep", figureType: "heel-pivot", name: "Heel Pivot (Quarter Turn to Left)" },
   {
     dance: "quickstep",
-    figureType: "hesitation-change",
-    name: "Hesitation Change",
-    timing: "SSS",
-    start: "LF bwd and slightly to side (Closed Position)",
-    finish: "Weight on RF, LF closes to RF without weight (Closed Position)",
-    notes: [
-      "NOTE - Couple Position: Step 1 may be taken in CBMP in Outside Partner Position.",
-      "NOTE - General: Steps 1 -2 only may be used",
-    ],
-  },
-  {
-    dance: "quickstep",
     figureType: "hover-corte",
     name: "Hover Corté",
     timing: "SSS",
@@ -1015,17 +895,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Couple Position: Step 1 may be taken bwd in CBMP in Outside Partner Position",
       "NOTE - Timing: Alternative timing SQQ may be used",
-    ],
-  },
-  {
-    dance: "quickstep",
-    figureType: "natural-fallaway-turn",
-    name: "Natural Fallaway Turn",
-    timing: "SQQ SQQ",
-    start: "RF fwd and across in CBMP (Promenade Position)",
-    finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [
-      "NOTE - Foot Placement/ Couple Position: may start RF fwd in CBMP in Outside Partner position. It",
     ],
   },
   {
@@ -1072,55 +941,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "quickstep",
-    figureType: "natural-turning-lock",
-    name: "Natural Turning Lock",
-    timing: "QQSS",
-    start: "RF bwd with R side leading (Closed Position)",
-    finish: "LF diag fwd L side leading (Promenade Position)",
-    notes: [
-      "NOTE- Timing: alternative timing QQQQ may be used.",
-      "NOTE- Couple Position/ Foot Placement: may end in closed position, the following step is taken RF",
-      "NOTE- Quantity of Turn/ Couple Position: May be overturned to end in Closed Position (Man backing",
-    ],
-  },
-  {
-    dance: "quickstep",
-    figureType: "open-natural-turn",
-    name: "Open Natural Turn",
-    timing: "SQQ",
-    start: "RF Fwd and across in CBMP (Promenade Position)",
-    finish: "RF bwd R side leading (Closed Position)",
-    notes: ["NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position"],
-  },
-  {
-    dance: "quickstep",
     figureType: "open-reverse-turn-quick-open-reverse",
     name: "Open Reverse Turn (quick Open Reverse)",
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF bwd in CBMP (Outside Partner Position)",
     notes: [],
-  },
-  {
-    dance: "quickstep",
-    figureType: "outside-change",
-    name: "Outside Change",
-    timing: "SQQ",
-    start: "LF bwd in CBMP (Outside Partner Position)",
-    finish: "LF to side and slightly fwd (Closed Position)",
-    notes: ["NOTE - Couple Position: May end in Promenade Position"],
-  },
-  {
-    dance: "quickstep",
-    figureType: "outside-spin",
-    name: "Outside Spin",
-    timing: "SSS",
-    start: "LF bwd in CBMP (Outside Partner Position)",
-    finish: "LF to side (Closed Position)",
-    notes: [
-      "NOTE-Timing: Alternative timing SQQ may be used",
-      "NOTE- Foot Placement/Quantity of Turn: it may be underturned (no turn on step3) in which case",
-    ],
   },
   { dance: "quickstep", figureType: "progressive-chasse", name: "Progressive Chassé" },
   {
@@ -1139,15 +965,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF to side and slightly Bwd (Closed Position)",
-    notes: [],
-  },
-  {
-    dance: "quickstep",
-    figureType: "quarter-turn-to-l",
-    name: "Quarter Turn to L",
-    timing: "SQQ",
-    start: "RF bwd and slightly to side (Closed Position)",
-    finish: "RF closes to LF (Closed Position)",
     notes: [],
   },
   {
@@ -1226,7 +1043,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "quickstep",
     figureType: "running-spin-turn",
     name: "Running Spin Turn",
-    timing: "SQQ SQQS",
+    timing: "SSQQS",
     start: "RF fwd (Closed Position)",
     finish: "RF bwd R side leading (Closed Position)",
     notes: [
@@ -1259,18 +1076,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side (Promenade Position)",
     notes: ["NOTE - Timing: Alternative timing SSS may be used"],
-  },
-  {
-    dance: "quickstep",
-    figureType: "tipple-chasse-to-l",
-    name: "Tipple Chasse to L",
-    timing: "SQQS",
-    start: "RF fwd in CBMP (Outside Partner Position)",
-    finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [
-      "NOTE - Couple Position: May start RF fwd in Closed Position",
-      "NOTE - General: Steps 2-4 only may be used",
-    ],
   },
   { dance: "quickstep", figureType: "tipple-chasse-to-r", name: "Tipple Chassé to R" },
   {
@@ -1320,7 +1125,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "quickstep",
     figureType: "v6",
     name: "V6",
-    timing: "SQQS QQS",
+    timing: "SQQS SQQ",
     start: "LF bwd (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
     notes: ["NOTE-General: it may start from step 2."],
@@ -1418,7 +1223,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "change-of-direction",
     name: "Change of Direction",
-    timing: "SSSS",
+    timing: "SSS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF fwd (Closed Position)",
     notes: ["NOTE - Quantity of turn: It may turn ½ to L when danced into a corner."],
@@ -1474,15 +1279,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
-    figureType: "extended-reverse-wave",
-    name: "Extended Reverse Wave",
-    timing: "SQQ SQQ SQQ SQQ QSQ",
-    start: "LF fwd and slightly to side (Closed Position)",
-    finish: "LF fwd (Closed Position)",
-    notes: ["NOTE - General: Steps 1-9, 1-12, 6-12 or 6-15 only may be used."],
-  },
-  {
-    dance: "foxtrot",
     figureType: "fallaway-reverse-and-slip-pivot",
     name: "Fallaway Reverse and Slip Pivot",
     timing: "QQQQ",
@@ -1526,7 +1322,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "heel-pull-finish",
     name: "Heel Pull Finish",
-    timing: "QSQ",
+    timing: "SSS",
     start: "LF bwd (Closed Position)",
     finish: "LF fwd (Closed Position)",
     notes: [
@@ -1581,7 +1377,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "impetus",
     name: "Impetus",
-    timing: "SSS",
+    timing: "SQQ",
     start: "LF bwd and slightly to side (Closed Position)",
     finish: "LF to side and slightly bwd (Closed Position)",
     notes: [],
@@ -1641,39 +1437,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
-    figureType: "natural-twist-turn-with-impetus-and-feather-finish",
-    name: "Natural Twist Turn with Impetus and Feather Finish",
-    timing: "SQ&Q QQ SQQ",
-    start: "RF fwd (Closed Position)",
-    finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [
-      "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner",
-    ],
-  },
-  {
-    dance: "foxtrot",
-    figureType: "natural-twist-turn-with-impetus-to-p-p",
-    name: "Natural Twist Turn with Impetus to P.P",
-    timing: "SQ&Q QQ",
-    start: "RF fwd (Closed Position)",
-    finish: "LF to side (Promenade Position)",
-    notes: [
-      "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside",
-    ],
-  },
-  {
-    dance: "foxtrot",
-    figureType: "natural-twist-turn-with-natural-weave",
-    name: "Natural Twist Turn with Natural Weave",
-    timing: "SQ&Q SQQ QQQQ",
-    start: "RF fwd (Closed Position)",
-    finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [
-      "NOTE - Couple position: It may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner",
-    ],
-  },
-  {
-    dance: "foxtrot",
     figureType: "natural-weave",
     name: "Natural Weave",
     timing: "SQQ QQQQ",
@@ -1716,18 +1479,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
-    figureType: "outside-spin",
-    name: "Outside Spin",
-    timing: "SQQ",
-    start: "LF bwd in CBMP (Outside Partner Position)",
-    finish: "LF to side (Closed Position)",
-    notes: [
-      "NOTE - Timing: alternative timing &QQ may be used.",
-      "NOTE - Quantity of turn: When the outside Spin is underturned (no Pivot on step 3) the following",
-    ],
-  },
-  {
-    dance: "foxtrot",
     figureType: "outside-swivel",
     name: "Outside Swivel",
     timing: "S",
@@ -1740,27 +1491,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
-    figureType: "over-feather",
-    name: "Over Feather",
-    timing: "QQ",
-    start: "LF diag fwd L side leading (Closed Position)",
-    finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [],
-  },
-  {
-    dance: "foxtrot",
-    figureType: "progressive-chasse-to-r",
-    name: "Progressive Chasse to R",
-    timing: "S Q&Q",
-    start: "LF fwd and slightly to side (Closed Position)",
-    finish: "RF to side and slightly bwd (Closed Position)",
-    notes: ["NOTE - General: follow with Weave Ending (3-6 Basic Weave)"],
-  },
-  {
-    dance: "foxtrot",
     figureType: "quick-open-reverse-turn",
     name: "Quick Open Reverse Turn",
-    timing: "SQ&Q SQQ",
+    timing: "SQ&QQQ",
     start: "RF fwd in CBMP (Outside Partner Position)",
     finish: "Weight on R foot (Outside Partner Position)",
     notes: [
@@ -1803,18 +1536,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 1-4, 1-6 or 4-6 only may be used.",
       "NOTE- Rise and Fall: when steps 1-4 are used as a preceding figure to Basic Weave there is no",
-    ],
-  },
-  {
-    dance: "foxtrot",
-    figureType: "running-weave-from-p-p",
-    name: "Running Weave from P.P.",
-    timing: "SQ&Q SQQ",
-    start: "RF fwd in CBMP (Promenade Position)",
-    finish: "RFfwd in CBMP (Outside Partner Position)",
-    notes: [
-      "NOTE - General: Steps 1-4 only may be used.",
-      "NOTE - Couple position: Step 1 may be danced FWD in CBMP (Man) in Outside Partner Position.",
     ],
   },
   {
@@ -1900,15 +1621,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "tango",
-    figureType: "back-whisk",
-    name: "Back Whisk",
-    timing: "QQS",
-    start: "LF bwd in CBMP (Outside Partner Position)",
-    finish: "LF crosses behind RF (Promenade Position)",
-    notes: [],
-  },
-  {
-    dance: "tango",
     figureType: "basic-reverse-turn",
     name: "Basic Reverse Turn",
     timing: "QQS QQS",
@@ -1941,42 +1653,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - General: it may start from step 2. It may finish in Closed Position, Lady will turn only 5/8 to R",
       "NOTE - Timing: alternative timing could be used: SQQQQS&.",
     ],
-  },
-  {
-    dance: "tango",
-    figureType: "chase-alternative-endings-chase-chasse",
-    name: "Chase Alternative Endings - Chase, Chasse",
-    timing: "SQQ QQ Q&Q",
-    start: "LF to side (Promenade Position)",
-    finish: "RF to side (Closed Position)",
-    notes: [],
-  },
-  {
-    dance: "tango",
-    figureType: "chase-alternative-endings-method-1-whisk-fwd",
-    name: "Chase Alternative Endings - Method 1: Whisk, Fwd",
-    timing: "SQQ",
-    start: "LF crosses behind RF (Promenade Position)",
-    finish: "RF fwd and across in CBMP, LF placed to side w/o weight (Promenade Position)",
-    notes: ["NOTE - Timing: alternative timing could be used: QQS."],
-  },
-  {
-    dance: "tango",
-    figureType: "chase-alternative-endings-method-2-whisk",
-    name: "Chase Alternative Endings - Method 2: Whisk,",
-    timing: "SQQ",
-    start: "LF crosses behind RF (Promenade Position)",
-    finish: "RF fwd and across in CBMP, LF placed to side w/o weight (Closed Position)",
-    notes: ["NOTE - Timing: alternative timing could be used: QQS."],
-  },
-  {
-    dance: "tango",
-    figureType: "chase-alternative-endings-method-3-whisk-close",
-    name: "Chase Alternative Endings - Method 3: Whisk, Close",
-    timing: "SQQ",
-    start: "LF crosses behind RF (Promenade Position)",
-    finish: "RF closes to LF slightly bwd, LF placed to side w/o weight (Promenade Position)",
-    notes: ["NOTE - Timing: alternative timing could be used: S&S."],
   },
   {
     dance: "tango",
@@ -2023,7 +1699,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "tango",
     figureType: "fallaway-reverse-and-slip-pivot",
     name: "Fallaway Reverse and Slip Pivot",
-    timing: "QQS",
+    timing: "QQQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side (Prom Position)",
     notes: [
@@ -2060,15 +1736,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF bwd small step (Closed Position)",
     notes: ["NOTE - Timing: alternative timing QQQQ may be used."],
-  },
-  {
-    dance: "tango",
-    figureType: "in-out",
-    name: "IN - OUT",
-    timing: "&S",
-    start: "",
-    finish: "",
-    notes: [],
   },
   { dance: "tango", figureType: "lf-and-rf-rocks", name: "LF and RF Rocks" },
   {
@@ -2109,17 +1776,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "tango",
-    figureType: "natural-twist-turn",
-    name: "Natural Twist Turn",
-    timing: "SQ&QS",
-    start: "RF fwd (Closed Position)",
-    finish: "Feet almost closed, weight on RF, LF placed to side w/o weight (Promenade Position)",
-    notes: [
-      "NOTE - Couple Position/Quantity of Turn: it may end in Closed Position. The Man will turn 5/8 to R",
-    ],
-  },
-  {
-    dance: "tango",
     figureType: "natural-twist-turn-from-pp",
     name: "Natural Twist Turn from PP",
     timing: "SQQ SQQ",
@@ -2129,18 +1785,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - General: it may start from step 2.",
       "NOTE - Timing: use of alternative timing QQS is possible after step 3.",
       "NOTE - Couple Position/Quantity of Turn: it may end in Close Position. In this case the Man will turn",
-    ],
-  },
-  {
-    dance: "tango",
-    figureType: "open-natural-turn",
-    name: "Open Natural Turn",
-    timing: "SQQS",
-    start: "LF to side (Promenade Position)",
-    finish: "RF bwd R side leading (Closed Position)",
-    notes: [
-      "NOTE - Timing: alternative timing including the Preceding Step S&QQ may be used",
-      "NOTE -General: May start from step 2.",
     ],
   },
   {
@@ -2172,18 +1816,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "tango",
     figureType: "open-reverse-turn-partner-outside",
     name: "Open Reverse Turn, Partner Outside",
-  },
-  {
-    dance: "tango",
-    figureType: "outside-spin",
-    name: "Outside Spin",
-    timing: "QQS",
-    start: "LF bwd in CBMP (Outside Partner Position)",
-    finish: "LF to side (Closed Position)",
-    notes: [
-      "NOTE - Quantity of Turn: when the figure is underturned (no pivot on step 3) the following step will",
-      "NOTE - Timing: alternative timing could be used: &QQ.",
-    ],
   },
   {
     dance: "tango",
@@ -2326,27 +1958,6 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd (Closed Position)",
     notes: ["NOTE - General: LF or RF walk only may be used."],
   },
-  {
-    dance: "tango",
-    figureType: "tap-alternative-entries-to-pp",
-    name: "Tap - Alternative Entries to PP",
-    timing: "S&",
-    start: "RF fwd (Closed Position)",
-    finish: "Weight on R foot (Promenade Position)",
-    notes: [
-      "NOTE - General: Tap can be danced after any Closed or Open Finish.",
-      "NOTE - Timing: Alternative timing, including also the preceding step could be SS.",
-    ],
-  },
   { dance: "tango", figureType: "the-chase", name: "The Chase" },
   { dance: "tango", figureType: "walk", name: "Walk" },
-  {
-    dance: "tango",
-    figureType: "whisk",
-    name: "Whisk",
-    timing: "QQS",
-    start: "LF fwd (Closed Position)",
-    finish: "LF crosses behind RF (Promenade Position)",
-    notes: [],
-  },
 ];
