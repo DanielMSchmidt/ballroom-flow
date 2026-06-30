@@ -19,6 +19,13 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 1,
+  // Web-first assertions auto-retry until this ceiling. The journeys run against
+  // a REAL worker (wrangler dev) that can briefly stall under CI load — a reload
+  // that re-syncs the Automerge doc over WS, or a workerd "Connection reset by
+  // peer" hiccup, occasionally needs >5s. Bumping the default 5s → 10s lets a
+  // correct assertion ride out that transient stall instead of flaking; a
+  // genuinely broken assertion still fails (just 5s later).
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
