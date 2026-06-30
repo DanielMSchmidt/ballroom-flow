@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { zCreateFigure, zJournalList, zRegistryKind, zSearchResults, zTemplateList } from "./index";
+import {
+  zCreateFigure,
+  zJournalList,
+  zRegistryKind,
+  zRoutineList,
+  zSearchResults,
+  zTemplateList,
+} from "./index";
 
 describe("zJournalList (T6)", () => {
   it("parses a UNION of routine + account journal entries with resolved anchor labels", () => {
@@ -124,6 +131,38 @@ it("US-046 search result accepts a null dance (nullable, not optional)", () => {
     results: [{ docRef: "f1", type: "global-figure", title: "Feather" }],
   });
   expect(omitted.success).toBe(false);
+});
+
+describe("US-025 zRoutineListItem card projection (bars / figureCount / forkedFromTitle)", () => {
+  it("parses a routine row carrying the projected card fields", () => {
+    const parsed = zRoutineList.parse({
+      routines: [
+        {
+          docRef: "rt_1",
+          title: "My Waltz",
+          dance: "waltz",
+          role: "owner",
+          updatedAt: 10,
+          bars: 12,
+          figureCount: 4,
+          forkedFromTitle: "Golden Waltz Basic",
+        },
+      ],
+    });
+    expect(parsed.routines[0]).toMatchObject({ bars: 12, figureCount: 4 });
+    expect(parsed.routines[0]?.forkedFromTitle).toBe("Golden Waltz Basic");
+  });
+
+  it("keeps the card fields OPTIONAL (a row may omit them before first projection)", () => {
+    // Eventual consistency: a freshly-created routine is listed (eager projection)
+    // before its DO alarm has computed bars/figureCount — the row must still parse.
+    const parsed = zRoutineList.parse({
+      routines: [{ docRef: "rt_2", title: "Fresh", dance: "tango", role: "owner", updatedAt: 1 }],
+    });
+    expect(parsed.routines[0]?.bars).toBeUndefined();
+    expect(parsed.routines[0]?.figureCount).toBeUndefined();
+    expect(parsed.routines[0]?.forkedFromTitle).toBeUndefined();
+  });
 });
 
 it("US-045 shapes the template list", () => {

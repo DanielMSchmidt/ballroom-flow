@@ -102,11 +102,22 @@ export interface SeedSpec {
  * suite skip its CREATEs (→ "no such table"). Running the statements directly is
  * order-independent and self-contained. (#203 — the real fix behind #173; do not
  * reintroduce the bookkeeping or an error-swallow that masks a missing schema.)
+ *
+ * Tables/indexes use `CREATE … IF NOT EXISTS`, so re-running is a no-op. SQLite has
+ * NO `IF NOT EXISTS` for `ALTER TABLE … ADD COLUMN`, though, so a column-adding
+ * migration throws "duplicate column name" on the 2nd+ suite (shared D1). We
+ * swallow ONLY that exact re-add — a safe no-op — and rethrow everything else, so
+ * a genuinely missing schema (e.g. "no such table") still surfaces (#203).
  */
 export async function applyMigrations(): Promise<void> {
   for (const migration of env.TEST_MIGRATIONS) {
     for (const query of migration.queries) {
-      if (query.trim()) await env.DB.prepare(query).run();
+      if (!query.trim()) continue;
+      try {
+        await env.DB.prepare(query).run();
+      } catch (err) {
+        if (!/duplicate column name/i.test(String(err))) throw err;
+      }
     }
   }
 }

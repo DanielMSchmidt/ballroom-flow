@@ -8,6 +8,7 @@ import type { RoutineListItem } from "@ballroom/contract";
 import type { DanceId } from "@ballroom/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { alias } from "drizzle-orm/sqlite-core";
 import { documentRegistry, membership } from "./schema";
 
 /**
@@ -89,9 +90,16 @@ export async function countEditableRoutines(db: D1Database, userId: string): Pro
  * merged in memory — owner wins on overlap. D1 is a pure index, so this never
  * reads CRDT content; create eager-projects (US-022) so a new routine is here
  * immediately, while edit metadata is alarm-projected and may lag (#126).
+ *
+ * The card fields (US-025): `bars`/`figureCount` are the alarm-projected columns;
+ * `forkedFromTitle` is resolved here by a LEFT self-join of `document_registry`
+ * on `forkedFromRef` → the origin row's title (a PK lookup — EXPLAIN no-SCAN).
+ * All three are eventually consistent and may be null until first projection.
  */
 export async function listRoutines(db: D1Database, userId: string): Promise<RoutineListItem[]> {
   const d = drizzle(db);
+  // Self-alias so we can resolve a fork's origin TITLE in the same indexed read.
+  const origin = alias(documentRegistry, "origin");
 
   const owned = await d
     .select({
@@ -99,8 +107,12 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
       title: documentRegistry.title,
       dance: documentRegistry.dance,
       updatedAt: documentRegistry.updatedAt,
+      bars: documentRegistry.bars,
+      figureCount: documentRegistry.figureCount,
+      forkedFromTitle: origin.title,
     })
     .from(documentRegistry)
+    .leftJoin(origin, eq(origin.docRef, documentRegistry.forkedFromRef))
     .where(
       and(
         eq(documentRegistry.ownerId, userId),
@@ -117,10 +129,14 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
       title: documentRegistry.title,
       dance: documentRegistry.dance,
       updatedAt: documentRegistry.updatedAt,
+      bars: documentRegistry.bars,
+      figureCount: documentRegistry.figureCount,
+      forkedFromTitle: origin.title,
       role: membership.role,
     })
     .from(membership)
     .innerJoin(documentRegistry, eq(documentRegistry.docRef, membership.docRef))
+    .leftJoin(origin, eq(origin.docRef, documentRegistry.forkedFromRef))
     .where(
       and(
         eq(membership.userId, userId),
@@ -134,7 +150,15 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
   const seen = new Set<string>();
   const items: RoutineListItem[] = [];
   const push = (
-    row: { docRef: string; title: string | null; dance: string | null; updatedAt: number },
+    row: {
+      docRef: string;
+      title: string | null;
+      dance: string | null;
+      updatedAt: number;
+      bars: number | null;
+      figureCount: number | null;
+      forkedFromTitle: string | null;
+    },
     role: RoutineListItem["role"],
   ): void => {
     if (seen.has(row.docRef)) return; // owner wins over a redundant membership row
@@ -145,6 +169,11 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
       dance: (row.dance ?? "waltz") as DanceId,
       role,
       updatedAt: row.updatedAt,
+      // Omit eventually-consistent fields entirely when unprojected (null → absent),
+      // so the contract's optionals stay "absent until projected".
+      ...(row.bars != null ? { bars: row.bars } : {}),
+      ...(row.figureCount != null ? { figureCount: row.figureCount } : {}),
+      ...(row.forkedFromTitle != null ? { forkedFromTitle: row.forkedFromTitle } : {}),
     });
   };
   for (const r of owned) push(r, "owner");
