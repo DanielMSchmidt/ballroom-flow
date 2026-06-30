@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Inconsolata:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9e6df;font-family:Inconsolata,monospace;-webkit-font-smoothing:antialiased;transition:background .3s ease}
+  *{box-sizing:border-box}
+  body[data-backdrop="gray"]{background:#d9dadf}
+  body[data-backdrop="char"]{background:#2c2b29}
+  body[data-anno="off"] .anno{display:none!important}
+  body[data-anno="off"] .cap{display:none!important}
+  /* phone frame */
+  .frame{background:#fff;border:2px solid #2b2b2b;border-radius:30px;box-shadow:0 2px 0 #2b2b2b,0 10px 24px rgba(0,0,0,.12);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .sb{display:flex;justify-content:space-between;padding:9px 20px 3px;font:600 11px Inconsolata;color:#9a958c;flex:0 0 auto}
+  .hd{display:flex;align-items:center;gap:8px;padding:4px 14px 9px;border-bottom:1.5px solid #2b2b2b;flex:0 0 auto}
+  .ht{font:700 13px Inconsolata;color:#23344a}
+  .bk{font:700 17px Inconsolata;color:#23344a}
+  .bd{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  /* numbered interaction pins */
+  .pin{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;min-width:16px;border-radius:50%;background:#23344a;color:#fff;font:700 10px Inconsolata;vertical-align:middle}
+  .pinr{background:#c0563f}
+  .pino{background:#a9742c}
+  /* caption / interaction list under each frame */
+  .cap{display:flex;flex-direction:column;gap:5px}
+  .capt{font:700 9px Inconsolata;color:#8a857b;letter-spacing:.5px}
+  .cr{display:flex;gap:7px;align-items:flex-start;font:600 11px Inconsolata;color:#3a352d;line-height:1.3}
+  .cr b{color:#23344a}
+  /* sticky rule note */
+  .note{background:#ffe27a;padding:11px 13px;font:500 15px/1.4 Caveat,cursive;color:#5a4a00;box-shadow:0 1px 3px rgba(0,0,0,.18);border-radius:2px}
+  .note b{font-weight:700}
+  .note.blue{background:#cfe0f2;color:#1f3f63}
+  .note.tan{background:#f3e6d2;color:#6b4a16}
+  /* labels */
+  .lbl{font:600 12px Inconsolata;color:#6b665e}
+  .sub{font:600 10px Inconsolata;color:#9a958c;margin-top:2px}
+  .sect{font:700 30px Caveat,cursive;color:#2b2b2b}
+  /* color chips */
+  .chip{font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;display:inline-block;white-space:nowrap}
+  .crise{background:#d6f0e3;border:1px solid #1f8a5b;color:#0f5d3c}
+  .cbody{background:#f3eaf8;border:1px solid #8a5cab;color:#5a3a73}
+  .cfoot{background:#f3e6d2;border:1px solid #a9742c;color:#6b4a16}
+  .csway{background:#fbe3dc;border:1px solid #c0563f;color:#8f3825}
+  .cturn{background:#e3e8f2;border:1px solid #5b6b8a;color:#3e4a63}
+  .dot{width:6px;height:6px;border-radius:50%;border:1.5px solid #ddd6ca;display:inline-block}
+  /* section header row (green) */
+  .shd{display:flex;align-items:center;gap:8px;background:#eaf2ea;border:1.5px solid #5b8a5b;border-radius:9px;padding:8px 10px}
+  .shdt{flex:1;font:700 11px Inconsolata;color:#2f4f2f}
+  /* figure row */
+  .fig{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #cdddee;border-radius:10px;padding:9px 11px}
+  .fign{flex:1;font:700 11px Inconsolata;color:#23344a}
+  .cnt{font:600 9px Inconsolata;background:#eef4fb;border-radius:6px;padding:2px 7px;color:#2f5d8f}
+  .bdot{width:8px;height:8px;border-radius:50%;background:#2f5d8f;flex:0 0 auto}
+  .adot{width:8px;height:8px;border-radius:50%;background:#a9742c;flex:0 0 auto}
+  .vpill{font:600 8px Inconsolata;color:#a9742c;background:#f3e6d2;border-radius:5px;padding:1px 5px;white-space:nowrap}
+  /* tab bar */
+  .tb{margin-top:auto;border-top:2px solid #2b2b2b;background:#f7f5f0;display:flex;padding:7px 0 9px;flex:0 0 auto}
+  .tbi{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font:600 9px Inconsolata;color:#a7a299}
+  .tbon{color:#2f5d8f;font-weight:700}
+  .tbg{font-size:15px;line-height:1}
+  /* generic card panel */
+  .panel{background:#fff;border:1.5px solid #cfcabf;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  /* sheet over phone */
+  .scrim{position:absolute;inset:0;background:rgba(20,18,12,.4);z-index:4}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:14px 15px 18px;z-index:5;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+  .grab{width:34px;height:4px;border-radius:3px;background:#e0dbd0;margin:0 auto 12px}
+  .opt{display:flex;align-items:center;gap:11px;border:1.5px solid #dbe5f0;border-radius:11px;padding:11px 12px}
+  .opi{width:34px;height:34px;border-radius:9px;background:#eef4fb;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font:700 15px Inconsolata;color:#2f5d8f}
+  .opn{font:700 12px Inconsolata;color:#1c1c1e}
+  .ops{font:500 13px Caveat,cursive;color:#9a958c}
+  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);background:#1c1c1e;color:#fff;font:600 10px Inconsolata;padding:9px 14px;border-radius:10px;z-index:6;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+</style>
+</helmet>
+
+<!-- ===================== TITLE ===================== -->
+<div style="position:absolute;left:80px;top:26px;width:1320px">
+  <div style="font:700 46px Caveat,cursive;color:#2b2b2b;line-height:1">Ballroom Choreography Builder — Wireframes <span style="font-size:31px;color:#2f5d8f">v4</span></div>
+  <div class="anno" style="font:500 14px Inconsolata;color:#6b665e;margin-top:7px;max-width:1180px">Re-grounded on the v1 plan: <b>fork &amp; inheritance</b>. Four tabs (Choreo · Library · Journal · Profile), routine-level forking, account-level figure variants with copy-on-write, dance-aware figures, reading ⇄ editing on the choreo, and note-linking by place / figure / attribute with scope. Every frame lists its tap targets → effects; key screens are shown empty, with a few items, and overflowing.</div>
+</div>
+
+<!-- legend -->
+<div class="anno" style="position:absolute;left:80px;top:158px;width:1320px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font:600 12px Inconsolata;color:#3a352d">
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#cfe0f2;border:1.5px solid #2f5d8f;border-radius:3px"></span>step / timing</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#d6f0e3;border:1.5px solid #1f8a5b;border-radius:3px"></span>rise &amp; fall</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#f3eaf8;border:1.5px solid #8a5cab;border-radius:3px"></span>body position</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#f3e6d2;border:1.5px solid #a9742c;border-radius:3px"></span>footwork</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#fbe3dc;border:1.5px solid #c0563f;border-radius:3px"></span>sway</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#e3e8f2;border:1.5px solid #5b6b8a;border-radius:3px"></span>turn</span>
+  <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:#ffe27a;border:1.5px solid #b89400;border-radius:3px"></span>note</span>
+  <span style="display:flex;align-items:center;gap:6px;margin-left:8px"><span class="pin" style="width:15px;height:15px;min-width:15px">1</span>tap target → effect (see each frame's list)</span>
+  <span style="display:flex;align-items:center;gap:6px"><span class="bdot"></span>global</span>
+  <span style="display:flex;align-items:center;gap:6px"><span class="adot"></span>a frozen choreo-owned copy / custom</span>
+</div>
+
+<!-- ===================== SYSTEM RULES BAND ===================== -->
+<div class="anno" style="position:absolute;left:1440px;top:26px;width:1010px">
+  <div style="font:700 22px Caveat,cursive;color:#2b2b2b;margin-bottom:9px">System rules — how everything behaves</div>
+  <div style="display:flex;flex-wrap:wrap;gap:11px">
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #2f5d8f">
+      <div style="font:700 11px Inconsolata;color:#2f5d8f;margin-bottom:5px">ATTRIBUTE MODEL</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">A moment (a count, incl. off-beats <b>&amp; / a</b>) holds typed <b>attributes</b>: <b>Step</b> (direction + footwork, no foot side), Rise&amp;Fall, Position, Sway, Turn — plus user <b>custom types</b>. Each type is single/multi, optional or required, and may be <b>role-aware</b> (own leader vs follower value). <b>Reading</b> shows only set attributes as columns; <b>editing</b> shows every column. Size = <b>bars</b>.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #4a7c4a">
+      <div style="font:700 11px Inconsolata;color:#4a7c4a;margin-bottom:5px">DANCES</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">Each choreo is <b>one dance</b>, chosen at creation. Phrase length: Waltz &amp; Viennese = <b>3 or 6 bars</b>; Quickstep, Foxtrot, Tango = <b>4 or 8</b>. You only see figures valid for that dance. Many figures share a name across dances (Natural Turn, Fallaway) but carry <b>different steps per dance</b>.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #a9742c">
+      <div style="font:700 11px Inconsolata;color:#a9742c;margin-bottom:5px">FIGURE COPIES — global › choreo-owned › personal library</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d"><span class="bdot" style="display:inline-block;vertical-align:middle"></span> <b>global</b> = app-owned canonical library figure; nobody edits it. <span class="adot" style="display:inline-block;vertical-align:middle"></span> <b>choreo-owned copy</b> = the home of any edited / custom figure — lives in ONE routine, edited in place by everyone on that choreo, never ripples out. <span class="adot" style="display:inline-block;vertical-align:middle"></span> <b>personal library</b> = saved by a deliberate "Save to my library", reused across your routines. <b>Copy-on-write by location:</b> editing a figure that lives outside this choreo auto-makes a frozen choreo-owned copy (toast "Copied into this choreo"); the source is untouched.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #c0563f">
+      <div style="font:700 11px Inconsolata;color:#c0563f;margin-bottom:5px">ROUTINES — share vs fork</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d"><b>Share:</b> partners see each other's notes live; editing a <i>shared figure</i> changes it for everyone sharing this routine. <b>Fork ("make it your own"):</b> a frozen, independent copy you fully own — header shows "forked from &lt;origin&gt; · independent copy"; changes never flow back.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #8a5cab">
+      <div style="font:700 11px Inconsolata;color:#8a5cab;margin-bottom:5px">NOTES &amp; LINKING</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d"><b>v1:</b> a note attaches to a <b>place</b> (step 2 of this Natural Turn — one spot, no scope) or a <b>figure</b>, with a <b>scope</b> toggle: this choreo · all &lt;dance&gt; · every dance (one path covering a one-routine note and a cross-dance figure-family note). <b>Later (v1.1):</b> linking to an <i>attribute value</i> across steps ("all CBMPs", "all left sways") — needs a matching engine, deferred.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #5b6b8a">
+      <div style="font:700 11px Inconsolata;color:#5b6b8a;margin-bottom:5px">CHOREO — reading vs editing</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">The Choreo tab has two modes, toggled by <b>✎</b> in the header. <b>Reading</b> = a programme: every figure, its steps, fixed info-slots, and the latest 2 comments inline. <b>Editing</b> = sections + figures with add / reorder. <b>Sections</b> are user-named free text (no Long/Short/Corner enum).</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 0 · NAVIGATION MAP ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:430px">0 · Navigation — four tabs &amp; where every screen connects</div>
+<div class="anno panel" style="position:absolute;left:80px;top:480px;width:2370px;padding:16px 18px">
+  <div style="display:flex;gap:26px;flex-wrap:wrap">
+    <div style="flex:1;min-width:330px">
+      <div style="display:inline-flex;align-items:center;gap:6px;font:700 13px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:8px;padding:5px 10px"><span class="tbg">▦</span> CHOREO</div>
+      <div style="font:500 14px/1.5 Caveat,cursive;color:#3a352d;margin-top:8px">Choreo list → tap a routine → <b>Assemble</b> (reading ⇄ editing via ✎). From Assemble: tap a figure → <b>Figure detail</b> → tap a step → <b>Attribute editor</b>. Tap any info-slot → <b>Attribute info</b>. In reading, tap a comment / "+N more" → <b>Thread</b>. List: <b>＋</b> → New-choreo sheet · <b>⋯</b> → Open / Fork sheet · share icon → <b>Share</b>.</div>
+    </div>
+    <div style="flex:1;min-width:330px">
+      <div style="display:inline-flex;align-items:center;gap:6px;font:700 13px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:8px;padding:5px 10px"><span class="tbg">▤</span> LIBRARY</div>
+      <div style="font:500 14px/1.5 Caveat,cursive;color:#3a352d;margin-top:8px">Application-global figures grouped by <b>figure-type family</b>, filtered by dance. Each global figure has a <b>fork</b> affordance → adds to "Your variants &amp; custom" (toast). Your variants show a <b>based-on</b> lineage line + <b>used-in-N-routines</b> count, with an edit affordance.</div>
+    </div>
+    <div style="flex:1;min-width:330px">
+      <div style="display:inline-flex;align-items:center;gap:6px;font:700 13px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:8px;padding:5px 10px"><span class="tbg">▥</span> JOURNAL</div>
+      <div style="font:500 14px/1.5 Caveat,cursive;color:#3a352d;margin-top:8px">Profile-coloured entries (lessons &amp; practice). Tap an entry → <b>Entry</b> editor. "+ link" → <b>Link picker</b>: choose type (place / figure / attribute) → pick the target → pick <b>scope</b>. Links render as <b>↳</b> chips.</div>
+    </div>
+    <div style="flex:1;min-width:330px">
+      <div style="display:inline-flex;align-items:center;gap:6px;font:700 13px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:8px;padding:5px 10px"><span class="tbg">◓</span> PROFILE</div>
+      <div style="font:500 14px/1.5 Caveat,cursive;color:#3a352d;margin-top:8px">Your name and <b>profile colour</b> — the colour every note and thread reply of yours is tinted with, across shared routines. <b>Leader / Follower</b> is a per-figure <i>timeline</i> toggle (remembered between sessions), not a profile setting.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 1 · CHOREO TAB ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:740px">1 · Choreo tab — list, modes &amp; detail</div>
+
+<!-- 1.1 Choreo list — a few -->
+<div style="position:absolute;left:80px;top:800px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.1 · Choreo list <span class="sub" style="display:inline">— a few items</span></div>
+  <div class="frame" style="height:620px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto">
+        <span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span>
+        <span class="pin">1</span>
+        <span style="margin-left:6px;width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span>
+      </div>
+      <div style="padding:11px 12px;display:flex;flex-direction:column;gap:9px;flex:1;overflow:hidden">
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · 7 bars · Jun 2025</div></div>
+          <span class="pin">2</span><span class="pin">3</span><span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#1f8a5b;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Silver Quickstep</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Quickstep · no figures yet · Aug 2025</div></div>
+          <span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Practice Waltz #2</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · no figures yet · today</div></div>
+          <span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+      </div>
+      <div class="tb">
+        <div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:636px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>＋</b> → New-choreo sheet (1.5)</span></div>
+    <div class="cr"><span class="pin">2</span><span>tap a routine → <b>Assemble · reading</b> (1.6)</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>⋯</b> → Open / Fork sheet (1.4)</span></div>
+    <div class="cr"><span class="pin" style="background:#a7a299">·</span><span>tab bar switches tab; <b>Choreo</b> active</span></div>
+  </div>
+</div>
+
+<!-- 1.2 Choreo list — empty -->
+<div style="position:absolute;left:480px;top:800px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.2 · Choreo list <span class="sub" style="display:inline">— empty (first run)</span></div>
+  <div class="frame" style="height:620px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto">
+        <span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span>
+        <span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding:0 30px;text-align:center">
+        <span style="width:54px;height:54px;border-radius:14px;border:2px dashed #cabfa9;display:flex;align-items:center;justify-content:center;color:#bcae93;font:700 24px Inconsolata">▦</span>
+        <div style="font:700 13px Inconsolata;color:#6b665e">No choreos yet</div>
+        <div style="font:500 15px Caveat,cursive;color:#9a958c;line-height:1.35">Each dance gets its own routine — plus extras for practice. Start your first.</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#1c1c1e;color:#fff;border-radius:11px;padding:10px 16px;font:700 11px Inconsolata"><span class="pin" style="background:#fff;color:#1c1c1e">1</span>＋ Create choreo</span>
+      </div>
+      <div class="tb">
+        <div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:636px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>Create choreo</b> (or ＋) → New-choreo sheet (1.5)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Empty state replaces the list until the first routine exists.</span></div>
+  </div>
+</div>
+
+<!-- 1.3 Choreo list — too many -->
+<div style="position:absolute;left:880px;top:800px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.3 · Choreo list <span class="sub" style="display:inline">— many (scrolls) + forked</span></div>
+  <div class="frame" style="height:620px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto">
+        <span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span>
+        <span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span>
+      </div>
+      <div style="padding:9px 12px;display:flex;flex-direction:column;gap:7px;flex:1;overflow:hidden;position:relative">
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px"><span style="width:28px;height:28px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Gold Waltz</div><div style="font:500 8px Inconsolata;color:#9a958c">Waltz · 7 bars · Jun 2025</div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#ecd9bf;gap:9px;padding:7px 10px;background:#fdf8f3"><span style="width:28px;height:28px;border-radius:8px;background:#a9742c;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#6b4a16">Gold Waltz (my copy)</div><div style="display:flex;align-items:center;gap:3px;margin-top:1px"><span style="color:#a9742c;font:700 8px Inconsolata">⑂</span><span style="font:600 8px Inconsolata;color:#a9742c">forked from Gold Waltz</span></div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px"><span style="width:28px;height:28px;border-radius:8px;background:#1f8a5b;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Silver Quickstep</div><div style="font:500 8px Inconsolata;color:#9a958c">Quickstep · 4 bars · Aug 2025</div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px"><span style="width:28px;height:28px;border-radius:8px;background:#8a5cab;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Foxtrot — comp</div><div style="font:500 8px Inconsolata;color:#9a958c">Foxtrot · 8 bars · Sep 2025</div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px"><span style="width:28px;height:28px;border-radius:8px;background:#c0563f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Tango basics</div><div style="font:500 8px Inconsolata;color:#9a958c">Tango · 4 bars · Oct 2025</div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px"><span style="width:28px;height:28px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Practice Waltz #2</div><div style="font:500 8px Inconsolata;color:#9a958c">Waltz · today</div></div><span style="font:700 13px Inconsolata;color:#bcb6aa">⋯</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:9px;padding:7px 10px;opacity:.5"><span style="width:28px;height:28px;border-radius:8px;background:#1f8a5b;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#1c1c1e">Quickstep drills</div></div></div>
+        <div style="position:absolute;right:4px;top:10px;bottom:10px;width:3px;border-radius:3px;background:linear-gradient(#cabfa9,#cabfa9) no-repeat;background-size:100% 40%"></div>
+      </div>
+      <div class="tb">
+        <div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:636px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span style="font:700 11px Inconsolata">↕</span><span>List scrolls; tab bar &amp; header stay pinned.</span></div>
+    <div class="cr"><span style="color:#a9742c;font:700 11px Inconsolata">⑂</span><span>Forked routines carry a <b>forked-from</b> line + amber tint.</span></div>
+  </div>
+</div>
+
+<!-- 1.4 Choreo menu sheet -->
+<div style="position:absolute;left:1280px;top:800px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.4 · ⋯ Open / Fork sheet <span class="sub" style="display:inline">— overlay</span></div>
+  <div class="frame" style="height:620px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto;opacity:.5"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span><span style="font:700 16px Inconsolata;color:#2f5d8f">＋</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"><span class="pin pinr" style="position:absolute;top:120px;left:140px">3</span></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="font:700 13px Inconsolata;color:#1c1c1e">Gold Waltz</div>
+        <div style="font:500 14px Caveat,cursive;color:#9a958c;margin-bottom:11px">Choose what to do with this routine</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="opt"><span class="opi">◉</span><div style="flex:1"><div class="opn">Open</div><div class="ops">view &amp; edit this routine</div></div><span class="pin">1</span></div>
+          <div class="opt" style="border-color:#ecd9bf;background:#fdf8f3"><span class="opi" style="background:#f3e6d2;color:#a9742c">⑂</span><div style="flex:1"><div class="opn" style="color:#6b4a16">Fork — make it your own</div><div class="ops" style="color:#a98a5c">a frozen, independent copy you fully own</div></div><span class="pin">2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:636px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>Open</b> → Assemble · reading (1.6)</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Fork</b> → clones a frozen copy, opens it, toast <i>"Forked — independent copy"</i></span></div>
+    <div class="cr"><span class="pin pinr">3</span><span>tap scrim → dismiss</span></div>
+  </div>
+</div>
+
+<!-- 1.5 New choreo sheet -->
+<div style="position:absolute;left:1680px;top:800px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.5 · New-choreo sheet <span class="sub" style="display:inline">— overlay</span></div>
+  <div class="frame" style="height:620px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto;opacity:.5"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span><span style="font:700 16px Inconsolata;color:#2f5d8f">＋</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="font:700 14px Inconsolata;color:#1c1c1e;margin-bottom:11px">New choreography</div>
+        <div style="font:700 9px Inconsolata;color:#9a958c;margin-bottom:6px">DANCE <span class="pin">1</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+          <span style="font:700 11px Inconsolata;background:#2f5d8f;color:#fff;border-radius:12px;padding:6px 12px">Waltz</span>
+          <span style="font:600 11px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:12px;padding:6px 12px">Viennese Waltz</span>
+          <span style="font:600 11px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:12px;padding:6px 12px">Quickstep</span>
+          <span style="font:600 11px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:12px;padding:6px 12px">Foxtrot</span>
+          <span style="font:600 11px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:12px;padding:6px 12px">Tango</span>
+        </div>
+        <div style="font:700 9px Inconsolata;color:#9a958c;margin-bottom:6px">NAME <span class="pin">2</span></div>
+        <div style="border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px Inconsolata;color:#bcb6aa;background:#f7f5f0;margin-bottom:15px">e.g. Gold Waltz — comp routine</div>
+        <div style="display:flex;gap:8px">
+          <span style="flex:1;text-align:center;font:600 11px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px">cancel</span>
+          <span style="flex:2;text-align:center;font:700 11px Inconsolata;background:#1c1c1e;color:#fff;border-radius:10px;padding:11px"><span class="pin" style="background:#fff;color:#1c1c1e">3</span> create choreo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:636px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>pick <b>dance</b> → sets bars math (3/6 vs 4/8) &amp; filters the figure library to that dance</span></div>
+    <div class="cr"><span class="pin">2</span><span>type a <b>name</b></span></div>
+    <div class="cr"><span class="pin">3</span><span><b>create</b> → adds routine, opens <b>Assemble · editing</b> (1.7)</span></div>
+  </div>
+</div>
+
+<!-- bars-math sticky -->
+<div class="anno note" style="position:absolute;left:2090px;top:840px;width:296px;transform:rotate(-1deg)">
+  <b>Rule — bars math.</b> Dance decides phrase length: Waltz / Viennese = <b>3 or 6</b> bars per section; Quickstep / Foxtrot / Tango = <b>4 or 8</b>. The bar count on every card &amp; section is derived from the steps, not typed.
+</div>
+
+<!-- ===== ROW B : ASSEMBLE MODES ===== -->
+<!-- 1.6 Assemble · reading -->
+<div style="position:absolute;left:80px;top:1740px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.6 · Assemble — READING <span class="sub" style="display:inline">— attribute columns · only what's set</span></div>
+  <div class="frame" style="height:1200px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">reading</div></div><span class="pin">2</span><span style="font:700 14px Inconsolata;color:#2f5d8f">✎</span><span class="pin">3</span><span style="font:700 13px Inconsolata;color:#2f5d8f">↗</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">STEPS FOR</span><span class="pin">4</span><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:4px 11px">Leader</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:4px 11px">Follower</span></span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">1ST LONG SIDE</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <!-- figure: Natural Turn -->
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Natural Turn</span><span class="pin">5</span><span class="cnt">1 2 3</span></div>
+        <!-- column header: only the types this figure uses -->
+        <div style="display:flex;gap:4px;padding:0 2px"><span style="width:18px;flex:0 0 auto"></span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#2f5d8f">Step</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#1f8a5b">Rise</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#8a5cab">Pos</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#5b6b8a">Turn</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#0f8a8a">Head</span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:5px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">1</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">fwd·HT</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">comm</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#5b6b8a">¼R</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#0f8a8a">left</span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:5px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">2</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">side·T</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">up</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#5b6b8a">cont</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="margin-left:20px;display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#b07cc6;flex:0 0 auto"></span><span style="font:500 13px Caveat,cursive;color:#6b665e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">heads stay left — don't turn the head early</span><span class="pin">6</span></div>
+          <div style="font:600 8px Inconsolata;color:#c0bab0">+ add comment</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;padding:5px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">3</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">close·TH</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">up</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#8a5cab">Closed</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:4px"><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">2ND LONG SIDE</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Weave</span><span class="cnt">1 &amp; 2 &amp; 3 a</span><span style="font:600 8px Inconsolata;color:#9a958c">6 bars</span></div>
+        <div style="display:flex;gap:4px;padding:0 2px"><span style="width:18px;flex:0 0 auto"></span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#2f5d8f">Step</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#1f8a5b">Rise</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#8a5cab">Pos</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#c0563f">Sway</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#5b6b8a">Turn</span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">1</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">fwd·HT</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">comm</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#5b6b8a">⅛R</span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#f4f2ee"><span style="width:18px;text-align:center;font:700 10px Inconsolata;color:#9aa7bb;flex:0 0 auto">&amp;</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">side·T</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">2</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">fwd·T</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">up</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#8a5cab">PP</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#f4f2ee"><span style="width:18px;text-align:center;font:700 10px Inconsolata;color:#9aa7bb;flex:0 0 auto">&amp;</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">cross·T</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">3</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">side·TH</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#1f8a5b">low</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#f4f2ee"><span style="width:18px;text-align:center;font:700 10px Inconsolata;color:#9aa7bb;flex:0 0 auto">a</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">close·T</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#c0563f">to R</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="font:500 12px Caveat,cursive;color:#b0aaa0;padding-left:2px">↳ <b>&amp;</b> and <b>a</b> are off-beat timings — sub-beats sit dimmed between the counts</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:4px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Promenade Change</span><span class="cnt">1 &amp; 2</span></div>
+        <div style="display:flex;gap:4px;padding:0 2px"><span style="width:18px;flex:0 0 auto"></span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#2f5d8f">Step</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#8a5cab">Pos</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#c0563f">Sway</span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">1</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">fwd·T</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#f6f0f8;border:1px dashed #d8c4e2"><span style="width:18px;text-align:center;font:700 10px Inconsolata;color:#9aa7bb;flex:0 0 auto">&amp;</span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#8a5cab">to PP</span></span><span style="flex:1;display:flex;justify-content:center"><span class="dot"></span></span></div>
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:7px;background:#fafaf8"><span style="width:18px;text-align:center;font:700 11px Inconsolata;color:#2f5d8f;flex:0 0 auto">2</span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#2f5d8f">side·T</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#8a5cab">PP</span></span><span style="flex:1;display:flex;justify-content:center"><span style="font:700 8px Inconsolata;border-radius:5px;padding:2px 4px;color:#fff;background:#c0563f">to R</span></span></div>
+        <div style="font:500 12px Caveat,cursive;color:#8a5cab;padding-left:2px">↳ the <b>&amp;</b> holds a Position change with <b>no Step</b> — an attribute can sit on its own timing</div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:1216px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹</b> → Choreo list (1.1)</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>✎</b> → switches to EDITING (1.7); tap again to return</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>↗</b> → Share (4.2)</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>Leader / Follower</b> → flips role-aware values (Head left→right, Sway L→R); remembered</span></div>
+    <div class="cr"><span class="pin">5</span><span>tap a figure name → Figure detail (1.11)</span></div>
+    <div class="cr"><span class="pin">6</span><span>tap a comment / "+N more" / "+ add comment" → Thread (1.14)</span></div>
+  </div>
+</div>
+
+<!-- 1.7 Assemble · editing -->
+<div style="position:absolute;left:480px;top:1740px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.7 · Assemble — EDITING <span class="sub" style="display:inline">— sections + figures</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span class="pin">1</span><span style="font:700 14px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+        <div class="shd"><span style="color:#3f6b3f;font:700 11px Inconsolata">▾</span><span class="shdt">1st Long Side</span><span style="font:600 9px Inconsolata;color:#5b8a5b">6 bars</span></div>
+        <div style="margin-left:8px;display:flex;flex-direction:column;gap:7px">
+          <div class="fig"><span class="bdot"></span><span class="fign">Natural Turn</span><span class="pin">2</span><span class="cnt">1 2 3</span><span style="font:700 12px Inconsolata;color:#bcb6aa">⠿</span></div>
+          <div class="fig"><span class="bdot"></span><span class="fign">Spin Turn</span><span class="cnt">1 2 3</span><span style="font:700 12px Inconsolata;color:#bcb6aa">⠿</span></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed #9fc09f;border-radius:9px;padding:7px;color:#4a7c4a;font:700 10px Inconsolata"><span class="pin">3</span>＋ add figure</div>
+        </div>
+        <div class="shd"><span style="color:#3f6b3f;font:700 11px Inconsolata">▾</span><span class="shdt">1st Short Side</span><span style="font:600 9px Inconsolata;color:#5b8a5b">3 bars</span></div>
+        <div style="margin-left:8px;display:flex;flex-direction:column;gap:7px">
+          <div class="fig"><span class="bdot"></span><span class="fign">Whisk</span><span class="cnt">1 &amp; 2 3</span><span style="font:700 12px Inconsolata;color:#bcb6aa">⠿</span></div>
+          <div class="fig" style="border-color:#ecd9bf;background:#fdf8f3"><span class="adot"></span><span class="fign" style="color:#6b4a16">Chassé</span><span class="vpill">custom</span><span style="font:700 12px Inconsolata;color:#bcb6aa">⠿</span></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed #5b8a5b;border-radius:9px;padding:8px;color:#4a7c4a;font:700 10px Inconsolata"><span class="pin">4</span>＋ add section</div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>✎</b> (active/dark) → back to READING (1.6)</span></div>
+    <div class="cr"><span class="pin">2</span><span>tap figure → Figure detail (1.11) · <b>⠿</b> drag to reorder</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>＋ add figure</b> → Add-figure sheet (1.10)</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>＋ add section</b> → inline name field (1.9)</span></div>
+    <div class="cr"><span style="font:700 11px Inconsolata">▾</span><span>tap a section header → collapse / expand</span></div>
+  </div>
+</div>
+
+<!-- 1.8 Assemble editing — empty -->
+<div style="position:absolute;left:880px;top:1740px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.8 · Assemble — EDITING <span class="sub" style="display:inline">— new, empty</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Silver Quickstep</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span style="font:700 14px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 28px;text-align:center">
+        <span style="width:48px;height:48px;border-radius:12px;border:2px dashed #9fc09f;display:flex;align-items:center;justify-content:center;color:#9fc09f;font:700 22px Inconsolata">＋</span>
+        <div style="font:700 12px Inconsolata;color:#6b665e">No sections yet</div>
+        <div style="font:500 14px Caveat,cursive;color:#9a958c;line-height:1.35">Add a section (e.g. "1st Long Side"), then drop figures into it.</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#2f4f2f;color:#fff;border-radius:9px;padding:9px 14px;font:700 10px Inconsolata"><span class="pin" style="background:#fff;color:#2f4f2f">1</span>＋ add section</span>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>＋ add section</b> → inline name field (1.9)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>A freshly-created or forked-then-emptied routine lands here.</span></div>
+  </div>
+</div>
+
+<!-- 1.9 Add section -->
+<div style="position:absolute;left:1280px;top:1740px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.9 · Add section <span class="sub" style="display:inline">— inline, free-text name</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span style="font:700 14px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+        <div class="shd" style="opacity:.5"><span style="color:#3f6b3f;font:700 11px Inconsolata">▸</span><span class="shdt">2nd Long Side</span><span style="font:600 9px Inconsolata;color:#5b8a5b">3 figs</span></div>
+        <!-- expanded add-section -->
+        <div style="border:1.5px solid #5b8a5b;border-radius:10px;padding:11px 12px;background:#eaf2ea">
+          <div style="font:700 9px Inconsolata;color:#3f6b3f;margin-bottom:8px">NAME THIS SECTION <span class="pin">1</span></div>
+          <div style="border:1.5px solid #b9d2b9;border-radius:8px;padding:8px 11px;font:600 12px Inconsolata;color:#2f4f2f;background:#fff;margin-bottom:9px">1st Long Side<span style="border-left:1.5px solid #2f4f2f;margin-left:1px;animation:none">&nbsp;</span></div>
+          <div style="font:500 13px Caveat,cursive;color:#7a9a7a;margin-bottom:9px">e.g. 1st Long Side · Corner · Intro · Spin section — anything you like</div>
+          <div style="display:flex;gap:7px">
+            <span style="flex:1;text-align:center;font:600 10px Inconsolata;border:1.5px solid #b9d2b9;color:#4a7c4a;border-radius:8px;padding:8px"><span class="pin pinr">3</span> cancel</span>
+            <span style="flex:2;text-align:center;font:700 10px Inconsolata;background:#2f4f2f;color:#fff;border-radius:8px;padding:8px"><span class="pin" style="background:#fff;color:#2f4f2f">2</span> add section</span>
+          </div>
+        </div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>type any <b>name</b> (free text — no Long/Short/Corner enum)</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>add section</b> → appends empty section, toast <i>"Added &lt;name&gt;"</i></span></div>
+    <div class="cr"><span class="pin pinr">3</span><span><b>cancel</b> → collapses the field</span></div>
+  </div>
+</div>
+
+<!-- 1.10 Add figure sheet -->
+<div style="position:absolute;left:1680px;top:1740px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.10 · Add-figure sheet <span class="sub" style="display:inline">— filter + create own</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div class="hd" style="opacity:.5"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span style="font:700 14px Inconsolata;color:#2f5d8f">✎</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="max-height:84%">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px"><span style="font:700 12px Inconsolata;color:#3a352d">Add to 1st Short Side</span><span style="font:600 9px Inconsolata;color:#2f5d8f">Waltz ▾ <span class="pin">1</span></span></div>
+        <div style="border:1.5px solid #ddd6ca;border-radius:8px;padding:7px 10px;font:600 11px Inconsolata;color:#bcb6aa;background:#f7f5f0;margin-bottom:9px">🔍 filter figures… <span class="pin">2</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="fig" style="border-color:#cdddee;padding:8px 10px"><span class="bdot"></span><span class="fign">Wing</span><span class="pin">3</span><span class="cnt">1 2 3</span></div>
+          <div class="fig" style="border-color:#cdddee;padding:8px 10px"><span class="bdot"></span><span class="fign">Outside Change</span><span class="cnt">1 2 3</span></div>
+          <div class="fig" style="border-color:#cdddee;padding:8px 10px"><span class="bdot"></span><span class="fign">Double Reverse Spin</span><span class="cnt">1 &amp; 2</span></div>
+          <div class="fig" style="border-color:#ecd9bf;background:#fdf8f3;padding:8px 10px"><span class="adot"></span><span class="fign" style="color:#6b4a16">Whisk</span><span class="vpill">variant · Whisk</span></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed #2f5d8f;border-radius:9px;padding:9px;color:#2f5d8f;font:700 10px Inconsolata;margin-top:9px"><span class="pin">4</span>＋ create your own figure</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>dance ▾</b> locked to the routine's dance — only valid figures listed</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>filter</b> field narrows the list by name</span></div>
+    <div class="cr"><span class="pin">3</span><span>tap a figure → adds it to the section, closes sheet, toast</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>create your own</b> → compose a custom figure (amber)</span></div>
+  </div>
+</div>
+
+<!-- reading/editing sticky -->
+<div class="anno note blue" style="position:absolute;left:2090px;top:1770px;width:300px;transform:rotate(-1deg)">
+  <b>✎ is the mode switch.</b> Off = reading (a clean programme for the floor). On (dark) = editing (build &amp; reorder). Same screen, same data — two lenses. The header subtitle echoes the current mode.
+</div>
+<div class="anno note tan" style="position:absolute;left:2090px;top:2010px;width:300px;transform:rotate(1.2deg)">
+  <b>Dance-scoped library.</b> The add-figure list only ever shows figures defined for <i>this</i> routine's dance. A "Natural Turn" added to a Foxtrot pulls the Foxtrot steps, not the Waltz ones.
+</div>
+
+<!-- ===== ROW C : FIGURE / STEP / ATTRIBUTE / THREAD ===== -->
+<!-- 1.11 Figure detail -->
+<div style="position:absolute;left:80px;top:3200px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.11 · Figure detail <span class="sub" style="display:inline">— EDIT grid · every type &amp; timing</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><div style="flex:1"><div style="display:flex;align-items:center;gap:6px"><span class="bdot"></span><span class="ht">Natural Turn</span></div><div style="font:500 9px Inconsolata;color:#9a958c">1st Long Side · global figure</div></div><span class="pin">2</span><span style="font:700 13px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 2px"><span style="font:700 8px Inconsolata;color:#9a958c">STEPS FOR</span><span class="pin">5</span><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:4px 11px">Leader</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:4px 11px">Follower</span></span></div>
+    <div style="display:flex;gap:3px;padding:7px 12px 4px"><span style="width:20px;flex:0 0 auto"></span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#2f5d8f">Step*</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#1f8a5b">Rise</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#8a5cab">Pos</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#c0563f">Sway</span><span style="flex:1;text-align:center;font:700 8px Inconsolata;color:#5b6b8a">Turn</span><span style="width:12px;flex:0 0 auto;text-align:center;color:#c0bab0">›</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:0 12px 8px;display:flex;flex-direction:column;gap:3px">
+        <div style="display:flex;gap:3px;align-items:stretch"><span style="width:20px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:6px">1</span><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px;min-height:26px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#2f5d8f">fwd·HT</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#1f8a5b">comm</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;position:relative"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span><span class="pin" style="position:absolute;top:-7px;right:-7px">3</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#5b6b8a">¼R</span></div><span style="width:12px;flex:0 0 auto"></span></div>
+        <div style="display:flex;gap:3px;align-items:stretch"><span style="width:20px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:6px">2</span><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px;min-height:26px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#2f5d8f">side·T</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#1f8a5b">up</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#5b6b8a">cont</span></div><span style="width:12px;flex:0 0 auto"></span></div>
+        <div style="display:flex;gap:3px;align-items:stretch"><span style="width:20px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:6px">3</span><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px;min-height:26px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#2f5d8f">close·TH</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#1f8a5b">up</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;padding:4px 2px"><span style="font:700 8px Inconsolata;border-radius:4px;padding:1px 4px;color:#fff;background:#8a5cab">Closed</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><span style="width:12px;flex:0 0 auto"></span></div>
+        <div style="display:flex;gap:3px;align-items:stretch;opacity:.6"><span style="width:20px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font:700 11px Inconsolata;color:#9aa7bb;background:#f4f2ee;border-radius:6px">&amp;</span><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px;min-height:24px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f7faff;border-radius:6px"><span style="font:700 11px Inconsolata;color:#bcd2e8">＋</span></div><span style="width:12px;flex:0 0 auto"></span></div>
+        <div onClick="x" style="margin-top:7px;display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed #9fc0e0;border-radius:9px;padding:8px;color:#2f5d8f;font:700 10px Inconsolata"><span class="pin">4</span>＋ add an in-between timing</div>
+        <div style="font:500 12px Caveat,cursive;color:#a9a299;text-align:center;margin-top:5px">tap a cell to add / edit · * required · scroll → Head &amp; custom types</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹</b> → back to Assemble</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>✎</b> → READING grid (view · only set types)</span></div>
+    <div class="cr"><span class="pin">3</span><span>tap a cell → Attribute editor (1.12); a filled cell edits, ＋ adds</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>＋ timing</b> → add a moment on <b>&amp; / a</b> or a whole count</span></div>
+    <div class="cr"><span class="pin">5</span><span><b>Leader / Follower</b> → role-aware values; remembered</span></div>
+  </div>
+</div>
+
+<!-- 1.12 Attribute editor -->
+<div style="position:absolute;left:480px;top:3200px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.12 · Attribute editor <span class="sub" style="display:inline">— one attribute · both roles</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><div style="flex:1;display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;border-radius:3px;background:#2f5d8f"></span><span class="ht">Step</span></div><span class="pin">4</span><span style="font:700 12px Inconsolata;color:#2f5d8f">done</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:14px 15px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font:700 8px Inconsolata;color:#9a958c">ROLES</span><span class="pin">2</span><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 11px">Same for both</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 11px">Per role</span></span></div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:6px">DIRECTION <span class="pin">3</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;background:#2f5d8f;color:#fff;border-radius:11px;padding:5px 11px">forward</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">back</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">side</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">close</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">behind</span></div></div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:6px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;background:#2f5d8f;color:#fff;border-radius:11px;padding:5px 11px">HT</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">T</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">TH</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">H</span><span style="font:600 10px Inconsolata;border:1.5px dashed #c9c4bb;color:#9a958c;border-radius:11px;padding:5px 11px">＋ heel pull</span></div></div>
+        <span style="align-self:flex-start;font:700 10px Inconsolata;color:#c0563f;border:1.5px solid #e6c2b8;border-radius:9px;padding:8px 13px;margin-top:4px">remove attribute</span>
+      </div>
+    </div>
+    <div class="toast">✓ Copied into this choreo</div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹ / done</b> → save &amp; back to the grid</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Same for both ⇄ Per role</b> → split into separate leader / follower values</span></div>
+    <div class="cr"><span class="pin">3</span><span>pick the value(s) — Step holds <b>Direction + Footwork</b>; list types pick one (or many); custom types accept free text</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>done</b> saves · editing a figure outside this choreo forks a frozen copy → toast</span></div>
+  </div>
+</div>
+
+<!-- 1.13 Attribute info -->
+<div style="position:absolute;left:880px;top:3200px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.13 · Attribute info <span class="sub" style="display:inline">— reference for an attribute type</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><div style="flex:1"><div style="display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;border-radius:3px;background:#f3e6d2;border:1.5px solid #a9742c"></span><span class="ht">Footwork</span></div><div style="font:500 9px Inconsolata;color:#9a958c">what touches the floor, in order</div></div></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+        <div style="font:500 14px Caveat,cursive;color:#6b665e;line-height:1.35">The part of the foot contacting the floor through the step — abbreviated by initials, read in order of contact.</div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">VALUES</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;gap:9px;align-items:baseline"><span class="chip cfoot" style="min-width:30px;text-align:center">H</span><span style="font:600 10px Inconsolata;color:#3a352d">Heel — heel leads, e.g. forward walks</span></div>
+          <div style="display:flex;gap:9px;align-items:baseline"><span class="chip cfoot" style="min-width:30px;text-align:center">T</span><span style="font:600 10px Inconsolata;color:#3a352d">Toe — ball/toe only, e.g. side steps in rise</span></div>
+          <div style="display:flex;gap:9px;align-items:baseline"><span class="chip cfoot" style="min-width:30px;text-align:center">HT</span><span style="font:600 10px Inconsolata;color:#3a352d">Heel-Toe — heel then rises to toe</span></div>
+          <div style="display:flex;gap:9px;align-items:baseline"><span class="chip cfoot" style="min-width:30px;text-align:center">TH</span><span style="font:600 10px Inconsolata;color:#3a352d">Toe-Heel — toe then lowers to heel (closes)</span></div>
+          <div style="display:flex;gap:9px;align-items:baseline"><span style="min-width:30px;display:flex;justify-content:center"><span class="dot"></span></span><span style="font:600 10px Inconsolata;color:#9a958c">None — no footwork logged for this step</span></div>
+        </div>
+        <div style="margin-top:auto;background:#faf7f1;border:1px solid #ece4d6;border-radius:9px;padding:9px 11px;font:500 13px Caveat,cursive;color:#8a7048">Used in <b>9 steps</b> across Gold Waltz. <span class="pin">2</span> Tap a value to see every step that uses it.</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹</b> → back to where you tapped (figure / step)</span></div>
+    <div class="cr"><span class="pin">2</span><span>tap a value → list of steps using it (jump-to)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Reached by tapping any info-slot or its column head, in reading or figure detail.</span></div>
+  </div>
+</div>
+
+<!-- 1.14 Thread -->
+<div style="position:absolute;left:1280px;top:3200px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.14 · Thread <span class="sub" style="display:inline">— profile-coloured comments</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><div style="flex:1"><div class="ht">Spin Turn · step 2</div><div style="font:500 9px Inconsolata;color:#9a958c">3 comments</div></div></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;gap:8px"><span style="width:22px;height:22px;border-radius:50%;background:#3b7dd8;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata;flex:0 0 auto">D</span><div style="flex:1"><div style="font:700 9px Inconsolata;color:#3b7dd8">Daniel <span style="color:#bcb6aa;font-weight:500">· 2d ago</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">feels rushed — wait for her weight</div></div></div>
+        <div style="display:flex;gap:8px"><span style="width:22px;height:22px;border-radius:50%;background:#c0563f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata;flex:0 0 auto">L</span><div style="flex:1"><div style="font:700 9px Inconsolata;color:#c0563f">Lena <span style="color:#bcb6aa;font-weight:500">· 1d ago</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">agree — I'll commit to the side step sooner</div></div></div>
+        <div style="display:flex;gap:8px"><span style="width:22px;height:22px;border-radius:50%;background:#1f8a5b;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata;flex:0 0 auto">A</span><div style="flex:1"><div style="font:700 9px Inconsolata;color:#1f8a5b">Anna <span style="color:#bcb6aa;font-weight:500">· lesson 3 May</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">both: think "up &amp; out", not up.</div></div></div>
+      </div>
+      <div style="border-top:1.5px solid #ece8e0;padding:9px 12px;display:flex;align-items:center;gap:8px;background:#f7f5f0"><span style="width:20px;height:20px;border-radius:50%;background:#3b7dd8;flex:0 0 auto"></span><div style="flex:1;border:1.5px solid #ddd6ca;border-radius:14px;padding:6px 11px;font:600 10px Inconsolata;color:#bcb6aa;background:#fff">add a reply… <span class="pin">2</span></div><span style="font:700 10px Inconsolata;color:#2f5d8f">send <span class="pin">3</span></span></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹</b> → back to opener (reading / figure / journal)</span></div>
+    <div class="cr"><span class="pin">2</span><span>reply field — your text tints with <b>your profile colour</b></span></div>
+    <div class="cr"><span class="pin">3</span><span><b>send</b> → appends to the thread</span></div>
+  </div>
+</div>
+
+<!-- role-on-timeline sticky -->
+<div class="anno note blue" style="position:absolute;left:2090px;top:3230px;width:300px;transform:rotate(1deg)">
+  <b>Role lives on the timeline.</b> Leader / Follower is a per-figure view toggle, not a profile attribute. Follower shows the mirror (RF↔LF, sway &amp; turn flipped). The app remembers your last-viewed role and reopens there.
+</div>
+
+<!-- copy-on-write sticky -->
+<div class="anno note tan" style="position:absolute;left:2090px;top:3470px;width:300px;transform:rotate(-1deg)">
+  <b>Copy-on-write.</b> The moment you change a slot on a figure from outside this choreo, it silently forks to <i>your</i> variant (toast confirms), and this routine re-points to it. The shared/global figure — and everyone else's routines — stay exactly as they were.
+</div>
+
+<!-- ===================== SECTION 2 · LIBRARY TAB ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:4060px">2 · Library tab — global catalogue &amp; your personal library</div>
+
+<!-- 2.1 Library — global (All) -->
+<div style="position:absolute;left:80px;top:4130px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">2.1 · Library — GLOBAL <span class="sub" style="display:inline">— filter: All</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="padding:6px 14px 7px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><div style="font:700 16px Inconsolata;color:#1c1c1e">Figure Library</div><div style="font:500 9px Inconsolata;color:#9a958c">the shared catalogue · filter by dance</div></div>
+      <div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid #ece8e0;flex:0 0 auto;overflow:hidden"><span class="pin">1</span><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;border-radius:10px;padding:4px 9px">All</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Waltz</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Quickstep</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Foxtrot</span></div>
+      <div style="flex:1;overflow:hidden;padding:11px 13px;display:flex;flex-direction:column;gap:13px">
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">GLOBAL LIBRARY</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="font:700 10px Inconsolata;color:#5a554c">Natural Turn</div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:9px 11px"><span class="bdot"></span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#23344a">Natural Turn</div><div style="display:flex;gap:3px;margin-top:3px;flex-wrap:wrap"><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Waltz</span><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Foxtrot</span><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Quickstep</span><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">+2</span></div></div><span style="display:flex;align-items:center;gap:4px;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px"><span class="pin">2</span><span style="font:700 8px Inconsolata;color:#a9742c">↟ save</span></span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="font:700 10px Inconsolata;color:#5a554c">Whisk &amp; Chassé</div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:9px 11px"><span class="bdot"></span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#23344a">Whisk</div><div style="display:flex;gap:3px;margin-top:3px"><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Waltz</span></div></div><span style="display:flex;align-items:center;gap:4px;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px"><span style="font:700 8px Inconsolata;color:#a9742c">↟ save</span></span></div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:9px 11px"><span class="bdot"></span><div style="flex:1;min-width:0"><div style="font:700 11px Inconsolata;color:#23344a">Chassé</div><div style="display:flex;gap:3px;margin-top:3px"><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Waltz</span><span style="font:600 7px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px">Quickstep</span></div></div><span style="display:flex;align-items:center;gap:4px;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px"><span style="font:700 8px Inconsolata;color:#a9742c">↟ save</span></span></div>
+        </div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi tbon"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>dance filter</b> → narrows every group to that dance</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>↟ Save to my library</b> → promotes a copy into your personal library (deliberate; reusable across your routines)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Grouped by figure-type family; dance tags show where each figure is defined.</span></div>
+  </div>
+</div>
+
+<!-- 2.2 Library — filtered Waltz -->
+<div style="position:absolute;left:480px;top:4130px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">2.2 · Library — GLOBAL <span class="sub" style="display:inline">— filter: Waltz</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="padding:6px 14px 7px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><div style="font:700 16px Inconsolata;color:#1c1c1e">Figure Library</div><div style="font:500 9px Inconsolata;color:#9a958c">the shared catalogue · filter by dance</div></div>
+      <div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid #ece8e0;flex:0 0 auto;overflow:hidden"><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">All</span><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;border-radius:10px;padding:4px 9px">Waltz</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Quickstep</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Foxtrot</span></div>
+      <div style="flex:1;overflow:hidden;padding:11px 13px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">GLOBAL LIBRARY · WALTZ</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="font:700 10px Inconsolata;color:#5a554c">Natural Turn</div>
+        <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:8px 11px"><span class="bdot"></span><span style="flex:1;font:700 11px Inconsolata;color:#23344a">Natural Turn</span><span style="font:700 8px Inconsolata;color:#a9742c;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px">↟ save</span></div>
+        <div style="font:700 10px Inconsolata;color:#5a554c">Reverse Turn</div>
+        <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:8px 11px"><span class="bdot"></span><span style="flex:1;font:700 11px Inconsolata;color:#23344a">Reverse Turn</span><span style="font:700 8px Inconsolata;color:#a9742c;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px">↟ save</span></div>
+        <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:8px 11px"><span class="bdot"></span><span style="flex:1;font:700 11px Inconsolata;color:#23344a">Double Reverse Spin</span><span style="font:700 8px Inconsolata;color:#a9742c;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px">↟ save</span></div>
+        <div style="font:700 10px Inconsolata;color:#5a554c">Spin</div>
+        <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #e1dcd2;border-radius:10px;padding:8px 11px"><span class="bdot"></span><span style="flex:1;font:700 11px Inconsolata;color:#23344a">Spin Turn</span><span style="font:700 8px Inconsolata;color:#a9742c;border:1.5px solid #d8d2c8;border-radius:8px;padding:5px 8px">↟ save</span></div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi tbon"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Same screen, <b>Waltz</b> selected — only Waltz figures across every family.</span></div>
+  </div>
+</div>
+
+<!-- 2.3 Your variants & custom -->
+<div style="position:absolute;left:880px;top:4130px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">2.3 · Your personal library <span class="sub" style="display:inline">— a few</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="padding:6px 14px 7px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><div style="font:700 16px Inconsolata;color:#1c1c1e">Figure Library</div><div style="font:500 9px Inconsolata;color:#9a958c">figures you saved to reuse across routines</div></div>
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:7px"><span class="adot"></span><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">YOUR PERSONAL LIBRARY</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#fdf8f3;border:1.5px solid #ecd9bf;border-radius:11px;padding:10px 12px"><span class="adot"></span><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:5px"><span style="font:700 11px Inconsolata;color:#6b4a16">Whisk</span><span class="vpill">saved</span></div><div style="display:flex;align-items:center;gap:5px;margin-top:3px"><span style="font:500 13px Caveat,cursive;color:#a98a5c">based on Whisk</span><span style="width:3px;height:3px;border-radius:50%;background:#d8c4a0"></span><span style="font:600 8px Inconsolata;color:#b09362">used in 2 routines</span></div></div><span style="width:30px;height:30px;border-radius:8px;border:1.5px solid #ecd9bf;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#a9742c">✎<span class="pin">1</span></span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#fdf8f3;border:1.5px solid #ecd9bf;border-radius:11px;padding:10px 12px"><span class="adot"></span><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:5px"><span style="font:700 11px Inconsolata;color:#6b4a16">Hover Corté (mine)</span><span class="vpill">custom</span></div><div style="display:flex;align-items:center;gap:5px;margin-top:3px"><span style="font:500 13px Caveat,cursive;color:#a98a5c">your own figure</span><span style="width:3px;height:3px;border-radius:50%;background:#d8c4a0"></span><span style="font:600 8px Inconsolata;color:#b09362">used in 1 routine</span></div></div><span style="width:30px;height:30px;border-radius:8px;border:1.5px solid #ecd9bf;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#a9742c">✎</span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#fdf8f3;border:1.5px solid #ecd9bf;border-radius:11px;padding:10px 12px"><span class="adot"></span><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:5px"><span style="font:700 11px Inconsolata;color:#6b4a16">Feather</span><span class="vpill">saved</span></div><div style="display:flex;align-items:center;gap:5px;margin-top:3px"><span style="font:500 13px Caveat,cursive;color:#a98a5c">based on Feather Step</span><span style="width:3px;height:3px;border-radius:50%;background:#d8c4a0"></span><span style="font:600 8px Inconsolata;color:#b09362">used in 1 routine</span></div></div><span style="width:30px;height:30px;border-radius:8px;border:1.5px solid #ecd9bf;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata;color:#a9742c">✎</span></div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi tbon"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>✎</b> → edit here → ripples to every one of <b>your</b> routines that uses it (the deliberate cross-routine case)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Each card shows <b>based-on</b> lineage + <b>used-in-N-routines</b> count.</span></div>
+  </div>
+</div>
+
+<!-- 2.4 Your variants — empty -->
+<div style="position:absolute;left:1280px;top:4130px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">2.4 · Your personal library <span class="sub" style="display:inline">— empty for dance</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="padding:6px 14px 7px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><div style="font:700 16px Inconsolata;color:#1c1c1e">Figure Library</div><div style="font:500 9px Inconsolata;color:#9a958c">filter: Tango</div></div>
+      <div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid #ece8e0;flex:0 0 auto;overflow:hidden"><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">All</span><span style="font:600 9px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:4px 9px">Foxtrot</span><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;border-radius:10px;padding:4px 9px">Tango</span></div>
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:7px"><span class="adot"></span><span style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.5px">YOUR PERSONAL LIBRARY</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:0 26px;text-align:center">
+          <span style="width:44px;height:44px;border-radius:11px;border:2px dashed #ecd9bf;display:flex;align-items:center;justify-content:center;color:#d8c4a0;font:700 18px Inconsolata">⑂</span>
+          <div style="font:500 15px Caveat,cursive;color:#b0aaa0;line-height:1.35">Nothing saved for this dance yet — Save a figure from the library to reuse it.</div>
+        </div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi tbon"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Empty per-dance state; global figures above can still be saved.</span></div>
+  </div>
+</div>
+
+<!-- library sticky -->
+<div class="anno note tan" style="position:absolute;left:1680px;top:4180px;width:300px;transform:rotate(1deg)">
+  <b>Choreo-owned vs personal library.</b> Editing a figure inside a routine only changes that routine's own copy — it never ripples elsewhere. The cross-routine case is deliberate: <b>Save to my library</b> makes a personal-library figure, and editing THAT updates every one of your routines that uses it. (A routine fork stays frozen.)
+</div>
+
+<!-- ===================== SECTION 3 · JOURNAL TAB ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:4990px">3 · Journal tab — entries &amp; the link picker (place / figure / attribute → scope)</div>
+
+<!-- 3.1 Journal list — a few -->
+<div style="position:absolute;left:80px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.1 · Journal list <span class="sub" style="display:inline">— a few entries</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="display:flex;align-items:center;padding:6px 14px 9px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">Journal</span><span class="pin">1</span><span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span></div>
+      <div style="flex:1;overflow:hidden;padding:11px 12px;display:flex;flex-direction:column;gap:9px">
+        <div style="background:#fff;border:1.5px solid #e1dcd2;border-left:3px solid #1f8a5b;border-radius:10px;padding:10px 11px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font:700 8px Inconsolata;background:#e3f2ea;color:#1f8a5b;border-radius:5px;padding:1px 6px">LESSON</span><span style="font:700 9px Inconsolata;color:#1f8a5b">Anna</span><span style="font:500 8px Inconsolata;color:#bcb6aa">· 3 May</span><span class="pin">2</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">Heads stay left through the natural turn. Don't sit into the knees on the lowering. Whisk: more cross, less turn.</div><div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="font:600 8px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:5px;padding:1px 6px">↳ Natural Turn · step 2</span><span style="font:600 8px Inconsolata;background:#eef4fb;color:#2f5d8f;border-radius:5px;padding:1px 6px">↳ all Whisks</span></div></div>
+        <div style="background:#fff;border:1.5px solid #e1dcd2;border-left:3px solid #3b7dd8;border-radius:10px;padding:10px 11px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font:700 8px Inconsolata;background:#e7eefb;color:#3b7dd8;border-radius:5px;padding:1px 6px">PRACTICE</span><span style="font:700 9px Inconsolata;color:#3b7dd8">solo</span><span style="font:500 8px Inconsolata;color:#bcb6aa">· today</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">Spin not rushing; whisk sway still collapsing.</div><div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="font:600 8px Inconsolata;background:#fbe3dc;color:#8f3825;border-radius:5px;padding:1px 6px">↳ all Whisks · all Waltz</span></div></div>
+        <div style="background:#fff;border:1.5px solid #e1dcd2;border-left:3px solid #c0563f;border-radius:10px;padding:10px 11px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font:700 8px Inconsolata;background:#fbe3dc;color:#c0563f;border-radius:5px;padding:1px 6px">PRACTICE</span><span style="font:700 9px Inconsolata;color:#c0563f">w/ Lena</span><span style="font:500 8px Inconsolata;color:#bcb6aa">· Mon</span></div><div style="font:500 14px Caveat,cursive;color:#3a352d;line-height:1.3">Ran the routine full 5×; counts run 24/27.</div></div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi tbon"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>＋</b> → new entry (opens editor, 3.3)</span></div>
+    <div class="cr"><span class="pin">2</span><span>tap an entry → Entry editor (3.3)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Left border + author name tint = that person's <b>profile colour</b>. Chips are its links.</span></div>
+  </div>
+</div>
+
+<!-- 3.2 Journal list — empty -->
+<div style="position:absolute;left:480px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.2 · Journal list <span class="sub" style="display:inline">— empty</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="display:flex;align-items:center;padding:6px 14px 9px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">Journal</span><span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 28px;text-align:center">
+        <span style="width:48px;height:48px;border-radius:12px;border:2px dashed #cabfa9;display:flex;align-items:center;justify-content:center;color:#bcae93;font:700 22px Inconsolata">▥</span>
+        <div style="font:700 12px Inconsolata;color:#6b665e">No entries yet</div>
+        <div style="font:500 14px Caveat,cursive;color:#9a958c;line-height:1.35">Log a lesson or a practice session — link it to the figures &amp; attributes you worked on.</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#1c1c1e;color:#fff;border-radius:11px;padding:10px 16px;font:700 11px Inconsolata"><span class="pin" style="background:#fff;color:#1c1c1e">1</span>＋ New entry</span>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi tbon"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>New entry</b> → Entry editor (3.3)</span></div>
+  </div>
+</div>
+
+<!-- 3.3 Journal entry editor -->
+<div style="position:absolute;left:880px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.3 · Entry editor <span class="sub" style="display:inline">— text + links</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><span style="flex:1;font:700 13px Inconsolata;color:#23344a">Lesson · Anna · 3 May</span><span style="font:700 11px Inconsolata;color:#2f5d8f">done</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;gap:6px"><span style="font:700 9px Inconsolata;background:#1f8a5b;color:#fff;border-radius:9px;padding:4px 10px">Lesson</span><span style="font:600 9px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:9px;padding:4px 10px">Practice</span></div>
+        <div style="border:1.5px solid #ddd6ca;border-radius:9px;padding:10px;font:500 14px Caveat,cursive;color:#3a352d;line-height:1.35;background:#fffdf8;min-height:90px">Heads stay left through the natural turn. Don't sit into the knees on the lowering. Whisk: more cross, less turn.<span style="border-left:1.5px solid #2f5d8f">&nbsp;</span><span class="pin">2</span></div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">LINKS</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #cdddee;border-radius:9px;padding:7px 10px"><span style="flex:1;font:600 9px Inconsolata;color:#2f5d8f">↳ Natural Turn · step 2</span><span style="font:700 11px Inconsolata;color:#c0563f">×</span><span class="pin pinr">3</span></div>
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #cdddee;border-radius:9px;padding:7px 10px"><span style="flex:1;font:600 9px Inconsolata;color:#2f5d8f">↳ all Whisks · all Waltz</span><span style="font:700 11px Inconsolata;color:#c0563f">×</span></div>
+          <div style="border:1.5px dashed #cdc7bc;border-radius:9px;padding:8px;text-align:center;font:600 9px Inconsolata;color:#2f5d8f"><span class="pin">4</span> + link to a step, figure or attribute</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹ / done</b> → save &amp; back to list</span></div>
+    <div class="cr"><span class="pin">2</span><span>edit the note text · toggle Lesson / Practice</span></div>
+    <div class="cr"><span class="pin pinr">3</span><span><b>×</b> removes a link chip · tap a chip → jumps to its target</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>+ link</b> → Link picker (3.4)</span></div>
+  </div>
+</div>
+
+<!-- 3.4 Link picker — type -->
+<div style="position:absolute;left:1280px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.4 · Link picker — TYPE <span class="sub" style="display:inline">— overlay</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div class="hd" style="opacity:.5"><span class="bk">‹</span><span style="flex:1;font:700 13px Inconsolata;color:#23344a">Lesson · Anna</span><span style="font:700 11px Inconsolata;color:#2f5d8f">done</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="font:700 14px Inconsolata;color:#1c1c1e;margin-bottom:11px">Link to…</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="opt"><span class="opi">◎</span><div style="flex:1"><div class="opn">Specific place</div><div class="ops">step 2 of Natural Turn · 1st Long Side</div></div><span class="pin">1</span></div>
+          <div class="opt"><span class="opi">▤</span><div style="flex:1"><div class="opn">A figure</div><div class="ops">all Whisks, all Natural Turns</div></div><span class="pin">2</span></div>
+          <div class="opt" style="opacity:.55;border-style:dashed"><span class="opi" style="background:#efe9e0;color:#b0aaa0">≡</span><div style="flex:1"><div class="opn" style="color:#9a958c">An attribute <span style="font:600 8px Inconsolata;background:#efe9e0;color:#8a857b;border-radius:5px;padding:1px 5px">coming later · v1.1</span></div><div class="ops">all CBMPs, all left sways — needs a matching engine</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>Specific place</b> → pick section → figure → step. Links to that one spot (no scope step).</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>A figure</b> → pick a figure (3.5) → scope (3.7)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span><b>An attribute</b> is disabled in v1 — the family→value picker (3.6) is a <b>v1.1</b> exploration</span></div>
+  </div>
+</div>
+
+<!-- 3.5 Link picker — pick figure -->
+<div style="position:absolute;left:1680px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.5 · Link picker — FIGURE <span class="sub" style="display:inline">— overlay</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="max-height:86%">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px"><span style="font:700 13px Inconsolata;color:#9a958c">‹</span><span style="flex:1;font:700 14px Inconsolata;color:#1c1c1e">Pick a figure</span><span style="font:700 13px Inconsolata;color:#9a958c">×</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Natural Turn</span><span style="font:500 8px Inconsolata;color:#b0aaa0">3 steps</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Spin Turn</span><span style="font:500 8px Inconsolata;color:#b0aaa0">3 steps</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #2f5d8f;border-radius:9px;padding:9px 11px;background:#eef5fc"><span style="flex:1;font:700 10px Inconsolata;color:#1f3f63">Whisk</span><span class="pin">1</span><span style="color:#2f5d8f">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Chassé</span><span style="font:500 8px Inconsolata;color:#b0aaa0">4 steps</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Wing</span><span style="color:#d0cac2">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>tap a figure (e.g. <b>Whisk</b>) → scope step (3.7) → chip "↳ all Whisks · …"</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">‹</span><span>back returns to the type step (3.4).</span></div>
+  </div>
+</div>
+
+<!-- 3.6 Link picker — attribute -->
+<div style="position:absolute;left:2080px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.6 · Link picker — ATTRIBUTE <span class="sub" style="display:inline">— v1.1 / Later · not in v1</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="max-height:88%">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font:700 13px Inconsolata;color:#9a958c">‹</span><span style="flex:1;font:700 14px Inconsolata;color:#1c1c1e">Body position</span><span style="font:700 13px Inconsolata;color:#9a958c">×</span></div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px"><span style="font:700 8px Inconsolata;background:#f3eaf8;color:#8a5cab;border:1.5px solid #8a5cab;border-radius:8px;padding:3px 8px">Body</span><span style="font:600 8px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:8px;padding:3px 8px">Rise &amp; fall</span><span style="font:600 8px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:8px;padding:3px 8px">Footwork</span><span style="font:600 8px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:8px;padding:3px 8px">Sway</span><span style="font:600 8px Inconsolata;border:1.5px solid #d8d2c8;color:#6b665e;border-radius:8px;padding:3px 8px">Turn</span><span class="pin">1</span></div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:6px">VALUE</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #8a5cab;border-radius:9px;padding:9px 11px;background:#f8f3fb"><span style="width:8px;height:8px;border-radius:2px;background:#8a5cab"></span><span style="flex:1;font:700 10px Inconsolata;color:#5a3a73">CBMP</span><span class="pin">2</span><span style="color:#8a5cab">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Closed</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Promenade</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Wing</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px dashed #c9c4bb;border-radius:9px;padding:9px 11px"><span style="flex:1;font:700 10px Inconsolata;color:#9a958c">None</span><span style="color:#d0cac2">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>pick a <b>family</b> (Body / Rise / Foot / Sway / Turn)</span></div>
+    <div class="cr"><span class="pin">2</span><span>pick a <b>value</b> (e.g. CBMP, or ¼ L for "all left turns") → scope (3.7)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span><b>None</b> is itself a value — "every step with no sway logged".</span></div>
+  </div>
+</div>
+
+<!-- 3.7 Link picker — scope -->
+<div style="position:absolute;left:2480px;top:5050px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">3.7 · Link picker — SCOPE <span class="sub" style="display:inline">— how wide</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font:700 13px Inconsolata;color:#9a958c">‹</span><span style="flex:1;font:700 14px Inconsolata;color:#1c1c1e">Apply to…</span><span style="font:700 13px Inconsolata;color:#9a958c">×</span></div>
+        <div style="font:500 13px Caveat,cursive;color:#9a958c;margin-bottom:11px">linking: all Whisks</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="opt" style="border-color:#dbe5f0"><span class="opi">●</span><div style="flex:1"><div class="opn">This choreo only</div><div class="ops">Gold Waltz</div></div><span class="pin">1</span></div>
+          <div class="opt" style="border-color:#dbe5f0"><span class="opi">◐</span><div style="flex:1"><div class="opn">All Waltz choreos</div><div class="ops">same dance, every routine</div></div><span class="pin">2</span></div>
+          <div class="opt" style="border-color:#dbe5f0"><span class="opi">○</span><div style="flex:1"><div class="opn">Every dance</div><div class="ops">wherever this appears</div></div><span class="pin">3</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>→ chip "↳ all Whisks · here"</span></div>
+    <div class="cr"><span class="pin">2</span><span>→ chip "↳ all Whisks · all Waltz"</span></div>
+    <div class="cr"><span class="pin">3</span><span>→ chip "↳ all Whisks · every dance"</span></div>
+  </div>
+</div>
+
+<!-- linking sticky -->
+<div class="anno note" style="position:absolute;left:2480px;top:5860px;width:300px;transform:rotate(-1.2deg)">
+  <b>Scope is the payoff.</b> A correction rarely belongs to one step. "More cross on every Whisk" → figure <i>Whisk</i>, scope <i>every dance</i>. The note then surfaces on every matching step you ever dance — across routines.
+</div>
+
+<!-- ===================== SECTION 4 · PROFILE + SHARE ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:6040px">4 · Profile &amp; Share — identity colour, partners, fork</div>
+
+<!-- 4.1 Profile -->
+<div style="position:absolute;left:80px;top:6100px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">4.1 · Profile <span class="sub" style="display:inline">— identity colour</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="display:flex;align-items:center;padding:6px 14px 9px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">Profile</span></div>
+      <div style="flex:1;overflow:hidden;padding:16px 14px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <span style="width:62px;height:62px;border-radius:50%;background:#3b7dd8;color:#fff;display:flex;align-items:center;justify-content:center;font:700 26px Inconsolata">D</span>
+          <div style="font:700 15px Inconsolata;color:#1c1c1e">Daniel</div>
+        </div>
+<div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:6px">PROFILE COLOUR <span class="pin">1</span></div><div style="font:500 13px Caveat,cursive;color:#9a958c;margin-bottom:8px">every note &amp; reply of yours is tinted with this, across shared routines</div><div style="display:flex;gap:9px"><span style="width:30px;height:30px;border-radius:50%;background:#3b7dd8;border:2.5px solid #1c1c1e"></span><span style="width:30px;height:30px;border-radius:50%;background:#c0563f"></span><span style="width:30px;height:30px;border-radius:50%;background:#1f8a5b"></span><span style="width:30px;height:30px;border-radius:50%;background:#8a5cab"></span><span style="width:30px;height:30px;border-radius:50%;background:#a9742c"></span></div></div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi tbon"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>pick your <b>profile colour</b> → re-tints all your notes &amp; thread replies everywhere</span></div>
+  </div>
+</div>
+
+<!-- 4.2 Share -->
+<div style="position:absolute;left:480px;top:6100px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">4.2 · Share <span class="sub" style="display:inline">— partners · fork</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><span class="pin">1</span><span style="flex:1;font:700 13px Inconsolata;color:#23344a">Share · Gold Waltz</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:13px;display:flex;flex-direction:column;gap:11px">
+        <div style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">PARTNERS ON THIS ROUTINE</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:8px 11px"><span style="width:24px;height:24px;border-radius:50%;background:#3b7dd8;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata">D</span><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Daniel</span><span style="font:600 8px Inconsolata;color:#9a958c">you · owner</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:8px 11px"><span style="width:24px;height:24px;border-radius:50%;background:#c0563f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata">L</span><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Lena</span><span style="display:inline-flex;align-items:center;gap:3px;font:700 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:2px 6px">editor ▾</span></div>
+          <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:9px;padding:8px 11px"><span style="width:24px;height:24px;border-radius:50%;background:#1f8a5b;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata">A</span><span style="flex:1;font:700 10px Inconsolata;color:#1c1c1e">Anna</span><span style="display:inline-flex;align-items:center;gap:3px;font:700 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:2px 6px">commenter ▾</span></div>
+        </div>
+        <div style="background:#ecf2fb;border:1.5px solid #cdddee;border-radius:10px;padding:10px 12px;font:500 14px Caveat,cursive;line-height:1.4;color:#23537f">Editing a shared figure changes it for every routine that uses it. To branch off on your own, fork the routine — you'll get a frozen, independent copy.</div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:7px;font:700 12px Inconsolata;background:#1c1c1e;color:#fff;border-radius:11px;padding:12px"><span class="pin" style="background:#fff;color:#1c1c1e">2</span>⑂ Fork — make it your own</span>
+          <span style="text-align:center;font:600 10px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:11px;padding:10px"><span class="pin">3</span> + invite someone</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>‹</b> → back to Assemble</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Fork</b> → frozen independent copy, opens it, toast <i>"Forked — independent copy"</i></span></div>
+    <div class="cr"><span class="pin">3</span><span><b>invite</b> → add someone &amp; pick a role: <b>viewer · commenter · editor</b></span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">▾</span><span>owner / editor can change a member's <b>role</b> or remove them; the invite carries it. (No leader / follower / teacher — that's a per-figure timeline view, not a stored role.)</span></div>
+  </div>
+</div>
+
+<!-- share vs fork sticky -->
+<div class="anno note blue" style="position:absolute;left:880px;top:6150px;width:310px;transform:rotate(1deg)">
+  <b>Three kinds of copy.</b> A <i>routine</i> fork = a frozen snapshot, fully yours, no link back. A <i>figure</i> edit = a frozen <b>choreo-owned</b> copy that stays in this one routine. <b>Save to my library</b> = a personal-library figure reused across your routines — the only place edits ripple.
+</div>
+<div class="anno" style="position:absolute;left:880px;top:6300px;width:340px;font:500 14px/1.45 Caveat,cursive;color:#6b665e">
+  <b style="font-family:Inconsolata;font-size:11px;color:#3a352d">END OF FLOW.</b><br>Every screen we built is here, with its tap targets mapped and its empty / few / many states where they matter. The six rule cards up top govern behaviour across all of them. Toggle annotations off (tweak panel) for a clean showcase.
+</div>
+
+<!-- ===================== SECTION 1b · ATTRIBUTE EDITING (new model) ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:7320px">1b · Attribute editing — type picker, custom types &amp; the types manager</div>
+
+<!-- 1.15 Add-attribute type picker -->
+<div style="position:absolute;left:80px;top:7400px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.15 · Add-attribute · type picker <span class="sub" style="display:inline">— sheet</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div class="hd" style="opacity:.5"><span class="bk">‹</span><div style="flex:1"><div class="ht">Natural Turn</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span style="font:700 13px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="max-height:84%;display:flex;flex-direction:column">
+        <div class="grab"></div>
+        <div style="font:700 13px Inconsolata;color:#1c1c1e;margin-bottom:11px">Add an attribute</div>
+        <div class="scrl" style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#2f5d8f;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Step</span><span class="pin">1</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#1f8a5b;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Rise &amp; Fall</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#8a5cab;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Position</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#b07cc6;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Body Actions</span><span style="font:600 8px Inconsolata;color:#9a958c">multi</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#c0563f;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Sway</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#5b6b8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Turn</span><span style="color:#d0cac2">›</span></div>
+          <div class="opt" style="padding:9px 11px"><span style="width:11px;height:11px;border-radius:3px;background:#0f8a8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#1c1c1e">Head</span><span style="font:600 8px Inconsolata;color:#0f8a8a;background:#e0f2f2;border-radius:5px;padding:1px 6px">custom</span><span style="color:#d0cac2">›</span></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed #9fb6c0;border-radius:10px;padding:10px;color:#0f8a8a;font:700 11px Inconsolata"><span class="pin">2</span>＋ new attribute type</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>tap a type → value editor for a new attribute (1.12)</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>＋ new type</b> → custom-type builder (1.16)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>reached from a cell's <b>＋</b> in the edit grid (1.11). Standard + your custom types in one list.</span></div>
+  </div>
+</div>
+
+<!-- 1.16 New custom type -->
+<div style="position:absolute;left:480px;top:7400px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.16 · New custom type <span class="sub" style="display:inline">— end-user builder</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="font:700 13px Inconsolata;color:#1c1c1e;margin-bottom:11px">New attribute type · this choreo</div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">NAME <span class="pin">1</span></div>
+        <div style="border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px Inconsolata;color:#3a352d;background:#fff;margin-bottom:12px">Head</div>
+        <div style="display:flex;gap:14px;margin-bottom:11px">
+          <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">VALUES</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">from list</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">free text</span></span></div>
+          <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">CHOICES</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">single</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">multi</span></span></div>
+          <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">REQUIRED</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">optional</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">req</span></span></div>
+        </div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:6px">CHOICES <span style="color:#bdb8ad;font-weight:500">add each value with ＋</span> <span class="pin">2</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">left <span style="color:#0f8a8a;font-weight:700">×</span></span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">right <span style="color:#0f8a8a;font-weight:700">×</span></span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">closed <span style="color:#0f8a8a;font-weight:700">×</span></span>
+        </div>
+        <div style="display:flex;gap:7px;margin-bottom:14px"><div style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px Inconsolata;color:#bcb6aa;background:#fff">to partner</div><span style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 17px Inconsolata">＋</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font:700 8px Inconsolata;color:#9a958c">ROLE-AWARE</span><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;border-radius:8px;padding:5px 11px">yes — own L / F values</span><span class="pin">3</span></div>
+        <div style="display:flex;gap:8px"><span style="flex:1;text-align:center;font:600 11px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px">cancel</span><span style="flex:2;text-align:center;font:700 11px Inconsolata;background:#0f8a8a;color:#fff;border-radius:10px;padding:11px"><span class="pin" style="background:#fff;color:#0f8a8a">4</span> create &amp; add</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>name it; pick <b>list vs free text</b>, <b>single vs multi</b>, <b>optional vs required</b></span></div>
+    <div class="cr"><span class="pin">2</span><span>add choices one at a time with <b>＋</b> (no comma lists) · × removes</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>role-aware</b> → separate leader / follower values</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>create &amp; add</b> → type is scoped to <b>this choreo</b> (partners see it); becomes a column</span></div>
+  </div>
+</div>
+
+<!-- 1.17 Profile · Attribute types -->
+<div style="position:absolute;left:880px;top:7400px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.17 · Profile · Attribute types <span class="sub" style="display:inline">— types manager</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 16px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">Profile</span></div>
+      <div style="flex:1;overflow:hidden;padding:13px 15px;display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center"><span style="flex:1;font:700 9px Inconsolata;color:#9a958c;letter-spacing:.4px">ATTRIBUTE TYPES</span><span style="font:700 9px Inconsolata;color:#0f8a8a"><span class="pin">1</span>＋ new type</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#2f5d8f;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Step</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#c0563f">required</span><span style="font:600 8px Inconsolata;color:#b0aaa0">· standard</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#1f8a5b;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Rise &amp; Fall</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#9a958c">single</span><span style="font:600 8px Inconsolata;color:#b0aaa0">· standard</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a5cab;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Position</span><span style="font:600 8px Inconsolata;color:#9a958c">single</span><span style="font:600 8px Inconsolata;color:#b0aaa0">· standard</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#b07cc6;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Body Actions</span><span style="font:600 8px Inconsolata;color:#9a958c">multi</span><span style="font:600 8px Inconsolata;color:#b0aaa0">· standard</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#5b6b8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Sway · Turn</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#b0aaa0">· standard</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #d6ecec;border-radius:9px;padding:8px 11px;background:#f3fbfb"><span style="width:10px;height:10px;border-radius:3px;background:#0f8a8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#0f6b6b">Head</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#0f8a8a">this choreo</span></div>
+        <div style="font:500 13px var(--note-font);color:#b0aaa0;margin-top:2px">standard types are shared by everyone · custom types are scoped to a choreo so partners see them</div>
+      </div>
+      <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi tbon"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>＋ new type</b> → custom-type builder (1.16)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Standard types are locked; custom types you add are choreo-scoped (not personal) so collaborators can use them too.</span></div>
+  </div>
+</div>
+<!-- ===================== SYSTEM RULES · PART 2 (semantics with no screen) ===================== -->
+<div class="anno" style="position:absolute;left:80px;top:8320px;width:1352px">
+  <div style="font:700 22px Caveat,cursive;color:#2b2b2b;margin-bottom:9px">System rules · part 2 — semantics that don't live on a screen</div>
+  <div style="display:flex;flex-wrap:wrap;gap:11px">
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #c0563f">
+      <div style="font:700 11px Inconsolata;color:#c0563f;margin-bottom:5px">PERMISSIONS</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">Only <b>editors &amp; owners</b> can change attributes; <b>commenters</b> and <b>viewers</b> are read-only. Edit rights <b>flow from the routine to its figures</b> — but being on a choreo <b>never</b> grants the right to <b>delete</b> a figure.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #a9742c">
+      <div style="font:700 11px Inconsolata;color:#a9742c;margin-bottom:5px">FIGURE COPIES &amp; THE "CUSTOM" LABEL</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">An in-choreo copy is <b>frozen</b> — it stops inheriting from its origin. Editing a figure that lives outside this choreo makes that frozen, choreo-owned copy automatically; <b>saving to your personal library is a separate, deliberate action</b>. A figure reads <b>custom</b> only once its technique or name <b>drifts</b> from the library pick (judged by meaning — type · timing · role · value) — distinct from <i>variant</i>.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #1f8a5b">
+      <div style="font:700 11px Inconsolata;color:#1f8a5b;margin-bottom:5px">DATA INTEGRITY</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d"><b>Soft-delete:</b> removing an attribute tombstones it (so it can return and two editors never clobber each other) — it's just hidden. A custom figure <b>stores only its diffs</b> (changes / removals / additions / rename), not a full copy. <b>Renamed or cleaned-up values still display</b> correctly on old figures. Changing a value keeps a step's identity; <b>moving its beat or role = remove + add</b>.</div>
+    </div>
+    <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #8a5cab">
+      <div style="font:700 11px Inconsolata;color:#8a5cab;margin-bottom:5px">TYPES — &amp; WHAT ISN'T ONE</div>
+      <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">A type is single/multi, optional/required, and may be role-aware; it can be <b>limited to certain dances</b> (Rise &amp; Fall doesn't apply to Tango). Custom types are <b>choreo-scoped</b> so partners see them. <b>Entry/exit alignment and threaded notes are NOT attributes</b> — they're separate things that live on the figure.</div>
+    </div>
+  </div>
+</div></x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;backdrop&quot;: {&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Studio paper&quot;,&quot;Cool gray&quot;,&quot;Charcoal&quot;],&quot;default&quot;:&quot;Studio paper&quot;,&quot;tsType&quot;:&quot;string&quot;},
+  &quot;annotations&quot;: {&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}
+}">
+class Component extends DCLogic {
+  componentDidMount(){ this.sync(); }
+  componentDidUpdate(){ this.sync(); }
+  sync(){
+    const bd = this.props.backdrop || 'Studio paper';
+    const map = { 'Studio paper':'paper', 'Cool gray':'gray', 'Charcoal':'char' };
+    document.body.setAttribute('data-backdrop', map[bd] || 'paper');
+    document.body.setAttribute('data-anno', this.props.annotations === false ? 'off' : 'on');
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

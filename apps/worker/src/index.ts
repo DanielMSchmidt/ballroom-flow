@@ -1,22 +1,776 @@
+import {
+  zCreateFigure,
+  zCreateRoutine,
+  zIssueInvite,
+  zRegistryKind,
+  zSaveToLibrary,
+} from "@ballroom/contract";
+import {
+  can,
+  type FigureDoc,
+  globalFigureRef,
+  isReservedKind,
+  LIBRARY_FIGURES,
+  newId,
+  parseAttributeWrite,
+} from "@ballroom/domain";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
+import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
+import {
+  createFigureRows,
+  findSavedLibraryFigure,
+  listGlobalFigures,
+  listMineFigures,
+} from "./db/figures";
+import { issueInvite, redeemInvite } from "./db/invites";
+import { journalForUser } from "./db/journal";
+import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
+import { linkPlacement } from "./db/placement-edge";
+import {
+  countOwnedRoutines,
+  createOwnedRoutine,
+  FREE_ROUTINE_CAP,
+  getDocOwner,
+  listRoutines,
+  listTemplates,
+  searchReachable,
+} from "./db/routines";
+import { users } from "./db/schema";
+import type { DocDO } from "./doc-do";
+import { forkRoutineFor } from "./fork";
+import { testSeed } from "./routes/test-seed";
+import { seedSampleRoutine } from "./sample";
+import { seedStarterRoutine } from "./starter";
+
+// Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
+// state (not a stale module boolean). A cheap indexed existence check (ownerId
+// ='app' via owner_idx) short-circuits in prod once the row persists, and
+// re-seeds if the row is ever gone (e.g. the E2E /api/test/reset wipes D1 — a
+// boolean guard would leave templates permanently empty after a reset).
+// seedSampleRoutine is idempotent, so a concurrent re-seed race is safe.
+async function ensureSample(env: Env): Promise<void> {
+  try {
+    const existing = await listTemplates(env.DB);
+    if (existing.length > 0) return;
+    await seedSampleRoutine(env);
+  } catch (err) {
+    console.error("sample seed failed", err);
+  }
+}
 
 export type Env = {
   DB: D1Database;
+  // Per-document Automerge host (US-014, PLAN §6/D23): one DO per routine/figure
+  // document, SQLite-backed, the sync + permission boundary. Typed with the DO
+  // class so the create routes can call its RPC (seedDoc, #205).
+  DOC_DO: DurableObjectNamespace<DocDO>;
   // Clerk verification keys — set as Wrangler secrets (see PROVISIONING.md).
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
+  // "1" ONLY in the E2E wrangler run (wrangler.toml [env.e2e]); mounts the
+  // /api/test/* fixtures routes. Unset everywhere else → those routes 404.
+  E2E_TEST_ROUTES?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
+// E2E-only test fixtures (#191). Guarded so these routes exist ONLY when the
+// E2E wrangler run sets E2E_TEST_ROUTES=1 — in dev/staging/prod the flag is
+// unset and the routes 404 (never a backdoor into a real environment).
+app.use("/api/test/*", async (c, next) => {
+  if (c.env.E2E_TEST_ROUTES !== "1") return c.json({ error: "not_found" }, 404);
+  await next();
+});
+app.route("/", testSeed);
+
+// GET /api/me — the verified Clerk identity (US-019 AC-3). The JWT is verified
+// networklessly in auth/ (CLERK_JWT_KEY, no Clerk fetch). Returns the `sub`
+// plus the account profile when the user has onboarded (else onboarded:false so
+// the client can route into onboarding).
 app.get("/api/me", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
-  return c.json({ sub: user.sub });
+  const db = drizzle(c.env.DB);
+  const row = await db.select().from(users).where(eq(users.id, user.sub)).get();
+  if (!row) return c.json({ sub: user.sub, onboarded: false, routineCap: FREE_ROUTINE_CAP });
+  return c.json({
+    sub: user.sub,
+    onboarded: true,
+    displayName: row.displayName,
+    identityColor: row.identityColor,
+    plan: row.plan,
+    // The free-plan owned-routine cap, sourced from the ONE server constant so the
+    // client never hardcodes a second copy (#176) — the Choreo list gates the
+    // upsell on this, and the POST /api/routines 402 enforces the same value.
+    routineCap: FREE_ROUTINE_CAP,
+  });
+});
+
+// POST /api/onboarding — capture the account's displayName + identity color
+// (US-019 AC-2). Upsert keyed by the verified Clerk sub, so re-running it is
+// idempotent (e.g. a retried first-run). Plan defaults to 'free' (billing is
+// US-053/quota). A hex identityColor keeps annotation authorship legible (#5).
+app.post("/api/onboarding", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const body = (await c.req.json().catch(() => null)) as {
+    displayName?: unknown;
+    identityColor?: unknown;
+  } | null;
+  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
+  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
+  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
+    return c.json({ error: "invalid_profile" }, 400);
+  }
+
+  const db = drizzle(c.env.DB);
+  // Detect a genuine first onboarding (no prior users row) so the starter routine
+  // is seeded at most once — a re-onboard / profile edit hits the update path.
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, user.sub))
+    .get();
+  const firstRun = !existing;
+
+  await db
+    .insert(users)
+    .values({ id: user.sub, displayName, identityColor, plan: "free", createdAt: Date.now() })
+    .onConflictDoUpdate({ target: users.id, set: { displayName, identityColor } });
+
+  if (firstRun) {
+    // Best-effort: a new user gets a default "Golden Waltz Basic" routine (US-055).
+    // Never fail onboarding if the gift can't be seeded — the account must succeed.
+    try {
+      await seedStarterRoutine(c.env, user.sub);
+    } catch (err) {
+      console.error("starter routine seed failed", { userId: user.sub, err });
+    }
+  }
+
+  return c.json({ sub: user.sub, displayName, identityColor, plan: "free" });
+});
+
+// POST /api/routines — create a routine (US-025 server path) with the SERVER-SIDE
+// quota gate (US-022). A free account may OWN at most FREE_ROUTINE_CAP routines;
+// the 4th create is refused with a structured upsell payload (402) the UI renders
+// — NOT a generic 403. The quota is enforced here so a client bypass is still
+// blocked. Only OWNED routines count (shared-in membership rows don't). On allow
+// we EAGER-project the registry row + the owner membership (createOwnedRoutine);
+// the CRDT doc is created lazily by its DO on first open (US-025 seeds content).
+app.post("/api/routines", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  // Validate against the SHARED contract schema (#79 home) — title is trimmed +
+  // non-empty + length-capped, dance is one of the five; web + worker agree.
+  const parsed = zCreateRoutine.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_routine", issues: parsed.error.flatten() }, 400);
+  }
+  const { title, dance } = parsed.data;
+
+  const db = drizzle(c.env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
+  const plan = me?.plan ?? "free";
+
+  // SERVER-SIDE quota: count OWNED routines (indexed; shared-in excluded).
+  const owned = await countOwnedRoutines(c.env.DB, user.sub);
+  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
+    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
+  }
+
+  const docRef = newId();
+  await createOwnedRoutine(c.env.DB, { docRef, ownerId: user.sub, title, dance });
+  // Server-seed the routine's CRDT content durably at create (#201/#109), so its
+  // title/dance is DO-persisted before any client connects — the Assemble header
+  // shows the real title, never "Untitled routine", and survives an immediate reload.
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).seedDoc({
+    id: docRef,
+    title,
+    dance,
+    ownerId: user.sub,
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  return c.json({ docRef, title, dance, plan }, 201);
+});
+
+// POST /api/routines/:id/fork — choreo fork, "make it your own" (US-037). Any
+// MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
+// it into a NEW owned routine. App-owned templates (ownerId="app") may also be
+// forked by any authenticated user without a membership row (US-045/Task 6).
+// The fork is FROZEN + INDEPENDENT: we snapshot the origin's CRDT content and
+// seed a brand-new doc with it (no shared history), so later origin edits never
+// appear in the fork. `forkedFromRef` records lineage (provenance only).
+// Referenced figures stay shared (placements keep their figureRefs).
+// A fork COUNTS against the forker's quota.
+app.post("/api/routines/:id/fork", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const originRef = c.req.param("id");
+
+  // Fast PK lookup — tells us if this is an app-owned template before any heavy work.
+  const owner = await getDocOwner(c.env.DB, originRef);
+
+  // Only app-template forks need the seed: user-routine forks never call getSnapshot
+  // on an app-owned DO, so the extra existence check is wasteful on every user fork.
+  if (owner === "app") {
+    // Ensure the app template DO content exists before getSnapshot is called inside
+    // forkRoutineFor (idempotent; re-seeds if the E2E reset wiped D1).
+    await ensureSample(c.env);
+  }
+
+  // Must be able to read the origin to fork it (member/owner — or app-owned template).
+  const role = await resolveEffectiveRole(c.env.DB, originRef, user.sub);
+  if (!role && owner !== "app") return c.json({ error: "forbidden" }, 403);
+
+  // forkRoutineFor resolves the plan itself and returns it (in both the success
+  // and upsell shapes), so the route doesn't re-query users.plan here.
+  const result = await forkRoutineFor(c.env, { originRef, userId: user.sub });
+  if ("upsell" in result) {
+    return c.json({ ...result, reason: "quota" }, 402);
+  }
+  return c.json(result, 201);
+});
+
+// GET /api/figures?dance= — the global figure library list (US-032), from the
+// D1 index (no CRDT scan). Open to any authenticated user.
+app.get("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const dance = c.req.query("dance") || undefined;
+  const figures = await listGlobalFigures(c.env.DB, dance);
+  return c.json({ figures });
+});
+
+// GET /api/figures/mine — the caller's account variants + custom figures with a
+// "used in N routines" count (US-033), from the D1 index.
+app.get("/api/figures/mine", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const figures = await listMineFigures(c.env.DB, user.sub);
+  return c.json({ figures });
+});
+
+// POST /api/figures — project a client-minted figure doc to the D1 index (#187).
+// The client mints the figureRef + metadata; the SERVER stamps ownerId from the
+// verified JWT (never a client field). Projecting the registry row + owner
+// membership is what lets the fail-closed DO boundary (US-021) owner-resolve a
+// connect to that figure (101, not 403). Idempotent on figureRef. Figures are
+// NOT counted against the routine quota (type="account-figure" ≠ "routine").
+app.post("/api/figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const parsed = zCreateFigure.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
+  }
+  const { figureRef, name, dance, figureType, routineId, attributes, baseFigureRef } = parsed.data;
+
+  // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
+  // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
+  try {
+    for (const a of attributes) parseAttributeWrite(a, { dance });
+  } catch {
+    // Don't echo attacker-shaped attribute data back at the seed boundary — just reject.
+    return c.json({ error: "invalid_attribute" }, 400);
+  }
+
+  await createFigureRows(c.env.DB, {
+    figureRef,
+    ownerId: user.sub,
+    name,
+    dance,
+    figureType,
+    baseFigureRef,
+  });
+  // Record the routine→figure edge so the routine's co-members get read access to
+  // this figure (cascade): figure docs are otherwise shared independently (US-020).
+  await linkPlacement(c.env.DB, routineId, figureRef);
+  // Server-seed the figure's CRDT content durably at create (#205), so the figure
+  // name/attributes are DO-persisted before the client connects — no racy client
+  // seed write that can be lost on a reload right after "Add figure".
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
+    id: figureRef,
+    scope: "account",
+    ownerId: user.sub,
+    figureType,
+    dance,
+    name,
+    source: "custom",
+    attributes,
+    // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
+    // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
+    ...(baseFigureRef ? { baseFigureRef } : {}),
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
+});
+
+// POST /api/figures/save-to-library — "↟ Save to my library" (T5). Promotes a
+// GLOBAL-catalog figure into the CALLER'S personal library as a FROZEN account-
+// figure copy (PLAN §5.2): `baseFigureRef = globalFigureRef(dance, figureType)`,
+// provenance only. The server resolves the catalog figure from the bundled
+// reference data (never trusts client attributes) and stamps ownerId from the
+// verified JWT — no cross-user writes. Idempotent on `(owner, baseFigureRef)`:
+// re-saving returns the existing copy (200) instead of minting a duplicate.
+app.post("/api/figures/save-to-library", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const parsed = zSaveToLibrary.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_save", issues: parsed.error.flatten() }, 400);
+  }
+  const { dance, figureType, name } = parsed.data;
+
+  // Resolve the catalog figure SERVER-SIDE from the bundled reference data — the
+  // attributes seeded into the copy are the catalog's, not anything the client sent.
+  const origin = LIBRARY_FIGURES.find(
+    (f) => f.dance === dance && f.figureType === figureType && f.name === name,
+  );
+  if (!origin) return c.json({ error: "unknown_figure" }, 404);
+
+  const baseFigureRef = globalFigureRef(dance, figureType);
+
+  // Idempotency: a prior save from the SAME global figure resolves the existing copy.
+  const existing = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
+  if (existing) {
+    return c.json({ figureRef: existing, baseFigureRef, alreadySaved: true }, 200);
+  }
+
+  const figureRef = newId();
+  const attributes = (origin.attributes ?? []).map((a) => ({ ...a }));
+
+  // The SELECT above narrows the window but doesn't close it: two concurrent saves
+  // can both pass it. The DB partial unique index `account_figure_base_idx`
+  // (migration 0010, on `(ownerId, forkedFromRef)`) is the real guard. On a
+  // conflict, resolve the row the winning request inserted and return it as
+  // alreadySaved — never a 500. (seedDoc runs only after the rows commit, so a
+  // loser never seeds an orphan DO.)
+  try {
+    await createFigureRows(c.env.DB, {
+      figureRef,
+      ownerId: user.sub,
+      name,
+      dance,
+      figureType,
+      baseFigureRef,
+    });
+  } catch (err) {
+    const winner = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
+    if (winner) {
+      return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
+    }
+    throw err;
+  }
+  // Seed the figure's CRDT content durably (#205): a FROZEN snapshot of the
+  // catalog figure's attributes; `source: "library"` + `baseFigureRef` provenance
+  // (no live overlay — §5.2). No placement edge: a saved figure isn't in a routine
+  // yet, so `usedInCount` starts at 0 until it's placed.
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
+    id: figureRef,
+    scope: "account",
+    ownerId: user.sub,
+    figureType,
+    dance,
+    name,
+    source: "library",
+    attributes,
+    baseFigureRef,
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  return c.json({ figureRef, baseFigureRef, alreadySaved: false }, 201);
+});
+
+// GET /api/routines/:id/family-notes — the co-member family-note read (US-041,
+// option 2). Surfaces the family notes authored by THIS routine's members that
+// apply to its dance, so the client can show a co-member's "every Feather" note
+// on the matching figure. In v1 a note's content lives in the figure_type_note_
+// index row (server-mediated; see migration 0005), so this returns it directly —
+// the client never reads another user's account doc. The co-membership gate is
+// the security boundary: a NON-member is refused (403) before any note is read
+// (AC-3/4). The query is keyed by members(R) + dance scope; the client then
+// matches each note to the figures actually in R (resolveFamilyNotesFor).
+app.get("/api/routines/:id/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+
+  // Gate on co-membership of the routine: a non-member resolves to null → 403.
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  // The routine's dance scopes which family notes apply (its dance, or "all").
+  const reg = await c.env.DB.prepare("SELECT dance FROM document_registry WHERE docRef = ?")
+    .bind(routineRef)
+    .first<{ dance: string | null }>();
+  const dance = reg?.dance ?? "waltz";
+
+  const members = await listMembers(c.env.DB, routineRef);
+  const authorIds = members.map((m) => m.userId);
+  const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
+  // Shape each row as an Annotation-like note (with a figureType anchor) so the
+  // client can match it to the routine's figures (resolveFamilyNotesFor).
+  const notes = rows.map((r) => ({
+    id: r.noteId,
+    authorId: r.authorId,
+    kind: r.kind,
+    text: r.text,
+    figureType: r.figureType,
+    danceScope: r.danceScope,
+    anchors: [{ type: "figureType", figureType: r.figureType, danceScope: r.danceScope }],
+  }));
+  return c.json({ notes });
+});
+
+// POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
+// is owned by the caller (authorId from the verified JWT) and scoped to a figure
+// family + dance scope (this dance, or "all"). Server-mediated: the client never
+// writes another account's data. Co-members then discover it via the route above.
+app.post("/api/account/family-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const body = (await c.req.json().catch(() => null)) as {
+    kind?: unknown;
+    text?: unknown;
+    figureType?: unknown;
+    danceScope?: unknown;
+  } | null;
+  const kind = body?.kind;
+  const text = typeof body?.text === "string" ? body.text.trim() : "";
+  const figureType = body?.figureType;
+  const danceScope = body?.danceScope;
+  if (
+    (kind !== "note" && kind !== "lesson" && kind !== "practice") ||
+    !text ||
+    typeof figureType !== "string" ||
+    !figureType ||
+    typeof danceScope !== "string" ||
+    !danceScope
+  ) {
+    return c.json({ error: "invalid_family_note" }, 400);
+  }
+
+  const noteId = newId();
+  await insertFamilyNote(c.env.DB, {
+    noteId,
+    authorId: user.sub,
+    figureType,
+    danceScope,
+    kind,
+    text,
+  });
+  return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
+});
+
+// GET /api/journal — the signed-in user's cross-routine Journal (T6, PLAN §2.6/
+// §2.7/§4.6). The UNION of routine-scoped lesson/practice annotations (projected
+// to journal_entry by the routine DO alarm) and account-scoped figureType
+// lesson/practice notes (figure_type_note_index), newest-first, tombstones
+// excluded, author display/colour joined. VISIBILITY (T6 LOCKED): both arms are
+// gated to the user PLUS their co-members on shared routines — the routine arm by
+// routine-accessibility, the account arm by the accessible-AUTHORS set (see
+// db/journal.ts). Missing/invalid token → 401 (fail-closed) before any read.
+app.get("/api/journal", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const entries = await journalForUser(c.env.DB, user.sub);
+  return c.json({ entries });
+});
+
+// GET /api/account/custom-kinds — the caller's account-wide custom kinds (US-043).
+app.get("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const kinds = await listAccountKinds(c.env.DB, user.sub);
+  return c.json({ kinds });
+});
+
+// POST /api/account/custom-kinds — create/update a custom kind (US-043).
+app.post("/api/account/custom-kinds", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const parsed = zRegistryKind.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success)
+    return c.json({ error: "invalid_kind", issues: parsed.error.flatten() }, 400);
+  const kind = parsed.data;
+  // Builtins are reserved — a custom kind may never be builtin or collide with one.
+  if (kind.builtin || isReservedKind(kind.kind)) return c.json({ error: "reserved_kind" }, 400);
+  await upsertAccountKind(c.env.DB, user.sub, kind, Date.now());
+  return c.json(kind, 201);
+});
+
+// POST /api/docs/:id/invites — issue a shareable invite (US-023 AC-1/AC-4). Only
+// a member who can invite (owner/editor via resolveEffectiveRole + can()) may
+// mint one; everyone else → 403 (a non-member resolves to null → also 403). The
+// granted role is validated against the contract (viewer/commenter/editor — never
+// "owner"). The token is unguessable and its role/docRef live in D1, so a
+// redeemer can't escalate (see db/invites.ts).
+app.post("/api/docs/:id/invites", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const docRef = c.req.param("id");
+  const effective = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!effective || !can(effective, "canInvite")) {
+    return c.json({ error: "forbidden" }, 403);
+  }
+
+  const parsed = zIssueInvite.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid_invite", issues: parsed.error.flatten() }, 400);
+  }
+
+  const { token, expiresAt } = await issueInvite(c.env.DB, { docRef, role: parsed.data.role });
+  return c.json({ token, role: parsed.data.role, expiresAt }, 201);
+});
+
+// POST /api/invites/:token/redeem — redeem an invite (US-023 AC-2/AC-3). Grants
+// the REDEEMING user (the verified JWT sub, never a client field) the invite's
+// role on its doc; single-use + expiry enforced in db/invites.ts. Unknown → 404,
+// expired → 410, already-redeemed → 409 (clear errors, never a 500).
+//
+// QUOTA (US-022 × US-023): the routine-edit cap counts routines the user can
+// EDIT. An editor invite to a routine a free user can't already edit would add
+// one more, so when they're at the cap we grant COMMENTER instead and flag
+// `downgraded` — they still join, just read/comment-only. The client notices.
+app.post("/api/invites/:token/redeem", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+
+  const db = drizzle(c.env.DB);
+  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
+  const plan = me?.plan ?? "free";
+
+  const result = await redeemInvite(c.env.DB, c.req.param("token"), user.sub, {
+    plan,
+    editableCap: FREE_ROUTINE_CAP,
+  });
+  if (!result.ok) {
+    if (result.reason === "not_found") return c.json({ error: "invite_not_found" }, 404);
+    if (result.reason === "expired") return c.json({ error: "invite_expired" }, 410);
+    return c.json({ error: "invite_already_redeemed" }, 409);
+  }
+  return c.json(
+    {
+      docRef: result.docRef,
+      role: result.role,
+      requestedRole: result.requestedRole,
+      downgraded: result.downgraded,
+    },
+    200,
+  );
+});
+
+// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Any
+// MEMBER may read the roster (resolveEffectiveRole → non-null); a non-member 403s.
+app.get("/api/docs/:id/members", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return c.json({ members: await listMembers(c.env.DB, docRef) });
+});
+
+// DELETE /api/docs/:id/members/:userId — remove a member (US-024 AC-2). Only a
+// role that can manage membership (editor/owner via can(role,"canInvite")) may
+// remove; commenter/viewer → 403. Soft-delete only (tombstone), never hard removal.
+app.delete("/api/docs/:id/members/:userId", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role || !can(role, "canInvite")) return c.json({ error: "forbidden" }, 403);
+  await removeMember(c.env.DB, docRef, c.req.param("userId"));
+  return c.json({ ok: true }, 200);
+});
+
+// GET /api/docs/:id/access — the viewer's OWN effective role on a document, used
+// by the client to distinguish DENIED from offline before opening the heavy WS
+// store (FE-2 / #178). A browser WebSocket can't read the WS handshake's 401/403
+// (it only sees an abnormal 1006 close, indistinguishable from a transient
+// disconnect), so the calm access-denied state is driven by this browser-readable
+// preflight — the fail-closed DO sync boundary (US-021) is still the real gate.
+//   • unauthenticated → 401  • non-member → 403  • member/owner → 200 { role }
+app.get("/api/docs/:id/access", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const role = await resolveEffectiveRole(c.env.DB, c.req.param("id"), user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return c.json({ role }, 200);
+});
+
+// GET /api/routines/:id/snapshot — the READ-ONLY snapshot path (read/edit split).
+// A single REST read hydrates a routine + ALL its referenced figures (each
+// carrying its own attributes — frozen copies, no overlay) with NO per-document
+// WebSocket — so opening a
+// routine to *read* it (the common case) costs one request and zero persistent
+// sockets, instead of one live WS per routine + per figure. The live WS sync
+// (US-015) is reserved for the EDIT path. Same gate as /access: a non-member 403s
+// (the fail-closed DO boundary, US-021, remains the real gate for the WS path).
+//   • unauthenticated → 401  • non-member → 403  • member/owner → 200 { routine, figures }
+app.get("/api/routines/:id/snapshot", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  const doc = (id: string) => c.env.DOC_DO.get(c.env.DOC_DO.idFromName(id));
+  const routine = await doc(routineRef).getSnapshot();
+
+  // Every LIVE placement's figure (tombstoned placements dropped).
+  const figureRefs = new Set<string>();
+  for (const section of routine.sections ?? []) {
+    for (const p of section.placements ?? []) {
+      if (p.deletedAt == null) figureRefs.add(p.figureRef);
+    }
+  }
+
+  // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes —
+  // a copy is a frozen snapshot (no overlay, no base resolution; §5.2), mirroring
+  // the client store's resolveFigure. A never-seeded/empty figure is omitted → the
+  // client renders it missing.
+  const figures: Record<string, FigureDoc> = {};
+  await Promise.all(
+    [...figureRefs].map(async (ref) => {
+      // Cast: the DO RPC stub degrades the `FigureDoc | null` return type — we
+      // own getFigureSnapshot, so re-assert the real shape here.
+      const fig = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      if (!fig?.figureType) return;
+      figures[ref] = fig;
+    }),
+  );
+
+  return c.json({ routine, figures });
+});
+
+// GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in
+// routines (newest first), served from the D1 index (no CRDT content read). A
+// just-created routine appears immediately (eager projection); edit metadata is
+// alarm-projected and may lag (#126).
+app.get("/api/routines", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routines = await listRoutines(c.env.DB, user.sub);
+  return c.json({ routines });
+});
+
+// GET /api/templates — the app-owned start-from-template sources (US-045). Any
+// authenticated user may read them; templates are seeded lazily on first call
+// (ensureSample is idempotent). The response mirrors the RoutineListItem shape
+// with role:"viewer" (the caller can only read, not edit, app-owned templates).
+app.get("/api/templates", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  await ensureSample(c.env);
+  const rows = await listTemplates(c.env.DB);
+  const templates = rows.map((r) => ({
+    docRef: r.docRef,
+    title: r.title,
+    dance: r.dance,
+    role: "viewer" as const,
+    updatedAt: r.updatedAt,
+  }));
+  return c.json({ templates });
+});
+
+// GET /api/search — prefix search over the D1 index (US-046). Scoped to the
+// caller's reachable docs (owned routines + owned/app-owned figures). Indexed
+// (EXPLAIN no-SCAN gate, ops.test). Annotation/content search is v1.1.
+// NOTE: shared-in routines (membership, not ownership) are out of v1 search
+// scope to keep the query single-index; add a UNION over membership_user_idx later.
+app.get("/api/search", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const q = (c.req.query("q") ?? "").trim();
+  if (!q) return c.json({ results: [] });
+  const dance = c.req.query("dance") ?? undefined;
+  const rows = await searchReachable(c.env.DB, { userId: user.sub, q, dance });
+  const results = rows.map((r) => ({
+    docRef: r.docRef,
+    // Production figures are stored as type="figure" in the DB (createFigureRows).
+    // Map to the contract-valid types ("global-figure" / "account-figure") here so
+    // the web client's zSearchResults.parse never sees the raw "figure" value and
+    // silently empties the results list via a ZodError that .catch swallows.
+    type: (r.type === "figure"
+      ? r.ownerId === "app"
+        ? "global-figure"
+        : "account-figure"
+      : r.type) as "routine" | "global-figure" | "account-figure",
+    title: r.title ?? "",
+    dance: r.dance,
+  }));
+  return c.json({ results });
+});
+
+// Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a
+// `GET /docs/:id/connect` upgrade to that document's DO (one DO per document,
+// keyed by `:id` via idFromName) and forwards the upgrade so the DO's
+// Hibernatable-WS sync (US-015) takes over. We pass the doc name to the DO via
+// the `x-doc-name` header because the DO can't recover its idFromName key from
+// `ctx.id` (US-016).
+//
+// AUTH (#189): a browser WS handshake can't set an Authorization header, so the
+// client offers the Clerk token as a `Sec-WebSocket-Protocol` subprotocol
+// (`ballroom.auth, <token>`). This route extracts the token and forwards it to
+// the DO as `Authorization: Bearer …` (worker→DO fetch CAN set headers). The DO's
+// US-021 fail-closed boundary then authenticates it UNCHANGED — this route only
+// delivers the token, it does not re-authorize. On a 101 we echo the selected
+// subprotocol (browsers fail the handshake unless the server selects one offered).
+const AUTH_SUBPROTOCOL = "ballroom.auth";
+
+app.get("/docs/:id/connect", async (c) => {
+  if (c.req.header("Upgrade") !== "websocket") {
+    return c.text("expected websocket upgrade", 426);
+  }
+  const id = c.req.param("id");
+  const stub = c.env.DOC_DO.get(c.env.DOC_DO.idFromName(id));
+
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("x-doc-name", id);
+
+  // Pull the bearer token out of the auth subprotocol → Authorization header.
+  const offered = (c.req.header("Sec-WebSocket-Protocol") ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const hasAuthProto = offered.includes(AUTH_SUBPROTOCOL);
+  const token = hasAuthProto ? offered.find((p) => p !== AUTH_SUBPROTOCOL) : undefined;
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const res = await stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
+
+  // Echo the auth subprotocol on a successful upgrade so the browser completes
+  // the handshake (it requires the server to select one of the offered protocols).
+  if (res.status === 101 && hasAuthProto) {
+    const out = new Response(null, { status: 101, webSocket: res.webSocket });
+    out.headers.set("Sec-WebSocket-Protocol", AUTH_SUBPROTOCOL);
+    return out;
+  }
+  return res;
 });
 
 export type AppType = typeof app;
 export default app;
+
+// The per-document Durable Object must be exported from the Worker entry so the
+// runtime can instantiate it for the `DOC_DO` binding (wrangler.toml).
+export { DocDO } from "./doc-do";

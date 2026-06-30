@@ -1,0 +1,242 @@
+import { describe, expect, it } from "vitest";
+import { importDomain } from "./__fixtures__";
+import { type MigrationStep, runLadder } from "./migrations";
+
+// ─────────────────────────────────────────────────────────────────────────
+// US-013 — Migration ladder (schemaVersion) [M1, system/developer]
+// PLAN §2.1, §7, §10.2 invariant: "migration ladder". Every doc carries a
+// schemaVersion; an ordered chain upgrades older docs; unknown values survive;
+// migrating a current doc is a no-op. Used by JSON import (US-048).
+//
+// Product `migrate`/`CURRENT_SCHEMA_VERSION` (M1) don't exist yet → dynamic
+// import, skipped.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("US-013 Migration ladder (schemaVersion)", () => {
+  it("upgrades an older-version doc through the ordered ladder to current", async () => {
+    // Intent: a v(N-1) doc migrates to the current schemaVersion.
+    // Arrange: a routine-shaped doc tagged schemaVersion: 1 (older).
+    // Act: migrate(doc). Assert: result.schemaVersion === CURRENT_SCHEMA_VERSION
+    //   and is ≥ the input version.
+    // Covers US-013 AC-1 (schemaVersion present) + AC-2 (ordered chain upgrades).
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const old = { schemaVersion: 1, kind: "routine", title: "Old", sections: [] };
+    const migrated = migrate(old);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it("preserves unknown attribute values across a migration (no data loss)", async () => {
+    // Intent: a forward-compatible value survives the migration ladder.
+    // Arrange: an older doc carrying an unknown attribute value.
+    // Act: migrate(doc). Assert: the unknown value is still present afterwards.
+    // Covers US-013 AC-3 (unknown values survive).
+    const { migrate } = await importDomain();
+    const old = {
+      schemaVersion: 1,
+      kind: "figure",
+      attributes: [{ id: "a1", kind: "step", count: 1, value: "FUTURE_VALUE" }],
+    };
+    const migrated = migrate(old) as unknown as { attributes: Array<{ value: unknown }> };
+    expect(migrated.attributes[0]?.value).toBe("FUTURE_VALUE");
+  });
+
+  it("is a no-op when the doc is already at the current version", async () => {
+    // Intent: re-migrating a current doc changes nothing (idempotent ladder).
+    // Arrange: a doc at CURRENT_SCHEMA_VERSION. Act: migrate it.
+    // Assert: deeply equal to the input.
+    // Covers US-013 AC-4 (already-current is a no-op).
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const current = { schemaVersion: CURRENT_SCHEMA_VERSION, kind: "routine", sections: [] };
+    expect(migrate(current)).toEqual(current);
+  });
+
+  // ── Extra edge cases (in the spirit of US-013, beyond the listed ACs) ──
+
+  it("preserves figureType across a migration (immutable identity, #91/#92)", async () => {
+    // Intent: figureType is an immutable family identity — a migration must never
+    // rewrite it (US-011/US-041 rely on it). Pin that it survives migrate().
+    const { migrate } = await importDomain();
+    const fig = {
+      schemaVersion: 1,
+      kind: "figure",
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+    };
+    expect((migrate(fig) as { figureType?: string }).figureType).toBe("feather");
+  });
+
+  it("runs the ladder in order across multiple versions (synthetic ladder)", () => {
+    // Intent: prove the ladder machinery iterates v→v+1 to the target. Production
+    // has no v2 step yet (CURRENT=1), so exercise the mechanism with a fake ladder.
+    const ladder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, steppedFrom1: true }),
+      2: (d) => ({ ...d, steppedFrom2: true }),
+    };
+    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3) as Record<string, unknown>;
+    expect(result.schemaVersion).toBe(3);
+    expect(result.steppedFrom1).toBe(true);
+    expect(result.steppedFrom2).toBe(true);
+    expect(result.x).toBe("keep"); // untouched fields survive
+  });
+
+  it("throws if a migration step rewrites figureType (guard fires)", () => {
+    // Intent: the immutability invariant is structurally enforced — a buggy step
+    // that changes figureType is rejected, not silently applied.
+    const badLadder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, figureType: "hacked" }),
+    };
+    expect(() => runLadder({ schemaVersion: 1, figureType: "feather" }, badLadder, 2)).toThrow(
+      /figureType is immutable/,
+    );
+  });
+
+  it("throws if a migration step rewrites dance (guard fires)", () => {
+    // Intent: `dance` is also a copied-not-resolved identity field that family-note
+    // matching depends on (matchesFigureType gates on danceScope === figure.dance),
+    // so rewriting it would silently break this-dance notes. Same guard as figureType.
+    const badLadder: Record<number, MigrationStep> = {
+      1: (d) => ({ ...d, dance: "waltz" }),
+    };
+    expect(() => runLadder({ schemaVersion: 1, dance: "foxtrot" }, badLadder, 2)).toThrow(
+      /dance is immutable/,
+    );
+  });
+
+  it("treats an untagged doc as v1", () => {
+    // Intent: a doc with no schemaVersion is migrated from the earliest version.
+    const ladder: Record<number, MigrationStep> = { 1: (d) => ({ ...d, upgraded: true }) };
+    const result = runLadder({ kind: "figure" }, ladder, 2) as Record<string, unknown>;
+    expect(result.schemaVersion).toBe(2);
+    expect(result.upgraded).toBe(true);
+  });
+
+  // ── v3 → v4: assign sortKeys to sections + placements (#63, PLAN §5.3) ──
+  // (migrate() applies the full ladder, so a v2 doc lands at v4 with sortKeys.)
+
+  it("assigns ascending sortKeys to sections and placements in array order (#63)", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+        { id: "s2", name: "Body", placements: [] },
+      ],
+    };
+    const migrated = migrate(routine) as unknown as {
+      schemaVersion: number;
+      sections: Array<{ id: string; sortKey?: string; placements: Array<{ sortKey?: string }> }>;
+    };
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    // Sections keyed in array order (ascending).
+    const sk = migrated.sections.map((s) => s.sortKey);
+    expect(sk.every((k) => typeof k === "string")).toBe(true);
+    expect((sk[0] as string) < (sk[1] as string)).toBe(true);
+    // Placements within s1 keyed in array order (ascending).
+    const pk = (migrated.sections[0]?.placements ?? []).map((p) => p.sortKey);
+    expect(pk.every((k) => typeof k === "string")).toBe(true);
+    expect(String(pk[0]) < String(pk[1])).toBe(true);
+  });
+
+  it("is deterministic — two migrations of the same doc assign identical sortKeys", async () => {
+    // Both replicas migrate the same persisted bytes, so the backfill converges.
+    const { migrate } = await importDomain();
+    const doc = () => ({
+      schemaVersion: 2,
+      sections: [
+        { id: "s1", name: "A", placements: [{ id: "p1", figureRef: "f1" }] },
+        { id: "s2", name: "B", placements: [] },
+      ],
+    });
+    expect(migrate(doc())).toEqual(migrate(doc()));
+  });
+
+  it("does not inject sortKey/placements onto a doc that lacks sections (figure doc)", async () => {
+    // Automerge can't store undefined: a figure doc (no `sections`) must pass the
+    // v3→v4 step with the version bump alone — no spurious keys.
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const figure = { schemaVersion: 2, figureType: "feather", dance: "foxtrot", attributes: [] };
+    const migrated = migrate(figure) as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("sections" in migrated).toBe(false);
+    expect("sortKey" in migrated).toBe(false);
+  });
+
+  it("preserves an existing sortKey rather than overwriting it (idempotent)", async () => {
+    const { migrate } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [{ id: "s1", name: "A", sortKey: "PRESET", placements: [] }],
+    };
+    const migrated = migrate(routine) as unknown as { sections: Array<{ sortKey?: string }> };
+    expect(migrated.sections[0]?.sortKey).toBe("PRESET");
+  });
+
+  it("strips a stray `overlay` key from an old doc on migration (v2→v3)", async () => {
+    // Intent: the `Overlay` type and `overlay?` field on `FigureDoc` are retired
+    // (§5.2, §2.5.1 #14–18). Old persisted docs may carry a stray `overlay` key.
+    // The v2→v3 step must silently strip it so it does not linger; attributes and
+    // identity fields must survive intact. CRITICAL: the strip must NEVER assign
+    // `undefined` (Automerge cannot store it) — it builds a new object without
+    // the key instead.
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+
+    // A v1 figure doc that previously had an overlay (the pre-v2 shape).
+    const oldFigure = {
+      schemaVersion: 1,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [{ id: "a1", kind: "footwork", count: 1, value: "HT" }],
+      overlay: {
+        overrides: { a1: "T" },
+        tombstones: [],
+        additions: [{ id: "v1", kind: "sway", count: 2, value: "left" }],
+        rename: "My Natural Turn",
+      },
+    };
+    const migrated = migrate(oldFigure) as Record<string, unknown>;
+
+    // Migrated to current version.
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+
+    // overlay key is gone — not set to undefined, just absent.
+    expect("overlay" in migrated).toBe(false);
+
+    // Automerge-safety: no undefined values written.
+    for (const v of Object.values(migrated)) {
+      expect(v).not.toBeUndefined();
+    }
+
+    // Identity fields and attributes survive intact.
+    expect(migrated.figureType).toBe("natural-turn");
+    expect(migrated.dance).toBe("waltz");
+    expect((migrated.attributes as Array<{ id: string }>)[0]?.id).toBe("a1");
+  });
+
+  it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
+    // Intent: docs already at schemaVersion 2 (migrated before this PR) may still
+    // carry a stray `overlay` key. The v2→v3 step must strip it on read.
+    const { migrate } = await importDomain();
+
+    const v2DocWithOverlay = {
+      schemaVersion: 2,
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+    };
+    const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
+
+    // migrate() runs to CURRENT (4): the overlay strip happens at the v2→v3 step.
+    expect(migrated.schemaVersion).toBe(4);
+    expect("overlay" in migrated).toBe(false);
+    expect(migrated.figureType).toBe("feather");
+  });
+});

@@ -1,0 +1,1216 @@
+{
+  "summary": {
+    "istd": 122,
+    "wdsf": 184,
+    "exactSlugMatchBoth": 66,
+    "wdsfOnly": 118,
+    "istdOnly": 56,
+    "matchCaveat": "Matching is by (dance, name-slug). ISTD and WDSF often name the SAME figure differently (e.g. ISTD 'Back Lock' vs WDSF 'Backward Lock'; ISTD 'Closed Impetus' vs WDSF 'Impetus'; ISTD 'Reverse Corté' vs WDSF 'Hover Corte'). So true overlap is higher than the exact-match count — treat ISTD-only/WDSF-only as 'needs name reconciliation', not 'absent'."
+  },
+  "inBoth": [
+    {
+      "dance": "foxtrot",
+      "figureType": "basic-weave",
+      "name": "Basic Weave"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "bounce-fallaway-with-weave-ending",
+      "name": "Bounce Fallaway with Weave Ending"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "change-of-direction",
+      "name": "Change of Direction"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "fallaway-reverse-and-slip-pivot",
+      "name": "Fallaway Reverse and Slip Pivot"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "feather-step",
+      "name": "Feather Step"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "hover-cross",
+      "name": "Hover Cross"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "hover-telemark",
+      "name": "Hover Telemark"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-hover-telemark",
+      "name": "Natural Hover Telemark"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-telemark",
+      "name": "Natural Telemark"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-turn",
+      "name": "Natural Turn"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-twist-turn",
+      "name": "Natural Twist Turn"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-weave",
+      "name": "Natural Weave"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "reverse-turn",
+      "name": "Reverse Turn (incorporating Feather Finish)"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "reverse-wave",
+      "name": "Reverse Wave"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "three-step",
+      "name": "Three Step"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "top-spin",
+      "name": "Top Spin"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "backward-lock",
+      "name": "Backward Lock"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "cross-chasse",
+      "name": "Cross Chassé"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "cross-swivel",
+      "name": "Cross Swivel"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "double-reverse-spin",
+      "name": "Double Reverse Spin"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "forward-lock",
+      "name": "Forward Lock"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "four-quick-run",
+      "name": "Four Quick Run"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "hover-corte",
+      "name": "Hover Corté"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-spin-turn",
+      "name": "Natural Spin Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-turn",
+      "name": "Natural Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "progressive-chasse-to-r",
+      "name": "Progressive Chassé to R"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "quarter-turn-to-r",
+      "name": "Quarter Turn to R"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "reverse-pivot",
+      "name": "Reverse Pivot"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "rumba-cross",
+      "name": "Rumba Cross"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "running-finish",
+      "name": "Running Finish"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "six-quick-run",
+      "name": "Six Quick Run"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "v6",
+      "name": "V6"
+    },
+    {
+      "dance": "tango",
+      "figureType": "back-corte",
+      "name": "Back Corté"
+    },
+    {
+      "dance": "tango",
+      "figureType": "back-open-promenade",
+      "name": "Back Open Promenade"
+    },
+    {
+      "dance": "tango",
+      "figureType": "basic-reverse-turn",
+      "name": "Basic Reverse Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "brush-tap",
+      "name": "Brush Tap"
+    },
+    {
+      "dance": "tango",
+      "figureType": "closed-promenade",
+      "name": "Closed Promenade"
+    },
+    {
+      "dance": "tango",
+      "figureType": "fallaway-four-step",
+      "name": "Fallaway Four Step"
+    },
+    {
+      "dance": "tango",
+      "figureType": "fallaway-reverse-and-slip-pivot",
+      "name": "Fallaway Reverse and Slip Pivot"
+    },
+    {
+      "dance": "tango",
+      "figureType": "five-step",
+      "name": "Five Step"
+    },
+    {
+      "dance": "tango",
+      "figureType": "four-step",
+      "name": "Four Step"
+    },
+    {
+      "dance": "tango",
+      "figureType": "four-step-change",
+      "name": "Four Step Change"
+    },
+    {
+      "dance": "tango",
+      "figureType": "natural-twist-turn",
+      "name": "Natural Twist Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "open-promenade",
+      "name": "Open Promenade"
+    },
+    {
+      "dance": "tango",
+      "figureType": "progressive-link",
+      "name": "Progressive Link"
+    },
+    {
+      "dance": "tango",
+      "figureType": "progressive-side-step",
+      "name": "Progressive Side Step"
+    },
+    {
+      "dance": "tango",
+      "figureType": "progressive-side-step-reverse-turn",
+      "name": "Progressive Side Step Reverse Turn"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "natural-turn",
+      "name": "Natural Turn"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "reverse-turn",
+      "name": "Reverse Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "back-whisk",
+      "name": "Back Whisk"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "basic-weave",
+      "name": "Basic Weave"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "chasse-from-pp",
+      "name": "Chassé from PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "double-reverse-spin",
+      "name": "Double Reverse Spin"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "drag-hesitation",
+      "name": "Drag Hesitation"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "fallaway-reverse-and-slip-pivot",
+      "name": "Fallaway Reverse and Slip Pivot"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "hesitation-change",
+      "name": "Hesitation Change"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "hover-corte",
+      "name": "Hover Corté"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "natural-spin-turn",
+      "name": "Natural Spin Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "natural-turn",
+      "name": "Natural Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "outside-change",
+      "name": "Outside Change"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "outside-spin",
+      "name": "Outside Spin"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "progressive-chasse-to-r",
+      "name": "Progressive Chassé to R"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "reverse-pivot",
+      "name": "Reverse Pivot"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "reverse-turn",
+      "name": "Reverse Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "weave-from-pp",
+      "name": "Weave from PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "whisk",
+      "name": "Whisk"
+    }
+  ],
+  "istdOnly": [
+    {
+      "dance": "foxtrot",
+      "figureType": "closed-impetus-and-feather-finish",
+      "name": "Closed Impetus and Feather Finish"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "closed-telemark",
+      "name": "Closed Telemark"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "curved-feather-to-back-feather",
+      "name": "Curved Feather to Back Feather"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "hover-feather",
+      "name": "Hover Feather"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-zig-zag-from-pp",
+      "name": "Natural Zig-Zag from PP"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "open-impetus",
+      "name": "Open Impetus"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "open-telemark-and-feather-ending",
+      "name": "Open Telemark and Feather Ending"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "open-telemark-natural-turn-outside-swivel-feather-ending",
+      "name": "Open Telemark, Natural Turn, Outside Swivel, Feather Ending"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "weave-from-pp",
+      "name": "Weave from PP"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "change-of-direction",
+      "name": "Change of Direction"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "chasse-reverse-turn",
+      "name": "Chassé Reverse Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "closed-impetus",
+      "name": "Closed Impetus"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "closed-telemark",
+      "name": "Closed Telemark"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "fishtail",
+      "name": "Fishtail"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "heel-pivot",
+      "name": "Heel Pivot (Quarter Turn to Left)"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-pivot-turn",
+      "name": "Natural Pivot Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-turn-and-back-lock",
+      "name": "Natural Turn and Back Lock"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-turn-with-hesitation",
+      "name": "Natural Turn with Hesitation"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "progressive-chasse",
+      "name": "Progressive Chassé"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "quick-open-reverse",
+      "name": "Quick Open Reverse"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "running-right-turn",
+      "name": "Running Right Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipple-chasse-to-r",
+      "name": "Tipple Chassé to R"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipsy-to-r-or-l",
+      "name": "Tipsy to R or L"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "zig-zag-back-lock-and-running-finish",
+      "name": "Zig Zag, Back Lock and Running Finish"
+    },
+    {
+      "dance": "tango",
+      "figureType": "contra-check",
+      "name": "Contra Check"
+    },
+    {
+      "dance": "tango",
+      "figureType": "fallaway-promenade",
+      "name": "Fallaway Promenade"
+    },
+    {
+      "dance": "tango",
+      "figureType": "lf-and-rf-rocks",
+      "name": "LF and RF Rocks"
+    },
+    {
+      "dance": "tango",
+      "figureType": "natural-promenade-turn",
+      "name": "Natural Promenade Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "open-reverse-turn-partner-in-line",
+      "name": "Open Reverse Turn, Partner in Line"
+    },
+    {
+      "dance": "tango",
+      "figureType": "open-reverse-turn-partner-outside",
+      "name": "Open Reverse Turn, Partner Outside"
+    },
+    {
+      "dance": "tango",
+      "figureType": "outside-swivels",
+      "name": "Outside Swivels"
+    },
+    {
+      "dance": "tango",
+      "figureType": "oversway",
+      "name": "Oversway"
+    },
+    {
+      "dance": "tango",
+      "figureType": "promenade-link",
+      "name": "Promenade Link"
+    },
+    {
+      "dance": "tango",
+      "figureType": "rock-turn",
+      "name": "Rock Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "the-chase",
+      "name": "The Chase"
+    },
+    {
+      "dance": "tango",
+      "figureType": "walk",
+      "name": "Walk"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "backward-change-step",
+      "name": "Backward Change Step"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "contra-check",
+      "name": "Contra Check"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "forward-change-step",
+      "name": "Forward Change Step"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "natural-fleckerl",
+      "name": "Natural Fleckerl"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "reverse-fleckerl",
+      "name": "Reverse Fleckerl"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "back-lock",
+      "name": "Back Lock"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-changes",
+      "name": "Closed Changes"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-impetus",
+      "name": "Closed Impetus"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-telemark",
+      "name": "Closed Telemark"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-wing",
+      "name": "Closed Wing"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "contra-check",
+      "name": "Contra Check"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "fallaway-whisk",
+      "name": "Fallaway Whisk"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "left-whisk",
+      "name": "Left Whisk"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "open-impetus-and-cross-hesitation",
+      "name": "Open Impetus and Cross Hesitation"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "open-impetus-and-wing",
+      "name": "Open Impetus and Wing"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "open-telemark-and-cross-hesitation",
+      "name": "Open Telemark and Cross Hesitation"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "open-telemark-and-wing",
+      "name": "Open Telemark and Wing"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "reverse-corte",
+      "name": "Reverse Corté"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "turning-lock",
+      "name": "Turning Lock"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "turning-lock-to-r",
+      "name": "Turning Lock to R"
+    }
+  ],
+  "wdsfOnly": [
+    {
+      "dance": "foxtrot",
+      "figureType": "back-feather",
+      "name": "Back Feather"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "back-whisk",
+      "name": "Back Whisk"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "curved-feather",
+      "name": "Curved Feather"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "curved-feather-from-p-p",
+      "name": "Curved Feather from P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "curved-three-step",
+      "name": "Curved Three Step"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "double-reverse-spin",
+      "name": "Double Reverse Spin"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "extended-reverse-wave",
+      "name": "Extended Reverse Wave"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "feather-ending",
+      "name": "Feather Ending"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "feather-finish",
+      "name": "Feather Finish"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "heel-pull-finish",
+      "name": "Heel Pull Finish"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "hover-corte",
+      "name": "Hover Corte"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "hover-telemark-to-p-p",
+      "name": "Hover Telemark to P.P"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "impetus",
+      "name": "Impetus"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "impetus-to-p-p",
+      "name": "Impetus to P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-twist-turn-with-impetus-and-feather-finish",
+      "name": "Natural Twist Turn with Impetus and Feather Finish"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-twist-turn-with-impetus-to-p-p",
+      "name": "Natural Twist Turn with Impetus to P.P"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-twist-turn-with-natural-weave",
+      "name": "Natural Twist Turn with Natural Weave"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "natural-zig-zag-from-p-p",
+      "name": "Natural Zig Zag from P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "open-natural-turn",
+      "name": "Open Natural Turn"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "outside-spin",
+      "name": "Outside Spin"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "outside-swivel",
+      "name": "Outside Swivel"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "over-feather",
+      "name": "Over Feather"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "progressive-chasse-to-r",
+      "name": "Progressive Chasse to R"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "quick-open-reverse-turn",
+      "name": "Quick Open Reverse Turn"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "reverse-pivot",
+      "name": "Reverse Pivot"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "running-weave-from-p-p",
+      "name": "Running Weave from P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "telemark",
+      "name": "Telemark"
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "telemark-to-p-p",
+      "name": "Telemark to P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "weave-from-p-p",
+      "name": "Weave from P.P."
+    },
+    {
+      "dance": "foxtrot",
+      "figureType": "whisk",
+      "name": "Whisk"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "back-whisk",
+      "name": "Back Whisk"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "curved-feather",
+      "name": "Curved Feather"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "drag-hesitation",
+      "name": "Drag Hesitation"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "fisht-tail",
+      "name": "Fisht Tail"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "hesitation-change",
+      "name": "Hesitation Change"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "impetus",
+      "name": "Impetus"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "impetus-to-pp",
+      "name": "Impetus to PP"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-fallaway-turn",
+      "name": "Natural Fallaway Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-pivot",
+      "name": "Natural Pivot"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "natural-turning-lock",
+      "name": "Natural Turning Lock"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "open-natural-turn",
+      "name": "Open Natural Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "open-reverse-turn-quick-open-reverse",
+      "name": "Open Reverse Turn (quick Open Reverse)"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "outside-change",
+      "name": "Outside Change"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "outside-spin",
+      "name": "Outside Spin"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "progressive-chasse-to-l",
+      "name": "Progressive Chasse to L"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "quarter-turn-to-l",
+      "name": "Quarter Turn to L"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "reverse-turn",
+      "name": "Reverse Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "running-cross-chasse",
+      "name": "Running Cross Chasse"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "running-natural-turn",
+      "name": "Running Natural Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "running-spin-turn",
+      "name": "Running Spin Turn"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "telemark",
+      "name": "Telemark"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "telemark-to-pp",
+      "name": "Telemark to PP"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipple-chasse-to-l",
+      "name": "Tipple Chasse to L"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipple-chasse-to-r-along-lod",
+      "name": "Tipple Chasse to R - Along LOD"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipple-chasse-to-r-at-the-corner",
+      "name": "Tipple Chasse to R - at the Corner"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipsy-to-l",
+      "name": "Tipsy to L"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "tipsy-to-r",
+      "name": "Tipsy to R"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "weave-from-pp",
+      "name": "Weave from PP"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "whisk",
+      "name": "Whisk"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "wing",
+      "name": "Wing"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "wing-from-promenade-position",
+      "name": "Wing from Promenade Position"
+    },
+    {
+      "dance": "quickstep",
+      "figureType": "zig-zag",
+      "name": "Zig Zag"
+    },
+    {
+      "dance": "tango",
+      "figureType": "back-whisk",
+      "name": "Back Whisk"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase",
+      "name": "Chase"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase-alternative-endings-chase-chasse",
+      "name": "Chase Alternative Endings - Chase, Chasse"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase-alternative-endings-method-1-whisk-fwd",
+      "name": "Chase Alternative Endings - Method 1: Whisk, Fwd"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase-alternative-endings-method-2-whisk",
+      "name": "Chase Alternative Endings - Method 2: Whisk,"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase-alternative-endings-method-3-whisk-close",
+      "name": "Chase Alternative Endings - Method 3: Whisk, Close"
+    },
+    {
+      "dance": "tango",
+      "figureType": "chase-alternative-endings-method-4-progressive",
+      "name": "Chase Alternative Endings - Method 4: Progressive"
+    },
+    {
+      "dance": "tango",
+      "figureType": "fallaway-in-promenade",
+      "name": "Fallaway IN Promenade"
+    },
+    {
+      "dance": "tango",
+      "figureType": "in-out",
+      "name": "IN - OUT"
+    },
+    {
+      "dance": "tango",
+      "figureType": "mini-five-step",
+      "name": "Mini Five Step"
+    },
+    {
+      "dance": "tango",
+      "figureType": "natural-rock-turn",
+      "name": "Natural Rock Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "natural-turn-from-pp",
+      "name": "Natural Turn from PP"
+    },
+    {
+      "dance": "tango",
+      "figureType": "natural-twist-turn-from-pp",
+      "name": "Natural Twist Turn from PP"
+    },
+    {
+      "dance": "tango",
+      "figureType": "open-natural-turn",
+      "name": "Open Natural Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "open-reverse-turn",
+      "name": "Open Reverse Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "outside-spin",
+      "name": "Outside Spin"
+    },
+    {
+      "dance": "tango",
+      "figureType": "outside-swivel-method-1-after-open-finish-and",
+      "name": "Outside Swivel Method 1 - After Open Finish and"
+    },
+    {
+      "dance": "tango",
+      "figureType": "outside-swivel-method-2-turning-to-l",
+      "name": "Outside Swivel Method 2 - Turning to L"
+    },
+    {
+      "dance": "tango",
+      "figureType": "outside-swivel-method-3-reverse-outside-swivel",
+      "name": "Outside Swivel Method 3 - Reverse Outside Swivel"
+    },
+    {
+      "dance": "tango",
+      "figureType": "promenade-link-turned-to-left",
+      "name": "Promenade Link Turned to Left"
+    },
+    {
+      "dance": "tango",
+      "figureType": "promenade-link-turned-to-right",
+      "name": "Promenade Link Turned to Right"
+    },
+    {
+      "dance": "tango",
+      "figureType": "quick-reverse-turn",
+      "name": "Quick Reverse Turn"
+    },
+    {
+      "dance": "tango",
+      "figureType": "reverse-pivot",
+      "name": "Reverse Pivot"
+    },
+    {
+      "dance": "tango",
+      "figureType": "rock-on-left-foot",
+      "name": "Rock on Left Foot"
+    },
+    {
+      "dance": "tango",
+      "figureType": "rock-on-right-foot",
+      "name": "Rock on Right Foot"
+    },
+    {
+      "dance": "tango",
+      "figureType": "tango-walk",
+      "name": "Tango Walk"
+    },
+    {
+      "dance": "tango",
+      "figureType": "tap-alternative-entries-to-pp",
+      "name": "Tap - Alternative Entries to PP"
+    },
+    {
+      "dance": "tango",
+      "figureType": "whisk",
+      "name": "Whisk"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "lf-backward-change-step-natural-to-reverse",
+      "name": "LF Backward Change Step Natural to Reverse"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "lf-forward-change-step-reverse-to-natural",
+      "name": "LF Forward Change Step Reverse to Natural"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "rf-backward-change-step-reverse-to-natural",
+      "name": "RF Backward Change Step Reverse to Natural"
+    },
+    {
+      "dance": "viennese_waltz",
+      "figureType": "rf-forward-change-step-natural-to-reverse",
+      "name": "RF Forward Change Step Natural to Reverse"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "backward-lock",
+      "name": "Backward Lock"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "bounce-fallaway-weave-ending",
+      "name": "Bounce Fallaway Weave Ending"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-change-on-lf",
+      "name": "Closed Change on LF"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "closed-change-on-rf",
+      "name": "Closed Change on RF"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "cross-hesitation-from-pp",
+      "name": "Cross Hesitation from PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "curved-feather",
+      "name": "Curved Feather"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "fallaway-natural-turn",
+      "name": "Fallaway Natural Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "impetus",
+      "name": "Impetus"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "impetus-to-pp",
+      "name": "Impetus to PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "natural-turning-lock",
+      "name": "Natural Turning Lock"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "open-natural-turn",
+      "name": "Open Natural Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "outside-swivel",
+      "name": "Outside Swivel"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "overturned-running-spin-turn",
+      "name": "Overturned Running Spin Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "progressive-chasse-to-l",
+      "name": "Progressive Chasse to L"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "quick-open-reverse",
+      "name": "Quick Open Reverse"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "reverse-turning-lock",
+      "name": "Reverse Turning Lock"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "running-cross-chasse",
+      "name": "Running Cross Chasse"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "running-finish",
+      "name": "Running Finish"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "running-spin-turn",
+      "name": "Running Spin Turn"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "running-weave-from-pp",
+      "name": "Running Weave from PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "telemark",
+      "name": "Telemark"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "telemark-to-pp",
+      "name": "Telemark to PP"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "wing",
+      "name": "Wing"
+    },
+    {
+      "dance": "waltz",
+      "figureType": "wing-from-pp",
+      "name": "Wing from PP"
+    }
+  ]
+}

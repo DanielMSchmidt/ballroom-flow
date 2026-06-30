@@ -1,0 +1,63 @@
+// Frame 1.15 — Add-attribute type picker. A sheet listing the standard kinds +
+// any custom kinds, plus a dashed "＋ new attribute type" footer that opens the
+// custom-type builder (frame 1.16).
+import type { RegistryKind } from "@ballroom/domain";
+import type { ComponentType } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { importComponent } from "../test-support/import-component";
+import { renderUi, screen, userEvent } from "../test-support/render";
+
+interface PickerModule {
+  AddKindPicker: ComponentType<Record<string, unknown>>;
+}
+const load = () => importComponent<PickerModule>("../components/AddKindPicker");
+
+const head: RegistryKind = {
+  kind: "head",
+  label: "Head",
+  color: "#4a9d9a",
+  cardinality: "single",
+  valueType: "enum",
+  values: ["left", "right"],
+  builtin: false,
+};
+
+describe("AddKindPicker (frame 1.15)", () => {
+  it("lists standard + custom kinds and marks the custom one", async () => {
+    const { AddKindPicker } = await load();
+    renderUi(<AddKindPicker open customKinds={[head]} />);
+    // A standard kind and the custom kind both appear.
+    expect(screen.getByRole("button", { name: /rise & fall/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /head/i })).toBeInTheDocument();
+    // The custom kind is marked "custom".
+    expect(screen.getByText(/custom/i)).toBeInTheDocument();
+  });
+
+  it("surfaces registry-derived L/F (roleAware) + required affordances (T5)", async () => {
+    const { AddKindPicker } = await load();
+    renderUi(<AddKindPicker open dance="waltz" />);
+    // Direction is the required slot → a required marker; role-aware kinds show L/F.
+    expect(screen.getAllByLabelText("required").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("L/F").length).toBeGreaterThan(0);
+  });
+
+  it("calls onSelectKind with the chosen kind", async () => {
+    const { AddKindPicker } = await load();
+    const onSelectKind = vi.fn();
+    renderUi(<AddKindPicker open onSelectKind={onSelectKind} />);
+    await userEvent.click(screen.getByRole("button", { name: /position/i }));
+    expect(onSelectKind).toHaveBeenCalledWith(expect.objectContaining({ kind: "position" }));
+  });
+
+  it("opens the builder from the ＋ new attribute type footer and emits onCreate", async () => {
+    const { AddKindPicker } = await load();
+    const onCreate = vi.fn();
+    renderUi(<AddKindPicker open onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole("button", { name: /new attribute type/i }));
+    // The builder's Label field is now present.
+    await userEvent.type(screen.getByLabelText(/label/i), "Energy");
+    await userEvent.type(screen.getByLabelText(/values/i), "low, high");
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: "energy" }));
+  });
+});

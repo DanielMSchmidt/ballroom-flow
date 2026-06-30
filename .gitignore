@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-e2e/
 .wrangler/
 .dev.vars
 *.local
@@ -8,3 +9,8 @@ playwright-report/
 test-results/
 .DS_Store
 *.log
+.claude/worktrees/
+.parity-audit/
+apps/web/_parity_capture.mjs
+apps/web/e2e/parity-capture.spec.ts
+.superpowers/
