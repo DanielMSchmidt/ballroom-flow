@@ -2,6 +2,8 @@
 // POST /api/routines/:id/fork on an app-owned template also covered here.
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import type { Env } from "../index";
+import { seedSampleRoutine } from "../sample";
 import { authedContext } from "../test-support/authed-context";
 import type { DocNamespace } from "../test-support/doc-do-api";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -12,6 +14,16 @@ let kp: TestKeypair;
 beforeAll(async () => {
   await applyMigrations();
   kp = await generateTestKeypair();
+  // Seed the app template's CRDT content into THIS test worker's Durable-Object
+  // storage up front. vitest-pool-workers gives each test FILE its own isolated DO
+  // storage but a SHARED D1 (config: isolatedStorage:false). `ensureSample` (the
+  // lazy route seed) gates on the SHARED D1 row, so if another worker inserts that
+  // row first, this worker SKIPS seeding and its template DO stays empty — making
+  // the fork-the-template read race-dependent. Seeding directly here (idempotent:
+  // seedDoc no-clobber, D1 onConflictDoNothing) makes this file deterministic
+  // regardless of cross-file ordering. Production is unaffected (D1 + DO are one
+  // globally-consistent store there, so the D1-row gate is correct).
+  await seedSampleRoutine(env as unknown as Env);
 });
 
 describe("US-045 templates", () => {
