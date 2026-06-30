@@ -47,16 +47,32 @@ const ABBREV: Record<string, Record<string, string>> = {
   },
   position: { closed: "Cl", promenade: "PP", wing: "W", CBMP: "CBMP" },
   footwork: {
-    // Canonical picker codes (already short — explicit so no fallback mangles them).
+    // Canonical picker codes → tight overview codes (explicit so no fallback
+    // mangles the slashed rolls). The full descriptive label lives in the edit
+    // picker; the explanation in the registry valueDefs.
     HT: "HT",
-    T: "T",
     TH: "TH",
+    T: "T",
     H: "H",
+    B: "B",
+    WF: "WF",
+    BF: "BF",
+    IE: "IE",
+    flat: "F",
+    "heel turn": "Htn",
     "heel pull": "HP",
+    // Compound rolls carried by the catalog.
+    BH: "BH",
+    HTH: "HTH",
+    THT: "THT",
+    "T/H/T": "T/H/T",
+    "H/T": "H/T",
+    "T/H": "T/H",
+    "T/TH": "T/TH",
+    "TH/T": "TH/T",
     // Legacy anatomical tokens still render for old data.
     ball: "B",
     ball_flat: "BF",
-    flat: "F",
     heel: "H",
     heel_ball: "HB",
     toe: "T",

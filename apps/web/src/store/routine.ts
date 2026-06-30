@@ -216,6 +216,9 @@ export type CreateFigureFn = (figure: {
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
   attributes: Attribute[];
+  /** Figure-level entry/exit alignment seeded from the catalog chart, where charted. */
+  entryAlignment?: Alignment;
+  exitAlignment?: Alignment;
   /** When set, the new figure is a COW variant of this base (US-035). */
   baseFigureRef?: string;
 }) => Promise<void>;
@@ -654,6 +657,9 @@ export async function openRoutine(
 
       // A catalog pick carries the per-step timeline (US-032 + WDSF seed); a custom has none.
       const attributes = preset?.attributes ?? [];
+      // …and its charted figure-level alignment (where it started / ended), where present.
+      const entryAlignment = preset?.entryAlignment;
+      const exitAlignment = preset?.exitAlignment;
 
       // Project the figure to D1 + an owner membership AND server-seed its CRDT
       // content durably (#187/#205): POST /api/figures now both projects the
@@ -662,7 +668,16 @@ export async function openRoutine(
       // no racy client seed write that could be lost on an immediate reload. We
       // then just OPEN the figure connection so its (server-seeded) content
       // replays into the local store on catch-up.
-      createFigure({ figureRef, name, dance, figureType, routineId, attributes })
+      createFigure({
+        figureRef,
+        name,
+        dance,
+        figureType,
+        routineId,
+        attributes,
+        entryAlignment,
+        exitAlignment,
+      })
         .then(() => {
           // Created server-side (DO seeded) → safe to open: the catch-up replay
           // now carries the seed, so the figure hydrates deterministically.
@@ -754,6 +769,13 @@ export async function openRoutine(
         figureType: variant.figureType,
         routineId,
         attributes,
+        // Preserve the base's figure-level alignment onto the frozen copy — the
+        // user edited the step attributes, not where the figure starts/ends, so the
+        // copy should keep the base's entry/exit alignment. Undefined when the base
+        // has none (buildDoc strips it server-side); the onceLive rewrite below sets
+        // other fields but never touches alignment, so the seeded value survives.
+        entryAlignment: base.entryAlignment,
+        exitAlignment: base.exitAlignment,
         baseFigureRef: base.id,
       })
         .then(() => {

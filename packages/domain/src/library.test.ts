@@ -34,6 +34,21 @@ describe("figure library catalog", () => {
     expect(foxtrot.some((f) => /natural spin turn/i.test(f.name))).toBe(false);
   });
 
+  it("carries the charted figure-level entry/exit alignment (Waltz closed changes)", () => {
+    // The closed change doesn't turn, so its alignment is constant — entry == exit,
+    // from the leader's perspective. RF change faces Diagonal Centre; LF faces
+    // Diagonal Wall (dancecentral.info). Figures with no charted alignment carry none.
+    const rf = LIBRARY_FIGURES.find(
+      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-rf",
+    );
+    expect(rf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    expect(rf?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    const lf = LIBRARY_FIGURES.find(
+      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-lf",
+    );
+    expect(lf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
+  });
+
   it("groups a dance's figures by figureType for the library browse", () => {
     const groups = libraryGroupsForDance("waltz");
     expect(groups.length).toBeGreaterThan(0);

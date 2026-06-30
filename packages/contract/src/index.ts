@@ -62,6 +62,14 @@ export const zAttribute = z.object({
   deletedAt: z.number().nullish(),
 });
 
+/** A figure's per-figure alignment (mirrors the domain `Alignment`): which way the
+ *  couple faces, from the leader's perspective. Carried on entry/exit so a charted
+ *  catalog figure seeds with "where it started / where it ended". */
+export const zAlignment = z.object({
+  qualifier: z.enum(["facing", "backing", "pointing"]),
+  direction: z.enum(["LOD", "ALOD", "wall", "centre", "DW", "DC", "DW_against", "DC_against"]),
+});
+
 /**
  * Create-figure request (#187). The client mints the figureRef (ULID) + the
  * metadata; the SERVER stamps ownerId from the verified JWT sub. Projecting the
@@ -78,6 +86,10 @@ export const zCreateFigure = z.object({
    *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
   routineId: z.string().min(1),
   attributes: z.array(zAttribute).default([]),
+  /** Figure-level entry/exit alignment (per-figure, leader's perspective) seeded
+   *  from the catalog chart, where charted. Optional — most figures carry none. */
+  entryAlignment: zAlignment.optional(),
+  exitAlignment: zAlignment.optional(),
   /** Set when this figure is a copy-on-write COPY of a shared base (US-035): a
    *  FROZEN snapshot carrying its own `attributes`; `baseFigureRef` is provenance
    *  only — no live overlay (§5.2). Omitted for a fresh custom figure. */

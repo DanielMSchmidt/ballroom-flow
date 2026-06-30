@@ -301,7 +301,17 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const { figureRef, name, dance, figureType, routineId, attributes, baseFigureRef } = parsed.data;
+  const {
+    figureRef,
+    name,
+    dance,
+    figureType,
+    routineId,
+    attributes,
+    baseFigureRef,
+    entryAlignment,
+    exitAlignment,
+  } = parsed.data;
 
   // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
   // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
@@ -335,6 +345,10 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
+    // Figure-level entry/exit alignment (per-figure, where the catalog charts it) —
+    // buildDoc drops undefined optionals, so an uncharted figure carries neither.
+    ...(entryAlignment ? { entryAlignment } : {}),
+    ...(exitAlignment ? { exitAlignment } : {}),
     // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
     // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
     ...(baseFigureRef ? { baseFigureRef } : {}),

@@ -228,9 +228,10 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     for (const name of [/direction/i, /footwork/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
-    // Technique kinds appear once "More attributes" is expanded.
+    // Technique kinds appear once "More attributes" is expanded. Exact names so
+    // "Position" doesn't also match the "Foot Position" heading.
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
-    for (const name of [/turn/i, /sway/i, /position/i]) {
+    for (const name of ["Turn", "Sway", "Position", "Foot Position"]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
@@ -335,21 +336,22 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     expect(within(bodyGroup).queryByRole("button", { name: /^CBMP$/ })).toBeNull();
   });
 
-  it("adds a free-text footwork value (suggestions are not a closed enum, §3/#83)", async () => {
-    // Intent: footwork is free-text — typing a custom action adds it alongside the
-    //   readable footwork suggestions.
-    // Covers #83 (footwork free-text on the editor side).
+  it("offers footwork as a closed picklist (no free-text custom input)", async () => {
+    // Intent: footwork is now a CLOSED enum — the editor picks from the fixed set
+    //   and does NOT render the free-text "Custom footwork…" add affordance.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const onChange = vi.fn();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
-    await userEvent.type(screen.getByPlaceholderText(/custom footwork/i), "brush_tap");
-    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    // No free-text add for footwork.
+    expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
+    // A footwork value is still pickable from the closed set.
+    await userEvent.click(screen.getByRole("button", { name: "HT" }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
     );
-    expect(added?.value).toBe("brush_tap");
+    expect(added?.value).toBe("HT");
   });
 });
 

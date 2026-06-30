@@ -212,7 +212,7 @@ export function AttributeEditor({
           );
         })}
 
-        {editable && kind.freeText && (
+        {editable && (kind.freeTextInput ?? kind.freeText) && (
           <FreeTextAdd
             label={kind.label}
             onAdd={(v) => toggle(kind.kind, kind.cardinality, v, scope)}

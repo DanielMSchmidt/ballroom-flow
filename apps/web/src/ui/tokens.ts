@@ -15,6 +15,7 @@
 export const ATTRIBUTE_KINDS = [
   "direction",
   "footwork",
+  "footPosition",
   "rise",
   "position",
   "sway",

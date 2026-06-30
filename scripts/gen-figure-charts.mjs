@@ -31,14 +31,33 @@ const step = (s) => {
 };
 
 const table = {};
-for (const fig of seed.figures) table[`${fig.dance}:${fig.figureType}`] = fig.steps.map(step);
+const alignments = {};
+for (const fig of seed.figures) {
+  const key = `${fig.dance}:${fig.figureType}`;
+  table[key] = fig.steps.map(step);
+  // Figure-level entry/exit alignment (per-figure in the model; from the leader's
+  // perspective). Only emitted for figures the seed charts it on.
+  if (fig.entryAlignment || fig.exitAlignment) {
+    const a = {};
+    if (fig.entryAlignment) a.entry = fig.entryAlignment;
+    if (fig.exitAlignment) a.exit = fig.exitAlignment;
+    alignments[key] = a;
+  }
+}
 
 const header = `// GENERATED from docs/seed/figure-charts.json by scripts/gen-figure-charts.mjs.
 // Real per-step both-role technique (WDSF-first, dancecentral.info primary), researched
 // per figure with source attribution in the seed. Do not edit by hand — regenerate instead.
+import type { Alignment } from "./doc-types";
 import type { AuthoredStep } from "./figure-steps";
 
 export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = ${JSON.stringify(table, null, 2)};
+
+/** Figure-level entry/exit alignment (per-figure, leader's perspective), where charted. */
+export const GENERATED_FIGURE_ALIGNMENTS: Record<
+  string,
+  { entry?: Alignment; exit?: Alignment }
+> = ${JSON.stringify(alignments, null, 2)};
 `;
 const outPath = resolve(root, "packages/domain/src/figure-charts.generated.ts");
 writeFileSync(outPath, header);

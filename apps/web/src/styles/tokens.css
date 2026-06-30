@@ -57,6 +57,12 @@
   --bf-kind-footwork-tint: #f3e6d2;
   --bf-kind-footwork-border: #a9742c;
 
+  /* footPosition (feet relationship, 1st–5th) — teal */
+  --bf-kind-footPosition: #2c8a85;
+  --bf-kind-footPosition-ink: #186b66;
+  --bf-kind-footPosition-tint: #d6f0ee;
+  --bf-kind-footPosition-border: #2c8a85;
+
   /* direction (step headline) — blue */
   --bf-kind-direction: #2f5d8f;
   --bf-kind-direction-ink: #1d3a5a;

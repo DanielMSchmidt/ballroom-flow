@@ -8164,7 +8164,9 @@
       "figureType": "closed-change-on-lf",
       "source": "https://www.dancecentral.info/ballroom/international-style/waltz/waltz-closed-changes",
       "corroboration": "",
-      "note": "LF Closed Change (Reverse-to-Natural): LF fwd, RF side, LF closes.",
+      "note": "LF Closed Change (Reverse-to-Natural): LF fwd, RF side, LF closes. Leader faces Diagonal Wall throughout (no turn); sway straight on 1. dancecentral charts a slight CBM on step 1.",
+      "entryAlignment": { "qualifier": "facing", "direction": "DW" },
+      "exitAlignment": { "qualifier": "facing", "direction": "DW" },
       "steps": [
         {
           "rise": "commence",
@@ -8216,7 +8218,9 @@
       "figureType": "closed-change-on-rf",
       "source": "https://www.dancecentral.info/ballroom/international-style/waltz/waltz-closed-changes",
       "corroboration": "",
-      "note": "RF Closed Change (Natural-to-Reverse): RF fwd, LF side, RF closes.",
+      "note": "RF Closed Change (Natural-to-Reverse): RF fwd, LF side, RF closes. Leader faces Diagonal Centre throughout (no turn); sway straight on 1. dancecentral charts a slight CBM on step 1.",
+      "entryAlignment": { "qualifier": "facing", "direction": "DC" },
+      "exitAlignment": { "qualifier": "facing", "direction": "DC" },
       "steps": [
         {
           "rise": "commence",

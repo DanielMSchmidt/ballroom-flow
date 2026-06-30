@@ -1,6 +1,7 @@
 // GENERATED from docs/seed/figure-charts.json by scripts/gen-figure-charts.mjs.
 // Real per-step both-role technique (WDSF-first, dancecentral.info primary), researched
 // per figure with source attribution in the seed. Do not edit by hand — regenerate instead.
+import type { Alignment } from "./doc-types";
 import type { AuthoredStep } from "./figure-steps";
 
 export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
@@ -7902,3 +7903,28 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
   ],
 };
+
+/** Figure-level entry/exit alignment (per-figure, leader's perspective), where charted. */
+export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; exit?: Alignment }> =
+  {
+    "waltz:closed-change-on-lf": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:closed-change-on-rf": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+  };

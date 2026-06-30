@@ -39,6 +39,10 @@ export interface RegistryKind {
   cardinality: "single" | "multi";
   valueType: string;
   values?: string[];
+  /** When true, `values` are suggestions (free text also valid) — e.g. footwork. */
+  freeText?: boolean;
+  /** Whether the editor offers a free-text input (defaults to `freeText`). */
+  freeTextInput?: boolean;
   appliesToDances?: DanceId[];
   /** Registry-derived info-sheet + Profile affordances (T5). */
   description?: string;
@@ -52,6 +56,7 @@ export interface RegistryKind {
 export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
   footwork: RegistryKind;
+  footPosition: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;

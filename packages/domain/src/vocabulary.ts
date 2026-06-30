@@ -35,6 +35,14 @@ export interface RegistryKind {
    * write-check (US-012) skips the unknown-value rejection for such kinds.
    */
   freeText?: boolean;
+  /**
+   * Whether the EDITOR offers a free-text input alongside the value chips. Decoupled
+   * from `freeText` (which governs SCHEMA leniency): footwork is `freeText` (the
+   * lenient write path tolerates the public-syllabus scaffold + legacy values) but
+   * `freeTextInput:false` — the editor is a CLOSED PICKLIST, no custom-value box.
+   * Defaults to `freeText` when unset (a kind with no opinion behaves as before).
+   */
+  freeTextInput?: boolean;
   /** When present, the kind applies only to these dances (e.g. rise omits Tango). */
   appliesToDances?: DanceId[];
   /**
@@ -73,6 +81,8 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
   /** The foot part of the step (HT/T/TH/…). Renamed from the old `step` kind. */
   footwork: RegistryKind;
+  /** The ballet-derived position of the feet relative to each other (1st–5th). */
+  footPosition: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;
@@ -113,30 +123,99 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     required: true,
     builtin: true,
   },
-  // The foot part of the step (renamed from the old `step` kind, which held the
-  // same foot-part pressure tokens). The pickable set is the design's compound
-  // ISTD codes (HT/T/TH/H/heel pull); `freeText` keeps any legacy anatomical
-  // value (ball/heel/toe/…) and one-offs valid + displayable. H and T are now
-  // canonical picker values, so they are NOT rewritten on read. Single-select:
-  // a step has one foot part (a roll is one compound token, e.g. HT).
+  // The foot part of the step (renamed from the old `step` kind). A CLOSED PICKLIST
+  // for editing (`freeTextInput:false` — no custom-value box) over the full ISTD
+  // vocabulary the figure catalog uses. `freeText` stays true so the lenient WRITE
+  // path still tolerates the public-syllabus scaffold's entry/exit prose + legacy
+  // values (there is no valid home for free prose in a fully-closed vocabulary).
+  // The pickable set leads with the common single-part contacts + named actions,
+  // then the compound rolls the catalog carries (BH/THT/T/H/T/…) so every charted
+  // figure validates losslessly. Each value renders three ways: a tight CODE in the
+  // reading overview (attribute-display.ts ABBREV), a full descriptive LABEL in the
+  // edit picker, and a one-line explanation here (`valueDefs`). H and T are canonical
+  // picker codes, NOT rewritten on read. Single-select: one foot part per step (a
+  // roll is one compound token). roleAware — e.g. heel turns are the follower's.
   footwork: {
     kind: "footwork",
     label: "Footwork",
     color: "#a9742c",
     cardinality: "single",
     valueType: "enum",
-    values: ["HT", "T", "TH", "H", "heel pull"],
     freeText: true,
+    freeTextInput: false,
+    values: [
+      // common single-part contacts + named actions
+      "HT",
+      "TH",
+      "T",
+      "H",
+      "B",
+      "WF",
+      "BF",
+      "IE",
+      "flat",
+      "heel turn",
+      "heel pull",
+      // compound rolls carried by the figure catalog (kept lossless)
+      "BH",
+      "HTH",
+      "THT",
+      "T/H/T",
+      "H/T",
+      "T/H",
+      "T/TH",
+      "TH/T",
+    ],
     description:
       "The part of the foot contacting the floor through the step — read in order of contact.",
     valueDefs: {
-      HT: "HT — Heel-Toe (e.g. forward walks)",
+      HT: "HT — Heel-Toe: heel then toe (e.g. forward walks)",
+      TH: "TH — Toe-Heel: toe then heel (e.g. back walks, the closing/lowering step)",
       T: "T — Toe/ball (e.g. side steps in rise)",
-      TH: "TH — Toe-Heel (e.g. back walks, the closing/lowering step)",
-      H: "H — Heel",
-      "heel pull": "Heel pull — the heel-pull action (e.g. a heel turn)",
+      H: "H — Heel only",
+      B: "B — Ball of the foot",
+      WF: "WF — Whole foot, flat to the floor",
+      BF: "BF — Ball, then lowering to flat",
+      IE: "IE — Inside edge of the foot",
+      flat: "F — Flat foot, the whole foot with no roll",
+      "heel turn": "Heel turn — commence on the ball, weight onto the heel, closing foot parallel",
+      "heel pull":
+        "Heel pull — turn on the supporting-foot heel, the moving foot pulled back then to the side",
+      BH: "BH — Ball-Heel: ball then heel",
+      HTH: "HTH — Heel-Toe-Heel roll",
+      THT: "THT — Toe-Heel-Toe roll",
+      "T/H/T": "T/H/T — Toe, Heel, Toe on clear successive beats (a heel-turn action)",
+      "H/T": "H/T — Heel, then Toe on successive beats",
+      "T/H": "T/H — Toe, then Heel on successive beats",
+      "T/TH": "T/TH — Toe, then Toe-Heel",
+      "TH/T": "TH/T — Toe-Heel, then Toe",
     },
     // Footwork genuinely differs by role (e.g. heel turns are the follower's).
+    roleAware: true,
+    builtin: true,
+  },
+  // The ballet-derived position of the feet relative to each other (ISTD's
+  // occasional "Foot Position" column — research/domain.md §2 #10). A closed enum
+  // of the five classical positions, with Fourth split open/closed. Role-aware: the
+  // two partners are not always in the same position (one may close while the other
+  // steps side). Single-select — the feet sit in one relationship per count.
+  footPosition: {
+    kind: "footPosition",
+    label: "Foot Position",
+    color: "#2c8a85",
+    cardinality: "single",
+    valueType: "enum",
+    values: ["first", "second", "third", "fourth_open", "fourth_closed", "fifth"],
+    description: "The ballet-derived position of the feet relative to each other.",
+    valueDefs: {
+      first: "First — heels together, toes turned out",
+      second: "Second — feet apart to the side, about one foot between the heels",
+      third: "Third — heel of the front foot touching the middle of the back foot",
+      fourth_open: "Fourth (open) — one foot forward, about a foot apart, a gap between",
+      fourth_closed: "Fourth (closed) — one foot forward, in contact, no gap",
+      fifth: "Fifth — heel of the front foot touching the toe of the back foot",
+    },
+    // Foot position can differ between partners (one closes while the other opens).
     roleAware: true,
     builtin: true,
   },
@@ -167,13 +246,28 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#8a5cab",
     cardinality: "single",
     valueType: "enum",
-    values: ["closed", "promenade", "wing", "CBMP"],
+    values: [
+      "closed",
+      "promenade",
+      "counter_promenade",
+      "outside_partner",
+      "left_side",
+      "right_side",
+      "tandem",
+      "wing",
+      "CBMP",
+    ],
     description: "The hold or dance position the step is danced in.",
     valueDefs: {
       closed: "Closed — closed hold, partners square",
-      promenade: "Promenade — a V-shaped promenade position",
+      promenade: "Promenade — a V-shape, the open sides of the couple together",
+      counter_promenade: "Counter promenade — a V-shape opening to the other (closed) side",
+      outside_partner: "Outside partner — stepping outside the partner, usually on the right side",
+      left_side: "Left side position — partners offset to the left",
+      right_side: "Right side position — partners offset to the right",
+      tandem: "Tandem — one partner directly in front of the other, both facing the same way",
       wing: "Wing — wing position",
-      CBMP: "CBMP — CBM Position: the foot placed across without the body turn",
+      CBMP: "CBMP — CBM Position: the foot placed across the line without the body turn",
     },
     // The hold is shared by the couple, so it isn't role-split.
     builtin: true,
@@ -184,10 +278,11 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#8a5cab",
     cardinality: "multi",
     valueType: "enum",
-    values: ["CBM"],
+    values: ["CBM", "side_leading"],
     description: "Body actions used through the step (more than one can apply).",
     valueDefs: {
       CBM: "CBM — Contrary Body Movement: turning the opposite side toward the moving leg",
+      side_leading: "Side leading — the same side of the body moves with the stepping foot",
     },
     // CBM is applied by the turning dancer, so it commonly differs by role.
     roleAware: true,

@@ -69,13 +69,14 @@ export interface ReadingColumn {
 const COLUMN_LABEL: Record<string, string> = {
   rise: "Rise",
   position: "Pos",
+  footPosition: "Feet",
   sway: "Sway",
   turn: "Turn",
   bodyActions: "Body",
 };
 
 /** Technique kinds that get a column, in the design's left-to-right order. */
-const ORDERED_KINDS = ["rise", "position", "sway", "turn"];
+const ORDERED_KINDS = ["rise", "position", "footPosition", "sway", "turn"];
 
 /** Kinds that never get their own column (they feed the merged Step chip). */
 const STEP_KINDS = new Set(["direction", "footwork"]);
@@ -119,7 +120,7 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
  *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
  *  "Body" column alongside `position` is NOT done here — each kind is its own
  *  column so a cell maps 1:1 to a (count, kind) editor target. */
-const EDIT_ORDERED_KINDS = ["rise", "position", "sway", "turn", "bodyActions"];
+const EDIT_ORDERED_KINDS = ["rise", "position", "footPosition", "sway", "turn", "bodyActions"];
 
 /**
  * Every column the EDIT grid should show for a figure's dance (frame 1.11:

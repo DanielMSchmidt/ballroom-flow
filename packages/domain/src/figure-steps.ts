@@ -12,14 +12,16 @@
 // the start/finish scaffold rather than carrying invented footwork.
 
 import type { DanceId } from "./dances";
-import { GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
+import type { Alignment } from "./doc-types";
+import { GENERATED_FIGURE_ALIGNMENTS, GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
 
 /**
  * One role's step content. `direction` (headline) + `footwork` are required; the
  * role-aware extras (`sway`, `turn`, `bodyActions`) are filled in when the source
  * gives them. All values are vocabulary tokens (see vocabulary.ts): direction is a
- * closed enum, footwork free-text (ISTD HT/T/TH/H/"heel pull"), sway to_L/to_R/none,
- * turn the turn enum (quarter_R…), bodyActions a list (e.g. ["CBM"]).
+ * closed enum, footwork the closed ISTD picklist (HT/TH/T/H/… plus the compound rolls
+ * BH/THT/T/H/T/…), sway to_L/to_R/none, turn the turn enum (quarter_R…), bodyActions
+ * a list (e.g. ["CBM"]).
  */
 export interface AuthoredFootwork {
   /** A value from the `direction` vocabulary (forward/back/side/behind/close/diagonal/in_place). */
@@ -38,9 +40,9 @@ export interface AuthoredFootwork {
  * One count's authored content. The per-role footwork plus the SHARED (non-role)
  * `rise` and `position` the couple dance together (vocabulary.ts marks both
  * non-roleAware). `rise` ∈ the rise enum (commence/continue/up/lowering/NFR…);
- * `position` ∈ the position enum (closed/promenade/wing/CBMP) — set only when the
- * source's position maps to one of those (e.g. "Outside Partner Position" has no
- * slot in our vocabulary, so it's left unset rather than written as an unknown).
+ * `position` ∈ the position enum (closed/promenade/counter_promenade/outside_partner/
+ * left_side/right_side/tandem/wing/CBMP) — set only when the source's position maps
+ * to one of those, else left unset rather than written as an unknown.
  */
 export interface AuthoredStep {
   leader: AuthoredFootwork;
@@ -65,4 +67,16 @@ export function authoredSteps(
   figureType: string,
 ): readonly AuthoredStep[] | undefined {
   return FIGURE_STEPS[`${dance}:${figureType}`];
+}
+
+/**
+ * Figure-level entry/exit alignment (per-figure, from the leader's perspective) for a
+ * charted figure, or `undefined` when the source doesn't chart it. Constant-alignment
+ * figures (e.g. a Waltz closed change, which doesn't turn) carry the same entry + exit.
+ */
+export function authoredAlignment(
+  dance: DanceId,
+  figureType: string,
+): { entry?: Alignment; exit?: Alignment } | undefined {
+  return GENERATED_FIGURE_ALIGNMENTS[`${dance}:${figureType}`];
 }

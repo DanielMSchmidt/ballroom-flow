@@ -20,9 +20,31 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     // Arrange: import the registry. Act: read each standard kind's values.
     // Covers AC-1 (standard kinds + values).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    // Footwork's pickable set is the design's compound ISTD codes (freeText still
-    // accepts legacy anatomical values).
-    expect(ATTRIBUTE_REGISTRY.footwork.values).toEqual(["HT", "T", "TH", "H", "heel pull"]);
+    // Footwork is a CLOSED PICKLIST in the editor (freeTextInput:false) over the
+    // common contacts + named actions first, then the compound rolls the catalog
+    // carries. (The schema stays lenient — freeText — for the syllabus scaffold.)
+    expect(ATTRIBUTE_REGISTRY.footwork.freeTextInput).toBe(false);
+    expect(ATTRIBUTE_REGISTRY.footwork.values).toEqual([
+      "HT",
+      "TH",
+      "T",
+      "H",
+      "B",
+      "WF",
+      "BF",
+      "IE",
+      "flat",
+      "heel turn",
+      "heel pull",
+      "BH",
+      "HTH",
+      "THT",
+      "T/H/T",
+      "H/T",
+      "T/H",
+      "T/TH",
+      "TH/T",
+    ]);
     expect(ATTRIBUTE_REGISTRY.direction.values).toEqual(
       expect.arrayContaining(["forward", "back", "side", "close"]),
     );
@@ -66,7 +88,8 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     // lenient, so it passes through unchanged rather than aliasing to CBMP).
     const { ATTRIBUTE_REGISTRY, normalizeValue } = await importDomain();
     expect(ATTRIBUTE_REGISTRY.position.values).toContain("CBMP");
-    expect(ATTRIBUTE_REGISTRY.bodyActions.values).toEqual(["CBM"]);
+    // bodyActions carries CBM + side_leading; CBMP/CBP never live here.
+    expect(ATTRIBUTE_REGISTRY.bodyActions.values).toContain("CBM");
     expect(ATTRIBUTE_REGISTRY.bodyActions.values).not.toContain("CBMP");
     expect(normalizeValue("bodyActions", "CBP")).toBe("CBP"); // alias removed
   });
@@ -107,14 +130,42 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
 
   // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
 
-  it("ships all seven standard kinds, every one builtin", async () => {
+  it("ships all eight standard kinds, every one builtin", async () => {
     // Intent: the standard tier is complete and flagged builtin (so the merge
     // and the creation UI can distinguish standard from user-defined kinds).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    for (const k of ["direction", "footwork", "rise", "position", "bodyActions", "sway", "turn"]) {
+    for (const k of [
+      "direction",
+      "footwork",
+      "footPosition",
+      "rise",
+      "position",
+      "bodyActions",
+      "sway",
+      "turn",
+    ]) {
       expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
       expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);
     }
+  });
+
+  it("models footPosition as a closed single-select enum of the five ballet positions", async () => {
+    // Intent: the ISTD "Foot Position" column (research/domain.md §2 #10) ships as a
+    // closed enum — Fourth split open/closed — so the strict write check (US-012)
+    // rejects an un-enumerated value.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    const fp = ATTRIBUTE_REGISTRY.footPosition;
+    expect(fp.cardinality).toBe("single");
+    expect(fp.freeText ?? false).toBe(false);
+    expect(fp.values).toEqual([
+      "first",
+      "second",
+      "third",
+      "fourth_open",
+      "fourth_closed",
+      "fifth",
+    ]);
+    expect(fp.appliesToDances).toBeUndefined(); // applies to every dance
   });
 
   it("applies rise to every Standard dance except Tango", async () => {
@@ -231,7 +282,7 @@ describe("T5 RegistryKind is data-driven (description / valueDefs / roleAware / 
     // mirrors, footwork differs, sway/turn mirror; the hold (position) + rise are
     // shared by the couple.
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    for (const k of ["direction", "footwork", "sway", "turn", "bodyActions"]) {
+    for (const k of ["direction", "footwork", "footPosition", "sway", "turn", "bodyActions"]) {
       expect(ATTRIBUTE_REGISTRY[k]?.roleAware, `${k} should be roleAware`).toBe(true);
     }
     expect(ATTRIBUTE_REGISTRY.position.roleAware ?? false).toBe(false);
