@@ -75,6 +75,11 @@ test.describe("@screenshots landing imagery", () => {
         await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
       }
     }
+    // Scroll to top and wait for section-added toasts to clear before screenshots.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.getByText("Added Long Side")).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Added Short Side")).not.toBeVisible({ timeout: 10_000 });
+
     // Hero: ASSEMBLE editor overview — "Your whole routine, figure by figure."
     // Captured at default viewport (punchy top-of-routine shot, not fullPage).
     await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible();
@@ -104,8 +109,11 @@ test.describe("@screenshots landing imagery", () => {
 
     // 4. Lanes cross-step grid — the "Lanes" button lives INSIDE the notation
     //    sheet (Assemble.tsx), so click it while the sheet is still open.
+    //    The grid renders below the fold of the sheet's scroll area; scroll it
+    //    into the modal's visible region before capturing.
     await page.getByRole("button", { name: "Lanes" }).click();
     await expect(page.getByRole("grid")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("grid").scrollIntoViewIfNeeded();
     await page.screenshot({ path: shot("lanes.png"), fullPage: true });
 
     // Close the notation sheet before navigating to reading view.
