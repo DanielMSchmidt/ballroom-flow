@@ -42,6 +42,45 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     );
   });
 
+  it("captures description, per-value definitions, and roleAware/required flags", async () => {
+    // Intent: the editor authors the data-driven RegistryKind fields (#111 / §3),
+    // so a custom kind keeps its prose + flags through to persistence.
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const onCreate = vi.fn();
+    renderUi(<AddKindSheet open onCreate={onCreate} />);
+    await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
+    await userEvent.type(screen.getByLabelText(/description/i), "How much drive the step carries");
+    await userEvent.type(screen.getByLabelText(/^values/i), "low, high");
+    // A per-value definition input appears for each parsed enum value.
+    await userEvent.type(screen.getByLabelText(/definition for "low"/i), "barely moving");
+    await userEvent.click(screen.getByRole("switch", { name: /leader/i }));
+    await userEvent.click(screen.getByRole("switch", { name: /required/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "energy",
+        description: "How much drive the step carries",
+        valueDefs: { low: "barely moving" },
+        roleAware: true,
+        required: true,
+      }),
+    );
+  });
+
+  it("omits the optional fields when left blank (no empty description/valueDefs)", async () => {
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const onCreate = vi.fn();
+    renderUi(<AddKindSheet open onCreate={onCreate} />);
+    await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
+    await userEvent.type(screen.getByLabelText(/^values/i), "low, high");
+    await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
+    const kind = onCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(kind).not.toHaveProperty("description");
+    expect(kind).not.toHaveProperty("valueDefs");
+    expect(kind).not.toHaveProperty("roleAware");
+    expect(kind).not.toHaveProperty("required");
+  });
+
   it("blocks submit when the label slugifies to an empty string (e.g. only punctuation)", async () => {
     // Intent: a label like "!!!" passes the non-empty check but slugifyKind returns "",
     //   which would create a kind with an empty `kind` key. The submit must be blocked

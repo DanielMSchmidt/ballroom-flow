@@ -12,10 +12,10 @@ export async function upsertAccountKind(
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO account_custom_kind (userId, kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, updatedAt, deletedAt)
-       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL)
+      `INSERT INTO account_custom_kind (userId, kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required, updatedAt, deletedAt)
+       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,NULL)
        ON CONFLICT(userId, kind) DO UPDATE SET
-         label=?3, color=?4, cardinality=?5, valueType=?6, valuesJson=?7, freeText=?8, appliesToDancesJson=?9, updatedAt=?10, deletedAt=NULL`,
+         label=?3, color=?4, cardinality=?5, valueType=?6, valuesJson=?7, freeText=?8, appliesToDancesJson=?9, description=?10, valueDefsJson=?11, roleAware=?12, required=?13, updatedAt=?14, deletedAt=NULL`,
     )
     .bind(
       userId,
@@ -27,6 +27,10 @@ export async function upsertAccountKind(
       k.values ? JSON.stringify(k.values) : null,
       k.freeText == null ? null : k.freeText ? 1 : 0,
       k.appliesToDances ? JSON.stringify(k.appliesToDances) : null,
+      k.description ?? null,
+      k.valueDefs ? JSON.stringify(k.valueDefs) : null,
+      k.roleAware == null ? null : k.roleAware ? 1 : 0,
+      k.required == null ? null : k.required ? 1 : 0,
       now,
     )
     .run();
@@ -36,7 +40,7 @@ export async function upsertAccountKind(
 export async function listAccountKinds(db: D1Database, userId: string): Promise<RegistryKindDto[]> {
   const rows = await db
     .prepare(
-      `SELECT kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson
+      `SELECT kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required
        FROM account_custom_kind WHERE userId = ?1 AND deletedAt IS NULL ORDER BY updatedAt DESC`,
     )
     .bind(userId)
@@ -49,6 +53,10 @@ export async function listAccountKinds(db: D1Database, userId: string): Promise<
       valuesJson: string | null;
       freeText: number | null;
       appliesToDancesJson: string | null;
+      description: string | null;
+      valueDefsJson: string | null;
+      roleAware: number | null;
+      required: number | null;
     }>();
   return rows.results.map((r) => ({
     kind: r.kind,
@@ -61,6 +69,12 @@ export async function listAccountKinds(db: D1Database, userId: string): Promise<
     appliesToDances: r.appliesToDancesJson
       ? (JSON.parse(r.appliesToDancesJson) as RegistryKindDto["appliesToDances"])
       : undefined,
+    description: r.description ?? undefined,
+    valueDefs: r.valueDefsJson
+      ? (JSON.parse(r.valueDefsJson) as Record<string, string>)
+      : undefined,
+    roleAware: r.roleAware == null ? undefined : r.roleAware === 1,
+    required: r.required == null ? undefined : r.required === 1,
     builtin: false,
   }));
 }

@@ -64,6 +64,75 @@ describe("US-043 account custom-kind persistence", () => {
     });
   });
 
+  it("round-trips the data-driven fields (description, valueDefs, roleAware, required)", async () => {
+    // Follow-up to #111: the editor now authors these RegistryKind fields, so the
+    // account_custom_kind table must persist + return them (else they vanish on reload).
+    const ctx = await authedContext({ keypair: kp, userId: "u_ckdd", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_ckdd", displayName: "DD", identityColor: "#111", plan: "free" }],
+    });
+
+    const richKind = {
+      kind: "energy",
+      label: "Energy",
+      color: "#ff6600",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["low", "high"],
+      description: "How much drive the step carries",
+      valueDefs: { low: "barely moving", high: "full power" },
+      roleAware: true,
+      required: false,
+      builtin: false,
+    };
+    const post = await SELF.fetch("https://x/api/account/custom-kinds", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify(richKind),
+    });
+    expect(post.status).toBe(201);
+
+    const get = await SELF.fetch("https://x/api/account/custom-kinds", {
+      headers: ctx.authHeaders(),
+    });
+    const body = await get.json<{
+      kinds: {
+        kind: string;
+        description?: string;
+        valueDefs?: Record<string, string>;
+        roleAware?: boolean;
+        required?: boolean;
+      }[];
+    }>();
+    const energy = body.kinds.find((k) => k.kind === "energy");
+    expect(energy?.description).toBe("How much drive the step carries");
+    expect(energy?.valueDefs).toEqual({ low: "barely moving", high: "full power" });
+    // roleAware:true → read back true; required:false → read back false (0/1 branch).
+    expect(energy?.roleAware).toBe(true);
+    expect(energy?.required).toBe(false);
+  });
+
+  it("omits the data-driven fields when not supplied (null → undefined branch)", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_cknull", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_cknull", displayName: "NU", identityColor: "#111", plan: "free" }],
+    });
+    await SELF.fetch("https://x/api/account/custom-kinds", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify(sampleKind),
+    });
+    const get = await SELF.fetch("https://x/api/account/custom-kinds", {
+      headers: ctx.authHeaders(),
+    });
+    const body = await get.json<{
+      kinds: { kind: string; description?: string; roleAware?: boolean }[];
+    }>();
+    const energy = body.kinds.find((k) => k.kind === "energy");
+    expect(energy?.description).toBeUndefined();
+    expect(energy?.roleAware).toBeUndefined();
+  });
+
   it("round-trips a free-text kind with NO values/appliesToDances (covers the null + freeText branches)", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_ckft", docRef: "n/a", role: null });
     await seedDb({
