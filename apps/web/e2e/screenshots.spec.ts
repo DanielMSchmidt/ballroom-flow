@@ -109,12 +109,11 @@ test.describe("@screenshots landing imagery", () => {
 
     // 4. Lanes cross-step grid — the "Lanes" button lives INSIDE the notation
     //    sheet (Assemble.tsx), so click it while the sheet is still open.
-    //    The grid renders below the fold of the sheet's scroll area; scroll it
-    //    into the modal's visible region before capturing.
+    //    Element-level screenshot crops tightly to the grid so the beats + chips
+    //    dominate the frame rather than being buried under annotation chrome.
     await page.getByRole("button", { name: "Lanes" }).click();
     await expect(page.getByRole("grid")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("grid").scrollIntoViewIfNeeded();
-    await page.screenshot({ path: shot("lanes.png"), fullPage: true });
+    await page.getByRole("grid").screenshot({ path: shot("lanes.png") });
 
     // Close the notation sheet before navigating to reading view.
     await page.keyboard.press("Escape");
