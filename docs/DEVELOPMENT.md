@@ -138,7 +138,7 @@ the moment a test calls it.
 Automerge throws when a value is `undefined` — `RangeError: Cannot assign
 undefined value at /path` — at `A.from(...)` and inside `A.change(...)`. Our
 logical doc shapes carry optional fields (e.g. `entryAlignment`,
-`perPlacementAlignment`, `overlay`, `baseFigureRef`) that POJOs/fixtures often
+`perPlacementAlignment`, `baseFigureRef`) that POJOs/fixtures often
 leave `undefined`, so feeding them straight into Automerge fails. The domain doc
 builders therefore **strip `undefined`-valued keys before `A.from`** (JSON
 drop-the-key semantics — an absent optional simply isn't set, and reads still

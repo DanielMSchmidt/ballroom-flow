@@ -117,13 +117,12 @@ describe("US-007 Choreo fork (clone)", () => {
 describe("US-008 Copy-on-write (frozen copy)", () => {
   it("spawns an owned frozen copy (own attributes + baseFigureRef provenance) and re-points the placement", async () => {
     // Intent: editing a non-owned figure diverges only that figure into an owned,
-    // FROZEN copy carrying its own attributes — no overlay, no flow-up (§5.2,
-    // §2.5.1 #14–18).
+    // FROZEN copy carrying its own attributes — no flow-up (§5.2, §2.5.1 #14–18).
     // Arrange: a placement pointing at the global FEATHER_FOXTROT; editor = student.
     // Act: copyOnWrite(placement, FEATHER_FOXTROT, student).
     // Assert: new figure doc has scope:account, ownerId:student, source:custom,
-    //   baseFigureRef:FEATHER_FOXTROT.id, its OWN attributes (== base by content),
-    //   and NO overlay; placement.figureRef re-points to it.
+    //   baseFigureRef:FEATHER_FOXTROT.id, its OWN attributes (== base by content);
+    //   placement.figureRef re-points to it.
     // Covers US-008 AC-1 (copy fields) + AC-2 (placement re-pointed) — §10.2 "placement re-point".
     const { copyOnWrite } = await importDomain();
     const placement = makePlacement(FEATHER_FOXTROT.id, { id: "plc_cow" });
@@ -140,8 +139,6 @@ describe("US-008 Copy-on-write (frozen copy)", () => {
     });
     // The copy carries its OWN attributes, equal by content to the source's.
     expect(variant?.attributes).toEqual(FEATHER_FOXTROT.attributes);
-    // No overlay — the live-overlay model is retired.
-    expect(variant?.overlay).toBeUndefined();
     expect(repointed.figureRef).toBe(variant?.id);
   });
 

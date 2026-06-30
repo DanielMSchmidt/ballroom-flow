@@ -29,7 +29,6 @@ export type {
   FigureDoc,
   FigureSource,
   FigureType,
-  Overlay,
   Placement,
   Reply,
   Role,
