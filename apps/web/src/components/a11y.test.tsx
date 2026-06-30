@@ -31,16 +31,23 @@ const SCREENS: { name: string; ui: ReactElement }[] = [
   { name: "AttributeEditor", ui: <AttributeEditor count={1} role="editor" dance="foxtrot" /> },
   { name: "FigureTimeline", ui: <FigureTimeline role="editor" dance="foxtrot" /> },
   { name: "AnnotationPanel", ui: <AnnotationPanel role="commenter" /> },
-  { name: "FigureLibrary", ui: <FigureLibrary /> },
+  // Filter to ONE dance on purpose. Prop-less, FigureLibrary renders the entire
+  // ~240-figure catalog (~3000 DOM nodes); axe is O(nodes), so that single sweep
+  // took ~3s warm and 13–17s under parallel CI load — over vitest's 5s default,
+  // which is exactly what flaked CI on nearly every branch. a11y violations are a
+  // property of the *markup* (heading order, button labels, aria), which is
+  // identical for every figure card — one dance exercises every distinct element
+  // (header, dance chips, section divider, figure card, scope dot) at ~585 nodes
+  // / ~0.2s, so the coverage is the same and the flake is gone.
+  { name: "FigureLibrary", ui: <FigureLibrary initialDance="waltz" /> },
   { name: "Profile", ui: <Profile plan="free" ownedRoutineCount={0} /> },
 ];
 
-// axe traversal is CPU-heavy and runs much slower under the full suite's parallel
-// load than in isolation — the FigureLibrary sweep (the largest tree) can exceed
-// vitest's default 5000ms and flake the whole gate (seen on CI during the design-
-// parity follow-up integration). Give the axe sweeps a generous timeout;
-// correctness is unchanged, only the allowed wall-clock.
-const AXE_TIMEOUT_MS = 30_000;
+// Axe sweeps are inherently heavier than a normal component assertion. Give them
+// a generous ceiling (vs. the 5s default) so a slow-but-correct sweep can never
+// tip into a timeout under CI contention — a safety net beyond the node-count cut
+// above, and headroom for screens added later.
+const AXE_TIMEOUT_MS = 20_000;
 
 describe("US-051 Accessibility WCAG AA — axe clean on each screen", () => {
   for (const { name, ui } of SCREENS) {
