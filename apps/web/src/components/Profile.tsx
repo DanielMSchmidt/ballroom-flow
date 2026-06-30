@@ -156,11 +156,13 @@ export function Profile({
           </p>
         </fieldset>
 
-        {/* Plan + owned/cap count (US-053 AC-2). */}
+        {/* Plan + owned/cap count (US-053 AC-2).
+            D7: show "Free · N of M routines" status when plan + cap are known (design 1.18). */}
         <section className="flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
           <p className="text-2xs text-ink-muted">
-            You own {ownedRoutineCount} {routineWord}
-            {plan === "free" && routineCap ? ` of ${routineCap}` : ""}.
+            {plan === "free" && routineCap != null
+              ? `Free · ${ownedRoutineCount} of ${routineCap} routines`
+              : `You own ${ownedRoutineCount} ${routineWord}${plan === "free" && routineCap ? ` of ${routineCap}` : ""}.`}
           </p>
           <Badge tone={plan === "pro" ? "accent" : "neutral"}>
             {plan === "pro" ? "Pro plan" : "Free plan"}

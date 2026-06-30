@@ -69,6 +69,9 @@ test.describe("@smoke choreo fork is frozen / independent", () => {
 
     // Student opens it (read-only — no Add section) and forks it.
     await student.page.goto(`/routines/${docRef}`);
+    // Opening an existing routine lands in READ; switch to the list view so
+    // section headings are visible. The viewer still has no Add section button.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.getByRole("heading", { name: "OriginSec" })).toBeVisible({
       timeout: 15_000,
     });
@@ -81,6 +84,9 @@ test.describe("@smoke choreo fork is frozen / independent", () => {
     await expect(student.page.getByText(/forked copy/i)).toBeVisible({ timeout: 15_000 });
     const forkRef = new URL(student.page.url()).pathname.split("/").pop();
     expect(forkRef).not.toBe(docRef);
+    // Forking opens the new routine in READ; switch to EDIT so section headings
+    // and the Add section affordance (student now owns the fork) are visible.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.getByRole("heading", { name: "OriginSec" })).toBeVisible();
     await expect(student.page.getByRole("button", { name: "Add section" })).toBeVisible();
 
@@ -120,9 +126,9 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // Open the figure's step timeline and set count-1 footwork "T".
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
-    await page.getByRole("button", { name: /^ball$/ }).click();
+    await page.getByRole("button", { name: /^HT$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
 
@@ -131,11 +137,14 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // Wait for the routine to re-hydrate (DO reconnects + replays changes).
     await page.goto(`/routines/${docRef}`);
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to EDIT to access the
+    // step timeline editor.
+    await page.getByRole("button", { name: /list view/i }).click();
 
     // Re-open the figure's step timeline and verify "T" is still there.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     // The count 1 summary chip is visible without expanding — proves DO-persistence.
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -186,12 +195,15 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
 
     // The placement card should show the global figure.
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to EDIT to access the
+    // step timeline editor for the copy-on-write trigger.
+    await page.getByRole("button", { name: /list view/i }).click();
 
     // Open the figure's steps and trigger copy-on-write by editing count 1.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     // "T" is a suggestion in the Step kind; clicking it on a global figure triggers COW.
-    await page.getByRole("button", { name: /^ball$/ }).click();
+    await page.getByRole("button", { name: /^HT$/ }).click();
 
     // The FigureTimeline immediately shows "Copied as your variant" (local state).
     // Use .first() because both FigureTimeline (on `copied`) and Assemble (`copiedToast`)
@@ -282,6 +294,9 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     // Student (co-member) opens the shared routine, opens the figure → SEES the note.
     await student.page.goto(`/routines/${docRef}`);
     await expect(student.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to the list view so the
+    // per-figure step button is accessible. Commenter has no Add section even here.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await student.page.getByRole("button", { name: /steps: Feather Step/i }).click();
     const studentFamily = student.page.getByRole("region", { name: /family notes/i });
     await expect(studentFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
@@ -333,17 +348,20 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     // The co-editor opens the routine + the figure, and tags count 1 footwork "T".
     await editor.page.goto(`/routines/${docRef}`);
     await expect(editor.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to EDIT to access the
+    // step timeline editor.
+    await editor.page.getByRole("button", { name: /list view/i }).click();
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await editor.page.getByRole("button", { name: /beat 1/i }).click();
-    await editor.page.getByRole("button", { name: /^ball$/ }).click();
-    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await editor.page.getByRole("button", { name: /^HT$/ }).click();
+    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
 
     // The OWNER opens the SAME figure → sees the co-editor's edit converge: it hit the
     // shared figure doc, not just the co-editor's local copy (cascade edit is real).
     await owner.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
 

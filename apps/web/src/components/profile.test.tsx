@@ -151,6 +151,32 @@ describe("T4 Profile attribute-types manager (frame 1.17)", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// D7 — Quota status in Profile (design 1.18).
+// "Profile shows status 'Free · 2 of 3 routines'" — concise plan+cap summary.
+// ─────────────────────────────────────────────────────────────────────────
+describe("D7 Quota status in Profile (design 1.18)", () => {
+  it("shows 'Free · N of M routines' when plan is free and routineCap is known", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={2} routineCap={3} />);
+    expect(screen.getByText(/free · 2 of 3 routines/i)).toBeInTheDocument();
+  });
+
+  it("falls back to the standard ownership sentence when cap is unknown", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={2} />);
+    expect(screen.getByText(/you own 2 routines/i)).toBeInTheDocument();
+    expect(screen.queryByText(/free · /i)).toBeNull();
+  });
+
+  it("shows the standard sentence for a pro user (no cap display)", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="pro" ownedRoutineCount={5} routineCap={3} />);
+    expect(screen.queryByText(/free · /i)).toBeNull();
+    expect(screen.getByText(/pro plan/i)).toBeInTheDocument();
+  });
+});
+
 // US-038 Per-user undo / redo UX: the undo/redo affordances + "Undone" toast live
 // on the OPEN routine (the Assemble header), not on a standalone <UndoControls> or
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe

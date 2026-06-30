@@ -136,6 +136,30 @@ describe("T2 Open/Fork sheet (frame 1.4)", () => {
   });
 });
 
+describe("D7 Quota label (design 1.18)", () => {
+  it("shows 'Free · N of M' in the header when on free plan with a known cap", async () => {
+    // Intent (D7 design 1.18): a free-plan user at quota sees 'Free · 2 of 3' in the
+    //   'My Choreos' header so they know how many owned routines they have left.
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={2} plan="free" cap={3} />);
+    expect(screen.getByText(/free · 2 of 3/i)).toBeInTheDocument();
+  });
+
+  it("does not show the quota label when cap is unknown", async () => {
+    // Intent: cap is sourced from /api/me which may not have loaded yet — don't show
+    //   stale UI while it resolves.
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={2} plan="free" />);
+    expect(screen.queryByText(/free · /i)).toBeNull();
+  });
+
+  it("does not show the quota label for a pro user", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={5} plan="pro" cap={3} />);
+    expect(screen.queryByText(/free · /i)).toBeNull();
+  });
+});
+
 describe("Delete a routine (owner-only, confirmed)", () => {
   const owned = [
     {

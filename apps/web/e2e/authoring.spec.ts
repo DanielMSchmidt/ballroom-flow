@@ -61,39 +61,47 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /^forward$/ }).click();
-    await page.getByRole("button", { name: /^ball$/ }).click();
+    await page.getByRole("button", { name: /^HT$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible();
-    // 4c. Set the figure's entry alignment (US-031): a facing-direction → a chip.
-    await page.getByLabel(/entry direction/i).selectOption("DW");
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
+    // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)
+    //     direction chip in the Entry group (qualifier defaults to "facing"), then
+    //     close the sheet; the placement shows an "entry facing diag wall" chip.
+    await page
+      .getByRole("group", { name: /entry alignment/i })
+      .getByRole("button", { name: /^diag wall$/i })
+      .click();
     await page.keyboard.press("Escape");
-    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
     //    reconnect (US-018 open & view). The figure-after-reload is reliable now
     //    that the server owns the figure seed (no racy client write).
     await page.reload();
+    // Reload returns to READ; switch back to EDIT so section headings and the
+    // step-timeline editor are accessible below.
+    await page.getByRole("button", { name: /list view/i }).click();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
     // The entry-alignment chip persisted too (figure doc).
-    await expect(page.getByText(/entry DW/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("ball")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });
     await page.keyboard.press("Escape");
 
     // 5c. The reading view lays the whole routine out read-only as a per-figure
     //     used-columns table — the step's direction + footwork MERGE into one
-    //     blue Step chip (frame 1.6): "forward" + "ball" → "fwd·B".
+    //     blue Step chip (frame 1.6): "forward" + "HT" → "fwd·HT".
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
-    await expect(reading.getByText("fwd·B")).toBeVisible();
+    await expect(reading.getByText("fwd·HT")).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
@@ -159,6 +167,8 @@ test.describe("@smoke core authoring journey", () => {
 
     // persists across reload: re-open the figure + count 1, Energy still there
     await page.reload();
+    // Reload returns to READ; switch back to EDIT to access the step timeline.
+    await page.getByRole("button", { name: /list view/i }).click();
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /more attributes/i }).click();

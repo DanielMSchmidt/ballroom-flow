@@ -2,7 +2,8 @@
 //
 // One vocabulary, two postures (D7 "forward-compatible reads, strict writes"):
 //   • READ is LENIENT — a future/unknown value survives (no data loss); aliases
-//     normalize (CBP→CBMP). This keeps old clients reading new data.
+//     normalize (the split diagonal diag_forward/diag_back → diagonal). This
+//     keeps old clients reading new data.
 //   • WRITE is STRICT — a value written to a KNOWN enum kind must be in that
 //     kind's registry enum, and (when a dance meter is given) the count must be a
 //     valid timing position: ≥ 1 and on the 1/8-note grid. This stops bad data
@@ -27,7 +28,7 @@ const baseAttribute = z.object({
   deletedAt: z.number().nullish(),
 });
 
-/** Normalize an attribute's value through the read-side aliases (CBP→CBMP). */
+/** Normalize an attribute's value through the read-side aliases (diag_*→diagonal). */
 function withNormalizedValue<T extends { kind: string; value: unknown }>(attr: T): T {
   if (typeof attr.value === "string") {
     return { ...attr, value: normalizeValue(attr.kind, attr.value) };

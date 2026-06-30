@@ -6,7 +6,8 @@
 //   • user-defined kinds — created in-app (US-043), merged via mergeRegistry.
 //
 // Forward-compatible reads (§3): unknown values pass through on read, aliases
-// normalize (CBP→CBMP), and unknown-value *writes* to a known kind are rejected
+// normalize (the split diagonal diag_forward/diag_back → diagonal), and
+// unknown-value *writes* to a known kind are rejected
 // — the write-side rejection lives in the Zod layer (US-012), not here. This
 // module owns the vocabulary data, the merge, and read-side alias normalization.
 //
@@ -70,7 +71,7 @@ export interface RegistryKind {
 export interface StandardRegistry extends Record<string, RegistryKind> {
   /** The step's travel direction — its headline (forward/back/side/…). */
   direction: RegistryKind;
-  /** The foot part of the step (ball/heel/…). Renamed from the old `step` kind. */
+  /** The foot part of the step (HT/T/TH/…). Renamed from the old `step` kind. */
   footwork: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
@@ -95,15 +96,15 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#2f5d8f",
     cardinality: "single",
     valueType: "enum",
-    values: ["forward", "back", "side", "close", "diag_forward", "diag_back", "in_place"],
+    values: ["forward", "back", "side", "behind", "close", "diagonal", "in_place"],
     description: "Which way the step travels across the floor — the step's headline.",
     valueDefs: {
       forward: "Forward — stepping forward along your line",
       back: "Back — stepping backward",
       side: "Side — stepping to the side",
+      behind: "Behind — crossing behind the supporting foot",
       close: "Close — feet close together, no travel",
-      diag_forward: "Diagonal forward — forward on a diagonal",
-      diag_back: "Diagonal back — back on a diagonal",
+      diagonal: "Diagonal — travelling on a diagonal",
       in_place: "In place — a weight change with no travel",
     },
     // Direction mirrors by role (leader forward ⇄ follower back). It also drives
@@ -113,28 +114,27 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     builtin: true,
   },
   // The foot part of the step (renamed from the old `step` kind, which held the
-  // same foot-part pressure tokens). Readable value set; `freeText` keeps the
-  // classic ISTD tokens (HT/TH/heel_pull) and one-offs valid, and the read-side
-  // aliases below normalize the clean singles (H→heel, T→toe). Single-select:
-  // a step has one foot part (a roll is one compound token, e.g. ball_flat).
+  // same foot-part pressure tokens). The pickable set is the design's compound
+  // ISTD codes (HT/T/TH/H/heel pull); `freeText` keeps any legacy anatomical
+  // value (ball/heel/toe/…) and one-offs valid + displayable. H and T are now
+  // canonical picker values, so they are NOT rewritten on read. Single-select:
+  // a step has one foot part (a roll is one compound token, e.g. HT).
   footwork: {
     kind: "footwork",
     label: "Footwork",
     color: "#a9742c",
     cardinality: "single",
     valueType: "enum",
-    values: ["ball", "ball_flat", "flat", "heel", "heel_ball", "toe", "tap"],
+    values: ["HT", "T", "TH", "H", "heel pull"],
     freeText: true,
     description:
       "The part of the foot contacting the floor through the step — read in order of contact.",
     valueDefs: {
-      ball: "Ball — ball of the foot",
-      ball_flat: "Ball-Flat — ball, then lowering to flat",
-      flat: "Flat — the whole foot flat",
-      heel: "Heel — heel leads, e.g. forward walks",
-      heel_ball: "Heel-Ball — heel, then rising to ball",
-      toe: "Toe — ball/toe only, e.g. side steps in rise",
-      tap: "Tap — a tap with no weight taken",
+      HT: "HT — Heel-Toe (e.g. forward walks)",
+      T: "T — Toe/ball (e.g. side steps in rise)",
+      TH: "TH — Toe-Heel (e.g. back walks, the closing/lowering step)",
+      H: "H — Heel",
+      "heel pull": "Heel pull — the heel-pull action (e.g. a heel turn)",
     },
     // Footwork genuinely differs by role (e.g. heel turns are the follower's).
     roleAware: true,
@@ -167,12 +167,13 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#8a5cab",
     cardinality: "single",
     valueType: "enum",
-    values: ["closed", "promenade", "wing"],
+    values: ["closed", "promenade", "wing", "CBMP"],
     description: "The hold or dance position the step is danced in.",
     valueDefs: {
       closed: "Closed — closed hold, partners square",
       promenade: "Promenade — a V-shaped promenade position",
       wing: "Wing — wing position",
+      CBMP: "CBMP — CBM Position: the foot placed across without the body turn",
     },
     // The hold is shared by the couple, so it isn't role-split.
     builtin: true,
@@ -183,13 +184,12 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#8a5cab",
     cardinality: "multi",
     valueType: "enum",
-    values: ["CBM", "CBMP"],
+    values: ["CBM"],
     description: "Body actions used through the step (more than one can apply).",
     valueDefs: {
       CBM: "CBM — Contrary Body Movement: turning the opposite side toward the moving leg",
-      CBMP: "CBMP — CBM Position: the foot placed across without the body turn",
     },
-    // CBM/CBMP are applied by the turning dancer, so they commonly differ by role.
+    // CBM is applied by the turning dancer, so it commonly differs by role.
     roleAware: true,
     builtin: true,
   },
@@ -248,16 +248,15 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
 // Read-side value aliases (Q-D4). Keyed by kind → { alias: canonical }. Unknown
 // values that aren't aliases pass through untouched (forward-compatible reads).
 const VALUE_ALIASES: Record<string, Record<string, string>> = {
-  bodyActions: { CBP: "CBMP" },
-  // Legacy ISTD single tokens → the readable footwork values (2026-06-28 parity).
-  // The compound tokens (HT/TH/heel_pull) have no clean readable equivalent, so
-  // they pass through as free-text rather than being lossily rewritten.
-  footwork: { H: "heel", T: "toe" },
+  // The split diagonal (diag_forward/diag_back) collapsed into a single
+  // `diagonal` value; legacy docs/seeds read through without a doc migration.
+  direction: { diag_forward: "diagonal", diag_back: "diagonal" },
 };
 
 /**
  * Normalize a value read for a kind: map known aliases to their canonical form
- * (e.g. bodyActions "CBP" → "CBMP"); pass any other value through unchanged.
+ * (e.g. direction "diag_forward" → "diagonal"); pass any other value through
+ * unchanged.
  */
 export function normalizeValue(kind: string, value: string): string {
   return VALUE_ALIASES[kind]?.[value] ?? value;

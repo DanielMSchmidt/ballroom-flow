@@ -25,7 +25,8 @@ test.describe("@smoke account profile", () => {
     // Open the Profile tab: plan + owned-routine count show (US-053 AC-2).
     await page.getByRole("button", { name: "Profile" }).click();
     await expect(page.getByText(/free plan/i)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/own 0 routines/i)).toBeVisible();
+    // D7 (design 1.18): a free user with a known cap shows "Free · N of M routines".
+    await expect(page.getByText(/free · 0 of 3 routines/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible();
 
     // Edit the display name and save (US-053 AC-1 → POST /api/onboarding).
