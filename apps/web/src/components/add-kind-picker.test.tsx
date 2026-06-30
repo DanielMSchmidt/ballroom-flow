@@ -33,6 +33,14 @@ describe("AddKindPicker (frame 1.15)", () => {
     expect(screen.getByText(/custom/i)).toBeInTheDocument();
   });
 
+  it("surfaces registry-derived L/F (roleAware) + required affordances (T5)", async () => {
+    const { AddKindPicker } = await load();
+    renderUi(<AddKindPicker open dance="waltz" />);
+    // Direction is the required slot → a required marker; role-aware kinds show L/F.
+    expect(screen.getAllByLabelText("required").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("L/F").length).toBeGreaterThan(0);
+  });
+
   it("calls onSelectKind with the chosen kind", async () => {
     const { AddKindPicker } = await load();
     const onSelectKind = vi.fn();

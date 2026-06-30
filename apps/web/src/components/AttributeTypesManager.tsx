@@ -5,9 +5,10 @@
 // (the shared AddKindSheet, frame 1.16).
 //
 // Registry-driven: standard rows come from ATTRIBUTE_REGISTRY; custom rows from
-// the passed-in account/choreo kinds. STORE-DATA GAP: role-awareness (the L/F
-// badge) and "required" are not modelled on RegistryKind, so they're not shown
-// here — only the registry-backed cardinality + scope are.
+// the passed-in account/choreo kinds. Each row surfaces the registry data — the
+// colour dot, cardinality, an "L/F" badge for a role-aware kind (`roleAware`),
+// a "required" marker for a core slot (`required`), and the scope label. A
+// custom kind that carries `roleAware`/`required` gets the same affordances.
 import { ATTRIBUTE_REGISTRY, type RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
 import { Button, PlusIcon } from "../ui";
@@ -76,7 +77,26 @@ export function AttributeTypesManager({
               style={{ color: custom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
             >
               {kind.label}
+              {kind.required && (
+                // role="img" gives the "*" glyph an accessible label ("required").
+                <span
+                  role="img"
+                  className="ml-0.5 align-super text-2xs text-ink-muted"
+                  title="Required attribute type"
+                  aria-label="required"
+                >
+                  *
+                </span>
+              )}
             </span>
+            {kind.roleAware && (
+              <span
+                className="flex-none rounded-[5px] border border-border-subtle px-1.5 py-0.5 text-[9px] font-bold text-ink-muted"
+                title="Commonly differs by leader / follower"
+              >
+                L/F
+              </span>
+            )}
             <span className="flex-none text-2xs text-ink-muted">{kind.cardinality}</span>
             <span aria-hidden="true" className="flex-none text-ink-faint">
               ·
