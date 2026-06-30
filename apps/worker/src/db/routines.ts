@@ -280,6 +280,25 @@ export async function getDocOwner(db: D1Database, docRef: string): Promise<strin
   return row?.ownerId ?? null;
 }
 
+/**
+ * Soft-delete a routine (US-025 delete flow): set the registry row's `deletedAt`
+ * tombstone — never a hard removal (PLAN §2.1: all deletes are tombstones). Once
+ * tombstoned the routine drops out of the list/count/search (every read filters
+ * `deletedAt IS NULL`), and the DO alarm's projection upsert leaves `deletedAt`
+ * untouched (it's absent from the ON CONFLICT update), so it never resurrects.
+ * Idempotent: a re-delete matches zero rows (already tombstoned). Returns the
+ * number of rows tombstoned (0 → unknown/already-deleted → the route 404s).
+ */
+export async function softDeleteRoutine(db: D1Database, docRef: string): Promise<number> {
+  const res = await db
+    .prepare(
+      "UPDATE document_registry SET deletedAt = ? WHERE docRef = ? AND type = 'routine' AND deletedAt IS NULL",
+    )
+    .bind(Date.now(), docRef)
+    .run();
+  return res.meta?.changes ?? 0;
+}
+
 export async function createOwnedRoutine(db: D1Database, r: NewRoutine): Promise<void> {
   const now = Date.now();
   const d = drizzle(db);
