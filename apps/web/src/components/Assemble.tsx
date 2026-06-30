@@ -47,7 +47,6 @@ import {
   kindVar,
   OfflineState,
   ScreenHeader,
-  Select,
   ShareIcon,
   Sheet,
   Skeleton,
@@ -356,9 +355,11 @@ export function Assemble({
                 (US-010); B's concurrent edit survives. Editor-only. */}
             {canEdit && (
               <>
+                {/* D7: glyph glyphs ↶/↷ (design 1.21) with aria-label for accessible name. */}
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-label="Undo"
                   onClick={() => {
                     // Undo always proceeds (CRDT merges). When another actor had
                     // built on the reverted change, soften the toast — advisory
@@ -373,10 +374,10 @@ export function Assemble({
                     }
                   }}
                 >
-                  Undo
+                  <span aria-hidden="true">↶</span> Undo
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => store.redo()}>
-                  Redo
+                <Button variant="ghost" size="sm" aria-label="Redo" onClick={() => store.redo()}>
+                  <span aria-hidden="true">↷</span> Redo
                 </Button>
               </>
             )}
@@ -417,17 +418,38 @@ export function Assemble({
         </Sheet>
 
         {mode === "read" ? (
-          <RoutineReadingView
-            routine={routine}
-            placements={store.readPlacements()}
-            annotations={store.readAnnotations()}
-            canComment={can(role, "canAnnotate")}
-            memberColors={memberColorMap}
-            roleView={roleView}
-            onRoleViewChange={setRoleView}
-            onOpenFigure={(figureId) => setNotating(figureId)}
-            onOpenThread={(anchor) => setThreadAnchor(anchor)}
-          />
+          <>
+            {/* D5: "Make it mine" fork banner (design 1.19).
+                Shown to read-only viewers (canEdit=false) who have a fork path (onFork set).
+                Gives the Golden Waltz sample viewer a visible fork CTA. */}
+            {onFork && !canEdit && (
+              <div
+                className="flex items-center gap-3 rounded-lg border p-3"
+                style={{
+                  background: "var(--bf-scope-custom-tint)",
+                  borderColor: "var(--bf-scope-custom-border)",
+                }}
+              >
+                <p className="flex-1 text-xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
+                  Viewing a read-only routine
+                </p>
+                <Button variant="primary" size="sm" loading={forking} onClick={onFork}>
+                  Make it mine
+                </Button>
+              </div>
+            )}
+            <RoutineReadingView
+              routine={routine}
+              placements={store.readPlacements()}
+              annotations={store.readAnnotations()}
+              canComment={can(role, "canAnnotate")}
+              memberColors={memberColorMap}
+              roleView={roleView}
+              onRoleViewChange={setRoleView}
+              onOpenFigure={(figureId) => setNotating(figureId)}
+              onOpenThread={(anchor) => setThreadAnchor(anchor)}
+            />
+          </>
         ) : routine.sections.length === 0 ? (
           // Empty state (frame 1.8): a freshly created/forked-empty routine.
           <EmptyState canEdit={canEdit} onAdd={(name) => store.addSection(name)} />
@@ -555,6 +577,29 @@ export function Assemble({
       >
         {notatingFigure && (
           <div className="flex flex-col gap-4">
+            {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
+                chips above the timeline when either entry or exit alignment is set. */}
+            {(notatingFigure.entryAlignment || notatingFigure.exitAlignment) && (
+              <div className="flex items-center gap-2">
+                {notatingFigure.entryAlignment && (
+                  <Chip tone="accent" asStatic>
+                    {notatingFigure.entryAlignment.qualifier}{" "}
+                    {DIRECTION_LABEL[notatingFigure.entryAlignment.direction]}
+                  </Chip>
+                )}
+                {notatingFigure.entryAlignment && notatingFigure.exitAlignment && (
+                  <span aria-hidden="true" className="text-xs text-ink-faint">
+                    →
+                  </span>
+                )}
+                {notatingFigure.exitAlignment && (
+                  <Chip tone="accent" asStatic>
+                    {notatingFigure.exitAlignment.qualifier}{" "}
+                    {DIRECTION_LABEL[notatingFigure.exitAlignment.direction]}
+                  </Chip>
+                )}
+              </div>
+            )}
             <FigureTimeline
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
@@ -1226,6 +1271,18 @@ const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
   "DC_against",
 ];
 
+/** Human-readable labels for alignment directions (frame 1.20). */
+const DIRECTION_LABEL: Record<Alignment["direction"], string> = {
+  LOD: "LOD",
+  ALOD: "against LOD",
+  wall: "wall",
+  centre: "centre",
+  DW: "diag wall",
+  DC: "diag centre",
+  DW_against: "diag wall ↩",
+  DC_against: "diag centre ↩",
+};
+
 /** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
  *  facing-direction the figure starts and ends on. Editor-only. */
 function AlignmentEditor({
@@ -1254,7 +1311,11 @@ function AlignmentEditor({
   );
 }
 
-/** One edge (entry/exit) of the alignment editor: qualifier + direction selects. */
+/**
+ * One edge (entry/exit) of the alignment editor: qualifier + direction chip rows
+ * (design 1.20 — selected chip filled accent, others outlined).
+ * Keeps the fieldset/aria-label structure for accessibility.
+ */
 function AlignmentEdge({
   label,
   edge,
@@ -1269,30 +1330,53 @@ function AlignmentEdge({
   const qualifier = current?.qualifier ?? "facing";
   const direction = current?.direction ?? "";
   return (
-    <fieldset aria-label={`${label} alignment`} className="flex items-end gap-2">
-      <Select
-        label={`${label} facing`}
-        value={qualifier}
-        options={ALIGNMENT_QUALIFIERS.map((q) => ({ value: q, label: q }))}
-        onChange={(e) =>
-          onChange(edge, {
-            qualifier: e.target.value as Alignment["qualifier"],
-            direction: (direction || "LOD") as Alignment["direction"],
-          })
-        }
-      />
-      <Select
-        label={`${label} direction`}
-        value={direction}
-        options={[
-          { value: "", label: "— not set" },
-          ...ALIGNMENT_DIRECTIONS.map((d) => ({ value: d, label: d })),
-        ]}
-        onChange={(e) => {
-          const d = e.target.value;
-          onChange(edge, d ? { qualifier, direction: d as Alignment["direction"] } : null);
-        }}
-      />
+    <fieldset aria-label={`${label} alignment`} className="flex flex-col gap-2">
+      {/* QUALIFIER row */}
+      <div>
+        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
+          Qualifier
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {ALIGNMENT_QUALIFIERS.map((q) => (
+            <Chip
+              key={q}
+              tone="accent"
+              // Only show selected when a direction is also set (full alignment exists).
+              selected={qualifier === q && direction !== ""}
+              onClick={() =>
+                onChange(edge, {
+                  qualifier: q,
+                  // Default to LOD if no direction yet (matches existing Select behaviour).
+                  direction: (direction || "LOD") as Alignment["direction"],
+                })
+              }
+            >
+              {q}
+            </Chip>
+          ))}
+        </div>
+      </div>
+      {/* DIRECTION row */}
+      <div>
+        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
+          Direction
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <Chip tone="neutral" selected={direction === ""} onClick={() => onChange(edge, null)}>
+            — not set
+          </Chip>
+          {ALIGNMENT_DIRECTIONS.map((d) => (
+            <Chip
+              key={d}
+              tone="accent"
+              selected={direction === d}
+              onClick={() => onChange(edge, { qualifier, direction: d })}
+            >
+              {DIRECTION_LABEL[d]}
+            </Chip>
+          ))}
+        </div>
+      </div>
     </fieldset>
   );
 }
@@ -1305,19 +1389,29 @@ function attributeSummary(attributes: Attribute[]): string {
   return `${live.length} attribute${live.length === 1 ? "" : "s"} · ${kinds.join(", ")}`;
 }
 
-/** Entry/exit + per-placement alignment as chips (read-only here; editing is US-031). */
+/**
+ * Entry/exit + per-placement alignment as read-only chips (editing is US-031).
+ * D6: shows qualifier + readable direction label, e.g. "entry facing diag wall".
+ */
 function AlignmentChips({ placement, figure }: { placement: Placement; figure: FigureDoc | null }) {
-  const chips: string[] = [];
-  if (figure?.entryAlignment) chips.push(`entry ${figure.entryAlignment.direction}`);
-  if (figure?.exitAlignment) chips.push(`exit ${figure.exitAlignment.direction}`);
+  const chips: Array<{ key: string; label: string }> = [];
+  if (figure?.entryAlignment) {
+    const { qualifier, direction } = figure.entryAlignment;
+    chips.push({ key: "entry", label: `entry ${qualifier} ${DIRECTION_LABEL[direction]}` });
+  }
+  if (figure?.exitAlignment) {
+    const { qualifier, direction } = figure.exitAlignment;
+    chips.push({ key: "exit", label: `exit ${qualifier} ${DIRECTION_LABEL[direction]}` });
+  }
   if (placement.perPlacementAlignment) {
-    chips.push(`here ${placement.perPlacementAlignment.direction}`);
+    const { qualifier, direction } = placement.perPlacementAlignment;
+    chips.push({ key: "here", label: `here ${qualifier} ${DIRECTION_LABEL[direction]}` });
   }
   if (chips.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1">
-      {chips.map((label) => (
-        <Chip key={label} tone="neutral">
+      {chips.map(({ key, label }) => (
+        <Chip key={key} tone="neutral" asStatic>
           {label}
         </Chip>
       ))}

@@ -173,21 +173,29 @@ export function ChoreoList({
 
   return (
     <section aria-label="Your choreography" className="flex flex-col gap-3">
+      {/* D7: quota label (design 1.18) — "Free · N of M" inline with the header. */}
       <ScreenHeader
         title="My Choreos"
         className="border-b-0 px-0 py-0"
         actions={
-          <IconButton
-            label="New choreo"
-            onClick={onNew}
-            style={{
-              background: "var(--bf-accent)",
-              color: "var(--bf-ink-inverse)",
-              borderRadius: "var(--bf-radius-md)",
-            }}
-          >
-            <PlusIcon size={20} />
-          </IconButton>
+          <>
+            {plan === "free" && cap != null && (
+              <span className="text-2xs font-semibold text-ink-muted">
+                Free · {ownedCount} of {cap}
+              </span>
+            )}
+            <IconButton
+              label="New choreo"
+              onClick={onNew}
+              style={{
+                background: "var(--bf-accent)",
+                color: "var(--bf-ink-inverse)",
+                borderRadius: "var(--bf-radius-md)",
+              }}
+            >
+              <PlusIcon size={20} />
+            </IconButton>
+          </>
         }
       />
 

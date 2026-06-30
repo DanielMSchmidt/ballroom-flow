@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement, RoutineStore } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
-import { axeCheck, renderUi, screen, userEvent } from "../test-support/render";
+import { axeCheck, renderUi, screen, userEvent, within } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-018 — Open & view a routine [M2, user]
@@ -667,6 +667,7 @@ describe("US-031 Edit per-figure alignment", () => {
   it("edits a figure's entry alignment (qualifier + direction) via the store (AC-1)", async () => {
     // Intent: an editor sets a figure's entry/exit facing-direction from the step
     //   sheet; the change writes to the figure's doc through the store seam.
+    //   D6: alignment editor now uses chip toggles (QUALIFIER + DIRECTION rows).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const setFigureAlignment = vi.fn();
     const { routine, resolved } = alignedRoutine();
@@ -678,8 +679,10 @@ describe("US-031 Edit per-figure alignment", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    expect(screen.getByRole("group", { name: /entry alignment/i })).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText(/entry direction/i), "LOD");
+    const entryGroup = screen.getByRole("group", { name: /entry alignment/i });
+    expect(entryGroup).toBeInTheDocument();
+    // Click the "LOD" direction chip inside the entry alignment fieldset.
+    await userEvent.click(within(entryGroup).getByRole("button", { name: /^LOD$/i }));
     expect(setFigureAlignment).toHaveBeenCalledWith("feather", "entry", {
       qualifier: "facing",
       direction: "LOD",
@@ -688,10 +691,12 @@ describe("US-031 Edit per-figure alignment", () => {
 
   it("renders an alignment chip on the placement card (AC-2)", async () => {
     // Intent: a figure's set alignment shows as a read-only chip on its card.
+    //   D6: chip shows qualifier + readable direction label ("entry facing diag wall").
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const { routine, resolved } = alignedRoutine();
     renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
-    expect(screen.getByText(/entry DW/i)).toBeInTheDocument();
+    // entryAlignment = { qualifier: "facing", direction: "DW" } → "entry facing diag wall"
+    expect(screen.getByText(/entry facing diag wall/i)).toBeInTheDocument();
   });
 
   it("has no separate floor / long / short / corner concept (AC-3)", async () => {
@@ -709,5 +714,131 @@ describe("US-031 Edit per-figure alignment", () => {
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
     expect(screen.queryByRole("group", { name: /entry alignment/i })).toBeNull();
+  });
+
+  it("D6: shows alignment header summary chips ('facing DW → backing LOD') in the step sheet", async () => {
+    // Intent (D6 design 1.20 pin 1): when a figure has entry + exit alignment set,
+    //   the notation sheet shows a compact "facing X → backing Y" header summary.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const fig: FigureDoc = {
+      ...figure("feather", "Feather"),
+      entryAlignment: { qualifier: "facing", direction: "DW" },
+      exitAlignment: { qualifier: "backing", direction: "LOD" },
+    };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    // Header summary chips appear in the notation sheet (may also appear on placement card).
+    // Use getAllByText to tolerate both occurrences (placement card + header summary).
+    expect(screen.getAllByText(/facing diag wall/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/backing LOD/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe("D5 'Make it mine' fork banner (read mode, design 1.19)", () => {
+  const viewerRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Golden Waltz",
+    dance: "waltz",
+    ownerId: "other",
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("shows a fork banner in read mode when viewer cannot edit but can fork", async () => {
+    // Intent: a read-only viewer (no canEdit) who has an onFork prop sees the
+    //   'Make it mine' banner — the primary fork CTA for the Golden Waltz sample.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onFork = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="viewer"
+        initialMode="read"
+        store={fakeStore(viewerRoutine(), [])}
+        onFork={onFork}
+      />,
+    );
+    expect(screen.getByText(/viewing a read-only routine/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /make it mine/i }));
+    expect(onFork).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT show the fork banner in edit mode", async () => {
+    // Intent: the banner is read-mode only — not shown in the edit view.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onFork = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="viewer"
+        initialMode="edit"
+        store={fakeStore(viewerRoutine(), [])}
+        onFork={onFork}
+      />,
+    );
+    expect(screen.queryByText(/viewing a read-only routine/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /make it mine/i })).toBeNull();
+  });
+
+  it("does NOT show the fork banner for an editor (canEdit=true)", async () => {
+    // Intent: an editor already has full edit rights — no fork banner needed.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onFork = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(viewerRoutine(), [])}
+        onFork={onFork}
+      />,
+    );
+    expect(screen.queryByText(/viewing a read-only routine/i)).toBeNull();
+  });
+});
+
+describe("D7 Undo/redo glyphs (design 1.21)", () => {
+  const undoRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("renders ↶ glyph on the Undo button and ↷ on Redo, accessible names intact", async () => {
+    // Intent (D7 design 1.21): undo/redo show the glyph characters visually while
+    //   keeping 'Undo' / 'Redo' as aria-labels so AT reads them correctly.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(undoRoutine(), [])} />);
+    const undoBtn = screen.getByRole("button", { name: /^undo$/i });
+    const redoBtn = screen.getByRole("button", { name: /^redo$/i });
+    expect(undoBtn).toBeInTheDocument();
+    expect(redoBtn).toBeInTheDocument();
+    // Glyphs are present in the button text content.
+    expect(undoBtn.textContent).toContain("↶");
+    expect(redoBtn.textContent).toContain("↷");
   });
 });
