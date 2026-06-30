@@ -47,6 +47,11 @@ export function AttributeInfoSheet({
   const gloss = glossFor(kind.kind);
   const values = kind.values ?? [];
   const accent = kindColor(kind);
+  // Prose + per-value definitions are registry-derived (T5), so a CUSTOM kind
+  // carrying a `description`/`valueDefs` gets the same treatment; one with none
+  // gracefully falls back to just the value list.
+  const description = kind.description;
+  const valueDefs = kind.valueDefs;
 
   return (
     <Sheet open={open} onClose={onClose} title={kind.label}>
@@ -61,13 +66,13 @@ export function AttributeInfoSheet({
           {gloss?.subtitle && <span className="text-2xs text-ink-muted">{gloss.subtitle}</span>}
         </div>
 
-        {/* Plain-language description in the note voice (Caveat). */}
-        {gloss?.description && (
+        {/* Plain-language description in the note voice (Caveat) — registry-derived. */}
+        {description && (
           <p
             className="text-base leading-snug text-ink-secondary"
             style={{ fontFamily: "var(--bf-font-note)" }}
           >
-            {gloss.description}
+            {description}
           </p>
         )}
 
@@ -76,7 +81,7 @@ export function AttributeInfoSheet({
           <h3 className="text-2xs font-bold uppercase tracking-wide text-ink-muted">Values</h3>
           <ul className="flex flex-col gap-2">
             {values.map((value) => {
-              const def = gloss?.values?.[value];
+              const def = valueDefs?.[value];
               const chip = (
                 <span
                   className="inline-flex min-w-9 flex-none items-center justify-center rounded-[5px] border px-1.5 py-0.5 text-2xs font-bold text-ink"

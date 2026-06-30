@@ -133,6 +133,12 @@ export const zRegistryKind = z.object({
   values: z.array(z.string()).optional(),
   freeText: z.boolean().optional(),
   appliesToDances: z.array(z.enum(DANCE_IDS)).optional(),
+  // Registry-derived info-sheet + Profile affordances (T5): one-line prose,
+  // per-value definitions, role-awareness (L/F), and the required-slot marker.
+  description: z.string().optional(),
+  valueDefs: z.record(z.string(), z.string()).optional(),
+  roleAware: z.boolean().optional(),
+  required: z.boolean().optional(),
   builtin: z.boolean(),
 });
 export type RegistryKindDto = z.infer<typeof zRegistryKind>;

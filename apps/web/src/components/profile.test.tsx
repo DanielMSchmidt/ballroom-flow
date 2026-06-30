@@ -139,6 +139,16 @@ describe("T4 Profile attribute-types manager (frame 1.17)", () => {
     // The builder (AddKindSheet) is now open — its Label field is present.
     expect(screen.getByLabelText(/label/i)).toBeInTheDocument();
   });
+
+  it("surfaces registry-derived L/F (roleAware) + required affordances (T5)", async () => {
+    const { Profile } = await importComponent<ProfileModule>("../components/Profile");
+    renderUi(<Profile plan="free" ownedRoutineCount={0} />);
+    // Direction is the required slot (the notate Step* column) → a required marker.
+    expect(screen.getByText("Direction")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("required").length).toBeGreaterThan(0);
+    // Role-aware kinds (direction/footwork/sway/turn/bodyActions) show an L/F badge.
+    expect(screen.getAllByText("L/F").length).toBeGreaterThan(0);
+  });
 });
 
 // US-038 Per-user undo / redo UX: the undo/redo affordances + "Undone" toast live
