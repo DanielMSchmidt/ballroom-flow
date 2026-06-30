@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { migrate } from "./migrations";
+import { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -70,32 +70,16 @@ describe("migration v2 — step → footwork retag", () => {
       ],
     };
     const migrated = migrate(figure) as typeof figure;
-    expect(migrated.schemaVersion).toBe(3); // v1→v2 (footwork) →v3 (sortKey, no-op for a figure)
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // value preserved verbatim (lossless); other kinds untouched
     expect(migrated.attributes[0]).toMatchObject({ kind: "footwork", value: "HT" });
     expect(migrated.attributes[1]).toMatchObject({ kind: "rise" });
   });
 
-  it("retags step attributes inside a variant overlay's additions", () => {
-    const variant = {
-      schemaVersion: 1,
-      figureType: "natural-turn",
-      dance: "waltz",
-      attributes: [],
-      overlay: {
-        overrides: {},
-        tombstones: [],
-        additions: [{ id: "v1", kind: "step", count: 2, value: "T" }],
-      },
-    };
-    const migrated = migrate(variant) as typeof variant;
-    expect(migrated.overlay.additions[0]).toMatchObject({ kind: "footwork", value: "T" });
-  });
-
   it("leaves a routine doc's content untouched apart from the version bump + sortKeys", () => {
-    // The footwork retag (v1→v2) ignores routine docs (no attributes); the v2→v3
-    // step adds a `sortKey` to each section/placement in array order (#63) but
-    // preserves ids, names, and order.
+    // The footwork retag (v1→v2) and overlay strip (v2→v3) ignore routine docs
+    // (no attributes / no overlay); the v3→v4 step adds a `sortKey` to each
+    // section/placement in array order (#63) but preserves ids, names, and order.
     const routine = {
       schemaVersion: 1,
       sections: [
@@ -107,7 +91,7 @@ describe("migration v2 — step → footwork retag", () => {
       schemaVersion: number;
       sections: Array<{ id: string; name: string; sortKey?: string }>;
     };
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.sections.map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(migrated.sections.map((s) => s.name)).toEqual(["Intro", "Body"]);
     // sortKeys added in array order (ascending).
@@ -116,12 +100,13 @@ describe("migration v2 — step → footwork retag", () => {
     expect(String(keys[0]) < String(keys[1])).toBe(true);
   });
 
-  it("never injects an `attributes`/`overlay` key on a doc that lacks one", () => {
+  it("never injects an `attributes` key on a doc that lacks one", () => {
     // Automerge cannot store `undefined`; a migration that spreads back
     // `attributes: undefined` corrupts routine docs (and broke template forks).
     const routine = { schemaVersion: 1, sections: [] };
     const migrated = migrate(routine);
     expect("attributes" in migrated).toBe(false);
+    // overlay is stripped by v2→v3, but a doc that never had it must not gain it.
     expect("overlay" in migrated).toBe(false);
   });
 });
