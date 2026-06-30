@@ -14,7 +14,13 @@ import { useAppAuth } from "../auth/app-auth";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
 import { useMe } from "../store/me";
-import { isQuotaError, useCreateRoutine, useForkRoutine, useRoutines } from "../store/routines";
+import {
+  isQuotaError,
+  useCreateRoutine,
+  useDeleteRoutine,
+  useForkRoutine,
+  useRoutines,
+} from "../store/routines";
 import { search } from "../store/search";
 import { forkTemplate, listTemplates } from "../store/templates";
 import { AccessDenied, Button, Spinner, useToast } from "../ui";
@@ -41,6 +47,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const me = useMe();
   const create = useCreateRoutine();
   const fork = useForkRoutine();
+  const del = useDeleteRoutine();
   const { getToken } = useAppAuth();
   const toast = useToast();
   // Access preflight (#178): for an OPEN routine, learn DENIED vs allowed before
@@ -212,6 +219,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
       cap={routineCap}
       quotaBlocked={quotaBlocked}
       creating={create.isPending}
+      deleting={del.isPending}
       onCreate={(input) =>
         // A freshly-created routine isn't in the list yet — the creator owns it,
         // so deep-link to it; the list refetches in the background. A brand-new
@@ -237,6 +245,16 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             if (isQuotaError(err)) setForkQuotaBlocked(true);
             else toast.show("Couldn't fork this routine. Please try again.", { tone: "danger" });
           },
+        })
+      }
+      onDelete={(docRef) =>
+        // Soft-delete from the ⋯ sheet → the list refetches and the card drops out.
+        // Confirm a success, and never silently swallow a failure (e.g. a non-owner
+        // race or a network blip) — surface it as a danger toast.
+        del.mutate(docRef, {
+          onSuccess: () => toast.show("Routine deleted"),
+          onError: () =>
+            toast.show("Couldn't delete this routine. Please try again.", { tone: "danger" }),
         })
       }
       sample={sample}

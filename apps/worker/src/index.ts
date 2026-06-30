@@ -38,6 +38,7 @@ import {
   listRoutines,
   listTemplates,
   searchReachable,
+  softDeleteRoutine,
 } from "./db/routines";
 import { users } from "./db/schema";
 import type { DocDO } from "./doc-do";
@@ -242,6 +243,29 @@ app.post("/api/routines/:id/fork", async (c) => {
     return c.json({ ...result, reason: "quota" }, 402);
   }
   return c.json(result, 201);
+});
+
+// DELETE /api/routines/:id — delete a routine from the Choreo overview (US-025
+// delete flow). DELETE is OWNER-ONLY (PLAN §4.0: only the owner can delete the
+// doc — `canDelete`). Ownership is the registry `ownerId`, NOT the effective role:
+// an owner carries an EDITOR membership row (createOwnedRoutine, #168), so
+// resolveEffectiveRole would resolve them to "editor" and never "owner" — gating
+// on that would lock the real owner out. So we compare ownerId to the verified
+// sub. A non-owner member (editor/commenter/viewer) or non-member → 403; an
+// unknown routine → 404. Soft-delete only: the registry row is tombstoned
+// (deletedAt), never hard-removed (PLAN §2.1), so the routine drops out of the
+// list/count/search while its CRDT doc and shared-in members' history survive.
+// A re-delete (already tombstoned) matches zero rows → 404.
+app.delete("/api/routines/:id", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const owner = await getDocOwner(c.env.DB, docRef);
+  if (owner === null) return c.json({ error: "not_found" }, 404);
+  if (owner !== user.sub) return c.json({ error: "forbidden" }, 403);
+  const removed = await softDeleteRoutine(c.env.DB, docRef);
+  if (removed === 0) return c.json({ error: "not_found" }, 404);
+  return c.json({ ok: true }, 200);
 });
 
 // GET /api/figures?dance= — the global figure library list (US-032), from the

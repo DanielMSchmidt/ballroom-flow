@@ -13,8 +13,18 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { Badge, Button, Chip, EmptyState, IconButton, Input, ScreenHeader, Sheet } from "../ui";
-import { BranchIcon, EditIcon, PlusIcon, StepsIcon } from "../ui/icons";
+import {
+  Badge,
+  Button,
+  Chip,
+  EmptyState,
+  IconButton,
+  Input,
+  Modal,
+  ScreenHeader,
+  Sheet,
+} from "../ui";
+import { BranchIcon, EditIcon, PlusIcon, StepsIcon, TrashIcon } from "../ui/icons";
 
 /** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
 function danceLabel(dance: DanceId): string {
@@ -90,8 +100,13 @@ export interface ChoreoListProps {
   onOpen?: (docRef: string) => void;
   /** Fork a routine into a new owned, frozen copy (US-037, from the ⋯ sheet). */
   onFork?: (docRef: string) => void;
+  /** Delete a routine (owner-only, from the ⋯ sheet → confirm). The screen wires
+   *  this to the store; the Delete affordance only shows for routines the viewer owns. */
+  onDelete?: (docRef: string) => void;
   /** A create is in flight. */
   creating?: boolean;
+  /** A delete is in flight (drives the confirm button's loading state). */
+  deleting?: boolean;
   /** US-045: the read-only sample routine to display in the empty state. */
   sample?: RoutineListItem;
   /** US-045: app-owned template routines — the "Start from template" button forks one. */
@@ -126,7 +141,9 @@ export function ChoreoList({
   onCreate,
   onOpen,
   onFork,
+  onDelete,
   creating,
+  deleting,
   sample,
   templates = [],
   onStartFromTemplate,
@@ -139,6 +156,8 @@ export function ChoreoList({
   const [dance, setDance] = useState<DanceId>("waltz");
   // Which routine's ⋯ Open/Fork sheet is open (null = closed).
   const [menuFor, setMenuFor] = useState<ChoreoRoutineItem | null>(null);
+  // Which routine the destructive delete-confirm dialog is for (null = closed).
+  const [confirmDelete, setConfirmDelete] = useState<ChoreoRoutineItem | null>(null);
   const atCap = plan === "free" && cap != null && ownedCount >= cap;
   // If the server refuses a create with a 402 (a race past the instant gate),
   // open the upsell so the user still sees why the routine wasn't created.
@@ -151,6 +170,7 @@ export function ChoreoList({
   const closeForm = useCallback(() => setFormOpen(false), []);
   const closeUpsell = useCallback(() => setUpsellOpen(false), []);
   const closeMenu = useCallback(() => setMenuFor(null), []);
+  const closeConfirmDelete = useCallback(() => setConfirmDelete(null), []);
 
   const onNew = (): void => {
     // Mirror the server cap for instant feedback; the server still enforces it.
@@ -442,8 +462,52 @@ export function ChoreoList({
               </span>
             </span>
           </button>
+          {/* Delete — owner-only (the server enforces canDelete); opens a
+              destructive confirm before removing. */}
+          {onDelete && menuFor?.role === "owner" && (
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDelete(menuFor);
+                closeMenu();
+              }}
+              className="flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface p-3 text-left"
+            >
+              <span
+                aria-hidden="true"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md text-danger"
+                style={{ background: "var(--bf-danger-tint)" }}
+              >
+                <TrashIcon size={16} />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-bold text-danger">Delete</span>
+                <span className="text-2xs text-ink-muted">remove this routine from your list</span>
+              </span>
+            </button>
+          )}
         </div>
       </Sheet>
+
+      {/* Delete confirm (destructive) — PLAN §4.0: deletes are confirmed. */}
+      <Modal
+        open={confirmDelete != null}
+        onClose={closeConfirmDelete}
+        title="Delete this routine?"
+        confirm={{
+          label: "Delete",
+          variant: "danger",
+          loading: deleting,
+          onClick: () => {
+            if (confirmDelete) onDelete?.(confirmDelete.docRef);
+            setConfirmDelete(null);
+          },
+        }}
+      >
+        <p>
+          “{confirmDelete?.title}” will be removed from your choreos. This can't be undone here.
+        </p>
+      </Modal>
 
       {/* Quota upsell */}
       <Sheet open={upsellOpen} onClose={closeUpsell} title="Upgrade for more routines">
