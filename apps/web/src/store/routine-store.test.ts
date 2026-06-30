@@ -217,13 +217,16 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
       return Promise.resolve();
     });
     const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    // "natural-turn" in waltz is a charted figure: 6 counts × 2 roles × {direction,
-    // footwork} = 24 attributes. The default routine dance is "waltz" (from emptyRoutine).
+    // "natural-turn" in waltz is a charted figure: its direction+footwork CORE is
+    // 6 counts × 2 roles × {direction, footwork} = 24 (plus richer rise/sway/turn/CBM
+    // on top). The default routine dance is "waltz" (from emptyRoutine).
     store.addPlacement("s1", "Natural Turn", "natural-turn");
 
     expect(createFigure).toHaveBeenCalledTimes(1);
     expect(seen[0]?.figureType).toBe("natural-turn");
-    expect((seen[0]?.attributes ?? []).length).toBe(24);
+    const attrs = (seen[0]?.attributes ?? []) as Array<{ kind: string }>;
+    expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
+    expect(attrs.length).toBeGreaterThan(24); // richer attributes are forwarded too
   });
 
   it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {
@@ -250,7 +253,8 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
     // miss the hyphenated catalog "natural-turn"; the name lookup must still resolve it.
     store.addPlacement("s1", "Natural Turn");
     expect(seen[0]?.figureType).toBe("natural-turn");
-    expect((seen[0]?.attributes ?? []).length).toBe(24);
+    const attrs = (seen[0]?.attributes ?? []) as Array<{ kind: string }>;
+    expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
   });
 });
 

@@ -33,7 +33,7 @@ describe("attribute-display — abbrevValue", () => {
     expect(abbrevValue("rise", "commence")).toBe("com");
     expect(abbrevValue("turn", "quarter_R")).toBe("¼R");
     expect(abbrevValue("position", "closed")).toBe("Cl");
-    expect(abbrevValue("position", "CBMP")).toBe("CBP"); // CBMP is now a position
+    expect(abbrevValue("position", "CBMP")).toBe("CBMP"); // CBMP is now a position (CBP removed)
     expect(abbrevValue("footwork", "heel")).toBe("H"); // legacy anatomical still maps
     // Canonical footwork picker codes render verbatim (no stale remapping).
     expect(abbrevValue("footwork", "HT")).toBe("HT");

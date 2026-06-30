@@ -48,8 +48,10 @@ describe("figure library catalog", () => {
   });
 
   it("includes the net-new WDSF figures with parsed step attributes", () => {
-    // ~247 = 122 ISTD + 125 net-new WDSF
-    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(240);
+    // ~204 figures: the ISTD identity set + WDSF-timed figures, after the re-chart
+    // dropped entries with no verifiable per-step source or mis-catalogued by dance
+    // (real-data charting, no fabrication — see figure-charts.generated.ts).
+    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(200);
 
     const natural = libraryFiguresForDance("waltz").find(
       (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
