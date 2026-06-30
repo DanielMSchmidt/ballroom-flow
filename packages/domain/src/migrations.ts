@@ -14,13 +14,15 @@
 // (US-041) depend on them being stable for life. The ladder enforces this — a
 // step that changes either throws.
 //
-// There are no schema changes yet, so CURRENT is 1 and the ladder is empty — but
-// the machinery is in place so a future v2 step plugs in with TWO localized edits
-// in this file (add a `MIGRATIONS[1]` entry AND bump CURRENT_SCHEMA_VERSION = 2),
-// with no caller changes.
+// CURRENT is 4 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
+// v3→v4: backfill section/placement `sortKey`). A future v5 step adds TWO
+// localized edits here (add a `MIGRATIONS[4]` entry AND bump
+// CURRENT_SCHEMA_VERSION = 5), with no caller changes.
+
+import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -39,12 +41,12 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
  */
 const MIGRATIONS: Record<number, MigrationStep> = {
   // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
-  // to `footwork`. Retag every `kind:"step"` attribute → `footwork`, in both a
-  // figure's own timeline and a variant overlay's additions. STRUCTURE-ONLY:
-  // values are preserved verbatim (lossless — the read-side aliases handle the
-  // legacy single tokens H/T), unknown values survive, and `figureType`/`dance`
-  // are untouched (the ladder guard enforces that). Docs without `attributes`
-  // (routine docs) pass through unchanged but for the version bump.
+  // to `footwork`. Retag every `kind:"step"` attribute → `footwork` in a
+  // figure's own timeline. STRUCTURE-ONLY: values are preserved verbatim
+  // (lossless — the read-side aliases handle the legacy single tokens H/T),
+  // unknown values survive, and `figureType`/`dance` are untouched (the ladder
+  // guard enforces that). Docs without `attributes` (routine docs) pass through
+  // unchanged but for the version bump.
   1: (doc) => {
     const retag = (a: unknown): unknown =>
       a && typeof a === "object" && (a as { kind?: unknown }).kind === "step"
@@ -55,13 +57,48 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     // docs and broke template forks).
     const out: VersionedDoc = { ...doc };
     if (Array.isArray(doc.attributes)) out.attributes = doc.attributes.map(retag);
-    if (doc.overlay && typeof doc.overlay === "object") {
-      const ov = doc.overlay as { additions?: unknown };
-      if (Array.isArray(ov.additions)) {
-        out.overlay = { ...ov, additions: ov.additions.map(retag) };
-      }
-    }
     return out;
+  },
+
+  // v2 → v3 (2026-06-30 overlay removal): the `Overlay` interface and the
+  // `overlay?` field on `FigureDoc` are retired. Strip any stray `overlay` key
+  // that a pre-removal doc carries so it does not linger in persisted documents.
+  // CRITICAL: never assign `undefined` — Automerge cannot store it. Build a new
+  // object WITHOUT the key rather than setting it to undefined.
+  2: (doc) => {
+    if (!("overlay" in doc)) return doc;
+    const { overlay: _dropped, ...rest } = doc;
+    return rest as VersionedDoc;
+  },
+
+  // v3 → v4 (#63 same-section reorder convergence): assign a fractional-index
+  // `sortKey` to every section and to every placement within each section, IN
+  // THEIR CURRENT ARRAY ORDER, so reorder becomes a per-field update that
+  // converges under concurrency (PLAN §5.3). Deterministic — every replica that
+  // migrates the same persisted bytes assigns identical keys, so the backfill
+  // itself converges. STRUCTURE-ONLY: only ADD `sortKey` (never rewrite an
+  // existing one), never write `undefined` back (Automerge can't store it — so a
+  // doc without `sections`/`placements` passes through untouched), and the
+  // immutable identity fields are not touched. Figure/account docs (no
+  // `sections`) get the version bump alone.
+  3: (doc) => {
+    if (!Array.isArray(doc.sections)) return { ...doc };
+    const sectionKeys = sequentialKeys(doc.sections.length);
+    const sections = doc.sections.map((section, i) => {
+      if (!section || typeof section !== "object") return section;
+      const s = section as Record<string, unknown>;
+      const out: Record<string, unknown> = { ...s };
+      if (Array.isArray(s.placements)) {
+        const placementKeys = sequentialKeys(s.placements.length);
+        out.placements = (s.placements as unknown[]).map((p, j) => {
+          if (!p || typeof p !== "object" || "sortKey" in (p as object)) return p;
+          return { ...(p as object), sortKey: placementKeys[j] };
+        });
+      }
+      if (!("sortKey" in s)) out.sortKey = sectionKeys[i];
+      return out;
+    });
+    return { ...doc, sections };
   },
 };
 

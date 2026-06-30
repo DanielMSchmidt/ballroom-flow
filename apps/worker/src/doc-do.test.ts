@@ -1,8 +1,10 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { listRoutines } from "./db/routines";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
 import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
+import { expectIndexedQuery } from "./test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
 
@@ -496,5 +498,166 @@ describe("T6 DO alarm: projects routine lesson/practice annotations to journal_e
       if (n < 2) await new Promise((r) => setTimeout(r, 20));
     }
     expect(n).toBe(2);
+  });
+});
+
+describe("US-025 DO alarm: routine-card projection (bars / figureCount / forkedFromTitle)", () => {
+  /** Read the projected card columns for a doc directly from D1. */
+  async function cardRow(
+    doName: string,
+  ): Promise<{ bars: number | null; figureCount: number | null }> {
+    const row = await env.DB.prepare(
+      "SELECT bars, figureCount FROM document_registry WHERE doName = ?",
+    )
+      .bind(doName)
+      .first<{ bars: number | null; figureCount: number | null }>();
+    return { bars: row?.bars ?? null, figureCount: row?.figureCount ?? null };
+  }
+
+  /** Seed a figure DO with the given attribute counts + project it via its alarm. */
+  async function seedFigure(counts: number[], dance: string): Promise<string> {
+    const { name, stub } = freshDoc("figure");
+    await stub.seedDoc({
+      id: name,
+      scope: "global",
+      ownerId: "u_card",
+      figureType: "natural-turn",
+      dance,
+      name: "Natural Turn",
+      source: "library",
+      attributes: counts.map((count, i) => ({
+        id: `a${i}`,
+        kind: "direction",
+        count,
+        role: null,
+        value: "fwd",
+        deletedAt: null,
+      })),
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.setMetadata({
+      doName: name,
+      docRef: name,
+      type: "global-figure",
+      dance,
+      ownerId: "u_card",
+      title: "Natural Turn",
+      figureType: "natural-turn",
+    });
+    await stub.runAlarmForTest();
+    return name;
+  }
+
+  it("a FIGURE DO projects its OWN bar count (barsForFigure, max count across roles)", async () => {
+    // count 5 (leader) and 7 (follower) → max 7; Waltz phraseBeats 6 → phrase 2 → 2 bars.
+    const twoBars = await seedFigure([5, 7], "waltz");
+    expect((await cardRow(twoBars)).bars).toBe(2);
+
+    const oneBar = await seedFigure([1], "waltz"); // max 1 → 1 bar
+    expect((await cardRow(oneBar)).bars).toBe(1);
+  });
+
+  it("a ROUTINE DO projects figureCount (non-deleted placements) + bars (Σ referenced figures)", async () => {
+    const f1 = await seedFigure([7], "waltz"); // 2 bars
+    const f2 = await seedFigure([1], "waltz"); // 1 bar
+
+    const { name, stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: name,
+      title: "Card Routine",
+      dance: "waltz",
+      ownerId: "u_card",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          deletedAt: null,
+          placements: [
+            { id: "p1", figureRef: f1, deletedAt: null }, // f1 placed twice
+            { id: "p2", figureRef: f1, deletedAt: null },
+            { id: "p3", figureRef: f2, deletedAt: null },
+            { id: "p4", figureRef: f2, deletedAt: 12345 }, // tombstoned → excluded
+          ],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.setMetadata({
+      doName: name,
+      docRef: name,
+      type: "routine",
+      dance: "waltz",
+      ownerId: "u_card",
+      title: "Card Routine",
+    });
+    await stub.runAlarmForTest();
+
+    // figureCount = 3 live placements (p4 tombstoned); bars = f1*2 + f2 = 2+2+1 = 5.
+    expect(await cardRow(name)).toEqual({ bars: 5, figureCount: 3 });
+
+    // And it surfaces through the list projection the Choreo card reads.
+    const list = await listRoutines(env.DB, "u_card");
+    const item = list.find((r) => r.docRef === name);
+    expect(item).toMatchObject({ bars: 5, figureCount: 3 });
+  });
+
+  it("projects figureCount 0 for a routine with no placements ('no figures yet')", async () => {
+    const { name, stub } = freshDoc("routine");
+    await stub.setMetadata({
+      doName: name,
+      docRef: name,
+      type: "routine",
+      dance: "tango",
+      ownerId: "u_empty",
+      title: "Empty",
+    });
+    await stub.runAlarmForTest();
+    expect(await cardRow(name)).toEqual({ bars: 0, figureCount: 0 });
+  });
+
+  it("resolves forkedFromTitle from forkedFromRef on the list read", async () => {
+    const origin = uniqueDocName("rt_origin");
+    const fork = uniqueDocName("rt_fork");
+    await seedDb({
+      users: [{ id: "u_lin", displayName: "Lin", identityColor: "#111", plan: "free" }],
+      docs: [
+        {
+          docRef: origin,
+          type: "routine",
+          ownerId: "u_lin",
+          doName: origin,
+          title: "Origin Routine",
+        },
+        {
+          docRef: fork,
+          type: "routine",
+          ownerId: "u_lin",
+          doName: fork,
+          title: "My Fork",
+          forkedFromRef: origin,
+        },
+      ],
+    });
+    const list = await listRoutines(env.DB, "u_lin");
+    expect(list.find((r) => r.docRef === fork)?.forkedFromTitle).toBe("Origin Routine");
+    // A non-fork carries no lineage line.
+    expect(list.find((r) => r.docRef === origin)?.forkedFromTitle).toBeUndefined();
+  });
+
+  it("keeps the joined Choreo-list query indexed (EXPLAIN, no SCAN)", async () => {
+    // The forkedFromTitle self-join must stay a PK lookup, not a table scan: outer
+    // routine rows from document_registry_owner_idx, the origin title from the PK.
+    await expectIndexedQuery(
+      env.DB,
+      "SELECT dr.docRef, dr.title, dr.dance, dr.updatedAt, dr.bars, dr.figureCount, origin.title " +
+        "FROM document_registry dr " +
+        "LEFT JOIN document_registry origin ON origin.docRef = dr.forkedFromRef " +
+        "WHERE dr.ownerId = ? AND dr.type = 'routine' AND dr.deletedAt IS NULL " +
+        "ORDER BY dr.updatedAt DESC",
+      ["u_card"],
+    );
   });
 });

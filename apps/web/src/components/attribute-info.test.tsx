@@ -35,9 +35,31 @@ describe("AttributeInfoSheet (frame 1.13)", () => {
     expect(screen.getByText(/values/i)).toBeInTheDocument();
     // A chip per registry value (heel is a footwork value).
     expect(screen.getByText("heel")).toBeInTheDocument();
+    // The prose description is registry-derived (RegistryKind.description, T5).
+    expect(screen.getByText(/in order of contact/i)).toBeInTheDocument();
+    // A per-value definition is registry-derived (RegistryKind.valueDefs, T5).
+    expect(screen.getByText(/heel leads/i)).toBeInTheDocument();
     // Footer counts usage.
     expect(screen.getByText(/used in 9 steps/i)).toBeInTheDocument();
     expect(screen.getByText(/gold waltz/i)).toBeInTheDocument();
+  });
+
+  it("renders a custom kind's own description + value definitions (registry-derived, T5)", async () => {
+    const { AttributeInfoSheet } = await load();
+    const energy: RegistryKind = {
+      kind: "energy",
+      label: "Energy",
+      color: "#c0563f",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["low", "high"],
+      description: "How much drive the step carries.",
+      valueDefs: { high: "High — driving through the floor" },
+      builtin: false,
+    };
+    renderUi(<AttributeInfoSheet open kind={energy} usageCount={0} />);
+    expect(screen.getByText(/how much drive/i)).toBeInTheDocument();
+    expect(screen.getByText(/driving through the floor/i)).toBeInTheDocument();
   });
 
   it("renders a custom kind's values with no crash (registry-derived)", async () => {

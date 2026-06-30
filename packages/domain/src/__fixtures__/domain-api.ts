@@ -40,6 +40,11 @@ export interface RegistryKind {
   valueType: string;
   values?: string[];
   appliesToDances?: DanceId[];
+  /** Registry-derived info-sheet + Profile affordances (T5). */
+  description?: string;
+  valueDefs?: Record<string, string>;
+  roleAware?: boolean;
+  required?: boolean;
   builtin: boolean;
 }
 

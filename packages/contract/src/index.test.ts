@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { zCreateFigure, zJournalList, zRegistryKind, zSearchResults, zTemplateList } from "./index";
+import {
+  zCreateFigure,
+  zJournalList,
+  zRegistryKind,
+  zRoutineList,
+  zSearchResults,
+  zTemplateList,
+} from "./index";
 
 describe("zJournalList (T6)", () => {
   it("parses a UNION of routine + account journal entries with resolved anchor labels", () => {
@@ -106,6 +113,34 @@ it("US-043 validates a custom registry kind", () => {
   expect(ok.success).toBe(true);
 });
 
+it("T5 accepts the registry-derived info fields (description/valueDefs/roleAware/required)", () => {
+  const ok = zRegistryKind.safeParse({
+    kind: "energy",
+    label: "Energy",
+    color: "#c0563f",
+    cardinality: "single",
+    valueType: "enum",
+    values: ["low", "high"],
+    description: "How much drive the step carries.",
+    valueDefs: { low: "Low — relaxed", high: "High — driving" },
+    roleAware: true,
+    required: false,
+    builtin: false,
+  });
+  expect(ok.success).toBe(true);
+  // The fields stay optional — a kind with none still validates.
+  expect(
+    zRegistryKind.safeParse({
+      kind: "tempo",
+      label: "Tempo",
+      color: "#000000",
+      cardinality: "single",
+      valueType: "enum",
+      builtin: false,
+    }).success,
+  ).toBe(true);
+});
+
 it("US-046 shapes search results", () => {
   const ok = zSearchResults.safeParse({
     results: [{ docRef: "r1", type: "routine", title: "My Foxtrot", dance: "foxtrot" }],
@@ -124,6 +159,38 @@ it("US-046 search result accepts a null dance (nullable, not optional)", () => {
     results: [{ docRef: "f1", type: "global-figure", title: "Feather" }],
   });
   expect(omitted.success).toBe(false);
+});
+
+describe("US-025 zRoutineListItem card projection (bars / figureCount / forkedFromTitle)", () => {
+  it("parses a routine row carrying the projected card fields", () => {
+    const parsed = zRoutineList.parse({
+      routines: [
+        {
+          docRef: "rt_1",
+          title: "My Waltz",
+          dance: "waltz",
+          role: "owner",
+          updatedAt: 10,
+          bars: 12,
+          figureCount: 4,
+          forkedFromTitle: "Golden Waltz Basic",
+        },
+      ],
+    });
+    expect(parsed.routines[0]).toMatchObject({ bars: 12, figureCount: 4 });
+    expect(parsed.routines[0]?.forkedFromTitle).toBe("Golden Waltz Basic");
+  });
+
+  it("keeps the card fields OPTIONAL (a row may omit them before first projection)", () => {
+    // Eventual consistency: a freshly-created routine is listed (eager projection)
+    // before its DO alarm has computed bars/figureCount — the row must still parse.
+    const parsed = zRoutineList.parse({
+      routines: [{ docRef: "rt_2", title: "Fresh", dance: "tango", role: "owner", updatedAt: 1 }],
+    });
+    expect(parsed.routines[0]?.bars).toBeUndefined();
+    expect(parsed.routines[0]?.figureCount).toBeUndefined();
+    expect(parsed.routines[0]?.forkedFromTitle).toBeUndefined();
+  });
 });
 
 it("US-045 shapes the template list", () => {

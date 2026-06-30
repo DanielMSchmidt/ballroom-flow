@@ -8,6 +8,7 @@ import type * as A from "@automerge/automerge";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
 import type { Anchor, AnnotationKind, ReadOptions, RoutineDoc } from "./doc-types";
 import { newId } from "./ids";
+import { ensureSortKeys, keyBetween, sortByOrder } from "./order";
 
 /** Build an in-memory Automerge routine doc from its logical shape. */
 export function buildRoutineDoc(routine: RoutineDoc): A.Doc<RoutineDoc> {
@@ -21,9 +22,11 @@ export function buildRoutineDoc(routine: RoutineDoc): A.Doc<RoutineDoc> {
  */
 export function readRoutine(doc: A.Doc<RoutineDoc>, opts?: ReadOptions): RoutineDoc {
   const plain = materialize(doc);
-  const sections = filterDeleted(plain.sections, opts).map((section) => ({
+  // Order by sortKey (#63, §5.3): sections, and placements within each section.
+  // `sortByOrder` falls back to array order for any pre-sortKey list.
+  const sections = sortByOrder(filterDeleted(plain.sections, opts)).map((section) => ({
     ...section,
-    placements: filterDeleted(section.placements, opts),
+    placements: sortByOrder(filterDeleted(section.placements, opts)),
   }));
   return {
     ...plain,
@@ -39,13 +42,27 @@ export function readRoutine(doc: A.Doc<RoutineDoc>, opts?: ReadOptions): Routine
 /** Append a section to a routine doc (used by US-026; handy for tests too). */
 export function addSection(doc: A.Doc<RoutineDoc>, section: { name: string }): A.Doc<RoutineDoc> {
   return mutate(doc, (draft) => {
+    // Append after the last section in sortKey order (#63). Backfill any legacy
+    // keyless sections first so the new key sorts correctly relative to them.
+    ensureSortKeys(draft.sections);
+    const lastKey = lastSortKey(draft.sections);
     draft.sections.push({
       id: newId(),
       name: section.name,
       placements: [],
+      sortKey: keyBetween(lastKey, null),
       deletedAt: null,
     });
   });
+}
+
+/** The greatest sortKey among `items` (in sort order), or null if none have one. */
+function lastSortKey(items: ReadonlyArray<{ sortKey?: string }>): string | null {
+  let max: string | null = null;
+  for (const it of items) {
+    if (typeof it.sortKey === "string" && (max === null || it.sortKey > max)) max = it.sortKey;
+  }
+  return max;
 }
 
 /** Soft-delete a section: set its `deletedAt` tombstone (never a hard removal). */

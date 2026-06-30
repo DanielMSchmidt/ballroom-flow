@@ -19,9 +19,11 @@ import {
   type AnnotationKind,
   addAnnotation,
   addSection,
+  barsForFigure,
   buildDoc,
   buildRoutineDoc,
   can,
+  type DanceId,
   type EffectiveRole,
   type FigureDoc,
   type RoutineDoc,
@@ -710,24 +712,101 @@ export class DocDO extends DurableObject<Env> {
     if (!meta?.doName) return; // nothing to project until metadata is set
 
     const docRef = meta.docRef ?? meta.doName;
+    const type = meta.type ?? "routine";
+    // US-025 card counts (bars/figureCount). forkedFromRef is left untouched here:
+    // it's set by the eager create (createOwnedRoutine) and the alarm must never
+    // clobber it — hence NULL on insert and absent from the ON CONFLICT update.
+    const { bars, figureCount } = await this.computeCardCounts(type, meta.dance);
     await this.env.DB.prepare(
-      `INSERT INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, forkedFromRef, updatedAt, deletedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL)
+      `INSERT INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, forkedFromRef, bars, figureCount, updatedAt, deletedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)
        ON CONFLICT(doName) DO UPDATE SET
          type = excluded.type, ownerId = excluded.ownerId, figureType = excluded.figureType,
-         dance = excluded.dance, title = excluded.title, updatedAt = excluded.updatedAt`,
+         dance = excluded.dance, title = excluded.title, bars = excluded.bars,
+         figureCount = excluded.figureCount, updatedAt = excluded.updatedAt`,
     )
       .bind(
         docRef,
-        meta.type ?? "routine",
+        type,
         meta.ownerId ?? "",
         meta.doName,
         meta.figureType,
         meta.dance,
         meta.title,
+        bars,
+        figureCount,
         Date.now(),
       )
       .run();
+  }
+
+  /**
+   * Compute the US-025 card-projection counts for THIS document (PLAN §2.5/§2.7):
+   *  • routine → figureCount = its NON-deleted placement count; bars = Σ over those
+   *    placements of each referenced figure's projected per-figure `bars`.
+   *  • figure  → bars = this figure's own bar count (`barsForFigure` over its
+   *    non-deleted attribute counts — the MAX count across BOTH roles → the longer
+   *    role's span); figureCount = null.
+   *  • account → { null, null }.
+   *
+   * Per-document DO layering (memory: per-document-do-layering): a routine reads the
+   * SHARED `document_registry` index to sum its figures' precomputed bars (mirroring
+   * `resolveFigureNames`) — it NEVER loads another doc or drives a figure DO. A
+   * figure computes its bars from its OWN attributes. Eventually consistent: a
+   * routine's `bars` may lag a figure edit until the routine re-projects, and a
+   * not-yet-projected figure contributes 0 until its own alarm runs (#126).
+   */
+  private async computeCardCounts(
+    type: string,
+    dance: string | null,
+  ): Promise<{ bars: number | null; figureCount: number | null }> {
+    const doc = this.loadPersisted();
+    if (!doc) return { bars: null, figureCount: null };
+
+    if (type === "routine") {
+      const routine = readRoutine(doc); // tombstones dropped → live placements only
+      const placementRefs: string[] = [];
+      for (const section of routine.sections) {
+        for (const placement of section.placements) placementRefs.push(placement.figureRef);
+      }
+      const barsByRef = await this.resolveFigureBars([...new Set(placementRefs)]);
+      // Sum PER PLACEMENT (a figure placed twice counts its bars twice).
+      const bars = placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0);
+      return { bars, figureCount: placementRefs.length };
+    }
+
+    if (type === "global-figure" || type === "account-figure") {
+      // Defensive: a figure-typed DO whose content was never seeded as a FigureDoc
+      // (e.g. an auto-materialized empty-routine placeholder from a stray getDoc)
+      // has no `attributes` — treat it as an empty (1-bar) figure rather than
+      // letting readFigure throw and abort the whole projection.
+      const figure = A.toJS(doc) as Partial<FigureDoc>;
+      const figureDance = (figure.dance ?? dance ?? "waltz") as DanceId;
+      const counts = (figure.attributes ?? [])
+        .filter((a) => a.deletedAt == null)
+        .map((a) => a.count);
+      return { bars: barsForFigure(counts, figureDance), figureCount: null };
+    }
+
+    return { bars: null, figureCount: null }; // account / unknown — no card counts
+  }
+
+  /**
+   * Read referenced figures' projected per-figure `bars` from the SHARED registry
+   * index (mirrors {@link resolveFigureNames}): reads the index, never another DO's
+   * doc. A figure with no projected `bars` yet is simply absent from the map.
+   */
+  private async resolveFigureBars(refs: string[]): Promise<Map<string, number>> {
+    const out = new Map<string, number>();
+    if (refs.length === 0) return out;
+    const ph = refs.map(() => "?").join(",");
+    const res = await this.env.DB.prepare(
+      `SELECT docRef, bars FROM document_registry WHERE docRef IN (${ph})`,
+    )
+      .bind(...refs)
+      .all<{ docRef: string; bars: number | null }>();
+    for (const r of res.results ?? []) if (r.bars != null) out.set(r.docRef, r.bars);
+    return out;
   }
 
   /**

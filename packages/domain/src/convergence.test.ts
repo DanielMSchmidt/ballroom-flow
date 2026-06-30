@@ -8,7 +8,26 @@ import {
   loadAutomerge,
 } from "./__fixtures__";
 import { buildRoutineDoc, readRoutine } from "./doc-routine";
-import type { RoutineDoc } from "./doc-types";
+import type { Placement, RoutineDoc, Section } from "./doc-types";
+import { keyBetween, sequentialKeys } from "./order";
+
+// ── Small lint-safe lookups (no non-null assertions) for the reorder tests ──
+function req<T>(value: T | undefined, what: string): T {
+  if (value === undefined) throw new Error(`expected ${what} to exist`);
+  return value;
+}
+const sectionById = (d: RoutineDoc, id: string): Section =>
+  req(
+    d.sections.find((s) => s.id === id),
+    `section ${id}`,
+  );
+const placementById = (s: Section, id: string): Placement =>
+  req(
+    s.placements.find((p) => p.id === id),
+    `placement ${id}`,
+  );
+const keyOf = (e: { sortKey?: string } | undefined, what: string): string =>
+  req(req(e, what).sortKey, `${what} sortKey`);
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-009 — Automerge convergence invariants [M1, system/developer]
@@ -94,65 +113,166 @@ describe("US-009 Automerge convergence invariants", () => {
     await assertIdempotent(base, change);
   });
 
-  it("converges a section REORDER on one client with a soft-DELETE on another (US-026 AC-3)", async () => {
-    // Intent: two replicas of a routine — client A reorders sections, client B
-    //   soft-deletes a DIFFERENT section — merge with no lost edits: the order A
-    //   chose holds, the section B deleted stays tombstoned, both replicas converge.
-    // Multi-actor scenario: A and B edit the same routine offline, then reconnect.
-    //
-    // HONEST LIMITATION (#63): the store's `moveSection` reorder is a JSON-copy
-    //   splice — it removes the moved section's Automerge object and re-inserts a
-    //   PLAIN COPY (a new object). So a concurrent edit to the SAME section being
-    //   moved would be lost (the open sortKey work). This test asserts the
-    //   ACHIEVABLE converged state: A and B touch DIFFERENT sections, which is the
-    //   case that must converge cleanly — and does.
-    const seed: RoutineDoc = {
+  // ── US-026 / #63 — sortKey reorder convergence (PLAN §5.3) ────────────────
+  // Reorder is now a per-field `sortKey` update, not a JSON-copy splice. The
+  // splice removed the moved Automerge object and re-inserted a plain copy, so a
+  // concurrent edit to the moved item (or a second concurrent splice) was lost.
+  // These tests prove the NOW-ACHIEVABLE same-section convergence: concurrent
+  // reorders within one section land deterministically with no lost edits, and a
+  // concurrent edit to a MOVED item survives.
+
+  // Seed a routine with explicit ascending sortKeys: 3 sections; section s2 holds
+  // 3 placements p1<p2<p3.
+  const seedReorderRoutine = (): RoutineDoc => {
+    const sk = sequentialKeys(3);
+    const pk = sequentialKeys(3);
+    return {
       id: "r1",
       title: "Routine",
       dance: "waltz",
       ownerId: "u1",
       sections: [
-        { id: "s1", name: "Intro", placements: [], deletedAt: null },
-        { id: "s2", name: "Middle", placements: [], deletedAt: null },
-        { id: "s3", name: "Finale", placements: [], deletedAt: null },
+        { id: "s1", name: "Intro", placements: [], sortKey: sk[0], deletedAt: null },
+        {
+          id: "s2",
+          name: "Middle",
+          sortKey: sk[1],
+          placements: [
+            { id: "p1", figureRef: "f1", sortKey: pk[0], deletedAt: null },
+            { id: "p2", figureRef: "f2", sortKey: pk[1], deletedAt: null },
+            { id: "p3", figureRef: "f3", sortKey: pk[2], deletedAt: null },
+          ],
+          deletedAt: null,
+        },
+        { id: "s3", name: "Finale", placements: [], sortKey: sk[2], deletedAt: null },
       ],
       annotations: [],
-      schemaVersion: 1,
+      schemaVersion: 3,
       deletedAt: null,
     };
-    const base = buildRoutineDoc(seed);
+  };
 
-    // Client A: reorder — move s1 to the end via the store's JSON-copy splice.
+  it("converges two replicas reordering DIFFERENT placements in the SAME section (#63)", async () => {
+    // The case the JSON-copy splice could not do: two clients reorder placements
+    // in the SAME section offline, then merge. Each reorder is a per-field write
+    // on a distinct object, so BOTH land and the replicas converge to one
+    // deterministic order with no lost edits.
+    const base = buildRoutineDoc(seedReorderRoutine());
+    const ps = sectionById(readRoutine(base), "s2").placements;
+    const k0 = keyOf(ps[0], "p1");
+    const k2 = keyOf(ps[2], "p3");
+
+    // L: move p1 to the end (after p3).
     const left = await applyMutations(base, [
       (d: RoutineDoc) => {
-        const i = d.sections.findIndex((s) => s.id === "s1");
-        const moved = JSON.parse(JSON.stringify(d.sections[i]));
-        d.sections.splice(i, 1);
-        d.sections.push(moved);
+        placementById(sectionById(d, "s2"), "p1").sortKey = keyBetween(k2, null);
+      },
+    ]);
+    // R: move p3 to the front (before p1).
+    const right = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        placementById(sectionById(d, "s2"), "p3").sortKey = keyBetween(null, k0);
       },
     ]);
 
-    // Client B: soft-delete a DIFFERENT section (s3) — a tombstone flip in place.
+    const { converged } = await exchangeAndAssertConverged(left, right);
+    const order = sectionById(readRoutine(converged), "s2").placements.map((p) => p.id);
+    expect(order).toEqual(["p3", "p2", "p1"]);
+  });
+
+  it("keeps a concurrent edit to a MOVED placement (the object is never deleted)", async () => {
+    // The splice deleted the moved placement's object and re-inserted a copy — a
+    // concurrent edit to it was lost. sortKey moves it in place, so a concurrent
+    // perPlacementAlignment edit on the SAME, moved placement survives the merge.
+    const base = buildRoutineDoc(seedReorderRoutine());
+    const k2 = keyOf(sectionById(readRoutine(base), "s2").placements[2], "p3");
+
+    // L: reorder p1 to the end.
+    const left = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        placementById(sectionById(d, "s2"), "p1").sortKey = keyBetween(k2, null);
+      },
+    ]);
+    // R: edit that SAME placement's alignment concurrently.
     const right = await applyMutations(base, [
       (d: RoutineDoc) => {
-        const s = d.sections.find((sec) => sec.id === "s3");
-        if (s) s.deletedAt = Date.now();
+        placementById(sectionById(d, "s2"), "p1").perPlacementAlignment = {
+          qualifier: "facing",
+          direction: "LOD",
+        };
+      },
+    ]);
+
+    const { converged } = await exchangeAndAssertConverged(left, right);
+    const s2 = sectionById(readRoutine(converged), "s2");
+    // p1 moved to the end (L) AND carries R's alignment edit (no lost edit).
+    expect(s2.placements.map((p) => p.id)).toEqual(["p2", "p3", "p1"]);
+    expect(placementById(s2, "p1").perPlacementAlignment).toEqual({
+      qualifier: "facing",
+      direction: "LOD",
+    });
+  });
+
+  it("converges two replicas moving the SAME placement (LWW on sortKey, no divergence)", async () => {
+    // Two concurrent moves of the SAME placement: Automerge LWW picks one sortKey
+    // deterministically, so BOTH replicas converge to the same order (the old
+    // double-splice could clobber the array into divergent states).
+    const base = buildRoutineDoc(seedReorderRoutine());
+    const ps = sectionById(readRoutine(base), "s2").placements;
+    const k0 = keyOf(ps[0], "p1");
+    const k2 = keyOf(ps[2], "p3");
+
+    const left = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        placementById(sectionById(d, "s2"), "p2").sortKey = keyBetween(k2, null); // p2 → end
+      },
+    ]);
+    const right = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        placementById(sectionById(d, "s2"), "p2").sortKey = keyBetween(null, k0); // p2 → front
+      },
+    ]);
+
+    // exchangeAndAssertConverged asserts both replicas reach identical heads.
+    const { left: ml, right: mr } = await exchangeAndAssertConverged(left, right);
+    const orderL = sectionById(readRoutine(ml), "s2").placements.map((p) => p.id);
+    const orderR = sectionById(readRoutine(mr), "s2").placements.map((p) => p.id);
+    expect(orderL).toEqual(orderR); // deterministic — no divergence
+    expect([...orderL].sort()).toEqual(["p1", "p2", "p3"]); // no lost placements
+  });
+
+  it("converges a SECTION reorder + self-edit with a concurrent soft-DELETE of another (US-026 AC-3)", async () => {
+    // The original US-026 AC-3 case, now sortKey-based: A reorders sections (moves
+    // s1 to the end) AND renames it; B soft-deletes a DIFFERENT section (s3). Both
+    // land, replicas converge, B's delete is a tombstone (not a removal), and —
+    // unlike the old splice — A's rename on the MOVED section is NOT lost.
+    const base = buildRoutineDoc(seedReorderRoutine());
+    const sectionKeys = readRoutine(base).sections.map((s) => keyOf(s, s.id));
+    const lastSectionKey = sectionKeys[sectionKeys.length - 1] ?? null;
+
+    const left = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        const s1 = sectionById(d, "s1");
+        s1.sortKey = keyBetween(lastSectionKey, null); // move after s3
+        s1.name = "Outro"; // self-edit on the moved section
+      },
+    ]);
+    const right = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        sectionById(d, "s3").deletedAt = Date.now(); // tombstone flip in place
       },
     ]);
 
     const { converged } = await exchangeAndAssertConverged(left, right);
 
-    // No lost edits: A's order holds (s1 moved after s2), B's delete holds (s3 gone
-    // from the default read), s2 untouched.
+    // A's order holds (s1 after s2) + rename kept; B's delete holds (s3 dropped).
     const live = readRoutine(converged);
     expect(live.sections.map((s) => s.id)).toEqual(["s2", "s1"]);
+    expect(sectionById(live, "s1").name).toBe("Outro");
 
-    // The deleted section stays TOMBSTONED (not hard-removed) — visible only with
-    // includeDeleted, carrying its deletedAt.
+    // s3 stays TOMBSTONED (a flip, not a hard removal) — visible with includeDeleted.
     const all = readRoutine(converged, { includeDeleted: true });
-    const s3 = all.sections.find((s) => s.id === "s3");
-    expect(s3?.deletedAt).toBeTruthy();
-    // All three sections survive in the doc (B's delete is a flip, not a removal).
+    expect(sectionById(all, "s3").deletedAt).toBeTruthy();
     expect(all.sections.map((s) => s.id).sort()).toEqual(["s1", "s2", "s3"]);
   });
 

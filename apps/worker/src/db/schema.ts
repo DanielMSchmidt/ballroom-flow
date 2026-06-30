@@ -46,6 +46,16 @@ export const documentRegistry = sqliteTable("document_registry", {
   dance: text("dance"),
   title: text("title"),
   forkedFromRef: text("forkedFromRef"),
+  /**
+   * US-025 card projection (PLAN §2.7). For a FIGURE row: the figure's own bar
+   * count (`barsForFigure`, computed by the figure DO). For a ROUTINE row: Σ of
+   * its referenced figures' `bars`. Nullable — eventually consistent (projected
+   * on the DO alarm; absent until the first projection).
+   */
+  bars: integer("bars"),
+  /** US-025 card projection: a ROUTINE row's non-deleted placement count (`0` →
+   *  "no figures yet"). Null on figure/account rows. */
+  figureCount: integer("figureCount"),
   updatedAt: integer("updatedAt").notNull(),
   deletedAt: integer("deletedAt"),
 });
