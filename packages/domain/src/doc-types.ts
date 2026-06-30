@@ -29,24 +29,6 @@ export interface Attribute {
   deletedAt?: number | null;
 }
 
-/**
- * LEGACY — no longer resolved. The earlier live-overlay variant model is retired
- * (§5.2, §2.5.1 #14–18): provenance copies now carry their OWN attributes (a
- * frozen snapshot), so nothing resolves an overlay against a base anymore. The
- * type is retained only so legacy persisted docs / migrations can be read
- * defensively; new copies never set it.
- */
-export interface Overlay {
-  /** base attribute id → replacement value. */
-  overrides: Record<string, unknown>;
-  /** base attribute ids this variant drops. */
-  tombstones: string[];
-  /** variant-only attributes. */
-  additions: Attribute[];
-  /** variant display-name override. */
-  rename?: string | null;
-}
-
 export interface Alignment {
   qualifier: "facing" | "backing" | "pointing";
   direction: "LOD" | "ALOD" | "wall" | "centre" | "DW" | "DC" | "DW_against" | "DC_against";
@@ -70,8 +52,6 @@ export interface FigureDoc {
    * frozen snapshot carrying its own `attributes`.
    */
   baseFigureRef?: string | null;
-  /** LEGACY — no longer resolved; see {@link Overlay}. Retained for old docs. */
-  overlay?: Overlay;
   schemaVersion: number;
   deletedAt?: number | null;
 }
@@ -80,6 +60,13 @@ export interface Placement {
   id: string;
   figureRef: string;
   perPlacementAlignment?: Alignment;
+  /**
+   * Fractional-index ordering key (#63, §5.3). Reads order placements by this;
+   * reorder sets it between the new neighbours (no remove-and-reinsert). Optional
+   * for lenient reads of pre-sortKey docs — those fall back to array order until
+   * a migration/reorder backfills keys (see `order.ts`).
+   */
+  sortKey?: string;
   deletedAt?: number | null;
 }
 
@@ -87,6 +74,8 @@ export interface Section {
   id: string;
   name: string;
   placements: Placement[];
+  /** Fractional-index ordering key (#63, §5.3) — see {@link Placement.sortKey}. */
+  sortKey?: string;
   deletedAt?: number | null;
 }
 

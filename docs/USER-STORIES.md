@@ -47,7 +47,7 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 | US-003 🦴 | ATTRIBUTE_REGISTRY + merge | M1 | system/developer | US-002 | Standard kinds + user-defined kinds merge; Tango omits rise; CBP→CBMP; single vs multi cardinality. |
 | US-004 🦴 | Float-count timing | M1 | system/developer | US-002 | `countLabel`/`countToPhrase`/`barsForFigure` render e/&/a + i-subdivisions modulo phrase. |
 | US-005 🦴 | Routine + figure document schemas | M1 | system/developer | US-001,US-003 | Build/read routine & figure Automerge docs (sections, placements, attributes, annotations); soft-delete flips. |
-| US-006 🦴 | ~~Overlay resolution `resolve(base,overlay)`~~ *(reconciled 2026-06: retired — vestigial)* | M1 | system/developer | US-005 | *(retired)* The live-overlay/flow-up model is no longer the design. `resolve()` does not exist; `overlay.test.ts` was never shipped. The `Overlay` type + `overlay?` field in `doc-types.ts` are LEGACY stubs retained only for reading old persisted docs. **Follow-up: remove the vestigial type + field once no old docs need migration.** |
+| US-006 🦴 | ~~Overlay resolution `resolve(base,overlay)`~~ *(reconciled 2026-06: retired — removed 2026-06-30)* | M1 | system/developer | US-005 | *(retired + cleaned up)* The live-overlay/flow-up model is no longer the design. `resolve()` does not exist; `overlay.test.ts` was never shipped. The `Overlay` type, `overlay?` field on `FigureDoc`, and all migration branches that touched the overlay key have been removed. Old persisted docs carrying a stray `overlay` key are stripped by the v2→v3 migration step. |
 | US-007 🦴 | Choreo fork (clone) | M1 | system/developer | US-005 | `cloneRoutine` → new id, frozen, `forkedFromRef` provenance, no pull from origin. |
 | US-008 🦴 | Copy-on-write (frozen choreo-owned copy) | M1 | system/developer | US-005 | `copyOnWrite` spawns a **frozen, choreo-owned copy** carrying its own attributes snapshot; `baseFigureRef` = provenance only (no overlay); placement re-pointed. *(Reconciled 2026-06: "auto-variant" → "frozen choreo-owned copy"; no US-006 dep.)* |
 | US-009 🦴 | Automerge convergence invariants | M1 | system/developer | US-005,US-007 | Property tests: shuffled/partitioned changes converge; commutative; idempotent on duplicates. |
@@ -102,7 +102,7 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 
 The minimal subset that proves the architecture end-to-end and is each independently testable, in order:
 
-1. **M1 domain core (in-memory, no network):** US-001, US-002, US-003, US-004, US-005, ~~US-006~~, US-007, US-008, US-009, US-010, US-012 — the document graph, **frozen copy-on-write** (no live overlays — US-006 overlay/resolve model is retired; see US-006 for the vestigial-code follow-up), fork/clone, convergence, and undo proven with unit + property tests (this is the §9 M1 "walking skeleton" deliverable). *(Reconciled 2026-06: overlay inheritance removed from this list.)*
+1. **M1 domain core (in-memory, no network):** US-001, US-002, US-003, US-004, US-005, ~~US-006~~, US-007, US-008, US-009, US-010, US-012 — the document graph, **frozen copy-on-write** (no live overlays — US-006 overlay/resolve model is retired and all vestigial code removed 2026-06-30), fork/clone, convergence, and undo proven with unit + property tests (this is the §9 M1 "walking skeleton" deliverable). *(Reconciled 2026-06: overlay inheritance removed from this list.)*
 2. **M2 thin sync spine:** US-014, US-015, US-017 — one DO per doc persisting incremental changes, two clients converging over WS, and the `store/` seam loading a routine + its figure docs.
 3. **First user-facing slice:** US-018 (open & view a routine), US-028 (place an attribute on the timeline — the hero flow).
 4. **First permission gate:** US-021 — the DO connection boundary (editor/commenter/viewer/non-member/forged).
@@ -187,13 +187,13 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `soft-deletes via a mergeable deletedAt flip, never a hard removal` (AC-3 + AC-4)
   - `flips an attribute soft-delete on a figure doc` (AC-3 at attribute grain)
 
-#### US-006 — ~~Overlay resolution `resolve(base, overlay)`~~ 🦴 *(reconciled 2026-06: RETIRED — vestigial code)*
+#### US-006 — ~~Overlay resolution `resolve(base, overlay)`~~ 🦴 *(reconciled 2026-06: RETIRED — removed 2026-06-30)*
 
-> **Reconciled 2026-06:** The live-overlay/flow-up variant model is **retired**. `resolve(base, overlay)` does **not exist** in the codebase — there is no `overlay.ts` source file and no `overlay.test.ts` test file. The `Overlay` interface and `overlay?: Overlay` field in `packages/domain/src/doc-types.ts` are LEGACY stubs, explicitly marked so in code comments ("LEGACY — no longer resolved. Retained for old docs."), used only in `migrations.ts` to read old persisted docs during migration. `fork.test.ts` explicitly asserts `expect(variant?.overlay).toBeUndefined()`. **No passing test suite covers live overlay resolution because none exists.** This is ENTIRELY VESTIGIAL. **Follow-up (do not remove code here):** once old-format docs are fully migrated, remove the `Overlay` type, the `overlay?` field on `FigureDoc`, and the migration branch in `migrations.ts`.
+> **Reconciled 2026-06 / Removed 2026-06-30:** The live-overlay/flow-up variant model is **retired** and all vestigial code is removed. `resolve(base, overlay)` does **not exist** in the codebase — there is no `overlay.ts` source file and no `overlay.test.ts` test file. The `Overlay` interface, the `overlay?: Overlay` field on `FigureDoc`, and the overlay retag branch in `migrations.ts` have all been deleted. Old persisted docs that carry a stray `overlay` key are stripped by the v2→v3 migration step (see `migrations.ts`). **No passing test suite covers live overlay resolution because none exists.**
 
 - **Narrative (historical — retired):** As the system, I wanted `resolve(base, overlay)`, so that a figure variant could inherit the live base and store only its divergences.
 - **Milestone:** M1 · **Source:** §2.2, §5.2, §9 1.6 · **Depends-on:** US-005 · **Type:** system/developer
-- **Status:** RETIRED. The frozen choreo-owned copy model (§5.2, §2.5.1 #14–18) supersedes this entirely. US-008 (`copyOnWrite`) carries its own attributes snapshot; `baseFigureRef` is provenance-only. See PLAN.md §5.2 "No live overlays / no flow-up (⟳ reversal)".
+- **Status:** RETIRED + CLEANED UP. The frozen choreo-owned copy model (§5.2, §2.5.1 #14–18) supersedes this entirely. US-008 (`copyOnWrite`) carries its own attributes snapshot; `baseFigureRef` is provenance-only. See PLAN.md §5.2 "No live overlays / no flow-up (⟳ reversal)".
 - **Tests:** `packages/domain/src/overlay.test.ts` was **never created**. The skipped test bodies referenced in earlier backlog drafts were never written. No tests to unskip.
 
 #### US-007 — Choreo fork (clone) 🦴

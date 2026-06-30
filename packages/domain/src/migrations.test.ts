@@ -110,4 +110,133 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     expect(result.schemaVersion).toBe(2);
     expect(result.upgraded).toBe(true);
   });
+
+  // ── v3 → v4: assign sortKeys to sections + placements (#63, PLAN §5.3) ──
+  // (migrate() applies the full ladder, so a v2 doc lands at v4 with sortKeys.)
+
+  it("assigns ascending sortKeys to sections and placements in array order (#63)", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+        { id: "s2", name: "Body", placements: [] },
+      ],
+    };
+    const migrated = migrate(routine) as unknown as {
+      schemaVersion: number;
+      sections: Array<{ id: string; sortKey?: string; placements: Array<{ sortKey?: string }> }>;
+    };
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    // Sections keyed in array order (ascending).
+    const sk = migrated.sections.map((s) => s.sortKey);
+    expect(sk.every((k) => typeof k === "string")).toBe(true);
+    expect((sk[0] as string) < (sk[1] as string)).toBe(true);
+    // Placements within s1 keyed in array order (ascending).
+    const pk = (migrated.sections[0]?.placements ?? []).map((p) => p.sortKey);
+    expect(pk.every((k) => typeof k === "string")).toBe(true);
+    expect(String(pk[0]) < String(pk[1])).toBe(true);
+  });
+
+  it("is deterministic — two migrations of the same doc assign identical sortKeys", async () => {
+    // Both replicas migrate the same persisted bytes, so the backfill converges.
+    const { migrate } = await importDomain();
+    const doc = () => ({
+      schemaVersion: 2,
+      sections: [
+        { id: "s1", name: "A", placements: [{ id: "p1", figureRef: "f1" }] },
+        { id: "s2", name: "B", placements: [] },
+      ],
+    });
+    expect(migrate(doc())).toEqual(migrate(doc()));
+  });
+
+  it("does not inject sortKey/placements onto a doc that lacks sections (figure doc)", async () => {
+    // Automerge can't store undefined: a figure doc (no `sections`) must pass the
+    // v3→v4 step with the version bump alone — no spurious keys.
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const figure = { schemaVersion: 2, figureType: "feather", dance: "foxtrot", attributes: [] };
+    const migrated = migrate(figure) as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("sections" in migrated).toBe(false);
+    expect("sortKey" in migrated).toBe(false);
+  });
+
+  it("preserves an existing sortKey rather than overwriting it (idempotent)", async () => {
+    const { migrate } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [{ id: "s1", name: "A", sortKey: "PRESET", placements: [] }],
+    };
+    const migrated = migrate(routine) as unknown as { sections: Array<{ sortKey?: string }> };
+    expect(migrated.sections[0]?.sortKey).toBe("PRESET");
+  });
+
+  it("strips a stray `overlay` key from an old doc on migration (v2→v3)", async () => {
+    // Intent: the `Overlay` type and `overlay?` field on `FigureDoc` are retired
+    // (§5.2, §2.5.1 #14–18). Old persisted docs may carry a stray `overlay` key.
+    // The v2→v3 step must silently strip it so it does not linger; attributes and
+    // identity fields must survive intact. CRITICAL: the strip must NEVER assign
+    // `undefined` (Automerge cannot store it) — it builds a new object without
+    // the key instead.
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+
+    // A v1 figure doc that previously had an overlay (the pre-v2 shape).
+    const oldFigure = {
+      schemaVersion: 1,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [{ id: "a1", kind: "footwork", count: 1, value: "HT" }],
+      overlay: {
+        overrides: { a1: "T" },
+        tombstones: [],
+        additions: [{ id: "v1", kind: "sway", count: 2, value: "left" }],
+        rename: "My Natural Turn",
+      },
+    };
+    const migrated = migrate(oldFigure) as Record<string, unknown>;
+
+    // Migrated to current version.
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+
+    // overlay key is gone — not set to undefined, just absent.
+    expect("overlay" in migrated).toBe(false);
+
+    // Automerge-safety: no undefined values written.
+    for (const v of Object.values(migrated)) {
+      expect(v).not.toBeUndefined();
+    }
+
+    // Identity fields and attributes survive intact.
+    expect(migrated.figureType).toBe("natural-turn");
+    expect(migrated.dance).toBe("waltz");
+    expect((migrated.attributes as Array<{ id: string }>)[0]?.id).toBe("a1");
+  });
+
+  it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
+    // Intent: docs already at schemaVersion 2 (migrated before this PR) may still
+    // carry a stray `overlay` key. The v2→v3 step must strip it on read.
+    const { migrate } = await importDomain();
+
+    const v2DocWithOverlay = {
+      schemaVersion: 2,
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+    };
+    const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
+
+    // migrate() runs to CURRENT (4): the overlay strip happens at the v2→v3 step.
+    expect(migrated.schemaVersion).toBe(4);
+    expect("overlay" in migrated).toBe(false);
+    expect(migrated.figureType).toBe("feather");
+  });
 });

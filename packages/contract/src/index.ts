@@ -28,6 +28,25 @@ export const zRoutineListItem = z.object({
   role: z.enum(["owner", "editor", "commenter", "viewer"]),
   /** Last-projected update time (unix ms); ~create time for a fresh routine. */
   updatedAt: z.number(),
+  /**
+   * Total bar count across the routine's non-deleted placements (US-025 card,
+   * frame 1.1 "<dance> · <N bars> · <date>") — Σ of each referenced figure's
+   * projected per-figure `bars` (PLAN §2.5/§2.7). Projected from D1 by the routine
+   * DO's alarm; OPTIONAL because it is eventually consistent — it may lag a figure
+   * edit until the routine re-projects, and is absent until the first projection.
+   */
+  bars: z.number().optional(),
+  /**
+   * Number of NON-deleted placements in the routine (US-025 card): `0` renders
+   * "no figures yet". Projected with `bars`; optional/eventually-consistent.
+   */
+  figureCount: z.number().optional(),
+  /**
+   * Title of the routine this one was forked from (frame 1.3 lineage line),
+   * resolved from `forkedFromRef` against the D1 registry on read. Absent for a
+   * non-fork (or when the origin's registry row is gone).
+   */
+  forkedFromTitle: z.string().optional(),
 });
 export type RoutineListItem = z.infer<typeof zRoutineListItem>;
 
@@ -114,6 +133,12 @@ export const zRegistryKind = z.object({
   values: z.array(z.string()).optional(),
   freeText: z.boolean().optional(),
   appliesToDances: z.array(z.enum(DANCE_IDS)).optional(),
+  // Registry-derived info-sheet + Profile affordances (T5): one-line prose,
+  // per-value definitions, role-awareness (L/F), and the required-slot marker.
+  description: z.string().optional(),
+  valueDefs: z.record(z.string(), z.string()).optional(),
+  roleAware: z.boolean().optional(),
+  required: z.boolean().optional(),
   builtin: z.boolean(),
 });
 export type RegistryKindDto = z.infer<typeof zRegistryKind>;

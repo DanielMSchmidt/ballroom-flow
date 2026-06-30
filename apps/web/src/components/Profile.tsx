@@ -9,9 +9,9 @@
 // tints every note & reply of yours across shared routines (DP #5). Leader /
 // Follower is deliberately *not* here: it's a per-figure timeline toggle.
 import type { RegistryKind } from "@ballroom/domain";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
-import { listAccountKinds, saveAccountKind } from "../store/custom-kinds";
+import { useAccountKinds, useSaveAccountKind } from "../store/custom-kinds";
 import { useMe, useOnboard } from "../store/me";
 import { useRoutines } from "../store/routines";
 import { Badge, Button, Card, IDENTITY_COLORS, IDENTITY_HEX, Input, ScreenHeader } from "../ui";
@@ -194,39 +194,14 @@ export function ProfileScreen() {
   const me = useMe();
   const routinesQ = useRoutines();
   const onboard = useOnboard();
-  const { signOut, getToken } = useAppAuth();
+  const { signOut } = useAppAuth();
   const owned = (routinesQ.data?.routines ?? []).filter((r) => r.role === "owner").length;
 
   // Account-wide custom attribute kinds for the types manager (frame 1.17).
-  // Best-effort: a failure must never block the profile from rendering.
-  const [customKinds, setCustomKinds] = useState<RegistryKind[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const kinds = await listAccountKinds(await getToken());
-        if (!cancelled) setCustomKinds(kinds);
-      } catch {
-        // Surfacing custom kinds is best-effort.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [getToken]);
-
-  const onCreateKind = useCallback(
-    async (kind: RegistryKind) => {
-      // Optimistic: show it immediately, then persist account-wide.
-      setCustomKinds((prev) => [...prev.filter((k) => k.kind !== kind.kind), kind]);
-      try {
-        await saveAccountKind(await getToken(), kind);
-      } catch {
-        // Persistence is best-effort here; the optimistic add still applies.
-      }
-    },
-    [getToken],
-  );
+  // A React Query read (deterministic caching/retry) through the store seam,
+  // not a hand-rolled effect; `?? []` keeps the manager rendering pre-resolve.
+  const accountKinds = useAccountKinds();
+  const saveKind = useSaveAccountKind();
 
   return (
     <Profile
@@ -236,8 +211,8 @@ export function ProfileScreen() {
       ownedRoutineCount={owned}
       routineCap={me.data?.routineCap}
       saving={onboard.isPending}
-      customKinds={customKinds}
-      onCreateKind={(kind) => void onCreateKind(kind)}
+      customKinds={accountKinds.data ?? []}
+      onCreateKind={(kind) => saveKind.mutate(kind)}
       onSave={(displayName, identityColor) => onboard.mutate({ displayName, identityColor })}
       onSignOut={() => void signOut()}
     />

@@ -175,6 +175,69 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
   });
 });
 
+describe("T5 RegistryKind is data-driven (description / valueDefs / roleAware / required)", () => {
+  it("ships a one-line description + per-value definitions for every builtin", async () => {
+    // Intent: the info-sheet prose is registry-derived, so every builtin must
+    // carry a `description` and `valueDefs` covering its values.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    for (const k of Object.values(ATTRIBUTE_REGISTRY)) {
+      expect(typeof k.description).toBe("string");
+      expect(k.description?.length ?? 0).toBeGreaterThan(0);
+      expect(k.valueDefs).toBeDefined();
+      // Every enumerated value has a definition (info-sheet glossary coverage).
+      for (const v of k.values ?? []) {
+        expect(k.valueDefs?.[v], `${k.kind}.${v} missing a definition`).toBeTruthy();
+      }
+    }
+  });
+
+  it("marks direction as the required slot (the notate grid's Step* column)", async () => {
+    // The EDIT grid renders "Step*" on the merged Step column whose driving kind
+    // is `direction` (FigureTimeline `col.isStep`), so direction is `required`.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    expect(ATTRIBUTE_REGISTRY.direction.required).toBe(true);
+    // The technique kinds are NOT required.
+    expect(ATTRIBUTE_REGISTRY.rise.required ?? false).toBe(false);
+    expect(ATTRIBUTE_REGISTRY.turn.required ?? false).toBe(false);
+  });
+
+  it("flags the role-mirroring kinds roleAware and leaves shared kinds off", async () => {
+    // research/domain.md: the follower dances a different chart — direction
+    // mirrors, footwork differs, sway/turn mirror; the hold (position) + rise are
+    // shared by the couple.
+    const { ATTRIBUTE_REGISTRY } = await importDomain();
+    for (const k of ["direction", "footwork", "sway", "turn", "bodyActions"]) {
+      expect(ATTRIBUTE_REGISTRY[k]?.roleAware, `${k} should be roleAware`).toBe(true);
+    }
+    expect(ATTRIBUTE_REGISTRY.position.roleAware ?? false).toBe(false);
+    expect(ATTRIBUTE_REGISTRY.rise.roleAware ?? false).toBe(false);
+  });
+
+  it("preserves the new fields on a merged custom kind", async () => {
+    // mergeRegistry assigns the whole descriptor, so a custom kind carrying
+    // description/valueDefs/roleAware/required keeps them downstream.
+    const { ATTRIBUTE_REGISTRY, mergeRegistry } = await importDomain();
+    const merged = mergeRegistry(ATTRIBUTE_REGISTRY, [
+      {
+        kind: "energy",
+        label: "Energy",
+        color: "#123456",
+        cardinality: "single",
+        valueType: "enum",
+        values: ["low", "high"],
+        description: "How much drive the step carries.",
+        valueDefs: { low: "Low — relaxed", high: "High — driving" },
+        roleAware: true,
+        required: false,
+        builtin: false,
+      },
+    ]);
+    expect(merged.energy?.description).toBe("How much drive the step carries.");
+    expect(merged.energy?.valueDefs?.high).toBe("High — driving");
+    expect(merged.energy?.roleAware).toBe(true);
+  });
+});
+
 describe("US-043 custom kind slug helpers", () => {
   it("slugifies a label to a safe kind id", async () => {
     const { slugifyKind } = await import("./vocabulary");

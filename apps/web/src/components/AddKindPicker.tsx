@@ -1,6 +1,7 @@
 // Frame 1.15 — Add-attribute type picker. A sheet that lists the standard kinds
 // (dance-scoped: Tango omits rise) and any custom kinds, each as a tappable row
-// (colour dot + label + a "multi"/"custom" hint + chevron), plus a dashed
+// (colour dot + label + a registry-derived "L/F"/required/"multi"/"custom" hint
+// + chevron), plus a dashed
 // "＋ new attribute type" footer that opens the custom-type builder (frame 1.16).
 //
 // Registry-driven: the standard rows come from ATTRIBUTE_REGISTRY; custom rows
@@ -69,7 +70,26 @@ export function AddKindPicker({
               />
               <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-ink">
                 {kind.label}
+                {kind.required && (
+                  // role="img" gives the "*" glyph an accessible label ("required").
+                  <span
+                    role="img"
+                    className="ml-0.5 align-super text-2xs text-ink-muted"
+                    title="Required attribute type"
+                    aria-label="required"
+                  >
+                    *
+                  </span>
+                )}
               </span>
+              {kind.roleAware && (
+                <span
+                  className="flex-none rounded-[5px] border border-border-subtle px-1.5 py-0.5 text-[9px] font-bold text-ink-muted"
+                  title="Commonly differs by leader / follower"
+                >
+                  L/F
+                </span>
+              )}
               {kind.cardinality === "multi" && (
                 <span className="flex-none text-2xs text-ink-faint">multi</span>
               )}
