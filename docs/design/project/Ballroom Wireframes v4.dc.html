@@ -620,7 +620,7 @@
 
 <!-- role-on-timeline sticky -->
 <div class="anno note blue" style="position:absolute;left:2090px;top:3230px;width:300px;transform:rotate(1deg)">
-  <b>Role lives on the timeline.</b> Leader / Follower is a per-figure view toggle, not a profile attribute. Follower shows the mirror (RF↔LF, sway &amp; turn flipped). The app remembers your last-viewed role and reopens there.
+  <b>Role lives on the timeline.</b> Leader / Follower is a per-figure view toggle, not a profile attribute. Follower shows the mirror (forward↔back, sway &amp; turn flipped) — feet are never shown, so there's nothing to swap there. The app remembers your last-viewed role and reopens there.
 </div>
 
 <!-- copy-on-write sticky -->
@@ -1123,6 +1123,111 @@
       <div style="font:700 11px Inconsolata;color:#8a5cab;margin-bottom:5px">TYPES — &amp; WHAT ISN'T ONE</div>
       <div style="font:500 14px/1.4 Caveat,cursive;color:#3a352d">A type is single/multi, optional/required, and may be role-aware; it can be <b>limited to certain dances</b> (Rise &amp; Fall doesn't apply to Tango). Custom types are <b>choreo-scoped</b> so partners see them. <b>Entry/exit alignment and threaded notes are NOT attributes</b> — they're separate things that live on the figure.</div>
     </div>
+  </div>
+</div>
+<!-- ===================== SECTION 1c · v1 FLOWS — plans, onboarding, alignment, undo ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:9200px">1c · Plans &amp; quota · onboarding · alignment · undo</div>
+
+<!-- 1.18 Plans & quota -->
+<div style="position:absolute;left:80px;top:9280px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.18 · Plans &amp; quota <span class="sub" style="display:inline">— at the cap</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto;opacity:.5"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span><span style="font:600 9px Inconsolata;color:#9a958c">Free · 3 of 3</span><span style="margin-left:8px;width:26px;height:26px;border-radius:8px;background:#bcb6aa;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="width:30px;height:30px;border-radius:8px;background:#f3e6d2;color:#a9742c;display:flex;align-items:center;justify-content:center;font:700 15px Inconsolata;flex:0 0 auto">★</span><div style="font:700 13px Inconsolata;color:#1c1c1e">You've reached 3 routines</div></div>
+        <div style="background:#faf6ef;border:1.5px solid #ecdcc2;border-radius:10px;padding:10px 12px;font:500 14px Caveat,cursive;line-height:1.4;color:#6b4a16;margin-bottom:13px">Free plans include <b>3 owned routines</b>. Routines shared <i>with</i> you don't count. Upgrade for unlimited routines.</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="text-align:center;font:700 12px Inconsolata;background:#a9742c;color:#fff;border-radius:11px;padding:12px"><span class="pin" style="background:#fff;color:#a9742c">1</span> Upgrade ▸</span>
+          <span style="text-align:center;font:600 10px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:11px;padding:10px">Not now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>Upgrade</b> → plans; until then the <b>＋</b> &amp; New-choreo (1.5) are blocked at the cap + upsell toast</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Quota counts <b>owned</b> routines only (not shared-in). Profile shows status "Free · 2 of 3 routines".</span></div>
+  </div>
+</div>
+
+<!-- 1.19 Onboarding — three starts -->
+<div style="position:absolute;left:480px;top:9280px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.19 · Onboarding <span class="sub" style="display:inline">— first-run, three starts</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:11px;padding:0 16px">
+        <div style="font:500 15px Caveat,cursive;color:#9a958c;text-align:center;margin-bottom:2px">No routines yet — start one of three ways:</div>
+        <div class="opt" style="border-color:#dbe5f0"><span class="opi">◉</span><div style="flex:1"><div class="opn">Open the sample</div><div class="ops">"Golden Waltz" · read-only tour</div></div><span class="pin">1</span></div>
+        <div class="opt" style="border-color:#dbe5f0"><span class="opi">▤</span><div style="flex:1"><div class="opn">Start from a template</div><div class="ops">a seeded starter you can edit</div></div><span class="pin">2</span></div>
+        <div class="opt" style="border-color:#dbe5f0"><span class="opi">＋</span><div style="flex:1"><div class="opn">Create blank</div><div class="ops">pick dance &amp; name (1.5)</div></div><span class="pin">3</span></div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>Sample</b> → opens read-only; a <b>"Make it mine"</b> banner forks it to an editable, owned copy</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Template</b> → seeds a starter routine you own &amp; edit</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>Blank</b> → New-choreo sheet (1.5)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Same three starts also offered inside the New-choreo flow.</span></div>
+  </div>
+</div>
+
+<!-- 1.20 Entry / exit alignment -->
+<div style="position:absolute;left:880px;top:9280px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.20 · Entry / exit alignment <span class="sub" style="display:inline">— on Figure detail</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div style="display:flex;align-items:center;gap:6px"><span class="bdot"></span><span class="ht">Natural Turn</span></div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="font:700 8px Inconsolata;background:#e8eef6;color:#3e4a63;border-radius:5px;padding:1px 5px">facing DW</span><span style="font:700 9px Inconsolata;color:#9aa7bb">→</span><span style="font:700 8px Inconsolata;background:#e8eef6;color:#3e4a63;border-radius:5px;padding:1px 5px">backing LOD</span><span class="pin">1</span></div></div></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:13px 14px;display:flex;flex-direction:column;gap:13px">
+        <div style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">ENTRY ALIGNMENT <span class="pin">2</span></div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">QUALIFIER</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;background:#5b6b8a;color:#fff;border-radius:11px;padding:5px 11px">facing</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">backing</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">pointing</span></div></div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">LOD</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">wall</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">centre</span><span style="font:600 10px Inconsolata;background:#5b6b8a;color:#fff;border-radius:11px;padding:5px 9px">diag wall</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">diag centre</span></div></div>
+        <div style="height:1px;background:#ece8e0"></div>
+        <div style="font:700 8px Inconsolata;color:#9a958c;letter-spacing:.4px">EXIT ALIGNMENT</div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">QUALIFIER</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">facing</span><span style="font:600 10px Inconsolata;background:#5b6b8a;color:#fff;border-radius:11px;padding:5px 11px">backing</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 11px">pointing</span></div></div>
+        <div><div style="font:700 8px Inconsolata;color:#9a958c;margin-bottom:5px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 10px Inconsolata;background:#5b6b8a;color:#fff;border-radius:11px;padding:5px 9px">LOD</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">wall</span><span style="font:600 10px Inconsolata;border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px">centre</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>entry→exit <b>alignment chips</b> show in the figure header (&amp; on each placement)</span></div>
+    <div class="cr"><span class="pin">2</span><span>each is a <b>qualifier</b> (facing / backing / pointing) + a <b>direction</b> (LOD · wall · centre · diag-wall · diag-centre)</span></div>
+  </div>
+</div>
+
+<!-- 1.21 Undo / redo -->
+<div style="position:absolute;left:1280px;top:9280px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.21 · Undo / redo <span class="sub" style="display:inline">— per-user, on editing</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span class="pin">1</span><span style="font:700 13px Inconsolata;color:#2f5d8f">↶</span><span class="pin">2</span><span style="font:700 13px Inconsolata;color:#c0bab0">↷</span><span style="font:700 14px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+        <div class="shd"><span style="color:#3f6b3f;font:700 11px Inconsolata">▾</span><span class="shdt">1st Long Side</span><span style="font:600 9px Inconsolata;color:#5b8a5b">6 bars</span></div>
+        <div style="margin-left:8px;display:flex;flex-direction:column;gap:7px">
+          <div class="fig"><span class="bdot"></span><span class="fign">Natural Turn</span><span class="cnt">1 2 3</span></div>
+          <div class="fig" style="opacity:.6"><span class="bdot"></span><span class="fign">Spin Turn</span><span style="font:600 8px Inconsolata;color:#a98a5c;background:#faf2e6;border-radius:5px;padding:1px 5px">superseded</span></div>
+        </div>
+      </div>
+      <div class="toast" style="position:static;transform:none;margin:0 13px 12px;align-self:flex-start;display:inline-block">↶ Undone · Natural Turn footwork</div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>↶ undo</b> → reverts <b>your own</b> last change · "Undone" toast</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>↷ redo</b> (dim when nothing to redo)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Per-user; if someone built on top, a soft <b>"superseded"</b> hint shows instead of clobbering. On Assemble · editing (1.7) &amp; Figure detail (1.11).</span></div>
   </div>
 </div></x-dc>
 <script type="text/x-dc" data-dc-script data-props="{
