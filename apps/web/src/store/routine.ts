@@ -17,8 +17,11 @@ import {
   addReply,
   addSection,
   copyOnWrite,
+  ensureSortKeys,
   type FigureDoc,
   isReservedKind,
+  keyBetween,
+  keyForMove,
   kindAppliesToDance,
   LIBRARY_FIGURES,
   newId,
@@ -30,6 +33,7 @@ import {
   softDeleteAnnotation,
   softDeleteReply,
   softDeleteSection,
+  sortByOrder,
   undoLastChange,
   wasSupersededByOthers,
 } from "@ballroom/domain";
@@ -584,16 +588,19 @@ export async function openRoutine(
 
     moveSection: (sectionId, direction) => {
       routineConn.change((draft) => {
-        const i = draft.sections.findIndex((s) => s.id === sectionId);
-        if (i < 0) return;
-        const j = direction === "up" ? i - 1 : i + 1;
-        if (j < 0 || j >= draft.sections.length) return;
-        // Re-insert a plain copy: an Automerge object can't be re-inserted after
-        // removal, so move via a JSON copy. Single-client correct; robust
-        // concurrent-reorder convergence is the (open) sortKey work, #63.
-        const moved = JSON.parse(JSON.stringify(draft.sections[i]));
-        draft.sections.splice(i, 1);
-        draft.sections.splice(j, 0, moved);
+        // Reorder via sortKey (#63, §5.3): set the moved section's `sortKey`
+        // between its new neighbours — NO splice, NO JSON copy, the object is
+        // never deleted. Concurrent reorders then converge by Automerge's
+        // per-field merge, and a concurrent edit to the moved section survives.
+        ensureSortKeys(draft.sections); // backfill a legacy keyless doc in place
+        const sorted = sortByOrder(draft.sections);
+        const from = sorted.findIndex((s) => s.id === sectionId);
+        if (from < 0) return;
+        const to = direction === "up" ? from - 1 : from + 1;
+        const key = keyForMove(sorted, from, to);
+        if (key == null) return;
+        const moved = draft.sections.find((s) => s.id === sectionId);
+        if (moved) moved.sortKey = key;
       });
     },
 
@@ -630,7 +637,19 @@ export async function openRoutine(
       // `sections?` guards the not-yet-synced (empty A.init) doc edge.
       routineConn.change((draft) => {
         const section = draft.sections?.find((s) => s.id === sectionId);
-        if (section) section.placements.push({ id: newId(), figureRef, deletedAt: null });
+        if (section) {
+          // Append after the last placement in sortKey order (#63). Backfill any
+          // legacy keyless placements first so the new key sorts after them.
+          ensureSortKeys(section.placements);
+          const ordered = sortByOrder(section.placements);
+          const lastKey = ordered[ordered.length - 1]?.sortKey ?? null;
+          section.placements.push({
+            id: newId(),
+            figureRef,
+            sortKey: keyBetween(lastKey, null),
+            deletedAt: null,
+          });
+        }
       });
 
       // A catalog pick carries the per-step timeline (US-032 + WDSF seed); a custom has none.
@@ -666,15 +685,18 @@ export async function openRoutine(
       routineConn.change((draft) => {
         const section = draft.sections.find((s) => s.id === sectionId);
         if (!section) return;
-        const i = section.placements.findIndex((p) => p.id === placementId);
-        if (i < 0) return;
-        const j = direction === "up" ? i - 1 : i + 1;
-        if (j < 0 || j >= section.placements.length) return;
-        // Re-insert a plain copy (an Automerge object can't be re-inserted after
-        // removal). Single-client correct; concurrent-reorder fidelity is #63.
-        const moved = JSON.parse(JSON.stringify(section.placements[i]));
-        section.placements.splice(i, 1);
-        section.placements.splice(j, 0, moved);
+        // Reorder via sortKey (#63, §5.3): a per-field update on the moved
+        // placement — no splice, no JSON copy, the object is never deleted, so a
+        // concurrent edit to it survives and two concurrent reorders converge.
+        ensureSortKeys(section.placements); // backfill a legacy keyless doc in place
+        const sorted = sortByOrder(section.placements);
+        const from = sorted.findIndex((p) => p.id === placementId);
+        if (from < 0) return;
+        const to = direction === "up" ? from - 1 : from + 1;
+        const key = keyForMove(sorted, from, to);
+        if (key == null) return;
+        const moved = section.placements.find((p) => p.id === placementId);
+        if (moved) moved.sortKey = key;
       });
     },
 

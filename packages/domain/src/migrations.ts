@@ -14,12 +14,15 @@
 // (US-041) depend on them being stable for life. The ladder enforces this — a
 // step that changes either throws.
 //
-// CURRENT is 3 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key).
-// A future v4 step adds TWO localized edits here (add a `MIGRATIONS[3]` entry
-// AND bump CURRENT_SCHEMA_VERSION = 4), with no caller changes.
+// CURRENT is 4 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
+// v3→v4: backfill section/placement `sortKey`). A future v5 step adds TWO
+// localized edits here (add a `MIGRATIONS[4]` entry AND bump
+// CURRENT_SCHEMA_VERSION = 5), with no caller changes.
+
+import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -66,6 +69,36 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     if (!("overlay" in doc)) return doc;
     const { overlay: _dropped, ...rest } = doc;
     return rest as VersionedDoc;
+  },
+
+  // v3 → v4 (#63 same-section reorder convergence): assign a fractional-index
+  // `sortKey` to every section and to every placement within each section, IN
+  // THEIR CURRENT ARRAY ORDER, so reorder becomes a per-field update that
+  // converges under concurrency (PLAN §5.3). Deterministic — every replica that
+  // migrates the same persisted bytes assigns identical keys, so the backfill
+  // itself converges. STRUCTURE-ONLY: only ADD `sortKey` (never rewrite an
+  // existing one), never write `undefined` back (Automerge can't store it — so a
+  // doc without `sections`/`placements` passes through untouched), and the
+  // immutable identity fields are not touched. Figure/account docs (no
+  // `sections`) get the version bump alone.
+  3: (doc) => {
+    if (!Array.isArray(doc.sections)) return { ...doc };
+    const sectionKeys = sequentialKeys(doc.sections.length);
+    const sections = doc.sections.map((section, i) => {
+      if (!section || typeof section !== "object") return section;
+      const s = section as Record<string, unknown>;
+      const out: Record<string, unknown> = { ...s };
+      if (Array.isArray(s.placements)) {
+        const placementKeys = sequentialKeys(s.placements.length);
+        out.placements = (s.placements as unknown[]).map((p, j) => {
+          if (!p || typeof p !== "object" || "sortKey" in (p as object)) return p;
+          return { ...(p as object), sortKey: placementKeys[j] };
+        });
+      }
+      if (!("sortKey" in s)) out.sortKey = sectionKeys[i];
+      return out;
+    });
+    return { ...doc, sections };
   },
 };
 

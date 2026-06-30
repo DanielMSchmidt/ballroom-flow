@@ -60,6 +60,13 @@ export interface Placement {
   id: string;
   figureRef: string;
   perPlacementAlignment?: Alignment;
+  /**
+   * Fractional-index ordering key (#63, §5.3). Reads order placements by this;
+   * reorder sets it between the new neighbours (no remove-and-reinsert). Optional
+   * for lenient reads of pre-sortKey docs — those fall back to array order until
+   * a migration/reorder backfills keys (see `order.ts`).
+   */
+  sortKey?: string;
   deletedAt?: number | null;
 }
 
@@ -67,6 +74,8 @@ export interface Section {
   id: string;
   name: string;
   placements: Placement[];
+  /** Fractional-index ordering key (#63, §5.3) — see {@link Placement.sortKey}. */
+  sortKey?: string;
   deletedAt?: number | null;
 }
 

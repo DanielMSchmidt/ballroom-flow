@@ -76,11 +76,28 @@ describe("migration v2 — step → footwork retag", () => {
     expect(migrated.attributes[1]).toMatchObject({ kind: "rise" });
   });
 
-  it("leaves a routine doc (no attributes) untouched apart from the version bump", () => {
-    const routine = { schemaVersion: 1, sections: [{ id: "s1", name: "Intro", placements: [] }] };
-    const migrated = migrate(routine) as typeof routine & { schemaVersion: number };
+  it("leaves a routine doc's content untouched apart from the version bump + sortKeys", () => {
+    // The footwork retag (v1→v2) and overlay strip (v2→v3) ignore routine docs
+    // (no attributes / no overlay); the v3→v4 step adds a `sortKey` to each
+    // section/placement in array order (#63) but preserves ids, names, and order.
+    const routine = {
+      schemaVersion: 1,
+      sections: [
+        { id: "s1", name: "Intro", placements: [] },
+        { id: "s2", name: "Body", placements: [] },
+      ],
+    };
+    const migrated = migrate(routine) as unknown as {
+      schemaVersion: number;
+      sections: Array<{ id: string; name: string; sortKey?: string }>;
+    };
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(migrated.sections).toEqual(routine.sections);
+    expect(migrated.sections.map((s) => s.id)).toEqual(["s1", "s2"]);
+    expect(migrated.sections.map((s) => s.name)).toEqual(["Intro", "Body"]);
+    // sortKeys added in array order (ascending).
+    const keys = migrated.sections.map((s) => s.sortKey);
+    expect(keys.every((k) => typeof k === "string")).toBe(true);
+    expect(String(keys[0]) < String(keys[1])).toBe(true);
   });
 
   it("never injects an `attributes` key on a doc that lacks one", () => {
