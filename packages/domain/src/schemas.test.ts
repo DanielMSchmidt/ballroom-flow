@@ -123,6 +123,51 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     expect(ok.value).toBe("CBMP");
   });
 
+  it("rejects a kind whose appliesToDances EXCLUDES the figure's dance on write (rise omits Tango)", async () => {
+    // Intent: a kind that does not apply to the figure's dance is rejected on the
+    // WRITE path — `rise` has appliesToDances = the 4 swing dances, omitting Tango
+    // (§3, §10.2). The reading view only HIDES the column; this closes the write gap
+    // so a rise value can never be persisted onto a Tango figure (T9a / T3 review).
+    const { parseAttributeWrite } = await importDomain();
+    try {
+      parseAttributeWrite({ id: "a1", kind: "rise", count: 1, value: "up" }, { dance: "tango" });
+      throw new Error("expected throw");
+    } catch (e) {
+      expect(e).toBeInstanceOf(z.ZodError);
+      const issue = (e as z.ZodError).issues[0] as {
+        params?: { code?: string; kind?: string; dance?: string };
+      };
+      expect(issue.params?.code).toBe("dance_not_applicable");
+      expect(issue.params?.kind).toBe("rise");
+      expect(issue.params?.dance).toBe("tango");
+    }
+  });
+
+  it("still accepts rise on a Waltz figure, and a non-rise kind on a Tango figure (no over-rejection)", async () => {
+    // Intent: the dance gate only blocks the inapplicable kind — valid writes pass.
+    //   • rise on Waltz (a swing dance) → accepted.
+    //   • position on Tango (rise-omitting, but position applies everywhere) → accepted.
+    const { parseAttributeWrite } = await importDomain();
+    expect(
+      parseAttributeWrite({ id: "a1", kind: "rise", count: 1, value: "up" }, { dance: "waltz" })
+        .value,
+    ).toBe("up");
+    expect(
+      parseAttributeWrite(
+        { id: "a2", kind: "position", count: 1, value: "closed" },
+        { dance: "tango" },
+      ).value,
+    ).toBe("closed");
+  });
+
+  it("does not apply the dance gate when no dance context is given (structural-only write)", async () => {
+    // Intent: without a dance, the figure's dance is unknown, so the gate is
+    // permissive (the DO/store always supply the figure's dance — this is the
+    // forward-compatible default, matching the timing check which is dance-scoped too).
+    const { parseAttributeWrite } = await importDomain();
+    expect(parseAttributeWrite({ id: "a1", kind: "rise", count: 1, value: "up" }).value).toBe("up");
+  });
+
   it("does not enum-restrict an unknown (user-defined) kind on write", async () => {
     // Intent: a kind not in this registry copy (future custom kind) isn't value-
     // restricted here — its values are validated by its own registry entry (US-043).

@@ -19,6 +19,7 @@ import {
   copyOnWrite,
   type FigureDoc,
   isReservedKind,
+  kindAppliesToDance,
   LIBRARY_FIGURES,
   newId,
   type Placement,
@@ -30,6 +31,7 @@ import {
   softDeleteReply,
   softDeleteSection,
   undoLastChange,
+  wasSupersededByOthers,
 } from "@ballroom/domain";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
 import {
@@ -57,6 +59,21 @@ import {
  *               figure IS accessible — a transient failure the user can retry.
  */
 export type FigureLoadStatus = "pending" | "loading" | "live" | "missing" | "error";
+
+/**
+ * Outcome of an `undo()` through the seam (US-038). Undo ALWAYS proceeds (the
+ * inverse is a normal change that merges — no hard refusal); this just reports
+ * what happened so the UI can soften the toast.
+ */
+export interface UndoResult {
+  /** Whether a change was actually reverted (false = the actor had nothing to undo). */
+  undone: boolean;
+  /**
+   * Advisory soft hint (US-038 AC-3): another actor had BUILT ON (causally
+   * depended on) the reverted change. Always false when `undone` is false.
+   */
+  supersededByOthers: boolean;
+}
 
 /** A placement with its figure resolved to effective attributes (its own attributes). */
 export interface ResolvedPlacement {
@@ -170,8 +187,13 @@ export interface RoutineStore extends RoutineReadModel {
    * without a full page reload.
    */
   retryFigure(figureRef: string): void;
-  /** Per-actor history undo / redo (US-010). */
-  undo(): void;
+  /**
+   * Per-actor history undo (US-010/US-038). Always proceeds (CRDT merges);
+   * returns whether a change was reverted and the advisory "superseded by
+   * others" soft hint (US-038 AC-3) so the caller can pick the toast copy.
+   */
+  undo(): UndoResult;
+  /** Per-actor history redo (US-010). */
   redo(): void;
   /** Subscribe to any change (local or synced); returns an unsubscribe fn. */
   subscribe(fn: () => void): () => void;
@@ -664,8 +686,16 @@ export async function openRoutine(
       });
     },
 
-    setFigureAttributes: (figureRef, attributes) => {
+    setFigureAttributes: (figureRef, rawAttributes) => {
       const figure = readFigureDoc(figureConn(figureRef).current());
+      // Dance gate (write path): drop any attribute whose kind does not apply to
+      // this figure's dance — e.g. a `rise` value can never land on a Tango figure
+      // (§3/§10.2). This mirrors the domain `parseAttributeWrite` rejection at the
+      // DO seed boundary, so the rule holds whether an attribute set arrives through
+      // the store seam (in-place / copy-on-write below) or the worker route. The
+      // reading view already HID inapplicable columns; this stops the bad value at
+      // the source instead of relying on every reader to defend.
+      const attributes = rawAttributes.filter((a) => kindAppliesToDance(a.kind, figure?.dance));
       if (figure?.scope !== "global") {
         // Account figures edit IN PLACE — whether you own it, or it's a co-member's
         // figure you can edit via the routine cascade (the shared doc converges to
@@ -819,7 +849,19 @@ export async function openRoutine(
       notify();
     },
 
-    undo: () => routineConn.commit(undoLastChange(routineConn.current(), actor ?? "local")),
+    undo: () => {
+      const actorId = actor ?? "local";
+      const before = routineConn.current();
+      // Peek the soft hint on the PRE-undo doc (the undo itself adds a change
+      // that would otherwise perturb the dependency graph). Undo still always
+      // proceeds — this is advisory only (US-038 AC-3, PLAN §5.4).
+      const superseded = wasSupersededByOthers(before, actorId);
+      const after = undoLastChange(before, actorId);
+      // undoLastChange returns the SAME doc reference on a no-op (nothing to undo).
+      const undone = after !== before;
+      routineConn.commit(after);
+      return { undone, supersededByOthers: undone && superseded };
+    },
     redo: () => routineConn.commit(redoLastChange(routineConn.current(), actor ?? "local")),
 
     subscribe: (fn) => {

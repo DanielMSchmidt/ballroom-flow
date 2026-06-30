@@ -7,11 +7,12 @@ import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Notation parity (2026-06-28, .pen FigureEditor): the figure timeline is a
-// dance-aware BAR / BEAT layout of step cards. Beats group into bars per the
-// dance (Waltz 3/4 → a 6-beat phrase of two bars), each step shows a derived
-// duration, and a step's `direction` drives its "RF/LF <direction>" headline
-// (foot is not stored — steps alternate feet).
+// Notation parity (2026-06-29, frame 1.11 "Figure detail EDIT grid"): the figure
+// timeline is a dance-aware COLUMN GRID. Each whole beat is a row with a tappable
+// count cell on the left; the columns are every attribute kind applicable to the
+// dance. Tapping a count (or a cell) opens the per-count editor; the open
+// editor's summary carries the step headline + that count's value chips. The
+// dance still scopes the beat ruler (Waltz 3/4 → a 6-beat phrase).
 // ─────────────────────────────────────────────────────────────────────────
 
 interface TimelineModule {
@@ -29,62 +30,58 @@ const attr = (kind: string, value: string, count: number): Attribute => ({
 
 const load = () => importComponent<TimelineModule>("../components/FigureTimeline");
 
-describe("FigureTimeline — dance-aware bars & beats", () => {
-  it("lays a Waltz figure out as one 6-beat phrase grouped into two bars of three", async () => {
+describe("FigureTimeline — dance-aware beat-row grid", () => {
+  it("lays a Waltz figure out as one 6-beat phrase of count rows", async () => {
     const { FigureTimeline } = await load();
     renderUi(<FigureTimeline role="editor" dance="waltz" />);
     // 6 whole beats (a Waltz phrase), not a flat 8.
     expect(screen.getByRole("button", { name: /^beat 6$/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^beat 7$/i })).toBeNull();
-    // Grouped into 2 bars of beatsPerBar=3.
-    expect(screen.getAllByLabelText(/^bar \d/i)).toHaveLength(2);
+  });
+
+  it("shows the dance's applicable kind columns (Tango omits Rise)", async () => {
+    const { FigureTimeline } = await load();
+    const waltz = renderUi(<FigureTimeline role="editor" dance="waltz" />);
+    expect(screen.getByRole("columnheader", { name: /rise/i })).toBeInTheDocument();
+    waltz.unmount();
+    renderUi(<FigureTimeline role="editor" dance="tango" />);
+    expect(screen.queryByRole("columnheader", { name: /rise/i })).toBeNull();
   });
 
   it("extends past the first phrase to cover an attribute placed later", async () => {
     const { FigureTimeline } = await load();
     // A footwork attribute on count 7 sits in the SECOND Waltz phrase, so the
-    // ruler must extend to 12 beats (4 bars) to show it.
+    // ruler must extend to 12 beats to show its row.
     renderUi(
       <FigureTimeline role="editor" dance="waltz" attributes={[attr("footwork", "ball", 7)]} />,
     );
     expect(screen.getByRole("button", { name: /^beat 7$/i })).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/^bar \d/i)).toHaveLength(4);
-  });
-
-  it("renders a step's direction as its headline", async () => {
-    const { FigureTimeline } = await load();
-    renderUi(
-      <FigureTimeline role="editor" dance="waltz" attributes={[attr("direction", "forward", 1)]} />,
-    );
-    const headline = screen.getByTestId("step-headline-1");
-    expect(headline).toHaveTextContent(/^forward$/i);
   });
 });
 
-describe("FigureTimeline — step-summary card + derived duration", () => {
-  it("opening a step shows a summary with its headline and derived duration", async () => {
+describe("FigureTimeline — opening a count's editor", () => {
+  it("opening a count shows a summary with its direction headline + value chips", async () => {
     const { FigureTimeline } = await load();
-    // A step on count 1 with the next step on 1.5 → it lasts half a beat.
     renderUi(
       <FigureTimeline
         role="editor"
         dance="waltz"
-        attributes={[attr("direction", "forward", 1), attr("footwork", "heel", 1.5)]}
+        attributes={[attr("direction", "forward", 1), attr("footwork", "ball", 1)]}
       />,
     );
-    await userEvent.click(screen.getByTestId("step-headline-1"));
-    const summary = screen.getByTestId("step-summary");
-    expect(summary).toHaveTextContent(/forward/i); // the direction headline
-    expect(summary).toHaveTextContent(/½ beat/i); // derived from the gap to 1.5
+    await userEvent.click(screen.getByRole("button", { name: /^beat 1$/i }));
+    expect(screen.getByTestId("step-headline-1")).toHaveTextContent(/^forward$/i);
+    // The count's value chips ride a labelled region (the authoring-journey contract).
+    expect(screen.getByLabelText(/count 1 attributes/i)).toHaveTextContent(/ball/i);
   });
 });
 
-describe("FigureTimeline — placing & resizing steps", () => {
-  it("opens the editor on an empty beat's Add step and places the attribute there", async () => {
+describe("FigureTimeline — placing steps via the grid", () => {
+  it("opens the editor on a count cell and places the attribute there", async () => {
     const { FigureTimeline } = await load();
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
-    // Open beat 2 via its tick, then pick footwork — the attribute lands on 2.
+    // Tap beat 2's count cell, then pick footwork — the attribute lands on 2.
     await userEvent.click(screen.getByRole("button", { name: /^beat 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^ball$/ }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
@@ -93,30 +90,12 @@ describe("FigureTimeline — placing & resizing steps", () => {
     expect(added?.count).toBe(2);
   });
 
-  it("resizes a step's duration with the keyboard (snaps later steps along)", async () => {
-    const { FigureTimeline } = await load();
-    const onChange = vi.fn();
-    renderUi(
-      <FigureTimeline
-        role="editor"
-        dance="waltz"
-        attributes={[attr("direction", "forward", 1), attr("footwork", "toe", 2)]}
-        onChange={onChange}
-      />,
-    );
-    // Grow step 1 (default ⅛ grid): the later step on 2 shifts by +⅛ to 2.125.
-    const handle = screen.getByRole("slider", { name: /resize step 1/i });
-    handle.focus();
-    await userEvent.keyboard("{ArrowRight}");
-    const moved = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork",
-    );
-    expect(moved?.count).toBe(2.125);
-  });
-
-  it("does not offer Add step affordances to a viewer", async () => {
+  it("does not offer add affordances to a viewer (read grid only)", async () => {
     const { FigureTimeline } = await load();
     renderUi(<FigureTimeline role="viewer" dance="waltz" />);
-    expect(screen.queryByRole("button", { name: /add step/i })).toBeNull();
+    // A viewer can tap a count to inspect (read-only editor) but gets no
+    // add-cell buttons and no in-between-timing affordance.
+    expect(screen.queryByRole("button", { name: /^Add .* at count/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /in-between timing/i })).toBeNull();
   });
 });

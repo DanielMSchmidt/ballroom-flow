@@ -146,9 +146,6 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   if (openRoutineId) {
     return (
       <div className="flex flex-col gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-          ← All routines
-        </Button>
         {access.state === "denied" ? (
           <AccessDenied
             action={
@@ -169,6 +166,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             role={roleForOpen(items, openRoutineId)}
             currentUserId={me.data?.sub}
             getToken={() => getToken()}
+            onBack={() => navigate("/")}
             forking={fork.isPending}
             onFork={() =>
               // Fork → a new owned, frozen copy; deep-link to it once created.
@@ -196,6 +194,21 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         create.mutate(input, { onSuccess: (res) => navigate(`/routines/${res.docRef}`) })
       }
       onOpen={(docRef) => navigate(`/routines/${docRef}`)}
+      onFork={(docRef) =>
+        // Fork from the list's ⋯ sheet → a NEW owned, frozen copy; deep-link to it
+        // and confirm with a toast. A 402 means the routine cap is hit → drive the
+        // SAME upsell path as a create/template-fork quota block.
+        fork.mutate(docRef, {
+          onSuccess: (res) => {
+            toast.show("Forked — independent copy");
+            navigate(`/routines/${res.docRef}`);
+          },
+          onError: (err) => {
+            if (isQuotaError(err)) setForkQuotaBlocked(true);
+            else toast.show("Couldn't fork this routine. Please try again.", { tone: "danger" });
+          },
+        })
+      }
       sample={sample}
       templates={templates}
       onStartFromTemplate={onStartFromTemplate}

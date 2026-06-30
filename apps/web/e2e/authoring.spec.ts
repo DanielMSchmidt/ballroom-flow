@@ -26,8 +26,11 @@ test.describe("@smoke core authoring journey", () => {
     // 1. Create a routine (US-025) — server-side create + quota gate.
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("E2E Foxtrot");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
 
     // 2. The new routine opens in Assemble as an editor (owner → editor): the
     //    add-section affordance is the proof we connected with edit rights.
@@ -85,13 +88,12 @@ test.describe("@smoke core authoring journey", () => {
     });
     await page.keyboard.press("Escape");
 
-    // 5c. The reading view lays the whole routine out read-only as a columnar
-    //     table — the step's direction is the headline ("forward") and footwork
-    //     "ball" shows as its tight column code ("B").
+    // 5c. The reading view lays the whole routine out read-only as a per-figure
+    //     used-columns table — the step's direction + footwork MERGE into one
+    //     blue Step chip (frame 1.6): "forward" + "ball" → "fwd·B".
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
-    await expect(reading.getByText("forward", { exact: true })).toBeVisible();
-    await expect(reading.getByText("B", { exact: true })).toBeVisible();
+    await expect(reading.getByText("fwd·B")).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
@@ -111,8 +113,11 @@ test.describe("@smoke core authoring journey", () => {
     // create routine → section → figure (reuse the existing pattern)
     await page.getByRole("button", { name: /new choreo/i }).click();
     await page.getByLabel("Routine name").fill("E2E Kinds");
-    await page.getByLabel("Dance").selectOption("foxtrot");
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("button", { name: "Foxtrot" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
     await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
       timeout: 15_000,
     });
@@ -128,9 +133,14 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
 
-    // create a custom kind "Energy"
+    // create a custom kind "Energy". "add kind" opens the type PICKER (frame
+    // 1.15); the "＋ new attribute type" footer opens the builder (frame 1.16).
     await page.getByRole("button", { name: /add kind/i }).click();
-    // Scope to the dialog to avoid ambiguity; use placeholder selectors to
+    await page
+      .getByRole("dialog", { name: /add an attribute/i })
+      .getByRole("button", { name: /new attribute type/i })
+      .click();
+    // Scope to the builder dialog to avoid ambiguity; use placeholder selectors to
     // avoid the required-asterisk suffix that breaks getByLabel exact regex.
     const kindDialog = page.getByRole("dialog", { name: /add attribute kind/i });
     await kindDialog.getByPlaceholder("e.g. Energy").fill("Energy");

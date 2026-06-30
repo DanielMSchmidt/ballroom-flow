@@ -148,13 +148,17 @@ test.describe("@smoke share screen (roster + invite from the UI)", () => {
 
     // 1. Roster (AC-1): the existing viewer member shows with their role.
     const shareSheet = page.getByRole("dialog", { name: /share this routine/i });
-    await expect(shareSheet.getByText("People with access")).toBeVisible();
-    await expect(shareSheet.getByText(member)).toBeVisible();
-    // Exact match: the role BADGE is exactly "Viewer" (the invite <option> reads
-    // "Viewer — can view", so a substring match would be ambiguous).
-    await expect(shareSheet.getByText("Viewer", { exact: true })).toBeVisible();
+    // Frame 4.2: section heading is "PARTNERS ON THIS ROUTINE" (CSS uppercase).
+    await expect(shareSheet.getByText(/partners on this routine/i)).toBeVisible();
+    // Frame 4.2: the member row shows their displayName (T9b: m.displayName ?? m.userId).
+    await expect(shareSheet.getByText("Member")).toBeVisible();
+    // Frame 4.2: role pill is lowercase "viewer" (not "Viewer" Badge; the invite
+    // <option> reads "Viewer — can view", so exact match still distinguishes them).
+    await expect(shareSheet.getByText("viewer", { exact: true })).toBeVisible();
 
-    // 2. Issue an invite link from the UI (AC-4): pick a role, create the link.
+    // 2. Issue an invite link from the UI (AC-4): expand the invite form via the
+    //    "+ invite someone" CTA (frame 4.2 ③), pick a role, create the link.
+    await shareSheet.getByRole("button", { name: /\+ invite someone/i }).click();
     await shareSheet.getByLabel("Role").selectOption("commenter");
     await shareSheet.getByRole("button", { name: "Create link" }).click();
     const inviteCode = shareSheet.locator("code", { hasText: "/invite/" });

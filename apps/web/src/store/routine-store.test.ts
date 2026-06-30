@@ -364,6 +364,80 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("undo() returns a supersededByOthers signal when another actor built on my change (US-038 AC-3)", async () => {
+    // Intent: the soft "superseded" hint flows through the seam. undo ALWAYS
+    //   proceeds (CRDT merges, no refusal); undo() just REPORTS whether another
+    //   actor causally built on the reverted change so the UI can soften the toast.
+    const ACTOR_A = "00aa00aa00aa00aa";
+    const ACTOR_B = "00bb00bb00bb00bb";
+    const base: RoutineDoc = {
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    // A authors the undo target; B merges A's change THEN edits → B depends on A.
+    let aDoc = A.from(
+      base as unknown as Record<string, unknown>,
+      ACTOR_A,
+    ) as unknown as A.Doc<RoutineDoc>;
+    aDoc = A.change(aDoc, (d) => {
+      const s = d.sections[0];
+      if (s) s.name = "Verse";
+    });
+    let bDoc = A.merge(A.init<RoutineDoc>(), A.clone(aDoc));
+    bDoc = A.change(A.clone(bDoc, { actor: ACTOR_B }), (d) => {
+      d.sections.push({ id: "s2", name: "FromB", placements: [], deletedAt: null });
+    });
+    const merged = A.merge(A.merge(A.init<RoutineDoc>(), A.clone(aDoc)), A.clone(bDoc));
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, actor: ACTOR_A });
+    sockets.get("rt_sample")?.load(merged);
+
+    const result = store.undo();
+    expect(result.undone).toBe(true);
+    expect(result.supersededByOthers).toBe(true);
+    store.close();
+  });
+
+  it("undo() reports supersededByOthers:false when only I have edited (US-038 AC-3)", async () => {
+    // Intent: with no other actor's dependent change, the hint stays quiet so the
+    //   UI shows the plain "Undone" toast.
+    const ACTOR_A = "00aa00aa00aa00aa";
+    const base: RoutineDoc = {
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    let aDoc = A.from(
+      base as unknown as Record<string, unknown>,
+      ACTOR_A,
+    ) as unknown as A.Doc<RoutineDoc>;
+    aDoc = A.change(aDoc, (d) => {
+      const s = d.sections[0];
+      if (s) s.name = "Verse";
+    });
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, actor: ACTOR_A });
+    sockets.get("rt_sample")?.load(aDoc);
+
+    const result = store.undo();
+    expect(result.undone).toBe(true);
+    expect(result.supersededByOthers).toBe(false);
+    store.close();
+  });
+
   it("exposes annotation reads + mutations stamped with currentUserId (US-039)", async () => {
     // Intent: the seam reads + creates/replies/deletes routine annotations, each
     //   stamped with the open user's id. Annotations live in the routine doc, so
@@ -459,6 +533,55 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // Opening the figure connection + writing the change sends bytes on its socket.
     expect(sockets.get("fig1")).toBeTruthy();
     expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(0);
+    store.close();
+  });
+
+  it("setFigureAttributes drops a kind that doesn't apply to the figure's dance (rise omits Tango, §3/§10.2)", async () => {
+    // Intent: the store seam enforces the dance gate on the WRITE path — a `rise`
+    //   value can never be persisted onto a Tango figure (T9a). A valid kind in the
+    //   same batch still lands; only the inapplicable attribute is dropped.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me" });
+
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "tango",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "figT", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "figT", scope: "account", ownerId: "me", dance: "tango" }) as FigureDoc,
+    );
+    sockets.get("figT")?.fireOpen();
+    sockets.get("figT")?.load(figDoc);
+    sockets.get("figT")?.fireCaughtUp();
+
+    store.setFigureAttributes("figT", [
+      { id: "rise-1", kind: "rise", count: 1, value: "up", role: null, deletedAt: null },
+      { id: "pos-1", kind: "position", count: 1, value: "closed", role: null, deletedAt: null },
+    ]);
+
+    // The rise attribute was dropped; the (dance-applicable) position attribute persisted.
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    const kinds = (rp?.figure?.attributes ?? []).map((a) => a.kind);
+    expect(kinds).toContain("position");
+    expect(kinds).not.toContain("rise");
     store.close();
   });
 

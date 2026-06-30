@@ -43,6 +43,21 @@ export interface AnnotationPanelProps {
   onReply?: (annotationId: string, text: string) => void;
   /** Reply-delete handler (controlled); shown only on the viewer's own replies. */
   onDeleteReply?: (annotationId: string, replyId: string) => void;
+  // ── T8 Thread parity (frame 1.14) ────────────────────────────────────────
+  /** Thread header title — e.g. "Spin Turn · step 2". When set, the panel
+   *  renders in THREAD MODE: a titled header + flat comment list + single reply
+   *  composer, instead of the filter bar + kind-select compose form. */
+  threadTitle?: string;
+  /** Author display names: authorId → display name ("Daniel"). Falls back to
+   *  authorId when missing. Used in T8 thread mode. */
+  authorNameMap?: Record<string, string>;
+  /** Author identity colors: authorId → hex color ("#3b7dd8"). Falls back to
+   *  a stable hash slot when missing. Used in T8 thread mode. */
+  authorColorMap?: Record<string, string>;
+  /** Current viewer's identity color (for the reply composer avatar). */
+  currentUserColor?: string;
+  /** Current viewer's display name (for avatar initial in reply composer). */
+  currentUserName?: string;
 }
 
 /** A kind filter, or a `figure:<ref>` by-figure filter (US-042). */
@@ -80,6 +95,11 @@ export function AnnotationPanel({
   onCreate,
   onReply,
   onDeleteReply,
+  threadTitle,
+  authorNameMap,
+  authorColorMap,
+  currentUserColor,
+  currentUserName,
 }: AnnotationPanelProps): React.JSX.Element {
   const canAnnotate = role === "commenter" || role === "editor";
   const [draft, setDraft] = useState("");
@@ -94,8 +114,10 @@ export function AnnotationPanel({
   const submit = (): void => {
     const text = draft.trim();
     if (!text) return;
+    // Thread mode always uses "note" kind; the filter-bar mode uses the select.
+    const submitKind: AnnotationKind = threadTitle ? "note" : kind;
     if (onCreate) {
-      onCreate({ kind, text });
+      onCreate({ kind: submitKind, text });
     } else {
       const anchor: ComposeAnchor = composeAnchor ?? { type: "figure", figureRef: "" };
       setLocal((prev) => [
@@ -103,7 +125,7 @@ export function AnnotationPanel({
         {
           id: nextLocalId(),
           authorId: currentUserId ?? "me",
-          kind,
+          kind: submitKind,
           text,
           tags: [],
           anchors: [anchor],
@@ -126,6 +148,67 @@ export function AnnotationPanel({
 
   const labelFor = (ref: string): string => figureLabels?.[ref] ?? ref;
 
+  // ── Thread mode (frame 1.14): titled header + flat comment list + footer reply ──
+  if (threadTitle) {
+    return (
+      <section aria-label="Thread" className="flex flex-col gap-3">
+        {/* Thread header: title ("Spin Turn · step 2") + comment count. */}
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-[15px] font-bold text-ink">{threadTitle}</h2>
+          <p className="text-2xs text-ink-muted">{visible.length} comments</p>
+        </div>
+
+        <ul aria-label="comment thread" className="flex flex-col gap-4">
+          {visible.map((a) => (
+            <li key={a.id}>
+              <ThreadComment
+                annotation={a}
+                currentUserId={currentUserId}
+                authorColorMap={authorColorMap}
+                authorNameMap={authorNameMap}
+                canReply={canAnnotate && Boolean(onReply)}
+                onReply={onReply ? (text) => onReply(a.id, text) : undefined}
+                onDeleteReply={
+                  onDeleteReply ? (replyId) => onDeleteReply(a.id, replyId) : undefined
+                }
+              />
+            </li>
+          ))}
+        </ul>
+
+        {/* Footer reply composer (frame 1.14 ③): avatar + "add a reply…" + send.
+            Tints the avatar + border with the current user's identity colour.
+            Commenter+ only (viewers are read-only). */}
+        {canAnnotate && (
+          <form
+            aria-label="Add reply"
+            className="flex items-center gap-2 border-t border-line pt-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
+            }}
+          >
+            <AuthorAvatar name={currentUserName} color={currentUserColor} size="md" />
+            <input
+              aria-label="add a reply"
+              placeholder="add a reply…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="flex-1 rounded-full border border-border-strong bg-surface-sunken px-4 text-sm text-ink placeholder:text-ink-faint min-h-[var(--bf-touch-target)] outline-none"
+              style={
+                currentUserColor ? { borderColor: currentUserColor, boxShadow: "none" } : undefined
+              }
+            />
+            <Button type="submit" variant="secondary" size="sm" disabled={!draft.trim()}>
+              send
+            </Button>
+          </form>
+        )}
+      </section>
+    );
+  }
+
+  // ── Standard mode: filter bar + annotation list + kind-select compose form ──
   return (
     <section aria-label="Annotations" className="flex flex-col gap-3">
       {/* Filter chips share the app's "pick one" pattern (#5/#7): a real button
@@ -202,6 +285,113 @@ export function AnnotationPanel({
     </section>
   );
 }
+
+// ── T8 helpers: Thread mode components ───────────────────────────────────────
+
+/** Relative time from a unix-ms timestamp (e.g. "2h", "3d ago", "3 May"). */
+function relativeTime(createdAt: number): string {
+  const now = Date.now();
+  const diffMs = now - createdAt;
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return "yesterday";
+  if (diffDay < 7) return `${diffDay}d ago`;
+  // Older: format as "3 May"
+  return new Date(createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+/** Round identity avatar: initial of the author name on their identity colour.
+ *  Decorative — the name is rendered alongside, so aria-hidden is correct. */
+function AuthorAvatar({
+  name,
+  color,
+  size = "md",
+}: {
+  name?: string;
+  color?: string;
+  size?: "sm" | "md";
+}) {
+  const initial = (name?.trim()[0] ?? "?").toUpperCase();
+  const sizeCls = size === "sm" ? "h-[20px] w-[20px] text-[10px]" : "h-[32px] w-[32px] text-sm";
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex flex-none items-center justify-center rounded-full font-bold text-white ${sizeCls}`}
+      style={{ backgroundColor: color ?? "var(--bf-identity-1)" }}
+    >
+      {initial}
+    </span>
+  );
+}
+
+/** One thread comment (T8 frame 1.14): large avatar + author name in identity
+ *  colour + relative time + Caveat text.  Reply thread indented below. */
+function ThreadComment({
+  annotation: a,
+  currentUserId,
+  authorColorMap,
+  authorNameMap,
+  canReply,
+  onReply,
+  onDeleteReply,
+}: {
+  annotation: Annotation;
+  currentUserId?: string;
+  authorColorMap?: Record<string, string>;
+  authorNameMap?: Record<string, string>;
+  canReply: boolean;
+  onReply?: (text: string) => void;
+  onDeleteReply?: (replyId: string) => void;
+}): React.JSX.Element {
+  const authorName = authorNameMap?.[a.authorId] ?? a.authorId;
+  const authorColor = authorColorMap?.[a.authorId];
+  const time = relativeTime(a.createdAt);
+  return (
+    <div className="flex gap-3">
+      <AuthorAvatar name={authorName} color={authorColor} size="md" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {/* Author name (in identity colour) · relative time */}
+        <p className="flex items-baseline gap-1.5 text-sm">
+          <span className="font-semibold" style={{ color: authorColor ?? "var(--bf-ink)" }}>
+            {authorName}
+          </span>
+          <span className="text-2xs text-ink-muted">· {time}</span>
+        </p>
+        {/* Comment text — Caveat (hand-written) font per brief */}
+        <p className="text-[15px] text-ink" style={{ fontFamily: "var(--bf-font-note)" }}>
+          {a.text}
+        </p>
+        {/* Threaded replies (indented) */}
+        {a.replies.length > 0 && (
+          <ul aria-label="replies thread" className="mt-1 flex flex-col gap-1 pl-2">
+            {a.replies.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 text-2xs text-ink-secondary">
+                <span>{r.text}</span>
+                {r.authorId === currentUserId && onDeleteReply && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDeleteReply(r.id)}
+                  >
+                    delete reply
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canReply && onReply && <ReplyBox onSend={onReply} />}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** One annotation: its kind (as text, not colour-only), body, and reply thread. */
 function AnnotationRow({

@@ -15,7 +15,9 @@
 import {
   type Alignment,
   type Attribute,
+  barsForFigure,
   can,
+  countLabel,
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
@@ -24,20 +26,27 @@ import {
   type RegistryKind,
   type Section,
 } from "@ballroom/domain";
-import { type FormEvent, useCallback, useEffect, useReducer, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import { useMe } from "../store/me";
 import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
+import { useMembers } from "../store/share";
 import {
-  Badge,
   Button,
   Card,
+  ChevronDownIcon,
+  ChevronRightIcon,
   Chip,
+  CountPill,
+  EditIcon,
   IconButton,
   Input,
+  kindVar,
   OfflineState,
+  ScreenHeader,
   Select,
   ShareIcon,
   Sheet,
@@ -45,12 +54,13 @@ import {
   Spinner,
   useToast,
 } from "../ui";
-import { AddKindSheet } from "./AddKindSheet";
+import { AddKindPicker } from "./AddKindPicker";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
 import { Lanes } from "./Lanes";
 import { RoutineReadingView } from "./RoutineReadingView";
+import { useStoredRoleView } from "./reading-columns-role";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -73,6 +83,8 @@ export interface AssembleProps {
   onFork?: () => void;
   /** A fork is in flight (disables the action + shows a spinner). */
   forking?: boolean;
+  /** Back out to the routine list (the ScreenHeader ‹ control). */
+  onBack?: () => void;
 }
 
 /**
@@ -153,6 +165,7 @@ export function Assemble({
   getToken,
   onFork,
   forking,
+  onBack,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
@@ -195,13 +208,49 @@ export function Assemble({
   // (`notating` itself is declared above, alongside the copy-on-write handler.)
   const [addKindOpen, setAddKindOpen] = useState(false);
   const [lanesOpen, setLanesOpen] = useState(false);
-  // "read" lays the whole routine out as a read-only timeline (the payoff view).
+  // "read" lays the whole routine out as the clean read-only programme (frame
+  // 1.6); "edit" is the section/figure builder (frames 1.7–1.9).
   const [mode, setMode] = useState<"edit" | "read">("edit");
+  // The anchor whose thread is open from the reading view (T8 QUAL-2 fix).
+  // When set, the thread sheet shows the AnnotationPanel for that step's anchor.
+  const [threadAnchor, setThreadAnchor] = useState<{
+    figureRef: string;
+    count: number;
+  } | null>(null);
+  // The Leader/Follower lens for the reading view — persisted across routines.
+  const [roleView, setRoleView] = useStoredRoleView();
+  // Which sections are collapsed in the editing view (frame 1.9: ▾/▸).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleCollapsed = useCallback((sectionId: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  }, []);
   const [pendingDeletePlacement, setPendingDeletePlacement] = useState<{
     sectionId: string;
     placement: Placement;
   } | null>(null);
   const toast = useToast();
+
+  // Identity colour map for reading-view inline dots (T9b): build from the
+  // members query + the current user's own identity so dots use real colours.
+  // React Query caches the request; calling it here (for reading view) and in
+  // ThreadSheetContents (for the thread panel) costs zero extra network hops.
+  const me = useMe();
+  const membersQ = useMembers(routineId);
+  const memberColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of membersQ.data?.members ?? []) {
+      if (m.identityColor) map[m.userId] = m.identityColor;
+    }
+    if (currentUserId && me.data?.identityColor) {
+      map[currentUserId] = me.data.identityColor;
+    }
+    return map;
+  }, [membersQ.data, me.data, currentUserId]);
 
   // Family notes (US-040/041) come from the worker (co-member visibility gate),
   // not the routine doc — load them for this routine + reload after authoring one.
@@ -248,109 +297,161 @@ export function Assemble({
       ? (store.readPlacements().find((rp) => rp.figure?.id === notating)?.figure ?? null)
       : null;
 
+  const modeLabel = mode === "read" ? "reading" : "editing";
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold">{routine.title || "Untitled routine"}</h1>
-          {/* Fork lineage as provenance (US-037 AC-3) — surfaced, not pulled-from. */}
-          {routine.forkedFromRef && <Badge tone="neutral">Forked copy</Badge>}
-        </div>
-        <div className="flex items-center gap-2">
-          {syncing && (
-            <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
-              <Spinner /> Syncing…
-            </span>
-          )}
-          {/* Per-user undo/redo (US-038): inverts only THIS actor's last change
-              (US-010); B's concurrent edit survives. Editor-only. */}
-          {canEdit && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  store.undo();
-                  toast.show("Undone");
-                }}
-              >
-                Undo
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => store.redo()}>
-                Redo
-              </Button>
-            </>
-          )}
-          {/* Choreo fork (US-037): any member may "make it your own" — the server
-              clones it into a new owned, frozen routine. */}
-          {onFork && (
-            <Button variant="secondary" size="sm" loading={forking} onClick={onFork}>
-              Make a copy
-            </Button>
-          )}
-          {/* Read-only timeline payoff view ⇄ the editable list (US-018 reading). */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setMode(mode === "edit" ? "read" : "edit")}
-          >
-            {mode === "edit" ? "Reading view" : "List view"}
-          </Button>
-          {canShare && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShareOpen(true)}
-              leadingIcon={<ShareIcon size={16} />}
+    <div className="flex flex-col">
+      {/* Compact per-screen header (frame 1.6/1.7): ‹ back · title · mode ·
+          ✎ toggle (+ ↗ Share in reading). Undo/Redo/Make-a-copy live below in
+          the editing toolbar — the reading lens stays the clean programme. */}
+      <ScreenHeader
+        title={routine.title || "Untitled routine"}
+        // Fork lineage as provenance (US-037 AC-3) — surfaced, not pulled-from.
+        subtitle={routine.forkedFromRef ? `${modeLabel} · forked copy` : modeLabel}
+        onBack={onBack}
+        backLabel="All routines"
+        actions={
+          <>
+            {/* Read ⇄ edit lens toggle. In editing the ✎ is active/filled; in
+                reading it's plain. Labels stay "Reading view"/"List view" so the
+                action names survive across the redesign. */}
+            <IconButton
+              label={mode === "edit" ? "Reading view" : "List view"}
+              variant={mode === "edit" ? "filled" : "plain"}
+              onClick={() => setMode(mode === "edit" ? "read" : "edit")}
             >
-              Share
-            </Button>
-          )}
-        </div>
-      </header>
+              <EditIcon size={16} />
+            </IconButton>
+            {/* Share (↗) — on the reading programme in the design (frame 1.6);
+                also kept on the editing header so an editor can share without
+                first switching lenses (US-024). */}
+            {canShare && (
+              <IconButton label="Share" onClick={() => setShareOpen(true)}>
+                <ShareIcon size={16} />
+              </IconButton>
+            )}
+          </>
+        }
+      />
 
-      {/* COW toast: "Copied as your variant" — shown when a non-owned figure edit
-          triggers copy-on-write (US-035). role="status" is the E2E observable hook.
-          Cleared when the notation Sheet closes. */}
-      {copiedToast && (
-        <p role="status" className="text-2xs text-accent">
-          Copied as your variant
-        </p>
-      )}
+      <div className="flex flex-col gap-3 p-4">
+        {/* Editing-only toolbar: undo/redo (editor) + make-a-copy (any member). */}
+        {mode === "edit" && (onFork || canEdit || syncing) && (
+          <div className="flex items-center gap-2">
+            {syncing && (
+              <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
+                <Spinner /> Syncing…
+              </span>
+            )}
+            {/* Per-user undo/redo (US-038): inverts only THIS actor's last change
+                (US-010); B's concurrent edit survives. Editor-only. */}
+            {canEdit && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // Undo always proceeds (CRDT merges). When another actor had
+                    // built on the reverted change, soften the toast — advisory
+                    // only, no modal, no refusal (US-038 AC-3, PLAN §5.4).
+                    const supersededByOthers = store.undo()?.supersededByOthers ?? false;
+                    if (supersededByOthers) {
+                      toast.show("Undone — others had built on this change", {
+                        tone: "warning",
+                      });
+                    } else {
+                      toast.show("Undone");
+                    }
+                  }}
+                >
+                  Undo
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => store.redo()}>
+                  Redo
+                </Button>
+              </>
+            )}
+            {/* Choreo fork (US-037): any member may "make it your own" — the
+                server clones it into a new owned, frozen routine. */}
+            {onFork && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="ml-auto"
+                loading={forking}
+                onClick={onFork}
+              >
+                Make a copy
+              </Button>
+            )}
+          </div>
+        )}
 
-      {/* Share screen: roster + roles, remove (confirmed), invite link (US-024). */}
-      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
-        <Share docRef={routineId} viewerRole={role} />
-      </Sheet>
+        {/* COW toast: "Copied as your variant" — shown when a non-owned figure edit
+            triggers copy-on-write (US-035). role="status" is the E2E observable hook.
+            Cleared when the notation Sheet closes. */}
+        {copiedToast && (
+          <p role="status" className="text-2xs text-accent">
+            Copied as your variant
+          </p>
+        )}
 
-      {mode === "read" ? (
-        <RoutineReadingView routine={routine} placements={store.readPlacements()} />
-      ) : (
-        <>
-          {/* The live section list. data-testid is a stable hook the two-client
-          convergence E2E (US-015) asserts on (no role/name ambiguity). */}
-          <div data-testid="section-list" className="flex flex-col gap-4">
-            {routine.sections.length === 0 ? (
-              <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
-            ) : (
-              routine.sections.map((section, index) => (
-                <section key={section.id} className="flex flex-col gap-2">
-                  <SectionHeader
-                    section={section}
-                    canEdit={canEdit}
-                    isFirst={index === 0}
-                    isLast={index === routine.sections.length - 1}
-                    onRename={(name) => store.renameSection(section.id, name)}
-                    onMove={(dir) => store.moveSection(section.id, dir)}
-                    onDelete={() => setPendingDelete(section)}
-                  />
-                  {section.placements.length === 0 ? (
-                    <p className="text-2xs text-ink-faint">No figures placed in this section.</p>
-                  ) : (
-                    <ul className="flex flex-col gap-2">
-                      {section.placements.map((placement, pIndex) => (
-                        <li key={placement.id}>
+        {/* Share screen: roster + roles, remove (confirmed), invite link (US-024).
+            T9b: wire routineName + onFork so the design's subtitle + Fork CTA show. */}
+        <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
+          <Share
+            docRef={routineId}
+            viewerRole={role}
+            routineName={routine.title || "Untitled routine"}
+            onFork={onFork}
+          />
+        </Sheet>
+
+        {mode === "read" ? (
+          <RoutineReadingView
+            routine={routine}
+            placements={store.readPlacements()}
+            annotations={store.readAnnotations()}
+            canComment={can(role, "canAnnotate")}
+            memberColors={memberColorMap}
+            roleView={roleView}
+            onRoleViewChange={setRoleView}
+            onOpenFigure={(figureId) => setNotating(figureId)}
+            onOpenThread={(anchor) => setThreadAnchor(anchor)}
+          />
+        ) : routine.sections.length === 0 ? (
+          // Empty state (frame 1.8): a freshly created/forked-empty routine.
+          <EmptyState canEdit={canEdit} onAdd={(name) => store.addSection(name)} />
+        ) : (
+          <>
+            {/* The live section list. data-testid is a stable hook the two-client
+            convergence E2E (US-015) asserts on (no role/name ambiguity). */}
+            <div data-testid="section-list" className="flex flex-col gap-[9px]">
+              {routine.sections.map((section, index) => {
+                const isCollapsed = collapsed.has(section.id);
+                return (
+                  <section key={section.id} className="flex flex-col gap-[7px]">
+                    <SectionHeader
+                      section={section}
+                      collapsed={isCollapsed}
+                      meta={sectionMeta(
+                        section,
+                        resolvedByPlacement,
+                        routine.dance as DanceId,
+                        isCollapsed,
+                      )}
+                      canEdit={canEdit}
+                      isFirst={index === 0}
+                      isLast={index === routine.sections.length - 1}
+                      onToggle={() => toggleCollapsed(section.id)}
+                      onRename={(name) => store.renameSection(section.id, name)}
+                      onMove={(dir) => store.moveSection(section.id, dir)}
+                      onDelete={() => setPendingDelete(section)}
+                    />
+                    {!isCollapsed && (
+                      <div className="ml-2 flex flex-col gap-[7px]">
+                        {section.placements.map((placement, pIndex) => (
                           <PlacementCard
+                            key={placement.id}
                             placement={placement}
                             figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
                             status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
@@ -367,27 +468,52 @@ export function Assemble({
                               setPendingDeletePlacement({ sectionId: section.id, placement })
                             }
                           />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {canEdit && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setAddingFigureTo(section.id)}
-                    >
-                      Add figure
-                    </Button>
-                  )}
-                </section>
-              ))
-            )}
-          </div>
+                        ))}
+                        {canEdit && (
+                          <DashedAddButton
+                            label="add figure"
+                            tone="figure"
+                            onClick={() => setAddingFigureTo(section.id)}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
 
-          {canEdit && <AddSection onAdd={(name) => store.addSection(name)} />}
-        </>
-      )}
+            {canEdit && <AddSection variant="inline" onAdd={(name) => store.addSection(name)} />}
+          </>
+        )}
+      </div>
+
+      {/* Thread panel (T8 QUAL-2 fix): opens the annotation thread for a
+          specific step anchor from the reading view. Uses a child component so
+          the identity data hooks (useMe/useMembers) are only mounted when open. */}
+      <Sheet open={threadAnchor !== null} onClose={() => setThreadAnchor(null)} title="Thread">
+        {threadAnchor && (
+          <ThreadSheetContents
+            routineId={routineId}
+            anchor={threadAnchor}
+            annotations={store.readAnnotations()}
+            placements={store.readPlacements()}
+            role={role}
+            currentUserId={currentUserId}
+            onCreate={({ kind, text }) =>
+              store.createAnnotation({
+                kind,
+                text,
+                anchors: [
+                  { type: "point", figureRef: threadAnchor.figureRef, count: threadAnchor.count },
+                ],
+              })
+            }
+            onReply={(annotationId, text) => store.addReply(annotationId, text)}
+            onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+          />
+        )}
+      </Sheet>
 
       {/* Add a figure: mints a fresh owned custom figure + a placement (US-027). */}
       <Sheet
@@ -423,6 +549,9 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              roleView={roleView}
+              onRoleViewChange={setRoleView}
+              scopeLabel={routine.title || notatingFigure.name}
               customKinds={store.customKinds()}
               figureScope={notatingFigure.scope === "global" ? "global" : "owned"}
               onForkIntoVariant={() =>
@@ -497,6 +626,8 @@ export function Assemble({
                   role={canEdit ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
+                  roleView={roleView}
+                  onRoleViewChange={setRoleView}
                   customKinds={store.customKinds()}
                   onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
                 />
@@ -506,14 +637,19 @@ export function Assemble({
         )}
       </Sheet>
 
-      {/* Add a custom attribute kind (US-043): editor-only; persisted in the
-          routine doc and across all routines via accountKinds (US-043 AC-2).
+      {/* Add an attribute kind (frame 1.15 + US-043): a picker over the standard
+          + custom kinds with a "＋ new attribute type" route to the builder
+          (frame 1.16). Editor-only; a created kind persists in the routine doc
+          and across routines via accountKinds (US-043 AC-2).
           NOTE: rendered AFTER the notation Sheet on purpose — both use the same
           overlay z-index, so DOM source order decides stacking; this Sheet must
           stay below the notation Sheet here to layer on top of it when open. */}
-      <AddKindSheet
+      <AddKindPicker
         open={addKindOpen}
         onClose={() => setAddKindOpen(false)}
+        dance={routine.dance as DanceId}
+        customKinds={store.customKinds()}
+        onSelectKind={() => setAddKindOpen(false)}
         onCreate={(k) => store.createCustomKind(k)}
       />
 
@@ -580,20 +716,50 @@ export function Assemble({
   );
 }
 
-/** A section's heading with editor management (rename inline, move up/down, delete). */
+/** The derived bar / figure count shown on a section header (frame 1.7/1.9):
+ *  expanded sections show the derived bar count; collapsed ones show the figure
+ *  count (the design's "3 figs"). Bars are summed from each figure's notation. */
+function sectionMeta(
+  section: Section,
+  resolved: Map<string, ResolvedPlacement>,
+  dance: DanceId,
+  collapsed: boolean,
+): string {
+  if (collapsed) {
+    const n = section.placements.length;
+    return `${n} fig${n === 1 ? "" : "s"}`;
+  }
+  let bars = 0;
+  for (const pl of section.placements) {
+    const fig = resolved.get(pl.id)?.figure;
+    if (!fig) continue;
+    const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
+    if (counts.length > 0) bars += barsForFigure(counts, dance);
+  }
+  return `${bars} bar${bars === 1 ? "" : "s"}`;
+}
+
+/** A section's green header (frames 1.7/1.9): ▾/▸ collapse toggle + name + green
+ *  "N bars"/"N figs" meta. Editors also get rename (inline) / move / delete. */
 function SectionHeader({
   section,
+  collapsed,
+  meta,
   canEdit,
   isFirst,
   isLast,
+  onToggle,
   onRename,
   onMove,
   onDelete,
 }: {
   section: Section;
+  collapsed: boolean;
+  meta: string;
   canEdit: boolean;
   isFirst: boolean;
   isLast: boolean;
+  onToggle: () => void;
   onRename: (name: string) => void;
   onMove: (direction: "up" | "down") => void;
   onDelete: () => void;
@@ -604,7 +770,8 @@ function SectionHeader({
   if (renaming) {
     return (
       <form
-        className="flex items-end gap-2"
+        className="flex items-end gap-2 rounded-[9px] border-[1.5px] p-2"
+        style={{ background: "var(--bf-section-tint)", borderColor: "var(--bf-section-meta)" }}
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
           const next = name.trim();
@@ -626,18 +793,39 @@ function SectionHeader({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <h2 className="text-sm font-bold">{section.name}</h2>
+    <div
+      className="flex items-center gap-2 rounded-[9px] border-[1.5px] px-[10px] py-2"
+      style={{
+        background: "var(--bf-section-tint)",
+        borderColor: "var(--bf-section-meta)",
+        opacity: collapsed ? 0.6 : undefined,
+      }}
+    >
+      <button
+        type="button"
+        aria-label={`${collapsed ? "Expand" : "Collapse"} ${section.name}`}
+        aria-expanded={!collapsed}
+        onClick={onToggle}
+        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+      >
+        <span aria-hidden="true" className="flex-none" style={{ color: "var(--bf-section-label)" }}>
+          {collapsed ? <ChevronRightIcon size={14} /> : <ChevronDownIcon size={14} />}
+        </span>
+        <h2 className="truncate text-[13px] font-bold" style={{ color: "var(--bf-section-ink)" }}>
+          {section.name}
+        </h2>
+      </button>
+      <span
+        className="flex-none text-2xs font-semibold"
+        style={{ color: "var(--bf-section-meta)" }}
+      >
+        {meta}
+      </span>
       {canEdit && (
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Rename ${section.name}`}
-            onClick={() => setRenaming(true)}
-          >
-            Rename
-          </Button>
+        <div className="-mr-1 flex flex-none items-center">
+          <IconButton label={`Rename ${section.name}`} onClick={() => setRenaming(true)}>
+            ✎
+          </IconButton>
           <IconButton
             label={`Move ${section.name} up`}
             disabled={isFirst}
@@ -652,59 +840,147 @@ function SectionHeader({
           >
             ↓
           </IconButton>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Delete ${section.name}`}
-            onClick={onDelete}
-          >
-            Delete
-          </Button>
+          <IconButton label={`Delete ${section.name}`} onClick={onDelete}>
+            ✕
+          </IconButton>
         </div>
       )}
     </div>
   );
 }
 
-/** The add-section affordance: a button that reveals a name input. */
-function AddSection({ onAdd }: { onAdd: (name: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-
-  if (!open) {
-    return (
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Add section
-      </Button>
-    );
-  }
+/** A dashed green "＋ add figure / add section" affordance (frame 1.7). The
+ *  figure variant uses the lighter dashed green; the section variant the bolder. */
+function DashedAddButton({
+  label,
+  tone,
+  onClick,
+}: {
+  label: string;
+  tone: "figure" | "section";
+  onClick: () => void;
+}) {
   return (
-    <form
-      className="flex items-end gap-2"
-      onSubmit={(e: FormEvent) => {
-        e.preventDefault();
-        const next = name.trim();
-        if (!next) return;
-        onAdd(next);
-        setName("");
-        setOpen(false);
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="flex items-center justify-center gap-1.5 rounded-[9px] border-[1.5px] border-dashed py-2 text-2xs font-bold"
+      style={{
+        borderColor: tone === "figure" ? "var(--bf-section-dash)" : "var(--bf-section-meta)",
+        color: "var(--bf-section-action)",
       }}
     >
-      <Input
-        label="Section name"
-        placeholder="e.g. Intro"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
-      <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-        Add
-      </Button>
-    </form>
+      <span aria-hidden="true">＋</span>
+      {label}
+    </button>
   );
 }
 
-/** One placement → a card: figure name, scope badge, attribute summary, alignment chips. */
+/** Add-section affordance (frames 1.8/1.9). The `empty` variant is the
+ *  centered empty-state card; the `inline` variant is the dashed full-width
+ *  button at the end of the list. Both expand into the green name panel. */
+function AddSection({
+  variant,
+  onAdd,
+}: {
+  variant: "empty" | "inline";
+  onAdd: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const toast = useToast();
+
+  if (open) {
+    return (
+      <form
+        className="rounded-[10px] border-[1.5px] p-3"
+        style={{ background: "var(--bf-section-tint)", borderColor: "var(--bf-section-meta)" }}
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          const next = name.trim();
+          if (!next) return;
+          onAdd(next);
+          toast.show(`Added ${next}`);
+          setName("");
+          setOpen(false);
+        }}
+      >
+        <p
+          className="mb-2 text-2xs font-bold uppercase tracking-wide"
+          style={{ color: "var(--bf-section-label)" }}
+        >
+          Name this section
+        </p>
+        <Input
+          label="Section name"
+          placeholder="e.g. 1st Long Side"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <p
+          className="my-2 text-[13px]"
+          style={{ color: "var(--bf-section-caption)", fontFamily: "var(--bf-font-note)" }}
+        >
+          e.g. 1st Long Side · Corner · Intro · Spin section — anything you like
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
+            Add section
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  if (variant === "empty") {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12 text-center">
+        <span
+          aria-hidden="true"
+          className="flex size-12 items-center justify-center rounded-xl border-2 border-dashed text-2xl"
+          style={{ borderColor: "var(--bf-section-dash)", color: "var(--bf-section-dash)" }}
+        >
+          ＋
+        </span>
+        <p className="text-sm font-bold text-ink-secondary">No sections yet</p>
+        <p
+          className="max-w-[16rem] text-sm text-ink-muted"
+          style={{ fontFamily: "var(--bf-font-note)" }}
+        >
+          Add a section (e.g. "1st Long Side"), then drop figures into it.
+        </p>
+        <Button
+          variant="primary"
+          size="sm"
+          aria-label="Add section"
+          onClick={() => setOpen(true)}
+          leadingIcon={<span aria-hidden="true">＋</span>}
+        >
+          add section
+        </Button>
+      </div>
+    );
+  }
+
+  return <DashedAddButton label="add section" tone="section" onClick={() => setOpen(true)} />;
+}
+
+/** The editing empty state (frame 1.8). For a viewer (no edit rights) it's just
+ *  the honest "No sections yet" line; an editor gets the add-section affordance. */
+function EmptyState({ canEdit, onAdd }: { canEdit: boolean; onAdd: (name: string) => void }) {
+  if (!canEdit) {
+    return <p className="py-12 text-center text-sm text-ink-muted">No sections yet.</p>;
+  }
+  return <AddSection variant="empty" onAdd={onAdd} />;
+}
+
+/** One placement → a card (frame 1.7): scope dot + figure name + count pill +
+ *  (custom) pill + drag handle; editors get reorder/remove + alignment chips. */
 function PlacementCard({
   placement,
   figure,
@@ -773,51 +1049,84 @@ function PlacementCard({
   }
 
   const label = figure.name;
+  const isCustom = figure.scope === "account" && !figureMatchesLibraryOrigin(figure);
+  const live = figure.attributes.filter((a) => a.deletedAt == null);
+  const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   return (
-    <Card>
+    <div
+      className="flex flex-col gap-1 rounded-[10px] border-[1.5px] px-[11px] py-[9px]"
+      style={{
+        background: isCustom ? "var(--bf-scope-custom-tint)" : "var(--bf-surface)",
+        borderColor: isCustom ? "var(--bf-scope-custom-border)" : "var(--bf-accent-border)",
+      }}
+    >
       <div className="flex items-center gap-2">
-        <span className="font-medium">{label}</span>
-        {figure ? <ScopeTag figure={figure} /> : null}
-        <div className="ml-auto flex items-center gap-1">
-          {/* Open the figure's step timeline — editors notate, others view (US-028). */}
-          {figure && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`${canEdit ? "Edit" : "View"} steps: ${label}`}
-              onClick={onOpen}
+        {/* Scope dot — blue (library) / amber (custom). The scope word rides as
+            sr-only text so the cue isn't color-only (#5). */}
+        <span className="flex flex-none items-center">
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full"
+            style={{ background: isCustom ? kindVar("footwork") : kindVar("direction") }}
+          />
+          <span className="bf-sr-only">{isCustom ? "Custom" : "Library"} figure</span>
+        </span>
+        {/* The name opens the figure's step timeline — editors notate, others view. */}
+        <button
+          type="button"
+          aria-label={`${canEdit ? "Edit" : "View"} steps: ${label}`}
+          onClick={onOpen}
+          className="min-w-0 flex-1 truncate text-left text-[13px] font-bold"
+          style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+        >
+          {label}
+        </button>
+        {counts.length > 0 && <CountPill counts={counts.map((c) => countLabel(c))} />}
+        {isCustom && (
+          <span
+            className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
+            style={{
+              background: "var(--bf-scope-custom-tint)",
+              color: "var(--bf-scope-custom-ink)",
+            }}
+          >
+            Custom
+          </span>
+        )}
+        {/* Drag handle affordance (frame 1.7 ⠿). Reorder is the up/down controls. */}
+        <span
+          aria-hidden="true"
+          className="flex-none text-sm"
+          style={{ color: "var(--bf-border-strong)" }}
+        >
+          ⠿
+        </span>
+        {canEdit && (
+          <div className="-mr-1 flex flex-none items-center">
+            <IconButton
+              label={`Move ${label} up`}
+              disabled={isFirst}
+              onClick={() => onMove?.("up")}
             >
-              Steps
-            </Button>
-          )}
-          {canEdit && (
-            <>
-              <IconButton
-                label={`Move ${label} up`}
-                disabled={isFirst}
-                onClick={() => onMove?.("up")}
-              >
-                ↑
-              </IconButton>
-              <IconButton
-                label={`Move ${label} down`}
-                disabled={isLast}
-                onClick={() => onMove?.("down")}
-              >
-                ↓
-              </IconButton>
-              <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={onDelete}>
-                Remove
-              </Button>
-            </>
-          )}
-        </div>
+              ↑
+            </IconButton>
+            <IconButton
+              label={`Move ${label} down`}
+              disabled={isLast}
+              onClick={() => onMove?.("down")}
+            >
+              ↓
+            </IconButton>
+            <IconButton label={`Remove ${label}`} onClick={onDelete}>
+              ✕
+            </IconButton>
+          </div>
+        )}
       </div>
-      {figure ? (
-        <p className="mt-1 text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
-      ) : null}
+      {/* A subtle attribute summary + entry/exit alignment chips (US-018/US-031). */}
+      <p className="text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
       <AlignmentChips placement={placement} figure={figure} />
-    </Card>
+    </div>
   );
 }
 
@@ -978,20 +1287,6 @@ function AlignmentEdge({
   );
 }
 
-/** Custom / library tag, derived by content DIVERGENCE (not the copy mechanism).
- *  A frozen account copy carries its own attributes; `baseFigureRef` is provenance
- *  only. An account figure still matching its catalog origin reads Library; once it
- *  diverges (or is a from-scratch custom) it reads Custom (§2.5.1 #19–20). */
-function ScopeTag({ figure }: { figure: FigureDoc }) {
-  if (figure.scope === "account") {
-    // An unchanged library pick isn't "custom" — only badge Custom once it actually
-    // diverges from the catalog figure it was added/copied from.
-    if (figureMatchesLibraryOrigin(figure)) return <Badge tone="neutral">Library</Badge>;
-    return <Badge tone="accent">Custom</Badge>;
-  }
-  return <Badge tone="neutral">Library</Badge>;
-}
-
 /** A short human summary of the figure's (live) attributes. */
 function attributeSummary(attributes: Attribute[]): string {
   const live = attributes.filter((a) => a.deletedAt == null);
@@ -1017,5 +1312,94 @@ function AlignmentChips({ placement, figure }: { placement: Placement; figure: F
         </Chip>
       ))}
     </div>
+  );
+}
+
+// ── T8 Thread Sheet (QUAL-2 fix) ──────────────────────────────────────────────
+
+/**
+ * The annotation thread panel that opens when a user taps an inline comment or
+ * "+ add comment" in the reading view. Rendered only when the Sheet is open
+ * (the Sheet's `if (!open) return null` ensures this component is unmounted
+ * when closed). This lets the identity data hooks (useMe/useMembers) be called
+ * safely without touching the rest of the Assemble render tree.
+ *
+ * Author colour data path: `useMembers(routineId)` → `Member.identityColor`
+ * (T8 extended the members endpoint to LEFT JOIN users). Current user: `useMe`
+ * → `Me.identityColor`.
+ *
+ * Gap documented: the `InlineComments` author dots in RoutineReadingView still
+ * use the hash fallback (identityColor(authorId)). To fix those too would
+ * require threading authorColorMap through RoutineReadingView → FigureReadout
+ * → StepRow → InlineComments; deferred (dots in the panel use real colours).
+ */
+function ThreadSheetContents({
+  routineId,
+  anchor,
+  annotations,
+  placements,
+  role,
+  currentUserId,
+  onCreate,
+  onReply,
+  onDeleteReply,
+}: {
+  routineId: string;
+  anchor: { figureRef: string; count: number };
+  annotations: import("@ballroom/domain").Annotation[];
+  placements: ResolvedPlacement[];
+  role: MembershipRole;
+  currentUserId?: string;
+  onCreate: (input: { kind: import("@ballroom/domain").AnnotationKind; text: string }) => void;
+  onReply: (annotationId: string, text: string) => void;
+  onDeleteReply: (annotationId: string, replyId: string) => void;
+}) {
+  // Only called when the Sheet is open (component is mounted) — see note above.
+  const me = useMe();
+  const membersQ = useMembers(routineId);
+
+  // Build authorId → identity maps from the members list (T8 extended endpoint).
+  const authorColorMap: Record<string, string> = {};
+  const authorNameMap: Record<string, string> = {};
+  for (const m of membersQ.data?.members ?? []) {
+    if (m.identityColor) authorColorMap[m.userId] = m.identityColor;
+    if (m.displayName) authorNameMap[m.userId] = m.displayName;
+  }
+  // Current user's own identity (useMe — always real; overrides any member row).
+  const currentUserColor = me.data?.identityColor;
+  const currentUserName = me.data?.displayName;
+  if (currentUserId && currentUserColor) authorColorMap[currentUserId] = currentUserColor;
+  if (currentUserId && currentUserName) authorNameMap[currentUserId] = currentUserName;
+
+  // Thread title: "Figure Name · step N" (frame 1.14 header).
+  const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
+  const figureName = figure?.name ?? anchor.figureRef;
+  const threadTitle = `${figureName} · step ${anchor.count}`;
+
+  // Only annotations anchored to this exact step (point anchor).
+  const threadAnnotations = annotations.filter(
+    (a) =>
+      a.deletedAt == null &&
+      a.anchors.some(
+        (an) =>
+          an.type === "point" && an.figureRef === anchor.figureRef && an.count === anchor.count,
+      ),
+  );
+
+  return (
+    <AnnotationPanel
+      role={role}
+      currentUserId={currentUserId}
+      annotations={threadAnnotations}
+      composeAnchor={{ type: "point", figureRef: anchor.figureRef, count: anchor.count }}
+      threadTitle={threadTitle}
+      authorColorMap={authorColorMap}
+      authorNameMap={authorNameMap}
+      currentUserColor={currentUserColor}
+      currentUserName={currentUserName}
+      onCreate={onCreate}
+      onReply={onReply}
+      onDeleteReply={onDeleteReply}
+    />
   );
 }

@@ -70,6 +70,18 @@ export interface SeedPlacementEdge {
   figureRef: string;
 }
 
+/** A routine-scoped Journal index row (T6, migration 0009). */
+export interface SeedJournalEntry {
+  entryId: string;
+  routineRef: string;
+  authorId: string;
+  kind: "lesson" | "practice";
+  text: string;
+  anchors?: unknown[];
+  createdAt?: number;
+  deletedAt?: number | null;
+}
+
 export interface SeedSpec {
   users?: SeedUser[];
   docs?: SeedDoc[];
@@ -77,6 +89,7 @@ export interface SeedSpec {
   invites?: SeedInvite[];
   familyNotes?: SeedFamilyNote[];
   placementEdges?: SeedPlacementEdge[];
+  journalEntries?: SeedJournalEntry[];
 }
 
 /**
@@ -162,6 +175,23 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
       env.DB.prepare(
         "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
       ).bind(e.routineRef, e.figureRef),
+    );
+  }
+  for (const j of spec.journalEntries ?? []) {
+    stmts.push(
+      env.DB.prepare(
+        "INSERT OR IGNORE INTO journal_entry (entryId, routineRef, authorId, kind, text, anchors, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        j.entryId,
+        j.routineRef,
+        j.authorId,
+        j.kind,
+        j.text,
+        JSON.stringify(j.anchors ?? []),
+        j.createdAt ?? now,
+        now,
+        j.deletedAt ?? null,
+      ),
     );
   }
 

@@ -53,7 +53,7 @@ function fakeStore(
     createCustomKind: () => {},
     customKinds: () => [],
     retryFigure: () => {},
-    undo: () => {},
+    undo: () => ({ undone: false, supersededByOthers: false }),
     redo: () => {},
     subscribe: () => () => {},
     syncState: () => "live",
@@ -220,7 +220,7 @@ describe("US-026 Add / rename / reorder / delete sections", () => {
     const nameInput = screen.getByRole("textbox", { name: /section name/i });
     expect(nameInput).toBeInTheDocument();
     await userEvent.type(nameInput, "Coda");
-    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add section/i }));
     expect(spies.addSection).toHaveBeenCalledWith("Coda");
 
     // Rename "Intro" → "Opening"

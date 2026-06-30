@@ -51,6 +51,18 @@ interface SeedBody {
   }[];
   /** Direct placement_edge rows (routine→figure) for the access cascade. */
   placementEdges?: { routineRef: string; figureRef: string }[];
+  /** Direct journal_entry rows (T6) — the routine-scoped projection, for tests
+   *  that want entries without driving the DO alarm. */
+  journalEntries?: {
+    entryId: string;
+    routineRef: string;
+    authorId: string;
+    kind: "lesson" | "practice";
+    text: string;
+    anchors?: unknown[];
+    createdAt?: number;
+    deletedAt?: number | null;
+  }[];
 }
 
 export const testSeed = new Hono<{ Bindings: Env }>();
@@ -66,6 +78,11 @@ testSeed.post("/api/test/reset", async (c) => {
   // same note across serial journeys/projects — raw SQL to stay independent of
   // the drizzle schema's merge timeline (mirrors `invite`).
   await c.env.DB.prepare("DELETE FROM figure_type_note_index").run();
+  // Journal index (T6). The routine DO alarm projects lesson/practice annotations
+  // here; clear it so a reused seed routine doesn't accumulate stale entries across
+  // serial journeys (mirrors figure_type_note_index). Raw SQL to stay independent
+  // of the drizzle schema's merge timeline.
+  await c.env.DB.prepare("DELETE FROM journal_entry").run();
   // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
   await c.env.DB.prepare("DELETE FROM placement_edge").run();
   await d.delete(membership);
@@ -190,6 +207,24 @@ testSeed.post("/api/test/seed", async (c) => {
       "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
     )
       .bind(e.routineRef, e.figureRef)
+      .run();
+    seeded++;
+  }
+  for (const j of body.journalEntries ?? []) {
+    await c.env.DB.prepare(
+      "INSERT OR IGNORE INTO journal_entry (entryId, routineRef, authorId, kind, text, anchors, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(
+        j.entryId,
+        j.routineRef,
+        j.authorId,
+        j.kind,
+        j.text,
+        JSON.stringify(j.anchors ?? []),
+        j.createdAt ?? now,
+        now,
+        j.deletedAt ?? null,
+      )
       .run();
     seeded++;
   }

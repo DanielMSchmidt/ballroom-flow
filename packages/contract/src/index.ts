@@ -67,6 +67,22 @@ export const zCreateFigure = z.object({
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
+ * Save-to-library request (T5 / US-034 reuse). Promotes a GLOBAL-catalog figure
+ * into the caller's personal library as a FROZEN account-figure copy (PLAN §5.2):
+ * the client identifies the catalog figure by its cross-dance identity
+ * `(dance, figureType, name)`; the SERVER resolves it from the bundled catalog,
+ * stamps ownerId from the verified JWT sub, mints the copy's figureRef, and
+ * records `baseFigureRef = globalFigureRef(dance, figureType)` as provenance. The
+ * promotion is idempotent on `(owner, baseFigureRef)` — re-saving is a no-op.
+ */
+export const zSaveToLibrary = z.object({
+  dance: z.enum(DANCE_IDS),
+  figureType: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(80),
+});
+export type SaveToLibrary = z.infer<typeof zSaveToLibrary>;
+
+/**
  * Issue-invite request (US-023). An editor/owner mints a shareable link granting
  * a chosen role. `role` is one of the three STORED membership roles — never
  * "owner" (ownership isn't transferable by link). The granted role is read back
@@ -120,3 +136,44 @@ export type TemplateList = z.infer<typeof zTemplateList>;
 /** Account custom-kinds response (US-043) — the caller's account-wide custom attribute kinds. */
 export const zAccountCustomKinds = z.object({ kinds: z.array(zRegistryKind) });
 export type AccountCustomKinds = z.infer<typeof zAccountCustomKinds>;
+
+/**
+ * T6 — A journal entry's link anchor as the `GET /api/journal` read returns it.
+ * It mirrors the domain `Anchor` union (point / figure / figureType) but carries
+ * a server-RESOLVED `label` (the figure name resolved at projection time) so the
+ * client renders a "Natural Turn · step 2" chip with NO extra refetch (T6 §3).
+ * Fields are optional because the three anchor shapes carry different keys.
+ */
+export const zJournalAnchor = z.object({
+  type: z.enum(["point", "figure", "figureType"]),
+  figureRef: z.string().optional(),
+  count: z.number().optional(),
+  figureType: z.string().optional(),
+  danceScope: z.string().optional(),
+  /** Pre-resolved display label for the link chip (server-side, no client refetch). */
+  label: z.string().optional(),
+});
+export type JournalAnchor = z.infer<typeof zJournalAnchor>;
+
+/**
+ * T6 — One cross-routine Journal entry (PLAN §2.6/§2.7/§4.6). The UNION of a
+ * routine-scoped lesson/practice annotation (projected to `journal_entry`) and
+ * an account-scoped figureType lesson/practice note (`figure_type_note_index`).
+ * `source` distinguishes the two homes; `routineRef` is the owning doc (a routine
+ * doc, or the author's `account:<id>` for account entries).
+ */
+export const zJournalEntry = z.object({
+  id: z.string(),
+  routineRef: z.string(),
+  authorId: z.string(),
+  kind: z.enum(["lesson", "practice"]),
+  text: z.string(),
+  anchors: z.array(zJournalAnchor),
+  createdAt: z.number(),
+  displayName: z.string().nullable(),
+  identityColor: z.string().nullable(),
+  source: z.enum(["routine", "account"]),
+});
+export const zJournalList = z.object({ entries: z.array(zJournalEntry) });
+export type JournalEntry = z.infer<typeof zJournalEntry>;
+export type JournalList = z.infer<typeof zJournalList>;

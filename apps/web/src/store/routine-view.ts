@@ -23,6 +23,7 @@ import {
   type OpenOptions,
   type ResolvedPlacement,
   type RoutineStore,
+  type UndoResult,
 } from "./routine";
 import {
   openRoutineSnapshot as defaultOpenSnapshot,
@@ -202,7 +203,18 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     deleteAnnotation: editAction((s) => s.deleteAnnotation),
     deleteReply: editAction((s) => s.deleteReply),
     createCustomKind: editAction((s) => s.createCustomKind as (...a: [RegistryKind]) => void),
-    undo: editAction((s) => s.undo),
+    // Undo returns the soft "superseded" hint synchronously (US-038 AC-3). The
+    // editor toolbar only enables Undo once the live store is hydrated, so the
+    // common path forwards to live.undo() and gets the real signal. If undo is
+    // somehow invoked pre-hydration, we still defer the action but report the
+    // neutral result (nothing reverted yet) rather than blocking.
+    undo: (): UndoResult => {
+      const neutral: UndoResult = { undone: false, supersededByOthers: false };
+      if (!editable) return neutral;
+      if (live && live.syncState() === "live") return live.undo();
+      void ensureLive().then((s) => whenLive(s, () => s.undo()));
+      return neutral;
+    },
     redo: editAction((s) => s.redo),
   };
 }

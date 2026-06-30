@@ -8,7 +8,7 @@ import type { EffectiveRole, MembershipRole } from "@ballroom/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { cascadeFigureRole } from "./placement-edge";
-import { documentRegistry, membership } from "./schema";
+import { documentRegistry, membership, users } from "./schema";
 
 /** The connecting user's active role on `docRef`, or null if not a member. */
 export async function roleFor(
@@ -63,20 +63,38 @@ export async function resolveEffectiveRole(
   return cascadeFigureRole(db, docRef, userId);
 }
 
-/** One member of a document (for the US-024 Share screen member list). */
+/** One member of a document (for the US-024 Share screen member list).
+ *  T8: `identityColor` + `displayName` are joined from the `users` table so
+ *  annotation threads can show real identity colours without a separate fetch.
+ *  Both are `undefined` when a member hasn't completed onboarding. */
 export interface MemberRow {
   userId: string;
   role: MembershipRole;
+  /** The member's stored identity colour hex (e.g. "#3b7dd8"). */
+  identityColor?: string;
+  /** The member's display name. */
+  displayName?: string;
 }
 
-/** All ACTIVE members of `docRef` with their roles (US-024 AC-1). */
+/** All ACTIVE members of `docRef` with their roles + identity (US-024 AC-1, T8). */
 export async function listMembers(db: D1Database, docRef: string): Promise<MemberRow[]> {
   const rows = await drizzle(db)
-    .select({ userId: membership.userId, role: membership.role })
+    .select({
+      userId: membership.userId,
+      role: membership.role,
+      identityColor: users.identityColor,
+      displayName: users.displayName,
+    })
     .from(membership)
+    .leftJoin(users, eq(membership.userId, users.id))
     .where(and(eq(membership.docRef, docRef), isNull(membership.deletedAt)))
     .all();
-  return rows;
+  return rows.map((r) => ({
+    userId: r.userId,
+    role: r.role,
+    identityColor: r.identityColor ?? undefined,
+    displayName: r.displayName ?? undefined,
+  }));
 }
 
 /**

@@ -7,6 +7,8 @@ import {
   exchangeAndAssertConverged,
   loadAutomerge,
 } from "./__fixtures__";
+import { buildRoutineDoc, readRoutine } from "./doc-routine";
+import type { RoutineDoc } from "./doc-types";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-009 — Automerge convergence invariants [M1, system/developer]
@@ -90,6 +92,68 @@ describe("US-009 Automerge convergence invariants", () => {
     });
     const change = A.getChanges(base, edited);
     await assertIdempotent(base, change);
+  });
+
+  it("converges a section REORDER on one client with a soft-DELETE on another (US-026 AC-3)", async () => {
+    // Intent: two replicas of a routine — client A reorders sections, client B
+    //   soft-deletes a DIFFERENT section — merge with no lost edits: the order A
+    //   chose holds, the section B deleted stays tombstoned, both replicas converge.
+    // Multi-actor scenario: A and B edit the same routine offline, then reconnect.
+    //
+    // HONEST LIMITATION (#63): the store's `moveSection` reorder is a JSON-copy
+    //   splice — it removes the moved section's Automerge object and re-inserts a
+    //   PLAIN COPY (a new object). So a concurrent edit to the SAME section being
+    //   moved would be lost (the open sortKey work). This test asserts the
+    //   ACHIEVABLE converged state: A and B touch DIFFERENT sections, which is the
+    //   case that must converge cleanly — and does.
+    const seed: RoutineDoc = {
+      id: "r1",
+      title: "Routine",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "Intro", placements: [], deletedAt: null },
+        { id: "s2", name: "Middle", placements: [], deletedAt: null },
+        { id: "s3", name: "Finale", placements: [], deletedAt: null },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const base = buildRoutineDoc(seed);
+
+    // Client A: reorder — move s1 to the end via the store's JSON-copy splice.
+    const left = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        const i = d.sections.findIndex((s) => s.id === "s1");
+        const moved = JSON.parse(JSON.stringify(d.sections[i]));
+        d.sections.splice(i, 1);
+        d.sections.push(moved);
+      },
+    ]);
+
+    // Client B: soft-delete a DIFFERENT section (s3) — a tombstone flip in place.
+    const right = await applyMutations(base, [
+      (d: RoutineDoc) => {
+        const s = d.sections.find((sec) => sec.id === "s3");
+        if (s) s.deletedAt = Date.now();
+      },
+    ]);
+
+    const { converged } = await exchangeAndAssertConverged(left, right);
+
+    // No lost edits: A's order holds (s1 moved after s2), B's delete holds (s3 gone
+    // from the default read), s2 untouched.
+    const live = readRoutine(converged);
+    expect(live.sections.map((s) => s.id)).toEqual(["s2", "s1"]);
+
+    // The deleted section stays TOMBSTONED (not hard-removed) — visible only with
+    // includeDeleted, carrying its deletedAt.
+    const all = readRoutine(converged, { includeDeleted: true });
+    const s3 = all.sections.find((s) => s.id === "s3");
+    expect(s3?.deletedAt).toBeTruthy();
+    // All three sections survive in the doc (B's delete is a flip, not a removal).
+    expect(all.sections.map((s) => s.id).sort()).toEqual(["s1", "s2", "s3"]);
   });
 
   it("converges shuffled/partitioned changes across a fork (cloned doc)", async () => {

@@ -48,11 +48,11 @@ Each kind exposes `base / -ink / -tint / -border`:
 
 > Attribute kinds are **registry-driven** (#24): the standard five are tokenized, but the UI must render from the merged `ATTRIBUTE_REGISTRY` (standard + user-defined). For a user-defined kind whose color isn't in the standard set, pass its stored color through to `Chip`/`Badge` via `style`.
 
-### Figure scopes (#11) — three consistent, distinct treatments
-`--bf-scope-{global|variant|custom}` each with `-ink / -tint / -border`. Encoded by the `ScopeBadge` primitive as **word + icon + color** (never color alone):
-- `global` — app-owned **Library** (slate, globe icon)
-- `variant` — your **Variant**, carries base lineage (violet, branch icon)
-- `custom` — your own **Custom** (amber, pencil icon)
+### Figure scopes (#11) — two consistent, distinct treatments
+Scope is determined by **content divergence** (PLAN §4.3), not the copy mechanism.
+`--bf-scope-{global|custom}` each with `-ink / -tint / -border`. Encoded by the `ScopeBadge` primitive as **word + icon + color** (never color alone):
+- `library` — matches catalog (app-owned or account copy that still agrees): **Library** (slate, globe icon)
+- `custom`  — diverged from or unrelated to the catalog (user-edited copy, from-scratch): **Custom** (amber, pencil icon)
 
 ### Semantic status
 `--bf-success`, `--bf-warning`, `--bf-danger`, `--bf-info`, `--bf-offline` — each with `-ink` / `-tint` (warning/danger also `-border`). `offline` is desaturated slate so it reads as "not live" (#20).
@@ -91,7 +91,7 @@ Every interactive primitive: **≥44px hit area** (#3), **visible focus ring** (
 | `Chip` | `tone` (neutral/accent/`AttributeKind`), `selected`, `asStatic`, `leading` | single-select toggle (`aria-pressed`) — the tag-editor pattern |
 | `CountLabel` | `value: string` | **presentational seam** for float counts e/&/a (#27); conversion lives in `packages/domain` |
 | `Badge` | `tone` (neutral/accent/success/warning/danger/info), `leading` | status marker, always text+tone (#5) |
-| `ScopeBadge` | `scope`, `lineage`, `compact` | the three figure scopes as word+icon+color (#11), lineage "based on …" (#12) |
+| `ScopeBadge` | `scope`, `compact` | the two figure scopes (library/custom) as word+icon+color (#11) |
 | `Card` | `padded`, `raised` | studio-paper surface (non-interactive) |
 | `List` / `ListRow` | `leading`, `title`, `subtitle`, `trailing`, `showChevron` | `ListRow` is a real `<button>`; whole row ≥44px (#3) |
 | `Tabs` | `items`, `value`, `onChange`, `label` | ARIA tabs, arrow-key roving focus (#7) |

@@ -15,6 +15,8 @@ import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP } from "@ballroom/contract";
 import {
+  type Anchor,
+  type AnnotationKind,
   addAnnotation,
   addSection,
   buildDoc,
@@ -25,8 +27,10 @@ import {
   type RoutineDoc,
   readFigure,
   readRoutine,
+  softDeleteAnnotation,
 } from "@ballroom/domain";
 import { authenticateToken } from "./auth";
+import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
 import { resolveEffectiveRole } from "./db/membership";
 import type { Env } from "./index";
 
@@ -41,7 +45,8 @@ interface SocketAttachment {
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp =
   | ({ op: "addSection"; name: string } & Record<string, unknown>)
-  | ({ op: "addAnnotation"; text: string } & Record<string, unknown>);
+  | ({ op: "addAnnotation"; text: string } & Record<string, unknown>)
+  | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
 
 /**
  * Compact once the incremental change log grows past this many rows. Bounds both
@@ -232,6 +237,12 @@ export class DocDO extends DurableObject<Env> {
     }
     this.persist(changes);
     await this.maybeScheduleCompaction();
+    // Arm the journal projection only when the op touched annotations, so an
+    // annotation edit projects promptly WITHOUT a structural-edit burst spuriously
+    // arming the alarm (and compacting the log out from under the structural tests).
+    if (op.op === "addAnnotation" || op.op === "deleteAnnotation") {
+      await this.maybeScheduleProjection();
+    }
     // An RPC edit also propagates to any live WebSocket clients of this doc.
     this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
@@ -258,12 +269,30 @@ export class DocDO extends DurableObject<Env> {
   private async ingestChange(change: Uint8Array, from: WebSocket | null): Promise<boolean> {
     const before = this.getDoc();
     const beforeHeads = A.getHeads(before);
-    const [after] = A.applyChanges(before, [change as A.Change]);
+    // Detect whether this change touches `annotations` via Automerge's patch
+    // stream — O(patches), NOT a full-doc JSON serialization. This keeps the
+    // US-015 hot sync path cheap: a structural-only change pays nothing extra and
+    // never arms the journal-projection alarm.
+    let touchedAnnotations = false;
+    const [after] = A.applyChanges(before, [change as A.Change], {
+      patchCallback: (patches) => {
+        if (touchedAnnotations) return;
+        for (const p of patches) {
+          if (p.path[0] === "annotations") {
+            touchedAnnotations = true;
+            return;
+          }
+        }
+      },
+    });
     this.doc = after;
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change as A.Change]);
     await this.maybeScheduleCompaction();
+    // Project the journal promptly only when this change touched annotations
+    // (the live WS path for lesson/practice authoring). See applyChange's gate.
+    if (touchedAnnotations) await this.maybeScheduleProjection();
     this.broadcast([change as A.Change], from);
     return true;
   }
@@ -273,13 +302,23 @@ export class DocDO extends DurableObject<Env> {
     switch (op.op) {
       case "addSection":
         return addSection(doc, { name: String(op.name) });
-      case "addAnnotation":
+      case "addAnnotation": {
+        // Defaults preserve the original behaviour (a `note` on `f1`); callers
+        // (tests, the journal-projection path) may pass kind/authorId/anchors to
+        // author a lesson/practice anchored to a real figure.
+        const kind: AnnotationKind =
+          op.kind === "lesson" || op.kind === "practice" ? op.kind : "note";
         return addAnnotation(doc, {
-          authorId: "tester",
-          kind: "note",
+          authorId: typeof op.authorId === "string" ? op.authorId : "tester",
+          kind,
           text: String(op.text),
-          anchors: [{ type: "figure", figureRef: "f1" }],
+          anchors: Array.isArray(op.anchors)
+            ? (op.anchors as Anchor[])
+            : [{ type: "figure", figureRef: "f1" }],
         });
+      }
+      case "deleteAnnotation":
+        return softDeleteAnnotation(doc, String(op.id));
       default:
         return doc;
     }
@@ -583,6 +622,11 @@ export class DocDO extends DurableObject<Env> {
       console.error("doc-do alarm: D1 index projection failed", err);
     }
     try {
+      await this.projectJournalToD1();
+    } catch (err) {
+      console.error("doc-do alarm: journal projection failed", err);
+    }
+    try {
       await this.expireInvites();
     } catch (err) {
       console.error("doc-do alarm: invite expiry failed", err);
@@ -608,6 +652,20 @@ export class DocDO extends DurableObject<Env> {
     if (rows < COMPACT_THRESHOLD) return;
     const pending = await this.ctx.storage.getAlarm();
     if (pending !== null) return; // an alarm is already scheduled — coalesce.
+    await this.ctx.storage.setAlarm(Date.now());
+  }
+
+  /**
+   * Arm a near-term alarm on ANY advancing change so a single lesson/practice
+   * annotation is projected to the `journal_entry` index promptly — not only once
+   * the change log passes COMPACT_THRESHOLD (64) or `setMetadata` runs (T6 §3).
+   * COALESCED: a burst of edits schedules one tick, not one per edit. The alarm
+   * body re-projects both the registry and the journal, so this is the timely
+   * trigger for the cross-routine Journal read (eventually consistent).
+   */
+  private async maybeScheduleProjection(): Promise<void> {
+    const pending = await this.ctx.storage.getAlarm();
+    if (pending !== null) return; // coalesce a burst into one tick
     await this.ctx.storage.setAlarm(Date.now());
   }
 
@@ -670,6 +728,95 @@ export class DocDO extends DurableObject<Env> {
         Date.now(),
       )
       .run();
+  }
+
+  /**
+   * T6 — project THIS routine's lesson/practice annotations to the cross-routine
+   * `journal_entry` index (PLAN §2.6/§2.7/§6). Mirrors `projectToD1`: D1 stays a
+   * pure index; the routine doc (DO SQLite) is the source of truth.
+   *
+   * Scope (memory: per-document DO layering): touches only THIS routine's own
+   * `journal_entry` rows. Figure/account DOs short-circuit (`type !== 'routine'`).
+   * It DOES read the shared `document_registry` index to resolve a placement's
+   * figure NAME for the chip label — reading the index, never another DO's doc.
+   *
+   * Reads annotations with tombstones INCLUDED so a soft-deleted annotation flips
+   * its row's `deletedAt` (idempotent: the next projection won't resurrect it).
+   */
+  private async projectJournalToD1(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; docRef: string | null; type: string | null }>(
+        "SELECT doName, docRef, type FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    // Only routine docs own routine-scoped journal entries.
+    if (!meta?.doName || (meta.type ?? "routine") !== "routine") return;
+    const docRef = meta.docRef ?? meta.doName;
+
+    const doc = this.loadPersisted();
+    if (!doc) return;
+    const routine = readRoutine(doc, { includeDeleted: true });
+    const journalAnnotations = routine.annotations.filter(
+      (a) => a.kind === "lesson" || a.kind === "practice",
+    );
+    if (journalAnnotations.length === 0) return;
+
+    // Resolve figure names for point/figure anchors from the registry (one query).
+    const figureRefs = new Set<string>();
+    for (const a of journalAnnotations) {
+      for (const an of a.anchors) {
+        if (an.type === "point" || an.type === "figure") figureRefs.add(an.figureRef);
+      }
+    }
+    const names = await this.resolveFigureNames([...figureRefs]);
+
+    const rows: JournalEntryProjection[] = journalAnnotations.map((a) => ({
+      entryId: a.id,
+      authorId: a.authorId,
+      kind: a.kind,
+      text: a.text,
+      anchors: JSON.stringify(a.anchors.map((an) => this.labelAnchor(an, names))),
+      createdAt: a.createdAt,
+      deletedAt: a.deletedAt ?? null,
+    }));
+    await projectJournalEntries(this.env.DB, docRef, rows);
+  }
+
+  /** Look up figure display names (document_registry.title) for the given refs. */
+  private async resolveFigureNames(refs: string[]): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    if (refs.length === 0) return out;
+    const ph = refs.map(() => "?").join(",");
+    const res = await this.env.DB.prepare(
+      `SELECT docRef, title FROM document_registry WHERE docRef IN (${ph})`,
+    )
+      .bind(...refs)
+      .all<{ docRef: string; title: string | null }>();
+    for (const r of res.results ?? []) if (r.title) out.set(r.docRef, r.title);
+    return out;
+  }
+
+  /** Attach a resolved chip `label` to an anchor (T6 §3 — no client refetch). */
+  private labelAnchor(anchor: Anchor, names: Map<string, string>): Record<string, unknown> {
+    if (anchor.type === "point") {
+      const name = names.get(anchor.figureRef) ?? "this figure";
+      return { ...anchor, label: `${name} · step ${anchor.count + 1}` };
+    }
+    if (anchor.type === "figure") {
+      return { ...anchor, label: names.get(anchor.figureRef) ?? "this figure" };
+    }
+    // figureType: humanize without a registry lookup (data is self-contained).
+    const titleCase = (s: string): string =>
+      s
+        .replace(/[_-]+/g, " ")
+        .split(" ")
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    const family = titleCase(anchor.figureType);
+    const scope =
+      anchor.danceScope === "all" ? "all dances" : `all ${titleCase(anchor.danceScope)}`;
+    return { ...anchor, label: `all ${family}s · ${scope}` };
   }
 
   /**

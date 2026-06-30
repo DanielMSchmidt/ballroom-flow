@@ -47,11 +47,13 @@ export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";
 export {
   figureMatchesLibraryOrigin,
+  globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
   type LibraryGroup,
   libraryFiguresForDance,
   libraryGroupsForDance,
+  libraryGroupsForFilter,
 } from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export {
@@ -65,10 +67,11 @@ export {
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { buildGoldenWaltzBasic } from "./starter-routine";
 export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
-export { redoLastChange, undoLastChange } from "./undo";
+export { redoLastChange, undoLastChange, wasSupersededByOthers } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,
   isReservedKind,
+  kindAppliesToDance,
   mergeRegistry,
   normalizeValue,
   type RegistryKind,

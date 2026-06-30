@@ -23,7 +23,7 @@
 |---|---|---|---|
 | **FE-1 Author a routine** | `authoring.spec` — sign in → create → section → figure → edit timeline → role-flip | US-018, US-025, US-026, US-027, US-028, US-029, US-030 ✓ · **US-053 profile ✓** (Profile tab: name/colour, plan, owned count, sign out) · **US-019 onboarding nudge ✓** · US-024 entry | built — **#191 proves the journey** |
 | **FE-2 Share, permissions & quota** | `permission-quota-invite.spec` — non-member denied; editor invites → redeem grants role; 4th routine → upsell | US-019/020/021/022/023 ✓ · **US-024 share screen** ✓ · denied-state UI (#178) | **journey green** — share UI (roster + role + invite-from-UI → redeem), non-member denied, quota upsell all proven on the real worker |
-| **FE-3 Figures, variants & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW auto-variant; figure auto-updates across routines | US-006/007/008 ✓ (domain) · **US-037 choreo fork ✓** · **US-028/029/030 notate-a-figure ✓ (wired into Assemble + authoring journey)** · **US-031 alignment ✓** · **US-032 figure library browse + add-from-library picker ✓** · **US-033/034/035/036 variants + auto-variant COW + figure auto-update ✓ (PR #74)** · #42, #56 | **built** — notation + library + alignment + choreo fork + figure auto-update + auto-variant copy-on-write all landed; `fork-and-figures.spec` (US-034/035/037 `@smoke`) active in the E2E gate |
+| **FE-3 Figures, copies & fork** | `fork-and-figures.spec` — fork choreo (frozen); edit shared figure → COW frozen copy; figure auto-updates across routines | ~~US-006~~ (retired) · US-007/008 ✓ (domain) · **US-037 choreo fork ✓** · **US-028/029/030 notate-a-figure ✓ (wired into Assemble + authoring journey)** · **US-031 alignment ✓** · **US-032 figure library browse + add-from-library picker ✓** · **US-033/034/035/036 personal-library + COW frozen-copy + figure auto-update ✓ (PR #74)** · #42, #56 | **built** — notation + library + alignment + choreo fork + figure auto-update + copy-on-write (frozen choreo-owned copy, "copied into this choreo") all landed; `fork-and-figures.spec` (US-034/035/037 `@smoke`) active in the E2E gate. *(Reconciled 2026-06: "auto-variant" → "frozen copy"; US-006 overlay model retired.)* |
 | **FE-4 Live collaboration** | `convergence.spec` — two contexts converge live; reconnect after a drop | US-014/015/016/017 ✓ · reconnect (#161) · typed envelope (#117) | **journey green** — two real browsers converge bidirectionally + idempotent reconnect replay; typed envelope (#117) still open |
 | **FE-5 Undo across clients** | `undo.spec` — per-user undo across two clients (A's undo reverts only A; B's edit survives) | US-010 ✓ (domain) · **US-038 ✓ (journey green)** · #70/#73/#160 | **journey green** — Undo/Redo + "Undone" toast; per-tab actor so A's undo touches only A's change; B's survives; redo restores |
 | **FE-6 Annotations** | new `annotations.spec` — note on point/figure; `figureType` note across matching figures; co-member visibility | **US-039/040/042 unified annotations + figureType + filters ✓ (PR #70)** · **US-041 co-member visibility ✓ (worker `figuretype-visibility.test`, `@smoke` E2E at `fork-and-figures.spec:227`)** · #172 | **built** — annotations/family-notes components + worker visibility index green; `annotations.spec` active. **One slice still skipped:** the all-dances-surfaces-in-both-Waltz-and-Foxtrot E2E (`fork-and-figures.spec:208`) |
@@ -47,18 +47,18 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 | US-003 🦴 | ATTRIBUTE_REGISTRY + merge | M1 | system/developer | US-002 | Standard kinds + user-defined kinds merge; Tango omits rise; CBP→CBMP; single vs multi cardinality. |
 | US-004 🦴 | Float-count timing | M1 | system/developer | US-002 | `countLabel`/`countToPhrase`/`barsForFigure` render e/&/a + i-subdivisions modulo phrase. |
 | US-005 🦴 | Routine + figure document schemas | M1 | system/developer | US-001,US-003 | Build/read routine & figure Automerge docs (sections, placements, attributes, annotations); soft-delete flips. |
-| US-006 🦴 | Overlay resolution `resolve(base,overlay)` | M1 | system/developer | US-005 | base − tombstones + overrides + additions + rename, resolved live so base additions flow up. |
+| US-006 🦴 | ~~Overlay resolution `resolve(base,overlay)`~~ *(reconciled 2026-06: retired — vestigial)* | M1 | system/developer | US-005 | *(retired)* The live-overlay/flow-up model is no longer the design. `resolve()` does not exist; `overlay.test.ts` was never shipped. The `Overlay` type + `overlay?` field in `doc-types.ts` are LEGACY stubs retained only for reading old persisted docs. **Follow-up: remove the vestigial type + field once no old docs need migration.** |
 | US-007 🦴 | Choreo fork (clone) | M1 | system/developer | US-005 | `cloneRoutine` → new id, frozen, `forkedFromRef` provenance, no pull from origin. |
-| US-008 🦴 | Copy-on-write (auto-variant) | M1 | system/developer | US-005,US-006 | `copyOnWrite` spawns owned variant w/ `baseFigureRef`+empty overlay, placement re-pointed. |
+| US-008 🦴 | Copy-on-write (frozen choreo-owned copy) | M1 | system/developer | US-005 | `copyOnWrite` spawns a **frozen, choreo-owned copy** carrying its own attributes snapshot; `baseFigureRef` = provenance only (no overlay); placement re-pointed. *(Reconciled 2026-06: "auto-variant" → "frozen choreo-owned copy"; no US-006 dep.)* |
 | US-009 🦴 | Automerge convergence invariants | M1 | system/developer | US-005,US-007 | Property tests: shuffled/partitioned changes converge; commutative; idempotent on duplicates. |
 | US-010 🦴 | History-based per-user undo | M1 | system/developer | US-005 | Invert a user's last change; A's undo reverts only A; B's concurrent edit survives; redo. |
-| US-011 | `figureType` annotation resolution | M1 | system/developer | US-005 | all-dances note matches the family in any dance; this-dance only its dance; variants inherit figureType. |
+| US-011 | `figureType` annotation resolution | M1 | system/developer | US-005 | all-dances note matches the family in any dance; this-dance only its dance; copies carry figureType from their source. |
 | US-012 🦴 | Zod schemas (lenient read / strict write) | M1 | system/developer | US-003,US-004 | Registry-derived; unknown values pass on read, rejected on write; timing range per meter. |
 | US-013 | Migration ladder (schemaVersion) | M1 | system/developer | US-005 | schemaVersion envelope; ordered migrations upgrade older docs; unknown values survive. |
 | US-014 🦴 | Per-document SQLite-backed DO hosts an Automerge doc | M2 | system/developer | US-005 | DO holds the doc, persists incremental changes to SQLite, rehydrates after eviction. |
 | US-015 🦴 | Live WebSocket sync (two clients converge) | M2 | system/developer | US-014,US-009 | Two clients sync changes over Hibernatable WS through the DO and converge; hibernation/wake keeps state. |
 | US-016 | DO alarm: compaction + D1 index projection + invite expiry | M2 | system/developer | US-014 | Alarm compacts history, projects a thin registry row to D1, expires invites — off request path. |
-| US-017 🦴 | `store/` seam (multi-doc) | M2 | system/developer | US-015,US-006 | store loads routine + referenced figure docs, resolves overlays, exposes reactive reads/mutations/undo. |
+| US-017 🦴 | `store/` seam (multi-doc) | M2 | system/developer | US-015 | store loads routine + referenced figure docs (each carries its own attributes — no overlay resolution), exposes reactive reads/mutations/undo. |
 | US-018 | Open & view a routine | M2 | user-facing | US-017 | Assemble shows sections → placement cards from the synced routine + referenced figures. |
 | US-019 | Clerk sign-in + onboarding | M3 | user-facing | — | Hosted sign-in (Google + passkeys); onboarding captures displayName + identity color. |
 | US-020 | Per-document membership & roles | M3 | system/developer | US-019 | Membership rows {viewer\|commenter\|editor} per doc; owner = editor + delete. |
@@ -74,10 +74,10 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 | US-030 | Timeline role-view toggle | M2 | user-facing | US-028 | Tap a step flips viewed role; per-device pref; both-role attributes always shown. |
 | US-031 | Edit per-figure alignment | M4 | user-facing | US-028 | Set entry/exit + per-placement alignment (qualifier + direction) chips. |
 | US-032 | Application-global figure library browse | M4 | user-facing | US-018 | Browse global canonical figures grouped by figureType, filterable by dance. |
-| US-033 | Account variants + custom figures in library | M4 | user-facing | US-032 | See your variants (base-lineage badge) + custom figures; "used in N routines". |
+| US-033 | Personal-library figures + custom figures in library | M4 | user-facing | US-032 | See your personal-library figures (saved copies, lineage badge) + custom figures; two-scope badge (`library`/`custom`); "used in N routines". |
 | US-034 | Editing your own figure flows into all referencing routines | M4 | user-facing | US-032,US-008 | Edit an owned figure → change appears in every routine referencing it (figure auto-update). |
-| US-035 | Auto-variant on editing a non-owned figure | M4 | user-facing | US-033,US-008 | Editing a global/other's figure silently creates an owned variant, re-points placement, "copied as your variant" toast; original untouched. |
-| US-036 | Fork a figure into a variant explicitly | M4 | user-facing | US-033,US-006 | "Fork into variant" creates a variant (overlay); base edits to non-overridden steps flow up. |
+| US-035 | Auto-copy on editing a figure from outside the choreo | M4 | user-facing | US-033,US-008 | Editing a global/personal-library figure silently creates a frozen choreo-owned copy, re-points placement, **"copied into this choreo"** toast; original untouched. |
+| US-036 | ~~Fork a figure into a live-overlay variant~~ *(reconciled 2026-06: retired / subsumed)* | M4 | user-facing | US-033 | *(subsumed)* The live-overlay "fork into variant with base flow-up" model is retired. Explicit copy is now **save-to-library** (US-035 + §4.2 save affordance): a frozen choreo-owned copy with `baseFigureRef` provenance only. No live overlay, no flow-up. |
 | US-037 | Choreo fork ("make it your own") | M4 | user-facing | US-025,US-007 | Fork a routine → owned, frozen clone; origin edits do NOT appear; lineage shown as provenance. |
 | US-038 | Per-user undo / redo UX | M5 | user-facing | US-017,US-010 | Undo reverts only your last change in the open doc; "Undone" toast; soft superseded hint; redo. |
 | US-039 | Unified annotations: point + figure anchors | M6 | user-facing | US-018,US-021 | Commenter+ creates note/lesson/practice anchored to a point or a figure; reply thread; author-only reply delete. |
@@ -102,7 +102,7 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 
 The minimal subset that proves the architecture end-to-end and is each independently testable, in order:
 
-1. **M1 domain core (in-memory, no network):** US-001, US-002, US-003, US-004, US-005, US-006, US-007, US-008, US-009, US-010, US-012 — the document graph, overlay inheritance, fork/copy-on-write, convergence, and undo proven with unit + property tests (this is the §9 M1 "walking skeleton" deliverable).
+1. **M1 domain core (in-memory, no network):** US-001, US-002, US-003, US-004, US-005, ~~US-006~~, US-007, US-008, US-009, US-010, US-012 — the document graph, **frozen copy-on-write** (no live overlays — US-006 overlay/resolve model is retired; see US-006 for the vestigial-code follow-up), fork/clone, convergence, and undo proven with unit + property tests (this is the §9 M1 "walking skeleton" deliverable). *(Reconciled 2026-06: overlay inheritance removed from this list.)*
 2. **M2 thin sync spine:** US-014, US-015, US-017 — one DO per doc persisting incremental changes, two clients converging over WS, and the `store/` seam loading a routine + its figure docs.
 3. **First user-facing slice:** US-018 (open & view a routine), US-028 (place an attribute on the timeline — the hero flow).
 4. **First permission gate:** US-021 — the DO connection boundary (editor/commenter/viewer/non-member/forged).
@@ -178,7 +178,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 - **Milestone:** M1 · **Source:** §2.2–2.6, §9 1.5 · **Depends-on:** US-001, US-003 · **Type:** system/developer
 - **Acceptance:**
   - Routine doc holds sections → ordered placements (each with `figureRef`, optional `perPlacementAlignment`) + routine annotations.
-  - Figure doc holds `scope`, `ownerId`, `figureType`, `dance`, `name`, `source`, alignment, attributes `{id,kind,count,role?,value}`, optional variant fields (`baseFigureRef`, overlay), `schemaVersion`.
+  - Figure doc holds `scope`, `ownerId`, `figureType`, `dance`, `name`, `source`, alignment, attributes `{id,kind,count,role?,value}`, optional `baseFigureRef` (provenance only — not resolved live; no active `overlay` field in the frozen model), `schemaVersion`. *(Reconciled 2026-06: `overlay` is a LEGACY field retained for old docs only — see US-006.)*
   - Soft-delete is a mergeable `deletedAt` flip; no hard removal anywhere.
   - Typed read/write helpers exist for every shape; reads of a deleted entity reflect the tombstone.
 - **Tests (unskip when done):** `packages/domain/src/doc-schemas.test.ts`
@@ -187,18 +187,14 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `soft-deletes via a mergeable deletedAt flip, never a hard removal` (AC-3 + AC-4)
   - `flips an attribute soft-delete on a figure doc` (AC-3 at attribute grain)
 
-#### US-006 — Overlay resolution `resolve(base, overlay)` 🦴
-- **Narrative:** As the system, I want `resolve(base, overlay)`, so that a figure variant inherits the live base and stores only its divergences.
+#### US-006 — ~~Overlay resolution `resolve(base, overlay)`~~ 🦴 *(reconciled 2026-06: RETIRED — vestigial code)*
+
+> **Reconciled 2026-06:** The live-overlay/flow-up variant model is **retired**. `resolve(base, overlay)` does **not exist** in the codebase — there is no `overlay.ts` source file and no `overlay.test.ts` test file. The `Overlay` interface and `overlay?: Overlay` field in `packages/domain/src/doc-types.ts` are LEGACY stubs, explicitly marked so in code comments ("LEGACY — no longer resolved. Retained for old docs."), used only in `migrations.ts` to read old persisted docs during migration. `fork.test.ts` explicitly asserts `expect(variant?.overlay).toBeUndefined()`. **No passing test suite covers live overlay resolution because none exists.** This is ENTIRELY VESTIGIAL. **Follow-up (do not remove code here):** once old-format docs are fully migrated, remove the `Overlay` type, the `overlay?` field on `FigureDoc`, and the migration branch in `migrations.ts`.
+
+- **Narrative (historical — retired):** As the system, I wanted `resolve(base, overlay)`, so that a figure variant could inherit the live base and store only its divergences.
 - **Milestone:** M1 · **Source:** §2.2, §5.2, §9 1.6 · **Depends-on:** US-005 · **Type:** system/developer
-- **Acceptance:**
-  - Effective attributes = base attributes − tombstones, with overrides applied, plus additions.
-  - `rename` applies to the variant's name.
-  - Base additions to non-overridden attributes flow up into the variant automatically.
-  - Overrides win over base; the function is pure and deterministic (same inputs → same output, no mutation of base).
-- **Tests (unskip when done):** `packages/domain/src/overlay.test.ts`
-  - `applies tombstones + overrides + additions and the rename` (AC-1 + AC-2)
-  - `flows a new base attribute up into the variant automatically` (AC-3)
-  - `lets overrides win over the base and is pure (does not mutate base)` (AC-4)
+- **Status:** RETIRED. The frozen choreo-owned copy model (§5.2, §2.5.1 #14–18) supersedes this entirely. US-008 (`copyOnWrite`) carries its own attributes snapshot; `baseFigureRef` is provenance-only. See PLAN.md §5.2 "No live overlays / no flow-up (⟳ reversal)".
+- **Tests:** `packages/domain/src/overlay.test.ts` was **never created**. The skipped test bodies referenced in earlier backlog drafts were never written. No tests to unskip.
 
 #### US-007 — Choreo fork (clone) 🦴
 - **Narrative:** As the system, I want `cloneRoutine`, so that "make it your own" produces an independent frozen copy with provenance.
@@ -213,18 +209,18 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - `is frozen: a later edit to the origin does NOT appear in the clone` (AC-2 + AC-3)
   - `keeps referenced figure docs shared (still points at the same figureRefs)` (AC-4)
 
-#### US-008 — Copy-on-write (auto-variant) 🦴
-- **Narrative:** As the system, I want `copyOnWrite(placement, sharedFigure, byUser)`, so that editing any non-owned figure diverges only that figure into an owned variant.
-- **Milestone:** M1 · **Source:** §2.4, §5.2, §9 1.7, D12 · **Depends-on:** US-005, US-006 · **Type:** system/developer
+#### US-008 — Copy-on-write (frozen choreo-owned copy) 🦴
+- **Narrative:** As the system, I want `copyOnWrite(placement, sharedFigure, byUser)`, so that editing a figure that lives outside the current choreo diverges only that placement into a frozen, choreo-owned copy.
+- **Milestone:** M1 · **Source:** §2.4, §5.2, §9 1.7, D12 · **Depends-on:** US-005 · **Type:** system/developer *(Reconciled 2026-06: no longer depends on US-006 — the retired overlay model is not used.)*
 - **Acceptance:**
-  - Produces a new figure doc with `baseFigureRef` = shared figure + empty overlay, `scope:account`, owned by `byUser`.
-  - The placement is re-pointed to the new variant.
-  - The shared base figure is untouched (no disturbance to others).
-  - Editing a figure the user already owns does NOT trigger copy-on-write (edits in place).
-- **Tests (unskip when done):** `packages/domain/src/fork.test.ts` (describe `US-008 Copy-on-write (auto-variant)`)
-  - `spawns an owned variant (baseFigureRef + empty overlay) and re-points the placement` (AC-1 + AC-2)
-  - `leaves the shared base figure untouched (no disturbance to others)` (AC-3)
-  - `does NOT copy-on-write when the user already owns the figure (edits in place)` (AC-4)
+  - Produces a new figure doc with `baseFigureRef` = shared figure (provenance only — **not resolved live**), `scope:account`, owned by `byUser`; carries a **full snapshot of the source's attributes** at copy time. **No `overlay` field** — the copy is a frozen snapshot, not an overlay wrapper.
+  - The placement is re-pointed to the new frozen copy.
+  - The shared source figure is untouched (no disturbance to others or to other routines).
+  - Editing a choreo-owned figure (one that lives inside the current choreo) does NOT trigger copy-on-write (edits in place).
+- **Tests (unskip when done):** `packages/domain/src/fork.test.ts` (describe `US-008 Copy-on-write (frozen copy)`) *(reconciled 2026-06: describe name in code is already "frozen copy", not "auto-variant")*
+  - `spawns a frozen choreo-owned copy (baseFigureRef provenance + own attributes snapshot, NO overlay) and re-points the placement` (AC-1 + AC-2) *(reconciled 2026-06: "empty overlay" wording removed)*
+  - `leaves the shared source figure untouched (no disturbance to others)` (AC-3)
+  - `does NOT copy-on-write when the figure is already choreo-owned (edits in place)` (AC-4)
 
 #### US-009 — Automerge convergence invariants 🦴
 - **Narrative:** As the system, I want property-based convergence tests, so that concurrent/partitioned edits always merge correctly.
@@ -261,13 +257,13 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 - **Acceptance:**
   - An `all`-dances note matches a figure of that family in any dance.
   - A `this-dance` note matches only figures of that family in its dance.
-  - A variant inherits its base's `figureType` + `dance`, so family notes match it too.
+  - A frozen copy carries its source's `figureType` + `dance`, so family notes match it too. *(Reconciled 2026-06: "variant inherits" → "copy carries" — copies are frozen snapshots, not live-linked variants.)*
   - Resolution is pure/deterministic and identity-based (not a predicate query).
 - **Tests (unskip when done):** `packages/domain/src/figuretype-notes.test.ts`
   - `matches an all-dances family note on a figure of that family in ANY dance` (AC-1)
   - `matches a this-dance family note only in that dance` (AC-2)
   - `does not match a different family` (AC-4 identity-based)
-  - `matches a variant because it inherits its base's figureType + dance` (AC-3)
+  - `matches a frozen copy because it carries its source's figureType + dance` (AC-3) *(reconciled 2026-06: "variant inherits" → "copy carries")*
 
 #### US-012 — Zod schemas (lenient read / strict write) 🦴
 - **Narrative:** As the system, I want registry-derived Zod schemas, so that writes are validated strictly while reads tolerate forward-compatible data.
@@ -342,14 +338,14 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 
 #### US-017 — `store/` seam (multi-doc) 🦴
 - **Narrative:** As a frontend developer, I want a typed `store/` seam over automerge, so that components never touch automerge or RPC directly.
-- **Milestone:** M2 · **Source:** §6.1, §6.2, D6 · **Depends-on:** US-015, US-006 · **Type:** system/developer
+- **Milestone:** M2 · **Source:** §6.1, §6.2, D6 · **Depends-on:** US-015 · **Type:** system/developer *(Reconciled 2026-06: no longer depends on US-006 — each figure doc carries its own attributes; no overlay resolution.)*
 - **Acceptance:**
   - Opening a routine connects to the routine doc's DO, then to each referenced figure doc's DO.
-  - Variant overlays resolve client-side via `resolve`.
+  - Each figure doc carries its own attributes (frozen snapshot — **no `resolve`/overlay step** required). *(Reconciled 2026-06: "variant overlays resolve client-side via resolve" is retired.)*
   - The seam exposes typed reactive reads + mutations + history-based undo.
   - Components import only from `store/` (a lint/architecture check forbids direct automerge/RPC use in components).
 - **Tests (unskip when done):** `apps/web/src/store/routine-store.test.ts`
-  - `loads a routine doc + each referenced figure doc and resolves variant overlays` (AC-1 + AC-2)
+  - `loads a routine doc + each referenced figure doc (each carries its own attributes — no overlay resolution)` (AC-1 + AC-2) *(reconciled 2026-06)*
   - `exposes typed reactive reads + mutations + history-based undo` (AC-3)
   - `documents the lint/architecture rule forbidding direct automerge/RPC in components` (AC-4 — placeholder; replace with the M2 dependency-cruiser/lint rule check).
 
@@ -473,7 +469,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 - **Acceptance:**
   - Editor adds a placement (figureRef into a section), reorders within the section, and soft-deletes (confirm).
   - A non-editor cannot modify placements.
-  - The placement card shows the figure name + variant/custom badge + attribute summary + alignment chips.
+  - The placement card shows the figure name + two-scope badge (`library`/`custom` — derived by content divergence, §4.3) + attribute summary + alignment chips. *(Reconciled 2026-06: "variant/custom badge" → `library`/`custom` ScopeBadge — no three-scope `variant` state.)*
 - **Tests (unskip when done):** `apps/web/src/components/assemble.test.tsx` (describe `US-027 …`)
   - `lets an editor add a placement, reorder within a section, and soft-delete` (AC-1 + AC-3 card content)
   - `blocks a non-editor from modifying placements` (AC-2)
@@ -549,18 +545,18 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Browsing reads the D1 registry + FigureType catalog (no CRDT scan for the list).
 - **Tests (unskip when done):**
   - Worker (the index-backed list): `apps/worker/src/routes/search.test.ts` (describe `US-032/033 …`) — `lists global figures grouped by figureType, filterable by dance, from the index` (AC-1 + AC-3).
-  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-032 …`) — `groups global figures by figureType and filters by dance` (AC-1), `marks global figures as not directly editable (auto-variant on edit)` (AC-2).
+  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-032 …`) — `groups global figures by figureType and filters by dance` (AC-1), `marks global figures as not directly editable (copy-on-write to a frozen choreo-owned copy on edit)` (AC-2). *(Reconciled 2026-06: "auto-variant on edit" → "copy-on-write".)*
 
-#### US-033 — Account variants + custom figures in library
-- **Narrative:** As a user, I want to see my variants and custom figures, so that I can manage my personal library.
+#### US-033 — Personal-library figures + custom figures in library *(reconciled 2026-06: "account variants" → personal-library figures)*
+- **Narrative:** As a user, I want to see my personal-library figures and custom figures, so that I can manage my personal library. *(Reconciled 2026-06: "account variants" is retired; figures are either personal-library saves or custom/choreo-owned figures.)*
 - **Milestone:** M4 · **Source:** §2.2, §4.2 · **Depends-on:** US-032 · **Type:** user-facing
 - **Acceptance:**
-  - My account variants show a badge with base lineage; custom figures show a custom badge.
+  - My personal-library figures (explicitly saved via "↟ Save to my library") show a **`library`** ScopeBadge with base-lineage ("based on \<source\>"); from-scratch custom figures show a **`custom`** badge. *(Reconciled 2026-06: no three-scope `variant` badge state — the badge is two-state by content divergence, §4.3.)* 
   - Each figure shows "used in N routines".
-  - Variants/custom figures are account-scoped (owned by me, not the app).
+  - Personal-library and custom figures are account-scoped (owned by me, not the app).
 - **Tests (unskip when done):**
-  - Worker (usage count from the index): `apps/worker/src/routes/search.test.ts` (describe `US-032/033 …`) — `lists the user's account variants + custom figures with 'used in N routines'` (AC-2 + AC-3 account-scoped).
-  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-033 …`) — `shows a variant lineage badge + a custom badge + 'used in N routines'` (AC-1 + AC-2).
+  - Worker (usage count from the index): `apps/worker/src/routes/search.test.ts` (describe `US-032/033 …`) — `lists the user's personal-library figures + custom figures with 'used in N routines'` (AC-2 + AC-3 account-scoped). *(reconciled 2026-06)*
+  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-033 …`) — `shows a library lineage badge + a custom badge + 'used in N routines'` (AC-1 + AC-2). *(reconciled 2026-06)*
 
 #### US-034 — Editing your own figure flows into all referencing routines
 - **Narrative:** As a user, I want edits to my own figure to flow everywhere it's used, so that I refine once.
@@ -573,30 +569,30 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Worker (persistence-layer flow across two routine DOs): `apps/worker/src/figures.test.ts` (describe `US-034 …`) — `propagates an owned-figure edit to every routine referencing it` (AC-1 + AC-2 no variant).
   - E2E: `apps/web/e2e/fork-and-figures.spec.ts` — `editing your OWN figure flows into every routine that references it` (AC-1; AC-3 live-sync is the convergence machinery).
 
-#### US-035 — Auto-variant on editing a non-owned figure
-- **Narrative:** As a user editing a figure I don't own, I want an automatic variant, so that I can tweak freely without disturbing others.
+#### US-035 — Auto-copy (copy-on-write) on editing a figure from outside the choreo *(reconciled 2026-06: "auto-variant" → frozen copy)*
+- **Narrative:** As a user editing a figure from outside the current choreo (a global or personal-library figure), I want an automatic frozen copy, so that I can tweak freely without disturbing others. *(Reconciled 2026-06: "auto-variant" is retired; this is a frozen choreo-owned copy.)*
 - **Milestone:** M4 · **Source:** §2.4, §5.2, Q-COW-TRIGGER, §10.E2E · **Depends-on:** US-033, US-008 · **Type:** user-facing
 - **Acceptance:**
-  - Editing a global figure or someone else's shared figure silently creates an account-scoped variant I own and re-points the placement.
-  - A "copied as your variant" toast shows.
-  - The original/base figure is untouched (other routines/users unaffected).
+  - Editing a global figure or a personal-library figure placed into the choreo silently creates a **frozen, choreo-owned copy** (account-scoped, owned by the choreo's editors) and re-points the placement. *(Reconciled 2026-06: "owned variant" → "frozen choreo-owned copy"; no overlay.)*
+  - A **"copied into this choreo"** toast shows. *(Reconciled 2026-06: was "copied as your variant" — see PLAN.md §4.4 and §4.9.)*
+  - The original figure is untouched (other routines/users unaffected); later edits to the source never flow into the copy.
   - No prompt is required (auto, not a dialog).
 - **Tests (unskip when done):**
-  - Worker (the COW spawn + re-point + base-untouched): `apps/worker/src/figures.test.ts` (describe `US-035 …`) — `silently creates an owned variant + re-points the placement; base untouched` (AC-1 + AC-3).
-  - Component (toast + no dialog): `apps/web/src/components/figure-library.test.tsx` (describe `US-035 …`) — `shows a 'copied as your variant' toast when editing a global figure` (AC-2 + AC-4).
-  - E2E: `apps/web/e2e/fork-and-figures.spec.ts` — `editing a GLOBAL figure auto-creates your variant with a toast; original untouched` (AC-1/2/3/4 end-to-end).
+  - Worker (the COW spawn + re-point + base-untouched): `apps/worker/src/figures.test.ts` (describe `US-035 …`) — `silently creates a frozen choreo-owned copy + re-points the placement; source untouched` (AC-1 + AC-3). *(reconciled 2026-06)*
+  - Component (toast + no dialog): `apps/web/src/components/figure-library.test.tsx` (describe `US-035 …`) — `shows a 'copied into this choreo' toast when editing a global figure` (AC-2 + AC-4). *(reconciled 2026-06: "copied as your variant" → "copied into this choreo")*
+  - E2E: `apps/web/e2e/fork-and-figures.spec.ts` — `editing a GLOBAL figure auto-creates a frozen copy with a toast; original untouched` (AC-1/2/3/4 end-to-end). *(reconciled 2026-06)*
   - Domain primitive behind it: US-008's `fork.test.ts` (`copyOnWrite`).
 
-#### US-036 — Fork a figure into a variant explicitly
-- **Narrative:** As a user, I want to fork a figure into a variant on purpose, so that I store overrides while inheriting the base.
-- **Milestone:** M4 · **Source:** §2.2, §4.4, §5.2 · **Depends-on:** US-033, US-006 · **Type:** user-facing
-- **Acceptance:**
-  - "Fork into variant" creates a variant with `baseFigureRef` + overlay.
-  - Base edits to non-overridden steps flow up into my variant (live).
-  - My overrides/tombstones/additions/rename win over the base where set.
-- **Tests (unskip when done):**
-  - Component: `apps/web/src/components/figure-library.test.tsx` (describe `US-036 …`) — `offers a 'Fork into variant' action that creates an overlay variant` (AC-1).
-  - Domain (the overlay semantics, AC-2 flow-up + AC-3 overrides-win): US-006's `overlay.test.ts`.
+#### US-036 — ~~Fork a figure into a live-overlay variant~~ *(reconciled 2026-06: RETIRED / subsumed)*
+
+> **Reconciled 2026-06:** This story described the retired live-overlay/flow-up variant model — a "Fork into variant" that created a `baseFigureRef` + overlay with base-addition flow-up. That model is entirely retired (§5.2, PLAN.md "No live overlays / no flow-up (⟳ reversal)"). It is **subsumed** by:
+> - **US-035** (auto copy-on-write = frozen copy when editing a figure from outside the choreo — the implicit "fork")
+> - **§4.2 "↟ Save to my library"** (the explicit reuse path: `POST /api/figures/save-to-library`, migration 0010 — a frozen personal-library copy for cross-routine reuse; see PLAN.md §5.2 + §4.2)
+>
+> There is no "Fork into variant" affordance in the shipped UI and no overlay variant in the data model. Tests referencing `overlay.test.ts` in this story were never written.
+
+- **Milestone:** M4 *(retired)* · **Source:** §2.2, §4.4, §5.2 · **Depends-on:** ~~US-033, US-006~~ · **Type:** user-facing
+- **Status:** RETIRED. No code, no tests, no UI. See US-035 + save-to-library (§4.2 + PLAN.md §5.2).
 
 #### US-037 — Choreo fork ("make it your own")
 - **Narrative:** As a user, I want to fork a whole routine, so that I get an independent copy to make my own.
@@ -628,7 +624,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Component (toast surface): `apps/web/src/components/assemble.test.tsx` (describe `US-038 Per-user undo / redo UX`) — `lets an editor undo (with an 'Undone' toast) and redo` (AC-1 + AC-4) + `hides undo/redo from a non-editor`. (The affordances + toast live on the open routine's header.)
   - E2E (two-client, AC-2 + AC-4): `apps/web/e2e/undo.spec.ts` — `A's undo reverts only A's last change; B's concurrent edit survives; redo restores`.
   - Domain primitive: US-010's `undo.test.ts` (inverse-change, B's edit preserved, redo).
-  - **Deferred — AC-3 soft "superseded" hint:** not yet built. History-based undo still succeeds when others built on the change (Automerge merges; no hard refusal), so the hint is advisory; add it + its assertion when the hint UX lands.
+  - **AC-3 soft "superseded" hint — SHIPPED (reconciled 2026-06):** `wasSupersededByOthers(doc, actorId)` in `packages/domain/src/undo.ts` detects causal successors in the Automerge change DAG. The store seam (`apps/web/src/store/routine.ts`) peeks this before undo and returns `{ undone, supersededByOthers }`; `Assemble.tsx` softens the "Undone" toast to "Undone — others had built on this change" when the flag is set. See PLAN.md §5.4 for the full spec. *(Reconciled 2026-06: was listed as deferred.)*
 
 ---
 
@@ -657,7 +653,7 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - The anchor picker offers "this step", "this figure here", or "this figure family" with a dance-scope toggle (this dance | all dances).
   - A `figureType` note is owned in my account doc (account-scoped).
   - An all-dances note surfaces on a figure of that family in any of my routines (e.g. Waltz Feather AND Foxtrot Feather); a this-dance note only in that dance.
-  - Variants inherit the family, so family notes surface on my variants too.
+  - Frozen copies carry the source's `figureType` + `dance`, so family notes surface on choreo-owned copies too. *(Reconciled 2026-06: "variants inherit" → "copies carry" — copies are frozen snapshots, not live-linked variants.)*
 - **Tests (unskip when done):**
   - Component (anchor picker, AC-1): `apps/web/src/components/annotations.test.tsx` (describe `US-040 …`) — `offers this-step / this-figure / this-figure-family with a dance-scope toggle`.
   - Domain (matching logic, AC-3 + AC-4): US-011's `figuretype-notes.test.ts` (`matchesFigureType` all-dances vs this-dance; variant inheritance).

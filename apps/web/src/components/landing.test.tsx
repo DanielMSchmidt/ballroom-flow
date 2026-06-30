@@ -1,12 +1,15 @@
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { SCREENSHOTS } from "../marketing/screenshots.manifest";
 import { renderUi, screen } from "../test-support/render";
 
 // Stub the auth seam: the real AccountControls renders Clerk components that
-// need a ClerkProvider not present in jsdom.
+// need a ClerkProvider not present in jsdom. NullAuthProvider is included as a
+// passthrough so renderUi's provider wrapper (which imports it) keeps working.
 vi.mock("../auth/app-auth", () => ({
   AccountControls: () => <button type="button">Sign in</button>,
+  NullAuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 describe("Landing", () => {

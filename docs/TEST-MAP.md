@@ -43,9 +43,9 @@ imports through small shims that defer module resolution to runtime:
 | US-003 | ATTRIBUTE_REGISTRY + merge | domain | `packages/domain/src/vocabulary.test.ts` |
 | US-004 | Float-count timing | domain | `packages/domain/src/timing.test.ts` |
 | US-005 | Routine + figure doc schemas | domain | `packages/domain/src/doc-schemas.test.ts` |
-| US-006 | Overlay resolution | domain | `packages/domain/src/overlay.test.ts` |
+| US-006 | ~~Overlay resolution~~ *(retired — vestigial)* | — | `packages/domain/src/overlay.test.ts` **does not exist and was never created**. `resolve()` does not exist in the codebase. The `Overlay` type + `overlay?` field in `doc-types.ts` are LEGACY stubs for reading old persisted docs only (`migrations.ts`). **Follow-up: remove vestigial type + field once migration is complete.** *(Reconciled 2026-06)* |
 | US-007 | Choreo fork (clone) | domain | `packages/domain/src/fork.test.ts` |
-| US-008 | Copy-on-write (auto-variant) | domain | `packages/domain/src/fork.test.ts` |
+| US-008 | Copy-on-write (frozen choreo-owned copy) *(reconciled 2026-06: no overlay)* | domain | `packages/domain/src/fork.test.ts` |
 | US-009 | Automerge convergence invariants | domain (property) | `packages/domain/src/convergence.test.ts` |
 | US-010 | History-based per-user undo | domain | `packages/domain/src/undo.test.ts` |
 | US-011 | figureType annotation resolution | domain | `packages/domain/src/figuretype-notes.test.ts` |
@@ -54,7 +54,7 @@ imports through small shims that defer module resolution to runtime:
 | US-014 | SQLite-backed DO hosts an Automerge doc | worker | `apps/worker/src/doc-do.test.ts` |
 | US-015 | Live WebSocket sync (two clients converge) | worker + E2E | `apps/worker/src/doc-do.test.ts`, `apps/web/e2e/convergence.spec.ts` |
 | US-016 | DO alarm: compaction + D1 projection + invite expiry | worker | `apps/worker/src/doc-do.test.ts` |
-| US-017 | store/ seam (multi-doc) | component (+ worker for sync) | `apps/web/src/store/routine-store.test.ts` |
+| US-017 | store/ seam (multi-doc — each figure carries own attrs; no overlay resolve) *(reconciled 2026-06)* | component (+ worker for sync) | `apps/web/src/store/routine-store.test.ts` |
 | US-018 | Open & view a routine | component + E2E | `apps/web/src/components/assemble.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-019 | Clerk sign-in + onboarding | worker (+ existing negative `auth/index.test.ts`) | `apps/worker/src/routes/me-profile.test.ts` |
 | US-020 | Per-document membership & roles | worker | `apps/worker/src/permissions.test.ts` |
@@ -70,10 +70,10 @@ imports through small shims that defer module resolution to runtime:
 | US-030 | Timeline role-view toggle | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-031 | Edit per-figure alignment | component | `apps/web/src/components/assemble.test.tsx` |
 | US-032 | Global figure library browse | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
-| US-033 | Account variants + custom figures | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
+| US-033 | Personal-library figures + custom figures (two-scope badge: `library`/`custom`) *(reconciled 2026-06: "account variants" retired)* | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-034 | Editing your own figure flows everywhere | worker + E2E | `apps/worker/src/figures.test.ts`, `apps/web/e2e/fork-and-figures.spec.ts` |
-| US-035 | Auto-variant on editing a non-owned figure | worker + component + E2E | `apps/worker/src/figures.test.ts`, `apps/web/src/components/figure-library.test.tsx`, `apps/web/e2e/fork-and-figures.spec.ts` |
-| US-036 | Fork a figure into a variant explicitly | component | `apps/web/src/components/figure-library.test.tsx` |
+| US-035 | Auto-copy (frozen choreo-owned copy, "copied into this choreo" toast) *(reconciled 2026-06: "auto-variant"/"copied as your variant" retired)* | worker + component + E2E | `apps/worker/src/figures.test.ts`, `apps/web/src/components/figure-library.test.tsx`, `apps/web/e2e/fork-and-figures.spec.ts`; also `figures.test.ts` covers `POST /api/figures/save-to-library` (migration 0010, the explicit reuse path). |
+| US-036 | ~~Fork a figure into a live-overlay variant~~ *(reconciled 2026-06: RETIRED — subsumed by US-035 + save-to-library)* | — | No test file; no overlay variant model. Subsumed by US-035 (auto-copy) + `POST /api/figures/save-to-library` (explicit reuse, `figures.test.ts`, migration 0010). |
 | US-037 | Choreo fork ("make it your own") | component + E2E | `apps/web/src/components/choreo-list.test.tsx`, `apps/web/e2e/fork-and-figures.spec.ts` |
 | US-038 | Per-user undo / redo UX | component + E2E | `apps/web/src/components/profile.test.tsx`, `apps/web/e2e/undo.spec.ts` |
 | US-039 | Unified annotations: point + figure | component | `apps/web/src/components/annotations.test.tsx` |
@@ -166,19 +166,35 @@ Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into 
 doc)" property test was added. Each story in `USER-STORIES.md` now carries a
 `Tests (unskip when done)` block naming the exact file(s) + test names to pass.
 Inline gaps flagged there (none leave a US uncovered): US-024 AC-4 role microcopy
-(Share component test when the screen lands); US-026 AC-3 section reorder/delete
-two-client merge (extend the convergence E2E); US-037 AC-1 fork→quota count;
-US-038 AC-3 superseded-hint UI.
+(Share component test when the screen lands); US-037 AC-1 fork→quota count.
+
+**Gaps RESOLVED in this program (reconciled 2026-06):**
+- **US-026 AC-3** cross-section reorder/soft-delete convergence test — **SHIPPED**: the
+  two-client section reorder + soft-delete convergence assertion is now part of
+  `apps/web/e2e/convergence.spec.ts`.
+- **US-038 AC-3** soft "superseded" hint — **SHIPPED**: `wasSupersededByOthers(doc,
+  actorId)` in `packages/domain/src/undo.ts` + store seam + `Assemble.tsx` toast
+  variant. See PLAN.md §5.4 for the full spec.
+
+**New surfaces shipped in the design-parity program (reconciled 2026-06):**
+- **Journal tab** (US-039/040/041/042 cross-routine view): `apps/web/e2e/journal.spec.ts`
+  (`@smoke`); `GET /api/journal` UNIONs `journal_entry` D1 index + `FigureTypeNoteIndex`
+  account rows; DO alarm projects lesson/practice annotations to `journal_entry`.
+- **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
+  `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
+  server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.
+- **Tango-Rise write gate** (`dance_not_applicable`): the DO seed route + store seam reject
+  a `rise` attribute on a Tango figure with a `dance_not_applicable` error; vocabulary
+  `appliesToDances` enforced on the write path. Covered in `vocabulary.test.ts` /
+  `figures.test.ts`.
+- **US-038 AC-3 undo superseded hint**: see above under "Gaps RESOLVED".
 
 ## Missing dependencies (for devops — NOT installed by the test engineer)
 
-1. **`@automerge/automerge`** is NOT declared as a dependency of `@ballroom/domain`
-   (nor `apps/worker`). It exists in the pnpm store (from the removed M0.5 spike)
-   but is not resolvable from either workspace. The domain convergence/undo
-   property tests and the M1 doc builders need it. **Action (M1, §9 0.2):** add
-   `@automerge/automerge` to `packages/domain` (and `apps/worker` for M2). Until
-   then the convergence helper loads it via a deferred runtime specifier, so the
-   skipped suite stays green; unskipping US-009/US-010 requires this dep.
+1. **`@automerge/automerge`** — **RESOLVED (US-005, development HEAD):** `@automerge/automerge`
+   is now declared in `packages/domain` (US-005). The domain convergence/undo property tests
+   (US-009/US-010) and M1 doc builders now resolve it. The deferred-specifier workaround in
+   the convergence helper is no longer needed for new tests. Worker M2 dep also present.
 2. **No JWT minting dep needed.** `makeTestJWT` is built on Web Crypto (RS256), so
    no `jose`/`jsonwebtoken` is required for v1. If a future test needs ES256/EdDSA
    or JWKS rotation, consider adding `jose` — not required now.
