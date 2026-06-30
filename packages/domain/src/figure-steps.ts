@@ -12,6 +12,7 @@
 // the start/finish scaffold rather than carrying invented footwork.
 
 import type { DanceId } from "./dances";
+import { GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
 
 /**
  * One role's step content. `direction` (headline) + `footwork` are required; the
@@ -50,76 +51,13 @@ export interface AuthoredStep {
   position?: string;
 }
 
-// Helpers to keep the tables readable. `s` is the direction+footwork-only form
-// (back-compatible with the original charts); richer charts use object literals.
-const s = (
-  leaderDir: string,
-  leaderFoot: string,
-  followerDir: string,
-  followerFoot: string,
-): AuthoredStep => ({
-  leader: { direction: leaderDir, footwork: leaderFoot },
-  follower: { direction: followerDir, footwork: followerFoot },
-});
-
-// Closed-change pattern (3 steps): leader forward, follower back. Used by both changes —
-// the feet differ but direction/footwork do not.
-const CLOSED_CHANGE: readonly AuthoredStep[] = [
-  s("forward", "HT", "back", "TH"),
-  s("side", "T", "side", "T"),
-  s("close", "TH", "close", "TH"),
-];
-
-// Natural/Reverse turn pattern (6 steps): leader turns forward→back, follower back→forward
-// with a heel turn on counts 2–3. Direction/footwork are foot-agnostic, so the natural and
-// reverse turns share this table.
-const SWING_TURN: readonly AuthoredStep[] = [
-  s("forward", "HT", "back", "TH"),
-  s("side", "T", "close", "HT"), // follower heel turn
-  s("close", "TH", "side", "TH"),
-  s("back", "TH", "forward", "HT"),
-  s("side", "T", "side", "T"),
-  s("close", "TH", "close", "TH"),
-];
-
-/** Verified content keyed by `${dance}:${figureType}`. */
-export const FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
-  "waltz:natural-turn": SWING_TURN,
-  "waltz:reverse-turn": SWING_TURN,
-  "waltz:closed-change-on-rf": CLOSED_CHANGE,
-  "waltz:closed-change-on-lf": CLOSED_CHANGE,
-  "foxtrot:feather-step": [
-    s("forward", "HT", "back", "TH"),
-    s("forward", "T", "back", "TH"),
-    s("forward", "TH", "back", "T"),
-  ],
-  "foxtrot:three-step": [
-    s("forward", "HT", "back", "TH"),
-    s("forward", "HT", "back", "TH"),
-    s("forward", "TH", "back", "T"),
-  ],
-
-  // Research-derived (leader corroborated; follower from the standard conventions). Worth a
-  // check against the technique books, like the rest — kept here so the Bronze Waltz set is
-  // more complete. The Whisk's third step crosses behind into PP (modeled as a side step).
-  "waltz:whisk": [
-    s("forward", "HT", "back", "TH"),
-    s("side", "T", "side", "T"),
-    s("side", "T", "side", "TH"),
-  ],
-  "waltz:outside-change": [
-    s("back", "TH", "forward", "HT"),
-    s("back", "T", "forward", "T"),
-    s("side", "TH", "side", "TH"),
-  ],
-  // Chassé from PP — timing 1 2 & 3, so the close lands on the "&".
-  "waltz:chasse-from-pp": [
-    s("forward", "HT", "forward", "HT"),
-    s("side", "T", "side", "T"),
-    s("close", "T", "close", "T"),
-    s("side", "TH", "side", "TH"),
-  ],
-};
+/**
+ * Verified per-figure content keyed by `${dance}:${figureType}`. GENERATED from the
+ * research bundle (real WDSF-first technique looked up per figure, one source per
+ * figure recorded) — see figure-charts.generated.ts. A figure with no verified chart
+ * is absent here and falls back to the start/finish scaffold in buildWdsfAttributes.
+ */
+export const FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = GENERATED_FIGURE_STEPS;
 
 /** Authored per-count steps for a figure, or `undefined` when none are verified yet. */
 export function authoredSteps(

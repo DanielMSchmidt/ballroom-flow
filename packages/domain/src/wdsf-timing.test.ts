@@ -102,12 +102,14 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
   });
 
   it("emits a direction + footwork attribute per role for each of the 6 counts", () => {
-    expect(natural).toHaveLength(6 * 2 * 2); // 6 counts × 2 roles × {direction, footwork}
-    expect(natural.map((a) => a.count)).toEqual(
+    // The chart carries richer attributes too (rise/sway/turn/position/CBM), so assert the
+    // direction+footwork CORE is exactly one per role per count — that's the timeline spine.
+    const core = natural.filter((a) => a.kind === "direction" || a.kind === "footwork");
+    expect(core).toHaveLength(6 * 2 * 2); // 6 counts × 2 roles × {direction, footwork}
+    expect(core.map((a) => a.count)).toEqual(
       [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3].concat([4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6]),
     );
-    expect(new Set(natural.map((a) => a.kind))).toEqual(new Set(["direction", "footwork"]));
-    expect(new Set(natural.map((a) => a.role))).toEqual(new Set(["leader", "follower"]));
+    expect(new Set(core.map((a) => a.role))).toEqual(new Set(["leader", "follower"]));
   });
 
   it("the leader's count-1 step is a forward Heel-Toe, the follower's is a back Toe-Heel", () => {
@@ -119,11 +121,22 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
     expect(at1("follower", "footwork")).toBe("TH");
   });
 
-  it("captures the follower's heel turn on count 2 (close, Heel-Toe)", () => {
-    const f2 = (kind: string) =>
-      natural.find((a) => a.count === 2 && a.role === "follower" && a.kind === kind)?.value;
-    expect(f2("direction")).toBe("close");
-    expect(f2("footwork")).toBe("HT");
+  it("carries the chart's richer rise / sway / turn / CBM attributes", () => {
+    // The natural turn's real technique: rise commences on count 1 (shared), the leader
+    // turns ¼R on count 1 with CBM, and sways right on count 2.
+    const shared = (count: number, kind: string) =>
+      natural.find((a) => a.count === count && a.role === null && a.kind === kind)?.value;
+    const lead = (count: number, kind: string) =>
+      natural.find((a) => a.count === count && a.role === "leader" && a.kind === kind)?.value;
+    expect(shared(1, "rise")).toBe("commence");
+    expect(lead(1, "turn")).toBe("quarter_R");
+    expect(lead(2, "sway")).toBe("to_R");
+    expect(
+      natural.some(
+        (a) =>
+          a.count === 1 && a.role === "leader" && a.kind === "bodyActions" && a.value === "CBM",
+      ),
+    ).toBe(true);
   });
 
   it("every authored attribute passes the strict write schema", () => {
