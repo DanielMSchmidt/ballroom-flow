@@ -1,6 +1,7 @@
 import type { DanceId } from "./dances";
 import type { Attribute } from "./doc-types";
 import { authoredSteps } from "./figure-steps";
+import { kindAppliesToDance } from "./vocabulary";
 
 // Parse a WDSF syllabus timing string into one float beat-count per step.
 //
@@ -69,14 +70,17 @@ export function buildWdsfAttributes(input: {
     counts.forEach((count, i) => {
       const step = authored[i];
       if (!step) return;
+      // Per-role (role-aware) attributes: direction + footwork always, plus
+      // sway / turn / bodyActions when the chart carries them.
       for (const role of ["leader", "follower"] as const) {
         const base = `fig-${input.figureType}-${input.dance}-${role}-s${i + 1}`;
+        const f = step[role];
         out.push({
           id: `${base}-dir`,
           kind: "direction",
           count,
           role,
-          value: step[role].direction,
+          value: f.direction,
           deletedAt: null,
         });
         out.push({
@@ -84,10 +88,61 @@ export function buildWdsfAttributes(input: {
           kind: "footwork",
           count,
           role,
-          value: step[role].footwork,
+          value: f.footwork,
+          deletedAt: null,
+        });
+        if (f.sway)
+          out.push({
+            id: `${base}-sway`,
+            kind: "sway",
+            count,
+            role,
+            value: f.sway,
+            deletedAt: null,
+          });
+        if (f.turn)
+          out.push({
+            id: `${base}-turn`,
+            kind: "turn",
+            count,
+            role,
+            value: f.turn,
+            deletedAt: null,
+          });
+        for (const [j, ba] of (f.bodyActions ?? []).entries()) {
+          out.push({
+            id: `${base}-ba${j}`,
+            kind: "bodyActions",
+            count,
+            role,
+            value: ba,
+            deletedAt: null,
+          });
+        }
+      }
+      // Shared (non-role) attributes: the couple's rise & position for this count.
+      const shared = `fig-${input.figureType}-${input.dance}-s${i + 1}`;
+      // Rise omits Tango (no rise & fall) — gate on the registry so a stray Tango
+      // rise in a chart can never emit an attribute the write schema would reject.
+      if (step.rise && kindAppliesToDance("rise", input.dance)) {
+        out.push({
+          id: `${shared}-rise`,
+          kind: "rise",
+          count,
+          role: null,
+          value: step.rise,
           deletedAt: null,
         });
       }
+      if (step.position)
+        out.push({
+          id: `${shared}-pos`,
+          kind: "position",
+          count,
+          role: null,
+          value: step.position,
+          deletedAt: null,
+        });
     });
     return out;
   }

@@ -32,4 +32,28 @@ describe("authored figure steps", () => {
       }
     }
   });
+
+  it("uses valid vocabulary tokens for the optional sway/turn/bodyActions/rise/position", () => {
+    // The richer per-step attributes must be real registry values (closed enums),
+    // or buildWdsfAttributes would emit attributes the write schema (US-012) rejects.
+    const swayValues = new Set(ATTRIBUTE_REGISTRY.sway.values ?? []);
+    const turnValues = new Set(ATTRIBUTE_REGISTRY.turn.values ?? []);
+    const baValues = new Set(ATTRIBUTE_REGISTRY.bodyActions.values ?? []);
+    const riseValues = new Set(ATTRIBUTE_REGISTRY.rise.values ?? []);
+    const positionValues = new Set(ATTRIBUTE_REGISTRY.position.values ?? []);
+    for (const [key, steps] of Object.entries(FIGURE_STEPS)) {
+      for (const [i, step] of steps.entries()) {
+        if (step.rise) expect(riseValues.has(step.rise), `${key}[${i}] rise`).toBe(true);
+        if (step.position)
+          expect(positionValues.has(step.position), `${key}[${i}] position`).toBe(true);
+        for (const role of ["leader", "follower"] as const) {
+          const f = step[role];
+          if (f.sway) expect(swayValues.has(f.sway), `${key} ${role}[${i}] sway`).toBe(true);
+          if (f.turn) expect(turnValues.has(f.turn), `${key} ${role}[${i}] turn`).toBe(true);
+          for (const ba of f.bodyActions ?? [])
+            expect(baValues.has(ba), `${key} ${role}[${i}] bodyAction ${ba}`).toBe(true);
+        }
+      }
+    }
+  });
 });

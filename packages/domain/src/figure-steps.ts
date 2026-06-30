@@ -13,20 +13,45 @@
 
 import type { DanceId } from "./dances";
 
-/** One role's step: its direction headline + footwork token. */
+/**
+ * One role's step content. `direction` (headline) + `footwork` are required; the
+ * role-aware extras (`sway`, `turn`, `bodyActions`) are filled in when the source
+ * gives them. All values are vocabulary tokens (see vocabulary.ts): direction is a
+ * closed enum, footwork free-text (ISTD HT/T/TH/H/"heel pull"), sway to_L/to_R/none,
+ * turn the turn enum (quarter_R…), bodyActions a list (e.g. ["CBM"]).
+ */
 export interface AuthoredFootwork {
-  /** A value from the `direction` vocabulary (forward/back/side/close/…). */
+  /** A value from the `direction` vocabulary (forward/back/side/behind/close/diagonal/in_place). */
   direction: string;
-  /** Footwork token (ISTD H/T/TH form, accepted as free-text by the `footwork` kind). */
+  /** Footwork token (ISTD HT/T/TH/H/"heel pull" form, accepted by the `footwork` kind). */
   footwork: string;
+  /** Sway (`sway` vocab: to_L/to_R/none) — role-aware, set when known. */
+  sway?: string;
+  /** Turn (`turn` vocab: quarter_R…) — role-aware, set when known. */
+  turn?: string;
+  /** Body actions (`bodyActions` vocab, e.g. ["CBM"]) — role-aware, set when known. */
+  bodyActions?: string[];
 }
 
+/**
+ * One count's authored content. The per-role footwork plus the SHARED (non-role)
+ * `rise` and `position` the couple dance together (vocabulary.ts marks both
+ * non-roleAware). `rise` ∈ the rise enum (commence/continue/up/lowering/NFR…);
+ * `position` ∈ the position enum (closed/promenade/wing/CBMP) — set only when the
+ * source's position maps to one of those (e.g. "Outside Partner Position" has no
+ * slot in our vocabulary, so it's left unset rather than written as an unknown).
+ */
 export interface AuthoredStep {
   leader: AuthoredFootwork;
   follower: AuthoredFootwork;
+  /** Rise & fall for this count (`rise` vocab) — shared by the couple. */
+  rise?: string;
+  /** Dance position for this count (`position` vocab) — shared by the couple. */
+  position?: string;
 }
 
-// Helpers to keep the tables readable.
+// Helpers to keep the tables readable. `s` is the direction+footwork-only form
+// (back-compatible with the original charts); richer charts use object literals.
 const s = (
   leaderDir: string,
   leaderFoot: string,
