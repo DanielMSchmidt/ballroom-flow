@@ -119,6 +119,15 @@ export function buildWdsfAttributes(input: {
             deletedAt: null,
           });
         }
+        if (f.footPosition)
+          out.push({
+            id: `${base}-fpos`,
+            kind: "footPosition",
+            count,
+            role,
+            value: f.footPosition,
+            deletedAt: null,
+          });
       }
       // Shared (non-role) attributes: the couple's rise & position for this count.
       const shared = `fig-${input.figureType}-${input.dance}-s${i + 1}`;

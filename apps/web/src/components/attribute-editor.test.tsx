@@ -54,7 +54,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /beat 2/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork" && a.count === 2,
@@ -347,11 +347,26 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     // No free-text add for footwork.
     expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
     // A footwork value is still pickable from the closed set.
-    await userEvent.click(screen.getByRole("button", { name: "HT" }));
+    await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
     );
     expect(added?.value).toBe("HT");
+  });
+
+  it("labels values with full text in the editor and explains the selected value inline", async () => {
+    // The edit picker reads as full descriptive labels ("Heel-Toe", not the "HT"
+    // code the reading overview shows); selecting a value reveals its one-line
+    // explanation (registry valueDefs) beneath the chips. The stored value is still
+    // the canonical code.
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(<AttributeEditor count={1} role="editor" value={[attr("footwork", "HT")]} />);
+    expect(screen.getByRole("button", { name: "Heel-Toe" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "HT" })).toBeNull();
+    // The selected value's explanation is shown in place.
+    expect(screen.getByText(/Heel-Toe: heel then toe/i)).toBeInTheDocument();
   });
 });
 

@@ -109,6 +109,94 @@ const DIRECTION_LABEL: Record<string, string> = {
   diag_back: "diagonal",
 };
 
+/**
+ * Full descriptive label per value, shown in the EDIT picker (the reading overview
+ * uses the tight ABBREV codes instead). A value with no entry falls back to the raw
+ * value humanized — so custom kinds and any un-mapped value still read sensibly.
+ * The one-line EXPLANATION lives in the registry `valueDefs` (info overlay + the
+ * editor's inline note); this is just the chip's headline.
+ */
+const FULL_LABEL: Record<string, Record<string, string>> = {
+  direction: {
+    forward: "Forward",
+    back: "Back",
+    side: "Side",
+    behind: "Behind",
+    close: "Close",
+    diagonal: "Diagonal",
+    in_place: "In place",
+  },
+  footwork: {
+    HT: "Heel-Toe",
+    TH: "Toe-Heel",
+    T: "Toe",
+    H: "Heel",
+    B: "Ball",
+    WF: "Whole foot",
+    BF: "Ball-flat",
+    IE: "Inside edge",
+    flat: "Flat foot",
+    "heel turn": "Heel turn",
+    "heel pull": "Heel pull",
+    BH: "Ball-heel",
+    HTH: "Heel-Toe-Heel",
+    THT: "Toe-Heel-Toe",
+    "T/H/T": "Toe / Heel / Toe",
+    "H/T": "Heel / Toe",
+    "T/H": "Toe / Heel",
+    "T/TH": "Toe / Toe-Heel",
+    "TH/T": "Toe-Heel / Toe",
+  },
+  footPosition: {
+    first: "First",
+    second: "Second",
+    third: "Third",
+    fourth_open: "Fourth (open)",
+    fourth_closed: "Fourth (closed)",
+    fifth: "Fifth",
+  },
+  rise: {
+    commence: "Commence",
+    body_rise: "Body rise",
+    foot_rise: "Foot rise",
+    up: "Up",
+    continue: "Continue",
+    lowering: "Lowering",
+    NFR: "No foot rise",
+  },
+  position: {
+    closed: "Closed",
+    promenade: "Promenade",
+    counter_promenade: "Counter promenade",
+    outside_partner: "Outside partner",
+    left_side: "Left side",
+    right_side: "Right side",
+    tandem: "Tandem",
+    wing: "Wing",
+    CBMP: "CBMP",
+  },
+  bodyActions: { CBM: "CBM", side_leading: "Side leading" },
+  sway: { to_L: "Sway left", to_R: "Sway right", none: "No sway" },
+  turn: {
+    none: "No turn",
+    eighth_L: "⅛ left",
+    eighth_R: "⅛ right",
+    quarter_L: "¼ left",
+    quarter_R: "¼ right",
+    three_eighth_L: "⅜ left",
+    three_eighth_R: "⅜ right",
+    half_L: "½ left",
+    half_R: "½ right",
+  },
+};
+
+/** The full descriptive label for a value (the edit picker), or the humanized raw
+ *  value when unmapped (custom kinds, future values). */
+export function labelValue(kind: string, value: unknown): string {
+  const raw = String(value);
+  return FULL_LABEL[kind]?.[raw] ?? raw.replace(/_/g, " ");
+}
+
 /** A short, column-friendly code for one attribute value. Falls back to a
  *  trimmed, space-normalized prefix for custom/unknown values. */
 export function abbrevValue(kind: string, value: unknown): string {

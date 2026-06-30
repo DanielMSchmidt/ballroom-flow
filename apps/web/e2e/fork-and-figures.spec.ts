@@ -126,9 +126,9 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // Open the figure's step timeline and set count-1 footwork "T".
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
-    await page.getByRole("button", { name: /^HT$/ }).click();
+    await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible({
       timeout: 15_000,
     });
 
@@ -144,7 +144,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // Re-open the figure's step timeline and verify "T" is still there.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     // The count 1 summary chip is visible without expanding — proves DO-persistence.
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -203,7 +203,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     // "T" is a suggestion in the Step kind; clicking it on a global figure triggers COW.
-    await page.getByRole("button", { name: /^HT$/ }).click();
+    await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
 
     // The FigureTimeline immediately shows "Copied as your variant" (local state).
     // Use .first() because both FigureTimeline (on `copied`) and Assemble (`copiedToast`)
@@ -353,15 +353,15 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     await editor.page.getByRole("button", { name: /list view/i }).click();
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await editor.page.getByRole("button", { name: /beat 1/i }).click();
-    await editor.page.getByRole("button", { name: /^HT$/ }).click();
-    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
+    await editor.page.getByRole("button", { name: /^Heel-Toe$/ }).click();
+    await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible({
       timeout: 15_000,
     });
 
     // The OWNER opens the SAME figure → sees the co-editor's edit converge: it hit the
     // shared figure doc, not just the co-editor's local copy (cascade edit is real).
     await owner.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
+    await expect(owner.page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible({
       timeout: 15_000,
     });
 

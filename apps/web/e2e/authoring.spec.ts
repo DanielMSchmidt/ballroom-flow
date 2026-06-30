@@ -60,10 +60,10 @@ test.describe("@smoke core authoring journey", () => {
     //     and FOOTWORK "ball" (a slot). The headline + the chip show on count 1.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
-    await page.getByRole("button", { name: /^forward$/ }).click();
-    await page.getByRole("button", { name: /^HT$/ }).click();
+    await page.getByRole("button", { name: /^Forward$/ }).click();
+    await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible();
     // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)
     //     direction chip in the Entry group (qualifier defaults to "facing"), then
     //     close the sheet; the placement shows an "entry facing diag wall" chip.
@@ -91,7 +91,7 @@ test.describe("@smoke core authoring journey", () => {
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
+    await expect(page.getByLabel(/count 1 attributes/i).getByText("Heel-Toe")).toBeVisible({
       timeout: 15_000,
     });
     await page.keyboard.press("Escape");

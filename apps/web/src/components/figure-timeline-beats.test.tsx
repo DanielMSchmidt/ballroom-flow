@@ -83,7 +83,7 @@ describe("FigureTimeline — placing steps via the grid", () => {
     renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
     // Tap beat 2's count cell, then pick footwork — the attribute lands on 2.
     await userEvent.click(screen.getByRole("button", { name: /^beat 2$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
     );
