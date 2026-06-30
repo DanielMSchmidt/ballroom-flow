@@ -136,6 +136,46 @@ describe("T2 Open/Fork sheet (frame 1.4)", () => {
   });
 });
 
+describe("Delete a routine (owner-only, confirmed)", () => {
+  const owned = [
+    {
+      docRef: "rt1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      role: "owner",
+      updatedAt: Date.UTC(2025, 5, 15),
+    },
+  ];
+
+  it("Delete → confirms, then deletes the routine", async () => {
+    // Intent: an owner's ⋯ sheet offers Delete, which opens a destructive confirm;
+    // confirming calls onDelete with the routine's docRef (the store soft-deletes).
+    const { ChoreoList } = await load();
+    const onDelete = vi.fn();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={owned} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^delete/i }));
+    // A confirm dialog appears BEFORE anything is deleted.
+    const confirm = await screen.findByRole("alertdialog", { name: /delete this routine/i });
+    expect(onDelete).not.toHaveBeenCalled();
+    await userEvent.click(within(confirm).getByRole("button", { name: /^delete$/i }));
+    expect(onDelete).toHaveBeenCalledWith("rt1");
+  });
+
+  it("does NOT offer Delete on a routine the viewer does not own", async () => {
+    // Intent: delete is owner-only — a shared-in (non-owner) routine's ⋯ sheet has
+    // no Delete affordance (the server also enforces ownership).
+    const { ChoreoList } = await load();
+    const onDelete = vi.fn();
+    const shared = [{ ...owned[0], role: "editor" }];
+    renderUi(<ChoreoList ownedCount={0} plan="free" routines={shared} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).queryByRole("button", { name: /^delete/i })).not.toBeInTheDocument();
+  });
+});
+
 describe("T2 New-choreo sheet (frame 1.5)", () => {
   it("creates with the dance picked from chips", async () => {
     const { ChoreoList } = await load();
