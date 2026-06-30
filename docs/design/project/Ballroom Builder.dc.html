@@ -1085,18 +1085,26 @@ class Component extends DCLogic {
     this.setState(s => ({ choreos:s.choreos.concat([entry]), openChoreoId:id, choreoView:'assemble', assembleEdit:true, newChoreo:null }));
   }
   addFigure(sideId, name, source){
-    let sid = 'na' + (++this._naid) + '_';
-    let n = 0;
-    const S = (count, action, o) => { o = o || {}; return { id:sid+(++n), count, action, rise:o.r||null, body:o.b||null, foot:o.f||null, sway:o.s||null, turn:o.t||null }; };
+    const pfx = 'na' + (++this._naid) + '_';
+    let n = 0, an = 0;
+    // new model: a step = direction (headline) + footwork only. Feet alternate automatically — never shown.
+    const A = (type, l, f) => ({ id:pfx+'a'+(++an), type, l, f:(f===undefined?null:f), removed:false });
+    const ST = (count, dir, foot, o) => { o = o || {}; const attrs = [ A('step', { dir:dir||null, foot:foot||null }, o.stepF||null) ];
+      if (o.rise) attrs.push(A('rise', o.rise, o.riseF||null));
+      if (o.position) attrs.push(A('position', o.position));
+      if (o.sway) attrs.push(A('sway', o.sway, o.swayF||null));
+      if (o.turn) attrs.push(A('turn', o.turn, o.turnF||null));
+      return { id:pfx+(++n), count, attrs };
+    };
     const builders = {
-      'Wing':[ S('1','RF forward, PP',{f:'HT',b:'Promenade'}), S('2','LF forward',{r:'up',f:'TH'}), S('3','Wing — hold',{b:'Wing',f:'TH'}) ],
-      'Outside Change':[ S('1','LF back',{f:'TH'}), S('2','RF back & side',{r:'up',f:'T'}), S('3','LF side & fwd, PP',{b:'Promenade',f:'TH'}) ],
-      'Double Reverse Spin':[ S('1','LF forward',{f:'HT',t:'½ L'}), S('&','RF side, toe pivot',{f:'T'}), S('2','LF crosses',{r:'up',f:'T'}) ],
-      'Chassé':[ S('1','RF forward in PP',{f:'HT',b:'Promenade'}), S('&','LF closes to RF',{f:'T'}), S('2','RF to side',{f:'T',s:'to R'}), S('3','LF closes, lower',{f:'TH',r:'lowering'}) ],
+      'Wing':[ ST('1','forward','HT',{position:'Promenade'}), ST('2','forward','TH',{rise:'up'}), ST('3','in place','TH',{position:'Wing'}) ],
+      'Outside Change':[ ST('1','back','TH'), ST('2','side','T',{rise:'up'}), ST('3','diagonal','TH',{position:'Promenade'}) ],
+      'Double Reverse Spin':[ ST('1','forward','HT',{turn:'½ L'}), ST('&','side','T'), ST('2','behind','T',{rise:'up'}) ],
+      'Chassé':[ ST('1','forward','HT',{position:'Promenade'}), ST('&','close','T'), ST('2','side','T',{sway:'to R'}), ST('3','close','TH',{rise:'lowering'}) ],
     };
     const dance = (this.state.choreos.find(c => c.id === this.state.openChoreoId) || {}).dance || 'Waltz';
     const isTriple = dance === 'Waltz' || dance === 'Viennese Waltz';
-    const generic = isTriple ? [ S('1','step forward',{f:'HT'}), S('2','side',{r:'up',f:'T'}), S('3','close',{f:'TH'}) ] : [ S('S','step forward',{f:'HT'}), S('Q','side',{f:'T'}), S('Q','close',{f:'TH'}) ];
+    const generic = isTriple ? [ ST('1','forward','HT'), ST('2','side','T',{rise:'up'}), ST('3','close','TH') ] : [ ST('S','forward','HT'), ST('Q','side','T'), ST('Q','close','TH') ];
     const steps = builders[name] || generic;
     const newFig = { id:'fx'+this._naid, name, source, steps };
     this.setState(s => {
