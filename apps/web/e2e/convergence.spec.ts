@@ -66,6 +66,9 @@ test.describe("@smoke two clients converge on a routine", () => {
     // Grant the student edit rights on the just-created doc, then they open it.
     await seedDb(coach.page, { memberships: [{ docRef, userId: STUDENT, role: "editor" }] });
     await student.page.goto(`/routines/${docRef}`);
+    // Opening an existing routine lands in READ; switch to EDIT so the section
+    // builder affordances are visible before asserting / editing below.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.getByRole("button", { name: "Add section" })).toBeVisible({
       timeout: 15_000,
     });
@@ -101,6 +104,9 @@ test.describe("@smoke two clients converge on a routine", () => {
     const docRef = await createRoutineAsCoach(coach.page, "Replay Waltz");
     await seedDb(coach.page, { memberships: [{ docRef, userId: STUDENT, role: "editor" }] });
     await student.page.goto(`/routines/${docRef}`);
+    // Opening an existing routine lands in READ; switch to EDIT so the section
+    // builder affordances are visible before asserting / editing below.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.getByRole("button", { name: "Add section" })).toBeVisible({
       timeout: 15_000,
     });
@@ -112,6 +118,8 @@ test.describe("@smoke two clients converge on a routine", () => {
     // Student reconnects (reload → fresh socket → full catch-up replay). A non-
     // idempotent replay would double-apply the change; assert exactly ONE "Solo".
     await student.page.reload();
+    // Reload returns to READ; switch back to EDIT so section headings are visible.
+    await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.getByRole("heading", { name: "Solo" })).toHaveCount(1, {
       timeout: 15_000,
     });

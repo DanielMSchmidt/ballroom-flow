@@ -74,6 +74,9 @@ test.describe("@smoke core authoring journey", () => {
     //    reconnect (US-018 open & view). The figure-after-reload is reliable now
     //    that the server owns the figure seed (no racy client write).
     await page.reload();
+    // Reload returns to READ; switch back to EDIT so section headings and the
+    // step-timeline editor are accessible below.
+    await page.getByRole("button", { name: /list view/i }).click();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
     // The entry-alignment chip persisted too (figure doc).
@@ -159,6 +162,8 @@ test.describe("@smoke core authoring journey", () => {
 
     // persists across reload: re-open the figure + count 1, Energy still there
     await page.reload();
+    // Reload returns to READ; switch back to EDIT to access the step timeline.
+    await page.getByRole("button", { name: /list view/i }).click();
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     await page.getByRole("button", { name: /beat 1/i }).click();
     await page.getByRole("button", { name: /more attributes/i }).click();

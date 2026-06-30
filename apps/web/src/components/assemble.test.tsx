@@ -118,6 +118,43 @@ describe("Reading view (read-only routine timeline)", () => {
     await userEvent.click(screen.getByRole("button", { name: /list view/i }));
     expect(screen.queryByTestId("reading-view")).toBeNull();
   });
+
+  it("opens on the reading programme when initialMode='read', then toggles to edit", async () => {
+    // Intent (design `assembleEdit`): opening an existing routine lands on the
+    //   clean reading view first — no editing affordances until the user toggles.
+    //   A freshly created routine (initialMode='edit', the default) lands in the
+    //   builder. ChoreoFlow chooses: read on open/fork, edit on create/template.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(routine, [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    // Lands in read: the reading programme is shown and editing is hidden even
+    // for an editor, until they switch lenses.
+    expect(screen.getByTestId("reading-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("section-list")).toBeNull();
+    // The header offers the read→edit toggle ("List view"); using it reveals the builder.
+    await userEvent.click(screen.getByRole("button", { name: /list view/i }));
+    expect(screen.queryByTestId("reading-view")).toBeNull();
+    expect(screen.getByTestId("section-list")).toBeInTheDocument();
+  });
 });
 
 describe("US-018 Open & view a routine", () => {

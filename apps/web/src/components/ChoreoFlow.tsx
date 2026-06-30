@@ -58,6 +58,23 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // path as a create 402 (the ChoreoList upsell Sheet opens on `quotaBlocked`).
   const [forkQuotaBlocked, setForkQuotaBlocked] = useState(false);
 
+  // Read/edit landing (design `assembleEdit`): opening an existing routine lands
+  // on the clean reading programme; only a routine the user just *created* (blank
+  // or from a template) opens straight in the builder. We remember the id of a
+  // just-created routine so the open it triggers lands in "edit"; every other
+  // open — list tap, deep link, refresh, fork ("make a copy") — lands in "read".
+  // Cleared once consumed so re-opening that same routine later still reads first.
+  const justCreatedRef = useRef<string | null>(null);
+  const initialMode = justCreatedRef.current === openRoutineId ? "edit" : "read";
+  useEffect(() => {
+    // Clear the create-intent only on returning to the list — NOT on every open.
+    // The open Assemble mounts lazily (after the access preflight resolves), so
+    // clearing on the first post-navigate render would wipe the intent before
+    // mount and the new routine would read first. Clearing on the way back to the
+    // list means re-opening that same routine from the list still reads first.
+    if (!openRoutineId) justCreatedRef.current = null;
+  }, [openRoutineId]);
+
   // Fetch templates ONLY when the routine list has loaded and is empty — the
   // empty state is the only place the sample + start-from-template UI shows
   // (US-045). Gating this avoids triggering the server-side template seed
@@ -114,6 +131,8 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         try {
           const token = await getToken();
           const res = await forkTemplate(token, docRef);
+          // A template start is a routine you own to build on → land in edit.
+          justCreatedRef.current = res.docRef;
           navigate(`/routines/${res.docRef}`);
         } catch (err) {
           // isQuotaError keeps the ApiError/status check behind the store seam
@@ -162,8 +181,13 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           </div>
         ) : (
           <Assemble
+            // Key per routine so each open is a fresh mount — the read/edit
+            // landing (initialMode) is applied on mount, and switching routines
+            // (e.g. fork → new copy) doesn't carry the previous lens over.
+            key={openRoutineId}
             routineId={openRoutineId}
             role={roleForOpen(items, openRoutineId)}
+            initialMode={initialMode}
             currentUserId={me.data?.sub}
             getToken={() => getToken()}
             onBack={() => navigate("/")}
@@ -190,8 +214,14 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
       creating={create.isPending}
       onCreate={(input) =>
         // A freshly-created routine isn't in the list yet — the creator owns it,
-        // so deep-link to it; the list refetches in the background.
-        create.mutate(input, { onSuccess: (res) => navigate(`/routines/${res.docRef}`) })
+        // so deep-link to it; the list refetches in the background. A brand-new
+        // routine lands straight in the builder (edit), not the reading view.
+        create.mutate(input, {
+          onSuccess: (res) => {
+            justCreatedRef.current = res.docRef;
+            navigate(`/routines/${res.docRef}`);
+          },
+        })
       }
       onOpen={(docRef) => navigate(`/routines/${docRef}`)}
       onFork={(docRef) =>

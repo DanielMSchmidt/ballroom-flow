@@ -58,6 +58,9 @@ test.describe("@smoke per-user undo across two clients", () => {
     const docRef = await createRoutineAsOwner(a.page, "Undo Waltz");
     await seedDb(a.page, { memberships: [{ docRef, userId: B, role: "editor" }] });
     await b.page.goto(`/routines/${docRef}`);
+    // Opening an existing routine lands in READ; switch to EDIT so the section
+    // builder affordances (and undo/redo toolbar) are visible.
+    await b.page.getByRole("button", { name: /list view/i }).click();
     await expect(b.page.getByRole("button", { name: "Add section" })).toBeVisible({
       timeout: 15_000,
     });

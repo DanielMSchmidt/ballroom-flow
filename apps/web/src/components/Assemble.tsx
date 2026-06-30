@@ -85,6 +85,14 @@ export interface AssembleProps {
   forking?: boolean;
   /** Back out to the routine list (the ScreenHeader ‹ control). */
   onBack?: () => void;
+  /**
+   * Which lens the screen opens in (design: `assembleEdit`). Opening an existing
+   * routine lands on the clean reading programme ("read"); a freshly created one
+   * lands straight in the section/figure builder ("edit"). Defaults to "edit" so
+   * direct unit renders keep exercising the editing affordances; ChoreoFlow (the
+   * production caller) passes "read" on open and "edit" on create.
+   */
+  initialMode?: "edit" | "read";
 }
 
 /**
@@ -166,6 +174,7 @@ export function Assemble({
   onFork,
   forking,
   onBack,
+  initialMode = "edit",
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
@@ -209,8 +218,9 @@ export function Assemble({
   const [addKindOpen, setAddKindOpen] = useState(false);
   const [lanesOpen, setLanesOpen] = useState(false);
   // "read" lays the whole routine out as the clean read-only programme (frame
-  // 1.6); "edit" is the section/figure builder (frames 1.7–1.9).
-  const [mode, setMode] = useState<"edit" | "read">("edit");
+  // 1.6); "edit" is the section/figure builder (frames 1.7–1.9). Opening lands
+  // on the lens chosen by the caller (`initialMode`): read on open, edit on create.
+  const [mode, setMode] = useState<"edit" | "read">(initialMode);
   // The anchor whose thread is open from the reading view (T8 QUAL-2 fix).
   // When set, the thread sheet shows the AnnotationPanel for that step's anchor.
   const [threadAnchor, setThreadAnchor] = useState<{
