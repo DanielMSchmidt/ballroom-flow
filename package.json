@@ -2,7 +2,7 @@
   "name": "ballroom-flow",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22"
   },
@@ -26,15 +26,5 @@
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "typescript": "^6.0.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lefthook",
-      "workerd",
-      "@cloudflare/workerd-darwin-64",
-      "@cloudflare/workerd-darwin-arm64",
-      "wrangler"
-    ]
   }
 }
