@@ -4,7 +4,7 @@
 import type { CreateRoutine, RoutineList } from "@ballroom/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "../auth/app-auth";
-import { ApiError, apiGet, apiPost } from "../lib/rpc";
+import { ApiError, apiDelete, apiGet, apiPost } from "../lib/rpc";
 
 /** Whether a create failure is the server's quota refusal (402) — drives the
  *  upsell. Lives in the store so components branch on it without importing
@@ -29,6 +29,21 @@ export function useCreateRoutine() {
   return useMutation({
     mutationFn: async (input: CreateRoutine) =>
       apiPost<{ docRef: string }>("/api/routines", await getToken(), input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
+  });
+}
+
+/**
+ * Delete a routine from the Choreo overview (US-025 delete flow). The server
+ * SOFT-deletes (tombstones) the registry row — owner-only (403 otherwise) — so it
+ * drops out of the list; on success the list refetches so the card disappears.
+ */
+export function useDeleteRoutine() {
+  const { getToken } = useAppAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (docRef: string) =>
+      apiDelete<{ ok: true }>(`/api/routines/${encodeURIComponent(docRef)}`, await getToken()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
   });
 }
