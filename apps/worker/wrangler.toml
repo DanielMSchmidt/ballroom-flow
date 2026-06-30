@@ -36,11 +36,16 @@ new_sqlite_classes = ["DocDO"]
 # the worker unit tests exercise), and E2E_TEST_ROUTES=1 to mount /api/test/*.
 # NEVER deployed — `wrangler dev --env e2e` only. The PEM mirrors
 # src/test-support/test-keys.ts (a committed throwaway test key).
+#
+# Serves from `dist-e2e`, the E2E-only build dir (see apps/web/e2e/serve.sh), NOT
+# the deployable `dist` the staging/production envs ship. The E2E bundle carries
+# the VITE_E2E=1 auth bypass, so keeping it out of `dist` is what stops it from
+# ever reaching a real deploy.
 [env.e2e]
 name = "ballroom-flow-e2e"
 
 [env.e2e.assets]
-directory = "../web/dist"
+directory = "../web/dist-e2e"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*", "/docs/*"]
 
