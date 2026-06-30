@@ -35,17 +35,28 @@ const SCREENS: { name: string; ui: ReactElement }[] = [
   { name: "Profile", ui: <Profile plan="free" ownedRoutineCount={0} /> },
 ];
 
+// axe traversal is CPU-heavy and runs much slower under the full suite's parallel
+// load than in isolation — the FigureLibrary sweep (the largest tree) can exceed
+// vitest's default 5000ms and flake the whole gate (seen on CI during the design-
+// parity follow-up integration). Give the axe sweeps a generous timeout;
+// correctness is unchanged, only the allowed wall-clock.
+const AXE_TIMEOUT_MS = 30_000;
+
 describe("US-051 Accessibility WCAG AA — axe clean on each screen", () => {
   for (const { name, ui } of SCREENS) {
-    it(`${name} has no axe violations`, async () => {
-      // Intent: each screen passes automated WCAG AA checks (axe).
-      // Arrange/Act: render the screen with minimal real props, run axe over it.
-      // Assert: no violations. Covers US-051 AC-3 (axe clean per screen). The
-      // ≥44px / keyboard / SR / reduced-motion / color-not-sole-signal aspects are
-      // asserted per-screen in their own tests + the E2E a11y journey (US-052).
-      const { container } = renderUi(ui);
-      expect(await axeCheck(container)).toHaveNoViolations();
-    });
+    it(
+      `${name} has no axe violations`,
+      async () => {
+        // Intent: each screen passes automated WCAG AA checks (axe).
+        // Arrange/Act: render the screen with minimal real props, run axe over it.
+        // Assert: no violations. Covers US-051 AC-3 (axe clean per screen). The
+        // ≥44px / keyboard / SR / reduced-motion / color-not-sole-signal aspects are
+        // asserted per-screen in their own tests + the E2E a11y journey (US-052).
+        const { container } = renderUi(ui);
+        expect(await axeCheck(container)).toHaveNoViolations();
+      },
+      AXE_TIMEOUT_MS,
+    );
   }
 
   it("never uses color as the only signal (kinds/roles carry text or shape)", async () => {
