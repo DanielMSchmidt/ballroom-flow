@@ -43,7 +43,7 @@ imports through small shims that defer module resolution to runtime:
 | US-003 | ATTRIBUTE_REGISTRY + merge | domain | `packages/domain/src/vocabulary.test.ts` |
 | US-004 | Float-count timing | domain | `packages/domain/src/timing.test.ts` |
 | US-005 | Routine + figure doc schemas | domain | `packages/domain/src/doc-schemas.test.ts` |
-| US-006 | ~~Overlay resolution~~ *(retired — vestigial)* | — | `packages/domain/src/overlay.test.ts` **does not exist and was never created**. `resolve()` does not exist in the codebase. The `Overlay` type + `overlay?` field in `doc-types.ts` are LEGACY stubs for reading old persisted docs only (`migrations.ts`). **Follow-up: remove vestigial type + field once migration is complete.** *(Reconciled 2026-06)* |
+| US-006 | ~~Overlay resolution~~ *(retired + removed 2026-06-30)* | — | `packages/domain/src/overlay.test.ts` **does not exist and was never created**. `resolve()` does not exist. The `Overlay` type, `overlay?` field on `FigureDoc`, and the overlay retag branch in `migrations.ts` are all deleted. Old docs carrying a stray `overlay` key are stripped by v2→v3 migration (proven in `migrations.test.ts`). *(Reconciled 2026-06)* |
 | US-007 | Choreo fork (clone) | domain | `packages/domain/src/fork.test.ts` |
 | US-008 | Copy-on-write (frozen choreo-owned copy) *(reconciled 2026-06: no overlay)* | domain | `packages/domain/src/fork.test.ts` |
 | US-009 | Automerge convergence invariants | domain (property) | `packages/domain/src/convergence.test.ts` |
@@ -99,7 +99,7 @@ imports through small shims that defer module resolution to runtime:
 
 ### Domain (`packages/domain/src/__fixtures__/`)
 - `factories.ts` — pure POJO builders: `makeAttribute`, `makeAlignment`,
-  `makeOverlay`, `makeFigureDoc`, `makeVariantDoc(base, byUser)`, `makePlacement`,
+  `makeFigureDoc`, `makeVariantDoc(base, byUser)`, `makePlacement`,
   `makeSection`, `makeAnnotation`, `makeAnchor`, `makeFigureTypeAnchor`,
   `makeRoutineDoc`, `pointAnchor`, `testId`/`resetTestIds`.
 - `sample.ts` — the read-only **SAMPLE routine** + shared **figure library** incl.
