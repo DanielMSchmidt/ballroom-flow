@@ -9,6 +9,7 @@
 import type { DanceId } from "./dances";
 import type { Attribute, FigureDoc, RoutineDoc } from "./doc-types";
 import { LIBRARY_FIGURES } from "./library";
+import { keyBetween, sequentialKeys } from "./order";
 
 /** The starter's figures, in choreography order, by their canonical figureType. */
 const GOLDEN_WALTZ_BASIC: readonly string[] = [
@@ -56,6 +57,7 @@ export function buildGoldenWaltzBasic(
     });
   }
 
+  const placementKeys = sequentialKeys(figures.length);
   const routine: RoutineDoc = {
     id: mintId(),
     title: "Golden Waltz Basic",
@@ -65,7 +67,14 @@ export function buildGoldenWaltzBasic(
       {
         id: mintId(),
         name: "Basic",
-        placements: figures.map((f) => ({ id: mintId(), figureRef: f.id, deletedAt: null })),
+        // Ascending sortKeys in choreography order (#63, §5.3).
+        placements: figures.map((f, i) => ({
+          id: mintId(),
+          figureRef: f.id,
+          sortKey: placementKeys[i],
+          deletedAt: null,
+        })),
+        sortKey: keyBetween(null, null),
         deletedAt: null,
       },
     ],

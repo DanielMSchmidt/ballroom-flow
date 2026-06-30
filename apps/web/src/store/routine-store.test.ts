@@ -321,6 +321,56 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("moveSection / movePlacement reorder via sortKey, not a splice (#63)", async () => {
+    // Intent: reorder is a field update through the seam — the read order changes
+    //   to reflect the new sortKey ordering. The seed has NO sortKeys, so this
+    //   also exercises the legacy-doc backfill (ensureSortKeys) on first move.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+    const doc = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "A",
+          placements: [
+            { id: "p1", figureRef: "f1", deletedAt: null },
+            { id: "p2", figureRef: "f2", deletedAt: null },
+            { id: "p3", figureRef: "f3", deletedAt: null },
+          ],
+          deletedAt: null,
+        },
+        { id: "s2", name: "B", placements: [], deletedAt: null },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(doc);
+
+    // Initial array order (no sortKeys yet → array-order fallback).
+    expect(store.readRoutine().sections.map((s) => s.id)).toEqual(["s1", "s2"]);
+
+    // Move section s1 down → [s2, s1].
+    store.moveSection("s1", "down");
+    expect(store.readRoutine().sections.map((s) => s.id)).toEqual(["s2", "s1"]);
+
+    // Move placement p1 down within s1 → [p2, p1, p3].
+    store.movePlacement("s1", "p1", "down");
+    const s1 = store.readRoutine().sections.find((s) => s.id === "s1");
+    expect(s1?.placements.map((p) => p.id)).toEqual(["p2", "p1", "p3"]);
+
+    // Move p3 up to the front → [p3, p2, p1].
+    store.movePlacement("s1", "p3", "up");
+    store.movePlacement("s1", "p3", "up");
+    const after = store.readRoutine().sections.find((s) => s.id === "s1");
+    expect(after?.placements.map((p) => p.id)).toEqual(["p3", "p2", "p1"]);
+    store.close();
+  });
+
   it("exposes typed reactive reads + mutations + history-based undo", async () => {
     // Intent: the seam is the only thing components touch — reads, mutations, undo.
     // Covers US-017 AC-3 (typed reactive reads + mutations + undo).

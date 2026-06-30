@@ -110,4 +110,71 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     expect(result.schemaVersion).toBe(2);
     expect(result.upgraded).toBe(true);
   });
+
+  // ── v2 → v3: assign sortKeys to sections + placements (#63, PLAN §5.3) ──
+
+  it("assigns ascending sortKeys to sections and placements in array order (#63)", async () => {
+    const { migrate } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+        { id: "s2", name: "Body", placements: [] },
+      ],
+    };
+    const migrated = migrate(routine) as unknown as {
+      schemaVersion: number;
+      sections: Array<{ id: string; sortKey?: string; placements: Array<{ sortKey?: string }> }>;
+    };
+    expect(migrated.schemaVersion).toBe(3);
+    // Sections keyed in array order (ascending).
+    const sk = migrated.sections.map((s) => s.sortKey);
+    expect(sk.every((k) => typeof k === "string")).toBe(true);
+    expect((sk[0] as string) < (sk[1] as string)).toBe(true);
+    // Placements within s1 keyed in array order (ascending).
+    const pk = (migrated.sections[0]?.placements ?? []).map((p) => p.sortKey);
+    expect(pk.every((k) => typeof k === "string")).toBe(true);
+    expect(String(pk[0]) < String(pk[1])).toBe(true);
+  });
+
+  it("is deterministic — two migrations of the same doc assign identical sortKeys", async () => {
+    // Both replicas migrate the same persisted bytes, so the backfill converges.
+    const { migrate } = await importDomain();
+    const doc = () => ({
+      schemaVersion: 2,
+      sections: [
+        { id: "s1", name: "A", placements: [{ id: "p1", figureRef: "f1" }] },
+        { id: "s2", name: "B", placements: [] },
+      ],
+    });
+    expect(migrate(doc())).toEqual(migrate(doc()));
+  });
+
+  it("does not inject sortKey/placements onto a doc that lacks sections (figure doc)", async () => {
+    // Automerge can't store undefined: a figure doc (no `sections`) must pass the
+    // v2→v3 step with the version bump alone — no spurious keys.
+    const { migrate } = await importDomain();
+    const figure = { schemaVersion: 2, figureType: "feather", dance: "foxtrot", attributes: [] };
+    const migrated = migrate(figure) as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(3);
+    expect("sections" in migrated).toBe(false);
+    expect("sortKey" in migrated).toBe(false);
+  });
+
+  it("preserves an existing sortKey rather than overwriting it (idempotent)", async () => {
+    const { migrate } = await importDomain();
+    const routine = {
+      schemaVersion: 2,
+      sections: [{ id: "s1", name: "A", sortKey: "PRESET", placements: [] }],
+    };
+    const migrated = migrate(routine) as unknown as { sections: Array<{ sortKey?: string }> };
+    expect(migrated.sections[0]?.sortKey).toBe("PRESET");
+  });
 });

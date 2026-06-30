@@ -57,6 +57,14 @@ export {
 } from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 export {
+  ensureSortKeys,
+  keyBetween,
+  keyForMove,
+  type Ordered,
+  sequentialKeys,
+  sortByOrder,
+} from "./order";
+export {
   type Capabilities,
   type Capability,
   can,
