@@ -108,6 +108,15 @@
                   <div style="flex:1;height:1px;background:#e8e3da"></div>
                 </div>
                 <sc-for list="{{ grp.figures }}" as="fig" hint-placeholder-count="2">
+                  <sc-if value="{{ fig.isBreak }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:9px;background:#f4f2ee;border:1.5px dashed #cfc8bb;border-radius:9px;padding:10px 12px">
+                      <span style="font:700 12px 'Inconsolata';color:#a79f90;letter-spacing:1px">❚❚</span>
+                      <span style="font:700 12px 'Inconsolata';color:#7a746a">Break</span>
+                      <span style="font:600 10px 'Inconsolata';color:#a79f90">{{ fig.beatSpan }}</span>
+                      <span style="margin-left:auto;font:600 10px 'Inconsolata';background:#ece8e0;border-radius:6px;padding:2px 7px;color:#7a746a">{{ fig.barsLabel }}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ fig.notBreak }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;flex-direction:column;gap:5px">
                     <div onClick="{{ fig.onOpen }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:3px">
                       <sc-if value="{{ fig.scopeGlobal }}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto"></span></sc-if>
@@ -117,6 +126,21 @@
                       <sc-if value="{{ fig.scopeCustom }}" hint-placeholder-val="{{ true }}"><span style="font:600 9px 'Inconsolata';color:#a9742c;background:#f3e6d2;border-radius:5px;padding:1px 5px">custom</span></sc-if>
                       <span style="font:600 10px 'Inconsolata';background:#eef4fb;border-radius:6px;padding:2px 7px;color:#2f5d8f">{{ fig.countLabel }}</span>
                     </div>
+                    <sc-if value="{{ fig.figHasComments }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-left:15px;display:flex;flex-direction:column;gap:2px;margin-bottom:1px">
+                        <div style="display:flex;align-items:center;gap:5px"><span style="font:700 7px 'Inconsolata';background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 5px;letter-spacing:.3px">WHOLE FIGURE</span></div>
+                        <sc-for list="{{ fig.figComments }}" as="c" hint-placeholder-count="1">
+                          <div onClick="{{ c.onTap }}" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                            <span style="width:7px;height:7px;border-radius:2px;background:{{ c.color }};flex:0 0 auto"></span>
+                            <span style="font:500 13px var(--note-font);color:#6b665e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">{{ c.text }}</span>
+                          </div>
+                        </sc-for>
+                        <div style="display:flex;align-items:center;gap:10px">
+                          <sc-if value="{{ fig.figMore }}" hint-placeholder-val="{{ true }}"><span onClick="{{ fig.onOpenFigThread }}" style="font:600 9px 'Inconsolata';color:var(--accent);cursor:pointer">+{{ fig.figMoreCount }} more</span></sc-if>
+                          <span onClick="{{ fig.onOpenFigThread }}" style="font:600 9px 'Inconsolata';color:#c0bab0;cursor:pointer">+ note on whole figure</span>
+                        </div>
+                      </div>
+                    </sc-if>
                     <sc-if value="{{ fig.hasCols }}" hint-placeholder-val="{{ true }}">
                       <div style="display:flex;gap:5px;padding:0 5px 2px">
                         <span style="width:18px;flex:0 0 auto"></span>
@@ -126,8 +150,8 @@
                     <sc-for list="{{ fig.steps }}" as="step" hint-placeholder-count="3">
                       <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:2px">
                         <div style="display:flex;align-items:stretch;gap:5px;padding:5px;border-radius:8px;background:#fafaf8">
-                          <sc-if value="{{ step.notSub }}" hint-placeholder-val="{{ true }}"><span style="width:18px;flex:0 0 auto;text-align:center;font:700 12px 'Inconsolata';color:var(--accent);align-self:center">{{ step.count }}</span></sc-if>
-                          <sc-if value="{{ step.isSub }}" hint-placeholder-val="{{ true }}"><span style="width:18px;flex:0 0 auto;text-align:center;font:700 11px 'Inconsolata';color:#9aa7bb;align-self:center">{{ step.count }}</span></sc-if>
+                          <sc-if value="{{ step.notSub }}" hint-placeholder-val="{{ true }}"><span style="width:18px;flex:0 0 auto;text-align:center;font:700 12px 'Inconsolata';color:var(--accent);align-self:center">{{ step.beat }}</span></sc-if>
+                          <sc-if value="{{ step.isSub }}" hint-placeholder-val="{{ true }}"><span style="width:18px;flex:0 0 auto;text-align:center;font:700 11px 'Inconsolata';color:#9aa7bb;align-self:center">{{ step.beat }}</span></sc-if>
                           <sc-for list="{{ step.cells }}" as="cell" hint-placeholder-count="4">
                             <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center">
                               <sc-if value="{{ cell.hasVal }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span onClick="{{ c.onTap }}" style="max-width:100%;font:700 8px 'Inconsolata';border-radius:5px;padding:2px 5px;color:#fff;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:{{ cell.color }}">{{ c.label }}</span></sc-for></sc-if>
@@ -155,6 +179,7 @@
                       </div>
                     </sc-for>
                   </div>
+                  </sc-if>
                 </sc-for>
               </div>
             </sc-for>
@@ -175,6 +200,16 @@
                 <sc-if value="{{ side.expanded }}" hint-placeholder-val="{{ true }}">
                   <div style="margin-left:10px;display:flex;flex-direction:column;gap:8px">
                     <sc-for list="{{ side.figures }}" as="fig" hint-placeholder-count="2">
+                      <sc-if value="{{ fig.isBreak }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;gap:9px;background:#f4f2ee;border:1.5px dashed #cfc8bb;border-radius:12px;padding:10px 13px">
+                          <span style="font:700 12px 'Inconsolata';color:#a79f90;letter-spacing:1px">❚❚</span>
+                          <span style="flex:1;font:700 13px 'Inconsolata';color:#7a746a">Break</span>
+                          <span style="font:600 10px 'Inconsolata';color:#9a958c">{{ fig.beatsLabel }}</span>
+                          <span onClick="{{ fig.onLess }}" style="width:24px;height:24px;border-radius:7px;border:1.5px solid #d8d2c8;display:flex;align-items:center;justify-content:center;font:700 15px 'Inconsolata';color:#7a746a;cursor:pointer">–</span>
+                          <span onClick="{{ fig.onMore }}" style="width:24px;height:24px;border-radius:7px;border:1.5px solid #d8d2c8;display:flex;align-items:center;justify-content:center;font:700 15px 'Inconsolata';color:#7a746a;cursor:pointer">+</span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ fig.notBreak }}" hint-placeholder-val="{{ true }}">
                       <div onClick="{{ fig.onOpen }}" style="display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid #cdddee;border-radius:12px;padding:11px 13px;cursor:pointer;box-shadow:0 1px 2px rgba(20,40,70,.05)">
                         <sc-if value="{{ fig.scopeGlobal }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex:0 0 auto"></span></sc-if>
                         <sc-if value="{{ fig.scopeNotGlobal }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:#a9742c;flex:0 0 auto"></span></sc-if>
@@ -184,11 +219,13 @@
                         <span style="margin-left:auto;flex:0 0 auto;font:600 10px 'Inconsolata';background:#eef4fb;border-radius:7px;padding:3px 8px;color:#2f5d8f">{{ fig.countLabel }}</span>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bcb6aa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"></path></svg>
                       </div>
+                      </sc-if>
                     </sc-for>
                     <div onClick="{{ side.onAdd }}" style="display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px dashed #9fc09f;border-radius:11px;padding:9px;color:#4a7c4a;font:700 11px 'Inconsolata';cursor:pointer">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7c4a" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
                       add figure
                     </div>
+                    <div onClick="{{ side.onAddBreak }}" style="display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px dashed #cfc8bb;border-radius:11px;padding:9px;color:#8a8478;font:700 11px 'Inconsolata';cursor:pointer"><span style="font:700 12px 'Inconsolata';letter-spacing:1px">❚❚</span> add break</div>
                   </div>
                 </sc-if>
               </div>
@@ -294,7 +331,7 @@
               <sc-if value="{{ addTimingOpen }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1.5px solid #cdddee;border-radius:9px;padding:8px 10px;background:#f7faff;margin-top:6px">
                   <span style="font:700 8px 'Inconsolata';color:#9a958c">ON COUNT</span>
-                  <sc-for list="{{ timingChoices }}" as="t" hint-placeholder-count="6"><span onClick="{{ t.onPick }}" style="font:700 12px 'Inconsolata';background:var(--accent);color:#fff;border-radius:8px;padding:5px 12px;cursor:pointer">{{ t.label }}</span></sc-for>
+                  <sc-for list="{{ timingChoices }}" as="t" hint-placeholder-count="6"><span onClick="{{ t.onPick }}" style="display:inline-flex;flex-direction:column;align-items:center;line-height:1;font:700 12px 'Inconsolata';background:var(--accent);color:#fff;border-radius:8px;padding:5px 11px;cursor:pointer">{{ t.label }}<sc-if value="{{ t.hasSub }}" hint-placeholder-val="{{ true }}"><span style="font:600 7px 'Inconsolata';opacity:.85;margin-top:1px">{{ t.sub }}</span></sc-if></span></sc-for>
                   <span onClick="{{ onCloseTiming }}" style="font:600 10px 'Inconsolata';color:#9a958c;cursor:pointer;margin-left:auto">cancel</span>
                 </div>
               </sc-if>
@@ -791,6 +828,9 @@
 
         <!-- List step -->
         <sc-if value="{{ lpIsList }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ lpShowSearch }}" hint-placeholder-val="{{ true }}">
+            <input value="{{ lpQuery }}" onChange="{{ onLpQuery }}" placeholder="search figures…" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none;margin-bottom:8px"></input>
+          </sc-if>
           <div class="scrl" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:7px">
             <sc-for list="{{ lpItems }}" as="item" hint-placeholder-count="4">
               <div onClick="{{ item.onPick }}" style="display:flex;align-items:center;gap:11px;border:1.5px solid #e1dcd2;border-radius:11px;padding:11px 13px;cursor:pointer">
@@ -841,16 +881,17 @@ class Component extends DCLogic {
       return { id:'st'+(++sid), count, attrs };
     };
     const fig = (id, name, source, steps, base) => ({ id, name, source, steps, base:base||null });
-    const natural = [ ST('1','forward','HT',{rise:'commence',turn:'¼ R',head:'left',headF:'right'}), ST('2','side','T',{rise:'up',turn:'continue'}), ST('3','close','TH',{rise:'up',position:'Closed',feet:'3'}) ];
+    const brk = (id, beats) => ({ id, source:'break', name:'Break', beats:beats, steps:[] });
+    const natural = [ ST('1','forward','HT',{rise:'commence',turn:'¼ R',head:'left',headF:'right'}), ST('2','side','T',{rise:'up',turn:'⅛ R'}), ST('3','close','TH',{rise:'up',position:'Closed',feet:'3'}) ];
     const spin = [ ST('1','back','TH',{rise:'lowering',position:'CBMP',turn:'½ L'}), ST('2','side','T',{rise:'body rise',sway:'to L',swayF:'to R'}), ST('3','close','TH',{rise:'continue',position:'Closed',feet:'3'}) ];
     const whisk = () => [ ST('1','forward','HT',{rise:'commence'}), ST('2','side','T',{rise:'up',sway:'to R'}), ST('3','behind','T',{rise:'up',position:'Promenade',feet:'5',feetF:'4c'}) ];
     const chasse = [ ST('1','forward','HT',{position:'Promenade'}), ST('&','close','T'), ST('2','side','T',{sway:'to R'}), ST('3','close','TH',{rise:'lowering'}) ];
-    const reverse = [ ST('1','forward','HT',{rise:'commence',turn:'¼ L'}), ST('2','side','T',{rise:'up',turn:'continue'}), ST('3','close','TH',{rise:'up',position:'Closed'}) ];
+    const reverse = [ ST('1','forward','HT',{rise:'commence',turn:'¼ L'}), ST('2','side','T',{rise:'up',turn:'⅛ L'}), ST('3','close','TH',{rise:'up',position:'Closed'}) ];
     const wing = [ ST('1','forward','HT',{position:'Promenade'}), ST('2','forward','TH',{rise:'up'}), ST('3','in place','TH',{position:'Wing'}) ];
 
     const routine = { title:'Gold Waltz', sides:[
       { id:'s1', name:'1st Long Side', figures:[ fig('f1','Natural Turn','library',natural), fig('f2','Spin Turn','library',spin) ] },
-      { id:'s2', name:'1st Short Side', figures:[ fig('f3','Whisk','library',whisk()), fig('f4','Chassé','custom',chasse) ] },
+      { id:'s2', name:'1st Short Side', figures:[ fig('f3','Whisk','library',whisk()), fig('f4','Chassé','custom',chasse), brk('bk1',3) ] },
       { id:'s3', name:'2nd Long Side', figures:[ fig('f5','Reverse Turn','library',reverse), fig('f6','Whisk','variant',whisk(),'Whisk'), fig('f7','Wing','library',wing) ] },
     ] };
 
@@ -872,6 +913,8 @@ class Component extends DCLogic {
       momentStepId:null, editAttr:null, addAttrFor:null, newType:null, addTimingOpen:false,
       routine,
       threads:{
+        'f1':[ {author:'anna',time:'3 May',text:'whole figure: keep it travelling — don\'t sit between the turns'}, {author:'me',time:'1d ago',text:'noted, more swing through the set'} ],
+        'f3':[ {author:'lena',time:'2d ago',text:'the whole whisk should rise as one movement'} ],
         'f2|2':[ {author:'me',time:'2d ago',text:'feels rushed — wait for her weight'}, {author:'lena',time:'1d ago',text:"agree — I'll commit to the side step sooner"}, {author:'anna',time:'lesson 3 May',text:'both: think “up & out”, not up.'} ],
         'f1|2':[ {author:'anna',time:'3 May',text:"heads stay left — don't turn the head early"}, {author:'marco',time:'2d ago',text:"I'm rushing the turn — wait for me"}, {author:'me',time:'1d ago',text:"will give you another beat"} ],
         'f1|1':[ {author:'marco',time:'4d ago',text:'commence the rise a touch later here'}, {author:'me',time:'3d ago',text:'got it — feels smoother now'} ],
@@ -919,7 +962,6 @@ class Component extends DCLogic {
       {key:'Counter promenade',code:'CPP',label:'Counter promenade',def:'The V opening to the closed side'},
       {key:'Outside Partner',code:'OP',label:'Outside Partner',def:'Step taken outside the partner\u2019s feet'},
       {key:'CBMP',code:'CBMP',label:'CBMP',def:'Counter Body Movement Position — foot placed across the line of the opposite foot'},
-      {key:'CBP',code:'CBP',label:'CBP',def:'Counter Body Movement — body turns away from the moving foot'},
       {key:'Left side',code:'LS',label:'Left side',def:'Partner on the left side'},
       {key:'Right side',code:'RS',label:'Right side',def:'Partner on the right side'},
       {key:'Tandem',code:'Tan',label:'Tandem',def:'One partner directly in front of the other, both facing the same way'},
@@ -946,14 +988,23 @@ class Component extends DCLogic {
       {key:'none',code:'\u2014',label:'No sway',def:'No sway — body remains upright on this step'},
     ],
     turn:[
-      {key:'\u00bc L',code:'\u00bcL',label:'Quarter left',def:'Quarter turn to the left (90\u00b0)'},
-      {key:'\u00bc R',code:'\u00bcR',label:'Quarter right',def:'Quarter turn to the right (90\u00b0)'},
-      {key:'\u215c L',code:'\u215cL',label:'Three-eighths left',def:'Three-eighths turn to the left (135\u00b0)'},
-      {key:'\u215c R',code:'\u215cR',label:'Three-eighths right',def:'Three-eighths turn to the right (135\u00b0)'},
-      {key:'\u00bd L',code:'\u00bdL',label:'Half left',def:'Half turn to the left (180\u00b0)'},
-      {key:'\u00bd R',code:'\u00bdR',label:'Half right',def:'Half turn to the right (180\u00b0)'},
-      {key:'continue',code:'Cont',label:'Continue',def:'Continue turning across this step'},
-      {key:'none',code:'\u2014',label:'No turn',def:'No turning action on this step'},
+      {key:'none',code:'\u2014',label:'No turn',def:'No rotation on this step'},
+      {key:'\u215b L',code:'\u215bL',label:'One-eighth left',def:'One-eighth turn to the left (45\u00b0) made on this step'},
+      {key:'\u215b R',code:'\u215bR',label:'One-eighth right',def:'One-eighth turn to the right (45\u00b0) made on this step'},
+      {key:'\u00bc L',code:'\u00bcL',label:'Quarter left',def:'Quarter turn to the left (90\u00b0) made on this step'},
+      {key:'\u00bc R',code:'\u00bcR',label:'Quarter right',def:'Quarter turn to the right (90\u00b0) made on this step'},
+      {key:'\u215c L',code:'\u215cL',label:'Three-eighths left',def:'Three-eighths turn to the left (135\u00b0) made on this step'},
+      {key:'\u215c R',code:'\u215cR',label:'Three-eighths right',def:'Three-eighths turn to the right (135\u00b0) made on this step'},
+      {key:'\u00bd L',code:'\u00bdL',label:'Half left',def:'Half turn to the left (180\u00b0) made on this step'},
+      {key:'\u00bd R',code:'\u00bdR',label:'Half right',def:'Half turn to the right (180\u00b0) made on this step'},
+      {key:'\u215d L',code:'\u215dL',label:'Five-eighths left',def:'Five-eighths turn to the left (225\u00b0) made on this step'},
+      {key:'\u215d R',code:'\u215dR',label:'Five-eighths right',def:'Five-eighths turn to the right (225\u00b0) made on this step'},
+      {key:'\u00be L',code:'\u00beL',label:'Three-quarters left',def:'Three-quarters turn to the left (270\u00b0) made on this step'},
+      {key:'\u00be R',code:'\u00beR',label:'Three-quarters right',def:'Three-quarters turn to the right (270\u00b0) made on this step'},
+      {key:'\u215e L',code:'\u215eL',label:'Seven-eighths left',def:'Seven-eighths turn to the left (315\u00b0) made on this step'},
+      {key:'\u215e R',code:'\u215eR',label:'Seven-eighths right',def:'Seven-eighths turn to the right (315\u00b0) made on this step'},
+      {key:'1 L',code:'1L',label:'Full turn left',def:'A full turn to the left (360\u00b0) made on this step'},
+      {key:'1 R',code:'1R',label:'Full turn right',def:'A full turn to the right (360\u00b0) made on this step'},
     ],
     foot:[
       {key:'HT',code:'HT',label:'Heel-Toe',def:'Heel then toe — step onto the heel, weight rolls forward to the ball',group:'common'},
@@ -1072,7 +1123,7 @@ class Component extends DCLogic {
     foot:{name:'Footwork',color:'#a9742c',desc:'Which part of the foot contacts the floor as the step lands, and the sequence of contact. Correct footwork creates the characteristic rise and fall action of the dance.'},
     body:{name:'Body actions',color:'#b07cc6',desc:'Actions of the body that shape a step beyond its direction and footwork — applied on their own or together.'},
     sway:{name:'Sway',color:'#c0563f',desc:'The inclination of the body to one side, a natural consequence of rise and the centrifugal force of turning. Sway is never forced — it arises from correct technique and is always away from the centre of the turn.'},
-    turn:{name:'Turn',color:'#5b6b8a',desc:'The amount of rotation during a step, measured as a fraction of a full turn. Turning is gradual — it occurs across the body of the step, not all at once.'},
+    turn:{name:'Turn',color:'#5b6b8a',desc:'The exact amount of rotation made on this step — the change of facing between it and the next step. Every step states its own amount (which may be “No turn”), and the per-step amounts across a figure sum to the figure’s total rotation.'},
   })[k] || {name:'',color:'#9a958c',desc:''};
     if (!meta.name){ const t = this.typeInfo(k); if (t && t.key === k && (t.opts||[]).length){ return { name:t.label, color:t.color, desc:'A custom attribute type for this choreo.', values:(t.opts||[]).map(o => ({ key:o, code:o, label:o, d:'' })) }; } }
     const vals = (this.valueCat()[k] || []).map(e => ({ key:e.key, code:e.code, label:e.label, d:e.def }));
@@ -1178,6 +1229,15 @@ class Component extends DCLogic {
     const entry = { id, title:(nc.name||'').trim()||('New '+nc.dance), dance:nc.dance, bars:0, created:'today' };
     this.setState(s => ({ choreos:s.choreos.concat([entry]), openChoreoId:id, choreoView:'assemble', assembleEdit:true, newChoreo:null }));
   }
+  addBreak(sideId){
+    const bb = this._barBeats();
+    this.setState(s => ({ routine:{ ...s.routine, sides:s.routine.sides.map(sd => sd.id!==sideId ? sd : ({ ...sd, figures: sd.figures.concat([{ id:'bk'+Date.now(), source:'break', name:'Break', beats:bb, steps:[] }]) })) } }));
+    this.toast('Break added');
+  }
+  setBreakBeats(figId, delta){
+    this.setState(s => ({ routine:{ ...s.routine, sides:s.routine.sides.map(sd => ({ ...sd, figures: sd.figures.map(f => f.id!==figId ? f : ({ ...f, beats: Math.max(1, (f.beats||1)+delta) })) })) } }));
+  }
+  _barBeats(){ const d=(this.state.choreos.find(c=>c.id===this.state.openChoreoId)||{}).dance||''; return /Waltz/.test(d)?3:4; }
   addFigure(sideId, name, source){
     const pfx = 'na' + (++this._naid) + '_';
     let n = 0, an = 0;
@@ -1225,11 +1285,11 @@ class Component extends DCLogic {
   }
   addLink(){ this.setState({ linkPicker:{ step:'type', sideId:null, figId:null, attrCat:null } }); }
   lpBack(){
-    const back = { side:'type','figure-place':'side',step:'figure-place','figure-all':'type','attr-cat':'type','attr-val':'attr-cat' };
+    const back = { side:'type','figure-place':'side',step:'figure-place','figure-all':'type','figure-grain':'figure-all','attr-cat':'type','attr-val':'attr-cat' };
     this.setState(s => {
       const cur = s.linkPicker.step;
       let prev = back[cur] || 'type';
-      if (cur === 'scope') prev = (s.linkPicker.pending && s.linkPicker.pending.type === 'figure') ? 'figure-all' : 'attr-val';
+      if(cur === 'scope') prev = (s.linkPicker.pending && s.linkPicker.pending.type === 'figure') ? 'figure-grain' : 'attr-val';
       return { linkPicker:{ ...s.linkPicker, step:prev } };
     });
   }
@@ -1280,15 +1340,18 @@ class Component extends DCLogic {
     const myVariantsEmpty = myVariants.length===0;
 
     /* assemble */
+    const _sbb = /Waltz/.test((openChoreo&&openChoreo.dance)||'') ? 3 : 4;
     const sides = st.routine.sides.map(sd => {
       const collapsed = !!st.collapsed[sd.id];
-      const n = sd.figures.length;
       return {
         id:sd.id, name:sd.name, collapsed, expanded:!collapsed,
-        barLabel: (() => { const b = sd.figures.reduce((acc, f) => acc + f.steps.filter(s => s.count === '1').length, 0); return b + (b === 1 ? ' bar' : ' bars'); })(),
-        figures: sd.figures.map(f => ({ id:f.id, name:f.name, countLabel:f.steps.map(s => s.count).join(' '), ...scope(f), onOpen:() => this.openFigure(f.id) })),
+        barLabel: (() => { const b = sd.figures.reduce((acc, f) => acc + (f.source==='break' ? Math.round((f.beats||_sbb)/_sbb) : f.steps.filter(s => s.count === '1').length), 0); return b + (b === 1 ? ' bar' : ' bars'); })(),
+        figures: sd.figures.map(f => f.source==='break'
+          ? { id:f.id, isBreak:true, notBreak:false, beats:f.beats||_sbb, beatsLabel:((f.beats||_sbb)===1?'1 beat':(f.beats||_sbb)+' beats'), onLess:()=>this.setBreakBeats(f.id,-1), onMore:()=>this.setBreakBeats(f.id,1) }
+          : { id:f.id, isBreak:false, notBreak:true, name:f.name, countLabel:f.steps.map(s => s.count).join(' '), ...scope(f), onOpen:() => this.openFigure(f.id) }),
         onToggle:() => this.toggleSide(sd.id),
         onAdd:() => this.setState({ addSheetSide:sd.id }),
+        onAddBreak:() => this.addBreak(sd.id),
       };
     });
 
@@ -1298,10 +1361,10 @@ class Component extends DCLogic {
     const _stdT = this.stdTypes();
     const _usedKeys = {}; if (figure) figure.steps.forEach(s=>s.attrs.filter(a=>!a.removed).forEach(a=>{ _usedKeys[a.type]=1; }));
     const _cols = (forEdit) => { let arr = forEdit ? _stdT.slice() : _stdT.filter(t=>_usedKeys[t.key]); (st.customTypes||[]).forEach(t=>{ const show = forEdit ? (_usedKeys[t.key]||t.scope==='choreo') : _usedKeys[t.key]; if (show && !arr.find(x=>x.key===t.key)) arr.push(t); }); return arr.map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color, required:!!t.required })); };
-    const _grid = (forEdit) => { const cols=_cols(forEdit); const rows=(figure?figure.steps:[]).map(s=>{ const isSub=(s.count==='&'||s.count==='a'); const tk=figure.id+'|'+(figure.steps.indexOf(s)+1); const th=st.threads[tk]||[]; const cells=cols.map(c=>{ const attrs=s.attrs.filter(a=>!a.removed&&a.type===c.key); const chips=attrs.filter(a=>this.attrIsSet(a)).map(a=>({ label:this.attrDisplay(a,vRole), divergent:this.attrDivergent(a), onTap:()=>this.openAttr(s.id,a.id) })); return { color:c.color, chips, hasVal:chips.length>0, empty:chips.length===0, onAdd:()=>this.addTyped(s.id,c.key) }; }); return { id:s.id, count:s.count, isSub, notSub:!isSub, hasThread:th.length>0, threadCount:th.length, cells }; }); return { cols, rows, hasCols:cols.length>0, noCols:cols.length===0 }; };
+    const _grid = (forEdit) => { const cols=_cols(forEdit); const rows=(figure?figure.steps:[]).map(s=>{ const isSub=(s.count==='&'||s.count==='e'||s.count==='a'); const tk=figure.id+'|'+(figure.steps.indexOf(s)+1); const th=st.threads[tk]||[]; const cells=cols.map(c=>{ const attrs=s.attrs.filter(a=>!a.removed&&a.type===c.key); const chips=attrs.filter(a=>this.attrIsSet(a)).map(a=>({ label:this.attrDisplay(a,vRole), divergent:this.attrDivergent(a), onTap:()=>this.openAttr(s.id,a.id) })); return { color:c.color, chips, hasVal:chips.length>0, empty:chips.length===0, onAdd:()=>this.addTyped(s.id,c.key) }; }); return { id:s.id, count:s.count, isSub, notSub:!isSub, hasThread:th.length>0, threadCount:th.length, cells }; }); return { cols, rows, hasCols:cols.length>0, noCols:cols.length===0 }; };
     const viewGrid = _grid(false);
     const editGrid = _grid(true);
-    const timingChoices = ['&','a','1','2','3','4'].map(c=>({ label:c, onPick:()=>this.addMoment(c) }));
+    const timingChoices = [ {label:'&',sub:'½'}, {label:'e',sub:'¼'}, {label:'a',sub:'¾'}, {label:'1',sub:''}, {label:'2',sub:''}, {label:'3',sub:''}, {label:'4',sub:''} ].map(c=>({ label:c.label, sub:c.sub, hasSub:!!c.sub, onPick:()=>this.addMoment(c.label) }));
 
     /* moment editor + single-attribute editor + type picker + custom-type form */
     const momentStep = st.momentStepId ? this._findStep(st.momentStepId) : null;
@@ -1340,13 +1403,18 @@ class Component extends DCLogic {
     /* thread */
     let tTitle = '', tSub = '', comments = [];
     if (st.threadStepKey){
-      const [fid, nStr] = st.threadStepKey.split('|'); const num = +nStr;
-      const { figure:fg } = this.findFigure(fid);
-      if (fg && fg.steps[num-1]){
-        const stp = fg.steps[num-1];
-        tTitle = fg.name + ' · step ' + num;
-        const liveT = stp.attrs.filter(a => !a.removed && this.attrIsSet(a));
-        tSub = 'count ' + stp.count + (liveT.length ? ' · ' + liveT.map(a => this.typeInfo(a.type).label.toLowerCase()).join(' · ') : '');
+      if (st.threadStepKey.indexOf('|') < 0){
+        const { figure:fg } = this.findFigure(st.threadStepKey);
+        if (fg){ tTitle = fg.name; tSub = 'whole figure'; }
+      } else {
+        const [fid, nStr] = st.threadStepKey.split('|'); const num = +nStr;
+        const { figure:fg } = this.findFigure(fid);
+        if (fg && fg.steps[num-1]){
+          const stp = fg.steps[num-1];
+          tTitle = fg.name + ' · step ' + num;
+          const liveT = stp.attrs.filter(a => !a.removed && this.attrIsSet(a));
+          tSub = 'count ' + stp.count + (liveT.length ? ' · ' + liveT.map(a => this.typeInfo(a.type).label.toLowerCase()).join(' · ') : '');
+        }
       }
       comments = (st.threads[st.threadStepKey] || []).map(c => {
         const m = this.authorMeta(c.author), col = m.color;
@@ -1373,7 +1441,7 @@ class Component extends DCLogic {
       eLinks = (d.links || []).map((l, i) => {
         let label;
         const scope = l.scope==='choreo' ? ' · here' : l.scope==='dance' ? ' · all '+l.dance : l.scope==='all' ? ' · every dance' : '';
-        if (l.type==='figure') label = '↳ all ' + l.name + 's' + scope;
+        if (l.type==='figure') label = '↳ ' + (l.grain==='whole' ? l.name + ' · whole figure' : (l.count ? l.name + ' · count ' + l.count : 'all ' + l.name + 's')) + scope;
         else if (l.type==='attr') label = '↳ ' + l.value + scope;
         else label = '↳ ' + (l.fig||l.name||'') + (l.step ? ' · step ' + l.step : '');
         return { label, onRemove:() => this.removeLink(i) };
@@ -1392,6 +1460,42 @@ class Component extends DCLogic {
     const addSheetSide = st.routine.sides.find(s => s.id === st.addSheetSide);
     const libDance = openChoreo ? openChoreo.dance : 'Waltz';
     const libDefs = this.danceFigures(libDance).map(nm => ({ name:nm, source: nm==='Chassé' ? 'custom' : 'library' }));
+
+    /* continuous beat numbering across the whole routine (wraps at phrase length) */
+    const _phraseLen = /Waltz/.test((openChoreo&&openChoreo.dance)||'') ? 6 : 8;
+    const _barBeatsN = /Waltz/.test((openChoreo&&openChoreo.dance)||'') ? 3 : 4;
+    let _beat = 0;
+    const readingGroups = st.routine.sides.map(sd => ({
+      sideName: sd.name,
+      figures: sd.figures.map(f => {
+        if (f.source==='break') {
+          const beats = f.beats || _barBeatsN;
+          const start = (_beat % _phraseLen) + 1;
+          _beat += beats;
+          const end = ((_beat - 1) % _phraseLen) + 1;
+          const barsN = Math.round(beats / _barBeatsN);
+          return { id:f.id, isBreak:true, notBreak:false, beats, beatSpan:(beats===1?('beat '+start):('beats '+start+'–'+end)), barsLabel: barsN+(barsN===1?' bar':' bars') };
+        }
+        const usedR={}; f.steps.forEach(s=>s.attrs.filter(a=>!a.removed&&this.attrIsSet(a)).forEach(a=>{ usedR[a.type]=1; }));
+        const cols = this.allTypes().filter(t=>usedR[t.key]).map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color, onInfo:()=>this.setState({infoKey:t.key, infoValue:null}) }));
+        const stepsM = f.steps.map((stp,i)=>{
+          const num=i+1, tkey=f.id+'|'+num;
+          const allC=st.threads[tkey]||[];
+          const latest2=allC.slice(-2);
+          const moreCount=Math.max(0,allC.length-2);
+          const openThread=()=>this.setState({choreoView:'thread',threadStepKey:tkey,threadReturnView:'assemble'});
+          const isSub=(stp.count==='&'||stp.count==='e'||stp.count==='a');
+          let beatLabel;
+          if (isSub) beatLabel = stp.count; else { beatLabel = String((_beat % _phraseLen)+1); _beat++; }
+          const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const ch=at.map(a=>{ const v=this.attrValForRole(a,vRole); const key=(c.key!=='step'&&!Array.isArray(v))?v:null; const fam=(c.key==='step')?'step':c.key; return { label:this.attrDisplay(a,vRole), onTap:()=>this.setState({infoKey:fam, infoValue:key}) }; }); return { color:c.color, chips:ch, hasVal:ch.length>0, empty:ch.length===0 }; });
+          return { n:num, count:stp.count, beat:beatLabel, isSub, notSub:!isSub, cells, hasThread:allC.length>0, threadCount:allC.length, hasComments:allC.length>0, noComments:allC.length===0, hasMore:moreCount>0, moreCount, latestComments:latest2.map(c=>{const m=this.authorMeta(c.author);return{color:m.color,text:c.text.length>44?c.text.slice(0,44)+'…':c.text,onTap:openThread};}), onOpenThread:openThread };
+        });
+        return { id:f.id, isBreak:false, notBreak:true, name:f.name, countLabel: stepsM.map(s=>s.beat).join(' '), ...scope(f), cols, hasCols:cols.length>0, onOpen:()=>this.openFigure(f.id), steps: stepsM,
+          ...(()=>{ const fc=st.threads[f.id]||[]; const l2=fc.slice(-2); const more=Math.max(0,fc.length-2); const openFig=()=>this.setState({choreoView:'thread',threadStepKey:f.id,threadReturnView:'assemble'}); return { figHasComments:fc.length>0, figComments:l2.map(c=>({color:this.authorMeta(c.author).color,text:(c.text.length>52?c.text.slice(0,52)+'…':c.text),onTap:openFig})), figMore:more>0, figMoreCount:more, onOpenFigThread:openFig }; })()
+        };
+      })
+    }));
+
     return {
       routineTitle: openChoreo ? openChoreo.title : st.routine.title,
       isChoreo, notChoreo:!isChoreo, isJournal, notJournal:!isJournal, isProfile, notProfile:!isProfile, isLibrary, notLibrary:!isLibrary,
@@ -1416,36 +1520,7 @@ class Component extends DCLogic {
       assembleView: !st.assembleEdit,
       onToggleAssembleEdit:() => this.setState(s => ({ assembleEdit:!s.assembleEdit })),
       sides,
-      readingGroups: st.routine.sides.map(sd => ({
-        sideName: sd.name,
-        figures: sd.figures.map(f => {
-          const usedR={}; f.steps.forEach(s=>s.attrs.filter(a=>!a.removed&&this.attrIsSet(a)).forEach(a=>{ usedR[a.type]=1; }));
-          const cols = this.allTypes().filter(t=>usedR[t.key]).map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color, onInfo:()=>this.setState({infoKey:t.key, infoValue:null}) }));
-          return {
-          id:f.id, name:f.name, countLabel:f.steps.map(s=>s.count).join(' '),
-          ...scope(f),
-          cols, hasCols:cols.length>0,
-          onOpen:()=>this.openFigure(f.id),
-          steps: f.steps.map((stp,i)=>{
-            const num=i+1, tkey=f.id+'|'+num;
-            const allC=st.threads[tkey]||[];
-            const latest2=allC.slice(-2);
-            const moreCount=Math.max(0,allC.length-2);
-            const openThread=()=>this.setState({choreoView:'thread',threadStepKey:tkey,threadReturnView:'assemble'});
-            const isSub=(stp.count==='&'||stp.count==='a');
-            const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const ch=at.map(a=>{ const v=this.attrValForRole(a,vRole); const key=(c.key!=='step'&&!Array.isArray(v))?v:null; const fam=(c.key==='step')?'step':c.key; return { label:this.attrDisplay(a,vRole), onTap:()=>this.setState({infoKey:fam, infoValue:key}) }; }); return { color:c.color, chips:ch, hasVal:ch.length>0, empty:ch.length===0 }; });
-            return {
-              n:num, count:stp.count, isSub, notSub:!isSub, cells,
-              hasThread:allC.length>0, threadCount:allC.length,
-              hasComments:allC.length>0, noComments:allC.length===0,
-              hasMore:moreCount>0, moreCount,
-              latestComments:latest2.map(c=>{const m=this.authorMeta(c.author);return{color:m.color,text:c.text.length>44?c.text.slice(0,44)+'…':c.text,onTap:openThread};}),
-              onOpenThread:openThread,
-            };
-          })
-          };
-        })
-      })),
+      readingGroups,
       onOpenShare:() => this.setState({ choreoView:'share' }),
 
       figTitle: figure ? figure.name : '', figSideName: side ? side.name : '',
@@ -1483,11 +1558,12 @@ class Component extends DCLogic {
         if(s==='side'){title='Pick a section';items=st.routine.sides.map(sd=>({label:sd.name,sub:sd.figures.length+' fig'+(sd.figures.length!==1?'s':''),onPick:goStep('figure-place',{sideId:sd.id})}));}
         else if(s==='figure-place'){const sd=st.routine.sides.find(x=>x.id===lp.sideId);title=sd?sd.name:'Pick a figure';items=(sd?sd.figures:[]).map(f=>({label:f.name,sub:f.steps.length+' steps',onPick:goStep('step',{figId:f.id})}));}
         else if(s==='step'){const {figure:fig,side:sd}=this.findFigure(lp.figId);title=fig?fig.name:'Pick a step';items=(fig?fig.steps:[]).map((stp,i)=>({label:'Step '+(i+1),sub:'count '+stp.count,onPick:()=>this.lpAddLink({type:'place',fig:fig.name,step:i+1,side:sd?sd.name:''})}));}
-        else if(s==='figure-all'){title='Pick a figure';const seen={};const figs=[];for(const sd of st.routine.sides)for(const f of sd.figures)if(!seen[f.name]){seen[f.name]=1;figs.push(f);}items=figs.map(f=>({label:f.name,sub:'',onPick:goStep('scope',{pending:{type:'figure',name:f.name}})}));}
+        else if(s==='figure-all'){title='Pick a figure';const q=(lp.query||'').toLowerCase();const seen={};const figs=[];for(const sd of st.routine.sides)for(const f of sd.figures)if(f.source!=='break'&&!seen[f.name]){seen[f.name]=1;figs.push(f);}items=figs.filter(f=>!q||f.name.toLowerCase().includes(q)).map(f=>({label:f.name,sub:'',onPick:goStep('figure-grain',{figId:f.id,pending:{type:'figure',name:f.name}})}));}
+        else if(s==='figure-grain'){const {figure:fig}=this.findFigure(lp.figId);title=fig?fig.name:'Where on the figure?';items=[{label:'The entire figure',sub:'note applies to the whole figure',onPick:goStep('scope',{pending:{...lp.pending,grain:'whole'}})}].concat((fig?fig.steps:[]).map((stp,i)=>({label:'On count '+stp.count,sub:'step '+(i+1),onPick:goStep('scope',{pending:{...lp.pending,count:stp.count,step:i+1}})})));}
         else if(s==='attr-cat'){title='Pick an attribute';items=[{k:'body',label:'Body position',color:'#8a5cab'},{k:'rise',label:'Rise & fall',color:'#1f8a5b'},{k:'foot',label:'Footwork',color:'#a9742c'},{k:'sway',label:'Sway',color:'#c0563f'},{k:'turn',label:'Turn',color:'#5b6b8a'}].map(c=>({label:c.label,sub:'',color:c.color,onPick:goStep('attr-val',{attrCat:c.k})}));}
         else if(s==='attr-val'){const cats={body:{l:'Body position',opts:['CBMP','CBP','Closed','Promenade','Wing']},rise:{l:'Rise & fall',opts:['lowering','body rise','foot rise','continue','up']},foot:{l:'Footwork',opts:['HT','T','TH','heel pull']},sway:{l:'Sway',opts:['to L','to R','none']},turn:{l:'Turn',opts:['¼ L','¼ R','⅜ L','⅜ R','½ L','½ R']}};const cat=cats[lp.attrCat]||{l:'',opts:[]};title=cat.l;items=cat.opts.map(v=>({label:v,sub:'',onPick:goStep('scope',{pending:{type:'attr',cat:lp.attrCat,value:v}})}));}
         else if(s==='scope'){const dance=openChoreo?openChoreo.dance:'Waltz';title='Apply to…';items=[{label:'This choreo only',sub:openChoreo?openChoreo.title:'',onPick:()=>this.lpAddLink({...lp.pending,scope:'choreo'})},{label:'All '+dance+' choreos',sub:'same dance',onPick:()=>this.lpAddLink({...lp.pending,scope:'dance',dance})},{label:'Every dance',sub:'wherever this appears',onPick:()=>this.lpAddLink({...lp.pending,scope:'all'})}];}
-        return {lpOpen:true,lpIsType:isType,lpIsList:!isType,lpItems:items,lpTitle:title,lpCanBack:canBack,onLpBack:()=>this.lpBack(),onCloseLp:()=>this.setState({linkPicker:null}),onLpPlace:goStep('side'),onLpFigure:goStep('figure-all'),onLpAttr:goStep('attr-cat')};})(),
+        return {lpOpen:true,lpIsType:isType,lpIsList:!isType,lpItems:items,lpTitle:title,lpCanBack:canBack,onLpBack:()=>this.lpBack(),onCloseLp:()=>this.setState({linkPicker:null}),onLpPlace:goStep('side'),onLpFigure:goStep('figure-all'),onLpAttr:goStep('attr-cat'),lpShowSearch:(s==='figure-all'),lpQuery:(lp.query||''),onLpQuery:(e)=>this.setState(p=>({linkPicker:{...p.linkPicker,query:e.target.value}}))};})(),
       onDraftChange:(e) => this.setState(s => ({ draft:{ ...s.draft, text:e.target.value } })),
       onAddLink:() => this.addLink(),
       onSaveEntry:() => this.saveEntry(),
