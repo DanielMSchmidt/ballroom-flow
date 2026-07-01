@@ -80,6 +80,27 @@ describe("AttributeInfoSheet (frame 1.13)", () => {
     expect(screen.getByText("high")).toBeInTheDocument();
   });
 
+  it("describes multiple kinds in one sheet (the merged Step slot: direction + footwork)", async () => {
+    const { AttributeInfoSheet } = await load();
+    renderUi(
+      <AttributeInfoSheet
+        open
+        title="Step"
+        kind={ATTRIBUTE_REGISTRY.direction}
+        extraKinds={[ATTRIBUTE_REGISTRY.footwork]}
+        usageCount={3}
+        scopeLabel="Gold Waltz"
+      />,
+    );
+    // The sheet title is the slot name; each kind is a labelled section.
+    expect(screen.getByRole("heading", { name: /^step$/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^direction$/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^footwork$/i })).toBeInTheDocument();
+    // Both kinds' values are present (a direction value + a footwork code).
+    expect(screen.getByText("forward")).toBeInTheDocument();
+    expect(screen.getByText("HT")).toBeInTheDocument();
+  });
+
   it("invokes onSelectValue when a value chip is tapped", async () => {
     const { AttributeInfoSheet } = await load();
     const onSelectValue = vi.fn();

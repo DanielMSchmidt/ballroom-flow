@@ -99,3 +99,29 @@ describe("FigureTimeline — placing steps via the grid", () => {
     expect(screen.queryByRole("button", { name: /in-between timing/i })).toBeNull();
   });
 });
+
+describe("FigureTimeline — attribute info overlay (frame 1.13)", () => {
+  it("tapping a column HEADER opens the kind's info reference (not the editor)", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        scopeLabel="Gold Waltz"
+        attributes={[attr("rise", "commence", 1)]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^about rise$/i }));
+    // The plain-language reference (frame 1.13) opens — its title + usage footer.
+    expect(screen.getByRole("heading", { name: /rise & fall/i })).toBeInTheDocument();
+    expect(screen.getByText(/used in 1 step across gold waltz/i)).toBeInTheDocument();
+  });
+
+  it("the merged Step header describes both direction and footwork", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" />);
+    await userEvent.click(screen.getByRole("button", { name: /^about step$/i }));
+    expect(screen.getByRole("heading", { name: /^direction$/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^footwork$/i })).toBeInTheDocument();
+  });
+});

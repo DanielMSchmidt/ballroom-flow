@@ -167,3 +167,50 @@ export function cellValue(here: Attribute[], column: ReadingColumn): string | nu
 export function isOffBeatCount(count: number): boolean {
   return !Number.isInteger(count);
 }
+
+/**
+ * The registry kind(s) an attribute info sheet (frame 1.13) should describe when
+ * a column's value chip or header is tapped. The merged Step column holds two
+ * kinds — direction + footwork — so it resolves to BOTH (rendered as two sections
+ * in the sheet); every other column resolves to its single kind.
+ *
+ * Always returns ≥1 kind: a custom attribute with no registry entry (e.g. one
+ * authored elsewhere and not in `customKinds`) is SYNTHESIZED from the values
+ * observed on the figure, so the overlay still shows the value list even when no
+ * prose/definitions exist for it (the "even custom attributes get a short view +
+ * a longer selection" requirement).
+ */
+export function infoKindsForColumn(
+  col: ReadingColumn,
+  customKinds: RegistryKind[],
+  live: Attribute[],
+): RegistryKind[] {
+  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+  const wanted = col.isStep ? ["direction", "footwork"] : [col.kind];
+  return wanted.map((kid) => {
+    const found = reg[kid];
+    if (found) return found;
+    const observed = [
+      ...new Set(
+        live.filter((a) => a.deletedAt == null && a.kind === kid).map((a) => String(a.value)),
+      ),
+    ];
+    return {
+      kind: kid,
+      label: col.label,
+      color: "var(--bf-ink-secondary)",
+      cardinality: "multi",
+      valueType: "text",
+      values: observed,
+      builtin: false,
+    } satisfies RegistryKind;
+  });
+}
+
+/** How many distinct steps (counts) of a figure carry any of `kinds` — the info
+ *  sheet's "Used in N steps" footer (frame 1.13). */
+export function columnUsage(live: Attribute[], kinds: RegistryKind[]): number {
+  const ids = new Set(kinds.map((k) => k.kind));
+  return new Set(live.filter((a) => a.deletedAt == null && ids.has(a.kind)).map((a) => a.count))
+    .size;
+}

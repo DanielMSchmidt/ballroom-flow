@@ -458,6 +458,7 @@ export function Assemble({
               annotations={store.readAnnotations()}
               canComment={can(role, "canAnnotate")}
               memberColors={memberColorMap}
+              customKinds={store.customKinds()}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               onOpenFigure={(figureId) => setNotating(figureId)}
