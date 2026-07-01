@@ -7,6 +7,7 @@ import { Journal } from "./components/Journal";
 import { Landing } from "./components/Landing";
 import { appGate } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
+import { SignInPrompt } from "./components/SignInPrompt";
 import { navigate, useRoute } from "./lib/router";
 import { createFamilyNote } from "./store/family-notes";
 import { loadMineFigures, saveFigureToLibrary } from "./store/figures";
@@ -137,15 +138,18 @@ function AppHome(): React.JSX.Element {
             </div>
           </Card>
         )}
-        {!isSignedIn ? (
-          <Card>
-            <p className="text-sm font-bold text-ink">Sign in to build choreography</p>
-            <p className="mt-1 text-2xs text-ink-muted">
-              Ballroom Flow keeps your routines in sync across your devices.
-            </p>
-          </Card>
-        ) : route.name === "invite" ? (
-          <InviteRedeem token={route.token} />
+        {route.name === "invite" ? (
+          // A share link (/invite/:token). Signed in → redeem + open the routine.
+          // Signed out → a sign-in prompt that returns here after auth (so the
+          // shared routine opens), NOT the generic dead-end card that has no
+          // sign-in control and never mentions the shared routine.
+          isSignedIn ? (
+            <InviteRedeem token={route.token} />
+          ) : (
+            <SignInPrompt invited />
+          )
+        ) : !isSignedIn ? (
+          <SignInPrompt />
         ) : openRoutineId || tab === "choreo" ? (
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (

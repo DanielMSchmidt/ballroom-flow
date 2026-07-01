@@ -424,9 +424,15 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
   - Redeeming creates a Membership with that role.
   - An expired or already-redeemed token is rejected.
   - A non-editor cannot issue an invite.
+  - A **signed-out** visitor opening a share link (`/invite/:token`) is shown a sign-in
+    prompt that names the shared routine and offers a real sign-in control — NOT the
+    generic logged-out card and NOT the marketing Landing. After signing in they return
+    to the same URL and redemption opens the routine. (Redemption never runs without a
+    token.)
 - **Tests (unskip when done):**
   - Worker: `apps/worker/src/routes/invite.test.ts` — `lets an editor issue a signed invite carrying docRef + role + expiry` (AC-1), `creates a Membership with the invite's role on redeem` (AC-2), `rejects an expired or already-redeemed invite` (AC-3), `forbids a non-editor from issuing an invite` (AC-4).
-  - E2E: `apps/web/e2e/permission-quota-invite.spec.ts` — `redeeming a valid invite link grants membership and opens the routine`.
+  - Component (signed-out entry): `apps/web/src/App.invite-auth.test.tsx` — a signed-out visitor on `/invite/:token` gets a sign-in control + shared-routine context, no Landing, no auto-redeem.
+  - E2E: `apps/web/e2e/permission-quota-invite.spec.ts` — `redeeming a valid invite link grants membership and opens the routine`; and `a signed-out friend opening a share link signs in and lands in the routine` (the signed-out entry, driven via the E2E sign-in bypass: `stagePendingAuth` + the in-app E2E sign-in control).
 
 #### US-024 — Share screen (member list + roles)
 - **Narrative:** As an editor, I want a Share screen, so that I can manage members and explain sharing semantics.

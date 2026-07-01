@@ -16,7 +16,8 @@ import {
   useAuth,
 } from "@clerk/clerk-react";
 import { createContext, type ReactNode, useContext } from "react";
-import { E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
+import { completeE2ESignIn, E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
+import { Button } from "../ui";
 
 export interface AppAuth {
   /** A fresh bearer token for the API/WS, or null when signed out. */
@@ -125,13 +126,7 @@ export function AppAuthProvider({
  * marker in E2E (where there's no Clerk widget to render).
  */
 export function AccountControls(): React.JSX.Element {
-  if (isE2E()) {
-    return (
-      <span data-testid="e2e-account" className="text-2xs text-ink-muted">
-        Signed in
-      </span>
-    );
-  }
+  if (isE2E()) return <E2EAccountControls />;
   return (
     <>
       <SignedOut>
@@ -141,5 +136,28 @@ export function AccountControls(): React.JSX.Element {
         <UserButton />
       </SignedIn>
     </>
+  );
+}
+
+/**
+ * E2E account control (no Clerk widget to render). Signed in → a plain marker;
+ * signed out → a real "Sign in" button that promotes the staged pending session
+ * (completeE2ESignIn) and reloads to the same URL. That lets signed-out entry
+ * points — a friend opening an /invite/:token share link — be driven end-to-end
+ * in the Clerk-less harness, mirroring Clerk returning the user signed-in.
+ */
+function E2EAccountControls(): React.JSX.Element {
+  const { isSignedIn } = useAppAuth();
+  if (isSignedIn) {
+    return (
+      <span data-testid="e2e-account" className="text-2xs text-ink-muted">
+        Signed in
+      </span>
+    );
+  }
+  return (
+    <Button variant="primary" size="sm" onClick={() => completeE2ESignIn()}>
+      Sign in
+    </Button>
   );
 }
