@@ -86,6 +86,16 @@ export interface ResolvedPlacement {
   figure: FigureDoc | null;
   /** Where this placement's figure is in its load lifecycle (see FigureLoadStatus). */
   status: FigureLoadStatus;
+  /**
+   * True when `figure` is served by the figure's OWN hydrated live connection
+   * (the authoritative, live-syncing doc), false when it's the read-only REST
+   * snapshot fallback (lazy mode, own connection not hydrated yet). The figure
+   * editor gates on this so it waits for the live doc ("load on open") instead of
+   * rendering — then swapping out — stale snapshot content, which is what caused
+   * the visible flicker / reset of in-flight edits. `undefined` from stores that
+   * don't distinguish (an injected test store) is treated as ready.
+   */
+  fromLiveDoc?: boolean;
 }
 
 /**
@@ -482,7 +492,7 @@ export async function openRoutine(
       conn.onAdvance(() => {
         // Real content arrived (or merged in) → this figure is no longer loading:
         // clear any pending hydration timeout/escalation so it reads as `live`.
-        if (readFigureDoc(c.current())) {
+        if (readFigureDoc(c)) {
           clearHydrationTimer(figureRef);
           hydrationTimedOut.delete(figureRef);
         }
@@ -531,24 +541,76 @@ export async function openRoutine(
   };
   routineConn.onAdvance(notify);
 
-  /** Read the routine, tolerating an as-yet-unsynced (empty A.init) doc. */
+  /**
+   * Read the routine, tolerating an as-yet-unsynced (empty A.init) doc.
+   *
+   * MEMOIZED by the routine doc's Automerge heads (A): an unchanged routine
+   * returns the SAME object across the many reads a single render makes, and
+   * across renders driven by an unrelated (figure) sync frame — so the routine's
+   * identity, and every placement/annotation object derived from it, stays stable.
+   * That referential stability is what stops the editor re-rendering/flickering.
+   */
+  let routineJsCache: { key: string; value: RoutineDoc } | null = null;
   const readRoutineSafe = (): RoutineDoc => {
-    const js = A.toJS(routineConn.current()) as Partial<RoutineDoc>;
+    const doc = routineConn.current();
+    const key = A.getHeads(doc).join("/");
+    if (routineJsCache && routineJsCache.key === key) return routineJsCache.value;
+    const js = A.toJS(doc) as Partial<RoutineDoc>;
+    let value: RoutineDoc;
     if (!Array.isArray(js.sections)) {
       // Not yet synced from the DO — return the empty sentinel, but preserve any
       // customKinds that have been locally embedded (e.g. via createCustomKind
       // called before the DO's catch-up replay arrives).
       const fallback = emptyRoutine(routineId);
       if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds as RegistryKind[];
-      return fallback;
+      value = fallback;
+    } else {
+      value = readRoutine(doc);
     }
-    return readRoutine(routineConn.current());
+    routineJsCache = { key, value };
+    return value;
   };
 
   // M2: guard against duplicate orphan variants on rapid double-edits. A second
   // COW on the same figureRef before the first re-point lands would produce two
   // variant rows and orphan one. Cleared in both the success and error paths.
   const cowInFlight = new Set<string>();
+
+  // Referential stability for readPlacements (A): return the SAME array when
+  // nothing observable changed (same placements, figures, statuses, live-ness), so
+  // an unrelated sync frame doesn't hand consumers a new array identity and churn
+  // their effect/memo deps. Safe because the placement objects (from the memoized
+  // routine) and figure objects (from each connection's memoized `materialized()`)
+  // are themselves reference-stable while unchanged.
+  let placementsCache: ResolvedPlacement[] | null = null;
+  const sameResolvedPlacements = (a: ResolvedPlacement[], b: ResolvedPlacement[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i] as ResolvedPlacement;
+      const y = b[i] as ResolvedPlacement;
+      if (
+        x.placement !== y.placement ||
+        x.figure !== y.figure ||
+        x.status !== y.status ||
+        x.fromLiveDoc !== y.fromLiveDoc
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * Whether a figure's content is served by its OWN hydrated live connection (vs
+   * the read-only snapshot fallback in lazy mode). Mirrors resolveFigure's
+   * connection lookup; drives ResolvedPlacement.fromLiveDoc → the editor's "load
+   * on open" gate (E). Cheap: `materialized()` is heads-memoized.
+   */
+  const figureFromLiveDoc = (figureRef: string): boolean => {
+    if (pendingFigures.has(figureRef)) return false;
+    const conn = eagerFigures ? figureConn(figureRef) : figureConns.get(figureRef);
+    return conn ? readFigureDoc(conn) !== null : false;
+  };
 
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
@@ -572,9 +634,13 @@ export async function openRoutine(
             placement,
             figure: status === "live" ? resolveFigure(placement.figureRef) : null,
             status,
+            fromLiveDoc: figureFromLiveDoc(placement.figureRef),
           });
         }
       }
+      // Referential stability (A): reuse the prior array when nothing changed.
+      if (placementsCache && sameResolvedPlacements(placementsCache, out)) return placementsCache;
+      placementsCache = out;
       return out;
     },
 
@@ -724,7 +790,7 @@ export async function openRoutine(
     },
 
     setFigureAttributes: (figureRef, rawAttributes) => {
-      const figure = readFigureDoc(figureConn(figureRef).current());
+      const figure = readFigureDoc(figureConn(figureRef));
       // Dance gate (write path): drop any attribute whose kind does not apply to
       // this figure's dance — e.g. a `rise` value can never land on a Tango figure
       // (§3/§10.2). This mirrors the domain `parseAttributeWrite` rejection at the
@@ -947,7 +1013,7 @@ export async function openRoutine(
     // Eager mode opens the figure's connection; lazy mode only uses one that's
     // ALREADY open (edited / openFigure'd), else falls back to the snapshot.
     const conn = eagerFigures ? figureConn(figureRef) : (figureConns.get(figureRef) ?? null);
-    const figure = conn ? readFigureDoc(conn.current()) : null;
+    const figure = conn ? readFigureDoc(conn) : null;
     if (!figure) {
       // No live content. In lazy mode fall back to the snapshot; in eager mode
       // it's simply loading.
@@ -963,9 +1029,12 @@ export async function openRoutine(
 
 // ── small helpers kept local to the seam ───────────────────────────────────
 
-/** Materialize a figure doc, returning null until it has real content. */
-function readFigureDoc(doc: A.Doc<FigureDoc>): FigureDoc | null {
-  const js = A.toJS(doc) as FigureDoc;
+/** Materialize a figure doc, returning null until it has real content. Reads via
+ *  the connection's heads-memoized `materialized()` so an unchanged figure keeps a
+ *  STABLE object identity across renders (referential stability — stops the editor
+ *  re-rendering/flickering on sync frames that didn't touch this figure). */
+function readFigureDoc(conn: DocConnection<FigureDoc>): FigureDoc | null {
+  const js = conn.materialized();
   return js.figureType ? js : null;
 }
 

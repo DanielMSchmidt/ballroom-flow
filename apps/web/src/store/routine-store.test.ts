@@ -341,6 +341,57 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("readPlacements is referentially stable + marks a live figure fromLiveDoc (A/E)", async () => {
+    // Identity caching (A): while nothing changes, readPlacements returns the SAME
+    // array and the SAME figure object across reads (so an unrelated sync frame
+    // doesn't churn the editor's props → the flicker root cause). fromLiveDoc (E)
+    // is true when a figure is served by its OWN hydrated live doc.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+
+    const routineFull = buildRoutineDoc({
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(routineFull);
+
+    // Eager mode: reading opens the figure's connection. Load + hydrate it.
+    store.readPlacements();
+    const figFull = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "account",
+        name: "Turn",
+        attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.load(figFull);
+    sockets.get("fg")?.fireCaughtUp();
+
+    const first = store.readPlacements();
+    expect(first[0]?.status).toBe("live");
+    expect(first[0]?.fromLiveDoc).toBe(true); // served by its OWN live doc
+
+    // Nothing changed → SAME array + SAME figure identity across reads (A).
+    const second = store.readPlacements();
+    expect(second).toBe(first);
+    expect(second[0]?.figure).toBe(first[0]?.figure);
+    store.close();
+  });
+
   it("moveSection / movePlacement reorder via sortKey, not a splice (#63)", async () => {
     // Intent: reorder is a field update through the seam — the read order changes
     //   to reflect the new sortKey ordering. The seed has NO sortKeys, so this

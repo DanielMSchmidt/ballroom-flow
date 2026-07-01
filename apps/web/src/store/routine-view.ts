@@ -116,9 +116,19 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
   // edit-first poke; viewers never open a socket.
   if (editable) void ensureLive();
 
-  /** Reads come from the live store ONLY once it's hydrated; otherwise the snapshot. */
-  const readSource = (): RoutineStore | RoutineSnapshotModel =>
-    live && live.syncState() === "live" ? live : snapshot;
+  /**
+   * Reads come from the live store ONCE it has hydrated, and STAY there (E):
+   * we latch on the first hydration and never flip back to the snapshot on a
+   * later transient reconnect (live briefly "connecting"). Flipping back would
+   * swap the whole routine/figure identity out from under an open editor and
+   * revert its content to the (staler) REST snapshot — a visible flicker and a
+   * reset of an in-flight edit. Until the first hydration, reads use the snapshot.
+   */
+  let liveHydratedOnce = false;
+  const readSource = (): RoutineStore | RoutineSnapshotModel => {
+    if (live && live.syncState() === "live") liveHydratedOnce = true;
+    return liveHydratedOnce && live ? live : snapshot;
+  };
 
   /** Run `fn` once the live store is hydrated — so an edit never lands pre-replay. */
   const whenLive = (s: RoutineStore, fn: () => void): void => {
