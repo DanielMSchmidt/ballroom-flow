@@ -4734,13 +4734,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH/T",
-        turn: "half_L",
+        turn: "three_quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        turn: "half_L",
+        turn: "three_quarter_L",
         bodyActions: ["CBM"],
       },
     },

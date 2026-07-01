@@ -6703,8 +6703,8 @@
       "dance": "tango",
       "figureType": "fallaway-reverse-and-slip-pivot",
       "source": "https://www.dancecentral.info/ballroom/international-style/tango/fallaway-reverse-and-slip-pivot",
-      "corroboration": "",
-      "note": "Stored timing QQS (3) corrected to QQQQ (4 steps) per dancecentral. Turn 3/4 L on the slip pivot capped to half_L. Stored finish names PP; dancecentral ends the slip pivot in CBMP facing center.",
+      "corroboration": "ballroomindex.weebly.com (timing QQQQ + rotation 3/4-7/8 L confirmed); per-step footwork from dancecentral (no online second source has a footwork table — refs offline ISTD manuals)",
+      "note": "Stored timing QQS (3) corrected to QQQQ (4 steps) per dancecentral. Slip-pivot turn 3/4 L (dancecentral; corroborated by ballroomindex 3/4-7/8 L). Footwork retained from dancecentral: no online second source charts it (Alex Moore/Guy Howard manuals only).",
       "steps": [
         {
           "position": "CBMP",
@@ -6746,7 +6746,7 @@
           "leader": {
             "direction": "back",
             "footwork": "TH/T",
-            "turn": "half_L",
+            "turn": "three_quarter_L",
             "bodyActions": [
               "CBM"
             ]
@@ -6754,7 +6754,7 @@
           "follower": {
             "direction": "forward",
             "footwork": "TH",
-            "turn": "half_L",
+            "turn": "three_quarter_L",
             "bodyActions": [
               "CBM"
             ]
