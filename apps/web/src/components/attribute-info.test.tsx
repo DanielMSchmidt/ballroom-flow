@@ -38,7 +38,8 @@ describe("AttributeInfoSheet (frame 1.13)", () => {
     // The prose description is registry-derived (RegistryKind.description, T5).
     expect(screen.getByText(/in order of contact/i)).toBeInTheDocument();
     // A per-value definition is registry-derived (RegistryKind.valueDefs, T5).
-    expect(screen.getByText(/heel-toe/i)).toBeInTheDocument();
+    // Match the full HT definition — several footwork values mention "heel-toe".
+    expect(screen.getByText(/heel then toe \(e\.g\. forward walks\)/i)).toBeInTheDocument();
     // Footer counts usage.
     expect(screen.getByText(/used in 9 steps/i)).toBeInTheDocument();
     expect(screen.getByText(/gold waltz/i)).toBeInTheDocument();

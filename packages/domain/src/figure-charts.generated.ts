@@ -1,6 +1,7 @@
 // GENERATED from docs/seed/figure-charts.json by scripts/gen-figure-charts.mjs.
 // Real per-step both-role technique (WDSF-first, dancecentral.info primary), researched
 // per figure with source attribution in the seed. Do not edit by hand — regenerate instead.
+import type { Alignment } from "./doc-types";
 import type { AuthoredStep } from "./figure-steps";
 
 export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
@@ -11,11 +12,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
+        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
@@ -39,11 +42,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
     },
   ],
@@ -587,6 +592,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
+        turn: "quarter_L",
       },
     },
     {
@@ -602,6 +608,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
@@ -1376,10 +1383,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -1948,11 +1957,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -1962,6 +1973,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
@@ -2427,10 +2439,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -2686,7 +2700,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "commence",
       leader: {
         direction: "close",
-        footwork: "HT",
+        footwork: "heel turn",
         sway: "to_L",
       },
       follower: {
@@ -2714,13 +2728,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "HT",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "TH",
         turn: "half_R",
       },
     },
@@ -2773,7 +2787,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "THT",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
@@ -2909,7 +2923,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "back",
-        footwork: "H",
+        footwork: "TH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -2947,11 +2961,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "lowering",
       leader: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
       follower: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
     },
   ],
@@ -3019,7 +3033,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "HT",
+        footwork: "TH",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
@@ -3055,11 +3069,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "lowering",
       leader: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
       follower: {
         direction: "diagonal",
-        footwork: "HT",
+        footwork: "TH",
       },
     },
   ],
@@ -3190,6 +3204,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -3317,7 +3332,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HTH",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
@@ -3347,7 +3362,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "heel turn",
         sway: "to_L",
         turn: "half_R",
       },
@@ -3838,6 +3853,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -4050,7 +4066,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "close",
         footwork: "T",
-        sway: "to_R",
+        sway: "to_L",
         turn: "eighth_L",
       },
       follower: {
@@ -4144,7 +4160,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
-        footwork: "H",
+        footwork: "heel turn",
         turn: "eighth_L",
       },
     },
@@ -4203,10 +4219,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -4434,6 +4452,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_L",
       },
     },
     {
@@ -4451,10 +4470,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4462,10 +4483,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4527,6 +4550,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4710,13 +4734,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH/T",
-        turn: "half_L",
+        turn: "three_quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        turn: "half_L",
+        turn: "three_quarter_L",
         bodyActions: ["CBM"],
       },
     },
@@ -4732,7 +4756,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -4740,7 +4764,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4751,7 +4775,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4761,22 +4785,22 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "side",
-        footwork: "H/T",
+        footwork: "IE",
       },
       follower: {
         direction: "side",
-        footwork: "H",
+        footwork: "IE",
       },
     },
   ],
@@ -4791,7 +4815,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
@@ -4799,7 +4823,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4810,7 +4834,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4822,11 +4846,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "promenade",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
       },
     },
   ],
@@ -4841,7 +4865,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -4849,7 +4873,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4869,11 +4893,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "BH",
       },
     },
   ],
@@ -4887,14 +4911,14 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4905,7 +4929,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4915,11 +4939,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
       },
     },
     {
@@ -4944,7 +4968,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         turn: "quarter_R",
         bodyActions: ["CBM"],
       },
@@ -4952,7 +4976,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4962,30 +4986,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "in_place",
-        footwork: "T",
+        footwork: "BH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         turn: "quarter_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "quarter_L",
+        bodyActions: ["side_leading"],
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -4997,11 +5025,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BH",
       },
     },
     {
@@ -5184,6 +5212,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
@@ -5255,6 +5284,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
@@ -5295,11 +5325,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_R",
+        turn: "quarter_R",
         bodyActions: ["CBM"],
       },
     },
@@ -5365,6 +5396,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5428,6 +5460,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5454,6 +5487,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "tango:progressive-side-step-reverse-turn": [
     {
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
@@ -5489,6 +5523,29 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      leader: {
+        direction: "back",
+        footwork: "T",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
       },
     },
     {
@@ -5505,30 +5562,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "T",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "forward",
-        footwork: "H",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -5537,11 +5576,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5671,7 +5712,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       leader: {
-        direction: "behind",
+        direction: "forward",
         footwork: "WF",
       },
       follower: {
@@ -5736,30 +5777,36 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -5817,12 +5864,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -6658,7 +6705,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
-        turn: "half_L",
+        turn: "five_eighth_L",
         bodyActions: ["CBM"],
       },
     },
@@ -7370,11 +7417,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -7870,6 +7919,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -7902,3 +7952,1478 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
   ],
 };
+
+/** Figure-level entry/exit alignment (per-figure, leader's perspective), where charted. */
+export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; exit?: Alignment }> =
+  {
+    "foxtrot:back-feather": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:back-whisk": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:basic-weave": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC_against",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:bounce-fallaway-with-weave-ending": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:change-of-direction": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:curved-feather": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "wall",
+      },
+    },
+    "foxtrot:curved-feather-from-p-p": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+    },
+    "foxtrot:curved-three-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+    },
+    "foxtrot:double-reverse-spin": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:fallaway-reverse-and-slip-pivot": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:feather-ending": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:feather-finish": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:feather-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:heel-pull-finish": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:hover-corte": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "foxtrot:hover-cross": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:hover-telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:hover-telemark-to-p-p": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:impetus": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "foxtrot:impetus-to-p-p": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:natural-hover-telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:natural-telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:natural-twist-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:natural-weave": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:natural-zig-zag-from-p-p": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:open-natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:outside-swivel": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC_against",
+      },
+    },
+    "foxtrot:quick-open-reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:reverse-pivot": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:reverse-wave": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:telemark-to-p-p": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:three-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:top-spin": {
+      entry: {
+        qualifier: "backing",
+        direction: "ALOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "foxtrot:weave-from-p-p": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:whisk": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:back-whisk": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:backward-lock": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "quickstep:cross-chasse": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:cross-swivel": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "quickstep:double-reverse-spin": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:fisht-tail": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:forward-lock": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:four-quick-run": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:hover-corte": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "quickstep:impetus": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "quickstep:impetus-to-pp": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "quickstep:natural-pivot": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:natural-spin-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "quickstep:natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:open-reverse-turn-quick-open-reverse": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:progressive-chasse-to-l": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:progressive-chasse-to-r": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "quickstep:quarter-turn-to-r": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "quickstep:reverse-pivot": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "centre",
+      },
+    },
+    "quickstep:reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:rumba-cross": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:running-cross-chasse": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:running-finish": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:running-natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:running-spin-turn": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "quickstep:six-quick-run": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:telemark-to-pp": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:tipple-chasse-to-r-along-lod": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:tipple-chasse-to-r-at-the-corner": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:tipsy-to-l": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:tipsy-to-r": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:v6": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:weave-from-pp": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:whisk": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:wing": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "quickstep:wing-from-promenade-position": {
+      entry: {
+        qualifier: "pointing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "quickstep:zig-zag": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "tango:back-corte": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:back-open-promenade": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "tango:basic-reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:brush-tap": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "tango:chase": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "tango:chase-alternative-endings-method-4-progressive": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:closed-promenade": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:fallaway-four-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:fallaway-in-promenade": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "wall",
+      },
+    },
+    "tango:fallaway-reverse-and-slip-pivot": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "tango:five-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:four-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "wall",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:four-step-change": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW_against",
+      },
+    },
+    "tango:mini-five-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:natural-rock-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:natural-turn-from-pp": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:natural-twist-turn-from-pp": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:open-promenade": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:open-reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "tango:outside-swivel-method-1-after-open-finish-and": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:outside-swivel-method-2-turning-to-l": {
+      entry: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "tango:outside-swivel-method-3-reverse-outside-swivel": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "wall",
+      },
+    },
+    "tango:progressive-link": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:progressive-side-step": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:progressive-side-step-reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "tango:promenade-link-turned-to-left": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "tango:promenade-link-turned-to-right": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "wall",
+      },
+    },
+    "tango:quick-reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "tango:reverse-pivot": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "tango:rock-on-left-foot": {
+      entry: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+    },
+    "tango:rock-on-right-foot": {
+      entry: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "ALOD",
+      },
+    },
+    "tango:tango-walk": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "viennese_waltz:lf-backward-change-step-natural-to-reverse": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "viennese_waltz:lf-forward-change-step-reverse-to-natural": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "viennese_waltz:natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "viennese_waltz:reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "viennese_waltz:rf-backward-change-step-reverse-to-natural": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "viennese_waltz:rf-forward-change-step-natural-to-reverse": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:back-whisk": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:backward-lock": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "waltz:basic-weave": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:chasse-from-pp": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:closed-change-on-lf": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:closed-change-on-rf": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "waltz:cross-hesitation-from-pp": {
+      entry: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "waltz:double-reverse-spin": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:drag-hesitation": {
+      entry: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "waltz:fallaway-reverse-and-slip-pivot": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:hesitation-change": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "waltz:hover-corte": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "waltz:impetus": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC_against",
+      },
+    },
+    "waltz:impetus-to-pp": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "waltz:natural-spin-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "waltz:natural-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "waltz:natural-turning-lock": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DC",
+      },
+    },
+    "waltz:outside-change": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:outside-spin": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:progressive-chasse-to-r": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "waltz:quick-open-reverse": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+    },
+    "waltz:reverse-pivot": {
+      entry: {
+        qualifier: "backing",
+        direction: "LOD",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+    },
+    "waltz:reverse-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:reverse-turning-lock": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:running-cross-chasse": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:running-finish": {
+      entry: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "waltz:running-spin-turn": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "backing",
+        direction: "DW",
+      },
+    },
+    "waltz:telemark": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:telemark-to-pp": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "wall",
+      },
+    },
+    "waltz:weave-from-pp": {
+      entry: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:whisk": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:wing": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+    "waltz:wing-from-pp": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DC",
+      },
+    },
+  };

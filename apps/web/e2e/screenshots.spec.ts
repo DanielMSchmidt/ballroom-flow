@@ -96,15 +96,14 @@ test.describe("@screenshots landing imagery", () => {
       .first()
       .click();
     await page.getByRole("button", { name: /beat 1/i }).click();
-    await page.getByRole("button", { name: /^forward$/ }).click(); // direction headline
-    await page.getByRole("button", { name: /^HT$/ }).click(); // footwork slot
-    // Reveal technique kinds (rise & fall, sway, turn, body actions, position).
-    await page.getByRole("button", { name: /more attributes/i }).click();
-    // Set a Rise & Fall value so a technique chip appears in the notate.png shot.
-    // "commence" is a valid rise value for Waltz (waltz is in RISE_DANCES).
-    await page.getByRole("button", { name: /^commence$/ }).click();
+    // The Natural Spin Turn is a catalog figure — already fully charted per role, so
+    // the editor opens in Per-role mode with the leader's step already set (forward ·
+    // Heel-Toe, plus rise/sway/turn). Just reveal the technique kinds for the shot;
+    // clicking a value here would TOGGLE the existing one off.
+    const leader = page.getByRole("group", { name: "Leader" });
+    await leader.getByRole("button", { name: /more attributes/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
-    await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
+    await expect(leader.getByRole("button", { name: /^Heel-Toe$/, pressed: true })).toBeVisible();
     await page.screenshot({ path: shot("notate.png") });
 
     // 4. Lanes cross-step grid — the "Lanes" button lives INSIDE the notation

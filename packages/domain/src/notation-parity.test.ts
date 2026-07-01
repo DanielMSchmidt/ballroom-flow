@@ -15,18 +15,41 @@ import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("vocabulary — footwork + direction kinds", () => {
-  it("renames step → footwork: readable, single-select, free-text", () => {
+  it("renames step → footwork: readable, single-select, closed picklist", () => {
     // The old `step` slug is gone; `footwork` is its replacement.
     expect(ATTRIBUTE_REGISTRY.step).toBeUndefined();
     const footwork = ATTRIBUTE_REGISTRY.footwork;
     expect(footwork).toBeDefined();
     expect(footwork.label).toBe("Footwork");
     expect(footwork.cardinality).toBe("single");
-    expect(footwork.freeText).toBe(true);
+    // Editor is a CLOSED PICKLIST (freeTextInput:false) over the full ISTD set the
+    // catalog uses; the schema stays lenient (freeText) for the syllabus scaffold.
+    expect(footwork.freeTextInput).toBe(false);
     expect(footwork.builtin).toBe(true);
-    // The pickable set is the design's compound ISTD codes; freeText still
-    // accepts legacy anatomical values (ball/heel/…) on write + display.
-    expect(footwork.values).toEqual(["HT", "T", "TH", "H", "heel pull"]);
+    // The pickable set leads with the common contacts + named actions, then the
+    // compound rolls the figure catalog carries (kept lossless so every figure
+    // validates on the strict write path).
+    expect(footwork.values).toEqual([
+      "HT",
+      "TH",
+      "T",
+      "H",
+      "B",
+      "WF",
+      "BF",
+      "IE",
+      "flat",
+      "heel turn",
+      "heel pull",
+      "BH",
+      "HTH",
+      "THT",
+      "T/H/T",
+      "H/T",
+      "T/H",
+      "T/TH",
+      "TH/T",
+    ]);
   });
 
   it("adds a `direction` kind as the step headline (single, closed enum)", () => {
@@ -66,7 +89,8 @@ describe("vocabulary — footwork + direction kinds", () => {
     // The old H→heel / T→toe aliases are removed; H/T are pickable codes.
     expect(normalizeValue("footwork", "H")).toBe("H");
     expect(normalizeValue("footwork", "T")).toBe("T");
-    // Legacy anatomical + unknown values still pass through (freeText).
+    // Read is always lenient: legacy anatomical + unknown values pass through
+    // unchanged on READ (the closed enum only gates the strict WRITE path).
     expect(normalizeValue("footwork", "ball")).toBe("ball");
     expect(normalizeValue("footwork", "brush")).toBe("brush");
   });

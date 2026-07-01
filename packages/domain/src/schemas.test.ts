@@ -143,6 +143,19 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toThrow();
   });
 
+  it("validates footPosition as a closed enum on write (accepts a ballet position, rejects junk)", async () => {
+    // Intent: the new `footPosition` kind is a closed enum, so the strict write
+    // check accepts an enumerated value (fourth_closed) and rejects an unknown one.
+    const { parseAttributeWrite } = await importDomain();
+    expect(
+      parseAttributeWrite({ id: "a1", kind: "footPosition", count: 1, value: "fourth_closed" })
+        .value,
+    ).toBe("fourth_closed");
+    expect(() =>
+      parseAttributeWrite({ id: "a2", kind: "footPosition", count: 1, value: "sixth" }),
+    ).toThrow();
+  });
+
   it("normalizes the split diagonal → `diagonal` on write, then accepts it", async () => {
     // Intent: the alias normalizes before the strict enum check, so writing a
     // legacy diag_forward to the closed `direction` enum succeeds, stored canonical.

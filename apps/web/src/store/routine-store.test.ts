@@ -229,6 +229,22 @@ describe("#205 addPlacement forwards library figure attributes to createFigure",
     expect(attrs.length).toBeGreaterThan(24); // richer attributes are forwarded too
   });
 
+  it("forwards a charted figure's entry/exit alignment to createFigure on pick", async () => {
+    // The Waltz Closed Change is charted with constant alignment (facing Diagonal
+    // Centre, no turn) — picking it from the catalog forwards that figure-level
+    // alignment to the server seed so the placed figure shows where it starts/ends.
+    const { opts } = fakeWiring();
+    const seen: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
+    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const store = await openRoutine("rt_sample", { ...opts, createFigure });
+    store.addPlacement("s1", "Closed Change on RF", "closed-change-on-rf");
+    expect(seen[0]?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    expect(seen[0]?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+  });
+
   it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {
     const { opts } = fakeWiring();
     const seen: Array<{ attributes?: unknown[] }> = [];
@@ -715,6 +731,67 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(rp?.placement.figureRef).toBe(variantRef);
     // …and the shared base figure doc was NEVER written to (COW must not mutate it).
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
+  });
+
+  it("copy-on-write preserves the base figure's entry/exit alignment on the copy", async () => {
+    // Intent: editing a global figure's STEPS spawns a frozen copy — the user changed
+    //   the footwork, not where the figure starts/ends, so the copy must keep the
+    //   base's figure-level entry/exit alignment (else the copy loses it on every COW).
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
+    const createFigure = vi.fn(async (m: { entryAlignment?: unknown; exitAlignment?: unknown }) => {
+      created.push({ entryAlignment: m.entryAlignment, exitAlignment: m.exitAlignment });
+    });
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me", createFigure });
+
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+
+    // A GLOBAL base figure that carries figure-level alignment (a charted catalog pick).
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "closed-change-on-rf",
+        dance: "waltz",
+        name: "Closed Change on RF",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+        entryAlignment: { qualifier: "facing", direction: "DC" },
+        exitAlignment: { qualifier: "facing", direction: "DC" },
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    // Edit the footwork on the non-owned figure → copy-on-write.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    // The copy's server seed carries the base's alignment, unchanged.
+    expect(created[0]?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    expect(created[0]?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
   });
 
   it("C1: onceLive defers the copy's attribute write until after the DO seed replay, preventing silent edit loss", async () => {

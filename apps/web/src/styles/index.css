@@ -63,6 +63,9 @@
   --color-kind-footwork: var(--bf-kind-footwork);
   --color-kind-footwork-ink: var(--bf-kind-footwork-ink);
   --color-kind-footwork-tint: var(--bf-kind-footwork-tint);
+  --color-kind-footPosition: var(--bf-kind-footPosition);
+  --color-kind-footPosition-ink: var(--bf-kind-footPosition-ink);
+  --color-kind-footPosition-tint: var(--bf-kind-footPosition-tint);
   --color-kind-direction: var(--bf-kind-direction);
   --color-kind-direction-ink: var(--bf-kind-direction-ink);
   --color-kind-direction-tint: var(--bf-kind-direction-tint);
@@ -72,6 +75,9 @@
   --color-kind-position: var(--bf-kind-position);
   --color-kind-position-ink: var(--bf-kind-position-ink);
   --color-kind-position-tint: var(--bf-kind-position-tint);
+  --color-kind-bodyActions: var(--bf-kind-bodyActions);
+  --color-kind-bodyActions-ink: var(--bf-kind-bodyActions-ink);
+  --color-kind-bodyActions-tint: var(--bf-kind-bodyActions-tint);
   --color-kind-sway: var(--bf-kind-sway);
   --color-kind-sway-ink: var(--bf-kind-sway-ink);
   --color-kind-sway-tint: var(--bf-kind-sway-tint);

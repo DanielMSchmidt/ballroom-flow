@@ -57,6 +57,12 @@
   --bf-kind-footwork-tint: #f3e6d2;
   --bf-kind-footwork-border: #a9742c;
 
+  /* footPosition (feet relationship, 1st–5th) — teal */
+  --bf-kind-footPosition: #2c8a85;
+  --bf-kind-footPosition-ink: #186b66;
+  --bf-kind-footPosition-tint: #d6f0ee;
+  --bf-kind-footPosition-border: #2c8a85;
+
   /* direction (step headline) — blue */
   --bf-kind-direction: #2f5d8f;
   --bf-kind-direction-ink: #1d3a5a;
@@ -69,11 +75,17 @@
   --bf-kind-rise-tint: #d6f0e3;
   --bf-kind-rise-border: #1f8a5b;
 
-  /* position / bodyActions — violet */
+  /* position — violet */
   --bf-kind-position: #8a5cab;
   --bf-kind-position-ink: #5a3a73;
   --bf-kind-position-tint: #f3eaf8;
   --bf-kind-position-border: #8a5cab;
+
+  /* bodyActions (Body) — light violet (distinct from position) */
+  --bf-kind-bodyActions: #b07cc6;
+  --bf-kind-bodyActions-ink: #7a5296;
+  --bf-kind-bodyActions-tint: #f4ebf9;
+  --bf-kind-bodyActions-border: #b07cc6;
 
   /* sway — terracotta */
   --bf-kind-sway: #c0563f;

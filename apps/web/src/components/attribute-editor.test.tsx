@@ -54,7 +54,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const onChange = vi.fn();
     renderUi(<FigureTimeline role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /beat 2/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork" && a.count === 2,
@@ -228,9 +228,10 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     for (const name of [/direction/i, /footwork/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
-    // Technique kinds appear once "More attributes" is expanded.
+    // Technique kinds appear once "More attributes" is expanded. Exact names so
+    // "Position" doesn't also match the "Foot Position" heading.
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
-    for (const name of [/turn/i, /sway/i, /position/i]) {
+    for (const name of ["Turn", "Sway", "Position", "Foot Position"]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
@@ -329,27 +330,43 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     // The CBMP chip (now a position value) shows selected.
     expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
-    // Body Actions only offers CBM now (CBMP migrated to position).
+    // Body Actions offers CBM (labelled "Contra body" per the design), never CBMP.
     const bodyGroup = screen.getByRole("group", { name: /body actions/i });
-    expect(within(bodyGroup).getByRole("button", { name: /^CBM$/ })).toBeInTheDocument();
+    expect(within(bodyGroup).getByRole("button", { name: /^Contra body$/ })).toBeInTheDocument();
     expect(within(bodyGroup).queryByRole("button", { name: /^CBMP$/ })).toBeNull();
   });
 
-  it("adds a free-text footwork value (suggestions are not a closed enum, §3/#83)", async () => {
-    // Intent: footwork is free-text — typing a custom action adds it alongside the
-    //   readable footwork suggestions.
-    // Covers #83 (footwork free-text on the editor side).
+  it("offers footwork as a closed picklist (no free-text custom input)", async () => {
+    // Intent: footwork is now a CLOSED enum — the editor picks from the fixed set
+    //   and does NOT render the free-text "Custom footwork…" add affordance.
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
     const onChange = vi.fn();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
-    await userEvent.type(screen.getByPlaceholderText(/custom footwork/i), "brush_tap");
-    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    // No free-text add for footwork.
+    expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
+    // A footwork value is still pickable from the closed set.
+    await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
     );
-    expect(added?.value).toBe("brush_tap");
+    expect(added?.value).toBe("HT");
+  });
+
+  it("labels values with full text in the editor and explains the selected value inline", async () => {
+    // The edit picker reads as full descriptive labels ("Heel-Toe", not the "HT"
+    // code the reading overview shows); selecting a value reveals its one-line
+    // explanation (registry valueDefs) beneath the chips. The stored value is still
+    // the canonical code.
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(<AttributeEditor count={1} role="editor" value={[attr("footwork", "HT")]} />);
+    expect(screen.getByRole("button", { name: "Heel-Toe" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "HT" })).toBeNull();
+    // The selected value's explanation is shown in place.
+    expect(screen.getByText(/Heel-Toe: heel then toe/i)).toBeInTheDocument();
   });
 });
 

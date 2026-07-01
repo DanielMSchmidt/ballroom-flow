@@ -624,7 +624,7 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
     // The count timeline shows; tap count 1, then pick footwork "HT".
     await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^HT$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
     expect(figureRef).toBe("feather");

@@ -45,7 +45,8 @@ describe("AddKindPicker (frame 1.15)", () => {
     const { AddKindPicker } = await load();
     const onSelectKind = vi.fn();
     renderUi(<AddKindPicker open onSelectKind={onSelectKind} />);
-    await userEvent.click(screen.getByRole("button", { name: /position/i }));
+    // Anchored so it doesn't also match the "Foot Position" kind button.
+    await userEvent.click(screen.getByRole("button", { name: /^position/i }));
     expect(onSelectKind).toHaveBeenCalledWith(expect.objectContaining({ kind: "position" }));
   });
 

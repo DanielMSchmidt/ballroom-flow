@@ -23,6 +23,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Button, Chip, IconButton, InfoIcon, Input, SegmentedToggle } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
+import { labelValue } from "./attribute-display";
 
 /** The role a value is written to: null = both, else a single side. */
 type RoleScope = "leader" | "follower" | null;
@@ -192,14 +193,16 @@ export function AttributeEditor({
         {[...suggestions, ...customSelected].map((v) => {
           const on = selected(kind.kind, v, lookupScope);
           if (!editable) {
-            // Read-only: show only the selected values, as static chips.
+            // Read-only: show only the selected values, as static chips (full label).
             return on ? (
               <Chip key={v} tone="neutral" asStatic>
-                {v}
+                {labelValue(kind.kind, v)}
               </Chip>
             ) : null;
           }
           // Selected value pills fill studio-blue (frame 1.12); unselected outline.
+          // The chip reads as the FULL label ("Heel-Toe", not "HT"); the tight code
+          // is the reading overview's job (abbrevValue).
           return (
             <Chip
               key={v}
@@ -207,17 +210,27 @@ export function AttributeEditor({
               selected={on}
               onClick={() => toggle(kind.kind, kind.cardinality, v, scope)}
             >
-              {v}
+              {labelValue(kind.kind, v)}
             </Chip>
           );
         })}
 
-        {editable && kind.freeText && (
+        {editable && (kind.freeTextInput ?? kind.freeText) && (
           <FreeTextAdd
             label={kind.label}
             onAdd={(v) => toggle(kind.kind, kind.cardinality, v, scope)}
           />
         )}
+
+        {/* Inline explanation: tapping a value selects it AND reveals its one-line
+            definition (registry valueDefs), so "what does HT mean?" is answered in
+            place — the per-kind ⓘ overlay still lists every value's prose. */}
+        <SelectedDefs
+          values={[...suggestions, ...customSelected].filter((v) =>
+            selected(kind.kind, v, lookupScope),
+          )}
+          valueDefs={kind.valueDefs}
+        />
       </fieldset>
     );
   };
@@ -322,6 +335,31 @@ function RoleRail({ side, children }: { side: "leader" | "follower"; children: R
       </legend>
       {children}
     </fieldset>
+  );
+}
+
+/**
+ * The one-line definition(s) of the currently-selected value(s) for a kind, shown
+ * under its chips. `valueDefs` is the registry's per-value glossary; values with no
+ * definition (custom kinds) render nothing. Full width so it wraps below the chips.
+ */
+function SelectedDefs({
+  values,
+  valueDefs,
+}: {
+  values: string[];
+  valueDefs?: Record<string, string>;
+}) {
+  const defs = values.map((v) => valueDefs?.[v]).filter((d): d is string => Boolean(d));
+  if (defs.length === 0) return null;
+  return (
+    <p className="w-full text-2xs text-ink-muted">
+      {defs.map((d) => (
+        <span key={d} className="block">
+          {d}
+        </span>
+      ))}
+    </p>
   );
 }
 
