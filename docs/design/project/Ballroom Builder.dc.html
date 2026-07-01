@@ -278,6 +278,7 @@
             <sc-if value="{{ notRoleFollower }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onRoleFollower }}" style="font:700 10px 'Inconsolata';color:#2f5d8f;padding:5px 13px;cursor:pointer">Follower</span></sc-if>
           </div>
           <sc-if value="{{ roleFollower }}" hint-placeholder-val="{{ true }}"><span style="font:500 13px var(--note-font);color:#a9a299">mirror of leader</span></sc-if>
+          <sc-if value="{{ modeEdit }}" hint-placeholder-val="{{ true }}"><span style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="font:700 8px 'Inconsolata';color:#9a958c;letter-spacing:.4px">LENGTH</span><span onClick="{{ onLessBars }}" style="width:22px;height:22px;border-radius:6px;border:1.5px solid #cdddee;display:flex;align-items:center;justify-content:center;font:700 14px 'Inconsolata';color:#2f5d8f;cursor:pointer">–</span><span style="font:700 10px 'Inconsolata';color:#1c1c1e;min-width:42px;text-align:center">{{ barsLabel }}</span><span onClick="{{ onMoreBars }}" style="width:22px;height:22px;border-radius:6px;border:1.5px solid #cdddee;display:flex;align-items:center;justify-content:center;font:700 14px 'Inconsolata';color:#2f5d8f;cursor:pointer">+</span></span></sc-if>
         </div>
 
         <!-- VIEW MODE — column per attribute type, only types in use -->
@@ -316,12 +317,13 @@
                 <sc-for list="{{ editGrid.cols }}" as="col" hint-placeholder-count="6"><span style="width:56px;flex:0 0 auto;text-align:center;font:700 8px 'Inconsolata';color:{{ col.color }}">{{ col.abbr }}<sc-if value="{{ col.required }}" hint-placeholder-val="{{ true }}"><span style="color:#c0563f">*</span></sc-if></span></sc-for>
               </div>
               <sc-for list="{{ editGrid.rows }}" as="row" hint-placeholder-count="3">
+                <sc-if value="{{ row.hasBadge }}" hint-placeholder-val="{{ true }}"><div style="font:700 7px 'Inconsolata';color:#b3aea4;letter-spacing:.5px;text-transform:uppercase;padding:5px 0 2px">{{ row.barBadge }}</div></sc-if>
                 <div style="display:flex;gap:3px;margin-bottom:3px;align-items:stretch">
                   <sc-if value="{{ row.notSub }}" hint-placeholder-val="{{ true }}"><span style="width:26px;flex:0 0 auto;position:sticky;left:0;display:flex;align-items:center;justify-content:center;font:700 12px 'Inconsolata';color:var(--accent);background:#eef4fb;border-radius:6px">{{ row.count }}</span></sc-if>
                   <sc-if value="{{ row.isSub }}" hint-placeholder-val="{{ true }}"><span style="width:26px;flex:0 0 auto;position:sticky;left:0;display:flex;align-items:center;justify-content:center;font:700 11px 'Inconsolata';color:#9aa7bb;background:#f4f2ee;border-radius:6px">{{ row.count }}</span></sc-if>
                   <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="6">
-                    <div onClick="{{ cell.onAdd }}" style="width:56px;flex:0 0 auto;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;border-radius:6px;padding:3px 2px;background:#f7faff;min-height:28px;cursor:pointer">
-                      <sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span onClick="{{ c.onTap }}" style="font:700 8px 'Inconsolata';border-radius:4px;padding:1px 4px;color:#fff;text-align:center;cursor:pointer;background:{{ cell.color }}">{{ c.label }}</span></sc-for>
+                    <div onClick="{{ cell.onEdit }}" style="width:56px;flex:0 0 auto;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;border-radius:6px;padding:3px 2px;background:#f7faff;min-height:28px;cursor:pointer">
+                      <sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span style="font:700 8px 'Inconsolata';border-radius:4px;padding:1px 4px;color:#fff;text-align:center;background:{{ cell.color }}">{{ c.label }}</span></sc-for>
                       <sc-if value="{{ cell.empty }}" hint-placeholder-val="{{ true }}"><span style="font:700 11px 'Inconsolata';color:#bcd2e8;line-height:1">＋</span></sc-if>
                     </div>
                   </sc-for>
@@ -348,8 +350,8 @@
       <div style="position:absolute;inset:0;background:#faf8f3;z-index:14;display:flex;flex-direction:column">
         <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 14px 11px;border-bottom:1px solid #ece8e0">
           <span onClick="{{ attrEd.onClose }}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c1c1e" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
-          <div style="flex:1;display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;border-radius:3px;background:{{ attrEd.color }}"></span><span style="font:700 14px 'Inconsolata';color:#1c1c1e">{{ attrEd.typeLabel }}</span></div>
-          <span onClick="{{ attrEd.onSave }}" style="font:700 13px 'Inconsolata';color:var(--accent);cursor:pointer">done</span>
+          <div style="flex:1;display:flex;flex-direction:column"><span style="font:700 13px 'Inconsolata';color:#1c1c1e">{{ attrEd.timingLabel }}</span><span style="display:flex;align-items:center;gap:6px;margin-top:1px"><span style="width:9px;height:9px;border-radius:3px;background:{{ attrEd.color }}"></span><span style="font:600 10px 'Inconsolata';color:#7a746a">{{ attrEd.typeLabel }}</span></span></div>
+          <span onClick="{{ attrEd.onSave }}" style="font:700 13px 'Inconsolata';color:var(--accent);cursor:pointer">Save</span>
         </div>
         <div class="scrl" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 22px;display:flex;flex-direction:column;gap:14px">
           <sc-if value="{{ attrEd.roleAware }}" hint-placeholder-val="{{ true }}">
@@ -715,6 +717,8 @@
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><span onClick="{{ onCancelCompose }}" style="cursor:pointer;display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a958c" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg></span><span style="font:700 13px 'Inconsolata';color:#3a352d">New custom figure</span></div>
           <div style="font:700 9px 'Inconsolata';color:#9a958c;margin-bottom:6px">FIGURE NAME</div>
           <input value="{{ composeName }}" onChange="{{ onComposeNameChange }}" placeholder="e.g. Open Telemark" style="width:100%;border:1.5px solid #ddd6ca;border-radius:10px;padding:10px 13px;font:600 13px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none;margin-bottom:16px"></input>
+          <div style="font:700 9px 'Inconsolata';color:#9a958c;margin-bottom:6px">LENGTH</div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px"><span onClick="{{ onLessComposeBars }}" style="width:30px;height:30px;border-radius:8px;border:1.5px solid #ddd6ca;display:flex;align-items:center;justify-content:center;font:700 16px 'Inconsolata';color:#a9742c;cursor:pointer">–</span><span style="font:700 13px 'Inconsolata';color:#3a352d;min-width:52px;text-align:center">{{ composeBarsLabel }}</span><span onClick="{{ onMoreComposeBars }}" style="width:30px;height:30px;border-radius:8px;border:1.5px solid #ddd6ca;display:flex;align-items:center;justify-content:center;font:700 16px 'Inconsolata';color:#a9742c;cursor:pointer">+</span></div>
           <div style="font:500 14px var(--note-font);color:#9a958c;margin-bottom:16px">The figure will be added with a placeholder step. You can annotate and tag it fully from the timeline.</div>
           <div style="display:flex;gap:8px">
             <span onClick="{{ onCancelCompose }}" style="flex:1;text-align:center;font:600 12px 'Inconsolata';border:1.5px solid #d6d0c6;color:#6b665e;border-radius:11px;padding:12px;cursor:pointer">cancel</span>
@@ -880,7 +884,7 @@ class Component extends DCLogic {
       if (o.head) attrs.push(A('cu_head', o.head, o.headF||null));
       return { id:'st'+(++sid), count, attrs };
     };
-    const fig = (id, name, source, steps, base) => ({ id, name, source, steps, base:base||null });
+    const fig = (id, name, source, steps, base) => ({ id, name, source, steps, base:base||null, bars: Math.max(1, Math.ceil(steps.filter(s=>!isNaN(parseInt(s.count,10))).length/3)) });
     const brk = (id, beats) => ({ id, source:'break', name:'Break', beats:beats, steps:[] });
     const natural = [ ST('1','forward','HT',{rise:'commence',turn:'¼ R',head:'left',headF:'right'}), ST('2','side','T',{rise:'up',turn:'⅛ R'}), ST('3','close','TH',{rise:'up',position:'Closed',feet:'3'}) ];
     const spin = [ ST('1','back','TH',{rise:'lowering',position:'CBMP',turn:'½ L'}), ST('2','side','T',{rise:'body rise',sway:'to L',swayF:'to R'}), ST('3','close','TH',{rise:'continue',position:'Closed',feet:'3'}) ];
@@ -932,7 +936,7 @@ class Component extends DCLogic {
       editingEntryId:null,
       draft:null, linkPicker:null,
       replyText:'',
-      addSheetSide:null, libFilter:'', composeFigure:false, composeName:'', addSideOpen:false,
+      addSheetSide:null, libFilter:'', composeFigure:false, composeName:'', composeBars:1, addSideOpen:false,
       toast:'',
       libDanceFilter:'All', forkMenuId:null, addSideName:'',
       variants:[
@@ -1163,6 +1167,11 @@ class Component extends DCLogic {
   setTab(t){ this.setState({ tab:t, ...(t==='choreo' ? {choreoView:'list'} : {}) }); }
   toggleSide(id){ this.setState(s => ({ collapsed:{ ...s.collapsed, [id]:!s.collapsed[id] } })); }
   openFigure(id){ this.setState(s => ({ choreoView:'figure', openFigureId:id, figMode:s.assembleEdit ? 'edit' : 'view', expandedStepId:null })); }
+  figBPB(){ const d=(this.state.choreos.find(c=>c.id===this.state.openChoreoId)||{}).dance||''; return /Waltz/.test(d)?3:4; }
+  _editFigure(figId, updater){ this.setState(s=>{ let toast=null; const routine={...s.routine, sides:s.routine.sides.map(sd=>({...sd, figures:sd.figures.map(f=>{ if(f.id!==figId) return f; let fig=f; if(f.source==='library'||f.source==='variant'){ toast='Copied into this choreo'; fig={...f,source:'custom',base:f.base||f.name}; } return updater(fig); })}))}; if(toast){clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),1800);return {routine,toast};} return {routine}; }); }
+  setFigureBars(delta){ const fid=this.state.openFigureId; this._editFigure(fid, f=>({ ...f, bars: Math.max(1, Math.min(16, (f.bars||1)+delta)) })); }
+  editCell(stepId, typeKey){ const st=this._findStep(stepId); const a=st&&st.attrs.find(x=>!x.removed&&x.type===typeKey); if(a){ this.openAttr(stepId,a.id); } else { const dv=this.defaultVal(typeKey); this.setState({ editAttr:{ stepId, attrId:null, typeKey, l:dv, f:null, linked:true, count:(st?st.count:'') } }); } }
+  createStepThenEdit(figId, idx, count, typeKey){ const nid='st'+Date.now(); this._editFigure(figId, f=>{ const steps=f.steps.slice(); steps.splice(idx,0,{id:nid,count:count,attrs:[]}); return {...f, steps}; }); const dv=this.defaultVal(typeKey); this.setState({ editAttr:{ stepId:nid, attrId:null, typeKey, l:dv, f:null, linked:true, count:count } }); }
   setRole(r){ try { localStorage.setItem('bb_role', r); } catch(e){} this.setState({ role:r }); }
   /* copy-on-write: editing a figure that lives outside this choreo forks a frozen, choreo-owned copy */
   _editStep(stepId, updater){
@@ -1182,7 +1191,7 @@ class Component extends DCLogic {
   openMoment(stepId){ this.setState({ momentStepId:stepId }); }
   closeMoment(){ this.setState({ momentStepId:null, editAttr:null, addAttrFor:null, newType:null }); }
   defaultVal(typeKey){ const t = this.typeInfo(typeKey); if (t.mode === 'step') return { dir:null, foot:null }; if (!t.single) return []; return null; }
-  openAttr(stepId, attrId){ const st = this._findStep(stepId); const a = st && st.attrs.find(x => x.id === attrId); if (!a) return; this.setState({ editAttr:{ stepId, attrId, typeKey:a.type, l:this._clone(a.l), f:this._clone(a.f), linked:(a.f == null) } }); }
+  openAttr(stepId, attrId){ const st = this._findStep(stepId); const a = st && st.attrs.find(x => x.id === attrId); if (!a) return; this.setState({ editAttr:{ stepId, attrId, typeKey:a.type, l:this._clone(a.l), f:this._clone(a.f), linked:(a.f == null), count:(st?st.count:'') } }); }
   startAddAttr(stepId){ this.setState({ addAttrFor:stepId, newType:null }); }
   pickType(typeKey){ const stepId = this.state.addAttrFor; const dv = this.defaultVal(typeKey); this.setState({ editAttr:{ stepId, attrId:null, typeKey, l:dv, f:null, linked:true }, addAttrFor:null, newType:null }); }
   typeAbbr(t){ return ({step:'Step',rise:'Rise',position:'Pos',feet:'Feet',body:'Body',sway:'Sway',turn:'Turn'})[t.key] || (t.label && t.label.length>5 ? t.label.slice(0,5) : t.label); }
@@ -1238,7 +1247,7 @@ class Component extends DCLogic {
     this.setState(s => ({ routine:{ ...s.routine, sides:s.routine.sides.map(sd => ({ ...sd, figures: sd.figures.map(f => f.id!==figId ? f : ({ ...f, beats: Math.max(1, (f.beats||1)+delta) })) })) } }));
   }
   _barBeats(){ const d=(this.state.choreos.find(c=>c.id===this.state.openChoreoId)||{}).dance||''; return /Waltz/.test(d)?3:4; }
-  addFigure(sideId, name, source){
+  addFigure(sideId, name, source, bars){
     const pfx = 'na' + (++this._naid) + '_';
     let n = 0, an = 0;
     // new model: a step = direction (headline) + footwork only. Feet alternate automatically — never shown.
@@ -1260,7 +1269,7 @@ class Component extends DCLogic {
     const isTriple = dance === 'Waltz' || dance === 'Viennese Waltz';
     const generic = isTriple ? [ ST('1','forward','HT'), ST('2','side','T',{rise:'up'}), ST('3','close','TH') ] : [ ST('S','forward','HT'), ST('Q','side','T'), ST('Q','close','TH') ];
     const steps = builders[name] || generic;
-    const newFig = { id:'fx'+this._naid, name, source, steps };
+    const newFig = { id:'fx'+this._naid, name, source, steps, bars: bars || Math.max(1, Math.ceil(steps.filter(s=>!isNaN(parseInt(s.count,10))).length/(isTriple?3:4))) };
     this.setState(s => {
       const routine = { ...s.routine, sides: s.routine.sides.map(sd => sd.id === sideId ? { ...sd, figures: sd.figures.concat([newFig]) } : sd) };
       return { routine, addSheetSide:null };
@@ -1363,7 +1372,8 @@ class Component extends DCLogic {
     const _cols = (forEdit) => { let arr = forEdit ? _stdT.slice() : _stdT.filter(t=>_usedKeys[t.key]); (st.customTypes||[]).forEach(t=>{ const show = forEdit ? (_usedKeys[t.key]||t.scope==='choreo') : _usedKeys[t.key]; if (show && !arr.find(x=>x.key===t.key)) arr.push(t); }); return arr.map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color, required:!!t.required })); };
     const _grid = (forEdit) => { const cols=_cols(forEdit); const rows=(figure?figure.steps:[]).map(s=>{ const isSub=(s.count==='&'||s.count==='e'||s.count==='a'); const tk=figure.id+'|'+(figure.steps.indexOf(s)+1); const th=st.threads[tk]||[]; const cells=cols.map(c=>{ const attrs=s.attrs.filter(a=>!a.removed&&a.type===c.key); const chips=attrs.filter(a=>this.attrIsSet(a)).map(a=>({ label:this.attrDisplay(a,vRole), divergent:this.attrDivergent(a), onTap:()=>this.openAttr(s.id,a.id) })); return { color:c.color, chips, hasVal:chips.length>0, empty:chips.length===0, onAdd:()=>this.addTyped(s.id,c.key) }; }); return { id:s.id, count:s.count, isSub, notSub:!isSub, hasThread:th.length>0, threadCount:th.length, cells }; }); return { cols, rows, hasCols:cols.length>0, noCols:cols.length===0 }; };
     const viewGrid = _grid(false);
-    const editGrid = _grid(true);
+    const _isSubC = c => (c==='&'||c==='e'||c==='a');
+    const editGrid = (()=>{ if(!figure) return {cols:[],rows:[],hasCols:false}; const cols=_cols(true); const BPB=this.figBPB(); const steps=figure.steps; const bars=figure.bars||Math.max(1,Math.ceil(steps.filter(s=>!_isSubC(s.count)).length/BPB)); let si=0; const rows=[]; const mkCells=(stp)=>cols.map(c=>{ const attrs=stp?stp.attrs.filter(a=>!a.removed&&a.type===c.key):[]; const chips=attrs.filter(a=>this.attrIsSet(a)).map(a=>({label:this.attrDisplay(a,vRole),divergent:this.attrDivergent(a)})); return { color:c.color, chips, hasVal:chips.length>0, empty:chips.length===0, onEdit:(()=>this.editCell(stp.id,c.key)) }; }); for(let bar=1;bar<=bars;bar++){ for(let beat=1;beat<=BPB;beat++){ const insertIdx=si; let stp=null; if(si<steps.length && !_isSubC(steps[si].count)){ stp=steps[si]; si++; } const badge=beat===1?('bar '+bar):''; if(stp){ rows.push({ id:stp.id, count:stp.count, isSub:false,notSub:true, barBadge:badge,hasBadge:!!badge, cells:mkCells(stp) }); } else { const cnt=String(beat); rows.push({ id:'e'+bar+'_'+beat, count:cnt, isSub:false,notSub:true, barBadge:badge,hasBadge:!!badge, cells:cols.map(c=>({ color:c.color, chips:[], hasVal:false, empty:true, onEdit:(()=>this.createStepThenEdit(figure.id, insertIdx, cnt, c.key)) })) }); } const offs={}; while(si<steps.length && _isSubC(steps[si].count)){ const os=steps[si]; offs[os.count]=os; si++; } const subInsert=si; ['e','&','a'].forEach(sub=>{ const os=offs[sub]; if(os){ rows.push({ id:os.id, count:os.count, isSub:true,notSub:false, barBadge:'',hasBadge:false, cells:mkCells(os) }); } else { rows.push({ id:'p'+bar+'_'+beat+'_'+sub, count:sub, isSub:true,notSub:false, barBadge:'',hasBadge:false, cells:cols.map(c=>({ color:c.color, chips:[], hasVal:false, empty:true, onEdit:(()=>this.createStepThenEdit(figure.id, subInsert, sub, c.key)) })) }); } }); Object.keys(offs).forEach(k=>{ if(k!=='e'&&k!=='&'&&k!=='a'){ const os=offs[k]; rows.push({ id:os.id, count:os.count, isSub:true,notSub:false, barBadge:'',hasBadge:false, cells:mkCells(os) }); } }); } } while(si<steps.length){ const s=steps[si]; si++; const sub=_isSubC(s.count); rows.push({ id:s.id, count:s.count, isSub:sub,notSub:!sub, barBadge:'',hasBadge:false, cells:mkCells(s) }); } return { cols, rows, hasCols:cols.length>0, noCols:cols.length===0 }; })();
     const timingChoices = [ {label:'&',sub:'½'}, {label:'e',sub:'¼'}, {label:'a',sub:'¾'}, {label:'1',sub:''}, {label:'2',sub:''}, {label:'3',sub:''}, {label:'4',sub:''} ].map(c=>({ label:c.label, sub:c.sub, hasSub:!!c.sub, onPick:()=>this.addMoment(c.label) }));
 
     /* moment editor + single-attribute editor + type picker + custom-type form */
@@ -1389,7 +1399,7 @@ class Component extends DCLogic {
         if (!t.single){ const arr = Array.isArray(val)?val:[]; return { isMulti:true, opts:vals.map(e=>({label:e.label, sel:arr.indexOf(e.key)>=0, notSel:arr.indexOf(e.key)<0, onPick:()=>this.toggleEditMulti(rk,e.key), onInfo:()=>this.openValInfo(t.key,e.key)})) }; }
         return { isList:true, opts:vals.map(e=>({label:e.label, sel:val===e.key, notSel:val!==e.key, onPick:()=>this.setEditVal(rk, val===e.key?null:e.key), onInfo:()=>this.openValInfo(t.key,e.key)})) };
       };
-      attrEd = { open:true, typeLabel:t.label, color:t.color, roleAware, notRoleAware:!roleAware, linked:eA.linked, unlinked:!eA.linked, isExisting:!!eA.attrId,
+      attrEd = { open:true, typeLabel:t.label, color:t.color, timingLabel:((eA.count==='&')?'the & (½ beat)':(eA.count==='e')?'the e (¼ beat)':(eA.count==='a')?'the a (¾ beat)':('count '+(eA.count||'—'))), roleAware, notRoleAware:!roleAware, linked:eA.linked, unlinked:!eA.linked, isExisting:!!eA.attrId,
         leader:mkRole('l', eA.l), follower:mkRole('f', eA.linked ? eA.l : eA.f),
         onToggleLink:()=>this.toggleEditLink(), onSave:()=>this.saveAttr(), onRemove:()=>this.removeAttr(), onClose:()=>this.closeAttr() };
     }
@@ -1525,6 +1535,7 @@ class Component extends DCLogic {
 
       figTitle: figure ? figure.name : '', figSideName: side ? side.name : '',
       figMode: st.figMode||'view',
+      barsLabel: figure ? ((figure.bars||1)+((figure.bars||1)===1?' bar':' bars')) : '', onLessBars:()=>this.setFigureBars(-1), onMoreBars:()=>this.setFigureBars(1),
       modeView: (st.figMode||'view')==='view', notModeView: (st.figMode||'view')!=='view',
       modeEdit: (st.figMode||'view')==='edit', notModeEdit: (st.figMode||'view')!=='edit',
       onModeView:() => this.setState({ figMode:'view' }),
@@ -1591,10 +1602,13 @@ class Component extends DCLogic {
       libEmpty: !!st.libFilter && libDefs.filter(l=>l.name.toLowerCase().includes(st.libFilter.toLowerCase())).length===0,
       composeFigure: st.composeFigure, notComposeFigure: !st.composeFigure,
       composeName: st.composeName,
+      composeBarsLabel: (st.composeBars||1)+((st.composeBars||1)===1?' bar':' bars'),
+      onLessComposeBars:()=>this.setState(s=>({composeBars:Math.max(1,(s.composeBars||1)-1)})),
+      onMoreComposeBars:()=>this.setState(s=>({composeBars:Math.min(16,(s.composeBars||1)+1)})),
       onComposeNameChange:(e)=>this.setState({composeName:e.target.value}),
-      onStartCompose:()=>this.setState({composeFigure:true,composeName:''}),
+      onStartCompose:()=>this.setState({composeFigure:true,composeName:'',composeBars:1}),
       onCancelCompose:()=>this.setState({composeFigure:false,composeName:''}),
-      onSaveCompose:()=>{ const name=(st.composeName||'').trim()||'New figure'; this.addFigure(st.addSheetSide,name,'custom'); this.setState({composeFigure:false,composeName:''}); },
+      onSaveCompose:()=>{ const name=(st.composeName||'').trim()||'New figure'; this.addFigure(st.addSheetSide,name,'custom',st.composeBars||1); this.setState({composeFigure:false,composeName:'',composeBars:1}); },
       onCloseAddSheet:()=>this.setState({addSheetSide:null,libFilter:'',composeFigure:false,composeName:''}),
       addSideOpen: st.addSideOpen, notAddSideOpen: !st.addSideOpen,
       onOpenAddSide:()=>this.setState({addSideOpen:true, addSideName:''}),
