@@ -43,6 +43,7 @@ import {
   Chip,
   CountPill,
   EditIcon,
+  FullScreen,
   IconButton,
   Input,
   kindVar,
@@ -52,6 +53,7 @@ import {
   Sheet,
   Skeleton,
   Spinner,
+  Stepper,
   useToast,
 } from "../ui";
 import { AddKindPicker } from "./AddKindPicker";
@@ -605,17 +607,18 @@ export function Assemble({
       >
         <AddFigurePicker
           dance={routine.dance as DanceId}
-          onAdd={(name, figureType) => {
-            if (addingFigureTo) store.addPlacement(addingFigureTo, name, figureType);
+          onAdd={(name, figureType, bars) => {
+            if (addingFigureTo) store.addPlacement(addingFigureTo, name, figureType, bars);
             setAddingFigureTo(null);
           }}
         />
       </Sheet>
 
-      {/* Notate a figure (US-028 hero flow): open the figure's step timeline. The
-          editor writes to the figure's OWN doc via the store; a viewer sees it
-          read-only. Re-reads live so a collaborator's edit flows in. */}
-      <Sheet
+      {/* Notate a figure (US-028 hero flow, frames 1.11/1.12): a FULL-SCREEN editor
+          (‹ back), not a modal-within-modal. The editor writes to the figure's OWN
+          doc via the store and auto-saves (undo exists — no figure-level Save); a
+          viewer sees it read-only. Re-reads live so a collaborator's edit flows in. */}
+      <FullScreen
         open={notating !== null}
         onClose={() => {
           setNotating(null);
@@ -624,6 +627,7 @@ export function Assemble({
           setCopiedToast(false);
         }}
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
+        backLabel="Back"
       >
         {notating !== null && !notatingFigureReady && (
           // Load on open (C/E): wait for the figure's own live doc before showing
@@ -633,7 +637,7 @@ export function Assemble({
           </div>
         )}
         {notatingFigure && notatingFigureReady && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 p-4">
             {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
                 chips above the timeline when either entry or exit alignment is set. */}
             {(notatingFigure.entryAlignment || notatingFigure.exitAlignment) && (
@@ -661,6 +665,8 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
+              bars={notatingFigure.bars}
+              onBarsChange={(next) => store.setFigureBars(notatingFigure.id, next)}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               scopeLabel={routine.title || notatingFigure.name}
@@ -747,7 +753,7 @@ export function Assemble({
             </div>
           </div>
         )}
-      </Sheet>
+      </FullScreen>
 
       {/* Add an attribute kind (frame 1.15 + US-043): a picker over the standard
           + custom kinds with a "＋ new attribute type" route to the builder
@@ -1320,10 +1326,14 @@ function AddFigurePicker({
   onAdd,
 }: {
   dance: DanceId;
-  onAdd: (name: string, figureType?: string) => void;
+  onAdd: (name: string, figureType?: string, bars?: number) => void;
 }) {
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
+  // The new custom figure's authored length (PLAN §2.5) — chosen here on creation
+  // and adjustable later in the editor header. Library picks keep their catalog
+  // default (their charted steps), so the stepper applies to the custom form only.
+  const [bars, setBars] = useState(2);
   const q = filter.trim().toLowerCase();
   const presets = libraryFiguresForDance(dance).filter(
     (f) => q === "" || f.name.toLowerCase().includes(q),
@@ -1365,7 +1375,7 @@ function AddFigurePicker({
           e.preventDefault();
           const next = name.trim();
           if (!next) return;
-          onAdd(next, undefined);
+          onAdd(next, undefined, bars);
           setName("");
         }}
       >
@@ -1375,6 +1385,18 @@ function AddFigurePicker({
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
+        <div className="flex items-center justify-between">
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">Length</span>
+          <Stepper
+            label="Bars"
+            hideLabel
+            unit="bars"
+            min={1}
+            max={32}
+            value={bars}
+            onChange={setBars}
+          />
+        </div>
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
           Add custom
         </Button>

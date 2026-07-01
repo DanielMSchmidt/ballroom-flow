@@ -160,7 +160,8 @@ describe("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" figureScope="global" />);
-    await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
+    // Editing a global figure via a cell overlay triggers copy-on-write.
+    await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(await screen.findByText(/copied as your variant/i)).toBeInTheDocument();
   });

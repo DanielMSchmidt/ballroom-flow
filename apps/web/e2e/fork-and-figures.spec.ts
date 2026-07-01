@@ -123,10 +123,12 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's step timeline and set count-1 footwork "T".
+    // Open the figure's full-screen editor and set count-1 footwork "HT" via the
+    // Step cell's single-attribute overlay, then Save to close it.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
+    await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
+    await page.getByRole("button", { name: /^Save$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
@@ -201,8 +203,9 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
 
     // Open the figure's steps and trigger copy-on-write by editing count 1.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
-    // "T" is a suggestion in the Step kind; clicking it on a global figure triggers COW.
+    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    // "Heel-Toe" is a footwork suggestion in the Step overlay; picking it on a
+    // global figure triggers copy-on-write.
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
 
     // The FigureTimeline immediately shows "Copied as your variant" (local state).
@@ -352,8 +355,9 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     // step timeline editor.
     await editor.page.getByRole("button", { name: /list view/i }).click();
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await editor.page.getByRole("button", { name: /beat 1/i }).click();
+    await editor.page.getByRole("button", { name: /Step at count 1$/i }).click();
     await editor.page.getByRole("button", { name: /^Heel-Toe$/ }).click();
+    await editor.page.getByRole("button", { name: /^Save$/ }).click();
     await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });

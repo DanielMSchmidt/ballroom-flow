@@ -95,6 +95,7 @@ The per-story detail in the index + sections below is **unchanged** — it is th
 | US-053 ✓ | Account / profile + plan status | M3 | user-facing | US-019,US-022 | Edit displayName + identity color; show plan + owned-routine count; sign out. Built: `Profile`/`ProfileScreen` + `profile.test.tsx` + `e2e/profile.spec.ts`; first-run onboarding nudge (US-019) points new users at it. |
 | US-054 | Full Standard syllabus library seed (ISTD) | Content | system/developer | US-005,US-032 | Global FigureDocs by figureType×dance; validated core at launch, full syllabus rolling; values are data, refinable. |
 | US-055 | Demo routine on join (fork of a central "golden steps" Waltz seed) | M7 | user-facing | US-007,US-025,US-045 | New users get a personal, editable demo routine — a fork of a central app-owned sample Waltz routine — so they explore real content immediately, not a blank page. |
+| US-056 | Figure length in bars (authored grid extent) | M2 | user-facing | US-004,US-002 | A figure carries an explicit `bars` count — chosen on creation (stepper), adjustable in the editor header — that generates the timing grid (every bar → beat → e/&/a). |
 
 ---
 
@@ -480,16 +481,28 @@ That spine (US-001–010, 012, 014–015, 017, 018, 021, 028) is the smallest th
 
 > The hero flow (§1.4 step 4, §4.4–4.5). Source: §2.5, §3, §4.4, §4.5, §10.2.
 
+#### US-056 — Figure length in bars (authored grid extent)
+- **Narrative:** As an editor, I want to set a figure's length in musical bars, so that the editor shows every place a value could go — not just the timings already used — and I can size the figure explicitly.
+- **Milestone:** M2 · **Source:** §2.5.2, §4.4 · **Depends-on:** US-004, US-002 · **Type:** user-facing
+- **Acceptance:**
+  - A figure carries an explicit `bars` count; the create-figure flow offers a **stepper** (default ⌈whole-beat steps ÷ beatsPerBar⌉, min 1 — a catalog pick keeps its charted default).
+  - The editor header has a **"− N bars +"** stepper that changes the length; every edit auto-saves.
+  - The grid rows are **generated from `bars`** (beatsPerBar = 3 Waltz/Viennese, 4 otherwise): each bar → each beat → the whole beat then `e`/`&`/`a`; a value placed beyond the range is never hidden.
+  - Changing the length of a figure outside the choreo forks a frozen choreo-owned copy (copy-on-write), like any other edit.
+- **Tests:**
+  - Domain: `packages/domain/src/figure-grid.test.ts` — `defaultFigureBars`, `resolveFigureBars`, `figureGridSlots`.
+  - Component: `apps/web/src/components/figure-timeline-beats.test.tsx` — bars default/explicit, the stepper emits the next length, and the generated whole/sub-beat rows.
+
 #### US-028 — Figure timeline: place/edit/remove attributes 🦴
 - **Narrative:** As an editor, I want to place attributes on a figure's count timeline, so that I can notate the figure (the hero flow).
-- **Milestone:** M2 · **Source:** §1.4, §4.4, §4.5 · **Depends-on:** US-018, US-003, US-021 · **Type:** user-facing
+- **Milestone:** M2 · **Source:** §1.4, §4.4, §4.5, §2.5.2 · **Depends-on:** US-018, US-003, US-021, US-056 · **Type:** user-facing
 - **Acceptance:**
-  - Tapping a count opens the editor; I can add/edit/remove an attribute of any registry kind for that count.
-  - Re-tapping a selected value clears it.
-  - I can switch the attribute's role inline (leader/follower/both).
-  - Counts render with conventional labels (US-004); a commenter/viewer cannot edit.
+  - The figure opens **full-screen** (‹ back), showing a **bars-driven grid** (§2.5.2): every timing the figure's length allows (bar → beat → `e`/`&`/`a`) × every applicable attribute column.
+  - Tapping any **cell** opens a **focused single-attribute overlay** (frame 1.12, US-029) for exactly that (timing, attribute); I add/edit/remove that one attribute there. Re-tapping a selected value clears it.
+  - Every edit **auto-saves** (an undo exists) — there is **no figure-level Save**; the overlay's Save just confirms + closes.
+  - Counts render with conventional labels (US-004); a commenter/viewer cannot edit (read grid, no overlay).
 - **Tests (unskip when done):**
-  - Component: `apps/web/src/components/attribute-editor.test.tsx` (describe `US-028 …`) — `opens the editor on tapping a count and adds an attribute for that count` (AC-1), `clears a value when its selected option is re-tapped` (AC-2), `does not allow a commenter/viewer to edit` (AC-4). Inline role-switch (AC-3) is covered by US-030's role-toggle test.
+  - Component: `apps/web/src/components/attribute-editor.test.tsx` (describe `US-028 …`) — `opens the single-attribute overlay on a cell and adds an attribute for that count` (AC-1/AC-2); `apps/web/src/components/figure-timeline-beats.test.tsx` — the bars-driven grid + cell overlay (`placing a step via a cell overlay`, `the single-attribute overlay`). Inline role-switch is covered by US-030's role-toggle test.
   - E2E: `apps/web/e2e/authoring.spec.ts` — the "place attributes" step of the hero journey.
 
 #### US-029 — Attribute editor (registry-derived sections)

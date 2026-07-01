@@ -18,6 +18,7 @@ import {
   addSection,
   copyOnWrite,
   DANCES,
+  defaultFigureBars,
   ensureSortKeys,
   type FigureDoc,
   isReservedKind,
@@ -150,8 +151,11 @@ export interface RoutineStore extends RoutineReadModel {
    * (the user then edits its timeline, US-028) and appends a placement
    * referencing it. A library pick (US-032) passes the catalog's canonical
    * `figureType`; a custom figure omits it and the store slugs one from the name.
+   * `bars` is the figure's authored length chosen in the create flow (PLAN §2.5);
+   * omitted → the store derives ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
+   * attributes (a catalog figure's charted steps, or 1 for a fresh custom).
    */
-  addPlacement(sectionId: string, figureName: string, figureType?: string): void;
+  addPlacement(sectionId: string, figureName: string, figureType?: string, bars?: number): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -172,6 +176,13 @@ export interface RoutineStore extends RoutineReadModel {
    * now this writes straight to the referenced figure doc.
    */
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
+  /**
+   * Set a figure's authored length in musical bars (PLAN §2.5). Drives the editor
+   * grid (every bar → beat → e/&/a slot). Like {@link setFigureAttributes}, editing
+   * a global (app-owned library) figure forks a frozen owned copy first (COW,
+   * US-035); an owned/account figure changes in place. Clamped to ≥1.
+   */
+  setFigureBars(figureRef: string, bars: number): void;
   /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
   setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Routine-scoped annotations (US-039), tombstones dropped. */
@@ -235,6 +246,8 @@ export type CreateFigureFn = (figure: {
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
   attributes: Attribute[];
+  /** The figure's authored length in musical bars (PLAN §2.5) — chosen on create. */
+  bars?: number;
   /** Figure-level entry/exit alignment seeded from the catalog chart, where charted. */
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
@@ -689,7 +702,7 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg) => {
+    addPlacement: (sectionId, figureName, figureTypeArg, barsArg) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
@@ -735,6 +748,11 @@ export async function openRoutine(
 
       // A catalog pick carries the per-step timeline (US-032 + WDSF seed); a custom has none.
       const attributes = preset?.attributes ?? [];
+      // Seed the figure's authored length (PLAN §2.5): the create flow's chosen
+      // `bars` when given, else ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
+      // attributes (a catalog figure's charted steps; 1 for a fresh custom). The
+      // editor's bars stepper adjusts it later.
+      const bars = barsArg ?? defaultFigureBars(attributes, dance);
       // …and its charted figure-level alignment (where it started / ended), where present.
       const entryAlignment = preset?.entryAlignment;
       const exitAlignment = preset?.exitAlignment;
@@ -753,6 +771,7 @@ export async function openRoutine(
         figureType,
         routineId,
         attributes,
+        bars,
         entryAlignment,
         exitAlignment,
       })
@@ -842,92 +861,11 @@ export async function openRoutine(
       // reading view already HID inapplicable columns; this stops the bad value at
       // the source instead of relying on every reader to defend.
       const attributes = rawAttributes.filter((a) => kindAppliesToDance(a.kind, figure?.dance));
-      if (figure?.scope !== "global") {
-        // Account figures edit IN PLACE — whether you own it, or it's a co-member's
-        // figure you can edit via the routine cascade (the shared doc converges to
-        // its owner, US-034). The DO permission boundary enforces your rights: an
-        // editor's write is applied, a viewer's is dropped. Copy-on-write fires
-        // ONLY for global (app-owned library) figures, which are non-editable.
-        figureConn(figureRef).change((draft) => {
-          draft.attributes = attributes;
-        });
-        return;
-      }
-      // Copy-on-write: editing a global (app-owned library) figure spawns an owned,
-      // FROZEN copy that carries its OWN attributes (a snapshot, no overlay, no
-      // flow-up — §5.2 / §2.5.1 #14–18), re-points the placement, and stores the
-      // user's edited attributes directly. The base is untouched.
-      const base = figure;
-      const loc = findPlacement(figureRef);
-      if (!loc) return;
-      const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
-      // defensive: a global figure always yields a variant
-      if (!variant) return;
-      // M2: guard against duplicate orphan variants on rapid double-edits.
-      if (cowInFlight.has(figureRef)) return;
-      cowInFlight.add(figureRef);
-      // 1) Project the copy (account-figure row + copy DO seeded w/ base ref as
-      //    provenance). Only AFTER it succeeds do we write the attributes, re-point
-      //    the placement, and toast — so a failed POST never leaves the placement
-      //    pointing at a copy doc that was never created (consistent state; the
-      //    edit drops).
-      createFigure({
-        figureRef: variant.id,
-        name: variant.name,
-        dance: variant.dance,
-        figureType: variant.figureType,
-        routineId,
-        attributes,
-        // Preserve the base's figure-level alignment onto the frozen copy — the
-        // user edited the step attributes, not where the figure starts/ends, so the
-        // copy should keep the base's entry/exit alignment. Undefined when the base
-        // has none (buildDoc strips it server-side); the onceLive rewrite below sets
-        // other fields but never touches alignment, so the seeded value survives.
-        entryAlignment: base.entryAlignment,
-        exitAlignment: base.exitAlignment,
-        baseFigureRef: base.id,
-      })
-        .then(() => {
-          const conn = figureConn(variant.id);
-          // 2) Write the user's edited attributes directly onto the copy — deferred
-          //    until the copy DO's catch-up replay has been applied (#202 / C1).
-          //    Without onceLive the write races the server seed: both writes are
-          //    causally independent, so ~50% of the time the server's seed wins and
-          //    the user's edit is silently lost. With onceLive the client write
-          //    lands causally AFTER the seed, so it always wins.
-          conn.onceLive(() => {
-            conn.change((draft) => {
-              draft.id = variant.id;
-              draft.scope = "account";
-              draft.ownerId = currentUserId;
-              draft.source = "custom";
-              draft.figureType = variant.figureType;
-              draft.dance = variant.dance;
-              draft.name = variant.name;
-              draft.baseFigureRef = base.id; // provenance only — frozen, no overlay
-              draft.attributes = attributes;
-              draft.schemaVersion = base.schemaVersion;
-              draft.deletedAt = null;
-            });
-          });
-          // 3) Re-point the placement in the routine doc — only on success.
-          routineConn.change((draft) => {
-            for (const section of draft.sections ?? []) {
-              const p = section.placements?.find((pp) => pp.id === rePointed.id);
-              if (p) p.figureRef = variant.id;
-            }
-          });
-          // 4) Tell the screen to toast "copied as your variant".
-          onCopyOnWrite?.(variant.id);
-          cowInFlight.delete(figureRef); // M2: release the in-flight guard on success
-        })
-        .catch((err) => {
-          // The variant POST failed (auth/network/quota): leave the placement on
-          // the base figure (no re-point, no toast) — the edit is dropped rather
-          // than corrupting state with a dangling variant reference.
-          console.warn("copy-on-write failed; placement left on the base figure", err);
-          cowInFlight.delete(figureRef); // M2: release the in-flight guard on failure too
-        });
+      editFigure(figureRef, { attributes });
+    },
+
+    setFigureBars: (figureRef, rawBars) => {
+      editFigure(figureRef, { bars: Math.max(1, Math.round(rawBars)) });
     },
 
     setFigureAlignment: (figureRef, edge, alignment) => {
@@ -1033,6 +971,105 @@ export async function openRoutine(
       for (const conn of figureConns.values()) conn.close();
     },
   };
+
+  /**
+   * Apply a partial edit (attributes and/or bars) to a figure doc. Account/owned
+   * figures change IN PLACE (the DO permission boundary decides if the write
+   * sticks); a global (app-owned library) figure forks a FROZEN owned copy first
+   * (copy-on-write, §5.2 / US-035) that carries the merged content, re-points the
+   * placement, and toasts. The base is never mutated. Shared by
+   * `setFigureAttributes` and `setFigureBars` so both edits fork identically.
+   */
+  function editFigure(figureRef: string, patch: { attributes?: Attribute[]; bars?: number }): void {
+    const figure = readFigureDoc(figureConn(figureRef));
+    if (figure?.scope !== "global") {
+      // Account figures edit IN PLACE — whether you own it, or it's a co-member's
+      // figure you can edit via the routine cascade (the shared doc converges to
+      // its owner, US-034). Copy-on-write fires ONLY for global figures below.
+      figureConn(figureRef).change((draft) => {
+        if (patch.attributes !== undefined) draft.attributes = patch.attributes;
+        if (patch.bars !== undefined) draft.bars = patch.bars;
+      });
+      return;
+    }
+    // Copy-on-write: editing a global (app-owned library) figure spawns an owned,
+    // FROZEN copy that carries its OWN content (a snapshot, no overlay, no flow-up —
+    // §5.2 / §2.5.1 #14–18), re-points the placement, and stores the user's edit.
+    const base = figure;
+    // The copy carries the merged content: the edited field from `patch`, the
+    // untouched fields from the base (so a bars-only edit keeps the base's steps,
+    // and an attributes-only edit keeps the base's authored bar length).
+    const attributes = patch.attributes ?? base.attributes;
+    const bars = patch.bars ?? base.bars;
+    const loc = findPlacement(figureRef);
+    if (!loc) return;
+    const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
+    // defensive: a global figure always yields a variant
+    if (!variant) return;
+    // M2: guard against duplicate orphan variants on rapid double-edits.
+    if (cowInFlight.has(figureRef)) return;
+    cowInFlight.add(figureRef);
+    // 1) Project the copy (account-figure row + copy DO seeded w/ base ref as
+    //    provenance). Only AFTER it succeeds do we write the content, re-point the
+    //    placement, and toast — so a failed POST never leaves the placement
+    //    pointing at a copy doc that was never created (consistent state; the
+    //    edit drops).
+    createFigure({
+      figureRef: variant.id,
+      name: variant.name,
+      dance: variant.dance,
+      figureType: variant.figureType,
+      routineId,
+      attributes,
+      ...(bars != null ? { bars } : {}),
+      // Preserve the base's figure-level alignment onto the frozen copy — the user
+      // edited steps/length, not where the figure starts/ends, so the copy keeps the
+      // base's entry/exit alignment. Undefined when the base has none.
+      entryAlignment: base.entryAlignment,
+      exitAlignment: base.exitAlignment,
+      baseFigureRef: base.id,
+    })
+      .then(() => {
+        const conn = figureConn(variant.id);
+        // 2) Write the user's edited content directly onto the copy — deferred until
+        //    the copy DO's catch-up replay has been applied (#202 / C1). Without
+        //    onceLive the write races the server seed: both are causally
+        //    independent, so ~50% of the time the seed wins and the edit is lost.
+        conn.onceLive(() => {
+          conn.change((draft) => {
+            draft.id = variant.id;
+            draft.scope = "account";
+            draft.ownerId = currentUserId;
+            draft.source = "custom";
+            draft.figureType = variant.figureType;
+            draft.dance = variant.dance;
+            draft.name = variant.name;
+            draft.baseFigureRef = base.id; // provenance only — frozen, no overlay
+            draft.attributes = attributes;
+            if (bars != null) draft.bars = bars;
+            draft.schemaVersion = base.schemaVersion;
+            draft.deletedAt = null;
+          });
+        });
+        // 3) Re-point the placement in the routine doc — only on success.
+        routineConn.change((draft) => {
+          for (const section of draft.sections ?? []) {
+            const p = section.placements?.find((pp) => pp.id === rePointed.id);
+            if (p) p.figureRef = variant.id;
+          }
+        });
+        // 4) Tell the screen to toast "copied as your variant".
+        onCopyOnWrite?.(variant.id);
+        cowInFlight.delete(figureRef); // M2: release the in-flight guard on success
+      })
+      .catch((err) => {
+        // The variant POST failed (auth/network/quota): leave the placement on the
+        // base figure (no re-point, no toast) — the edit is dropped rather than
+        // corrupting state with a dangling variant reference.
+        console.warn("copy-on-write failed; placement left on the base figure", err);
+        cowInFlight.delete(figureRef); // M2: release the in-flight guard on failure too
+      });
+  }
 
   /** Find the (live) placement and its section id that references `figureRef`. */
   function findPlacement(figureRef: string): { sectionId: string; placement: Placement } | null {

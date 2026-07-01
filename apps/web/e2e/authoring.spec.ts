@@ -55,13 +55,15 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // 4b. Notate the figure (US-028 hero flow + 2026-06-28 parity): open its step
-    //     timeline, tap count 1, set the step's DIRECTION "forward" (the headline)
-    //     and FOOTWORK "ball" (a slot). The headline + the chip show on count 1.
+    // 4b. Notate the figure (US-028 hero flow, 2026-07-01 bars grid): open its
+    //     full-screen editor, tap the Step cell at count 1 → the single-attribute
+    //     overlay → set DIRECTION "Forward" (the headline) + FOOTWORK "Heel-Toe"
+    //     (a slot) → Save (closes the overlay). The headline + chip show on count 1.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
+    await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
+    await page.getByRole("button", { name: /^Save$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
     // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)
@@ -137,9 +139,8 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // open the figure's step timeline and a count editor
+    // open the figure's full-screen step editor
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
 
     // create a custom kind "Energy". "add kind" opens the type PICKER (frame
     // 1.15); the "＋ new attribute type" footer opens the builder (frame 1.16).
@@ -155,24 +156,24 @@ test.describe("@smoke core authoring journey", () => {
     await kindDialog.getByPlaceholder("e.g. low, medium, high").fill("low, high");
     await kindDialog.getByRole("button", { name: "Create" }).click();
 
-    // the Energy section appears in the still-open count 1 editor — under the
-    // "More attributes" disclosure (the editor leads with direction + footwork;
-    // technique + custom kinds are revealed there, 2026-06-28 parity).
-    await page.getByRole("button", { name: /more attributes/i }).click();
-    await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
+    // Energy becomes a new COLUMN in the bars-driven grid (allColumns adds custom
+    // kinds), so it's addable at every count.
+    await expect(page.getByRole("columnheader", { name: /energy/i })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // view Energy in a lane grid
     await page.getByRole("button", { name: "Lanes" }).click();
     await expect(page.getByRole("grid")).toBeVisible();
 
-    // persists across reload: re-open the figure + count 1, Energy still there
+    // persists across reload: re-open the figure, Energy is still a grid column
     await page.reload();
     // Reload returns to READ; switch back to EDIT to access the step timeline.
     await page.getByRole("button", { name: /list view/i }).click();
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
-    await page.getByRole("button", { name: /more attributes/i }).click();
-    await expect(page.getByRole("heading", { name: /energy/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("columnheader", { name: /energy/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("a viewer sees the routine read-only (no edit affordances)", async ({ page }) => {

@@ -41,6 +41,13 @@ export type {
   RoutineDoc,
   Section,
 } from "./doc-types";
+export {
+  defaultFigureBars,
+  figureGridSlots,
+  type GridSlot,
+  resolveFigureBars,
+  SUB_BEATS,
+} from "./figure-grid";
 export { matchesFigureType } from "./figuretype";
 export { cloneRoutine, copyOnWrite } from "./fork";
 export { newId } from "./ids";

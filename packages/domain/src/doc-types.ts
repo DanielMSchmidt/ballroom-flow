@@ -45,6 +45,14 @@ export interface FigureDoc {
   source: FigureSource;
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
+  /**
+   * The figure's length in musical bars (§2.5). Authored explicitly — chosen on
+   * creation and adjustable in the editor — and drives the editor's timing grid
+   * (every bar → beat → e/&/a slot). Optional for lenient reads of pre-bars docs;
+   * `resolveFigureBars` falls back to `defaultFigureBars` (⌈whole-beat steps ÷
+   * beatsPerBar⌉) when absent, so a legacy figure still renders a full grid.
+   */
+  bars?: number;
   attributes: Attribute[];
   /**
    * Provenance only (§2.2, §5.2): the figure this doc was copied from, for

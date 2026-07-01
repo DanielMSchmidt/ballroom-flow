@@ -95,15 +95,12 @@ test.describe("@screenshots landing imagery", () => {
       .getByRole("button", { name: /edit steps: Natural Spin Turn/i })
       .first()
       .click();
-    await page.getByRole("button", { name: /beat 1/i }).click();
-    // The Natural Spin Turn is a catalog figure — already fully charted per role, so
-    // the editor opens in Per-role mode with the leader's step already set (forward ·
-    // Heel-Toe, plus rise/sway/turn). Just reveal the technique kinds for the shot;
-    // clicking a value here would TOGGLE the existing one off.
-    const leader = page.getByRole("group", { name: "Leader" });
-    await leader.getByRole("button", { name: /more attributes/i }).click();
+    // The full-screen bars-driven grid opens (frame 1.11): every timing × every
+    // attribute column. The Natural Spin Turn is a charted catalog figure, so
+    // count 1's recap already reads its leader headline — a good hero shot of the
+    // notation surface without opening a cell overlay.
+    await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
-    await expect(leader.getByRole("button", { name: /^Heel-Toe$/, pressed: true })).toBeVisible();
     await page.screenshot({ path: shot("notate.png") });
 
     // 4. Lanes cross-step grid — the "Lanes" button lives INSIDE the notation

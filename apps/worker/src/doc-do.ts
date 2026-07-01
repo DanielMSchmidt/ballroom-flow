@@ -745,9 +745,9 @@ export class DocDO extends DurableObject<Env> {
    * Compute the US-025 card-projection counts for THIS document (PLAN §2.5/§2.7):
    *  • routine → figureCount = its NON-deleted placement count; bars = Σ over those
    *    placements of each referenced figure's projected per-figure `bars`.
-   *  • figure  → bars = this figure's own bar count (`barsForFigure` over its
-   *    non-deleted attribute counts — the MAX count across BOTH roles → the longer
-   *    role's span); figureCount = null.
+   *  • figure  → bars = this figure's authored `bars` field when set, else the
+   *    phrase span of its non-deleted attribute counts (`barsForFigure`, the MAX
+   *    count across BOTH roles → the longer role's span); figureCount = null.
    *  • account → { null, null }.
    *
    * Per-document DO layering (memory: per-document-do-layering): a routine reads the
@@ -798,7 +798,14 @@ export class DocDO extends DurableObject<Env> {
       const counts = (figure.attributes ?? [])
         .filter((a) => a.deletedAt == null)
         .map((a) => a.count);
-      return { bars: barsForFigure(counts, figureDance), figureCount: null };
+      // The figure's card bar count (PLAN §2.5): the explicit authored `bars` when
+      // set, else the phrase span its steps occupy (`barsForFigure`) — a legacy
+      // figure with no authored length still gets an honest span-based estimate.
+      const bars =
+        typeof figure.bars === "number" && figure.bars >= 1
+          ? Math.floor(figure.bars)
+          : barsForFigure(counts, figureDance);
+      return { bars, figureCount: null };
     }
 
     return { bars: null, figureCount: null }; // account / unknown — no card counts
