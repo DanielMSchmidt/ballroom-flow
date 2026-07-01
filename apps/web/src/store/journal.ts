@@ -37,24 +37,40 @@ export async function loadRoutineOptions(
     .map((r) => ({ docRef: r.docRef, title: r.title, dance: r.dance }));
 }
 
-/** A routine's placed figures as link-picker options (from its REST snapshot). */
+/** A routine's placed figures as link-picker options (from its REST snapshot).
+ *  Each carries its distinct sorted counts so the picker can offer an
+ *  "On count N" grain (T6 / US-004a). */
 export async function loadRoutineFigureOptions(
   routineId: string,
   token: string | null,
   baseUrl = "",
-): Promise<{ figureRef: string; name: string; figureType: string }[]> {
+): Promise<{ figureRef: string; name: string; figureType: string; counts: number[] }[]> {
   const { routine, figures } = await apiGet<{
-    routine: { sections?: { placements?: { figureRef: string; deletedAt?: number | null }[] }[] };
-    figures: Record<string, { name: string; figureType: string }>;
+    routine: {
+      sections?: { placements?: { figureRef?: string; deletedAt?: number | null }[] }[];
+    };
+    figures: Record<
+      string,
+      {
+        name: string;
+        figureType: string;
+        attributes?: { count: number; deletedAt?: number | null }[];
+      }
+    >;
   }>(`${baseUrl}/api/routines/${encodeURIComponent(routineId)}/snapshot`, token);
   const seen = new Set<string>();
-  const out: { figureRef: string; name: string; figureType: string }[] = [];
+  const out: { figureRef: string; name: string; figureType: string; counts: number[] }[] = [];
   for (const section of routine.sections ?? []) {
     for (const p of section.placements ?? []) {
-      if (p.deletedAt != null || seen.has(p.figureRef)) continue;
+      // A break placement carries no figureRef — skip it (US-004a).
+      if (p.deletedAt != null || !p.figureRef || seen.has(p.figureRef)) continue;
       seen.add(p.figureRef);
       const fig = figures[p.figureRef];
-      if (fig) out.push({ figureRef: p.figureRef, name: fig.name, figureType: fig.figureType });
+      if (!fig) continue;
+      const counts = [
+        ...new Set((fig.attributes ?? []).filter((a) => a.deletedAt == null).map((a) => a.count)),
+      ].sort((a, b) => a - b);
+      out.push({ figureRef: p.figureRef, name: fig.name, figureType: fig.figureType, counts });
     }
   }
   return out;

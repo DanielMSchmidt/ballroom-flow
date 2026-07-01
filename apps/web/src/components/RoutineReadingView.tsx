@@ -12,11 +12,14 @@ import {
   type Annotation,
   type Attribute,
   barsForFigure,
-  countLabel,
+  DANCES,
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
+  type NumberedBeatEntry,
+  numberRoutineBeats,
   type RegistryKind,
+  type RoutineBeatEntry,
   type RoutineDoc,
 } from "@ballroom/domain";
 import { useState } from "react";
@@ -75,11 +78,22 @@ export function RoutineReadingView({
   onOpenFigure?: (figureId: string) => void;
   /** Tap a comment / "+ add comment" → open the annotation thread for that
    *  anchor (QUAL-2 fix: passes the specific figureRef + count, not just the
-   *  figure id, so the caller can focus the panel on the right anchor). */
-  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
+   *  figure id, so the caller can focus the panel on the right anchor). A
+   *  whole-figure note omits `count` (US-004a). */
+  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const resolvedByPlacement = new Map(placements.map((p) => [p.placement.id, p]));
   const dance = routine.dance as DanceId;
+  // Continuous beat numbering (US-004a): one running counter threads the whole
+  // routine in placement order, wrapping at the dance's phrase length. Breaks
+  // advance it too. We compute it ONCE here and hand each placement its result;
+  // the edit view keeps per-figure LOCAL counts (this is display-only).
+  const numberByPlacement = numberRoutineBeats_forRoutine(
+    routine,
+    resolvedByPlacement,
+    roleView,
+    dance,
+  );
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
       <div className="flex items-center gap-2">
@@ -107,6 +121,15 @@ export function RoutineReadingView({
               <p className="text-2xs text-ink-faint">No figures in this section.</p>
             ) : (
               section.placements.map((pl) => {
+                const numbered = numberByPlacement.get(pl.id);
+                if (pl.source === "break") {
+                  return (
+                    <BreakReadout
+                      key={pl.id}
+                      numbered={numbered?.kind === "break" ? numbered : undefined}
+                    />
+                  );
+                }
                 const rp = resolvedByPlacement.get(pl.id);
                 return (
                   <FigureReadout
@@ -115,6 +138,7 @@ export function RoutineReadingView({
                     status={rp?.status ?? "loading"}
                     dance={dance}
                     roleView={roleView}
+                    beatTokens={numbered?.kind === "figure" ? numbered.tokens : []}
                     annotations={annotations}
                     canComment={canComment}
                     memberColors={memberColors}
@@ -129,6 +153,66 @@ export function RoutineReadingView({
           </section>
         ))
       )}
+    </div>
+  );
+}
+
+/** A figure's distinct, sorted counts under the active role lens — the same
+ *  derivation FigureReadout renders from, so numbering aligns with the rows. */
+function figureCounts(figure: FigureDoc, roleView: RoleView): number[] {
+  const live = filterByRoleView(
+    figure.attributes.filter((a) => a.deletedAt == null),
+    roleView,
+  );
+  return [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
+}
+
+/** Number the whole routine's beats once (US-004a), returning a placement-id →
+ *  numbered-entry map. Threads a single counter across every section/placement in
+ *  order; a null (loading/missing) figure contributes no beats (best effort). */
+function numberRoutineBeats_forRoutine(
+  routine: RoutineDoc,
+  resolved: Map<string, ResolvedPlacement>,
+  roleView: RoleView,
+  dance: DanceId,
+): Map<string, NumberedBeatEntry | undefined> {
+  const beatsPerBar = DANCES[dance].beatsPerBar;
+  const ids: string[] = [];
+  const entries: RoutineBeatEntry[] = [];
+  for (const section of routine.sections) {
+    for (const pl of section.placements) {
+      ids.push(pl.id);
+      if (pl.source === "break") {
+        entries.push({ kind: "break", beats: pl.beats ?? beatsPerBar });
+      } else {
+        const fig = resolved.get(pl.id)?.figure ?? null;
+        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView) : [] });
+      }
+    }
+  }
+  const numbered = numberRoutineBeats(entries, dance);
+  return new Map(ids.map((id, i) => [id, numbered[i]]));
+}
+
+/** A break/wait row in the reading view (US-004a): a muted row showing the beat
+ *  span it occupies (e.g. "beats 4–6") + its bar count. Advances the counter. */
+function BreakReadout({ numbered }: { numbered?: Extract<NumberedBeatEntry, { kind: "break" }> }) {
+  const span = numbered?.span ?? "break";
+  const bars = numbered?.bars ?? 1;
+  return (
+    <div
+      data-testid="break-readout"
+      className="flex items-center gap-[7px] rounded-[7px] px-[8px] py-[6px]"
+      style={{ background: "var(--bf-surface-sunken)" }}
+    >
+      <span aria-hidden="true" className="text-2xs font-bold text-ink-faint">
+        ❚❚
+      </span>
+      <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">Break</span>
+      <span className="text-2xs text-ink-muted">{span}</span>
+      <span className="text-2xs font-medium text-ink-faint">
+        · {bars} bar{bars === 1 ? "" : "s"}
+      </span>
     </div>
   );
 }
@@ -148,6 +232,7 @@ function FigureReadout({
   status,
   dance,
   roleView,
+  beatTokens,
   annotations,
   canComment,
   memberColors,
@@ -160,13 +245,16 @@ function FigureReadout({
   status: FigureLoadStatus;
   dance: DanceId;
   roleView: RoleView;
+  /** The continuous beat token per distinct sorted count (US-004a), aligned to
+   *  this figure's `counts`. Drives the count pill + per-step count cell. */
+  beatTokens: string[];
   annotations: Annotation[];
   canComment: boolean;
   memberColors?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
   onOpenFigure?: (figureId: string) => void;
-  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
+  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   // The attribute kind whose info overlay is open (frame 1.13), or null. Tapping
   // a value chip or a column header opens the plain-language reference. State is
@@ -201,11 +289,19 @@ function FigureReadout({
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   const columns = usedColumns(live, dance);
   const bars = barsForFigure(counts, dance);
+  // The continuous beat token per count (US-004a), zipped with the sorted counts.
+  const tokenByCount = new Map(counts.map((c, i) => [c, beatTokens[i] ?? String(c)]));
   // Inline comments anchored to a specific step (point) of this figure.
   const figureComments = annotations.filter(
     (a) =>
       a.deletedAt == null &&
       a.anchors.some((an) => an.type === "point" && an.figureRef === figure.id),
+  );
+  // Comments anchored to the WHOLE figure (figure anchor, no count — US-004a).
+  const wholeFigureComments = annotations.filter(
+    (a) =>
+      a.deletedAt == null &&
+      a.anchors.some((an) => an.type === "figure" && an.figureRef === figure.id),
   );
   return (
     <div className="flex flex-col gap-[7px]">
@@ -219,13 +315,26 @@ function FigureReadout({
         >
           {figure.name}
         </button>
-        {counts.length > 0 && <CountPill counts={counts.map((c) => countLabel(c))} />}
+        {counts.length > 0 && <CountPill counts={beatTokens} />}
         {counts.length > 0 && (
           <span className="text-2xs font-medium text-ink-muted">
             {bars} bar{bars === 1 ? "" : "s"}
           </span>
         )}
       </div>
+
+      {/* WHOLE FIGURE notes (US-004a): a note block under the header, distinct
+          from per-step threads. Shown when there are notes OR the user may add
+          the first one. Tapping opens the figure-level thread (no count). */}
+      {(wholeFigureComments.length > 0 || canComment) && (
+        <WholeFigureNotes
+          comments={wholeFigureComments}
+          figureId={figure.id}
+          canComment={canComment}
+          memberColors={memberColors}
+          onOpenThread={onOpenThread}
+        />
+      )}
 
       {counts.length === 0 ? (
         <p className="text-2xs text-ink-faint">No steps noted yet.</p>
@@ -237,6 +346,7 @@ function FigureReadout({
               <StepRow
                 key={count}
                 count={count}
+                label={tokenByCount.get(count) ?? String(count)}
                 columns={columns}
                 here={live.filter((a) => a.count === count)}
                 comments={figureComments.filter((a) =>
@@ -325,6 +435,7 @@ function columnColor(col: ReadingColumn): string {
  *  rows render dimmed (muted surface + slate count). */
 function StepRow({
   count,
+  label,
   columns,
   here,
   comments,
@@ -335,6 +446,8 @@ function StepRow({
   onOpenThread,
 }: {
   count: number;
+  /** The continuous beat token to display in the count cell (US-004a). */
+  label: string;
   columns: ReadingColumn[];
   here: Attribute[];
   comments: Annotation[];
@@ -343,7 +456,7 @@ function StepRow({
   memberColors?: Record<string, string>;
   /** Tapping a value chip opens that kind's attribute info overlay (frame 1.13). */
   onOpenInfo: (col: ReadingColumn) => void;
-  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
+  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const offBeat = isOffBeatCount(count);
   return (
@@ -357,7 +470,7 @@ function StepRow({
           className="w-[18px] flex-none text-center text-[11px] font-bold tabular-nums"
           style={{ color: offBeat ? "var(--bf-offbeat-ink)" : kindVar("direction") }}
         >
-          {countLabel(count)}
+          {label}
         </span>
         {columns.map((col) => {
           const label = cellValue(here, col);
@@ -416,7 +529,7 @@ function InlineComments({
   /** Real `authorId → stored hex` map — use this first; hash-fallback only for
    *  unknown authors (e.g. very old annotations before T8 wired identity). */
   memberColors?: Record<string, string>;
-  onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
+  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const latest = comments.slice(-2);
   const anchor = { figureRef: figureId, count };
@@ -449,6 +562,78 @@ function InlineComments({
           onClick={() => onOpenThread?.(anchor)}
         >
           + add comment
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** WHOLE-FIGURE notes (US-004a): a note block under the figure header, distinct
+ *  from per-step threads. Shows a "WHOLE FIGURE" label, the latest ~2 notes
+ *  (truncated), a "+N more" hint, and a "+ note on whole figure" affordance for a
+ *  commenter. Tapping any opens the figure-level thread (a figure anchor, no
+ *  count). */
+function WholeFigureNotes({
+  comments,
+  figureId,
+  canComment,
+  memberColors,
+  onOpenThread,
+}: {
+  comments: Annotation[];
+  figureId: string;
+  canComment: boolean;
+  memberColors?: Record<string, string>;
+  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
+}) {
+  const latest = comments.slice(-2);
+  const more = Math.max(0, comments.length - latest.length);
+  const anchor = { figureRef: figureId };
+  return (
+    <div
+      data-testid="whole-figure-notes"
+      className="ml-[16px] flex flex-col gap-[2px] border-l-2 pl-[8px]"
+      style={{ borderColor: "var(--bf-border-strong)" }}
+    >
+      <span className="text-[8px] font-bold uppercase tracking-wider text-ink-faint">
+        Whole figure
+      </span>
+      {latest.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          className="flex items-center gap-[5px] text-left"
+          onClick={() => onOpenThread?.(anchor)}
+        >
+          <span
+            aria-hidden="true"
+            className="h-[7px] w-[7px] flex-none rounded-full"
+            style={{ background: memberColors?.[c.authorId] ?? identityColor(c.authorId) }}
+          />
+          <span
+            className="flex-1 truncate text-[13px] text-ink-secondary"
+            style={{ fontFamily: "var(--bf-font-note)" }}
+          >
+            {c.text}
+          </span>
+        </button>
+      ))}
+      {more > 0 && (
+        <button
+          type="button"
+          className="text-left text-[8px] font-semibold text-ink-faint"
+          onClick={() => onOpenThread?.(anchor)}
+        >
+          +{more} more
+        </button>
+      )}
+      {canComment && (
+        <button
+          type="button"
+          className="text-left text-[8px] font-semibold text-ink-faint"
+          onClick={() => onOpenThread?.(anchor)}
+        >
+          + note on whole figure
         </button>
       )}
     </div>

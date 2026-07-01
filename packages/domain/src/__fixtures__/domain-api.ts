@@ -52,6 +52,23 @@ export interface RegistryKind {
   builtin: boolean;
 }
 
+/** One entry in a routine's ordered beat stream (US-004a continuous numbering). */
+export type RoutineBeatEntry =
+  | { kind: "figure"; counts: number[] }
+  | { kind: "break"; beats: number };
+
+/** A numbered entry aligned 1:1 with the {@link RoutineBeatEntry} input. */
+export type NumberedBeatEntry =
+  | { kind: "figure"; tokens: string[] }
+  | {
+      kind: "break";
+      beats: number;
+      bars: number;
+      startBeat: number;
+      endBeat: number;
+      span: string;
+    };
+
 /** The statically-known standard attribute kinds + a string index for custom kinds. */
 export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
@@ -102,6 +119,8 @@ export interface DomainApi {
   countLabel(count: number): string;
   countToPhrase(count: number, dance: DanceId): { phrase: number; countInPhrase: number };
   barsForFigure(counts: number[], dance: DanceId): number;
+  offBeatSymbol(count: number): string | null;
+  numberRoutineBeats(entries: RoutineBeatEntry[], dance: DanceId): NumberedBeatEntry[];
 
   // US-005 doc-routine.ts / doc-figure.ts
   buildRoutineDoc(routine: RoutineDoc): DocHandle;

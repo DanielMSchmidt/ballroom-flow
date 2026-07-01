@@ -17,6 +17,7 @@ import {
   addReply,
   addSection,
   copyOnWrite,
+  DANCES,
   ensureSortKeys,
   type FigureDoc,
   isReservedKind,
@@ -155,6 +156,14 @@ export interface RoutineStore extends RoutineReadModel {
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
   deletePlacement(sectionId: string, placementId: string): void;
+  /**
+   * Append a BREAK/WAIT entry to a section (US-004a): a placement that occupies
+   * beats but has no figure. Defaults to one bar of the routine's dance (3 Waltz /
+   * 4 others). It advances the reading view's continuous beat counter.
+   */
+  addBreak(sectionId: string): void;
+  /** Set a break's whole-beat duration (US-004a); clamped to a minimum of 1. */
+  setBreakBeats(sectionId: string, placementId: string, beats: number): void;
   /**
    * Replace a figure doc's attribute timeline (US-028). The timeline editor emits
    * the figure's full next attribute set; this writes it to that figure's doc
@@ -629,6 +638,9 @@ export async function openRoutine(
       const out: ResolvedPlacement[] = [];
       for (const section of routine.sections) {
         for (const placement of section.placements) {
+          // A break has no figure to resolve — it's read structurally from the
+          // routine doc (readRoutine), not through the figure-resolution seam.
+          if (placement.source === "break" || !placement.figureRef) continue;
           const status = figureStatus(placement.figureRef);
           out.push({
             placement,
@@ -786,6 +798,37 @@ export async function openRoutine(
         const section = draft.sections.find((s) => s.id === sectionId);
         const placement = section?.placements.find((p) => p.id === placementId);
         if (placement) placement.deletedAt = Date.now();
+      });
+    },
+
+    addBreak: (sectionId) => {
+      // Default a break to one bar of the routine's dance (3 Waltz / 4 others).
+      const beats = DANCES[readRoutineSafe().dance].beatsPerBar;
+      routineConn.change((draft) => {
+        const section = draft.sections?.find((s) => s.id === sectionId);
+        if (!section) return;
+        // Append after the last placement in sortKey order (#63), mirroring
+        // addPlacement. A break carries NO figureRef (Automerge can't store
+        // undefined — we simply omit the field).
+        ensureSortKeys(section.placements);
+        const ordered = sortByOrder(section.placements);
+        const lastKey = ordered[ordered.length - 1]?.sortKey ?? null;
+        section.placements.push({
+          id: newId(),
+          source: "break",
+          beats,
+          sortKey: keyBetween(lastKey, null),
+          deletedAt: null,
+        });
+      });
+    },
+
+    setBreakBeats: (sectionId, placementId, beats) => {
+      const next = Math.max(1, Math.round(beats));
+      routineConn.change((draft) => {
+        const section = draft.sections.find((s) => s.id === sectionId);
+        const placement = section?.placements.find((p) => p.id === placementId);
+        if (placement?.source === "break") placement.beats = next;
       });
     },
 

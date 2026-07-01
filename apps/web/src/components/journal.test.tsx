@@ -135,4 +135,58 @@ describe("Journal editor + link picker (frames 3.3 / 3.4)", () => {
       text: "whisk more cross",
     });
   });
+
+  it("links to a specific count via the search + grain steps (US-004a)", async () => {
+    const createRoutineEntry = vi.fn(noop);
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => [
+          { docRef: "rt1", title: "Gold Waltz", dance: "waltz" },
+        ])}
+        loadRoutineFigures={vi.fn(async () => [
+          { figureRef: "f1", name: "Whisk", figureType: "whisk", counts: [1, 2, 3] },
+          { figureRef: "f2", name: "Chassé", figureType: "chasse", counts: [1, 2] },
+        ])}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "commit to the side step");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    // TYPE → Specific place → pick the choreo.
+    await userEvent.click(screen.getByText("Specific place"));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    // Search filters the figure list down to "Whisk", then pick it.
+    await userEvent.type(await screen.findByLabelText("Search figures"), "whis");
+    expect(screen.queryByText("Chassé")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /whisk/i }));
+    // GRAIN → "On count 2" builds a point anchor labelled "Whisk · count 2".
+    await userEvent.click(await screen.findByText("On count 2"));
+    await waitFor(() => expect(screen.getByText("↳ Whisk · count 2")).toBeInTheDocument());
+  });
+
+  it("links to a whole figure via the grain step (US-004a)", async () => {
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => [
+          { docRef: "rt1", title: "Gold Waltz", dance: "waltz" },
+        ])}
+        loadRoutineFigures={vi.fn(async () => [
+          { figureRef: "f1", name: "Whisk", figureType: "whisk", counts: [1, 2, 3] },
+        ])}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "note on the whole whisk");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(screen.getByText("Specific place"));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /whisk/i }));
+    await userEvent.click(await screen.findByText("The entire figure"));
+    await waitFor(() => expect(screen.getByText("↳ Whisk · whole figure")).toBeInTheDocument());
+  });
 });

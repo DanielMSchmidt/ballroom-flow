@@ -98,3 +98,74 @@ describe("US-004 Float-count timing", () => {
     expect(barsForFigure([], "foxtrot")).toBe(1); // empty → 1
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// US-004a — Continuous beat numbering across a routine (reading view).
+// A single counter threads the whole routine; it wraps at phrase length
+// (Waltz/Viennese 6, others 8). Only whole beats advance it; off-beats render
+// as their symbol and consume no number. Breaks occupy beats + report a span.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("US-004a continuous routine numbering", () => {
+  it("drops the local-beat prefix from an off-beat symbol", async () => {
+    const { offBeatSymbol } = await importDomain();
+    expect(offBeatSymbol(2)).toBeNull(); // whole beat → no symbol
+    expect(offBeatSymbol(2.25)).toBe("e");
+    expect(offBeatSymbol(2.5)).toBe("&");
+    expect(offBeatSymbol(3.75)).toBe("a");
+  });
+
+  it("continues the counter across figures and wraps at the Waltz phrase (6)", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 2, 3] },
+        { kind: "figure", counts: [1, 2, 3] },
+        { kind: "figure", counts: [1, 2, 3] },
+      ],
+      "waltz",
+    );
+    expect(out[0]).toMatchObject({ kind: "figure", tokens: ["1", "2", "3"] });
+    expect(out[1]).toMatchObject({ kind: "figure", tokens: ["4", "5", "6"] });
+    expect(out[2]).toMatchObject({ kind: "figure", tokens: ["1", "2", "3"] }); // wrapped
+  });
+
+  it("wraps at 8 for 4/4 dances (a figure starting bar 2 reads 5)", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 2, 3, 4] },
+        { kind: "figure", counts: [1, 2, 3, 4] },
+      ],
+      "quickstep",
+    );
+    expect(out[1]).toMatchObject({ tokens: ["5", "6", "7", "8"] });
+  });
+
+  it("renders off-beats as symbols without consuming a beat number", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const [figure] = numberRoutineBeats([{ kind: "figure", counts: [1, 2, 2.5, 3] }], "waltz");
+    // 2.5 shows "&" and does NOT advance — 3 still reads "3".
+    expect(figure).toMatchObject({ tokens: ["1", "2", "&", "3"] });
+  });
+
+  it("advances the counter through a break and reports its phrase span + bars", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 2, 3] }, // beats 1–3
+        { kind: "break", beats: 3 }, // beats 4–6, one Waltz bar
+        { kind: "figure", counts: [1, 2, 3] }, // wraps → 1 2 3
+      ],
+      "waltz",
+    );
+    expect(out[1]).toMatchObject({ kind: "break", span: "beats 4–6", bars: 1, beats: 3 });
+    expect(out[2]).toMatchObject({ kind: "figure", tokens: ["1", "2", "3"] });
+  });
+
+  it("labels a single-beat break as one beat", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const [brk] = numberRoutineBeats([{ kind: "break", beats: 1 }], "waltz");
+    expect(brk).toMatchObject({ kind: "break", span: "beat 1", bars: 1 });
+  });
+});

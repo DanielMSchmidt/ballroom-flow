@@ -168,6 +168,8 @@ export function openRoutineSnapshot(
       const out: ResolvedPlacement[] = [];
       for (const section of routine.sections) {
         for (const placement of section.placements) {
+          // A break has no figure to resolve — it's read structurally (US-004a).
+          if (placement.source === "break" || !placement.figureRef) continue;
           const figure = figures[placement.figureRef] ?? null;
           // The snapshot resolves every referenced figure server-side: present →
           // live; absent → genuinely missing (deleted / no access). Before the
