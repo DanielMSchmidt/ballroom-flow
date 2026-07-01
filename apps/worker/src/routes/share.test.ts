@@ -53,6 +53,53 @@ describe("US-024 Share screen (member list + roles)", () => {
     );
   });
 
+  it("resolves a not-onboarded member's name from their cached Clerk identity", async () => {
+    // Intent: a member who is logged in but hasn't onboarded (no `users` row) shows
+    //   a real name in the roster once they've loaded the app — not the raw id.
+    // Arrange: seed a routine + an editor + a profile-less member (users row absent).
+    //   The member hits GET /api/me with a Clerk `name` claim, caching their name.
+    // Act: GET /api/docs/:id/members as the editor.
+    // Assert: the member's displayName is the cached Clerk name, not undefined.
+    const docRef = "rt_share_cache";
+    const editor = await authedContext({ keypair: kp, userId: "u_edc", docRef, role: "editor" });
+    const guest = await authedContext({
+      keypair: kp,
+      userId: "u_guest",
+      docRef,
+      role: "commenter",
+      claims: { firstName: "Guest", lastName: "Dancer" },
+    });
+    await seedDb({
+      users: [{ id: "u_edc", displayName: "Ed", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_edc", doName: docRef }],
+      memberships: [
+        { id: "m_edc", docRef, userId: "u_edc", role: "editor" },
+        { id: "m_guest", docRef, userId: "u_guest", role: "commenter" },
+      ],
+    });
+
+    // Before the guest loads the app, their name can't be resolved (no row/cache).
+    const before = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
+      headers: editor.authHeaders(),
+    });
+    const beforeBody = (await before.json()) as {
+      members: Array<{ userId: string; displayName?: string }>;
+    };
+    expect(beforeBody.members.find((m) => m.userId === "u_guest")?.displayName).toBeUndefined();
+
+    // The guest loads the app → /api/me caches their Clerk-derived name.
+    await SELF.fetch("https://x/api/me", { headers: guest.authHeaders() });
+
+    // Now the roster resolves the guest's cached name.
+    const after = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
+      headers: editor.authHeaders(),
+    });
+    const afterBody = (await after.json()) as {
+      members: Array<{ userId: string; displayName?: string }>;
+    };
+    expect(afterBody.members.find((m) => m.userId === "u_guest")?.displayName).toBe("Guest Dancer");
+  });
+
   it("lets an editor/owner remove a member", async () => {
     // Intent: editors can remove members (soft-delete the membership).
     // Arrange: seed routine + editor + a viewer to remove. Act: DELETE the viewer

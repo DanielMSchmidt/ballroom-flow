@@ -46,6 +46,18 @@ and update the prod GH variable then. You can always deploy manually with
    ```
    (Optionally set `CLERK_JWT_KEY` to the instance PEM for fully networkless
    verification — see `apps/worker/src/auth/index.ts`.)
+4. **Session-token claims (for member display names)** — by default a Clerk
+   session token carries only `sub`, so we can't show a human name for a member
+   who hasn't onboarded (the roster falls back to the raw `user_…` id). In the
+   Clerk dashboard → **Sessions → Customize session token**, add the identity
+   claims, e.g.:
+   ```json
+   { "name": "{{user.full_name}}", "email": "{{user.primary_email_address}}" }
+   ```
+   The Worker reads these networklessly (`displayNameFromClaims`) and caches the
+   derived name (`UserNameCache`) so co-members see a real name. This is optional
+   and degrades gracefully — without it, names simply fall back to the user id
+   until the user onboards and sets their own display name.
 
 ## 2. Cloudflare (hosting + D1)
 

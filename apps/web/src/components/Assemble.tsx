@@ -28,6 +28,7 @@ import {
   type Section,
 } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { buildMemberColorMap, type ColorableMember } from "../lib/identity-colors";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
@@ -68,6 +69,30 @@ import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
 export type MembershipRole = "editor" | "commenter" | "viewer";
+
+/**
+ * Build the routine's `userId → identity colour` map for avatars + note dots.
+ * Members who chose a colour keep it; profile-less members get a default that's
+ * distinct from the others in the choreo (US-039). The current user's OWN colour
+ * (from `useMe`) is authoritative — it can be set before the members roster
+ * reflects it — so fold it in over their roster row.
+ */
+function resolveMemberColors(
+  members: { userId: string; identityColor?: string }[] | undefined,
+  currentUserId: string | undefined,
+  currentUserColor: string | undefined,
+): Record<string, string> {
+  const list: ColorableMember[] = (members ?? []).map((m) => ({
+    userId: m.userId,
+    identityColor: m.identityColor,
+  }));
+  if (currentUserId) {
+    const mine = list.find((m) => m.userId === currentUserId);
+    if (mine) mine.identityColor = currentUserColor ?? mine.identityColor;
+    else list.push({ userId: currentUserId, identityColor: currentUserColor });
+  }
+  return buildMemberColorMap(list);
+}
 
 export interface AssembleProps {
   /** The routine document id to open. */
@@ -260,16 +285,10 @@ export function Assemble({
   // ThreadSheetContents (for the thread panel) costs zero extra network hops.
   const me = useMe();
   const membersQ = useMembers(routineId);
-  const memberColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const m of membersQ.data?.members ?? []) {
-      if (m.identityColor) map[m.userId] = m.identityColor;
-    }
-    if (currentUserId && me.data?.identityColor) {
-      map[currentUserId] = me.data.identityColor;
-    }
-    return map;
-  }, [membersQ.data, me.data, currentUserId]);
+  const memberColorMap = useMemo(
+    () => resolveMemberColors(membersQ.data?.members, currentUserId, me.data?.identityColor),
+    [membersQ.data, me.data, currentUserId],
+  );
 
   // Family notes (US-040/041) come from the worker (co-member visibility gate),
   // not the routine doc — load them for this routine + reload after authoring one.
@@ -1678,18 +1697,26 @@ function ThreadSheetContents({
   const me = useMe();
   const membersQ = useMembers(routineId);
 
-  // Build authorId → identity maps from the members list (T8 extended endpoint).
-  const authorColorMap: Record<string, string> = {};
+  // Author colours: chosen colours win, profile-less members get distinct
+  // defaults (US-039) — so two logged-in-but-un-onboarded co-editors don't share
+  // slot 1. Current user's own colour (useMe) is folded in authoritatively.
+  const authorColorMap = resolveMemberColors(
+    membersQ.data?.members,
+    currentUserId,
+    me.data?.identityColor,
+  );
+  // Author names from the members list (server resolves un-onboarded members'
+  // names from their cached Clerk identity — see listMembers).
   const authorNameMap: Record<string, string> = {};
   for (const m of membersQ.data?.members ?? []) {
-    if (m.identityColor) authorColorMap[m.userId] = m.identityColor;
     if (m.displayName) authorNameMap[m.userId] = m.displayName;
   }
-  // Current user's own identity (useMe — always real; overrides any member row).
-  const currentUserColor = me.data?.identityColor;
+  // Current user's own name (useMe — real, and set before the roster reflects it).
   const currentUserName = me.data?.displayName;
-  if (currentUserId && currentUserColor) authorColorMap[currentUserId] = currentUserColor;
   if (currentUserId && currentUserName) authorNameMap[currentUserId] = currentUserName;
+  // The composer avatar uses the current user's resolved colour (a distinct
+  // default when they haven't picked one).
+  const currentUserColor = currentUserId ? authorColorMap[currentUserId] : undefined;
 
   // Thread title (frame 1.14 header): "Figure Name · step N" for a per-step
   // thread; the figure name + a "whole figure" subtitle for a figure-level one.

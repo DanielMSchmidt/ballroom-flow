@@ -40,7 +40,7 @@ import {
   searchReachable,
   softDeleteRoutine,
 } from "./db/routines";
-import { users } from "./db/schema";
+import { userNameCache, users } from "./db/schema";
 import type { DocDO } from "./doc-do";
 import { forkRoutineFor } from "./fork";
 import { testSeed } from "./routes/test-seed";
@@ -98,8 +98,30 @@ app.get("/api/me", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const db = drizzle(c.env.DB);
+  // Cache the human name from this user's Clerk claims so co-members can resolve
+  // it (even before this user onboards — they have no `users` row yet). Best-
+  // effort: a cache write must never fail /api/me. See migration 0013.
+  if (user.name) {
+    try {
+      const now = Date.now();
+      await db
+        .insert(userNameCache)
+        .values({ id: user.sub, name: user.name, updatedAt: now })
+        .onConflictDoUpdate({ target: userNameCache.id, set: { name: user.name, updatedAt: now } });
+    } catch (err) {
+      console.error("user name cache write failed", { userId: user.sub, err });
+    }
+  }
   const row = await db.select().from(users).where(eq(users.id, user.sub)).get();
-  if (!row) return c.json({ sub: user.sub, onboarded: false, routineCap: FREE_ROUTINE_CAP });
+  // Not onboarded: still surface the Clerk-derived name (if any) so the client
+  // shows a real name instead of the raw user id until they set a profile.
+  if (!row)
+    return c.json({
+      sub: user.sub,
+      onboarded: false,
+      displayName: user.name,
+      routineCap: FREE_ROUTINE_CAP,
+    });
   return c.json({
     sub: user.sub,
     onboarded: true,

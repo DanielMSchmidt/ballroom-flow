@@ -8,7 +8,7 @@ import type { EffectiveRole, MembershipRole } from "@ballroom/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { cascadeFigureRole } from "./placement-edge";
-import { documentRegistry, membership, users } from "./schema";
+import { documentRegistry, membership, userNameCache, users } from "./schema";
 
 /** The connecting user's active role on `docRef`, or null if not a member. */
 export async function roleFor(
@@ -84,16 +84,21 @@ export async function listMembers(db: D1Database, docRef: string): Promise<Membe
       role: membership.role,
       identityColor: users.identityColor,
       displayName: users.displayName,
+      // Fallback name for a member who's logged in but hasn't onboarded (no
+      // `users` row): the name cached from their Clerk claims (migration 0013).
+      cachedName: userNameCache.name,
     })
     .from(membership)
     .leftJoin(users, eq(membership.userId, users.id))
+    .leftJoin(userNameCache, eq(membership.userId, userNameCache.id))
     .where(and(eq(membership.docRef, docRef), isNull(membership.deletedAt)))
     .all();
   return rows.map((r) => ({
     userId: r.userId,
     role: r.role,
     identityColor: r.identityColor ?? undefined,
-    displayName: r.displayName ?? undefined,
+    // A chosen (onboarded) name wins; else the cached Clerk name; else the id.
+    displayName: r.displayName ?? r.cachedName ?? undefined,
   }));
 }
 
