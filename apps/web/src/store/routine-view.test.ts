@@ -84,6 +84,10 @@ function fakeLive() {
       state = "live";
       notify();
     },
+    setConnecting: () => {
+      state = "connecting";
+      notify();
+    },
   };
 }
 
@@ -148,6 +152,26 @@ describe("openRoutineView — editor mode", () => {
     expect(live.addSection).not.toHaveBeenCalled();
     live.setLive();
     await vi.waitFor(() => expect(live.addSection).toHaveBeenCalledWith("Intro"));
+    view.close();
+  });
+
+  it("stays on the live store after a transient reconnect — never reverts to the snapshot (E)", async () => {
+    // Once the live store has hydrated we latch onto it: a later transient
+    // reconnect (live briefly "connecting") must NOT flip reads back to the
+    // staler snapshot, which would swap content out from under an open editor
+    // and reset an in-flight edit.
+    const live = fakeLive();
+    const view = openRoutineView("rt", {
+      editable: true,
+      openSnapshot: () => fakeSnapshot(),
+      openLive: async () => live.store,
+    });
+    live.setLive();
+    await vi.waitFor(() => expect(view.readRoutine().title).toBe("from-live"));
+    // A transient reconnect: the live store drops to "connecting" for a moment.
+    live.setConnecting();
+    // Reads stay on the live store (last-known content), NOT the snapshot.
+    expect(view.readRoutine().title).toBe("from-live");
     view.close();
   });
 

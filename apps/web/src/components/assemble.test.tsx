@@ -633,6 +633,24 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
   });
 
+  it("waits for the figure's own live doc before showing the editor (load on open, no flicker)", async () => {
+    // Intent (C/E): for an EDITOR, the step editor must not render — then swap out
+    //   — stale snapshot content. While the figure is still served by the read-only
+    //   snapshot fallback (fromLiveDoc:false), the sheet shows a load state; the
+    //   step grid appears once the figure's own live doc has hydrated.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine } = oneFigureRoutine();
+    const p = placement("p1", "feather");
+    const resolved: ResolvedPlacement[] = [
+      { placement: p, figure: figure("feather", "Feather"), status: "live", fromLiveDoc: false },
+    ];
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    // The sheet is open but gated: a load state, NOT the editable step grid.
+    expect(screen.queryByRole("table", { name: /step grid/i })).toBeNull();
+    expect(screen.getByText(/loading figure/i)).toBeInTheDocument();
+  });
+
   it("lets a viewer open the step editor read-only (no value-edit affordance)", async () => {
     // Intent: viewers/commenters can READ a figure's notation but not edit it.
     // Covers US-028 AC-4 (read-only for non-editors), surfaced from Assemble.

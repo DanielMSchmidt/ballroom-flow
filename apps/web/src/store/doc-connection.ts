@@ -249,6 +249,27 @@ export class DocConnection<T> {
     return this.doc;
   }
 
+  /**
+   * The current doc materialized to plain JS, MEMOIZED by the doc's Automerge
+   * heads — an unchanged doc returns the SAME object reference across calls.
+   *
+   * Automerge docs are immutable and `getHeads` uniquely identifies a version, so
+   * this is a safe identity cache. It's what gives the reactive `store/` seam
+   * referential stability: an inbound sync frame that doesn't touch THIS doc no
+   * longer produces a fresh `A.toJS` object, so React sees stable props and the
+   * subtree stops re-rendering (the editor "flicker"/stutter root cause). Prefer
+   * this over `A.toJS(conn.current())` on any hot read path.
+   */
+  materialized(): T {
+    const key = A.getHeads(this.doc).join("/");
+    const cached = this.jsCache;
+    if (cached && cached.key === key) return cached.value;
+    const value = A.toJS(this.doc) as T;
+    this.jsCache = { key, value };
+    return value;
+  }
+  private jsCache: { key: string; value: T } | null = null;
+
   /** This connection's sync lifecycle state. */
   state(): SyncState {
     return this.syncState;

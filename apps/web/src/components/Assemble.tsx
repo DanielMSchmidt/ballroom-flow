@@ -299,12 +299,26 @@ export function Assemble({
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp]),
   );
   const syncing = store.syncState() === "connecting";
-  // The figure whose step timeline is open — re-read live each render so a
+  // The placement whose step timeline is open — re-read live each render so a
   // collaborator's synced attribute edit flows into the open editor (US-018 AC-2).
-  const notatingFigure =
+  // We read the whole ResolvedPlacement (not just the figure) so we can tell
+  // whether its content is served by the figure's OWN hydrated live doc
+  // (`fromLiveDoc`) or is still the read-only snapshot fallback. Match on the
+  // placement's figureRef too, so the open sheet still resolves during the brief
+  // window where the figure has no content yet (loading) and after a COW re-point.
+  const notatingRP =
     notating !== null
-      ? (store.readPlacements().find((rp) => rp.figure?.id === notating)?.figure ?? null)
+      ? (store
+          .readPlacements()
+          .find((rp) => rp.figure?.id === notating || rp.placement.figureRef === notating) ?? null)
       : null;
+  const notatingFigure = notatingRP?.figure ?? null;
+  // "Load on open, then live without flicker" (C/E): in editable mode the editor
+  // waits for the figure's own live doc rather than rendering — then swapping out —
+  // stale snapshot content. A viewer reads the snapshot directly, and an injected
+  // test store leaves `fromLiveDoc` undefined; both are treated as ready.
+  const notatingFigureReady =
+    notatingFigure !== null && (!editable || notatingRP?.fromLiveDoc !== false);
 
   const modeLabel = mode === "read" ? "reading" : "editing";
   return (
@@ -575,7 +589,14 @@ export function Assemble({
         }}
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
       >
-        {notatingFigure && (
+        {notating !== null && !notatingFigureReady && (
+          // Load on open (C/E): wait for the figure's own live doc before showing
+          // the timeline, so we never render then swap out stale snapshot content.
+          <div className="flex items-center gap-2 p-4 text-ink-faint" role="status">
+            <Spinner /> <span className="text-2xs">Loading figure…</span>
+          </div>
+        )}
+        {notatingFigure && notatingFigureReady && (
           <div className="flex flex-col gap-4">
             {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
                 chips above the timeline when either entry or exit alignment is set. */}

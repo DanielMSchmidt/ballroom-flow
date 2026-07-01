@@ -152,9 +152,17 @@ export function openRoutineSnapshot(
 
   const currentRoutine = (): RoutineDoc => snapshot?.routine ?? emptyRoutine(routineId);
 
+  // Referential stability (A): the snapshot object is replaced wholesale on each
+  // poll/refetch (`load`), so reuse the prior placements array while it's the same
+  // snapshot — an unchanged snapshot then hands consumers a STABLE array identity
+  // instead of a fresh one on every read.
+  let placementsCache: { snapshot: RoutineSnapshot | null; value: ResolvedPlacement[] } | null =
+    null;
+
   const model: RoutineSnapshotModel = {
     readRoutine: currentRoutine,
     readPlacements: () => {
+      if (placementsCache && placementsCache.snapshot === snapshot) return placementsCache.value;
       const routine = currentRoutine();
       const figures = snapshot?.figures ?? {};
       const out: ResolvedPlacement[] = [];
@@ -165,9 +173,12 @@ export function openRoutineSnapshot(
           // live; absent → genuinely missing (deleted / no access). Before the
           // first snapshot lands the whole view reads "connecting" (syncState).
           const status: FigureLoadStatus = figure ? "live" : snapshot ? "missing" : "loading";
-          out.push({ placement, figure, status });
+          // A REST snapshot figure is NEVER served by its own live doc — the editor
+          // gates on this to wait for the live figure connection ("load on open").
+          out.push({ placement, figure, status, fromLiveDoc: false });
         }
       }
+      placementsCache = { snapshot, value: out };
       return out;
     },
     readAnnotations: () => currentRoutine().annotations,
