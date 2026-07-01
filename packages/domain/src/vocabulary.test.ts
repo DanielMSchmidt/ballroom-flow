@@ -50,6 +50,10 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     );
     expect(ATTRIBUTE_REGISTRY.rise.values).toEqual(expect.arrayContaining(["NFR"]));
     expect(ATTRIBUTE_REGISTRY.turn.values).toEqual(expect.arrayContaining(["eighth_L", "half_R"]));
+    // Turn amounts extend past a half to a full turn (spin/twist/chase turns).
+    expect(ATTRIBUTE_REGISTRY.turn.values).toEqual(
+      expect.arrayContaining(["five_eighth_R", "three_quarter_R", "seven_eighth_R", "full_R"]),
+    );
   });
 
   it("omits rise for Tango via appliesToDances", async () => {

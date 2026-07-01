@@ -6705,7 +6705,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
-        turn: "half_L",
+        turn: "five_eighth_L",
         bodyActions: ["CBM"],
       },
     },

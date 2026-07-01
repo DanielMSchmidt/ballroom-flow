@@ -91,6 +91,14 @@ const ABBREV: Record<string, Record<string, string>> = {
     three_eighth_R: "⅜R",
     half_L: "½L",
     half_R: "½R",
+    five_eighth_L: "⅝L",
+    five_eighth_R: "⅝R",
+    three_quarter_L: "¾L",
+    three_quarter_R: "¾R",
+    seven_eighth_L: "⅞L",
+    seven_eighth_R: "⅞R",
+    full_L: "1L",
+    full_R: "1R",
   },
 };
 
@@ -187,6 +195,14 @@ const FULL_LABEL: Record<string, Record<string, string>> = {
     three_eighth_R: "⅜ right",
     half_L: "½ left",
     half_R: "½ right",
+    five_eighth_L: "⅝ left",
+    five_eighth_R: "⅝ right",
+    three_quarter_L: "¾ left",
+    three_quarter_R: "¾ right",
+    seven_eighth_L: "⅞ left",
+    seven_eighth_R: "⅞ right",
+    full_L: "Full turn left",
+    full_R: "Full turn right",
   },
 };
 

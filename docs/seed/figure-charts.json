@@ -9511,7 +9511,7 @@
           "follower": {
             "direction": "back",
             "footwork": "T",
-            "turn": "half_L",
+            "turn": "five_eighth_L",
             "bodyActions": [
               "CBM"
             ]
