@@ -37,15 +37,34 @@ export const COLUMN_KINDS = new Set<string>(ATTR_COLUMNS.flatMap((c) => c.kinds)
 /** Short cell codes per kind value — chosen to fit the design's tight columns. */
 const ABBREV: Record<string, Record<string, string>> = {
   rise: {
-    commence: "com",
+    commence: "Com",
     body_rise: "BR",
     foot_rise: "FR",
-    up: "up",
-    continue: "cont",
-    lowering: "low",
+    up: "Up",
+    continue: "Cont",
+    lowering: "Low",
+    body_lower: "BL",
     NFR: "NFR",
   },
-  position: { closed: "Cl", promenade: "PP", wing: "W", CBMP: "CBMP" },
+  position: {
+    closed: "Cl",
+    promenade: "PP",
+    counter_promenade: "CPP",
+    outside_partner: "OP",
+    left_side: "LS",
+    right_side: "RS",
+    tandem: "Tan",
+    wing: "Wg",
+    CBMP: "CBMP",
+  },
+  footPosition: {
+    first: "1",
+    second: "2",
+    third: "3",
+    fourth_open: "4o",
+    fourth_closed: "4c",
+    fifth: "5",
+  },
   footwork: {
     // Canonical picker codes → tight overview codes (explicit so no fallback
     // mangles the slashed rolls). The full descriptive label lives in the edit
@@ -78,11 +97,17 @@ const ABBREV: Record<string, Record<string, string>> = {
     toe: "T",
     tap: "tap",
   },
-  // CBMP moved to `position`; the legacy bodyActions abbrev stays for old data.
-  bodyActions: { CBM: "CB", CBMP: "CBP" },
-  sway: { to_L: "L", to_R: "R", none: "–" },
+  bodyActions: {
+    CBM: "CBM",
+    side_leading: "SL",
+    shaping: "Shp",
+    oversway: "OvS",
+    leg_line: "LL",
+    CBMP: "CBP", // legacy: CBMP once lived here; kept for old-data reads
+  },
+  sway: { to_L: "L", to_R: "R", none: "—" },
   turn: {
-    none: "–",
+    none: "—",
     eighth_L: "⅛L",
     eighth_R: "⅛R",
     quarter_L: "¼L",
@@ -159,8 +184,8 @@ const FULL_LABEL: Record<string, Record<string, string>> = {
     first: "First",
     second: "Second",
     third: "Third",
-    fourth_open: "Fourth (open)",
-    fourth_closed: "Fourth (closed)",
+    fourth_open: "Fourth open",
+    fourth_closed: "Fourth closed",
     fifth: "Fifth",
   },
   rise: {
@@ -170,20 +195,27 @@ const FULL_LABEL: Record<string, Record<string, string>> = {
     up: "Up",
     continue: "Continue",
     lowering: "Lowering",
+    body_lower: "Body lower",
     NFR: "No foot rise",
   },
   position: {
     closed: "Closed",
     promenade: "Promenade",
     counter_promenade: "Counter promenade",
-    outside_partner: "Outside partner",
+    outside_partner: "Outside Partner",
     left_side: "Left side",
     right_side: "Right side",
     tandem: "Tandem",
     wing: "Wing",
     CBMP: "CBMP",
   },
-  bodyActions: { CBM: "CBM", side_leading: "Side leading" },
+  bodyActions: {
+    CBM: "Contra body",
+    side_leading: "Side leading",
+    shaping: "Shaping",
+    oversway: "Oversway",
+    leg_line: "Leg line",
+  },
   sway: { to_L: "Sway left", to_R: "Sway right", none: "No sway" },
   turn: {
     none: "No turn",

@@ -61,6 +61,12 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     border: "var(--bf-kind-position-border)",
     solid: "var(--bf-kind-position)",
   },
+  bodyActions: {
+    tint: "var(--bf-kind-bodyActions-tint)",
+    ink: "var(--bf-kind-bodyActions-ink)",
+    border: "var(--bf-kind-bodyActions-border)",
+    solid: "var(--bf-kind-bodyActions)",
+  },
   sway: {
     tint: "var(--bf-kind-sway-tint)",
     ink: "var(--bf-kind-sway-ink)",

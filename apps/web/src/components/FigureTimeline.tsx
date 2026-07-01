@@ -74,7 +74,16 @@ const humanize = (value: unknown): string => displayValue(value).replace(/_/g, "
 
 /** A column's header/text color — the kind's base token, slate for custom. */
 function columnColor(col: ReadingColumn): string {
-  const standard = ["direction", "footwork", "footPosition", "rise", "position", "sway", "turn"];
+  const standard = [
+    "direction",
+    "footwork",
+    "footPosition",
+    "rise",
+    "position",
+    "bodyActions",
+    "sway",
+    "turn",
+  ];
   return standard.includes(col.kind)
     ? kindVar(col.kind as Parameters<typeof kindVar>[0])
     : "var(--bf-ink-secondary)";

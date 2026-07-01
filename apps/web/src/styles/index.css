@@ -75,6 +75,9 @@
   --color-kind-position: var(--bf-kind-position);
   --color-kind-position-ink: var(--bf-kind-position-ink);
   --color-kind-position-tint: var(--bf-kind-position-tint);
+  --color-kind-bodyActions: var(--bf-kind-bodyActions);
+  --color-kind-bodyActions-ink: var(--bf-kind-bodyActions-ink);
+  --color-kind-bodyActions-tint: var(--bf-kind-bodyActions-tint);
   --color-kind-sway: var(--bf-kind-sway);
   --color-kind-sway-ink: var(--bf-kind-sway-ink);
   --color-kind-sway-tint: var(--bf-kind-sway-tint);

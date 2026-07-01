@@ -330,9 +330,9 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     // The CBMP chip (now a position value) shows selected.
     expect(screen.getByRole("button", { name: /^CBMP$/ })).toHaveAttribute("aria-pressed", "true");
-    // Body Actions only offers CBM now (CBMP migrated to position).
+    // Body Actions offers CBM (labelled "Contra body" per the design), never CBMP.
     const bodyGroup = screen.getByRole("group", { name: /body actions/i });
-    expect(within(bodyGroup).getByRole("button", { name: /^CBM$/ })).toBeInTheDocument();
+    expect(within(bodyGroup).getByRole("button", { name: /^Contra body$/ })).toBeInTheDocument();
     expect(within(bodyGroup).queryByRole("button", { name: /^CBMP$/ })).toBeNull();
   });
 

@@ -99,7 +99,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     // The Step column merges direction + footwork into one chip.
     expect(screen.getByText("fwd·H")).toBeInTheDocument();
     // Values render as tight column codes, not raw enum strings.
-    expect(screen.getByText("com")).toBeInTheDocument(); // rise: commence
+    expect(screen.getByText("Com")).toBeInTheDocument(); // rise: commence
     expect(screen.getByText("¼R")).toBeInTheDocument(); // turn: quarter_R
     expect(screen.queryByText("quarter_R")).toBeNull();
   });
@@ -110,7 +110,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     ));
     renderReading(figure({ attributes: [attr(1, "bodyActions", ["CBM"])] }));
     expect(screen.getByText("Body")).toBeInTheDocument(); // titled column
-    expect(screen.getByText("CB")).toBeInTheDocument(); // CBM → "CB"
+    expect(screen.getByText("CBM")).toBeInTheDocument(); // CBM → "CBM"
   });
 
   it("flips role-aware values with the Leader/Follower lens", async () => {

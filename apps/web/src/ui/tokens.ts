@@ -18,6 +18,7 @@ export const ATTRIBUTE_KINDS = [
   "footPosition",
   "rise",
   "position",
+  "bodyActions",
   "sway",
   "turn",
 ] as const;

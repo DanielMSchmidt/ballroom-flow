@@ -30,7 +30,7 @@ describe("attribute-display — columns", () => {
 
 describe("attribute-display — abbrevValue", () => {
   it("maps known enum values to tight codes", () => {
-    expect(abbrevValue("rise", "commence")).toBe("com");
+    expect(abbrevValue("rise", "commence")).toBe("Com");
     expect(abbrevValue("turn", "quarter_R")).toBe("¼R");
     expect(abbrevValue("position", "closed")).toBe("Cl");
     expect(abbrevValue("position", "CBMP")).toBe("CBMP"); // CBMP is now a position (CBP removed)
@@ -41,7 +41,7 @@ describe("attribute-display — abbrevValue", () => {
   });
 
   it("joins a multi-set value", () => {
-    expect(abbrevValue("bodyActions", ["CBM", "CBMP"])).toBe("CB,CBP");
+    expect(abbrevValue("bodyActions", ["CBM", "CBMP"])).toBe("CBM,CBP");
   });
 
   it("falls back to a short prefix for custom/unknown values", () => {

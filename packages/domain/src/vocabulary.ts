@@ -225,7 +225,16 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#1f8a5b",
     cardinality: "single",
     valueType: "enum",
-    values: ["commence", "body_rise", "foot_rise", "up", "continue", "lowering", "NFR"],
+    values: [
+      "commence",
+      "body_rise",
+      "foot_rise",
+      "up",
+      "continue",
+      "lowering",
+      "body_lower",
+      "NFR",
+    ],
     appliesToDances: RISE_DANCES,
     description: "Rise & fall — the rise and lowering of the body and feet through the step.",
     valueDefs: {
@@ -235,6 +244,8 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       up: "Up — fully risen",
       continue: "Continue — stay up",
       lowering: "Lowering — lowering down",
+      body_lower:
+        "Body lower — the body lowers while staying on the feet (torso counterpart of body rise)",
       NFR: "NFR — no foot rise",
     },
     // The couple rise & lower together — a shared figure characteristic, not role-split.
@@ -275,14 +286,17 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
   bodyActions: {
     kind: "bodyActions",
     label: "Body Actions",
-    color: "#8a5cab",
+    color: "#b07cc6",
     cardinality: "multi",
     valueType: "enum",
-    values: ["CBM", "side_leading"],
+    values: ["CBM", "side_leading", "shaping", "oversway", "leg_line"],
     description: "Body actions used through the step (more than one can apply).",
     valueDefs: {
       CBM: "CBM — Contrary Body Movement: turning the opposite side toward the moving leg",
       side_leading: "Side leading — the same side of the body moves with the stepping foot",
+      shaping: "Shaping — a body shape (a stretch or line) held through the step",
+      oversway: "Oversway — a strong sway line, the body extended over the standing leg",
+      leg_line: "Leg line — an extended straight-leg line (e.g. a pointed toe)",
     },
     // CBM is applied by the turning dancer, so it commonly differs by role.
     roleAware: true,

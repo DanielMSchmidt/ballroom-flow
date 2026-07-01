@@ -113,9 +113,9 @@ describe("allColumns — every applicable kind for the EDIT grid", () => {
       "Rise",
       "Pos",
       "Feet",
+      "Body",
       "Sway",
       "Turn",
-      "Body",
     ]);
   });
 
