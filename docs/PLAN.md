@@ -241,6 +241,8 @@ Standard kinds (v1): **`direction`** (the step headline — **closed enum** `for
 ### 4.8 Profile — identity; editable name; note-color picker (global); **plan status + owned-routine count**; sign out.
 ### 4.9 Overlays — Add/fork-figure sheet; New Choreo sheet (quota-checked); Add-kind sheet; Info sheet (registry-derived); Toast (incl. "Undone", quota upsell, and **"copied into this choreo"** on copy-on-write).
 
+**Attribute info sheet reachability (frame 1.13).** The registry-derived info sheet (`AttributeInfoSheet`) is reached by **tapping any attribute value chip or its column header**, in **both** the reading view (`RoutineReadingView`) and the figure-detail EDIT grid (`FigureTimeline`) — plus the per-kind "About …" affordance inside the editor. In the EDIT grid a **cell** still opens the per-count editor (frame 1.11); the **column header** opens the info sheet. The merged **Step** column holds two kinds, so tapping it opens one sheet describing **both** `direction` + `footwork` (each a labelled section). A custom kind with no registry entry is synthesized from the figure's observed values, so the overlay always shows at least the value list (the short chip label stays in-view; the longer prose/definitions live on selection) — matching the "even custom attributes get a short view + a longer selection" contract.
+
 ---
 
 ## 5. Collaboration, Fork, Permissions & Undo

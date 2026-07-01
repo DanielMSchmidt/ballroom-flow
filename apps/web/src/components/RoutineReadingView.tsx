@@ -16,8 +16,10 @@ import {
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
+  type RegistryKind,
   type RoutineDoc,
 } from "@ballroom/domain";
+import { useState } from "react";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import {
   AttrChip,
@@ -29,7 +31,15 @@ import {
   Skeleton,
 } from "../ui";
 import type { FigureScope } from "../ui/tokens";
-import { cellValue, isOffBeatCount, type ReadingColumn, usedColumns } from "./reading-columns";
+import { AttributeInfoSheet } from "./AttributeInfoSheet";
+import {
+  cellValue,
+  columnUsage,
+  infoKindsForColumn,
+  isOffBeatCount,
+  type ReadingColumn,
+  usedColumns,
+} from "./reading-columns";
 import { filterByRoleView, type RoleView } from "./role-view";
 
 export function RoutineReadingView({
@@ -38,6 +48,7 @@ export function RoutineReadingView({
   annotations = [],
   canComment = false,
   memberColors,
+  customKinds = [],
   roleView,
   onRoleViewChange,
   onOpenFigure,
@@ -54,6 +65,9 @@ export function RoutineReadingView({
    *  caller (Assemble). When an authorId is found here, the inline dot uses the
    *  stored colour directly. Unknown authors fall back to the hash. */
   memberColors?: Record<string, string>;
+  /** User-defined kinds merged into the registry (US-043) — so the attribute info
+   *  overlay (frame 1.13) can describe a custom kind's prose/values too. */
+  customKinds?: RegistryKind[];
   /** The active Leader/Follower lens (controlled — persisted by the caller). */
   roleView: RoleView;
   onRoleViewChange: (view: RoleView) => void;
@@ -104,6 +118,8 @@ export function RoutineReadingView({
                     annotations={annotations}
                     canComment={canComment}
                     memberColors={memberColors}
+                    customKinds={customKinds}
+                    scopeLabel={routine.title}
                     onOpenFigure={onOpenFigure}
                     onOpenThread={onOpenThread}
                   />
@@ -135,6 +151,8 @@ function FigureReadout({
   annotations,
   canComment,
   memberColors,
+  customKinds = [],
+  scopeLabel,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -145,9 +163,15 @@ function FigureReadout({
   annotations: Annotation[];
   canComment: boolean;
   memberColors?: Record<string, string>;
+  customKinds?: RegistryKind[];
+  scopeLabel?: string;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
+  // The attribute kind whose info overlay is open (frame 1.13), or null. Tapping
+  // a value chip or a column header opens the plain-language reference. State is
+  // per-figure so usage counts + columns are scoped to the figure that was tapped.
+  const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
   if (!figure) {
     // A loading figure shows a skeleton (never silently vanishes); a genuinely
     // unavailable one says so plainly. A transient error reads as unavailable
@@ -207,7 +231,7 @@ function FigureReadout({
         <p className="text-2xs text-ink-faint">No steps noted yet.</p>
       ) : (
         <>
-          <ColumnHeader columns={columns} />
+          <ColumnHeader columns={columns} onOpenInfo={setInfoCol} />
           <ol className="flex flex-col gap-[5px]" aria-label={`${figure.name} steps`}>
             {counts.map((count) => (
               <StepRow
@@ -221,30 +245,60 @@ function FigureReadout({
                 figureId={figure.id}
                 canComment={canComment}
                 memberColors={memberColors}
+                onOpenInfo={setInfoCol}
                 onOpenThread={onOpenThread}
               />
             ))}
           </ol>
         </>
       )}
+
+      {/* The attribute info overlay (frame 1.13) — opened by tapping a value chip
+          or a column header. The merged Step column describes direction + footwork. */}
+      {infoCol &&
+        (() => {
+          const [primary, ...rest] = infoKindsForColumn(infoCol, customKinds, live);
+          if (!primary) return null;
+          return (
+            <AttributeInfoSheet
+              open
+              kind={primary}
+              extraKinds={rest}
+              title={infoCol.isStep ? infoCol.label : undefined}
+              usageCount={columnUsage(live, [primary, ...rest])}
+              scopeLabel={scopeLabel}
+              onClose={() => setInfoCol(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
 
 /** The per-figure column header: a count gutter then each used kind in its
- *  kind color (frame 1.6: Step · Rise · Pos · Sway · Turn). */
-function ColumnHeader({ columns }: { columns: ReadingColumn[] }) {
+ *  kind color (frame 1.6: Step · Rise · Pos · Sway · Turn). Each kind label is a
+ *  button that opens that kind's attribute info overlay (frame 1.13). */
+function ColumnHeader({
+  columns,
+  onOpenInfo,
+}: {
+  columns: ReadingColumn[];
+  onOpenInfo: (col: ReadingColumn) => void;
+}) {
   return (
-    <div className="flex items-center gap-1 px-[2px]" aria-hidden="true">
-      <span className="w-[18px] flex-none" />
+    <div className="flex items-center gap-1 px-[2px]">
+      <span className="w-[18px] flex-none" aria-hidden="true" />
       {columns.map((col) => (
-        <span
+        <button
           key={col.id}
-          className="flex-1 text-center text-[8px] font-bold leading-none"
+          type="button"
+          aria-label={`About ${col.label}`}
+          onClick={() => onOpenInfo(col)}
+          className="flex-1 cursor-pointer text-center text-[8px] font-bold leading-none"
           style={{ color: columnColor(col) }}
         >
           {col.label}
-        </span>
+        </button>
       ))}
     </div>
   );
@@ -277,6 +331,7 @@ function StepRow({
   figureId,
   canComment,
   memberColors,
+  onOpenInfo,
   onOpenThread,
 }: {
   count: number;
@@ -286,6 +341,8 @@ function StepRow({
   figureId: string;
   canComment: boolean;
   memberColors?: Record<string, string>;
+  /** Tapping a value chip opens that kind's attribute info overlay (frame 1.13). */
+  onOpenInfo: (col: ReadingColumn) => void;
   onOpenThread?: (anchor: { figureRef: string; count: number }) => void;
 }) {
   const offBeat = isOffBeatCount(count);
@@ -306,7 +363,18 @@ function StepRow({
           const label = cellValue(here, col);
           return (
             <span key={col.id} className="flex flex-1 justify-center">
-              {label ? <AttrChip kind={col.kind} label={label} dimmed={offBeat} /> : <EmptySlot />}
+              {label ? (
+                <button
+                  type="button"
+                  aria-label={`About ${col.label} — ${label}`}
+                  onClick={() => onOpenInfo(col)}
+                  className="cursor-pointer"
+                >
+                  <AttrChip kind={col.kind} label={label} dimmed={offBeat} />
+                </button>
+              ) : (
+                <EmptySlot />
+              )}
             </span>
           );
         })}

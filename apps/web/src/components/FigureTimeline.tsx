@@ -34,8 +34,16 @@ import { useMemo, useState } from "react";
 import { AttrChip, Button, Card, cx, kindVar, PlusIcon, SegmentedToggle } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
+import { AttributeInfoSheet } from "./AttributeInfoSheet";
 import { stepAction } from "./attribute-display";
-import { allColumns, cellValue, isOffBeatCount, type ReadingColumn } from "./reading-columns";
+import {
+  allColumns,
+  cellValue,
+  columnUsage,
+  infoKindsForColumn,
+  isOffBeatCount,
+  type ReadingColumn,
+} from "./reading-columns";
 import { displayValue, filterByRoleView, type RoleView } from "./role-view";
 
 export interface FigureTimelineProps {
@@ -108,6 +116,11 @@ export function FigureTimeline({
   const [openCount, setOpenCount] = useState<number | null>(null);
   const [openExpanded, setOpenExpanded] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
+  // The column whose attribute info overlay is open (frame 1.13). Tapping a column
+  // HEADER opens the plain-language reference; tapping a cell still opens the
+  // per-count editor (design 1.11 pin 3). The merged Step head describes both
+  // direction + footwork.
+  const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
   // `bb_role`) when provided; otherwise local UI state seeded from initialView.
   const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
@@ -244,8 +257,16 @@ export function FigureTimeline({
                   className="px-1.5 pb-1 text-center text-[10px] font-bold"
                   style={{ color: columnColor(col) }}
                 >
-                  {col.label}
-                  {col.isStep && <span aria-hidden="true">*</span>}
+                  <button
+                    type="button"
+                    aria-label={`About ${col.label}`}
+                    onClick={() => setInfoCol(col)}
+                    className="cursor-pointer"
+                    style={{ color: "inherit" }}
+                  >
+                    {col.label}
+                    {col.isStep && <span aria-hidden="true">*</span>}
+                  </button>
                 </th>
               ))}
             </tr>
@@ -376,6 +397,26 @@ export function FigureTimeline({
           />
         </Card>
       )}
+
+      {/* The attribute info overlay (frame 1.13) — opened by tapping a column
+          header. The merged Step column describes both direction + footwork. */}
+      {infoCol &&
+        (() => {
+          const live = attrs.filter((a) => a.deletedAt == null);
+          const [primary, ...rest] = infoKindsForColumn(infoCol, customKinds, live);
+          if (!primary) return null;
+          return (
+            <AttributeInfoSheet
+              open
+              kind={primary}
+              extraKinds={rest}
+              title={infoCol.isStep ? infoCol.label : undefined}
+              usageCount={columnUsage(live, [primary, ...rest])}
+              scopeLabel={scopeLabel}
+              onClose={() => setInfoCol(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

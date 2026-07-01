@@ -327,3 +327,67 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     expect(bg === "#1f8a5b" || bg === "rgb(31, 138, 91)").toBe(true);
   });
 });
+
+describe("RoutineReadingView — attribute info overlay (frame 1.13)", () => {
+  it("opens the info overlay when a column header is tapped", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(
+      figure({
+        attributes: [attr(1, "rise", "commence"), attr(3, "rise", "up")],
+      }),
+    );
+    // No overlay until the user asks for it.
+    expect(screen.queryByRole("heading", { name: /rise & fall/i })).toBeNull();
+    // The header button is exactly "About Rise" (the chip button carries the value too).
+    await userEvent.click(screen.getByRole("button", { name: /^about rise$/i }));
+    // The sheet titles the kind (its full registry label) + a usage footer.
+    expect(screen.getByRole("heading", { name: /rise & fall/i })).toBeInTheDocument();
+    expect(screen.getByText(/used in 2 steps across gold waltz/i)).toBeInTheDocument();
+  });
+
+  it("opens the info overlay when a value chip is tapped", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(figure({ attributes: [attr(1, "turn", "quarter_R")] }));
+    // The chip shows the SHORT code in the view…
+    const chip = screen.getByRole("button", { name: /about turn — ¼R/i });
+    await userEvent.click(chip);
+    // …and the overlay shows the LONGER reference for the kind.
+    expect(screen.getByRole("heading", { name: /^turn$/i })).toBeInTheDocument();
+  });
+
+  it("describes BOTH direction and footwork for the merged Step column", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(
+      figure({ attributes: [attr(1, "direction", "forward"), attr(1, "footwork", "heel")] }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^about step$/i }));
+    // The combined Step slot names each kind as its own section.
+    expect(screen.getByRole("heading", { name: /^step$/i })).toBeInTheDocument(); // sheet title
+    expect(screen.getByRole("heading", { name: /^direction$/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^footwork$/i })).toBeInTheDocument();
+  });
+
+  it("still shows a value list for a custom kind with no registry prose", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // A kind present on the figure but absent from the merged registry (no
+    // customKinds passed) — the overlay synthesizes its values from the figure.
+    renderReading(figure({ attributes: [attr(1, "energy", "high")] }));
+    await userEvent.click(screen.getByRole("button", { name: /^about energy$/i }));
+    expect(screen.getByRole("heading", { name: /^energy$/i })).toBeInTheDocument();
+    // The observed value renders as a chip even with no definition text.
+    const values = screen.getAllByText("high");
+    expect(values.length).toBeGreaterThan(0);
+  });
+});
