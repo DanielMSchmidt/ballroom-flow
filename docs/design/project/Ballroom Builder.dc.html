@@ -120,7 +120,7 @@
                     <sc-if value="{{ fig.hasCols }}" hint-placeholder-val="{{ true }}">
                       <div style="display:flex;gap:5px;padding:0 5px 2px">
                         <span style="width:18px;flex:0 0 auto"></span>
-                        <sc-for list="{{ fig.cols }}" as="col" hint-placeholder-count="4"><span style="flex:1;min-width:0;text-align:center;font:700 8px 'Inconsolata';letter-spacing:.2px;color:{{ col.color }}">{{ col.abbr }}</span></sc-for>
+                        <sc-for list="{{ fig.cols }}" as="col" hint-placeholder-count="4"><span onClick="{{ col.onInfo }}" style="flex:1;min-width:0;text-align:center;font:700 8px 'Inconsolata';letter-spacing:.2px;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;color:{{ col.color }}">{{ col.abbr }}</span></sc-for>
                       </div>
                     </sc-if>
                     <sc-for list="{{ fig.steps }}" as="step" hint-placeholder-count="3">
@@ -130,7 +130,7 @@
                           <sc-if value="{{ step.isSub }}" hint-placeholder-val="{{ true }}"><span style="width:18px;flex:0 0 auto;text-align:center;font:700 11px 'Inconsolata';color:#9aa7bb;align-self:center">{{ step.count }}</span></sc-if>
                           <sc-for list="{{ step.cells }}" as="cell" hint-placeholder-count="4">
                             <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center">
-                              <sc-if value="{{ cell.hasVal }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span style="max-width:100%;font:700 8px 'Inconsolata';border-radius:5px;padding:2px 5px;color:#fff;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:{{ cell.color }}">{{ c.label }}</span></sc-for></sc-if>
+                              <sc-if value="{{ cell.hasVal }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span onClick="{{ c.onTap }}" style="max-width:100%;font:700 8px 'Inconsolata';border-radius:5px;padding:2px 5px;color:#fff;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:{{ cell.color }}">{{ c.label }}</span></sc-for></sc-if>
                               <sc-if value="{{ cell.empty }}" hint-placeholder-val="{{ true }}"><span style="width:5px;height:5px;border-radius:50%;border:1.5px solid #ddd6ca"></span></sc-if>
                             </div>
                           </sc-for>
@@ -327,12 +327,9 @@
 
           <sc-if value="{{ attrEd.linked }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;flex-direction:column;gap:9px">
-              <sc-if value="{{ attrEd.leader.isStep }}" hint-placeholder-val="{{ true }}">
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.foots }}" as="o" hint-placeholder-count="4"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-              </sc-if>
-              <sc-if value="{{ attrEd.leader.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></sc-if>
-              <sc-if value="{{ attrEd.leader.isMulti }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="4"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:12px;padding:6px 12px;cursor:pointer">✓ {{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:12px;padding:6px 12px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></sc-if>
+              <sc-if value="{{ attrEd.leader.isStep }}" hint-placeholder-val="{{ true }}"><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:12px;padding:6px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:12px;padding:6px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.footsCommon }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div><div style="font:700 8px 'Inconsolata';color:#b3aea4;letter-spacing:.4px;margin:8px 0 5px">— rolls —</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.footsRolls }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></div></sc-if>
+              <sc-if value="{{ attrEd.leader.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></sc-if>
+              <sc-if value="{{ attrEd.leader.isMulti }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#fff;cursor:pointer">✓ {{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:12px;padding:6px 10px"><span onClick="{{ o.onPick }}" style="font:600 11px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></sc-if>
               <sc-if value="{{ attrEd.leader.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ attrEd.leader.value }}" onChange="{{ attrEd.leader.onInput }}" placeholder="type a value…" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#fff;outline:none"></input></sc-if>
             </div>
           </sc-if>
@@ -340,20 +337,14 @@
           <sc-if value="{{ attrEd.unlinked }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;flex-direction:column;gap:9px;border-left:3px solid #2f5d8f;padding-left:11px">
               <span style="font:700 9px 'Inconsolata';color:#2f5d8f">LEADER</span>
-              <sc-if value="{{ attrEd.leader.isStep }}" hint-placeholder-val="{{ true }}">
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:5px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:5px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.foots }}" as="o" hint-placeholder-count="4"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-              </sc-if>
-              <sc-if value="{{ attrEd.leader.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></sc-if>
+              <sc-if value="{{ attrEd.leader.isStep }}" hint-placeholder-val="{{ true }}"><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 9px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.footsCommon }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div><div style="font:700 8px 'Inconsolata';color:#b3aea4;letter-spacing:.4px;margin:8px 0 5px">— rolls —</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.footsRolls }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></div></sc-if>
+              <sc-if value="{{ attrEd.leader.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.leader.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></sc-if>
               <sc-if value="{{ attrEd.leader.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ attrEd.leader.value }}" onChange="{{ attrEd.leader.onInput }}" placeholder="type a value…" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;font:600 11px 'Inconsolata';color:#3a352d;background:#fff;outline:none"></input></sc-if>
             </div>
             <div style="display:flex;flex-direction:column;gap:9px;border-left:3px solid #c0563f;padding-left:11px">
               <span style="font:700 9px 'Inconsolata';color:#c0563f">FOLLOWER</span>
-              <sc-if value="{{ attrEd.follower.isStep }}" hint-placeholder-val="{{ true }}">
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:5px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-                <div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:5px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.foots }}" as="o" hint-placeholder-count="4"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div>
-              </sc-if>
-              <sc-if value="{{ attrEd.follower.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 10px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></sc-if>
+              <sc-if value="{{ attrEd.follower.isStep }}" hint-placeholder-val="{{ true }}"><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">DIRECTION</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.dirs }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';background:{{ attrEd.color }};color:#fff;border-radius:11px;padding:5px 9px;cursor:pointer">{{ o.label }}</span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:11px;padding:5px 9px;cursor:pointer">{{ o.label }}</span></sc-if></sc-for></div></div><div><div style="font:700 8px 'Inconsolata';color:#9a958c;margin-bottom:6px">FOOTWORK</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.footsCommon }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div><div style="font:700 8px 'Inconsolata';color:#b3aea4;letter-spacing:.4px;margin:8px 0 5px">— rolls —</div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.footsRolls }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></div></sc-if>
+              <sc-if value="{{ attrEd.follower.isList }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attrEd.follower.opts }}" as="o" hint-placeholder-count="5"><sc-if value="{{ o.sel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;background:{{ attrEd.color }};border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#fff;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if><sc-if value="{{ o.notSel }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid #dcd5ca;border-radius:11px;padding:5px 9px"><span onClick="{{ o.onPick }}" style="font:600 10px 'Inconsolata';color:#7a746a;cursor:pointer">{{ o.label }}</span><span onClick="{{ o.onInfo }}" style="width:14px;height:14px;border-radius:50%;background:#efe9e0;color:#9a958c;display:inline-flex;align-items:center;justify-content:center;font:italic 700 9px Georgia,serif;cursor:pointer">i</span></span></sc-if></sc-for></div></sc-if>
               <sc-if value="{{ attrEd.follower.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ attrEd.follower.value }}" onChange="{{ attrEd.follower.onInput }}" placeholder="type a value…" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;font:600 11px 'Inconsolata';color:#3a352d;background:#fff;outline:none"></input></sc-if>
             </div>
           </sc-if>
@@ -696,10 +687,10 @@
       </div>
     </sc-if>
 
-    <!-- ===== INFO SHEET ===== -->
-    <sc-if value="{{ infoSheetOpen }}" hint-placeholder-val="{{ true }}">
-      <div onClick="{{ onCloseInfo }}" style="position:absolute;inset:0;background:rgba(20,18,12,.3);z-index:20"></div>
-      <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:18px 20px 36px;z-index:21;box-shadow:0 -6px 28px rgba(0,0,0,.16)">
+    <!-- ===== INFO SHEET (always mounted; toggled via display) ===== -->
+    <div style="position:absolute;inset:0;z-index:30;display:{{ infoDisplay }}">
+      <div onClick="{{ onCloseInfo }}" style="position:absolute;inset:0;background:rgba(20,18,12,.3)"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:18px 20px 36px;box-shadow:0 -6px 28px rgba(0,0,0,.16)">
         <div style="width:36px;height:4px;border-radius:3px;background:#e0dbd0;margin:0 auto 16px"></div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span style="width:10px;height:10px;border-radius:50%;background:{{ infoContent.color }};flex:0 0 auto"></span>
@@ -710,14 +701,22 @@
         <div style="font:700 9px 'Inconsolata';color:#9a958c;letter-spacing:.4px;margin-bottom:8px">VALUES</div>
         <div class="scrl" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
           <sc-for list="{{ infoContent.values }}" as="val" hint-placeholder-count="5">
-            <div style="display:flex;gap:10px;padding:8px 10px;background:#f7f5f0;border-radius:9px;align-items:flex-start">
-              <span style="font:700 11px 'Inconsolata';color:{{ infoContent.color }};white-space:nowrap;min-width:52px">{{ val.v }}</span>
-              <span style="font:500 13px var(--note-font);color:#5a554c;line-height:1.35">{{ val.d }}</span>
-            </div>
+            <sc-if value="{{ val.anchored }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:10px;padding:9px 11px;background:#fff7e6;border:1.5px solid {{ infoContent.color }};border-radius:9px;align-items:flex-start">
+                <span style="font:700 11px 'Inconsolata';color:{{ infoContent.color }};white-space:nowrap;min-width:46px">{{ val.code }}</span>
+                <div style="flex:1"><div style="font:700 11px 'Inconsolata';color:#1c1c1e;margin-bottom:2px">{{ val.label }}</div><div style="font:500 13px var(--note-font);color:#5a554c;line-height:1.35">{{ val.d }}</div></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ val.plain }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:10px;padding:8px 11px;background:#f7f5f0;border-radius:9px;align-items:flex-start">
+                <span style="font:700 11px 'Inconsolata';color:{{ infoContent.color }};white-space:nowrap;min-width:46px">{{ val.code }}</span>
+                <div style="flex:1"><div style="font:700 11px 'Inconsolata';color:#3a352d;margin-bottom:2px">{{ val.label }}</div><div style="font:500 13px var(--note-font);color:#5a554c;line-height:1.35">{{ val.d }}</div></div>
+              </div>
+            </sc-if>
           </sc-for>
         </div>
       </div>
-    </sc-if>
+    </div>
 
     <!-- ===== FORK / CHOREO MENU SHEET ===== -->
     <sc-if value="{{ forkMenuOpen }}" hint-placeholder-val="{{ true }}">
@@ -834,6 +833,7 @@ class Component extends DCLogic {
     const ST = (count, dir, foot, o) => { o = o || {}; const attrs = [ A('step', {dir:dir||null, foot:foot||null}, o.stepF||null) ];
       if (o.rise) attrs.push(A('rise', o.rise, o.riseF||null));
       if (o.position) attrs.push(A('position', o.position));
+      if (o.feet) attrs.push(A('feet', o.feet, o.feetF||null));
       if (o.body) attrs.push(A('body', Array.isArray(o.body)?o.body:[o.body]));
       if (o.sway) attrs.push(A('sway', o.sway, o.swayF||null));
       if (o.turn) attrs.push(A('turn', o.turn, o.turnF||null));
@@ -841,9 +841,9 @@ class Component extends DCLogic {
       return { id:'st'+(++sid), count, attrs };
     };
     const fig = (id, name, source, steps, base) => ({ id, name, source, steps, base:base||null });
-    const natural = [ ST('1','forward','HT',{rise:'commence',turn:'¼ R',head:'left',headF:'right'}), ST('2','side','T',{rise:'up',turn:'continue'}), ST('3','close','TH',{rise:'up',position:'Closed'}) ];
-    const spin = [ ST('1','back','TH',{rise:'lowering',position:'CBMP',turn:'½ L'}), ST('2','side','T',{rise:'body rise',sway:'to L',swayF:'to R'}), ST('3','close','TH',{rise:'continue',position:'Closed'}) ];
-    const whisk = () => [ ST('1','forward','HT',{rise:'commence'}), ST('2','side','T',{rise:'up',sway:'to R'}), ST('3','behind','T',{rise:'up',position:'Promenade'}) ];
+    const natural = [ ST('1','forward','HT',{rise:'commence',turn:'¼ R',head:'left',headF:'right'}), ST('2','side','T',{rise:'up',turn:'continue'}), ST('3','close','TH',{rise:'up',position:'Closed',feet:'3'}) ];
+    const spin = [ ST('1','back','TH',{rise:'lowering',position:'CBMP',turn:'½ L'}), ST('2','side','T',{rise:'body rise',sway:'to L',swayF:'to R'}), ST('3','close','TH',{rise:'continue',position:'Closed',feet:'3'}) ];
+    const whisk = () => [ ST('1','forward','HT',{rise:'commence'}), ST('2','side','T',{rise:'up',sway:'to R'}), ST('3','behind','T',{rise:'up',position:'Promenade',feet:'5',feetF:'4c'}) ];
     const chasse = [ ST('1','forward','HT',{position:'Promenade'}), ST('&','close','T'), ST('2','side','T',{sway:'to R'}), ST('3','close','TH',{rise:'lowering'}) ];
     const reverse = [ ST('1','forward','HT',{rise:'commence',turn:'¼ L'}), ST('2','side','T',{rise:'up',turn:'continue'}), ST('3','close','TH',{rise:'up',position:'Closed'}) ];
     const wing = [ ST('1','forward','HT',{position:'Promenade'}), ST('2','forward','TH',{rise:'up'}), ST('3','in place','TH',{position:'Wing'}) ];
@@ -902,24 +902,105 @@ class Component extends DCLogic {
   }
 
   /* ---- attribute type registry (standard + custom; custom can never shadow a standard key/label) ---- */
-  stdTypes(){ return [
+  /* ---- value catalog: every enum value has a short CODE (overview), a full LABEL (edit), a one-line DEF (info) ---- */
+  valueCat(){ return {
+    rise:[
+      {key:'commence',code:'Com',label:'Commence',def:'Begin to rise at the end of this step'},
+      {key:'body rise',code:'BR',label:'Body rise',def:'Torso rises while the heel stays in contact with the floor'},
+      {key:'foot rise',code:'FR',label:'Foot rise',def:'Heel lifts — now fully on the toes'},
+      {key:'up',code:'Up',label:'Up',def:'Remain on the toes (heel off the floor)'},
+      {key:'continue',code:'Cont',label:'Continue',def:'Continue the existing rise or fall through this step'},
+      {key:'lowering',code:'Low',label:'Lowering',def:'Begin to lower at the end of this step — heel returns to the floor'},
+      {key:'body lower',code:'BL',label:'Body lower',def:'Upper body lowers before the foot settles'},
+    ],
+    position:[
+      {key:'Closed',code:'Cl',label:'Closed',def:'Standard ballroom hold — partners directly facing each other'},
+      {key:'Promenade',code:'PP',label:'Promenade',def:'Partners open into a V-shape, both moving along the same diagonal'},
+      {key:'Counter promenade',code:'CPP',label:'Counter promenade',def:'The V opening to the closed side'},
+      {key:'Outside Partner',code:'OP',label:'Outside Partner',def:'Step taken outside the partner\u2019s feet'},
+      {key:'CBMP',code:'CBMP',label:'CBMP',def:'Counter Body Movement Position — foot placed across the line of the opposite foot'},
+      {key:'CBP',code:'CBP',label:'CBP',def:'Counter Body Movement — body turns away from the moving foot'},
+      {key:'Left side',code:'LS',label:'Left side',def:'Partner on the left side'},
+      {key:'Right side',code:'RS',label:'Right side',def:'Partner on the right side'},
+      {key:'Tandem',code:'Tan',label:'Tandem',def:'One partner directly in front of the other, both facing the same way'},
+      {key:'Wing',code:'Wg',label:'Wing',def:'Man\u2019s right side close to lady\u2019s right side, moving together'},
+    ],
+    feet:[
+      {key:'1',code:'1',label:'First',def:'Feet together, heels touching'},
+      {key:'2',code:'2',label:'Second',def:'Feet apart, side by side'},
+      {key:'3',code:'3',label:'Third',def:'One foot in front, heel to instep'},
+      {key:'4o',code:'4o',label:'Fourth open',def:'One foot forward and apart, no overlap'},
+      {key:'4c',code:'4c',label:'Fourth closed',def:'One foot forward, overlapping the other'},
+      {key:'5',code:'5',label:'Fifth',def:'One foot fully crossed in front, heel to toe'},
+    ],
+    body:[
+      {key:'Contra body',code:'CBM',label:'Contra body',def:'Contra Body Movement — the opposite side swings toward the moving foot'},
+      {key:'Side leading',code:'SL',label:'Side leading',def:'The same side of the body moves with the stepping foot'},
+      {key:'Shaping',code:'Shp',label:'Shaping',def:'Stylistic shaping of the upper body'},
+      {key:'Oversway',code:'OvS',label:'Oversway',def:'A strong sway line settled into a held shape'},
+      {key:'Leg line',code:'LL',label:'Leg line',def:'An extended, pointed leg line'},
+    ],
+    sway:[
+      {key:'to L',code:'L',label:'Sway left',def:'Body inclines to the left'},
+      {key:'to R',code:'R',label:'Sway right',def:'Body inclines to the right'},
+      {key:'none',code:'\u2014',label:'No sway',def:'No sway — body remains upright on this step'},
+    ],
+    turn:[
+      {key:'\u00bc L',code:'\u00bcL',label:'Quarter left',def:'Quarter turn to the left (90\u00b0)'},
+      {key:'\u00bc R',code:'\u00bcR',label:'Quarter right',def:'Quarter turn to the right (90\u00b0)'},
+      {key:'\u215c L',code:'\u215cL',label:'Three-eighths left',def:'Three-eighths turn to the left (135\u00b0)'},
+      {key:'\u215c R',code:'\u215cR',label:'Three-eighths right',def:'Three-eighths turn to the right (135\u00b0)'},
+      {key:'\u00bd L',code:'\u00bdL',label:'Half left',def:'Half turn to the left (180\u00b0)'},
+      {key:'\u00bd R',code:'\u00bdR',label:'Half right',def:'Half turn to the right (180\u00b0)'},
+      {key:'continue',code:'Cont',label:'Continue',def:'Continue turning across this step'},
+      {key:'none',code:'\u2014',label:'No turn',def:'No turning action on this step'},
+    ],
+    foot:[
+      {key:'HT',code:'HT',label:'Heel-Toe',def:'Heel then toe — step onto the heel, weight rolls forward to the ball',group:'common'},
+      {key:'TH',code:'TH',label:'Toe-Heel',def:'Toe then heel — step onto the ball, then heel lowers as weight settles',group:'common'},
+      {key:'T',code:'T',label:'Toe',def:'Toe (ball of foot) only — no heel contact on this step',group:'common'},
+      {key:'H',code:'H',label:'Heel',def:'Heel only',group:'common'},
+      {key:'B',code:'B',label:'Ball',def:'Ball of the foot',group:'common'},
+      {key:'WF',code:'WF',label:'Whole foot',def:'Whole foot in contact at once',group:'common'},
+      {key:'BF',code:'BF',label:'Ball-flat',def:'Ball, then flattening onto the whole foot',group:'common'},
+      {key:'IE',code:'IE',label:'Inside edge',def:'Inside edge of the foot',group:'common'},
+      {key:'F',code:'F',label:'Flat foot',def:'Flat foot',group:'common'},
+      {key:'Htn',code:'Htn',label:'Heel turn',def:'Commence on the ball, then weight onto the heel',group:'common'},
+      {key:'HP',code:'HP',label:'Heel pull',def:'Draw the heel back sharply, used in certain turning actions',group:'common'},
+      {key:'BH',code:'BH',label:'Ball-heel',def:'Ball then heel',group:'rolls'},
+      {key:'HTH',code:'HTH',label:'Heel-Toe-Heel',def:'Heel, toe, heel sequence through the step',group:'rolls'},
+      {key:'THT',code:'THT',label:'Toe-Heel-Toe',def:'Toe, heel, toe sequence through the step',group:'rolls'},
+      {key:'T/H/T',code:'T/H/T',label:'Toe / Heel / Toe',def:'Separate-foot roll: toe, heel, toe',group:'rolls'},
+      {key:'H/T',code:'H/T',label:'Heel / Toe',def:'Separate-foot roll: heel then toe',group:'rolls'},
+      {key:'T/H',code:'T/H',label:'Toe / Heel',def:'Separate-foot roll: toe then heel',group:'rolls'},
+      {key:'T/TH',code:'T/TH',label:'Toe / Toe-Heel',def:'Separate-foot roll: toe, then toe-heel',group:'rolls'},
+      {key:'TH/T',code:'TH/T',label:'Toe-Heel / Toe',def:'Separate-foot roll: toe-heel, then toe',group:'rolls'},
+    ],
+  }; }
+  valuesFor(t){ const C = this.valueCat(); if (C[t.key]) return C[t.key]; return (t.opts||[]).map(o => ({ key:o, code:o, label:o, def:'' })); }
+  valMeta(family, key){ const list = this.valueCat()[family] || []; return list.find(e => e.key === key) || { key, code:key, label:key, def:'' }; }
+  valCode(family, key){ return this.valMeta(family, key).code; }
+
+  /* ---- attribute type registry (standard + custom; custom can never shadow a standard key/label) ---- */
+  stdTypes(){ const C = this.valueCat(); const ks = f => C[f].map(e => e.key); return [
     { key:'step', label:'Step', color:'#2f5d8f', mode:'step', single:true, roleAware:true, required:true, dances:null },
-    { key:'rise', label:'Rise & Fall', color:'#1f8a5b', mode:'list', opts:['lowering','commence','up','body rise','foot rise','continue'], single:true, roleAware:true, dances:['Waltz','Viennese Waltz','Foxtrot','Quickstep'] },
-    { key:'position', label:'Position', color:'#8a5cab', mode:'list', opts:['CBMP','CBP','Closed','Promenade','Outside Partner','Wing'], single:true, roleAware:false, dances:null },
-    { key:'body', label:'Body Actions', color:'#b07cc6', mode:'list', opts:['Contra body','Shaping','Oversway','Leg line'], single:false, roleAware:false, dances:null },
-    { key:'sway', label:'Sway', color:'#c0563f', mode:'list', opts:['to L','to R','none'], single:true, roleAware:true, dances:null },
-    { key:'turn', label:'Turn', color:'#5b6b8a', mode:'list', opts:['¼ L','¼ R','⅜ L','⅜ R','½ L','½ R','none'], single:true, roleAware:true, dances:null },
+    { key:'rise', label:'Rise & Fall', color:'#1f8a5b', mode:'list', opts:ks('rise'), single:true, roleAware:true, dances:['Waltz','Viennese Waltz','Foxtrot','Quickstep'] },
+    { key:'position', label:'Position', color:'#8a5cab', mode:'list', opts:ks('position'), single:true, roleAware:false, dances:null },
+    { key:'feet', label:'Foot Position', color:'#2c8a85', mode:'list', opts:ks('feet'), single:true, roleAware:true, dances:null },
+    { key:'body', label:'Body Actions', color:'#b07cc6', mode:'list', opts:ks('body'), single:false, roleAware:false, dances:null },
+    { key:'sway', label:'Sway', color:'#c0563f', mode:'list', opts:ks('sway'), single:true, roleAware:true, dances:null },
+    { key:'turn', label:'Turn', color:'#5b6b8a', mode:'list', opts:ks('turn'), single:true, roleAware:true, dances:null },
   ]; }
   dirOpts(){ return ['forward','back','side','close','behind','diagonal','in place']; }
-  footOpts(){ return ['HT','T','TH','H','heel pull']; }
+  footOpts(){ return this.valueCat().foot.map(e => e.key); }
   allTypes(){ const std = this.stdTypes(); const keys = {}, labs = {}; std.forEach(t => { keys[t.key]=1; labs[t.label.toLowerCase()]=1; }); const cu = (this.state.customTypes||[]).filter(t => !keys[t.key] && !labs[(t.label||'').toLowerCase()]); return std.concat(cu); }
   typeInfo(key){ return this.allTypes().find(t => t.key === key) || { key, label:key, color:'#9a958c', mode:'list', opts:[], single:true, roleAware:false }; }
   abbrDir(d){ return ({forward:'fwd',back:'back',side:'side',close:'close',behind:'beh',diagonal:'diag','in place':'hold'})[d] || d || '—'; }
   attrValForRole(a, role){ const v = (role === 'follower' && a.f != null) ? a.f : a.l; return v; }
   attrDisplay(a, role){ const t = this.typeInfo(a.type); const v = this.attrValForRole(a, role);
-    if (t.mode === 'step') { const dir = v && v.dir, foot = v && v.foot; if (!dir && !foot) return ''; return this.abbrDir(dir) + (foot ? ' · ' + foot : ''); }
-    if (Array.isArray(v)) return v.join(', ');
-    return v || ''; }
+    if (t.mode === 'step') { const dir = v && v.dir, foot = v && v.foot; if (!dir && !foot) return ''; return this.abbrDir(dir) + (foot ? ' · ' + this.valCode('foot', foot) : ''); }
+    if (Array.isArray(v)) return v.map(x => this.valCode(t.key, x)).join(', ');
+    return v ? this.valCode(t.key, v) : ''; }
   attrIsSet(a){ const t = this.typeInfo(a.type); if (t.mode === 'step') return !!(a.l && (a.l.dir || a.l.foot)); if (Array.isArray(a.l)) return a.l.length > 0; return a.l != null && a.l !== ''; }
   attrDivergent(a){ const t = this.typeInfo(a.type); return t.roleAware && a.f != null; }
 
@@ -977,13 +1058,25 @@ class Component extends DCLogic {
     { k:'turn', opts:['¼ L','¼ R','⅜ L','⅜ R','½ L','½ R','none'] },
   ]; }
   famByKey(k){ return this.fam().find(f => f.k === k); }
-  famInfo(k){ return ({
-    rise:{name:'Rise & fall',color:'#1f8a5b',desc:'The vertical movement of the body through each bar. In Waltz the couple begins to rise at the end of count 1, continues rising on 2–3, then lowers at the very end of count 3 into the next bar.',values:[{v:'commence',d:'Begin to rise at the end of this step'},{v:'body rise',d:'Torso rises while the heel stays in contact with the floor'},{v:'foot rise',d:'Heel lifts — now fully on the toes'},{v:'up',d:'Remain on the toes (heel off the floor)'},{v:'continue',d:'Continue the existing rise or fall through this step'},{v:'lowering',d:'Begin to lower at the end of this step — heel returns to the floor'},{v:'body lower',d:'Upper body lowers before the foot settles'}]},
-    body:{name:'Body position',color:'#8a5cab',desc:'The spatial relationship and orientation of the partners\' bodies to each other and to the line of dance. Correct body position is essential for connection and footwork to work as intended.',values:[{v:'Closed',d:'Standard ballroom hold — partners directly facing each other'},{v:'Promenade (PP)',d:'Partners open into a V-shape, both moving along the same diagonal'},{v:'CBMP',d:'Counter Body Movement Position — foot placed across the line of the opposite foot'},{v:'CBP',d:'Counter Body Movement — body turns away from the moving foot'},{v:'Wing',d:'A Waltz-specific position: man\'s right side close to lady\'s right side, moving together'}]},
-    foot:{name:'Footwork',color:'#a9742c',desc:'Which part of the foot contacts the floor as the step lands, and the sequence of contact. Correct footwork creates the characteristic rise and fall action of the dance.',values:[{v:'HT',d:'Heel then Toe — step onto the heel, weight rolls forward to the ball'},{v:'T',d:'Toe (ball of foot) only — no heel contact on this step'},{v:'TH',d:'Toe then Heel — step onto the ball, then heel lowers as weight settles'},{v:'heel pull',d:'Draw the heel back sharply, used in certain turning actions'}]},
-    sway:{name:'Sway',color:'#c0563f',desc:'The inclination of the body to one side, a natural consequence of rise and the centrifugal force of turning. Sway is never forced — it arises from correct technique and is always away from the centre of the turn.',values:[{v:'to L',d:'Body inclines to the left'},{v:'to R',d:'Body inclines to the right'},{v:'none',d:'No sway — body remains upright on this step'}]},
-    turn:{name:'Turn',color:'#5b6b8a',desc:'The amount of rotation during a step, measured as a fraction of a full turn. Turning is gradual — it occurs across the body of the step, not all at once.',values:[{v:'¼ L',d:'Quarter turn to the left (90°)'},{v:'¼ R',d:'Quarter turn to the right (90°)'},{v:'⅜ L',d:'Three-eighths turn to the left (135°)'},{v:'⅜ R',d:'Three-eighths turn to the right (135°)'},{v:'½ L',d:'Half turn to the left (180°)'},{v:'½ R',d:'Half turn to the right (180°)'},{v:'none',d:'No turning action on this step'}]},
-  })[k]||{name:'',color:'#9a958c',desc:'',values:[]}; }
+  famInfo(k){
+    if (k === 'step'){
+      const dd = {forward:'Travel forwards',back:'Travel backwards',side:'Step to the side',close:'Feet come together',behind:'Cross behind the supporting foot',diagonal:'Travel on a diagonal',"in place":'No travel — change weight in place'};
+      const dirs = this.dirOpts().map(d => ({ key:d, code:this.abbrDir(d), label:d, d:dd[d]||'' }));
+      const foots = this.valueCat().foot.map(e => ({ key:e.key, code:e.code, label:e.label, d:e.def }));
+      return { name:'Step', color:'#2f5d8f', desc:'A step is a direction (the headline) plus footwork (which part of the foot meets the floor). Which foot is never shown — feet alternate automatically.', values: dirs.concat(foots) };
+    }
+    const meta = ({
+    rise:{name:'Rise & fall',color:'#1f8a5b',desc:'The vertical movement of the body through each bar. In Waltz the couple begins to rise at the end of count 1, continues rising on 2–3, then lowers at the very end of count 3 into the next bar.'},
+    position:{name:'Position',color:'#8a5cab',desc:'The spatial relationship and orientation of the partners\u2019 bodies to each other and to the line of dance. Correct position is essential for connection and footwork to work as intended.'},
+    feet:{name:'Foot Position',color:'#2c8a85',desc:'The ballet-derived position of the feet relative to each other.'},
+    foot:{name:'Footwork',color:'#a9742c',desc:'Which part of the foot contacts the floor as the step lands, and the sequence of contact. Correct footwork creates the characteristic rise and fall action of the dance.'},
+    body:{name:'Body actions',color:'#b07cc6',desc:'Actions of the body that shape a step beyond its direction and footwork — applied on their own or together.'},
+    sway:{name:'Sway',color:'#c0563f',desc:'The inclination of the body to one side, a natural consequence of rise and the centrifugal force of turning. Sway is never forced — it arises from correct technique and is always away from the centre of the turn.'},
+    turn:{name:'Turn',color:'#5b6b8a',desc:'The amount of rotation during a step, measured as a fraction of a full turn. Turning is gradual — it occurs across the body of the step, not all at once.'},
+  })[k] || {name:'',color:'#9a958c',desc:''};
+    if (!meta.name){ const t = this.typeInfo(k); if (t && t.key === k && (t.opts||[]).length){ return { name:t.label, color:t.color, desc:'A custom attribute type for this choreo.', values:(t.opts||[]).map(o => ({ key:o, code:o, label:o, d:'' })) }; } }
+    const vals = (this.valueCat()[k] || []).map(e => ({ key:e.key, code:e.code, label:e.label, d:e.def }));
+    return { name:meta.name, color:meta.color, desc:meta.desc, values:vals }; }
   shorten(k, v){
     const m = { 'lowering':'lwr', 'body rise':'rise', 'foot rise':'f↑', 'continue':'cont', 'up':'up', 'commence':'com', 'Closed':'Cl', 'Promenade':'PP', 'Wing':'Wg', 'to L':'L', 'to R':'R', 'none':'—', 'heel pull':'H.pl' };
     if (m[v]) return m[v];
@@ -1041,7 +1134,7 @@ class Component extends DCLogic {
   openAttr(stepId, attrId){ const st = this._findStep(stepId); const a = st && st.attrs.find(x => x.id === attrId); if (!a) return; this.setState({ editAttr:{ stepId, attrId, typeKey:a.type, l:this._clone(a.l), f:this._clone(a.f), linked:(a.f == null) } }); }
   startAddAttr(stepId){ this.setState({ addAttrFor:stepId, newType:null }); }
   pickType(typeKey){ const stepId = this.state.addAttrFor; const dv = this.defaultVal(typeKey); this.setState({ editAttr:{ stepId, attrId:null, typeKey, l:dv, f:null, linked:true }, addAttrFor:null, newType:null }); }
-  typeAbbr(t){ return ({step:'Step',rise:'Rise',position:'Pos',body:'Body',sway:'Sway',turn:'Turn'})[t.key] || (t.label && t.label.length>5 ? t.label.slice(0,5) : t.label); }
+  typeAbbr(t){ return ({step:'Step',rise:'Rise',position:'Pos',feet:'Feet',body:'Body',sway:'Sway',turn:'Turn'})[t.key] || (t.label && t.label.length>5 ? t.label.slice(0,5) : t.label); }
   addTyped(stepId, typeKey){ this.setState({ addAttrFor:stepId }, () => this.pickType(typeKey)); }
   addMoment(count){ const fid = this.state.openFigureId; this.setState(s => { let toast=null; const routine={...s.routine, sides:s.routine.sides.map(sd=>({...sd, figures:sd.figures.map(f=>{ if(f.id!==fid) return f; let fig=f; if(f.source==='library'||f.source==='variant'){ toast='Copied into this choreo'; fig={...f,source:'custom',base:f.base||f.name}; } return {...fig, steps:fig.steps.concat([{id:'st'+Date.now(),count:count,attrs:[]}])}; })}))}; const next={routine, addTimingOpen:false}; if(toast){clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),1800);next.toast=toast;} return next; }); }
   _clone(v){ return (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v; }
@@ -1053,6 +1146,7 @@ class Component extends DCLogic {
   saveAttr(){ const e = this.state.editAttr; if (!e) return; const stepId = e.stepId; const newAttr = { type:e.typeKey, l:e.l, f:(e.linked ? null : e.f), removed:false }; this._editStep(stepId, st => { let attrs; if (e.attrId){ attrs = st.attrs.map(a => a.id === e.attrId ? { ...a, l:newAttr.l, f:newAttr.f, removed:false } : a); } else { attrs = st.attrs.concat([{ id:'a'+Date.now(), ...newAttr }]); } return { ...st, attrs }; }); this.setState({ editAttr:null }); }
   removeAttr(){ const e = this.state.editAttr; if (!e || !e.attrId) { this.setState({ editAttr:null }); return; } this._editStep(e.stepId, st => ({ ...st, attrs: st.attrs.map(a => a.id === e.attrId ? { ...a, removed:true } : a) })); this.setState({ editAttr:null }); }
   closeAttr(){ this.setState({ editAttr:null }); }
+  openValInfo(family, key){ this.setState({ infoKey:family, infoValue:key }); }
   startNewType(){ this.setState({ newType:{ label:'', color:'#0f8a8a', multi:false, freetext:false, opts:[], optDraft:'', roleAware:false, required:false } }); }
   addNewTypeOpt(){ this.setState(s=>{ const d=(s.newType.optDraft||'').trim(); if(!d) return {}; return { newType:{ ...s.newType, opts:(s.newType.opts||[]).concat([d]), optDraft:'' } }; }); }
   removeNewTypeOpt(i){ this.setState(s=>({ newType:{ ...s.newType, opts:(s.newType.opts||[]).filter((_,x)=>x!==i) } })); }
@@ -1224,10 +1318,13 @@ class Component extends DCLogic {
       const t = this.typeInfo(eA.typeKey); const roleAware = !!t.roleAware;
       const mkRole = (rk, val) => {
         if (t.mode === 'step'){ const v = val || {dir:null,foot:null};
-          return { isStep:true, dirs:this.dirOpts().map(d=>({label:d, sel:v.dir===d, notSel:v.dir!==d, onPick:()=>this.setEditStepField(rk,'dir',v.dir===d?null:d)})), foots:this.footOpts().map(fo=>({label:fo, sel:v.foot===fo, notSel:v.foot!==fo, onPick:()=>this.setEditStepField(rk,'foot',v.foot===fo?null:fo)})) }; }
+          const footChip = e => ({ label:e.label, sel:v.foot===e.key, notSel:v.foot!==e.key, onPick:()=>this.setEditStepField(rk,'foot',v.foot===e.key?null:e.key), onInfo:()=>this.openValInfo('foot',e.key) });
+          const fc = this.valueCat().foot;
+          return { isStep:true, dirs:this.dirOpts().map(d=>({label:d, sel:v.dir===d, notSel:v.dir!==d, onPick:()=>this.setEditStepField(rk,'dir',v.dir===d?null:d)})), footsCommon:fc.filter(e=>e.group==='common').map(footChip), footsRolls:fc.filter(e=>e.group==='rolls').map(footChip) }; }
         if (t.mode === 'text') return { isText:true, value: val||'', onInput:(ev)=>this.setEditVal(rk, ev.target.value) };
-        if (!t.single){ const arr = Array.isArray(val)?val:[]; return { isMulti:true, opts:(t.opts||[]).map(o=>({label:o, sel:arr.indexOf(o)>=0, notSel:arr.indexOf(o)<0, onPick:()=>this.toggleEditMulti(rk,o)})) }; }
-        return { isList:true, opts:(t.opts||[]).map(o=>({label:o, sel:val===o, notSel:val!==o, onPick:()=>this.setEditVal(rk, val===o?null:o)})) };
+        const vals = this.valuesFor(t);
+        if (!t.single){ const arr = Array.isArray(val)?val:[]; return { isMulti:true, opts:vals.map(e=>({label:e.label, sel:arr.indexOf(e.key)>=0, notSel:arr.indexOf(e.key)<0, onPick:()=>this.toggleEditMulti(rk,e.key), onInfo:()=>this.openValInfo(t.key,e.key)})) }; }
+        return { isList:true, opts:vals.map(e=>({label:e.label, sel:val===e.key, notSel:val!==e.key, onPick:()=>this.setEditVal(rk, val===e.key?null:e.key), onInfo:()=>this.openValInfo(t.key,e.key)})) };
       };
       attrEd = { open:true, typeLabel:t.label, color:t.color, roleAware, notRoleAware:!roleAware, linked:eA.linked, unlinked:!eA.linked, isExisting:!!eA.attrId,
         leader:mkRole('l', eA.l), follower:mkRole('f', eA.linked ? eA.l : eA.f),
@@ -1323,7 +1420,7 @@ class Component extends DCLogic {
         sideName: sd.name,
         figures: sd.figures.map(f => {
           const usedR={}; f.steps.forEach(s=>s.attrs.filter(a=>!a.removed&&this.attrIsSet(a)).forEach(a=>{ usedR[a.type]=1; }));
-          const cols = this.allTypes().filter(t=>usedR[t.key]).map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color }));
+          const cols = this.allTypes().filter(t=>usedR[t.key]).map(t=>({ key:t.key, abbr:this.typeAbbr(t), color:t.color, onInfo:()=>this.setState({infoKey:t.key, infoValue:null}) }));
           return {
           id:f.id, name:f.name, countLabel:f.steps.map(s=>s.count).join(' '),
           ...scope(f),
@@ -1336,7 +1433,7 @@ class Component extends DCLogic {
             const moreCount=Math.max(0,allC.length-2);
             const openThread=()=>this.setState({choreoView:'thread',threadStepKey:tkey,threadReturnView:'assemble'});
             const isSub=(stp.count==='&'||stp.count==='a');
-            const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const ch=at.map(a=>({ label:this.attrDisplay(a,vRole) })); return { color:c.color, chips:ch, hasVal:ch.length>0, empty:ch.length===0 }; });
+            const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const ch=at.map(a=>{ const v=this.attrValForRole(a,vRole); const key=(c.key!=='step'&&!Array.isArray(v))?v:null; const fam=(c.key==='step')?'step':c.key; return { label:this.attrDisplay(a,vRole), onTap:()=>this.setState({infoKey:fam, infoValue:key}) }; }); return { color:c.color, chips:ch, hasVal:ch.length>0, empty:ch.length===0 }; });
             return {
               n:num, count:stp.count, isSub, notSub:!isSub, cells,
               hasThread:allC.length>0, threadCount:allC.length,
@@ -1403,14 +1500,14 @@ class Component extends DCLogic {
       profileTypes: this.allTypes().map(t=>({ label:t.label, color:t.color, hasRole:!!t.roleAware, badge:(t.required?'required':(t.single?'single':'multi')), scope:(t.scope==='choreo'?'this choreo':(t.key.indexOf('cu_')===0?'personal':'standard')) })),
       onAddType:()=>this.startNewType(),
 
-      infoSheetOpen: !!st.infoKey,
-      infoContent: st.infoKey ? this.famInfo(st.infoKey) : {name:'',color:'#9a958c',desc:'',values:[]},
-      onInfoRise:()=>this.setState({infoKey:'rise'}),
-      onInfoBody:()=>this.setState({infoKey:'body'}),
-      onInfoFoot:()=>this.setState({infoKey:'foot'}),
-      onInfoSway:()=>this.setState({infoKey:'sway'}),
-      onInfoTurn:()=>this.setState({infoKey:'turn'}),
-      onCloseInfo:()=>this.setState({infoKey:null}),
+      infoDisplay: st.infoKey ? 'block' : 'none',
+      infoContent: st.infoKey ? (() => { const fi = this.famInfo(st.infoKey); return { name:fi.name, color:fi.color, desc:fi.desc, values: fi.values.map(v => ({ code:v.code, label:v.label, d:v.d, anchored: st.infoValue === v.key, plain: st.infoValue !== v.key })) }; })() : {name:'',color:'#9a958c',desc:'',values:[]},
+      onInfoRise:()=>this.setState({infoKey:'rise',infoValue:null}),
+      onInfoBody:()=>this.setState({infoKey:'body',infoValue:null}),
+      onInfoFoot:()=>this.setState({infoKey:'foot',infoValue:null}),
+      onInfoSway:()=>this.setState({infoKey:'sway',infoValue:null}),
+      onInfoTurn:()=>this.setState({infoKey:'turn',infoValue:null}),
+      onCloseInfo:()=>this.setState({infoKey:null,infoValue:null}),
       addSheetOpen:!!st.addSheetSide, addSheetSideName: addSheetSide ? addSheetSide.name : '', addSheetDance: libDance,
       libFilter: st.libFilter,
       onLibFilter:(e)=>this.setState({libFilter:e.target.value}),
