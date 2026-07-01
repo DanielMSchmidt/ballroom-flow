@@ -42,18 +42,18 @@ const footworkBall = (count: number): Attribute => ({
 });
 
 describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () => {
-  it("opens the editor on tapping a count and adds an attribute for that count", async () => {
-    // Intent: tapping a count opens the editor; choosing a value adds an attribute.
-    // User scenario: an editor taps count 2 and picks footwork "HT".
-    // Act: click the count-2 cell, then the "HT" footwork option.
+  it("opens the single-attribute overlay on a cell and adds an attribute for that count", async () => {
+    // Intent: tapping a cell opens the focused overlay; choosing a value adds it.
+    // User scenario: an editor taps the Step cell at count 2 and picks footwork "HT".
+    // Act: click the count-2 Step cell, then the "HT" footwork option.
     // Assert: onChange fires with a footwork="HT" attribute on count 2 (the add).
-    // Covers US-028 AC-1 (tap a count → add) — hero flow.
+    // Covers US-028 AC-1 (tap a cell → add) — hero flow.
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
     const onChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /beat 2/i }));
+    renderUi(<FigureTimeline role="editor" dance="waltz" bars={1} onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
@@ -391,7 +391,10 @@ describe("US-030 Timeline role-view toggle", () => {
     roleStep("follside", "follower"),
   ];
 
-  const openCount1 = async () => userEvent.click(screen.getByRole("button", { name: /^beat 1$/i }));
+  // The per-count recap is ALWAYS visible now (no "open the count" step) — the
+  // grid renders it for every count that carries a value. Kept as a no-op so the
+  // scenarios still read "then look at count 1's summary".
+  const openCount1 = async () => {};
   const summary = () => screen.getByLabelText(/count 1 attributes/i);
 
   it("flips the viewed role on the 'Steps for' segmented lens (per-device preference)", async () => {
@@ -470,7 +473,6 @@ describe("QUAL-5 role lens is controllable (unified with the reading view)", () 
         attributes={seeded}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /^beat 1$/i }));
     const summary = () => screen.getByLabelText(/count 1 attributes/i);
     // Controlled: leader view shows the leader-only value, hides follower-only.
     expect(summary()).toHaveTextContent(/leadside/i);

@@ -308,6 +308,7 @@ app.post("/api/figures", async (c) => {
     figureType,
     routineId,
     attributes,
+    bars,
     baseFigureRef,
     entryAlignment,
     exitAlignment,
@@ -345,6 +346,10 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
+    // The authored bar length (PLAN §2.5) — omitted when the client didn't send
+    // one (buildDoc drops undefined optionals); the DO then falls back to the
+    // whole-beat-derived default when projecting the card count.
+    ...(bars != null ? { bars } : {}),
     // Figure-level entry/exit alignment (per-figure, where the catalog charts it) —
     // buildDoc drops undefined optionals, so an uncharted figure carries neither.
     ...(entryAlignment ? { entryAlignment } : {}),

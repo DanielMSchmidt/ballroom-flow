@@ -50,6 +50,15 @@ export interface AttributeEditorProps {
   figureAttributes?: Attribute[];
   /** The choreo/figure name for the info sheet's "across …" footer. */
   scopeLabel?: string;
+  /**
+   * Focus the editor on ONE column's kind(s) — the single-attribute overlay (frame
+   * 1.12): render only these kinds (always expanded, no "More attributes"
+   * disclosure), and scope Remove to them. Omitted → the full per-count editor.
+   */
+  onlyKinds?: string[];
+  /** When set, render a Save button (confirm + close) — the overlay's per-attribute
+   *  confirm. Edits already auto-save via `onChange`; Save just dismisses. */
+  onDone?: () => void;
   /** Emits the next attribute set for this count after an edit. */
   onChange?: (next: Attribute[]) => void;
 }
@@ -71,9 +80,12 @@ export function AttributeEditor({
   defaultExpanded = false,
   figureAttributes,
   scopeLabel,
+  onlyKinds,
+  onDone,
   onChange,
 }: AttributeEditorProps) {
   const editable = role === "editor";
+  const focused = onlyKinds != null;
   const [showMore, setShowMore] = useState(defaultExpanded);
   // The kind whose info reference is open (frame 1.13), or null.
   const [infoKind, setInfoKind] = useState<RegistryKind | null>(null);
@@ -152,11 +164,11 @@ export function AttributeEditor({
    *  Per role clears the role-scoped sets (leaving any both-role values). */
   const removeAttribute = (): void => {
     if (!editable || !onChange) return;
-    onChange(
-      rolesMode === "both"
-        ? live.filter((a) => a.role != null)
-        : live.filter((a) => a.role == null),
-    );
+    // In focused mode, only clear the overlay's own kind(s) — never a neighbour
+    // kind sharing this count. The active role rail is cleared (both vs per-role).
+    const inScope = (a: Attribute) => onlyKinds == null || onlyKinds.includes(a.kind);
+    const inActiveRail = (a: Attribute) => (rolesMode === "both" ? a.role == null : a.role != null);
+    onChange(live.filter((a) => !(inScope(a) && inActiveRail(a))));
   };
 
   /** One registry kind → a labelled fieldset of value chips (+ free-text add),
@@ -239,10 +251,14 @@ export function AttributeEditor({
   // (headline) + footwork — leads; the technique kinds (rise/position/sway/turn/
   // body actions + custom) sit behind a "More attributes" toggle so the common
   // case is one focused choice, not a wall of every kind at once.
-  const kinds = kindsFor(dance, customKinds);
+  const allKinds = kindsFor(dance, customKinds);
+  // Focused (single-attribute overlay): only this column's kind(s), all shown flat
+  // with no disclosure. Full editor: the step identity leads, technique behind a
+  // "More attributes" toggle.
+  const kinds = focused ? allKinds.filter((k) => onlyKinds.includes(k.kind)) : allKinds;
   const IDENTITY = new Set(["direction", "footwork"]);
-  const primary = kinds.filter((k) => IDENTITY.has(k.kind));
-  const secondary = kinds.filter((k) => !IDENTITY.has(k.kind));
+  const primary = focused ? kinds : kinds.filter((k) => IDENTITY.has(k.kind));
+  const secondary = focused ? [] : kinds.filter((k) => !IDENTITY.has(k.kind));
 
   /** The kind sections for a role scope, with the technique disclosure. */
   const renderSections = (scope: RoleScope) => (
@@ -291,17 +307,28 @@ export function AttributeEditor({
         </>
       )}
 
-      {/* Red "remove attribute" (frame 1.12) — clears the count's values. */}
-      {editable && (
-        <button
-          type="button"
-          onClick={removeAttribute}
-          className="self-start rounded-md border px-3 py-2 text-xs font-bold"
-          style={{ color: "var(--bf-danger)", borderColor: "var(--bf-danger)" }}
-        >
-          remove attribute
-        </button>
-      )}
+      {/* Per-attribute actions (frame 1.12): Remove clears this attribute; Save
+          confirms + closes (edits already auto-saved via onChange). */}
+      <div className="flex items-center gap-2">
+        {editable && (
+          <button
+            type="button"
+            onClick={() => {
+              removeAttribute();
+              onDone?.();
+            }}
+            className="rounded-md border px-3 py-2 text-xs font-bold"
+            style={{ color: "var(--bf-danger)", borderColor: "var(--bf-danger)" }}
+          >
+            {focused ? "Remove" : "remove attribute"}
+          </button>
+        )}
+        {onDone && (
+          <Button variant="primary" size="sm" onClick={onDone}>
+            Save
+          </Button>
+        )}
+      </div>
 
       {/* The plain-language reference for one kind (frame 1.13), reachable from
           every kind's info affordance. Registry-derived; works for custom kinds. */}

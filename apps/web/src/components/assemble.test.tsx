@@ -46,6 +46,7 @@ function fakeStore(
     addBreak: () => {},
     setBreakBeats: () => {},
     setFigureAttributes: () => {},
+    setFigureBars: () => {},
     setFigureAlignment: () => {},
     readAnnotations: () => [],
     createAnnotation: () => {},
@@ -352,7 +353,8 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined);
+    // The custom form carries a bars stepper (default 2 — PLAN §2.5).
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 2);
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -532,7 +534,8 @@ describe("US-027 Add a figure from the library picker", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.click(screen.getByRole("button", { name: /feather step/i }));
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Feather Step", "feather-step");
+    // A library pick keeps its catalog-derived default length (no explicit bars).
+    expect(addPlacement).toHaveBeenCalledWith("s1", "Feather Step", "feather-step", undefined);
   });
 
   it("still supports creating a custom figure by name", async () => {
@@ -550,7 +553,8 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined);
+    // The custom form's bars stepper defaults to 2 (PLAN §2.5).
+    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 2);
   });
 });
 
@@ -657,8 +661,9 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // The count timeline shows; tap count 1, then pick footwork "HT".
-    await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
+    // The bars-driven grid shows; tap the Step cell at count 1 → the single-attribute
+    // overlay → pick footwork "HT".
+    await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
@@ -693,8 +698,11 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     const { routine, resolved } = oneFigureRoutine();
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    await userEvent.click(screen.getByRole("button", { name: /beat 1/i }));
-    expect(screen.queryByRole("button", { name: /^T$/ })).toBeNull();
+    // The read grid opens, but a viewer gets no add/edit cell buttons and no bars
+    // stepper — there is no way to open the single-attribute editor.
+    expect(screen.getByRole("table", { name: /step grid/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /at count/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /increase bars/i })).toBeNull();
   });
 });
 

@@ -1,37 +1,44 @@
 // US-028 / US-030 — the figure timeline (the hero flow). PLAN §4.4/§4.5, §1.5.
-// 2026-06-29 design parity (frame 1.11 "Figure detail EDIT grid"): the EDIT view
-// is a scrollable COLUMN GRID — a sticky count column on the left (count cell
-// tinted to the direction family; off-beat rows dimmed) and one column per
-// attribute kind APPLICABLE to the figure's dance (Step* required, then Rise ·
-// Pos · Sway · Turn · Body · custom). A cell shows an AttrChip when the count
-// carries that kind's value (the Step cell merges direction + footwork, e.g.
-// "fwd·B"), else a faint ＋ placeholder. Tapping any cell opens the per-count
-// AttributeEditor (a filled cell edits, a ＋ adds). A dashed "＋ add an
-// in-between timing" reveals an on-count chooser to place a sub-beat.
+// 2026-07-01 design update (frames 1.11 figure editor / 1.12 attribute editor):
+// the EDIT view is a BARS-DRIVEN column grid. Its rows are generated from the
+// figure's authored bar count — NOT from the steps it already has — so every
+// place a value could go is shown: for each bar → each beat (1..beatsPerBar) →
+// the whole beat, then its e (¼), & (½), a (¾) sub-beats. Whole beats read solid,
+// sub-beats dimmed; a "bar N" divider precedes each bar. Columns are every
+// attribute kind applicable to the dance (Step* required, then Rise · Pos · Feet ·
+// Body · Sway · Turn · custom). A cell shows an AttrChip for a set value or a
+// faint ＋; TAPPING ANY CELL opens a focused SINGLE-ATTRIBUTE overlay (frame 1.12)
+// for exactly that (timing, attribute) — not a per-count wall of every kind.
 //
-// Unlike the READING view (only-used columns), the EDIT grid shows every
-// applicable kind so empty cells are addable — `allColumns` honors
-// `appliesToDances` (Tango omits Rise), shared with the reading-view column model.
+// The figure's length is explicit: a "− N bars +" stepper in the header sets it
+// (US-004). Empty sub-beat/whole-beat slots are placeholders — a value written to
+// one creates the moment on demand at the right count (order preserved).
 //
-// Role is a VIEW, not an identity (US-030, principle #25): a per-device lens
-// (the "Steps for" SegmentedToggle), never a stored role. role=null ("both")
-// values always show; role values show only for the selected lens.
+// Everything AUTO-SAVES (edits emit `onChange`/`onBarsChange` immediately; an undo
+// exists) — there is no figure-level Save. The per-attribute overlay carries only
+// a Save (confirm + close) and Remove (clear) for that one attribute.
 //
-// Fully controlled (#151): the rendered attributes derive from the `attributes`
-// prop; edits go out via `onChange` and return as the next prop. Only transient
-// UI (open count, lens, chooser) is local state. The RENDER changed here, not the
-// timing model — float counts are untouched.
+// Role is a VIEW, not an identity (US-030, principle #25): a per-device lens (the
+// "Steps for" toggle), never a stored role. role=null ("both") always shows;
+// role values show only for the selected lens.
+//
+// Fully controlled (#151): the rendered attributes/bars derive from props; edits
+// go out via callbacks and return as the next props. Only transient UI (open
+// cell, lens, info column) is local state.
 
 import {
   type Attribute,
-  barsForFigure,
   countLabel,
   DANCES,
   type DanceId,
+  defaultFigureBars,
+  figureGridSlots,
+  type GridSlot,
+  offBeatSymbol,
   type RegistryKind,
 } from "@ballroom/domain";
-import { useMemo, useState } from "react";
-import { AttrChip, Button, Card, cx, kindVar, PlusIcon, SegmentedToggle } from "../ui";
+import { type ReactNode, useMemo, useState } from "react";
+import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -41,7 +48,6 @@ import {
   cellValue,
   columnUsage,
   infoKindsForColumn,
-  isOffBeatCount,
   type ReadingColumn,
 } from "./reading-columns";
 import { displayValue, filterByRoleView, type RoleView } from "./role-view";
@@ -49,12 +55,15 @@ import { displayValue, filterByRoleView, type RoleView } from "./role-view";
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
   role: MembershipRole;
-  /** The dance, to scope the attribute registry + beat ruler (US-029). */
+  /** The dance, to scope the attribute registry, beat grouping + grid (US-029). */
   dance?: DanceId;
   /** The figure's current attributes (controlled-with-fallback). */
   attributes?: Attribute[];
-  /** Override the whole-count count (else dance-aware). */
-  counts?: number;
+  /** The figure's authored length in musical bars (drives the generated grid).
+   *  Falls back to ⌈whole-beat steps ÷ beatsPerBar⌉ when omitted. */
+  bars?: number;
+  /** Emits the next bar count when the header stepper is used (editor only). */
+  onBarsChange?: (next: number) => void;
   /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
   initialView?: "leader" | "follower";
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
@@ -80,16 +89,24 @@ export interface FigureTimelineProps {
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
 const humanize = (value: unknown): string => displayValue(value).replace(/_/g, " ");
 
-/** The in-between (sub-beat) subdivisions offered by the add-timing picker, each
- *  a quarter of a beat: e (¼), & (½), a (¾) (US-004 / frame 1.11). */
-const QUARTER_SUBDIVISIONS = [0.25, 0.5, 0.75] as const;
-const FRACTION_HINTS: Record<string, string> = { "0.25": "¼", "0.5": "½", "0.75": "¾" };
+/** Vulgar-fraction words for a sub-beat's overlay title (frame 1.12). */
+const SUB_BEAT_VULGAR: Record<string, string> = { e: "¼", "&": "½", a: "¾" };
 
-/** The vulgar-fraction hint for a sub-beat count ("2.25" → "¼"), or "" for a
- *  whole beat / off-grid count — shown under the picker chip's e/&/a token. */
-function fractionHint(count: number): string {
-  const frac = Number((count - Math.floor(count)).toFixed(3));
-  return FRACTION_HINTS[String(frac)] ?? "";
+/**
+ * The attribute-overlay title for a timing (frame 1.12): a whole beat reads
+ * "count N"; a sub-beat reads "the & (½ beat)" (the symbol + its fraction).
+ */
+function timingTitle(count: number): string {
+  if (Number.isInteger(count)) return `count ${count}`;
+  const symbol = offBeatSymbol(count) ?? "";
+  const vulgar = SUB_BEAT_VULGAR[symbol];
+  return vulgar ? `the ${symbol} (${vulgar} beat)` : `count ${countLabel(count)}`;
+}
+
+/** The registry kind(s) a column's overlay edits: the merged Step column edits
+ *  direction + footwork; every other column edits its single kind. */
+function columnKinds(col: ReadingColumn): string[] {
+  return col.isStep ? ["direction", "footwork"] : [col.kind];
 }
 
 /** A column's header/text color — the kind's base token, slate for custom. */
@@ -113,7 +130,8 @@ export function FigureTimeline({
   role,
   dance,
   attributes,
-  counts,
+  bars,
+  onBarsChange,
   initialView,
   roleView,
   onRoleViewChange,
@@ -125,13 +143,10 @@ export function FigureTimeline({
   scopeLabel,
 }: FigureTimelineProps) {
   const attrs = attributes ?? [];
-  const [openCount, setOpenCount] = useState<number | null>(null);
-  const [openExpanded, setOpenExpanded] = useState(false);
-  const [chooserOpen, setChooserOpen] = useState(false);
+  // The open attribute overlay: a (timing, column) target, or null (frame 1.12).
+  const [openCell, setOpenCell] = useState<{ count: number; column: ReadingColumn } | null>(null);
   // The column whose attribute info overlay is open (frame 1.13). Tapping a column
-  // HEADER opens the plain-language reference; tapping a cell still opens the
-  // per-count editor (design 1.11 pin 3). The merged Step head describes both
-  // direction + footwork.
+  // HEADER opens the plain-language reference; tapping a cell opens the editor.
   const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
   // `bb_role`) when provided; otherwise local UI state seeded from initialView.
@@ -157,20 +172,15 @@ export function FigureTimeline({
     return map;
   }, [attrs]);
 
-  // Sorted distinct counts that actually carry a value (drives off-beat rows).
+  // Sorted distinct counts that actually carry a value (for out-of-grid rows).
   const placedCounts = useMemo(() => [...byCount.keys()].sort((a, b) => a - b), [byCount]);
 
-  // Dance-aware beat ruler: the dance's phrase (Waltz 6 / 4-4 dances 8), extended
-  // to cover any attribute placed in a later phrase. Drives the whole-beat rows.
-  const meta = dance ? DANCES[dance] : undefined;
-  const beatsPerBar = meta?.beatsPerBar ?? 4;
-  const phraseBeats = meta?.phraseBeats ?? 8;
-  const totalBeats = useMemo(() => {
-    const live = attrs.filter((a) => a.deletedAt == null).map((a) => a.count);
-    const maxWhole = live.reduce((m, c) => Math.max(m, Math.ceil(c)), 0);
-    const phrases = dance ? barsForFigure(live, dance) : 1;
-    return counts ?? Math.max(phraseBeats * phrases, maxWhole, beatsPerBar);
-  }, [attrs, counts, dance, phraseBeats, beatsPerBar]);
+  const gridDance = (dance ?? "waltz") as DanceId;
+  const beatsPerBar = DANCES[gridDance].beatsPerBar;
+  // The figure's authored length: the explicit `bars` prop, else the default from
+  // its whole-beat steps. Clamped so the stepper never drops below one bar.
+  const liveAttrs = useMemo(() => attrs.filter((a) => a.deletedAt == null), [attrs]);
+  const resolvedBars = Math.max(1, bars ?? defaultFigureBars(liveAttrs, gridDance));
 
   // The grid columns: every kind applicable to the dance (all-applicable, so empty
   // cells are addable) — the EDIT counterpart to the reading view's used-columns.
@@ -181,29 +191,23 @@ export function FigureTimeline({
     return map;
   }, [customKinds]);
 
-  // The grid rows: every whole beat of the ruler, plus any placed off-beat counts,
-  // in count order. Whole beats give the addable ruler; off-beats appear once used.
-  const rowCounts = useMemo(() => {
-    const set = new Set<number>();
-    for (let b = 1; b <= totalBeats; b++) set.add(b);
-    for (const c of placedCounts) if (isOffBeatCount(c)) set.add(c);
-    return [...set].sort((a, b) => a - b);
-  }, [totalBeats, placedCounts]);
-
-  // Candidate in-between (sub-beat) positions for the chooser: the three quarter
-  // subdivisions of each whole beat — e (¼), & (½), a (¾) — that aren't already a
-  // row (frame 1.11: the add-timing picker offers all in-between counts, US-004).
-  const offBeatChoices = useMemo(() => {
-    const present = new Set(rowCounts);
-    const out: number[] = [];
-    for (let b = 1; b <= totalBeats; b++) {
-      for (const frac of QUARTER_SUBDIVISIONS) {
-        const c = b + frac;
-        if (!present.has(c)) out.push(c);
-      }
-    }
-    return out;
-  }, [rowCounts, totalBeats]);
+  // The grid rows: EVERY timing the bar count allows (bar → beat → e/&/a),
+  // generated from `bars` (US-028) — plus any attribute placed OUTSIDE that range
+  // (e.g. a step left beyond a since-shrunk bar count) so no value is ever hidden.
+  const rows = useMemo(() => {
+    const slots = figureGridSlots(resolvedBars, gridDance);
+    const inGrid = new Set(slots.map((s) => s.count));
+    const extras: GridSlot[] = placedCounts
+      .filter((c) => !inGrid.has(c))
+      .map((c) => ({
+        count: c,
+        label: countLabel(c),
+        bar: Math.max(1, Math.ceil(Math.floor(c) / beatsPerBar)),
+        beat: Math.floor(c),
+        whole: Number.isInteger(c),
+      }));
+    return [...slots, ...extras].sort((a, b) => a.count - b.count);
+  }, [resolvedBars, gridDance, beatsPerBar, placedCounts]);
 
   /** Replace one count's attributes within the full set + emit (COW on first
    *  edit of a non-owned global figure). */
@@ -213,29 +217,36 @@ export function FigureTimeline({
     onChange?.([...others, ...next]);
   };
 
-  /** Open the per-count editor (optionally with the technique section expanded —
-   *  set when adding via a non-identity column cell). */
-  const open = (count: number, expanded = false): void => {
-    setOpenExpanded(expanded);
-    setOpenCount((cur) => (cur === count && !expanded ? null : count));
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      {/* "Steps for" role lens (frame 1.11). A per-device VIEW, not a stored role. */}
-      <div className="flex items-center gap-2">
-        <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-          Steps for
-        </span>
-        <SegmentedToggle<RoleView>
-          ariaLabel="Steps for"
-          value={view}
-          onChange={setView}
-          options={[
-            { value: "leader", label: "Leader" },
-            { value: "follower", label: "Follower" },
-          ]}
-        />
+      {/* Header controls: the "− N bars +" length stepper (editor only) + the
+          "Steps for" role lens (frame 1.11). The lens is a per-device VIEW. */}
+      <div className="flex flex-wrap items-center gap-3">
+        {editable && onBarsChange && (
+          <Stepper
+            label="Bars"
+            hideLabel
+            unit="bars"
+            min={1}
+            max={32}
+            value={resolvedBars}
+            onChange={(next) => onBarsChange(next)}
+          />
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+            Steps for
+          </span>
+          <SegmentedToggle<RoleView>
+            ariaLabel="Steps for"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "leader", label: "Leader" },
+              { value: "follower", label: "Follower" },
+            ]}
+          />
+        </div>
       </div>
 
       {isGlobal && (
@@ -260,7 +271,8 @@ export function FigureTimeline({
         </div>
       )}
 
-      {/* The column grid: sticky count column + one column per applicable kind. */}
+      {/* The column grid: sticky count column + one column per applicable kind,
+          grouped into bars (a "bar N" divider precedes each bar's beats). */}
       <div className="overflow-x-auto">
         <table className="w-max border-separate border-spacing-y-1" aria-label="Step grid">
           <thead>
@@ -290,104 +302,74 @@ export function FigureTimeline({
             </tr>
           </thead>
           <tbody>
-            {rowCounts.map((count) => {
-              const offBeat = isOffBeatCount(count);
-              const here = filterByRoleView(byCount.get(count) ?? [], view);
+            {rows.map((row, i) => {
+              const newBar = i === 0 || rows[i - 1]?.bar !== row.bar;
+              const here = filterByRoleView(byCount.get(row.count) ?? [], view);
               return (
-                <tr key={count}>
-                  <th scope="row" className="sticky left-0 z-10 bg-surface p-0 pr-1.5 align-middle">
-                    <CountCell
-                      count={count}
-                      offBeat={offBeat}
-                      selected={openCount === count}
-                      onOpen={() => open(count)}
-                    />
-                  </th>
-                  {columns.map((col) => (
-                    <td key={col.id} className="px-0.5 align-middle">
-                      <GridCell
-                        column={col}
-                        count={count}
-                        label={cellValue(here, col)}
-                        offBeat={offBeat}
-                        editable={editable}
-                        color={colorByKind.get(col.kind)}
-                        onOpen={() => open(count, !col.isStep)}
-                      />
-                    </td>
-                  ))}
-                </tr>
+                <BarRowGroup
+                  key={row.count}
+                  showDivider={newBar}
+                  bar={row.bar}
+                  span={columns.length}
+                >
+                  <tr>
+                    <th
+                      scope="row"
+                      className="sticky left-0 z-10 bg-surface p-0 pr-1.5 align-middle"
+                    >
+                      <CountCell label={row.label} offBeat={!row.whole} />
+                    </th>
+                    {columns.map((col) => (
+                      <td key={col.id} className="px-0.5 align-middle">
+                        <GridCell
+                          column={col}
+                          count={row.count}
+                          label={cellValue(here, col)}
+                          offBeat={!row.whole}
+                          editable={editable}
+                          color={colorByKind.get(col.kind)}
+                          onOpen={() => setOpenCell({ count: row.count, column: col })}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                </BarRowGroup>
               );
             })}
           </tbody>
         </table>
       </div>
 
-      {/* Add a sub-beat ("in-between timing") — frame 1.11's dashed affordance +
-          on-count chooser. */}
-      {editable && offBeatChoices.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            aria-expanded={chooserOpen}
-            onClick={() => setChooserOpen((o) => !o)}
-            className="flex items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border-strong py-2.5 text-2xs font-bold text-ink-muted"
-          >
-            <PlusIcon size={12} />
-            add an in-between timing
-          </button>
-          {chooserOpen && (
-            <div className="flex flex-wrap gap-1.5">
-              {offBeatChoices.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`add in-between count ${countLabel(c)}`}
-                  onClick={() => {
-                    setChooserOpen(false);
-                    open(c);
-                  }}
-                  className="flex min-h-[32px] flex-col items-center justify-center rounded-md bg-surface-sunken px-3 py-1 text-2xs font-bold leading-none tabular-nums text-ink"
-                >
-                  {countLabel(c)}
-                  <span aria-hidden="true" className="mt-0.5 text-[7px] font-semibold opacity-70">
-                    {fractionHint(c)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Helper caption (frame 1.11). */}
       <p className="text-2xs italic text-ink-faint">
-        tap a cell to add / edit · * required · scroll → Head &amp; custom types
+        tap a cell to add / edit one attribute · * required · scroll → Head &amp; custom types
       </p>
 
       {/* Always-visible per-count recap (the headline word + this count's value
-          words). The grid's cells are abbreviated; this readable recap is what the
-          authoring journey reads (step-headline-N, "count N attributes") — present
-          as soon as the figure opens, without first opening the editor. */}
-      {rowCounts.map((count) => {
-        const here = filterByRoleView(byCount.get(count) ?? [], view);
+          words) — the readable summary the authoring journey reads, present as soon
+          as the figure opens. */}
+      {rows.map((row) => {
+        const here = filterByRoleView(byCount.get(row.count) ?? [], view);
         if (here.length === 0) return null;
         const direction = here.find((a) => a.kind === "direction");
         const slots = here.filter((a) => a.kind !== "direction");
         return (
           <div
-            key={`detail-${count}`}
-            data-testid={`step-detail-${count}`}
+            key={`detail-${row.count}`}
+            data-testid={`step-detail-${row.count}`}
             className="flex flex-wrap items-center gap-2"
           >
             <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
-              {countLabel(count)}
+              {row.label}
             </span>
-            <span data-testid={`step-headline-${count}`} className="text-2xs font-bold text-ink">
+            <span
+              data-testid={`step-headline-${row.count}`}
+              className="text-2xs font-bold text-ink"
+            >
               {stepAction(direction?.value)}
             </span>
             <ul
-              aria-label={`count ${count} attributes`}
+              aria-label={`count ${row.count} attributes`}
               className="flex flex-wrap items-center gap-2"
             >
               {slots.map((a) => (
@@ -400,23 +382,31 @@ export function FigureTimeline({
         );
       })}
 
-      {/* The per-count editor (frame 1.12), opened by tapping a count/cell. */}
-      {openCount !== null && (
-        <Card>
+      {/* The single-attribute overlay (frame 1.12): title = the timing, meta = the
+          attribute name; body = ONLY that column's kind(s); Save confirms, Remove
+          clears. Opened by tapping a cell. */}
+      {openCell && (
+        <Sheet
+          open
+          onClose={() => setOpenCell(null)}
+          title={timingTitle(openCell.count)}
+          meta={openCell.column.label}
+        >
           <AttributeEditor
-            key={`${openCount}-${openExpanded}`}
-            count={openCount}
+            key={`${openCell.count}-${openCell.column.id}`}
+            count={openCell.count}
             role={role}
             dance={dance}
             view={view}
             customKinds={customKinds}
-            defaultExpanded={openExpanded}
-            value={byCount.get(openCount) ?? []}
+            onlyKinds={columnKinds(openCell.column)}
+            value={byCount.get(openCell.count) ?? []}
             figureAttributes={attrs}
             scopeLabel={scopeLabel}
-            onChange={(next) => onCountChange(openCount, next)}
+            onChange={(next) => onCountChange(openCell.count, next)}
+            onDone={() => setOpenCell(null)}
           />
-        </Card>
+        </Sheet>
       )}
 
       {/* The attribute info overlay (frame 1.13) — opened by tapping a column
@@ -442,38 +432,50 @@ export function FigureTimeline({
   );
 }
 
-/** The sticky left count cell — a tappable beat token (frame 1.11) that opens the
- *  per-count editor (read-only for a viewer). The count column is tinted to the
- *  direction family; off-beat rows read dimmed. */
-function CountCell({
-  count,
-  offBeat,
-  selected,
-  onOpen,
+/** Wrap a grid row in a "bar N" divider row when it starts a new bar (frame 1.11:
+ *  bar dividers group the beats). The divider is a full-width labelled row. */
+function BarRowGroup({
+  showDivider,
+  bar,
+  span,
+  children,
 }: {
-  count: number;
-  offBeat: boolean;
-  selected: boolean;
-  onOpen: () => void;
+  showDivider: boolean;
+  bar: number;
+  span: number;
+  children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={`beat ${countLabel(count)}`}
-      onClick={onOpen}
-      className={cx(
-        "flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-md",
-        "text-sm font-bold tabular-nums",
-        selected && "ring-2 ring-accent",
+    <>
+      {showDivider && (
+        <tr>
+          <td
+            colSpan={span + 1}
+            className="pt-2 pb-0.5 text-2xs font-bold uppercase tracking-wider text-ink-faint"
+          >
+            bar {bar}
+          </td>
+        </tr>
       )}
+      {children}
+    </>
+  );
+}
+
+/** The sticky left count cell — a static beat token (frame 1.11). The row header,
+ *  tinted to the direction family; off-beat (sub-beat) rows read dimmed. */
+function CountCell({ label, offBeat }: { label: string; offBeat: boolean }) {
+  return (
+    <span
+      className="flex h-[34px] w-[34px] items-center justify-center rounded-md text-sm font-bold tabular-nums"
       style={{
         background: "var(--bf-kind-direction-tint)",
         color: offBeat ? "var(--bf-offbeat-ink)" : "var(--bf-kind-direction-ink)",
         opacity: offBeat ? 0.7 : undefined,
       }}
     >
-      {countLabel(count)}
-    </button>
+      {label}
+    </span>
   );
 }
 
