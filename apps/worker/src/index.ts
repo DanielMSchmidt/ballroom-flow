@@ -459,13 +459,21 @@ app.get("/api/routines/:id/family-notes", async (c) => {
   if (!role) return c.json({ error: "forbidden" }, 403);
 
   // The routine's dance scopes which family notes apply (its dance, or "all").
-  const reg = await c.env.DB.prepare("SELECT dance FROM document_registry WHERE docRef = ?")
+  const reg = await c.env.DB.prepare(
+    "SELECT dance, ownerId FROM document_registry WHERE docRef = ?",
+  )
     .bind(routineRef)
-    .first<{ dance: string | null }>();
+    .first<{ dance: string | null; ownerId: string | null }>();
   const dance = reg?.dance ?? "waltz";
 
+  // The author set is the routine's members PLUS its owner — a routine owner is
+  // elevated by resolveEffectiveRole WITHOUT a membership row (#168), so without
+  // this the owner's OWN figureType notes would never surface on their own routine
+  // (the reported bug). Deduped; symmetric with journalForUser's owner arm.
   const members = await listMembers(c.env.DB, routineRef);
-  const authorIds = members.map((m) => m.userId);
+  const authorIds = [
+    ...new Set([...members.map((m) => m.userId), ...(reg?.ownerId ? [reg.ownerId] : [])]),
+  ];
   const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
   // Shape each row as an Annotation-like note (with a figureType anchor) so the
   // client can match it to the routine's figures (resolveFamilyNotesFor).
