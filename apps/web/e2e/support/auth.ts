@@ -15,6 +15,9 @@ import { mintTestJWT } from "./jwt";
 /** localStorage key the E2E build reads its impersonated session from. */
 export const E2E_SESSION_KEY = "ballroom-e2e-session";
 
+/** localStorage key for a staged-but-inactive session (see stagePendingAuth). */
+export const E2E_PENDING_SESSION_KEY = "ballroom-e2e-pending-session";
+
 /**
  * Sign a page in as `userId`: mint a test JWT and inject the session before any
  * app code runs (addInitScript), so the app boots signed-in as that user.
@@ -27,6 +30,24 @@ export async function seedAuth(page: Page, userId: string): Promise<void> {
       window.localStorage.setItem(key, value);
     },
     [E2E_SESSION_KEY, session] as const,
+  );
+}
+
+/**
+ * Stage a PENDING session for `userId`: mint the JWT but write it to the pending
+ * key, so the app boots SIGNED OUT. The in-app E2E "Sign in" control then
+ * promotes it to the active session (completeE2ESignIn) and reloads to the same
+ * URL — modelling a signed-out visitor completing sign-in. Use to drive
+ * signed-out entry points end-to-end (e.g. opening an /invite/:token link).
+ */
+export async function stagePendingAuth(page: Page, userId: string): Promise<void> {
+  const token = await mintTestJWT(userId);
+  const session = JSON.stringify({ sub: userId, token });
+  await page.addInitScript(
+    ([key, value]) => {
+      window.localStorage.setItem(key, value);
+    },
+    [E2E_PENDING_SESSION_KEY, session] as const,
   );
 }
 

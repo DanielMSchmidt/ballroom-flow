@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoRoutine, seedAuth } from "./support/auth";
+import { gotoRoutine, seedAuth, stagePendingAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, openUser } from "./support/two-users";
 
@@ -111,6 +111,51 @@ test.describe("@smoke invite redemption", () => {
     // Not denied, and commenter ≠ editor → no structural-edit affordances.
     await expect(page.getByRole("heading", { name: /don.?t have access/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add section" })).toHaveCount(0);
+  });
+});
+
+test.describe("@smoke invite deep-link (signed-out visitor)", () => {
+  test("a signed-out friend opening a share link signs in and lands in the routine (US-023)", async ({
+    page,
+  }) => {
+    // Intent: a signed-OUT visitor opening a /invite/:token share link is NOT
+    //   dropped on the generic dead-end card — they get a sign-in prompt that
+    //   names the shared routine + a real sign-in control, and after signing in
+    //   they return to the same link so redemption opens the routine.
+    // Regression: the app shell rendered the button-less signed-out card BEFORE
+    //   the invite branch, so a friend opening a share link had no way in.
+    const owner = "user_share_owner_out";
+    const friend = "user_share_friend_out";
+    const docRef = "rt_shared_out";
+    const token = "inv_signedout_token";
+    await resetDb(page);
+    await seedDb(page, {
+      users: [
+        { id: owner, displayName: "Owner", identityColor: "#111111" },
+        { id: friend, displayName: "Friend", identityColor: "#555555" },
+      ],
+      docs: [{ docRef, type: "routine", ownerId: owner, title: "Shared Routine", dance: "waltz" }],
+      invites: [{ id: token, docRef, role: "commenter", expiresAt: Date.now() + 86_400_000 }],
+    });
+    // The friend arrives SIGNED OUT: the session is staged, not active.
+    await stagePendingAuth(page, friend);
+    await page.goto(`/invite/${token}`);
+
+    // Not a dead end: an invite-aware sign-in prompt (names the shared routine)
+    //   with a real sign-in control — and it must NOT auto-redeem or bounce to
+    //   the marketing Landing while signed out.
+    await expect(page.getByText(/you.?ve been invited to a routine/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    const signIn = page.getByRole("button", { name: /sign in/i });
+    await expect(signIn).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/invite/${token}`));
+
+    // Completing sign-in returns to the SAME invite URL → redemption runs → the
+    //   friend (now a commenter member) is allowed into the routine, not denied.
+    await signIn.click();
+    await expect(page).toHaveURL(new RegExp(`/routines/${docRef}`), { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /don.?t have access/i })).toHaveCount(0);
   });
 });
 
