@@ -442,6 +442,51 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("addPlacement / addBreak insert BEFORE an anchor via sortKey (US-027 insert-between)", async () => {
+    // Intent: a new figure/break lands in the gap before the anchor placement,
+    // not appended — the read order reflects the fractional-index insert (#63).
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+    const doc = buildRoutineDoc({
+      id: "rt_sample",
+      title: "",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "A",
+          placements: [
+            { id: "p1", figureRef: "f1", deletedAt: null },
+            { id: "p2", figureRef: "f2", deletedAt: null },
+            { id: "p3", figureRef: "f3", deletedAt: null },
+          ],
+          deletedAt: null,
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(doc);
+
+    const known = new Set(["p1", "p2", "p3"]);
+    const placementsOf = (id: string) =>
+      store.readRoutine().sections.find((s) => s.id === id)?.placements ?? [];
+    const orderIds = () => placementsOf("s1").map((p) => (known.has(p.id) ? p.id : "NEW"));
+
+    // Insert a figure BEFORE p2 → [p1, NEW, p2, p3].
+    store.addPlacement("s1", "Hover", undefined, undefined, "p2");
+    expect(orderIds()).toEqual(["p1", "NEW", "p2", "p3"]);
+
+    // A break inserted before p1 goes to the front (the new figure adopts its id).
+    const insertedFigureId = placementsOf("s1")[1]?.id;
+    if (insertedFigureId) known.add(insertedFigureId);
+    store.addBreak("s1", "p1");
+    expect(orderIds()[0]).toBe("NEW");
+    store.close();
+  });
+
   it("exposes typed reactive reads + mutations + history-based undo", async () => {
     // Intent: the seam is the only thing components touch — reads, mutations, undo.
     // Covers US-017 AC-3 (typed reactive reads + mutations + undo).

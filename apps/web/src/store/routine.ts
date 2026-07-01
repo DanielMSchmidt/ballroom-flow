@@ -154,8 +154,16 @@ export interface RoutineStore extends RoutineReadModel {
    * `bars` is the figure's authored length chosen in the create flow (PLAN §2.5);
    * omitted → the store derives ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
    * attributes (a catalog figure's charted steps, or 1 for a fresh custom).
+   * `beforePlacementId` inserts the new figure immediately BEFORE that placement
+   * (US-027 insert-between); omitted/null appends to the end of the section.
    */
-  addPlacement(sectionId: string, figureName: string, figureType?: string, bars?: number): void;
+  addPlacement(
+    sectionId: string,
+    figureName: string,
+    figureType?: string,
+    bars?: number,
+    beforePlacementId?: string | null,
+  ): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -164,8 +172,10 @@ export interface RoutineStore extends RoutineReadModel {
    * Append a BREAK/WAIT entry to a section (US-004a): a placement that occupies
    * beats but has no figure. Defaults to one bar of the routine's dance (3 Waltz /
    * 4 others). It advances the reading view's continuous beat counter.
+   * `beforePlacementId` inserts the break immediately BEFORE that placement
+   * (US-027 insert-between); omitted/null appends to the end of the section.
    */
-  addBreak(sectionId: string): void;
+  addBreak(sectionId: string, beforePlacementId?: string | null): void;
   /** Set a break's whole-beat duration (US-004a); clamped to a minimum of 1. */
   setBreakBeats(sectionId: string, placementId: string, beats: number): void;
   /**
@@ -339,6 +349,27 @@ function randomActorId(): string {
   let s = "";
   for (let i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16);
   return s;
+}
+
+/**
+ * The sortKey for a new placement inserted immediately BEFORE `beforePlacementId`
+ * (insert-between, US-027), or appended when it's null/omitted/unknown. Assumes
+ * `ensureSortKeys` has already backfilled any legacy keyless list, so every item
+ * carries a key. The anchor's predecessor may be a tombstone — a midpoint against
+ * it still lands the new item just before the visible anchor, order preserved.
+ */
+function insertSortKey(
+  placements: { id: string; sortKey?: string; deletedAt?: number | null }[],
+  beforePlacementId?: string | null,
+): string {
+  const ordered = sortByOrder(placements);
+  const lastKey = ordered[ordered.length - 1]?.sortKey ?? null;
+  if (beforePlacementId == null) return keyBetween(lastKey, null);
+  const idx = ordered.findIndex((p) => p.id === beforePlacementId);
+  if (idx < 0) return keyBetween(lastKey, null); // unknown anchor → append
+  const prevKey = ordered[idx - 1]?.sortKey ?? null;
+  const anchorKey = ordered[idx]?.sortKey ?? null;
+  return keyBetween(prevKey, anchorKey);
 }
 
 /** An empty routine doc to seed a fresh connection; the DO replays real state. */
@@ -702,7 +733,7 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg, barsArg) => {
+    addPlacement: (sectionId, figureName, figureTypeArg, barsArg, beforePlacementId) => {
       const figureRef = newId();
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
@@ -732,15 +763,13 @@ export async function openRoutine(
       routineConn.change((draft) => {
         const section = draft.sections?.find((s) => s.id === sectionId);
         if (section) {
-          // Append after the last placement in sortKey order (#63). Backfill any
-          // legacy keyless placements first so the new key sorts after them.
+          // Insert before the anchor (insert-between) or append (#63). Backfill any
+          // legacy keyless placements first so the new key sorts correctly.
           ensureSortKeys(section.placements);
-          const ordered = sortByOrder(section.placements);
-          const lastKey = ordered[ordered.length - 1]?.sortKey ?? null;
           section.placements.push({
             id: newId(),
             figureRef,
-            sortKey: keyBetween(lastKey, null),
+            sortKey: insertSortKey(section.placements, beforePlacementId),
             deletedAt: null,
           });
         }
@@ -820,23 +849,21 @@ export async function openRoutine(
       });
     },
 
-    addBreak: (sectionId) => {
+    addBreak: (sectionId, beforePlacementId) => {
       // Default a break to one bar of the routine's dance (3 Waltz / 4 others).
       const beats = DANCES[readRoutineSafe().dance].beatsPerBar;
       routineConn.change((draft) => {
         const section = draft.sections?.find((s) => s.id === sectionId);
         if (!section) return;
-        // Append after the last placement in sortKey order (#63), mirroring
+        // Insert before the anchor (insert-between) or append (#63), mirroring
         // addPlacement. A break carries NO figureRef (Automerge can't store
         // undefined — we simply omit the field).
         ensureSortKeys(section.placements);
-        const ordered = sortByOrder(section.placements);
-        const lastKey = ordered[ordered.length - 1]?.sortKey ?? null;
         section.placements.push({
           id: newId(),
           source: "break",
           beats,
-          sortKey: keyBetween(lastKey, null),
+          sortKey: insertSortKey(section.placements, beforePlacementId),
           deletedAt: null,
         });
       });
