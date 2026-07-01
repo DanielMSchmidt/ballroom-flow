@@ -21,7 +21,8 @@
             "sway": "none",
             "bodyActions": [
               "CBM"
-            ]
+            ],
+            "turn": "eighth_R"
           },
           "follower": {
             "direction": "forward",
@@ -29,7 +30,8 @@
             "sway": "none",
             "bodyActions": [
               "CBM"
-            ]
+            ],
+            "turn": "eighth_R"
           }
         },
         {
@@ -51,12 +53,14 @@
           "leader": {
             "direction": "back",
             "footwork": "TH",
-            "sway": "to_L"
+            "sway": "to_L",
+            "turn": "eighth_R"
           },
           "follower": {
             "direction": "forward",
             "footwork": "TH",
-            "sway": "to_R"
+            "sway": "to_R",
+            "turn": "eighth_R"
           }
         }
       ],
@@ -852,7 +856,8 @@
           "follower": {
             "direction": "side",
             "footwork": "TH",
-            "sway": "to_L"
+            "sway": "to_L",
+            "turn": "quarter_L"
           }
         },
         {
@@ -872,7 +877,8 @@
             "sway": "to_L",
             "bodyActions": [
               "CBM"
-            ]
+            ],
+            "turn": "eighth_L"
           }
         }
       ],
@@ -1972,12 +1978,18 @@
           "leader": {
             "direction": "back",
             "footwork": "T",
-            "sway": "none"
+            "sway": "none",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "T",
-            "sway": "none"
+            "sway": "none",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -2796,12 +2808,18 @@
           "leader": {
             "direction": "forward",
             "footwork": "HT",
-            "sway": "to_L"
+            "sway": "to_L",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "back",
             "footwork": "TH",
-            "sway": "to_R"
+            "sway": "to_R",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -2810,7 +2828,10 @@
           "leader": {
             "direction": "forward",
             "footwork": "TH",
-            "sway": "to_L"
+            "sway": "to_L",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "back",
@@ -3479,12 +3500,18 @@
           "leader": {
             "direction": "diagonal",
             "footwork": "T",
-            "sway": "none"
+            "sway": "none",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "diagonal",
             "footwork": "T",
-            "sway": "none"
+            "sway": "none",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -3869,7 +3896,7 @@
           "rise": "commence",
           "leader": {
             "direction": "close",
-            "footwork": "HT",
+            "footwork": "heel turn",
             "sway": "to_L"
           },
           "follower": {
@@ -3914,7 +3941,7 @@
           "position": "CBMP",
           "leader": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "HT",
             "sway": "none",
             "turn": "half_R",
             "bodyActions": [
@@ -3923,7 +3950,7 @@
           },
           "follower": {
             "direction": "forward",
-            "footwork": "HT",
+            "footwork": "TH",
             "sway": "none",
             "turn": "half_R"
           }
@@ -3998,7 +4025,7 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "THT",
             "sway": "none",
             "turn": "half_R",
             "bodyActions": [
@@ -4203,7 +4230,7 @@
           "position": "closed",
           "leader": {
             "direction": "back",
-            "footwork": "H",
+            "footwork": "TH",
             "turn": "quarter_L",
             "bodyActions": [
               "CBM"
@@ -4245,11 +4272,11 @@
           "rise": "lowering",
           "leader": {
             "direction": "side",
-            "footwork": "HT"
+            "footwork": "TH"
           },
           "follower": {
             "direction": "side",
-            "footwork": "HT"
+            "footwork": "TH"
           }
         }
       ],
@@ -4354,7 +4381,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "HT",
+            "footwork": "TH",
             "sway": "none",
             "turn": "three_eighth_R",
             "bodyActions": [
@@ -4393,12 +4420,12 @@
           "rise": "lowering",
           "leader": {
             "direction": "side",
-            "footwork": "HT",
+            "footwork": "TH",
             "sway": "none"
           },
           "follower": {
             "direction": "diagonal",
-            "footwork": "HT",
+            "footwork": "TH",
             "sway": "none"
           }
         }
@@ -4605,7 +4632,10 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "T"
+            "footwork": "T",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
@@ -4778,7 +4808,7 @@
           },
           "follower": {
             "direction": "forward",
-            "footwork": "HT",
+            "footwork": "HTH",
             "sway": "none",
             "turn": "half_R",
             "bodyActions": [
@@ -4817,7 +4847,7 @@
           },
           "follower": {
             "direction": "close",
-            "footwork": "HT",
+            "footwork": "heel turn",
             "sway": "to_L",
             "turn": "half_R"
           }
@@ -5492,7 +5522,10 @@
           "follower": {
             "direction": "diagonal",
             "footwork": "T",
-            "sway": "none"
+            "sway": "none",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -5794,7 +5827,7 @@
           "leader": {
             "direction": "close",
             "footwork": "T",
-            "sway": "to_R",
+            "sway": "to_L",
             "turn": "eighth_L"
           },
           "follower": {
@@ -5929,7 +5962,7 @@
           },
           "follower": {
             "direction": "close",
-            "footwork": "H",
+            "footwork": "heel turn",
             "sway": "none",
             "turn": "eighth_L"
           }
@@ -6016,12 +6049,16 @@
           "leader": {
             "direction": "back",
             "footwork": "BH",
-            "turn": "none"
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none"
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -6059,13 +6096,11 @@
           "position": "closed",
           "leader": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           },
           "follower": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           }
         }
       ],
@@ -6089,13 +6124,11 @@
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           },
           "follower": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           }
         },
         {
@@ -6110,8 +6143,7 @@
           },
           "follower": {
             "direction": "forward",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           }
         },
         {
@@ -6122,21 +6154,18 @@
           },
           "follower": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         },
         {
           "position": "closed",
           "leader": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         }
       ],
@@ -6161,7 +6190,6 @@
           "leader": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
@@ -6169,7 +6197,6 @@
           "follower": {
             "direction": "back",
             "footwork": "BH",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
@@ -6190,13 +6217,11 @@
         {
           "leader": {
             "direction": "forward",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           },
           "follower": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           }
         },
         {
@@ -6204,7 +6229,6 @@
           "leader": {
             "direction": "back",
             "footwork": "BH",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
@@ -6212,7 +6236,6 @@
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
@@ -6281,37 +6304,31 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           }
         },
         {
           "leader": {
             "direction": "close",
-            "footwork": "T",
-            "turn": "none"
+            "footwork": "T"
           },
           "follower": {
             "direction": "close",
-            "footwork": "T",
-            "turn": "none"
+            "footwork": "T"
           }
         },
         {
           "leader": {
             "direction": "side",
-            "footwork": "IE",
-            "turn": "none"
+            "footwork": "IE"
           },
           "follower": {
             "direction": "side",
-            "footwork": "IE",
-            "turn": "none"
+            "footwork": "IE"
           }
         }
       ],
@@ -6335,13 +6352,11 @@
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           },
           "follower": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           }
         },
         {
@@ -6354,14 +6369,13 @@
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none"
+            "turn": "eighth_L"
           }
         },
         {
           "leader": {
             "direction": "side",
-            "footwork": "IE",
-            "turn": "none"
+            "footwork": "IE"
           },
           "follower": {
             "direction": "side",
@@ -6374,12 +6388,16 @@
           "leader": {
             "direction": "forward",
             "footwork": "BH",
-            "turn": "none"
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "back",
             "footwork": "BH",
-            "turn": "none"
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
@@ -6387,25 +6405,27 @@
           "leader": {
             "direction": "back",
             "footwork": "BH",
-            "turn": "none"
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none"
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         }
       ],
@@ -6429,13 +6449,11 @@
           "position": "CBMP",
           "leader": {
             "direction": "forward",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           },
           "follower": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         },
         {
@@ -6472,33 +6490,32 @@
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           },
           "follower": {
             "direction": "side",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           }
         },
         {
           "position": "promenade",
           "leader": {
             "direction": "forward",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none"
+            "turn": "none",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
           "leader": {
             "direction": "side",
-            "footwork": "IE",
-            "turn": "none"
+            "footwork": "IE"
           },
           "follower": {
             "direction": "side",
@@ -6510,13 +6527,11 @@
           "position": "closed",
           "leader": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           },
           "follower": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           }
         }
       ],
@@ -6555,38 +6570,32 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         },
         {
           "leader": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         },
         {
           "position": "promenade",
           "leader": {
             "direction": "close",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "close",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         }
       ],
@@ -6624,28 +6633,24 @@
           "leader": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
           },
           "follower": {
             "direction": "forward",
-            "footwork": "H",
-            "turn": "none"
+            "footwork": "H"
           }
         },
         {
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "none",
             "bodyActions": [
               "CBM"
             ]
@@ -6659,15 +6664,13 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           }
         },
         {
           "leader": {
             "direction": "back",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "back",
@@ -6679,13 +6682,11 @@
           "position": "promenade",
           "leader": {
             "direction": "close",
-            "footwork": "BH",
-            "turn": "none"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "close",
-            "footwork": "WF",
-            "turn": "none"
+            "footwork": "WF"
           }
         }
       ],
@@ -6788,7 +6789,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "BH",
             "turn": "quarter_L",
             "bodyActions": [
               "CBM"
@@ -6798,7 +6799,7 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
@@ -6809,7 +6810,7 @@
           "position": "CBMP",
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
@@ -6819,22 +6820,22 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "T"
+            "footwork": "B"
           },
           "follower": {
             "direction": "forward",
-            "footwork": "T"
+            "footwork": "B"
           }
         },
         {
           "position": "promenade",
           "leader": {
             "direction": "side",
-            "footwork": "H/T"
+            "footwork": "IE"
           },
           "follower": {
             "direction": "side",
-            "footwork": "H"
+            "footwork": "IE"
           }
         }
       ],
@@ -6866,7 +6867,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "BH",
             "turn": "eighth_L",
             "bodyActions": [
               "CBM"
@@ -6876,7 +6877,7 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
@@ -6887,7 +6888,7 @@
           "position": "CBMP",
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
@@ -6899,11 +6900,11 @@
           "position": "promenade",
           "leader": {
             "direction": "close",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "close",
-            "footwork": "TH"
+            "footwork": "BH"
           }
         }
       ],
@@ -6935,7 +6936,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "BH",
             "turn": "quarter_L",
             "bodyActions": [
               "CBM"
@@ -6945,7 +6946,7 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
@@ -6965,11 +6966,11 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
-            "footwork": "TH"
+            "footwork": "BH"
           }
         }
       ],
@@ -7000,7 +7001,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH",
+            "footwork": "BH",
             "bodyActions": [
               "CBM"
             ]
@@ -7009,7 +7010,7 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "side",
@@ -7020,7 +7021,7 @@
           "position": "CBMP",
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
@@ -7030,11 +7031,11 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "T"
+            "footwork": "B"
           },
           "follower": {
             "direction": "forward",
-            "footwork": "T"
+            "footwork": "B"
           }
         },
         {
@@ -7076,7 +7077,7 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "T",
+            "footwork": "BH",
             "turn": "quarter_R",
             "bodyActions": [
               "CBM"
@@ -7086,7 +7087,7 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "T"
+            "footwork": "BH"
           },
           "follower": {
             "direction": "forward",
@@ -7096,30 +7097,42 @@
         {
           "leader": {
             "direction": "in_place",
-            "footwork": "T"
+            "footwork": "BH",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "back",
-            "footwork": "T"
+            "footwork": "BH",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
           "leader": {
             "direction": "back",
-            "footwork": "T",
-            "turn": "quarter_L"
+            "footwork": "BH",
+            "turn": "quarter_L",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "quarter_L"
+            "turn": "quarter_L",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
           "position": "CBMP",
           "leader": {
             "direction": "back",
-            "footwork": "T",
+            "footwork": "BH",
             "bodyActions": [
               "CBM"
             ]
@@ -7135,11 +7148,11 @@
         {
           "leader": {
             "direction": "side",
-            "footwork": "T"
+            "footwork": "IE"
           },
           "follower": {
             "direction": "side",
-            "footwork": "T"
+            "footwork": "BH"
           }
         },
         {
@@ -7387,7 +7400,10 @@
           "position": "CBMP",
           "leader": {
             "direction": "forward",
-            "footwork": "H"
+            "footwork": "H",
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "back",
@@ -7479,7 +7495,10 @@
           "leader": {
             "direction": "back",
             "footwork": "TH",
-            "turn": "eighth_R"
+            "turn": "eighth_R",
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "forward",
@@ -7538,12 +7557,15 @@
           "leader": {
             "direction": "back",
             "footwork": "TH",
-            "turn": "eighth_L"
+            "turn": "eighth_L",
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "HT",
-            "turn": "eighth_R",
+            "turn": "quarter_R",
             "bodyActions": [
               "CBM"
             ]
@@ -7631,7 +7653,10 @@
           "follower": {
             "direction": "forward",
             "footwork": "HT",
-            "turn": "quarter_R"
+            "turn": "quarter_R",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
@@ -7728,7 +7753,10 @@
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "TH",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
@@ -7783,7 +7811,8 @@
             "bodyActions": [
               "CBM"
             ]
-          }
+          },
+          "position": "CBMP"
         },
         {
           "leader": {
@@ -7810,7 +7839,36 @@
           "follower": {
             "direction": "back",
             "footwork": "TH",
-            "turn": "eighth_L"
+            "turn": "eighth_L",
+            "bodyActions": [
+              "CBM"
+            ]
+          }
+        },
+        {
+          "leader": {
+            "direction": "forward",
+            "footwork": "H",
+            "bodyActions": [
+              "side_leading"
+            ]
+          },
+          "follower": {
+            "direction": "back",
+            "footwork": "T",
+            "bodyActions": [
+              "side_leading"
+            ]
+          }
+        },
+        {
+          "leader": {
+            "direction": "back",
+            "footwork": "T"
+          },
+          "follower": {
+            "direction": "forward",
+            "footwork": "H"
           }
         },
         {
@@ -7826,31 +7884,17 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "T"
+            "footwork": "T",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
-            "footwork": "H"
-          }
-        },
-        {
-          "leader": {
-            "direction": "forward",
-            "footwork": "H"
-          },
-          "follower": {
-            "direction": "back",
-            "footwork": "T"
-          }
-        },
-        {
-          "leader": {
-            "direction": "back",
-            "footwork": "T"
-          },
-          "follower": {
-            "direction": "forward",
-            "footwork": "T"
+            "footwork": "T",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -7858,12 +7902,18 @@
           "leader": {
             "direction": "back",
             "footwork": "TH",
-            "turn": "eighth_L"
+            "turn": "eighth_L",
+            "bodyActions": [
+              "CBM"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "H",
-            "turn": "eighth_L"
+            "turn": "eighth_L",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {
@@ -8050,7 +8100,7 @@
         },
         {
           "leader": {
-            "direction": "behind",
+            "direction": "forward",
             "footwork": "WF"
           },
           "follower": {
@@ -8152,31 +8202,49 @@
         {
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "TH",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
-            "footwork": "H"
+            "footwork": "H",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
           "leader": {
             "direction": "forward",
-            "footwork": "H"
+            "footwork": "H",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "TH",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
           "leader": {
             "direction": "back",
-            "footwork": "TH"
+            "footwork": "TH",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
-            "footwork": "H"
+            "footwork": "H",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         }
       ],
@@ -8269,14 +8337,14 @@
             "direction": "forward",
             "footwork": "H",
             "bodyActions": [
-              "CBM"
+              "side_leading"
             ]
           },
           "follower": {
             "direction": "back",
             "footwork": "TH",
             "bodyActions": [
-              "CBM"
+              "side_leading"
             ]
           }
         }
@@ -10491,12 +10559,18 @@
           "leader": {
             "direction": "back",
             "footwork": "T",
-            "sway": "to_L"
+            "sway": "to_L",
+            "bodyActions": [
+              "side_leading"
+            ]
           },
           "follower": {
             "direction": "forward",
             "footwork": "T",
-            "sway": "to_R"
+            "sway": "to_R",
+            "bodyActions": [
+              "side_leading"
+            ]
           }
         },
         {
@@ -11169,7 +11243,10 @@
           "follower": {
             "direction": "forward",
             "footwork": "HT",
-            "turn": "eighth_L"
+            "turn": "eighth_L",
+            "bodyActions": [
+              "CBM"
+            ]
           }
         },
         {

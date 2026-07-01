@@ -12,11 +12,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
+        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
@@ -40,11 +42,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
     },
   ],
@@ -588,6 +592,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
+        turn: "quarter_L",
       },
     },
     {
@@ -603,6 +608,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
@@ -1377,10 +1383,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -1949,11 +1957,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -1963,6 +1973,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
@@ -2428,10 +2439,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -2687,7 +2700,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "commence",
       leader: {
         direction: "close",
-        footwork: "HT",
+        footwork: "heel turn",
         sway: "to_L",
       },
       follower: {
@@ -2715,13 +2728,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "HT",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "TH",
         turn: "half_R",
       },
     },
@@ -2774,7 +2787,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "THT",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
@@ -2910,7 +2923,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "back",
-        footwork: "H",
+        footwork: "TH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -2948,11 +2961,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "lowering",
       leader: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
       follower: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
     },
   ],
@@ -3020,7 +3033,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "HT",
+        footwork: "TH",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
@@ -3056,11 +3069,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "lowering",
       leader: {
         direction: "side",
-        footwork: "HT",
+        footwork: "TH",
       },
       follower: {
         direction: "diagonal",
-        footwork: "HT",
+        footwork: "TH",
       },
     },
   ],
@@ -3191,6 +3204,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -3318,7 +3332,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HTH",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
@@ -3348,7 +3362,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "heel turn",
         sway: "to_L",
         turn: "half_R",
       },
@@ -3839,6 +3853,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "diagonal",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -4051,7 +4066,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "close",
         footwork: "T",
-        sway: "to_R",
+        sway: "to_L",
         turn: "eighth_L",
       },
       follower: {
@@ -4145,7 +4160,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
-        footwork: "H",
+        footwork: "heel turn",
         turn: "eighth_L",
       },
     },
@@ -4204,10 +4219,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -4435,6 +4452,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_L",
       },
     },
     {
@@ -4452,10 +4470,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4463,10 +4483,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4528,6 +4550,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4733,7 +4756,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -4741,7 +4764,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4752,7 +4775,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4762,22 +4785,22 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "side",
-        footwork: "H/T",
+        footwork: "IE",
       },
       follower: {
         direction: "side",
-        footwork: "H",
+        footwork: "IE",
       },
     },
   ],
@@ -4792,7 +4815,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
@@ -4800,7 +4823,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4811,7 +4834,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4823,11 +4846,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "promenade",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
       },
     },
   ],
@@ -4842,7 +4865,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
@@ -4850,7 +4873,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4870,11 +4893,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "BH",
       },
     },
   ],
@@ -4888,14 +4911,14 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
     {
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "side",
@@ -4906,7 +4929,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4916,11 +4939,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
       },
     },
     {
@@ -4945,7 +4968,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         turn: "quarter_R",
         bodyActions: ["CBM"],
       },
@@ -4953,7 +4976,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BH",
       },
       follower: {
         direction: "forward",
@@ -4963,30 +4986,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "in_place",
-        footwork: "T",
+        footwork: "BH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         turn: "quarter_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "quarter_L",
+        bodyActions: ["side_leading"],
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -4998,11 +5025,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BH",
       },
     },
     {
@@ -5185,6 +5212,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
@@ -5256,6 +5284,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
@@ -5296,11 +5325,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_R",
+        turn: "quarter_R",
         bodyActions: ["CBM"],
       },
     },
@@ -5366,6 +5396,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5429,6 +5460,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5455,6 +5487,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "tango:progressive-side-step-reverse-turn": [
     {
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
@@ -5490,6 +5523,29 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      leader: {
+        direction: "back",
+        footwork: "T",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
       },
     },
     {
@@ -5506,30 +5562,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "T",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "forward",
-        footwork: "H",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -5538,11 +5576,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5672,7 +5712,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       leader: {
-        direction: "behind",
+        direction: "forward",
         footwork: "WF",
       },
       follower: {
@@ -5737,30 +5777,36 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -5818,12 +5864,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -7371,11 +7417,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -7871,6 +7919,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HT",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
