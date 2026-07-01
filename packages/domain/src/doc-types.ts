@@ -58,7 +58,20 @@ export interface FigureDoc {
 
 export interface Placement {
   id: string;
-  figureRef: string;
+  /**
+   * The figure this placement references. Present for a normal figure placement;
+   * ABSENT for a `break` (a break has no figure — see {@link Placement.source}).
+   */
+  figureRef?: string;
+  /**
+   * Entry kind. Omitted (the default) for a normal figure placement; `"break"`
+   * for a WAIT/BREAK entry that occupies beats but has no figure or steps
+   * (US-004a). A break carries {@link Placement.beats} and no `figureRef`; it
+   * advances the routine's continuous beat counter and reads as a muted row.
+   */
+  source?: "break";
+  /** A break's duration in whole beats (`source === "break"` only; min 1). */
+  beats?: number;
   perPlacementAlignment?: Alignment;
   /**
    * Fractional-index ordering key (#63, §5.3). Reads order placements by this;

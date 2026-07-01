@@ -199,6 +199,8 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     addPlacement: editAction((s) => s.addPlacement),
     movePlacement: editAction((s) => s.movePlacement),
     deletePlacement: editAction((s) => s.deletePlacement),
+    addBreak: editAction((s) => s.addBreak),
+    setBreakBeats: editAction((s) => s.setBreakBeats),
     setFigureAttributes: editAction((s) => s.setFigureAttributes),
     setFigureAlignment: editAction(
       (s) => s.setFigureAlignment as (...a: [string, "entry" | "exit", Alignment | null]) => void,

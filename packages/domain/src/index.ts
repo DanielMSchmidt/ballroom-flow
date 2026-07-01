@@ -73,7 +73,16 @@ export {
 } from "./permissions";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
 export { buildGoldenWaltzBasic } from "./starter-routine";
-export { barsForFigure, countLabel, countToPhrase, isOnEighthGrid } from "./timing";
+export {
+  barsForFigure,
+  countLabel,
+  countToPhrase,
+  isOnEighthGrid,
+  type NumberedBeatEntry,
+  numberRoutineBeats,
+  offBeatSymbol,
+  type RoutineBeatEntry,
+} from "./timing";
 export { redoLastChange, undoLastChange, wasSupersededByOthers } from "./undo";
 export {
   ATTRIBUTE_REGISTRY,

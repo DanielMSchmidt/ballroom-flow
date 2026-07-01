@@ -678,7 +678,8 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   const figureRefs = new Set<string>();
   for (const section of routine.sections ?? []) {
     for (const p of section.placements ?? []) {
-      if (p.deletedAt == null) figureRefs.add(p.figureRef);
+      // A break placement carries no figureRef — skip it (US-004a).
+      if (p.deletedAt == null && p.figureRef) figureRefs.add(p.figureRef);
     }
   }
 

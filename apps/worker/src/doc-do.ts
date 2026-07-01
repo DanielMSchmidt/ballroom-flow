@@ -23,6 +23,7 @@ import {
   buildDoc,
   buildRoutineDoc,
   can,
+  DANCES,
   type DanceId,
   type EffectiveRole,
   type FigureDoc,
@@ -765,14 +766,26 @@ export class DocDO extends DurableObject<Env> {
 
     if (type === "routine") {
       const routine = readRoutine(doc); // tombstones dropped → live placements only
+      const beatsPerBar = DANCES[(routine.dance ?? "waltz") as DanceId].beatsPerBar;
       const placementRefs: string[] = [];
+      let breakBars = 0; // a break contributes bars but isn't a figure (US-004a)
+      let figureCount = 0;
       for (const section of routine.sections) {
-        for (const placement of section.placements) placementRefs.push(placement.figureRef);
+        for (const placement of section.placements) {
+          if (placement.source === "break") {
+            breakBars += Math.max(1, Math.round((placement.beats ?? beatsPerBar) / beatsPerBar));
+          } else if (placement.figureRef) {
+            placementRefs.push(placement.figureRef);
+            figureCount += 1;
+          }
+        }
       }
       const barsByRef = await this.resolveFigureBars([...new Set(placementRefs)]);
-      // Sum PER PLACEMENT (a figure placed twice counts its bars twice).
-      const bars = placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0);
-      return { bars, figureCount: placementRefs.length };
+      // Sum PER PLACEMENT (a figure placed twice counts its bars twice), then add
+      // break beats — the section/routine bar-count includes break bars (US-004a).
+      const bars =
+        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) + breakBars;
+      return { bars, figureCount };
     }
 
     if (type === "global-figure" || type === "account-figure") {

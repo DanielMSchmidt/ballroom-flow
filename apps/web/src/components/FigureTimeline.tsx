@@ -80,6 +80,18 @@ export interface FigureTimelineProps {
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
 const humanize = (value: unknown): string => displayValue(value).replace(/_/g, " ");
 
+/** The in-between (sub-beat) subdivisions offered by the add-timing picker, each
+ *  a quarter of a beat: e (¼), & (½), a (¾) (US-004 / frame 1.11). */
+const QUARTER_SUBDIVISIONS = [0.25, 0.5, 0.75] as const;
+const FRACTION_HINTS: Record<string, string> = { "0.25": "¼", "0.5": "½", "0.75": "¾" };
+
+/** The vulgar-fraction hint for a sub-beat count ("2.25" → "¼"), or "" for a
+ *  whole beat / off-grid count — shown under the picker chip's e/&/a token. */
+function fractionHint(count: number): string {
+  const frac = Number((count - Math.floor(count)).toFixed(3));
+  return FRACTION_HINTS[String(frac)] ?? "";
+}
+
 /** A column's header/text color — the kind's base token, slate for custom. */
 function columnColor(col: ReadingColumn): string {
   const standard = [
@@ -178,12 +190,18 @@ export function FigureTimeline({
     return [...set].sort((a, b) => a - b);
   }, [totalBeats, placedCounts]);
 
-  // Candidate in-between (sub-beat) positions for the chooser: the "&" of each
-  // whole beat that isn't already a row.
+  // Candidate in-between (sub-beat) positions for the chooser: the three quarter
+  // subdivisions of each whole beat — e (¼), & (½), a (¾) — that aren't already a
+  // row (frame 1.11: the add-timing picker offers all in-between counts, US-004).
   const offBeatChoices = useMemo(() => {
     const present = new Set(rowCounts);
     const out: number[] = [];
-    for (let b = 1; b <= totalBeats; b++) if (!present.has(b + 0.5)) out.push(b + 0.5);
+    for (let b = 1; b <= totalBeats; b++) {
+      for (const frac of QUARTER_SUBDIVISIONS) {
+        const c = b + frac;
+        if (!present.has(c)) out.push(c);
+      }
+    }
     return out;
   }, [rowCounts, totalBeats]);
 
@@ -329,9 +347,12 @@ export function FigureTimeline({
                     setChooserOpen(false);
                     open(c);
                   }}
-                  className="min-h-[32px] rounded-md bg-surface-sunken px-3 text-2xs font-bold tabular-nums text-ink"
+                  className="flex min-h-[32px] flex-col items-center justify-center rounded-md bg-surface-sunken px-3 py-1 text-2xs font-bold leading-none tabular-nums text-ink"
                 >
                   {countLabel(c)}
+                  <span aria-hidden="true" className="mt-0.5 text-[7px] font-semibold opacity-70">
+                    {fractionHint(c)}
+                  </span>
                 </button>
               ))}
             </div>

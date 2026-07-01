@@ -18,6 +18,7 @@ import {
   barsForFigure,
   can,
   countLabel,
+  DANCES,
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
@@ -224,7 +225,8 @@ export function Assemble({
   // When set, the thread sheet shows the AnnotationPanel for that step's anchor.
   const [threadAnchor, setThreadAnchor] = useState<{
     figureRef: string;
-    count: number;
+    /** Omitted for a WHOLE-FIGURE thread (US-004a); present for a per-step thread. */
+    count?: number;
   } | null>(null);
   // The Leader/Follower lens for the reading view — persisted across routines.
   const [roleView, setRoleView] = useStoredRoleView();
@@ -496,32 +498,59 @@ export function Assemble({
                     />
                     {!isCollapsed && (
                       <div className="ml-2 flex flex-col gap-[7px]">
-                        {section.placements.map((placement, pIndex) => (
-                          <PlacementCard
-                            key={placement.id}
-                            placement={placement}
-                            figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
-                            status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
-                            canEdit={canEdit}
-                            isFirst={pIndex === 0}
-                            isLast={pIndex === section.placements.length - 1}
-                            onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
-                            onRetry={() => store.retryFigure(placement.figureRef)}
-                            onOpen={() => {
-                              const f = resolvedByPlacement.get(placement.id)?.figure;
-                              if (f) setNotating(f.id);
-                            }}
-                            onDelete={() =>
-                              setPendingDeletePlacement({ sectionId: section.id, placement })
-                            }
-                          />
-                        ))}
+                        {section.placements.map((placement, pIndex) =>
+                          placement.source === "break" ? (
+                            <BreakCard
+                              key={placement.id}
+                              beats={
+                                placement.beats ?? DANCES[routine.dance as DanceId].beatsPerBar
+                              }
+                              canEdit={canEdit}
+                              onChangeBeats={(next) =>
+                                store.setBreakBeats(section.id, placement.id, next)
+                              }
+                              onDelete={() =>
+                                setPendingDeletePlacement({ sectionId: section.id, placement })
+                              }
+                            />
+                          ) : (
+                            <PlacementCard
+                              key={placement.id}
+                              placement={placement}
+                              figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
+                              status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
+                              canEdit={canEdit}
+                              isFirst={pIndex === 0}
+                              isLast={pIndex === section.placements.length - 1}
+                              onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                              onRetry={() =>
+                                placement.figureRef && store.retryFigure(placement.figureRef)
+                              }
+                              onOpen={() => {
+                                const f = resolvedByPlacement.get(placement.id)?.figure;
+                                if (f) setNotating(f.id);
+                              }}
+                              onDelete={() =>
+                                setPendingDeletePlacement({ sectionId: section.id, placement })
+                              }
+                            />
+                          ),
+                        )}
                         {canEdit && (
-                          <DashedAddButton
-                            label="add figure"
-                            tone="figure"
-                            onClick={() => setAddingFigureTo(section.id)}
-                          />
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <DashedAddButton
+                                label="add figure"
+                                tone="figure"
+                                onClick={() => setAddingFigureTo(section.id)}
+                              />
+                            </div>
+                            <DashedAddButton
+                              label="add break"
+                              tone="break"
+                              onClick={() => store.addBreak(section.id)}
+                            />
+                          </div>
                         )}
                       </div>
                     )}
@@ -552,7 +581,13 @@ export function Assemble({
                 kind,
                 text,
                 anchors: [
-                  { type: "point", figureRef: threadAnchor.figureRef, count: threadAnchor.count },
+                  threadAnchor.count == null
+                    ? { type: "figure", figureRef: threadAnchor.figureRef }
+                    : {
+                        type: "point",
+                        figureRef: threadAnchor.figureRef,
+                        count: threadAnchor.count,
+                      },
                 ],
               })
             }
@@ -803,11 +838,18 @@ function sectionMeta(
   collapsed: boolean,
 ): string {
   if (collapsed) {
-    const n = section.placements.length;
+    // Count figures only — a break isn't a figure (US-004a).
+    const n = section.placements.filter((p) => p.source !== "break").length;
     return `${n} fig${n === 1 ? "" : "s"}`;
   }
+  const beatsPerBar = DANCES[dance].beatsPerBar;
   let bars = 0;
   for (const pl of section.placements) {
+    if (pl.source === "break") {
+      // A break contributes its bar span to the section count (US-004a).
+      bars += Math.max(1, Math.round((pl.beats ?? beatsPerBar) / beatsPerBar));
+      continue;
+    }
     const fig = resolved.get(pl.id)?.figure;
     if (!fig) continue;
     const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
@@ -934,23 +976,83 @@ function DashedAddButton({
   onClick,
 }: {
   label: string;
-  tone: "figure" | "section";
+  tone: "figure" | "section" | "break";
   onClick: () => void;
 }) {
+  // A break reads muted (it's a wait, not a figure); figure/section keep the green.
+  const isBreak = tone === "break";
+  const borderColor = isBreak
+    ? "var(--bf-border-strong)"
+    : tone === "figure"
+      ? "var(--bf-section-dash)"
+      : "var(--bf-section-meta)";
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex items-center justify-center gap-1.5 rounded-[9px] border-[1.5px] border-dashed py-2 text-2xs font-bold"
+      className="flex w-full items-center justify-center gap-1.5 rounded-[9px] border-[1.5px] border-dashed py-2 text-2xs font-bold"
       style={{
-        borderColor: tone === "figure" ? "var(--bf-section-dash)" : "var(--bf-section-meta)",
-        color: "var(--bf-section-action)",
+        borderColor,
+        color: isBreak ? "var(--bf-ink-muted)" : "var(--bf-section-action)",
       }}
     >
-      <span aria-hidden="true">＋</span>
+      <span aria-hidden="true">{isBreak ? "❚❚" : "＋"}</span>
       {label}
     </button>
+  );
+}
+
+/** A break/wait card in the editing view (US-004a): a muted card with a −/＋
+ *  stepper (min 1 beat). It occupies beats but has no figure or steps. */
+function BreakCard({
+  beats,
+  canEdit,
+  onChangeBeats,
+  onDelete,
+}: {
+  beats: number;
+  canEdit: boolean;
+  onChangeBeats: (next: number) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      data-testid="break-card"
+      className="flex items-center gap-2 rounded-[10px] border border-dashed px-3 py-2"
+      style={{ borderColor: "var(--bf-border-strong)", background: "var(--bf-surface-sunken)" }}
+    >
+      <span aria-hidden="true" className="text-2xs font-bold text-ink-muted">
+        ❚❚
+      </span>
+      <span className="flex-1 text-2xs font-bold uppercase tracking-wider text-ink-muted">
+        Break
+      </span>
+      {canEdit ? (
+        <div className="flex items-center gap-2">
+          <IconButton
+            label="fewer beats"
+            onClick={() => onChangeBeats(beats - 1)}
+            disabled={beats <= 1}
+          >
+            <span aria-hidden="true">−</span>
+          </IconButton>
+          <span className="min-w-[52px] text-center text-2xs font-bold tabular-nums text-ink">
+            {beats} beat{beats === 1 ? "" : "s"}
+          </span>
+          <IconButton label="more beats" onClick={() => onChangeBeats(beats + 1)}>
+            <span aria-hidden="true">＋</span>
+          </IconButton>
+          <IconButton label="remove break" onClick={onDelete}>
+            <span aria-hidden="true">×</span>
+          </IconButton>
+        </div>
+      ) : (
+        <span className="text-2xs font-bold tabular-nums text-ink-muted">
+          {beats} beat{beats === 1 ? "" : "s"}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -1471,7 +1573,7 @@ function ThreadSheetContents({
   onDeleteReply,
 }: {
   routineId: string;
-  anchor: { figureRef: string; count: number };
+  anchor: { figureRef: string; count?: number };
   annotations: import("@ballroom/domain").Annotation[];
   placements: ResolvedPlacement[];
   role: MembershipRole;
@@ -1497,18 +1599,23 @@ function ThreadSheetContents({
   if (currentUserId && currentUserColor) authorColorMap[currentUserId] = currentUserColor;
   if (currentUserId && currentUserName) authorNameMap[currentUserId] = currentUserName;
 
-  // Thread title: "Figure Name · step N" (frame 1.14 header).
+  // Thread title (frame 1.14 header): "Figure Name · step N" for a per-step
+  // thread; the figure name + a "whole figure" subtitle for a figure-level one.
+  const isWholeFigure = anchor.count == null;
   const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
   const figureName = figure?.name ?? anchor.figureRef;
-  const threadTitle = `${figureName} · step ${anchor.count}`;
+  const threadTitle = isWholeFigure ? figureName : `${figureName} · step ${anchor.count}`;
+  const threadSubtitle = isWholeFigure ? "whole figure" : undefined;
 
-  // Only annotations anchored to this exact step (point anchor).
+  // A whole-figure thread keys on a `figure` anchor (no count); a per-step thread
+  // on the exact `point` anchor (US-004a).
   const threadAnnotations = annotations.filter(
     (a) =>
       a.deletedAt == null &&
-      a.anchors.some(
-        (an) =>
-          an.type === "point" && an.figureRef === anchor.figureRef && an.count === anchor.count,
+      a.anchors.some((an) =>
+        isWholeFigure
+          ? an.type === "figure" && an.figureRef === anchor.figureRef
+          : an.type === "point" && an.figureRef === anchor.figureRef && an.count === anchor.count,
       ),
   );
 
@@ -1517,8 +1624,13 @@ function ThreadSheetContents({
       role={role}
       currentUserId={currentUserId}
       annotations={threadAnnotations}
-      composeAnchor={{ type: "point", figureRef: anchor.figureRef, count: anchor.count }}
+      composeAnchor={
+        isWholeFigure
+          ? { type: "figure", figureRef: anchor.figureRef }
+          : { type: "point", figureRef: anchor.figureRef, count: anchor.count as number }
+      }
       threadTitle={threadTitle}
+      threadSubtitle={threadSubtitle}
       authorColorMap={authorColorMap}
       authorNameMap={authorNameMap}
       currentUserColor={currentUserColor}

@@ -48,6 +48,9 @@ export interface AnnotationPanelProps {
    *  renders in THREAD MODE: a titled header + flat comment list + single reply
    *  composer, instead of the filter bar + kind-select compose form. */
   threadTitle?: string;
+  /** Optional thread sub-header — e.g. "whole figure" for a figure-level thread
+   *  (US-004a). Rendered under the title in thread mode. */
+  threadSubtitle?: string;
   /** Author display names: authorId → display name ("Daniel"). Falls back to
    *  authorId when missing. Used in T8 thread mode. */
   authorNameMap?: Record<string, string>;
@@ -96,6 +99,7 @@ export function AnnotationPanel({
   onReply,
   onDeleteReply,
   threadTitle,
+  threadSubtitle,
   authorNameMap,
   authorColorMap,
   currentUserColor,
@@ -155,6 +159,11 @@ export function AnnotationPanel({
         {/* Thread header: title ("Spin Turn · step 2") + comment count. */}
         <div className="flex flex-col gap-0.5">
           <h2 className="text-[15px] font-bold text-ink">{threadTitle}</h2>
+          {threadSubtitle && (
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">
+              {threadSubtitle}
+            </p>
+          )}
           <p className="text-2xs text-ink-muted">{visible.length} comments</p>
         </div>
 

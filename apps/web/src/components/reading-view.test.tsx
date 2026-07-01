@@ -328,6 +328,132 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
   });
 });
 
+describe("RoutineReadingView — continuous beat numbering + breaks (US-004a)", () => {
+  const threeStep = (id: string, name: string): FigureDoc =>
+    figure({
+      id,
+      name,
+      attributes: [
+        attr(1, "direction", "forward"),
+        attr(2, "direction", "side"),
+        attr(3, "direction", "close"),
+      ],
+    });
+
+  function renderRoutine(
+    sections: RoutineDoc["sections"],
+    placements: ResolvedPlacement[],
+    extra: Partial<ReadingProps> = {},
+  ) {
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections,
+      annotations: [],
+      schemaVersion: 1,
+    };
+    return renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={placements}
+        roleView="leader"
+        onRoleViewChange={vi.fn()}
+        {...extra}
+      />,
+    );
+  }
+
+  it("continues the beat count across figures (second figure reads 4 5 6)", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const f1 = threeStep("f1", "Natural Turn");
+    const f2 = threeStep("f2", "Reverse Turn");
+    renderRoutine(
+      [
+        {
+          id: "s1",
+          name: "1st Long Side",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+      ],
+      [
+        { placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" },
+        { placement: { id: "p2", figureRef: "f2" }, figure: f2, status: "live" },
+      ],
+    );
+    // The SECOND figure's step rows continue the counter: 4, 5, 6.
+    const second = screen.getByRole("list", { name: /reverse turn steps/i });
+    expect(second).toHaveTextContent(/4/);
+    expect(second).toHaveTextContent(/5/);
+    expect(second).toHaveTextContent(/6/);
+  });
+
+  it("renders a break as a muted row with its phrase span + bar count", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const f1 = threeStep("f1", "Natural Turn");
+    renderRoutine(
+      [
+        {
+          id: "s1",
+          name: "1st Long Side",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", source: "break", beats: 3 },
+          ],
+        },
+      ],
+      [{ placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" }],
+    );
+    const brk = screen.getByTestId("break-readout");
+    // The figure took beats 1–3, so the break occupies beats 4–6 (one Waltz bar).
+    expect(brk).toHaveTextContent(/beats 4–6/);
+    expect(brk).toHaveTextContent(/1 bar/);
+  });
+
+  it("shows a WHOLE FIGURE note block and opens the figure thread (no count)", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const f1 = threeStep("f1", "Natural Turn");
+    const onOpenThread = vi.fn();
+    renderRoutine(
+      [{ id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: "f1" }] }],
+      [{ placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" }],
+      {
+        canComment: true,
+        onOpenThread,
+        annotations: [
+          {
+            id: "an1",
+            authorId: "u2",
+            kind: "note",
+            text: "keep the frame quiet",
+            tags: [],
+            anchors: [{ type: "figure", figureRef: "f1" }],
+            replies: [],
+            createdAt: 1,
+          },
+        ],
+      },
+    );
+    const block = screen.getByTestId("whole-figure-notes");
+    expect(block).toHaveTextContent(/whole figure/i);
+    expect(block).toHaveTextContent(/keep the frame quiet/i);
+    // Tapping the note opens the FIGURE thread — a figure anchor, no count.
+    await userEvent.click(screen.getByText("keep the frame quiet"));
+    expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1" });
+  });
+});
+
 describe("RoutineReadingView — attribute info overlay (frame 1.13)", () => {
   it("opens the info overlay when a column header is tapped", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");

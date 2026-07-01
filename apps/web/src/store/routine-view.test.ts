@@ -66,6 +66,8 @@ function fakeLive() {
     addPlacement: vi.fn(),
     movePlacement: vi.fn(),
     deletePlacement: vi.fn(),
+    addBreak: vi.fn(),
+    setBreakBeats: vi.fn(),
     setFigureAttributes: vi.fn(),
     setFigureAlignment: vi.fn(),
     createAnnotation: vi.fn(),

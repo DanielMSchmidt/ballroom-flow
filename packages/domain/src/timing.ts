@@ -94,3 +94,76 @@ export function barsForFigure(counts: number[], dance: DanceId): number {
   const maxCount = Math.max(...counts);
   return countToPhrase(maxCount, dance).phrase;
 }
+
+/**
+ * The sub-beat symbol for an OFF-beat count (2.5 → "&", 2.25 → "e", 2.75 → "a"),
+ * or null for a whole beat. Unlike {@link countLabel} it drops the whole-beat
+ * prefix — the continuous reading-view numbering (US-004a) renders an off-beat as
+ * its symbol ALONE (it doesn't belong to a local beat there) and, crucially,
+ * consumes no beat number.
+ */
+export function offBeatSymbol(count: number): string | null {
+  const fraction = count - Math.floor(count);
+  if (fraction === 0) return null;
+  const snapped = Math.round(fraction / EIGHTH) * EIGHTH;
+  return FRACTION_LABELS[String(snapped)] ?? `+${Number.parseFloat(fraction.toFixed(3))}`;
+}
+
+/** One entry in a routine's ordered beat stream: a figure (its distinct sorted
+ *  counts) or a break (its whole-beat duration). */
+export type RoutineBeatEntry =
+  | { kind: "figure"; counts: number[] }
+  | { kind: "break"; beats: number };
+
+/** A numbered entry aligned 1:1 with the {@link RoutineBeatEntry} input. */
+export type NumberedBeatEntry =
+  | { kind: "figure"; tokens: string[] }
+  | {
+      kind: "break";
+      beats: number;
+      bars: number;
+      startBeat: number;
+      endBeat: number;
+      span: string;
+    };
+
+/**
+ * Number a routine's beats CONTINUOUSLY across the whole routine (US-004a).
+ *
+ * A single running whole-beat counter threads through every entry in order; the
+ * displayed number wraps at the dance's phrase length (Waltz/Viennese 6, others
+ * 8), so a figure starting a phrase reads "1" and one starting the second bar
+ * reads "4" (Waltz) / "5" (4/4). Only WHOLE beats advance the counter — an
+ * off-beat renders as its symbol (&/e/a) and consumes no number. A break occupies
+ * its `beats` whole beats (advancing the counter) and reports the phrase span it
+ * covers (e.g. "beats 4–6") plus its bar count.
+ *
+ * Pure and display-only: the underlying float counts are untouched (the edit view
+ * keeps per-figure LOCAL counts). Output is aligned 1:1 with `entries`.
+ */
+export function numberRoutineBeats(
+  entries: RoutineBeatEntry[],
+  dance: DanceId,
+): NumberedBeatEntry[] {
+  const { phraseBeats, beatsPerBar } = DANCES[dance];
+  let beat = 0; // running whole-beat index across the routine (0-based)
+  return entries.map((entry) => {
+    if (entry.kind === "break") {
+      const beats = Math.max(1, entry.beats);
+      const startBeat = (beat % phraseBeats) + 1;
+      beat += beats;
+      const endBeat = ((beat - 1) % phraseBeats) + 1;
+      const bars = Math.max(1, Math.round(beats / beatsPerBar));
+      const span = beats === 1 ? `beat ${startBeat}` : `beats ${startBeat}–${endBeat}`;
+      return { kind: "break", beats, bars, startBeat, endBeat, span };
+    }
+    const tokens = entry.counts.map((count) => {
+      const symbol = offBeatSymbol(count);
+      if (symbol !== null) return symbol; // off-beat: symbol only, no number consumed
+      const label = String((beat % phraseBeats) + 1);
+      beat += 1;
+      return label;
+    });
+    return { kind: "figure", tokens };
+  });
+}

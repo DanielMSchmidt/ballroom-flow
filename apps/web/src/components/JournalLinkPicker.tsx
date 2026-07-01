@@ -6,10 +6,10 @@
 // the editor saves via createAnnotation. The "An attribute" row is the deferred
 // v1.1 predicate anchor — visibly disabled. Data arrives via injected loaders
 // (the store seam); the component holds no I/O of its own.
-import type { Anchor, DanceId } from "@ballroom/domain";
+import { type Anchor, countLabel, type DanceId } from "@ballroom/domain";
 import { useEffect, useState } from "react";
 import { type FigureFamilyOption, figureFamilies } from "../store/journal";
-import { Button, List, ListRow, Sheet, Spinner } from "../ui";
+import { Button, Input, List, ListRow, Sheet, Spinner } from "../ui";
 
 /** One of the user's routines (the routine chooser). */
 export interface RoutineOption {
@@ -22,6 +22,8 @@ export interface RoutineFigureOption {
   figureRef: string;
   name: string;
   figureType: string;
+  /** The figure's distinct sorted counts, for the "On count N" grain (US-004a). */
+  counts: number[];
 }
 
 /**
@@ -50,7 +52,7 @@ export interface JournalLinkPickerProps {
   families?: FigureFamilyOption[];
 }
 
-type Step = "type" | "family" | "scope" | "routine" | "figureInRoutine";
+type Step = "type" | "family" | "scope" | "routine" | "figureInRoutine" | "figureGrain";
 /** Which routine-scoped anchor we're building once a routine+figure is chosen. */
 type RoutineIntent = "point" | "figure";
 
@@ -76,6 +78,7 @@ export function JournalLinkPicker({
   const [family, setFamily] = useState<FigureFamilyOption | null>(null);
   const [routineIntent, setRoutineIntent] = useState<RoutineIntent>("figure");
   const [routine, setRoutine] = useState<RoutineOption | null>(null);
+  const [pickedFigure, setPickedFigure] = useState<RoutineFigureOption | null>(null);
 
   // Reset to the first step whenever the sheet (re)opens.
   useEffect(() => {
@@ -83,6 +86,7 @@ export function JournalLinkPicker({
       setStep("type");
       setFamily(null);
       setRoutine(null);
+      setPickedFigure(null);
     }
   }, [open]);
 
@@ -94,6 +98,7 @@ export function JournalLinkPicker({
     scope: "Apply to…",
     routine: "Pick a choreo",
     figureInRoutine: routine ? `Pick a figure in ${routine.title}` : "Pick a figure",
+    figureGrain: pickedFigure ? `Where on ${pickedFigure.name}?` : "Where on the figure?",
   };
 
   /** Finalize a figureType (account) link from the chosen family + dance scope. */
@@ -114,14 +119,26 @@ export function JournalLinkPicker({
     onClose();
   };
 
-  /** Finalize a routine-scoped link once a figure in a routine is chosen. */
+  /** After a figure in a routine is chosen, ask WHERE on it — the whole figure or
+   *  a specific count (US-004a grain step). */
   const pickRoutineFigure = (fig: RoutineFigureOption): void => {
-    if (!routine) return;
+    setPickedFigure(fig);
+    setStep("figureGrain");
+  };
+
+  /** Finalize a routine-scoped link from the chosen figure + grain. "whole" →
+   *  a figure anchor ("Whisk · whole figure"); a count → a point anchor
+   *  ("Whisk · count 2"). */
+  const finalizeGrain = (grain: "whole" | number): void => {
+    if (!routine || !pickedFigure) return;
     const anchor: Anchor =
-      routineIntent === "point"
-        ? { type: "point", figureRef: fig.figureRef, count: 0 }
-        : { type: "figure", figureRef: fig.figureRef };
-    const label = routineIntent === "point" ? `${fig.name} · step 1` : fig.name;
+      grain === "whole"
+        ? { type: "figure", figureRef: pickedFigure.figureRef }
+        : { type: "point", figureRef: pickedFigure.figureRef, count: grain };
+    const label =
+      grain === "whole"
+        ? `${pickedFigure.name} · whole figure`
+        : `${pickedFigure.name} · count ${countLabel(grain)}`;
     onPick({
       home: "routine",
       routineRef: routine.docRef,
@@ -136,6 +153,7 @@ export function JournalLinkPicker({
     if (step === "family" || step === "routine") setStep("type");
     else if (step === "scope") setStep("family");
     else if (step === "figureInRoutine") setStep(routineIntent === "point" ? "routine" : "scope");
+    else if (step === "figureGrain") setStep("figureInRoutine");
   };
 
   return (
@@ -237,6 +255,28 @@ export function JournalLinkPicker({
           onPick={pickRoutineFigure}
         />
       )}
+
+      {step === "figureGrain" && pickedFigure && (
+        <div className="flex flex-col gap-2">
+          <Button variant="ghost" size="sm" onClick={back}>
+            ‹ back
+          </Button>
+          <List aria-label="Where on the figure">
+            <ListRow
+              title="The entire figure"
+              subtitle="note applies to the whole figure"
+              onClick={() => finalizeGrain("whole")}
+            />
+            {pickedFigure.counts.map((count) => (
+              <ListRow
+                key={count}
+                title={`On count ${countLabel(count)}`}
+                onClick={() => finalizeGrain(count)}
+              />
+            ))}
+          </List>
+        </div>
+      )}
     </Sheet>
   );
 }
@@ -300,6 +340,7 @@ function FigureInRoutineChooser({
   onPick: (f: RoutineFigureOption) => void;
 }): React.JSX.Element {
   const [figures, setFigures] = useState<RoutineFigureOption[] | null>(null);
+  const [query, setQuery] = useState("");
   useEffect(() => {
     let live = true;
     loadRoutineFigures(routineRef).then((f) => {
@@ -314,9 +355,13 @@ function FigureInRoutineChooser({
   // fall back to the whole routine when none match (so the user is never stuck).
   const list = (() => {
     if (!figures) return null;
-    if (!familyType) return figures;
-    const matching = figures.filter((f) => f.figureType === familyType);
-    return matching.length > 0 ? matching : figures;
+    const scoped = (() => {
+      if (!familyType) return figures;
+      const matching = figures.filter((f) => f.figureType === familyType);
+      return matching.length > 0 ? matching : figures;
+    })();
+    const q = query.trim().toLowerCase();
+    return q ? scoped.filter((f) => f.name.toLowerCase().includes(q)) : scoped;
   })();
 
   return (
@@ -324,10 +369,21 @@ function FigureInRoutineChooser({
       <Button variant="ghost" size="sm" onClick={onBack}>
         ‹ back
       </Button>
+      {figures && figures.length > 0 && (
+        <Input
+          label="Search figures"
+          hideLabel
+          placeholder="Search figures…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
       {list === null ? (
         <Spinner size={20} label="Loading figures" />
       ) : list.length === 0 ? (
-        <p className="text-2xs text-ink-muted">This choreo has no figures yet.</p>
+        <p className="text-2xs text-ink-muted">
+          {query.trim() ? "No figures match your search." : "This choreo has no figures yet."}
+        </p>
       ) : (
         <List aria-label="Figures in this choreo" className="max-h-[60dvh] overflow-y-auto">
           {list.map((f) => (

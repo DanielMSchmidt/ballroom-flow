@@ -100,6 +100,32 @@ describe("FigureTimeline — placing steps via the grid", () => {
   });
 });
 
+describe("FigureTimeline — quarter in-between timings (US-004)", () => {
+  it("offers e (¼), & (½) and a (¾) sub-beats for a whole beat", async () => {
+    const { FigureTimeline } = await load();
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /in-between timing/i }));
+    // All three quarter subdivisions of beat 1 are offered, not just "&".
+    expect(screen.getByRole("button", { name: /add in-between count 1e/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add in-between count 1&/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add in-between count 1a/i })).toBeInTheDocument();
+  });
+
+  it("placing a ¼ off-beat lands the attribute on that sub-beat count", async () => {
+    const { FigureTimeline } = await load();
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /in-between timing/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add in-between count 2e/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
+    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+      (a) => a.kind === "footwork",
+    );
+    expect(added?.count).toBe(2.25);
+  });
+});
+
 describe("FigureTimeline — attribute info overlay (frame 1.13)", () => {
   it("tapping a column HEADER opens the kind's info reference (not the editor)", async () => {
     const { FigureTimeline } = await load();

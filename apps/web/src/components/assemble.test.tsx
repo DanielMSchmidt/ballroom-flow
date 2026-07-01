@@ -43,6 +43,8 @@ function fakeStore(
     addPlacement: () => {},
     movePlacement: () => {},
     deletePlacement: () => {},
+    addBreak: () => {},
+    setBreakBeats: () => {},
     setFigureAttributes: () => {},
     setFigureAlignment: () => {},
     readAnnotations: () => [],
@@ -361,6 +363,39 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(spies.deletePlacement).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: /remove figure/i }));
     expect(spies.deletePlacement).toHaveBeenCalledWith("s1", "p1");
+  });
+
+  it("lets an editor add a break and step its beats (US-004a)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const spies = { addBreak: vi.fn(), setBreakBeats: vi.fn() };
+    const brk: Placement = { id: "b1", source: "break", beats: 4, deletedAt: null };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [brk] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, [], spies)} />,
+    );
+
+    // The break renders as a muted card showing its beat count.
+    const card = screen.getByTestId("break-card");
+    expect(card).toHaveTextContent(/4 beats/i);
+
+    // The "add break" affordance appends a break to the section.
+    await userEvent.click(screen.getAllByRole("button", { name: /add break/i })[0] as HTMLElement);
+    expect(spies.addBreak).toHaveBeenCalledWith("s1");
+
+    // The −/＋ stepper changes the beat count.
+    await userEvent.click(screen.getByRole("button", { name: /more beats/i }));
+    expect(spies.setBreakBeats).toHaveBeenCalledWith("s1", "b1", 5);
+    await userEvent.click(screen.getByRole("button", { name: /fewer beats/i }));
+    expect(spies.setBreakBeats).toHaveBeenCalledWith("s1", "b1", 3);
   });
 
   it("blocks a non-editor from modifying placements", async () => {
