@@ -354,7 +354,8 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The custom form carries a bars stepper (default 2 — PLAN §2.5).
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 2);
+    // Appended (no insert anchor) → trailing beforePlacementId is undefined.
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 2, undefined);
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -365,6 +366,32 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(spies.deletePlacement).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: /remove figure/i }));
     expect(spies.deletePlacement).toHaveBeenCalledWith("s1", "p1");
+  });
+
+  it("lets an editor insert a figure BETWEEN placements (US-027 insert-between)", async () => {
+    // Intent: figures can grow anywhere in the sequence, not just at its end.
+    // A ＋ spot sits in the gap before each placement (past the first); tapping
+    // it opens the picker and addPlacement carries that placement as the anchor.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const addPlacement = vi.fn();
+    const { routine, resolved } = seeded();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { addPlacement })}
+      />,
+    );
+
+    // One insert spot for the two placements (before the 2nd only — index 0 has none).
+    const spots = screen.getAllByRole("button", { name: /insert figure here/i });
+    expect(spots).toHaveLength(1);
+    await userEvent.click(spots[0] as HTMLElement);
+
+    await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
+    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
+    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 2, "p2");
   });
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
@@ -535,7 +562,13 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.click(screen.getByRole("button", { name: /feather step/i }));
     // A library pick keeps its catalog-derived default length (no explicit bars).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Feather Step", "feather-step", undefined);
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "Feather Step",
+      "feather-step",
+      undefined,
+      undefined,
+    );
   });
 
   it("still supports creating a custom figure by name", async () => {
@@ -554,7 +587,7 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The custom form's bars stepper defaults to 2 (PLAN §2.5).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 2);
+    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 2, undefined);
   });
 });
 

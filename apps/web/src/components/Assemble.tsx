@@ -42,6 +42,7 @@ import {
   ChevronRightIcon,
   Chip,
   CountPill,
+  cx,
   EditIcon,
   FullScreen,
   IconButton,
@@ -214,7 +215,12 @@ export function Assemble({
   const canShare = can(role, "canInvite");
   const [shareOpen, setShareOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Section | null>(null);
-  const [addingFigureTo, setAddingFigureTo] = useState<string | null>(null);
+  // The "add a figure" target: which section, and (for insert-between) the
+  // placement the new figure lands BEFORE. `beforePlacementId` omitted → append.
+  const [addingFigureTo, setAddingFigureTo] = useState<{
+    sectionId: string;
+    beforePlacementId?: string;
+  } | null>(null);
   // Custom-kind sheet (US-043) + Lanes view (US-044) — local to the notation panel.
   // (`notating` itself is declared above, alongside the copy-on-write handler.)
   const [addKindOpen, setAddKindOpen] = useState(false);
@@ -500,54 +506,72 @@ export function Assemble({
                     />
                     {!isCollapsed && (
                       <div className="ml-2 flex flex-col gap-[7px]">
-                        {section.placements.map((placement, pIndex) =>
-                          placement.source === "break" ? (
-                            <BreakCard
-                              key={placement.id}
-                              beats={
-                                placement.beats ?? DANCES[routine.dance as DanceId].beatsPerBar
-                              }
-                              canEdit={canEdit}
-                              onChangeBeats={(next) =>
-                                store.setBreakBeats(section.id, placement.id, next)
-                              }
-                              onDelete={() =>
-                                setPendingDeletePlacement({ sectionId: section.id, placement })
-                              }
-                            />
-                          ) : (
-                            <PlacementCard
-                              key={placement.id}
-                              placement={placement}
-                              figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
-                              status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
-                              canEdit={canEdit}
-                              isFirst={pIndex === 0}
-                              isLast={pIndex === section.placements.length - 1}
-                              onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
-                              onRetry={() =>
-                                placement.figureRef && store.retryFigure(placement.figureRef)
-                              }
-                              onOpen={() => {
-                                const f = resolvedByPlacement.get(placement.id)?.figure;
-                                if (f) setNotating(f.id);
-                              }}
-                              onDelete={() =>
-                                setPendingDeletePlacement({ sectionId: section.id, placement })
-                              }
-                            />
-                          ),
-                        )}
+                        {section.placements.map((placement, pIndex) => {
+                          const card =
+                            placement.source === "break" ? (
+                              <BreakCard
+                                beats={
+                                  placement.beats ?? DANCES[routine.dance as DanceId].beatsPerBar
+                                }
+                                canEdit={canEdit}
+                                onChangeBeats={(next) =>
+                                  store.setBreakBeats(section.id, placement.id, next)
+                                }
+                                onDelete={() =>
+                                  setPendingDeletePlacement({ sectionId: section.id, placement })
+                                }
+                              />
+                            ) : (
+                              <PlacementCard
+                                placement={placement}
+                                figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
+                                status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
+                                canEdit={canEdit}
+                                isFirst={pIndex === 0}
+                                isLast={pIndex === section.placements.length - 1}
+                                onMove={(dir) => store.movePlacement(section.id, placement.id, dir)}
+                                onRetry={() =>
+                                  placement.figureRef && store.retryFigure(placement.figureRef)
+                                }
+                                onOpen={() => {
+                                  const f = resolvedByPlacement.get(placement.id)?.figure;
+                                  if (f) setNotating(f.id);
+                                }}
+                                onDelete={() =>
+                                  setPendingDeletePlacement({ sectionId: section.id, placement })
+                                }
+                              />
+                            );
+                          return (
+                            <div key={placement.id} className="flex flex-col gap-[7px]">
+                              {/* Insert-between spot (editor): drop a figure BEFORE this one,
+                                  so the sequence can grow anywhere, not just at its end. */}
+                              {canEdit && pIndex > 0 && (
+                                <InsertSpot
+                                  onClick={() =>
+                                    setAddingFigureTo({
+                                      sectionId: section.id,
+                                      beforePlacementId: placement.id,
+                                    })
+                                  }
+                                />
+                              )}
+                              {card}
+                            </div>
+                          );
+                        })}
                         {canEdit && (
                           <div className="flex gap-2">
-                            <div className="flex-1">
-                              <DashedAddButton
-                                label="add figure"
-                                tone="figure"
-                                onClick={() => setAddingFigureTo(section.id)}
-                              />
-                            </div>
+                            {/* Equal-width add affordances (frame 1.7): figure + break
+                                share the row evenly, so neither reads as primary. */}
                             <DashedAddButton
+                              className="flex-1"
+                              label="add figure"
+                              tone="figure"
+                              onClick={() => setAddingFigureTo({ sectionId: section.id })}
+                            />
+                            <DashedAddButton
+                              className="flex-1"
                               label="add break"
                               tone="break"
                               onClick={() => store.addBreak(section.id)}
@@ -608,7 +632,14 @@ export function Assemble({
         <AddFigurePicker
           dance={routine.dance as DanceId}
           onAdd={(name, figureType, bars) => {
-            if (addingFigureTo) store.addPlacement(addingFigureTo, name, figureType, bars);
+            if (addingFigureTo)
+              store.addPlacement(
+                addingFigureTo.sectionId,
+                name,
+                figureType,
+                bars,
+                addingFigureTo.beforePlacementId,
+              );
             setAddingFigureTo(null);
           }}
         />
@@ -975,15 +1006,18 @@ function SectionHeader({
 }
 
 /** A dashed green "＋ add figure / add section" affordance (frame 1.7). The
- *  figure variant uses the lighter dashed green; the section variant the bolder. */
+ *  figure variant uses the lighter dashed green; the section variant the bolder.
+ *  `className` lets callers size it (e.g. `flex-1` for the equal figure/break row). */
 function DashedAddButton({
   label,
   tone,
   onClick,
+  className,
 }: {
   label: string;
   tone: "figure" | "section" | "break";
   onClick: () => void;
+  className?: string;
 }) {
   // A break reads muted (it's a wait, not a figure); figure/section keep the green.
   const isBreak = tone === "break";
@@ -997,7 +1031,10 @@ function DashedAddButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-[9px] border-[1.5px] border-dashed py-2 text-2xs font-bold"
+      className={cx(
+        "flex w-full items-center justify-center gap-1.5 rounded-[9px] border-[1.5px] border-dashed py-2 text-2xs font-bold",
+        className,
+      )}
       style={{
         borderColor,
         color: isBreak ? "var(--bf-ink-muted)" : "var(--bf-section-action)",
@@ -1005,6 +1042,39 @@ function DashedAddButton({
     >
       <span aria-hidden="true">{isBreak ? "❚❚" : "＋"}</span>
       {label}
+    </button>
+  );
+}
+
+/** A slim insert-between affordance (US-027): a hairline with a centered ＋ that
+ *  sits in the gap BETWEEN two placements, so a figure can be dropped mid-sequence
+ *  rather than only appended. Reads quiet until tapped so it never competes with
+ *  the placement cards. */
+function InsertSpot({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Insert figure here"
+      onClick={onClick}
+      className="group flex w-full items-center gap-2 py-0.5 text-ink-faint"
+    >
+      <span
+        aria-hidden="true"
+        className="h-px flex-1 border-t border-dashed"
+        style={{ borderColor: "var(--bf-section-dash)" }}
+      />
+      <span
+        aria-hidden="true"
+        className="flex size-[18px] flex-none items-center justify-center rounded-full border border-dashed text-2xs font-bold leading-none"
+        style={{ borderColor: "var(--bf-section-dash)", color: "var(--bf-section-action)" }}
+      >
+        ＋
+      </span>
+      <span
+        aria-hidden="true"
+        className="h-px flex-1 border-t border-dashed"
+        style={{ borderColor: "var(--bf-section-dash)" }}
+      />
     </button>
   );
 }
