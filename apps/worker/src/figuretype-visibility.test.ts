@@ -154,6 +154,54 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
     );
   });
 
+  it("surfaces the routine OWNER's own family note on their own routine (no membership row, #168)", async () => {
+    // Intent: a routine owner authors a "every <family>, all dances" note, then opens
+    //   their own routine and sees it on the matching figure. Regression for the bug
+    //   where a figureType note never surfaced on the choreos using that figure because
+    //   the owner has NO membership row (they're elevated by resolveEffectiveRole), so
+    //   the family-note author set (members(R)) excluded them.
+    // Arrange: a SOLO routine — owner in document_registry.ownerId, NO membership row,
+    //   NO co-members. Act: author a note (POST), read it back (GET) as the owner.
+    // Assert: the note surfaces (would be absent before the owner arm was added).
+    const docRef = "rt_solo_owner";
+    await seedDb({
+      users: [{ id: "solo_owner", displayName: "Solo", identityColor: "#222", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "solo_owner", doName: docRef, dance: "waltz" }],
+      // Deliberately NO memberships — the owner relies on resolveEffectiveRole (#168).
+    });
+    // role: null → NO membership row; the owner is elevated by resolveEffectiveRole
+    // from document_registry.ownerId (which seedDb set above) — the production path.
+    const ctx = await authedContext({ keypair: kp, userId: "solo_owner", docRef, role: null });
+    const created = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "lesson",
+        text: "keep the head left",
+        figureType: "natural_turn",
+        danceScope: "all",
+      }),
+    });
+    expect(created.status).toBe(201);
+
+    const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
+      headers: ctx.authHeaders(),
+    });
+    expect(got.status).toBe(200);
+    const body = (await got.json()) as {
+      notes: Array<{ figureType: string; text: string; authorId: string }>;
+    };
+    expect(body.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          figureType: "natural_turn",
+          text: "keep the head left",
+          authorId: "solo_owner",
+        }),
+      ]),
+    );
+  });
+
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {
     // Intent: the co-member family-note discovery query is indexed (NFR).
     // Arrange: the EXACT SQL the route runs — familyNotesForMembers filters by
