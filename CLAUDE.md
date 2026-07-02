@@ -51,6 +51,29 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 - **Tooling / CI / config** → `TOOLING.md` (and don't break the layered CI gate).
 - **A locked decision feels wrong** → `PLAN.md` §8 + §12 (open/resolved questions). Decisions are cheap to revisit *before* code exists; surface it rather than silently diverging.
 
+### Skill library (`.claude/skills/`)
+
+Deep-dive skills live in [`.claude/skills/`](.claude/skills/). They **complement — never
+override — `PLAN.md`**; on any conflict, PLAN.md wins. Load the one matching your task:
+
+| Task type | Skill |
+|---|---|
+| **Any change** — classify it, pick the branch, know which gates/rules apply (load **before** editing) | `ballroom-flow-change-control` |
+| Setup, install/build/test failures, sandbox Playwright, secrets & zero-secret matrix | `ballroom-flow-build-and-env` |
+| Run locally, deploy, wrangler envs, D1 migrations, ops actions | `ballroom-flow-run-and-operate` |
+| Writing/changing any test; layers, "done" bar, coverage ratchet | `ballroom-flow-validation-and-qa` |
+| Measuring: query plans, coverage, axe, traces, flake repro, DO internals | `ballroom-flow-diagnostics-and-tooling` |
+| Something broken/flaky/weird — symptom → experiment triage before touching code | `ballroom-flow-debugging-playbook` |
+| Designing changes to data shape, doc boundaries, sync, permissions, module structure | `ballroom-flow-architecture-contract` |
+| Automerge/CRDT reasoning: convergence, sharp edges, overlays, undo, ordering | `ballroom-flow-crdt-reference` |
+| Ballroom concepts (timing, footwork, rise, alignment) → this codebase's enums | `ballroom-dance-reference` |
+| Figure/seed data, chart corrections, regenerating library artifacts | `ballroom-flow-figure-data-pipeline` |
+| The **v5 live-figure migration** (the active milestone; variants, `resolveFigure`, hardening tail) | `ballroom-flow-v5-migration-campaign` |
+| Proving a claim: convergence, undo soundness, authz safety, D1 perf; reviewing such PRs | `ballroom-flow-proof-and-analysis` |
+| Hunch → accepted change: evidence bar, adversarial refutation, root-cause-before-fix | `ballroom-flow-research-methodology` |
+| Before re-litigating anything settled — past investigations, reversals, dead ends | `ballroom-flow-failure-archaeology` |
+| Scoping beyond the milestone; any proposed external claim (blog/paper/benchmark) | `ballroom-flow-research-frontier` |
+
 ---
 
 ## 3. Architecture & module boundaries
@@ -82,12 +105,13 @@ A **graph of Automerge documents**, one per Durable Object; **D1 is a pure index
 ## 5. Commands
 
 ```bash
+# Toolchain: node 22 (.nvmrc), pnpm 11 (pinned via packageManager in package.json)
 pnpm dev              # web (Vite) + worker (wrangler dev) together
-pnpm test             # all suites (domain + worker/DO + web component)
+pnpm test             # all suites (domain + contract + worker/DO + web component)
 pnpm test:e2e         # Playwright matrix; pnpm test:e2e:smoke for the @smoke subset
 pnpm lint             # Biome (noExplicitAny = error)
 pnpm typecheck        # tsc across all 4 workspaces
-pnpm coverage         # coverage (thresholds: domain ≥95%, worker ≥90% — uncomment when suites land)
+pnpm coverage         # coverage — thresholds ARMED: domain ≥90, worker ≥88 lines (ratchet toward 95/90, PLAN §10.3)
 ```
 
 ---
