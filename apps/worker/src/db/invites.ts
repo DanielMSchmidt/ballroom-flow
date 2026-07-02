@@ -70,6 +70,10 @@ export type RedeemResult =
       requestedRole: MembershipRole;
       /** True when an editor invite was downgraded to commenter by the cap. */
       downgraded: boolean;
+      /** True when the redeemer had ALREADY accepted this doc (an active member),
+       *  so an expired/consumed token redirected them in rather than erroring —
+       *  no new grant happened. `downgraded` is always false in this case. */
+      alreadyMember?: boolean;
     }
   | { ok: false; reason: "not_found" | "expired" | "already_redeemed" };
 
@@ -83,6 +87,12 @@ export type RedeemResult =
  * redeemer can't already edit, the cap is applied: a free user already at their
  * editable-routine limit is granted COMMENTER instead (US-022 × US-023), and the
  * result is flagged `downgraded` so the client can notice the user.
+ *
+ * "Already accepted" redirect: an expired or already-consumed token that would
+ * otherwise error is instead treated as a redirect when the redeemer is ALREADY
+ * an active member of the doc (most often the same user re-opening a link they
+ * already used) — they're sent straight into the routine rather than stranded on
+ * an error, flagged `alreadyMember`.
  */
 export async function redeemInvite(
   db: D1Database,
@@ -93,8 +103,25 @@ export async function redeemInvite(
   const now = Date.now();
   const row = await drizzle(db).select().from(invite).where(eq(invite.id, token)).get();
   if (!row) return { ok: false, reason: "not_found" };
-  if (row.expiresAt < now) return { ok: false, reason: "expired" };
-  if (row.redeemedAt != null) return { ok: false, reason: "already_redeemed" };
+  // Un-redeemable token (expired or single-use already consumed). Before
+  // erroring, check whether the redeemer already accepted this doc: an active
+  // membership means they belong here, so redirect them in instead of stranding
+  // them. Only on these dead branches — a still-valid link keeps its normal
+  // claim+upgrade path below (so an existing member can still be upgraded).
+  if (row.expiresAt < now || row.redeemedAt != null) {
+    const existing = await roleFor(db, row.docRef, userId);
+    if (existing) {
+      return {
+        ok: true,
+        docRef: row.docRef,
+        role: existing,
+        requestedRole: row.role as MembershipRole,
+        downgraded: false,
+        alreadyMember: true,
+      };
+    }
+    return { ok: false, reason: row.expiresAt < now ? "expired" : "already_redeemed" };
+  }
 
   // Single-use claim: only the writer that flips redeemedAt from NULL wins. A
   // concurrent second redeem sees changes===0 → already-redeemed (no double

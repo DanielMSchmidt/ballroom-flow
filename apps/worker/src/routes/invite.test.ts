@@ -102,6 +102,97 @@ describe("US-023 Invite by link (issue + redeem)", () => {
     expect(await roleFor(docRef, "u_late")).toBeNull();
   });
 
+  it("redirects an already-accepted user into the routine when they re-open a consumed link", async () => {
+    // Intent: a user who ALREADY accepted this invite must not be stranded on an
+    //   error when they re-open the (now single-use-consumed) link — they belong
+    //   here, so redeem redirects them into the routine.
+    // Arrange: seed a consumed invite AND an active membership for the SAME user.
+    // Act: they POST redeem. Assert: 200 { docRef, alreadyMember:true } with their
+    //   existing role; no new/duplicate membership, role unchanged.
+    const docRef = "rt_inv_member";
+    const member = await authedContext({ keypair: kp, userId: "u_mem", docRef, role: "commenter" });
+    await seedDb({
+      users: [{ id: "u_mem", displayName: "Mem", identityColor: "#999", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      memberships: member.membership ? [member.membership] : [],
+      invites: [
+        {
+          id: "inv_consumed",
+          docRef,
+          role: "commenter",
+          expiresAt: Date.now() + 3_600_000,
+          redeemedAt: Date.now() - 500,
+        },
+      ],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_consumed/redeem", {
+      method: "POST",
+      headers: member.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      docRef,
+      role: "commenter",
+      alreadyMember: true,
+      downgraded: false,
+    });
+    // Still exactly one active membership at the unchanged role (no re-grant).
+    expect(await roleFor(docRef, "u_mem")).toBe("commenter");
+    const { results } = await env.DB.prepare(
+      "SELECT id FROM membership WHERE docRef = ? AND userId = ? AND deletedAt IS NULL",
+    )
+      .bind(docRef, "u_mem")
+      .all();
+    expect(results.length).toBe(1);
+  });
+
+  it("redirects an already-accepted user into the routine even when the link has EXPIRED", async () => {
+    // Intent: the "already accepted → redirect" path also covers an EXPIRED token,
+    //   not just a consumed one — an existing member should never see a dead end.
+    const docRef = "rt_inv_member_exp";
+    const member = await authedContext({ keypair: kp, userId: "u_mem2", docRef, role: "editor" });
+    await seedDb({
+      users: [{ id: "u_mem2", displayName: "Mem2", identityColor: "#aaa", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      memberships: member.membership ? [member.membership] : [],
+      invites: [{ id: "inv_exp_member", docRef, role: "viewer", expiresAt: Date.now() - 1000 }],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_exp_member/redeem", {
+      method: "POST",
+      headers: member.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ docRef, role: "editor", alreadyMember: true });
+    // Upgrade-only still holds — the viewer link never demotes the editor member.
+    expect(await roleFor(docRef, "u_mem2")).toBe("editor");
+  });
+
+  it("still rejects a consumed link for a NON-member (no membership → no redirect)", async () => {
+    // Guard: the redirect is gated on an EXISTING membership. A stranger holding a
+    //   consumed link is still refused (409) — they never joined.
+    const docRef = "rt_inv_stranger";
+    const stranger = await authedContext({ keypair: kp, userId: "u_str", docRef, role: null });
+    await seedDb({
+      users: [{ id: "u_str", displayName: "Str", identityColor: "#bbb", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ed", doName: docRef }],
+      invites: [
+        {
+          id: "inv_str",
+          docRef,
+          role: "commenter",
+          expiresAt: Date.now() + 3_600_000,
+          redeemedAt: Date.now() - 500,
+        },
+      ],
+    });
+    const res = await SELF.fetch("https://x/api/invites/inv_str/redeem", {
+      method: "POST",
+      headers: stranger.authHeaders(),
+    });
+    expect(res.status).toBe(409);
+    expect(await roleFor(docRef, "u_str")).toBeNull();
+  });
+
   it("forbids a non-editor from issuing an invite", async () => {
     // Intent: only editors/owners may issue invites.
     // Arrange: seed routine + a COMMENTER membership. Act: commenter POSTs an invite.
@@ -190,8 +281,13 @@ describe("US-023 Invite by link (issue + redeem)", () => {
       });
     const [a, b] = await Promise.all([fire(), fire()]);
 
-    // One redeem wins; the other sees the single-use claim already taken.
-    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    // One redeem performs the single fresh grant (200). The other either loses
+    // the atomic single-use claim (409) or — if it reads the row after the first
+    // already granted — sees this same user is now a member and redirects them in
+    // (200, alreadyMember). The interleaving decides which, so accept both; the
+    // load-bearing guarantee is the row count below, NOT the status pair.
+    expect([a.status, b.status]).toContain(200);
+    for (const status of [a.status, b.status]) expect([200, 409]).toContain(status);
     // And exactly ONE active membership row exists — no double-grant.
     const { results } = await env.DB.prepare(
       "SELECT id FROM membership WHERE docRef = ? AND userId = ? AND deletedAt IS NULL",
