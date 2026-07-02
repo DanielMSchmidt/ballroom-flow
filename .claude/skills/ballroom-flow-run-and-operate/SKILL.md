@@ -136,7 +136,9 @@ deployed production auth fails closed. Staging is live and sign-in works.
 
 ## 4. D1 migrations (`apps/worker/migrations/`)
 
-**13 migrations exist as of 2026-07-02** (`0001_d1_index.sql` … `0013_user_name_cache.sql`).
+**15 migrations exist as of 2026-07-02, HEAD `c9622c9`** (`0001_d1_index.sql` …
+`0014_admin.sql` — the D31 `isAdmin`/`routineCapOverride` columns — and
+`0015_library_entry.sql` — the per-user library-bookmark projection).
 Ignore DEVELOPMENT.md's "migrations dir is empty until M2" — stale.
 
 Where they get applied (three places, same files):
@@ -244,21 +246,42 @@ PRs only run `@smoke` chromium.
 Things done by an operator (Cloudflare/Clerk dashboards, `wrangler` CLI, direct D1
 statements) rather than through app UI.
 
-### Admin seams — PLANNED, not yet implemented (as of 2026-07-02)
+### Admin seams — SHIPPED (PR #137, migration 0014; PLAN §9 step 6 ✅)
 
-PLAN.md D31 / §9 step 6 (checkbox **open**): v1 admin is two columns only —
-**`User.isAdmin`** (edit global figure docs in-app; approve/reject **elevation** of a
-user's library figure into the global catalog — `account → global` re-scope, same ref)
-and **`User.routineCapOverride`** (read by the quota seam, which today is a bare
-`FREE_ROUTINE_CAP = 3` in `apps/worker/src/db/routines.ts`).
+v1 admin is two columns on `users` (D31, `0014_admin.sql`, in `db/schema.ts`):
 
-- **Granting is an ops action until the v1.1 admin UI exists**: a direct D1 `UPDATE` on
-  the `users` row (e.g. via `wrangler d1 execute ballroom-flow-staging --remote --command "…"`)
-  once the columns land. **Elevation** likewise: an ops-driven re-scope, admin-approved,
-  keeping the same docRef so existing placements survive.
-- Neither column exists in `apps/worker/src/db/schema.ts` yet — do not write ops docs or
-  code assuming they do. Implementing them is v5-migration work
-  (ballroom-flow-v5-migration-campaign); adding the columns is a migration per §4 above.
+- **`isAdmin`** (INTEGER, default 0) — an admin resolves to **editor** on a global-figure
+  doc (any other signed-in user is a viewer whose edit spawns a variant client-side;
+  `resolveEffectiveRole`, `apps/worker/src/db/membership.ts`), and gates the admin routes.
+- **`routineCapOverride`** (INTEGER, NULL = no override) — read by the quota seam
+  `routineCapFor` (`apps/worker/src/db/admin.ts`) **before** the plan default
+  (`FREE_ROUTINE_CAP = 3`, `db/routines.ts`; pro = unbounded), on BOTH routine-create and
+  fork. `/api/me` surfaces the effective `routineCap` + `isAdmin` flag.
+
+**Granting is an ops action until the v1.1 admin UI exists** — a direct D1 `UPDATE` on the
+`users` row:
+
+```bash
+cd apps/worker
+pnpm exec wrangler d1 execute DB --env staging --remote \
+  --command "UPDATE users SET isAdmin = 1 WHERE id = '<clerk sub>'"
+pnpm exec wrangler d1 execute DB --env staging --remote \
+  --command "UPDATE users SET routineCapOverride = 10 WHERE id = '<clerk sub>'"
+# local dev: drop --env/--remote and use --local
+```
+
+**Elevation** (`account → global` re-scope, same docRef so placements survive) likewise
+remains ops-driven, admin-approved (queue UI is v1.1, PLAN §11).
+
+### Seeding the global figure catalog — admin-only route (PR #137, D30)
+
+`POST /api/admin/seed-global-figures` (caller must be `isAdmin`; non-admin → 403) imports
+the bundled catalog into **real, admin-owned global figure docs** via `seedGlobalFigures`
+(`apps/worker/src/seed-global-figures.ts`). **Additive + idempotent** (D30): re-running only
+creates missing figures — an existing doc is never overwritten, so admin in-app edits are
+safe from a re-seed. Response reports `{ ok, created, skipped }`. This is the per-environment
+ops action that stands up the catalog (staging/production) until the admin UI lands; seed
+semantics live in **ballroom-flow-figure-data-pipeline** §7.
 
 ### Sample/template self-healing — no ops action needed
 
@@ -286,24 +309,29 @@ member names, D1 creation) lives in `PROVISIONING.md` — follow it, don't impro
 
 ## Provenance and maintenance
 
-Verified 2026-07-02 against repo HEAD `70eed7e` on `development`, by reading:
+Verified 2026-07-02 against repo HEAD `70eed7e`; **admin/migrations sections refreshed
+2026-07-02 — verified at HEAD `c9622c9`** (PR #137: migration 0014 + admin route; PR #136:
+migration 0015) on `development`, by reading:
 `apps/worker/wrangler.toml` (all four envs, D1 ids, committed e2e PEM, dist-e2e comment),
 `.github/workflows/deploy.yml` / `screenshots.yml` / `nightly.yml`, `apps/web/e2e/serve.sh`,
 commit `e71d06d` (the staging auth-bypass incident, full message), root + worker
 `package.json`, `apps/web/vite.config.ts` (:8787 proxy), `apps/web/src/main.tsx`
-(Clerk-key notice), `apps/worker/drizzle.config.ts`, the 13 files in
-`apps/worker/migrations/` (hand-written SQL, no drizzle `meta/`), `apps/worker/src/sample.ts`
+(Clerk-key notice), `apps/worker/drizzle.config.ts`, the 15 files in
+`apps/worker/migrations/` (hand-written SQL, no drizzle `meta/`; 0014/0015 read in full),
+`apps/worker/src/db/admin.ts` + `src/seed-global-figures.ts` + the `/api/me` and
+`/api/admin/seed-global-figures` routes, `apps/worker/src/sample.ts`
 + `src/index.ts` `ensureSample`, `scripts/gen-library.mjs` / `gen-figure-charts.mjs`
 (both executed earlier this cycle: 204 figures / 147 charts, clean diff), `PROVISIONING.md`
-(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (admin seams open).
+(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅).
 
 Re-verify drift with:
 
 ```bash
 grep -n "dist-e2e\|database_id" apps/worker/wrangler.toml        # env table, D1 ids
 grep -n "wrangler d1 migrations apply\|wrangler deploy" .github/workflows/deploy.yml
-ls apps/worker/migrations/                                       # migration count (13)
+ls apps/worker/migrations/                                       # migration count (15)
 node scripts/gen-library.mjs && node scripts/gen-figure-charts.mjs && git diff --stat  # counts + determinism
-grep -n "isAdmin" apps/worker/src/db/schema.ts                   # admin seams still open? (no hit = still ops-planned)
+grep -n "isAdmin\|routineCapOverride" apps/worker/src/db/schema.ts   # admin columns present
+grep -n "seed-global-figures" apps/worker/src/index.ts           # admin seeder route present
 grep -n "CLERK_SECRET_KEY" PROVISIONING.md                       # production secret still TODO?
 ```

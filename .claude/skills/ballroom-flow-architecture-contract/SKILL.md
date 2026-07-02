@@ -59,7 +59,7 @@ The ~12 most load-bearing, each with the one-line WHY. Decisions marked ⟳v5 we
 |---|---|---|
 | **D6** | **Core `@automerge/automerge`**, NOT automerge-repo, behind `store/` | The M0.5 spike proved core + a thin custom DO sync is enough; automerge-repo's sync protocol is adoptable later if delta-efficiency demands it. Don't add it casually. |
 | **D10** | **Role-aware read/edit split**: viewers = zero WebSockets (REST snapshot + polling); editors/commenters = one live routine WS; a figure's own WS opens only when its editor opens | Kills per-figure socket fan-out for the dominant read path. **Rejected alternative (recorded in §8):** "read-by-default for everyone, upgrade on first edit" — a passive co-editor on a polled snapshot can't see another editor's edits live; it broke the US-015 convergence journeys. Also locks — **all shipped in PR #134 (2026-07-02)**: snapshot-frame catch-up (one `A.save` blob, never per-change replay), reconnect resend of unacked changes (#161), broadcast-failure → close-for-resync (`SYNC_RESYNC_CLOSE_CODE`). Wire details in **ballroom-flow-crdt-reference** §7. |
-| **D12 ⟳v5** | Figures are **live wherever referenced**; editing a *global* figure as a non-admin spawns a **live overlay variant** (per-beat ownership + copy-down); *account* figures edit in place; fork copies account figures, variants stay variants; frozen copies **retired** | Propagation over isolation — the 2026-07-02 reversal of the 2026-06 frozen-copy model. The shipped code is still partly frozen-style (see weak points + the v5-migration-campaign skill). |
+| **D12 ⟳v5** | Figures are **live wherever referenced**; editing a *global* figure as a non-admin spawns a **live overlay variant** (per-beat ownership + copy-down); *account* figures edit in place; fork copies account figures, variants stay variants; frozen copies **retired** | Propagation over isolation — the 2026-07-02 reversal of the 2026-06 frozen-copy model. Shipped end-to-end 2026-07-02 (PRs #133/#136/#137): domain helpers, fork, live catalog references, store overlay resolution, snapshot bases. |
 | **D13** | **Automerge + a document graph** (one doc per figure/routine), not one big doc | Cross-routine figure inheritance, fork/merge, per-doc history and per-doc permissions all fall out of doc granularity. |
 | **D14** | **History-based per-user undo**, no op-log. Soundness (locked 2026-07-02): inverse targets list elements **by id** never index; an already-undone change is never re-selected; figure-editor undo targets **the figure doc** | Op-log undo had three researched blockers (cascading deletes, supersession, per-user dependency); inverting the user's own last change from CRDT history is sound and cheap. |
 | **D23** | **One SQLite-backed Durable Object per document**; DO hosts the doc AND is the sync + permission boundary; persist **incremental changes**, compact on alarm | Spike-validated. Full save/load per op was the rejected shape; incremental append + threshold-64 compaction keeps writes cheap. D1 stays a pure index. |
@@ -81,7 +81,7 @@ today; if your change adds a new path, it must re-enforce the rule there.
 | Invariant | Enforced at |
 |---|---|
 | **Soft-delete only** — removal is always a `deletedAt` tombstone, never hard removal, so a concurrent edit on a deleted item still merges (PLAN §2.5.1 #6–7) | `packages/domain/src/doc-internal.ts` (`isDeleted`/`filterDeleted`); every worker D1 read filters `deletedAt IS NULL`; commenter gate reads with `includeDeleted: true` (`apps/worker/src/doc-do.ts` `commenterChangeAllowed`) |
-| **Per-beat variant ownership** (PLAN §2.5.1 #14–18): a variant owns beat *b* iff it carries any attribute (live or tombstoned) with `floor(count) == b`; owned beat reads wholly from the variant, unowned wholly from the live base; copy-down on first touch; spawning/editing a variant never mutates the base | `packages/domain/src/fork.ts` — `ownedBeats`, `resolveFigure(base, variant)`, `variantAttributesForEdit`, `spawnVariant`; pinned by `fork.test.ts` incl. the Passing Tumble Turn scenario. (NOT yet wired into the web store / worker snapshot — see weak points) |
+| **Per-beat variant ownership** (PLAN §2.5.1 #14–18): a variant owns beat *b* iff it carries any attribute (live or tombstoned) with `floor(count) == b`; owned beat reads wholly from the variant, unowned wholly from the live base; copy-down on first touch; spawning/editing a variant never mutates the base | `packages/domain/src/fork.ts` — `ownedBeats`, `resolveFigure(base, variant)`, `variantAttributesForEdit`, `spawnVariant`; pinned by `fork.test.ts` incl. the Passing Tumble Turn scenario. Wired end-to-end since PR #137: the web store resolves variants on read (`apps/web/src/store/routine.ts` `resolveFigure` :1218 → domain overlay :1233) and the worker snapshot returns variant **bases** for client-side resolution (`index.ts` :751–802) |
 | **Builtin attribute slugs are reserved** — a custom kind colliding with a builtin is ignored, builtin wins (PLAN §2.5.1 #9) | `packages/domain/src/vocabulary.ts` `mergeRegistry`; worker `POST /api/account/custom-kinds` rejects builtin slugs 400 |
 | **Dance gates enforced on the write path** — a kind's `appliesToDances` (e.g. `rise` omits Tango) rejects inapplicable writes with `dance_not_applicable`; reads stay forward-compatible (unknown values pass, aliases normalize) | `packages/domain/src/schemas.ts` `parseAttributeWrite` (strict) vs `parseAttributeRead` (lenient); worker `POST /api/figures` uses the strict parse |
 | **Permission cascade + owner-without-membership-row**: stored membership wins → document owner is elevated to `owner` even with **no membership row** (#168 — owner must never be locked out) → routine role cascades to referenced figures (editor→editor, commenter/viewer→viewer, most-permissive across routines, never grants delete) | `apps/worker/src/db/membership.ts` `resolveEffectiveRole` → `apps/worker/src/db/placement-edge.ts` `cascadeFigureRole`; gates the DO WS boundary (`doc-do.ts` `fetch`, 403 pre-upgrade) + post-connect via `refreshConnectedRoles` (closes revoked sockets 1008) + the figure REST routes |
@@ -116,40 +116,43 @@ For any change touching data shape, boundaries, sync, permissions, or module str
       `docs/design/` first (see **ballroom-flow-change-control**); components render from the
       merged ATTRIBUTE_REGISTRY, not hardcoded kind lists.
 - [ ] **Touching figures?** Decide explicitly against the v5 model (D12/D28): global vs
-      account scope, variant vs in-place edit, and whether your surface uses the domain
-      `resolveFigure(base, variant)` or the legacy frozen path (weak point 2).
+      account scope, variant vs in-place edit. New read paths resolve via the domain
+      `resolveFigure(base, variant)` overlay (the store and snapshot already do); the legacy
+      frozen `copyOnWrite` is read-only for pre-v5 data — never a new write path.
 - [ ] **Contradicting a locked decision?** Don't route around it — propose the change in
       PLAN.md §8/§12 in the same PR.
 
-## 4. Known weak points — as of 2026-07-02, HEAD `3693ff6` on `development`
+## 4. Known weak points — as of 2026-07-02, HEAD `c9622c9` on `development`
 
-State these plainly in any design that touches them. Points 1–3 ARE the active v5
-milestone — the **single detailed audit** (per-item state, sequencing, fenced-off wrong
-paths) lives in **ballroom-flow-v5-migration-campaign** §2; here is only what this skill's
-own invariants depend on:
+State these plainly in any design that touches them. The v5 milestone is complete except
+figure-editor undo — the **single detailed audit** lives in
+**ballroom-flow-v5-migration-campaign** §2; here is only what this skill's own invariants
+depend on:
 
-1. **`development`'s tip is RED pending PR #140: live-doc vs persisted-lineage divergence.**
-   `migrateOnLoad` (PR #135) persists the migration change during transient reads
-   (`getFigureSnapshot`/connect catch-up call `loadPersisted` directly) without advancing the
-   instance's already-materialized `this.doc` — the persisted change log and the live doc
-   fork into different lineages, and a peer change built on the persisted heads is silently
-   swallowed by `ingestChange` (missing dep → heads unchanged → treated as duplicate).
-   `fork.test.ts` "is independent of the origin" fails deterministically. Fix pending as
-   PR #140 (`fix/migrate-on-load-live-doc`, 601032a): the change log must never contain a
-   change the live doc hasn't applied. Check `git log origin/development` before assuming.
-2. **The web store's figure resolution is still frozen-style** — `apps/web/src/store/routine.ts`
-   (~line 1117) returns a figure's OWN attributes with no live-base overlay; until v5 step 3
-   lands, D12's "live wherever referenced" is true in the domain layer only.
-3. **The account-doc CRDT is not wired to a DO** — `packages/domain/src/doc-account.ts` is
-   built + tested but v1 family notes live in a D1 row; kept deliberately for a store-seam
-   swap later. Don't delete it as dead code; don't assume family notes merge like CRDT data.
-4. **Per-document DO fan-out at scale is unmeasured** — explicit PLAN §12 watch-item; no
-   load test exists.
-5. **`main` diverges from `development` beyond release lag.** `main` carries the #83
+1. **Figure-editor undo still targets the routine doc** — the one open PLAN §9 box.
+   `apps/web/src/store/routine.ts` `undo()`/`redo()` (:987/:1000) commit to `routineConn`
+   only, while PLAN §5.4 (LOCKED) requires "undo follows the surface being edited". Known
+   work, not a regression.
+2. **The account-doc CRDT is not wired to a DO** — `packages/domain/src/doc-account.ts` is
+   built + tested (family-note mutators AND the v5 `libraryFigureRefs` bookmark helpers),
+   but the persisted state today is D1: family notes in their index row, bookmarks in
+   `library_entry` (migration 0015) — PLAN §9 step 4 records this explicitly. Don't delete
+   it as dead code; don't assume notes/bookmarks merge like CRDT data until the wiring lands.
+3. **Per-document DO fan-out at scale is unmeasured** — explicit PLAN §12 watch-item; no
+   load test exists. Step 3 raised the stakes: the snapshot route now also fans out to each
+   variant's base doc's DO (`index.ts` :751–802).
+4. **`main` diverges from `development` beyond release lag.** `main` carries the #83
    figure-data merge (9106f63) and its revert (#85, 720103d) plus a CLAUDE.md commit (#89)
-   that are not part of `development`'s history; `development` is ~443 commits ahead.
+   that are not part of `development`'s history; `development` is hundreds of commits ahead.
    Releases merge `development → main`; never base work on `main`
    (history in **ballroom-flow-failure-archaeology**).
+
+**Recently fixed (do not re-report):** the migrateOnLoad live-doc/persisted-lineage
+divergence (`fork.test.ts` "is independent of the origin" red on the tip) was FIXED by
+PR #139 (903d109) — `migrateOnLoad` now adopts the migrated doc (`this.doc = fresh`,
+doc-do.ts :265). The binding invariant it restored: **the change log must never contain a
+change the live doc hasn't applied.** Any new load-path read that persists must also advance
+the in-memory doc.
 
 ## 5. Where each subsystem lives
 
@@ -168,7 +171,8 @@ own invariants depend on:
 | Shared API contract (Zod + the WS wire constants `SYNC_CAUGHT_UP` / `SYNC_FRAME_SNAPSHOT` / `SYNC_FRAME_CHANGE` / `SYNC_RESYNC_CLOSE_CODE`) | `packages/contract/src/index.ts` |
 | REST routes + auth + WS handoff | `apps/worker/src/index.ts`; Clerk verify in `apps/worker/src/auth/` (networkless with `CLERK_JWT_KEY`) |
 | The Durable Object (persistence/sync/permissions/alarm) | `apps/worker/src/doc-do.ts` (SQLite tables: `changes`, `snapshot`, `doc_meta`) |
-| D1 schema + query modules | `apps/worker/src/db/schema.ts` (+ `membership.ts`, `placement-edge.ts`, `routines.ts`, `figures.ts`, `invites.ts`, `journal.ts`, …); migrations in `apps/worker/migrations/` (13 files) |
+| D1 schema + query modules | `apps/worker/src/db/schema.ts` (+ `membership.ts`, `placement-edge.ts`, `routines.ts`, `figures.ts`, `invites.ts`, `journal.ts`, `admin.ts`, `library.ts`, …); migrations in `apps/worker/migrations/` (15 files; 0014 admin cols, 0015 library_entry) |
+| Global-catalog seeder (admin-only, additive, D30) | `apps/worker/src/seed-global-figures.ts`; route `POST /api/admin/seed-global-figures` in `index.ts` |
 | EXPLAIN no-SCAN gate | `apps/worker/src/test-support/explain.ts` |
 | Web store seam | `apps/web/src/store/` (`routine.ts` is the core; `doc-connection.ts` owns WS + heads-keyed materialization) |
 | Web components / primitives / tokens | `apps/web/src/components/`, `apps/web/src/ui/`, `apps/web/src/styles/tokens.css` |
@@ -176,27 +180,30 @@ own invariants depend on:
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against repo HEAD `70eed7e`; **refreshed 2026-07-02 against HEAD `3693ff6`**
-(after PRs #133 fork-v5, #134 sync-hardening, #135 migration-ladder-wiring; PR #140 —
-the migrateOnLoad lineage fix, 601032a — **not yet merged** at refresh time) on `development`.
-Verified directly against:
+Authored 2026-07-02 against repo HEAD `70eed7e`; refreshed at `3693ff6`; **refreshed again
+2026-07-02 — verified at HEAD `759b3a8` (PR #141 figure-editor undo included)** (after PR #139 migrateOnLoad-fix 903d109, PR #136
+library-as-bookmark, PR #137 global-figure-docs + admin seams; PR #140 closed as superseded
+by #139) on `development`. Verified directly against:
 `docs/PLAN.md` v5.0 (§2.5.1 invariants, §5.3, §6, §8 D1–D31, §9), `packages/domain/src/{order,vocabulary,schemas,fork,migrations,doc-account}.ts`,
-`apps/worker/src/{index,doc-do,fork}.ts`, `apps/worker/src/db/{schema,membership,placement-edge}.ts`,
+`apps/worker/src/{index,doc-do,fork,seed-global-figures}.ts`, `apps/worker/src/db/{schema,membership,placement-edge,admin,library}.ts`,
 `apps/worker/src/test-support/explain.ts`, `apps/web/src/store/{routine,doc-connection}.ts`,
-`packages/contract/src/index.ts`, and `git log origin/main`/`origin/development`.
+`packages/contract/src/index.ts`, the 15 files in `apps/worker/migrations/`, and
+`git log origin/main`/`origin/development`.
 
 Re-verify what drifts:
 
 ```bash
 # Still the digest of the real §8? (decision table)
 grep -n "D28\|D30\|D31" docs/PLAN.md | head
-# PR #140 (weak point 1) merged yet?
-git log origin/development --oneline -5
-# Migration ladder still on the load path?
-grep -n "migrateOnLoad" apps/worker/src/doc-do.ts
+# PLAN §9 boxes all closed? (zero '☐' expected since PR #141)
+grep -n '☐' docs/PLAN.md
+# Migration ladder still on the load path, adopting the migrated doc (#139)?
+grep -n "migrateOnLoad\|this.doc = fresh" apps/worker/src/doc-do.ts
 grep -n "CURRENT_SCHEMA_VERSION" packages/domain/src/migrations.ts
-# Store still frozen-style? (comment vanishes when v5 step 3 lands)
-grep -n "no live overlay against a base" apps/web/src/store/routine.ts
+# Store overlay resolution still live (v5 step 3)?
+grep -n "resolveVariantOverlay" apps/web/src/store/routine.ts
+# Migration count (15 as of 2026-07-02)
+ls apps/worker/migrations/ | wc -l
 # Component/store boundary intact (matches must be comments only)
 grep -rln "lib/rpc" apps/web/src --include="*.ts*" | grep -v store | grep -v test
 ```

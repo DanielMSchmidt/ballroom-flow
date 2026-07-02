@@ -120,21 +120,28 @@ Docs: `e27bca6` (PLAN v5.0, see oscillation table) + `17eee40` (USER-STORIES.md 
 2. **`POST /api/figures` authorization hole** (`089dbc0`): any authenticated caller + upsert semantics meant posting an *existing* figureRef rewrote the victim's registry title AND inserted the caller as editor; an unchecked `routineId` allowed self-escalation via the membership cascade. Fix: caller must resolve editor/owner on the routineId; guarded insert (`onConflictDoNothing` + owner re-read); cross-owner → 409 with zero writes.
 3. **Alarm D1-projection clobber** (`9edab0a`): production never called `setMetadata`, so once a doc hit the compaction threshold (or gained one annotation) the alarm upserted `ownerId=''` / `title=NULL` / `type='routine'` over the eagerly-created registry row — the owner lost DELETE rights and routines vanished from quota/owned lists. Fix: project identity **from the loaded doc**; non-destructive upsert (CASE/COALESCE).
 4. **Boundary enforcement past the handshake** (`99fa1b9`): the role was resolved once at connect and frozen in the hibernation attachment — a **removed editor kept live write access** until reconnect. Fix: `refreshConnectedRoles()` (re-resolve from D1; close revoked sockets with 1008), invoked by member-removal/invite-redeem. Plus: commenters could edit/tombstone ANY author's annotation (client-controlled `authorId`) — authorship is now checked against the socket-verified `sub`.
-**Status: all four FIXED (the ✅ items in PLAN §9 v5 step 1). The rest of the milestone is OPEN — see below.**
+**Status: all four FIXED (✅ items in PLAN §9 v5 step 1). The rest of the milestone landed the same day (entries below); only figure-editor undo remains.**
 
 ### 2026-07-02 — three v5 boxes shipped in one afternoon (PRs #134/#135/#133)
 Landed after the #132 review, in merge order:
 - **PR #134 sync-hardening** (`84c3eea`, `cd06daa`, `df24778`, `054d91e`): the three D10 leftovers. Connect catch-up became **ONE `SYNC_FRAME_SNAPSHOT`** (`A.save` blob; client `A.load`s + **merges**, so unacked edits survive) instead of the unbounded per-change replay; the client **re-sends unacknowledged local changes on reconnect** (diffs `getChanges(serverDoc, merged)` after the snapshot merge; idempotent server-side); a **broadcast send failure closes the socket** with `SYNC_RESYNC_CLOSE_CODE` (4001) so the client warm-reconnects to a fresh snapshot instead of silently diverging. New wire envelope in `@ballroom/contract`: server→client binary frames carry a 1-byte type tag (`SYNC_FRAME_SNAPSHOT`/`SYNC_FRAME_CHANGE`); client→server frames stay raw (asymmetric). **Deliberate hard protocol cutover** — old client ⇄ new server drops frames until reload; a WS-subprotocol version is the recorded escape hatch.
 - **PR #135 migration-ladder-wiring** (`eee3f5b`, `8146621`, `2fc7371`, `b2e494f`): the ladder finally **runs on the DO load path** — `loadPersisted` → `migrateOnLoad` runs `migrateDraft` inside an `A.change` attributed to a fixed `MIGRATION_ACTOR` (per-user undo can never select it) and persists the upgrade; every seed site (`starter-routine.ts`, `doc-do.ts` `emptyRoutine`, worker `index.ts`, `sample.ts`, `test-seed.ts`, the web store placeholders) stamps `CURRENT_SCHEMA_VERSION`. The old "ladder defined but not wired into any runtime path" state is history.
 - **PR #133 v5-fork-copy** (`8cb646c`, `0e65912`, `0a3f841`): PLAN §9 v5 **step 5 ✅** — fork re-points every placement whose ref resolves to a registry `type='account-figure'` at a fresh forker-owned `copyFigureForFork` copy (D1-projected + DO-seeded **before** the fork's routine doc is seeded), `placement_edge` per copy; global/dangling/app-template refs stay live; an `account_figure_base_idx` collision reuses the forker's existing derivative.
-**Status: all three FIXED/shipped — but their interaction caused the incident below.**
+**Status: all three FIXED/shipped — but the #133/#135 interaction caused the lineage incident below (itself now fixed).**
 
-### 2026-07-02 — the migrateOnLoad lineage divergence (found post-merge; fix pending as PR #140)
-**Symptom:** `development`'s tip (`3693ff6`) is **red** — `routes/fork.test.ts` "is independent of the origin" fails **deterministically** (an edit to the origin figure never lands: `applyRawChange` returns false, heads unchanged, change silently swallowed as a "duplicate"). Each of #133/#135 was green on its own merge ref; only their combination fails.
+### 2026-07-02 — the migrateOnLoad lineage divergence (found post-merge; FIXED by PR #139)
+**Symptom:** `development`'s tip (`3693ff6`) was **red** — `routes/fork.test.ts` "is independent of the origin" failed **deterministically** (an edit to the origin figure never lands: `applyRawChange` returns false, heads unchanged, change silently swallowed as a "duplicate"). Each of #133/#135 was green on its own merge ref; only their combination failed.
 **Root cause:** `migrateOnLoad` (#135) persists the migration change even when it runs inside a **transient read** — `getFigureSnapshot` and the connect catch-up call `loadPersisted` **directly**, not `getDoc` — so the persisted change log gains `ballroom:migrate` while the instance's already-materialized `this.doc` never applies it. The two diverge into different lineages; a peer change built on the persisted heads (#133's fork flow replays the change log — the same lineage a freshly caught-up client holds) arrives at `ingestChange` with a **missing dep**, Automerge defers it, heads stay unchanged → the "heads unchanged = duplicate" dedupe silently drops it.
 **Evidence:** instrumentation showed persisted log = `[seed d073b9ac, ballroom:migrate(deps d073b9ac)]` vs `this.doc` = `[seed d073b9ac]` only.
-**Fix (PR #140, branch `fix/migrate-on-load-live-doc`, `601032a`):** after persisting the migration change, **advance `this.doc` with it too** — restoring the invariant that the change log never contains a change the live doc hasn't applied (the invariant `ingestChange` maintains by persisting only after a successful apply).
-**Status: OPEN until #140 merges** (not on `origin/development` as of this writing — verify with `git log origin/development --oneline -5`). Same failure family as pattern 2: state written on one path (persisted log) that another path (the live doc) never observes.
+**Fix (PR #139, `903d109`, merged as `8ddd147`):** `migrateOnLoad` now **adopts the migrated clone wholesale** (`this.doc = fresh`, `doc-do.ts` :265) — monotonically safe because every ingested change is persisted immediately, so `this.doc` is always a prefix of what SQLite replays. This restores the invariant that the change log never contains a change the live doc hasn't applied (the invariant `ingestChange` maintains by persisting only after a successful apply). Notably, **two sessions root-caused this independently and converged on the identical fix** — PR #140 (`601032a`, branch `fix/migrate-on-load-live-doc`) was closed as superseded by #139.
+**Status: FIXED** — the worker suite is green at `c9622c9` (180 passed / 7 skipped). Same failure family as pattern 2: state written on one path (persisted log) that another path (the live doc) never observes.
+
+### 2026-07-02 (afternoon) — the v5 milestone lands: steps 3, 4, 6 in two PRs
+With the lineage fix in, the remaining v5 model work merged the same afternoon:
+- **PR #136 library-as-bookmark** (merge `b910dc0`; `ed59aa9`, `315c819`, `f83883f`, `7962b93`, `f4aef0e`): PLAN §9 **step 4 ✅**. Account-doc `libraryFigureRefs` (domain `addLibraryRef`/`removeLibraryRef`) + the `library_entry` D1 projection (migration 0015, `apps/worker/src/db/library.ts`); `POST /api/figures/save-to-library` became a **bookmark** (accepts `{ figureRef }` or the legacy triple resolved to `globalFigureRef` — no copy), DELETE un-bookmarks (tombstone), `GET /api/figures/mine` is bookmark-driven; "add to my library" affordance in Assemble + FigureTimeline. The account doc is still not DO-wired — `library_entry` is the persisted state today (recorded in PLAN §9 step 4).
+- **PR #137 global figure docs + admin seams** (merge `c9622c9`; `71b7aa2`, `1e71cec`, `6c371b8`, `26e8e8b`, `3b50802`, `60bfb70`): PLAN §9 **steps 3 + 6 ✅**. Additive idempotent `seedGlobalFigures` into real admin-owned docs + admin-only `POST /api/admin/seed-global-figures`; the `resolveEffectiveRole` global-figure boundary (any user → viewer, admin → editor); catalog placements became **live references**; the snapshot fans out variant **bases**; the store's edit-global path became `spawnVariant` + per-beat overlay resolution on read (the frozen-style store read is gone); `isAdmin` + `routineCapOverride` (migration 0014) with the `routineCapFor` quota seam on create AND fork, surfaced via `/api/me`.
+- **PR #141 figure-editor undo** (merge `759b3a8`; `e14c5cb`, `d9072a8`): the FINAL PLAN §9 box ✅ — `undoFigure`/`redoFigure` on the store seam invert this tab's actor's last change on the figure's own `DocConnection` (per-tab actor seeding makes figure edits attributable); the full-screen editor header carries the affordance (undo follows the surface being edited, §5.4).
+**Result:** the v5 milestone is COMPLETE — zero `☐` boxes in PLAN §9. Audit: **ballroom-flow-v5-migration-campaign** §2. **Status: shipped.**
 
 ### Smaller settled battles
 | What | Evidence | Resolution |
@@ -154,7 +161,8 @@ Landed after the #132 review, in merge order:
 | **#90** | Three-state RemoteData/TanStack loading fix | Right idea, **wrong architecture** — built against the retired online-only RPC design after development had moved to Automerge sync. The idea shipped correctly at the store seam as `FigureLoadStatus` in PR #94. |
 | **#26** | (early) | Redone as #27. |
 | **#64** | (early) | Duplicate. |
-| Renovate #1/#3/#4 | Dependency PRs | Closed; the allowlist migration merged separately via #8. Open PRs at 2026-07-02 (post-#133/#134/#135): **#113** (Renovate pnpm 11) and **#140** (the migrateOnLoad lineage fix — see chronicle). |
+| Renovate #1/#3/#4 | Dependency PRs | Closed; the allowlist migration merged separately via #8. **#113** (Renovate pnpm 11) was still open at the 3693ff6 refresh. |
+| **#140** | The migrateOnLoad lineage fix (`601032a`) | Closed as **superseded** — an independent session root-caused the same incident and PR #139 (`903d109`) merged the identical fix first (see chronicle). Not a rejected idea; a duplicate. |
 
 Also REJECTED (never a PR of its own): the read-by-default polling split inside PR #95 — see D10 above.
 
@@ -165,7 +173,7 @@ Also REJECTED (never a PR of its own): the read-by-default polling split inside 
 Each pattern is a rule earned by ≥1 incident above. When triaging a new bug, scan this list first — new incidents almost always land in an existing pattern.
 
 1. **Positional vs identity addressing in CRDTs.** Never address Automerge list elements by index across time; never delete-and-reinsert to move. Bit twice: splice-reorder (internal #63, `38dfba7`) and undo inverse (`3725ec9`).
-2. **"Open" ≠ "hydrated" ≠ "durable" ≠ "broadcast".** Every state transition needs an explicit acknowledged signal; state written on one path must be observed by every other path. Incidents: `97e7fea` (live-on-OPEN), `4ef16ac` (client-side seed), `c43ebed`/`9509d30` (seed persisted-not-broadcast; eager connect), reconnect resend (internal #161, shipped PR #134), and the **migrateOnLoad lineage divergence** (persisted change log ≠ live doc; PR #140, above).
+2. **"Open" ≠ "hydrated" ≠ "durable" ≠ "broadcast".** Every state transition needs an explicit acknowledged signal; state written on one path must be observed by every other path. Incidents: `97e7fea` (live-on-OPEN), `4ef16ac` (client-side seed), `c43ebed`/`9509d30` (seed persisted-not-broadcast; eager connect), reconnect resend (internal #161, shipped PR #134), and the **migrateOnLoad lineage divergence** (persisted change log ≠ live doc; fixed by PR #139/`903d109`, above).
 3. **D1 projections racing/clobbering doc state.** The Automerge doc is the source of truth; projections must be non-destructive and derive identity from the doc. Incidents: `9edab0a`, `6c3b8ab`.
 4. **Authorization checked once / by label / asymmetrically.** Gate by verified identity + observed effect; re-check on membership change; remember **owners are not in the members table**. Incidents: `99fa1b9` (frozen role + client authorId), `eb04a33` (effect-based gate), `089dbc0` (upsert-as-escalation), `92ace53` (owner asymmetry).
 5. **React re-render churn from unstable identities on sync frames.** Heads-keyed memoization at the store seam; never key effects on caller-supplied closures. Incidents: `42f7d39`, `90bed2d`.
@@ -178,21 +186,20 @@ Each pattern is a rule earned by ≥1 incident above. When triaging a new bug, s
 
 ---
 
-## Still-OPEN items (as of 2026-07-02, HEAD `3693ff6`)
+## Still-OPEN items (as of 2026-07-02, HEAD `759b3a8`)
 
-**The ☐ boxes in docs/PLAN.md §9 (v5 migration milestone) are known, tracked work — not
-regressions** (remaining after the #133/#134/#135 landings: figure-editor undo, steps 3/4/6).
-Do not report an unchecked box as a bug, and do not silently start one without the campaign
-context: the single detailed audit (per-item state, sequencing, fenced-off wrong paths) lives
-in **ballroom-flow-v5-migration-campaign** §2/§4.
+**The v5 milestone is COMPLETE — zero ☐ boxes in docs/PLAN.md §9** (the last one,
+figure-editor undo, shipped in PR #141). Remaining work is the tracked follow-up tail and
+the watch-items below — known, tracked work, not regressions. Consult
+**ballroom-flow-v5-migration-campaign** §2/§4 before building on any shipped step. The
+suite is fully green at this HEAD
+(domain 245/3 skipped, contract 14, web 343, worker 180/7 skipped) — a red test is YOUR
+change or a genuine regression, not a known incident.
 
-**One genuinely red item:** the migrateOnLoad lineage divergence (chronicle above) — the
-deterministic `fork.test.ts` failure on `development`'s tip, fix pending as **PR #140**. That
-one IS a bug, already root-caused; don't re-investigate it from scratch.
-
-Beyond the milestone boxes, three standing **watch-items** (PLAN §12): per-document DO
-fan-out at scale; full-syllabus content effort; notation-loop validation with the primary
-persona. All OPEN (watch), none started.
+Beyond that box: the tracked **follow-up tail** (security comments, perf, a11y, sortKey
+convergence, reconnect — CLAUDE.md §6) lives in the task board, and three standing
+**watch-items** (PLAN §12): per-document DO fan-out at scale; full-syllabus content effort;
+notation-loop validation with the primary persona. All OPEN (watch), none started.
 
 Source-code TODO/FIXME count is effectively zero — debt lives in the PLAN boxes, not in comments.
 
@@ -200,10 +207,10 @@ Source-code TODO/FIXME count is effectively zero — debt lives in the PLAN boxe
 
 ## Provenance and maintenance
 
-Compiled 2026-07-02 against repo HEAD `70eed7e`; **refreshed 2026-07-02 against HEAD `3693ff6`**
-(adds the #133/#134/#135 landings + the migrateOnLoad incident; **PR #140**/`601032a` on branch
-`fix/migrate-on-load-live-doc` was **not yet merged** at refresh — re-check its status before
-treating that entry as OPEN) on `development`, from git history (`git log origin/development`), the divergent `main` history, PR merge commits, docs/PLAN.md v5.0, and docs/spike/SPIKE-FINDINGS.md. Every commit hash above was verified to exist via `git show -s <hash>`; every merged PR number was verified against the merge-commit log; #83/#85/#89 verified on `origin/main`. Closed-unmerged PR dispositions (#78–#80, #84, #90) and the "GitHub has one real issue" claim come from the handoff investigation and match the absence of those PRs in local merge history, but were not re-checked against the GitHub API here — treat as **verified-by-absence**.
+Compiled 2026-07-02 against repo HEAD `70eed7e`; refreshed at `3693ff6`; **refreshed again
+2026-07-02 (afternoon) — verified at HEAD `759b3a8` (PR #141 figure-editor undo included)** (adds the #139 lineage fix — closing the
+migrateOnLoad incident — and the #136/#137 v5-completion landings; PR #140 closed as
+superseded by #139) on `development`, from git history (`git log origin/development`), the divergent `main` history, PR merge commits, docs/PLAN.md v5.0, and docs/spike/SPIKE-FINDINGS.md. Every commit hash above was verified to exist via `git show -s <hash>`; every merged PR number was verified against the merge-commit log; #83/#85/#89 verified on `origin/main`. Closed-unmerged PR dispositions (#78–#80, #84, #90) and the "GitHub has one real issue" claim come from the handoff investigation and match the absence of those PRs in local merge history, but were not re-checked against the GitHub API here — treat as **verified-by-absence**.
 
 Re-verification commands for anything that may drift:
 
