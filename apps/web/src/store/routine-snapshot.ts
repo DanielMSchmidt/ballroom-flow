@@ -10,6 +10,7 @@
 // when the user actually edits. The live WS sync stays the edit path.
 import {
   type Annotation,
+  CURRENT_SCHEMA_VERSION,
   type FigureDoc,
   isReservedKind,
   type RegistryKind,
@@ -66,7 +67,7 @@ function emptyRoutine(id: string): RoutineDoc {
     ownerId: "",
     sections: [],
     annotations: [],
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   };
 }

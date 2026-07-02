@@ -16,6 +16,7 @@ import {
   addAnnotation,
   addReply,
   addSection,
+  CURRENT_SCHEMA_VERSION,
   copyOnWrite,
   DANCES,
   defaultFigureBars,
@@ -381,7 +382,7 @@ function emptyRoutine(id: string): RoutineDoc {
     ownerId: "",
     sections: [],
     annotations: [],
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   };
 }
