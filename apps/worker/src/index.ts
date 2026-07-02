@@ -21,14 +21,10 @@ import { Hono } from "hono";
 import { authenticate } from "./auth";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
-import {
-  createFigureRows,
-  findSavedLibraryFigure,
-  listGlobalFigures,
-  listMineFigures,
-} from "./db/figures";
+import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
+import { bookmarkFigure, unbookmarkFigure } from "./db/library";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import {
@@ -407,13 +403,21 @@ app.post("/api/figures", async (c) => {
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
 });
 
-// POST /api/figures/save-to-library — "↟ Save to my library" (T5). Promotes a
-// GLOBAL-catalog figure into the CALLER'S personal library as a FROZEN account-
-// figure copy (PLAN §5.2): `baseFigureRef = globalFigureRef(dance, figureType)`,
-// provenance only. The server resolves the catalog figure from the bundled
-// reference data (never trusts client attributes) and stamps ownerId from the
-// verified JWT — no cross-user writes. Idempotent on `(owner, baseFigureRef)`:
-// re-saving returns the existing copy (200) instead of minting a duplicate.
+// POST /api/figures/save-to-library — "↟ Save to my library" (T5; ⟳v5 — a
+// BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). Records `figureRef` in the
+// CALLER'S `library_entry` projection (+ their account doc, once it is wired to
+// a live DO — see doc-account.ts's STORAGE NOTE). Supersedes the v4.x
+// frozen-copy promotion: no figure doc is minted or seeded here.
+//
+// AUTHZ: you can't bookmark a doc you can't read. A catalog ref (`global:*`) is
+// readable by every signed-in user by construction; an account-figure ref
+// requires `resolveEffectiveRole` to resolve non-null (owner/member, OR the
+// routine-cascade a co-member gets via a shared routine's placements, §5.1) —
+// so a bare figureRef leaked from elsewhere can't be bookmarked blind.
+//
+// Idempotent per (caller, figureRef): re-saving returns `alreadySaved: true`,
+// always 200 (no distinct "created" status — a bookmark has no id of its own to
+// report back).
 app.post("/api/figures/save-to-library", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
@@ -422,76 +426,46 @@ app.post("/api/figures/save-to-library", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_save", issues: parsed.error.flatten() }, 400);
   }
-  const { dance, figureType, name } = parsed.data;
 
-  // Resolve the catalog figure SERVER-SIDE from the bundled reference data — the
-  // attributes seeded into the copy are the catalog's, not anything the client sent.
-  const origin = LIBRARY_FIGURES.find(
-    (f) => f.dance === dance && f.figureType === figureType && f.name === name,
-  );
-  if (!origin) return c.json({ error: "unknown_figure" }, 404);
-
-  const baseFigureRef = globalFigureRef(dance, figureType);
-
-  // Idempotency: a prior save from the SAME global figure resolves the existing copy.
-  const existing = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
-  if (existing) {
-    return c.json({ figureRef: existing, baseFigureRef, alreadySaved: true }, 200);
+  // Resolve the figureRef to bookmark: the v5 direct shape names it; the legacy
+  // (dance, figureType, name) triple is resolved SERVER-SIDE against the bundled
+  // catalog (never trusting client-supplied identity) to `globalFigureRef` — the
+  // catalog doc itself is bookmarked, no copy minted.
+  let figureRef: string;
+  if ("figureRef" in parsed.data) {
+    figureRef = parsed.data.figureRef;
+  } else {
+    const { dance, figureType, name } = parsed.data;
+    const origin = LIBRARY_FIGURES.find(
+      (f) => f.dance === dance && f.figureType === figureType && f.name === name,
+    );
+    if (!origin) return c.json({ error: "unknown_figure" }, 404);
+    figureRef = globalFigureRef(dance, figureType);
   }
 
-  const figureRef = newId();
-  const attributes = (origin.attributes ?? []).map((a) => ({ ...a }));
+  if (!figureRef.startsWith("global:")) {
+    const role = await resolveEffectiveRole(c.env.DB, figureRef, user.sub);
+    if (role == null) return c.json({ error: "forbidden" }, 403);
+  }
 
-  // The SELECT above narrows the window but doesn't close it: two concurrent saves
-  // can both pass it. The DB partial unique index `account_figure_base_idx`
-  // (migration 0010, on `(ownerId, forkedFromRef)`) is the real guard. On a
-  // conflict, resolve the row the winning request inserted and return it as
-  // alreadySaved — never a 500. (seedDoc runs only after the rows commit, so a
-  // loser never seeds an orphan DO.)
-  let created: Awaited<ReturnType<typeof createFigureRows>>;
-  try {
-    created = await createFigureRows(c.env.DB, {
-      figureRef,
-      ownerId: user.sub,
-      name,
-      dance,
-      figureType,
-      baseFigureRef,
-    });
-  } catch (err) {
-    const winner = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
-    if (winner) {
-      return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
-    }
-    throw err;
-  }
-  // The loser of the unique-index race now surfaces as a skipped insert (guarded
-  // `onConflictDoNothing`) rather than a throw — resolve the winner's copy.
-  if (created === "owner_conflict") {
-    const winner = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
-    if (winner) {
-      return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
-    }
-    return c.json({ error: "figure_ref_conflict" }, 409);
-  }
-  // Seed the figure's CRDT content durably (#205): a FROZEN snapshot of the
-  // catalog figure's attributes; `source: "library"` + `baseFigureRef` provenance
-  // (no live overlay — §5.2). No placement edge: a saved figure isn't in a routine
-  // yet, so `usedInCount` starts at 0 until it's placed.
-  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
-    id: figureRef,
-    scope: "account",
-    ownerId: user.sub,
-    figureType,
-    dance,
-    name,
-    source: "library",
-    attributes,
-    baseFigureRef,
-    schemaVersion: CURRENT_SCHEMA_VERSION,
-    deletedAt: null,
-  });
-  return c.json({ figureRef, baseFigureRef, alreadySaved: false }, 201);
+  const { alreadySaved } = await bookmarkFigure(c.env.DB, user.sub, figureRef);
+  return c.json({ alreadySaved }, 200);
+});
+
+// DELETE /api/figures/save-to-library — un-bookmark (⟳v5). Body-based (not a
+// path param) because a bookmarked figureRef can itself contain `/` (an
+// Automerge URL) or `:` (a catalog `global:<dance>:<figureType>` ref), which a
+// path segment would need lossy encoding for. Tombstones the LibraryEntry ONLY
+// — never the figure doc or its placements (§5.2). Idempotent: un-bookmarking an
+// absent/already-removed entry still 200s (no distinct "not found").
+app.delete("/api/figures/save-to-library", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const body = (await c.req.json().catch(() => null)) as { figureRef?: unknown } | null;
+  const figureRef = typeof body?.figureRef === "string" ? body.figureRef : null;
+  if (!figureRef) return c.json({ error: "invalid_request" }, 400);
+  await unbookmarkFigure(c.env.DB, user.sub, figureRef);
+  return c.json({ ok: true }, 200);
 });
 
 // GET /api/routines/:id/family-notes — the co-member family-note read (US-041,

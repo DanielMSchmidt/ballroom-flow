@@ -4,6 +4,7 @@ import {
   zJournalList,
   zRegistryKind,
   zRoutineList,
+  zSaveToLibrary,
   zSearchResults,
   zTemplateList,
 } from "./index";
@@ -97,6 +98,23 @@ describe("zCreateFigure", () => {
       attributes: [{ id: "a1", count: 1 }], // missing kind/value
     };
     expect(zCreateFigure.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe("zSaveToLibrary (⟳v5 — bookmark, not a copy)", () => {
+  it("accepts the direct v5 shape { figureRef }", () => {
+    expect(zSaveToLibrary.safeParse({ figureRef: "fig_1" }).success).toBe(true);
+  });
+
+  it("accepts the legacy (dance, figureType, name) triple for back-compat", () => {
+    const legacy = { dance: "waltz", figureType: "natural-turn", name: "Natural Turn" };
+    expect(zSaveToLibrary.safeParse(legacy).success).toBe(true);
+  });
+
+  it("rejects a body matching neither shape", () => {
+    expect(zSaveToLibrary.safeParse({ dance: "waltz" }).success).toBe(false);
+    expect(zSaveToLibrary.safeParse({}).success).toBe(false);
+    expect(zSaveToLibrary.safeParse({ figureRef: "" }).success).toBe(false);
   });
 });
 

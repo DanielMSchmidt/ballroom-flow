@@ -5,7 +5,7 @@
 // of truth for D1 shape; these Drizzle tables mirror it for typed access in
 // routes). `users` is US-019; document_registry / membership / invite are
 // projected/seeded via raw SQL today and get typed here as their stories land.
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /** Account identity captured at onboarding (US-019). `id` is the Clerk `sub`. */
 export const users = sqliteTable("users", {
@@ -114,3 +114,27 @@ export const journalEntry = sqliteTable("journal_entry", {
 });
 
 export type JournalEntryRow = typeof journalEntry.$inferSelect;
+
+/**
+ * §2.7 LibraryEntry (migration 0015, ⟳v5) — the per-user library BOOKMARK
+ * projection ("add to my library" is a reference, never a copy, D28). Source of
+ * truth is the user's account doc `libraryFigureRefs`; this table is its D1
+ * projection for GET /api/figures/mine. `figureRef` is either an account-figure
+ * docRef or a catalog `global:<dance>:<figureType>` ref — several users may hold
+ * an entry for the SAME figureRef. PRIMARY KEY (userId, figureRef) covers both
+ * "this user's bookmarks" and the per-(user,figureRef) idempotent upsert. Raw SQL
+ * (db/library.ts) does the actual reads/writes, matching db/journal.ts/
+ * db/family-notes.ts; typed here for the reset/seed path.
+ */
+export const libraryEntry = sqliteTable(
+  "library_entry",
+  {
+    userId: text("userId").notNull(),
+    figureRef: text("figureRef").notNull(),
+    createdAt: integer("createdAt").notNull(),
+    deletedAt: integer("deletedAt"),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.figureRef] })],
+);
+
+export type LibraryEntryRow = typeof libraryEntry.$inferSelect;

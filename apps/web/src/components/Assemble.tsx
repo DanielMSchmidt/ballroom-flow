@@ -121,6 +121,15 @@ export interface AssembleProps {
    * production caller) passes "read" on open and "edit" on create.
    */
   initialMode?: "edit" | "read";
+  /**
+   * The caller's library bookmark set (⟳v5, PLAN §4.2/§5.2): figureRefs already
+   * "added to my library". Drives the placement-card / figure-editor "add to my
+   * library" ↔ "in your library" affordance for a choreo-local ACCOUNT figure.
+   * Omitted → the affordance hides (e.g. offline, or a test that doesn't wire it).
+   */
+  bookmarkedFigureRefs?: ReadonlySet<string>;
+  /** Bookmark a figure into the caller's library (a REFERENCE, never a copy). */
+  onAddToLibrary?: (figureRef: string) => Promise<{ alreadySaved: boolean }>;
 }
 
 /**
@@ -203,6 +212,8 @@ export function Assemble({
   forking,
   onBack,
   initialMode = "edit",
+  bookmarkedFigureRefs,
+  onAddToLibrary,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
@@ -278,6 +289,25 @@ export function Assemble({
     placement: Placement;
   } | null>(null);
   const toast = useToast();
+
+  // "Add to my library" (⟳v5, PLAN §4.2/§5.2): bookmark a placed/notated ACCOUNT
+  // figure. Wraps the caller's mutation with the same toast contract as the
+  // global-library "↟ save" card (FigureLibrary.tsx) — "Added"/"Already in your
+  // library" on success, a danger toast on failure; never throws into the caller.
+  const handleAddToLibrary = useCallback(
+    async (figureRef: string) => {
+      if (!onAddToLibrary) return;
+      try {
+        const res = await onAddToLibrary(figureRef);
+        toast.show(res.alreadySaved ? "Already in your library" : "Added to your library", {
+          tone: res.alreadySaved ? "neutral" : "success",
+        });
+      } catch {
+        toast.show("Couldn't add to your library", { tone: "danger" });
+      }
+    },
+    [onAddToLibrary, toast],
+  );
 
   // Identity colour map for reading-view inline dots (T9b): build from the
   // members query + the current user's own identity so dots use real colours.
@@ -526,6 +556,8 @@ export function Assemble({
                     {!isCollapsed && (
                       <div className="ml-2 flex flex-col gap-[7px]">
                         {section.placements.map((placement, pIndex) => {
+                          const placementFigure =
+                            resolvedByPlacement.get(placement.id)?.figure ?? null;
                           const card =
                             placement.source === "break" ? (
                               <BreakCard
@@ -543,7 +575,7 @@ export function Assemble({
                             ) : (
                               <PlacementCard
                                 placement={placement}
-                                figure={resolvedByPlacement.get(placement.id)?.figure ?? null}
+                                figure={placementFigure}
                                 status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                                 canEdit={canEdit}
                                 isFirst={pIndex === 0}
@@ -553,11 +585,19 @@ export function Assemble({
                                   placement.figureRef && store.retryFigure(placement.figureRef)
                                 }
                                 onOpen={() => {
-                                  const f = resolvedByPlacement.get(placement.id)?.figure;
-                                  if (f) setNotating(f.id);
+                                  if (placementFigure) setNotating(placementFigure.id);
                                 }}
                                 onDelete={() =>
                                   setPendingDeletePlacement({ sectionId: section.id, placement })
+                                }
+                                isBookmarked={
+                                  placementFigure != null &&
+                                  (bookmarkedFigureRefs?.has(placementFigure.id) ?? false)
+                                }
+                                onAddToLibrary={
+                                  canEdit && onAddToLibrary && placementFigure
+                                    ? () => void handleAddToLibrary(placementFigure.id)
+                                    : undefined
                                 }
                               />
                             );
@@ -726,6 +766,15 @@ export function Assemble({
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+              isBookmarked={
+                notatingFigure.scope === "account" &&
+                (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)
+              }
+              onAddToLibrary={
+                canEdit && onAddToLibrary && notatingFigure.scope === "account"
+                  ? () => void handleAddToLibrary(notatingFigure.id)
+                  : undefined
+              }
             />
             {canEdit && (
               <AlignmentEditor
@@ -1266,6 +1315,8 @@ function PlacementCard({
   onOpen,
   onDelete,
   onRetry,
+  isBookmarked = false,
+  onAddToLibrary,
 }: {
   placement: Placement;
   figure: FigureDoc | null;
@@ -1277,6 +1328,12 @@ function PlacementCard({
   onOpen?: () => void;
   onDelete?: () => void;
   onRetry?: () => void;
+  /** Whether this (account) figure is already in the caller's library (⟳v5, §4.2/§5.2). */
+  isBookmarked?: boolean;
+  /** Bookmark this figure into the caller's library — offered for a choreo-local
+   *  ACCOUNT figure only (a global/catalog reference isn't "yours" to bookmark
+   *  from here — that's the Library screen's "↟ save" card). */
+  onAddToLibrary?: () => void;
 }) {
   // A figure is its own doc on its own connection, loaded lazily. Distinguish the
   // transient states (just-added / still-hydrating) from genuine failures so a
@@ -1367,6 +1424,36 @@ function PlacementCard({
             Custom
           </span>
         )}
+        {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a choreo-local
+            ACCOUNT figure only; a bookmark is a REFERENCE, never a copy. */}
+        {figure.scope === "account" &&
+          (isBookmarked ? (
+            <span
+              className="flex-none rounded-pill px-2 py-0.5 text-[9px] font-semibold"
+              style={{
+                background: "var(--bf-scope-global-tint)",
+                color: "var(--bf-scope-global-ink)",
+              }}
+            >
+              In your library
+            </span>
+          ) : (
+            onAddToLibrary && (
+              <button
+                type="button"
+                aria-label={`Add ${label} to my library`}
+                onClick={onAddToLibrary}
+                className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
+                style={{
+                  borderColor: "var(--bf-scope-custom-border)",
+                  color: "var(--bf-scope-custom-ink)",
+                  background: "var(--bf-surface)",
+                }}
+              >
+                <span aria-hidden="true">↟</span> add to library
+              </button>
+            )
+          ))}
         {/* Drag handle affordance (frame 1.7 ⠿). Reorder is the up/down controls. */}
         <span
           aria-hidden="true"

@@ -183,3 +183,51 @@ describe("FigureTimeline — attribute info overlay (frame 1.13)", () => {
     expect(screen.getByRole("heading", { name: /^footwork$/i })).toBeInTheDocument();
   });
 });
+
+describe("FigureTimeline — 'add to my library' affordance (⟳v5, PLAN §4.2/§5.2)", () => {
+  it("shows 'Add to my library' for an owned (account) figure and calls onAddToLibrary", async () => {
+    const { FigureTimeline } = await load();
+    const onAddToLibrary = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        onAddToLibrary={onAddToLibrary}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /add to my library/i });
+    await userEvent.click(button);
+    expect(onAddToLibrary).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows 'In your library' (no button) once bookmarked", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        isBookmarked
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/in your library/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add to my library/i })).toBeNull();
+  });
+
+  it("hides the affordance for a GLOBAL (catalog) figure — that bookmark lives on the Library screen", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline role="editor" dance="waltz" figureScope="global" onAddToLibrary={vi.fn()} />,
+    );
+    expect(screen.queryByRole("button", { name: /add to my library/i })).toBeNull();
+    expect(screen.queryByText(/in your library/i)).toBeNull();
+  });
+
+  it("hides the affordance when the caller doesn't wire onAddToLibrary", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" figureScope="owned" />);
+    expect(screen.queryByRole("button", { name: /add to my library/i })).toBeNull();
+  });
+});

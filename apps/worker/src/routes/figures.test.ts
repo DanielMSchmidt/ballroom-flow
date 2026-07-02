@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { uniqueDocName } from "../test-support/do-id";
 import type { DocNamespace } from "../test-support/doc-do-api";
+import { expectIndexedQuery } from "../test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
@@ -349,15 +350,15 @@ describe("#187 figure-doc projection", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// T5 — "↟ Save to my library" (POST /api/figures/save-to-library).
-//
-// Promotes a GLOBAL-catalog figure into the caller's personal library as a FROZEN
-// account-figure copy (PLAN §5.2): owner = caller (from the JWT, never a client
-// field), baseFigureRef = globalFigureRef(dance, figureType) provenance. Idempotent
-// on (owner, baseFigureRef). The catalog figure is resolved server-side.
+// v5 library-as-bookmark — "↟ Save to my library" / un-save (POST/DELETE
+// /api/figures/save-to-library). Supersedes T5's frozen-copy promotion (PLAN
+// §4.2/§5.2/D28): "add to my library" now records a REFERENCE in the caller's
+// `library_entry` projection — never a copy. Several users may bookmark the
+// SAME figureRef; un-bookmarking drops the reference only.
 // ─────────────────────────────────────────────────────────────────────────
 
 const NAT_TURN = { dance: "waltz", figureType: "natural-turn", name: "Natural Turn" } as const;
+const NAT_TURN_REF = "global:waltz:natural-turn";
 
 async function saveToLibrary(
   headers: Record<string, string>,
@@ -370,74 +371,80 @@ async function saveToLibrary(
   });
 }
 
-describe("T5 save-to-library promotion", () => {
-  it("creates a frozen account-figure copy owned by the caller, with provenance", async () => {
+async function unsaveFromLibrary(
+  headers: Record<string, string>,
+  figureRef: string,
+): Promise<Response> {
+  return SELF.fetch("https://x/api/figures/save-to-library", {
+    method: "DELETE",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({ figureRef }),
+  });
+}
+
+async function mineDocRefs(headers: Record<string, string>): Promise<string[]> {
+  const res = await SELF.fetch("https://x/api/figures/mine", { headers });
+  const { figures } = (await res.json()) as { figures: Array<{ docRef: string }> };
+  return figures.map((f) => f.docRef);
+}
+
+describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, legacy triple)", () => {
+  it("bookmarks the catalog figure itself — no copy is minted", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_save", docRef: "x", role: null });
     await seedDb({
       users: [{ id: "u_save", displayName: "S", identityColor: "#111", plan: "free" }],
     });
 
     const res = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
-    expect(res.status).toBe(201);
-    const { figureRef, baseFigureRef, alreadySaved } = (await res.json()) as {
-      figureRef: string;
-      baseFigureRef: string;
-      alreadySaved: boolean;
-    };
-    expect(alreadySaved).toBe(false);
-    expect(baseFigureRef).toBe("global:waltz:natural-turn");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { alreadySaved: boolean };
+    expect(body.alreadySaved).toBe(false);
 
-    // The registry row is an account-figure owned by the verified sub, carrying the
-    // global figure's provenance in forkedFromRef (the reused lineage column).
-    const row = await env.DB.prepare(
-      "SELECT type, ownerId, forkedFromRef, dance, figureType FROM document_registry WHERE docRef = ?",
+    // NO account-figure doc/registry row was created for this bookmark.
+    const row = await env.DB.prepare("SELECT docRef FROM document_registry WHERE forkedFromRef = ?")
+      .bind(NAT_TURN_REF)
+      .first();
+    expect(row).toBeNull();
+
+    // The LibraryEntry row references the CATALOG ref directly.
+    const entry = await env.DB.prepare(
+      "SELECT userId, figureRef, deletedAt FROM library_entry WHERE userId = ? AND figureRef = ?",
     )
-      .bind(figureRef)
-      .first<{
-        type: string;
-        ownerId: string;
-        forkedFromRef: string;
-        dance: string;
-        figureType: string;
-      }>();
-    expect(row).toMatchObject({
-      type: "account-figure",
-      ownerId: "u_save",
-      forkedFromRef: "global:waltz:natural-turn",
-      dance: "waltz",
-      figureType: "natural-turn",
-    });
+      .bind("u_save", NAT_TURN_REF)
+      .first<{ userId: string; figureRef: string; deletedAt: number | null }>();
+    expect(entry).toMatchObject({ userId: "u_save", figureRef: NAT_TURN_REF, deletedAt: null });
 
-    // It surfaces in the caller's "mine" list as a saved (baseFigureRef-set) figure.
+    // It surfaces in "mine" resolved from the bundled catalog (no D1 registry row).
     const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
     const { figures } = (await mine.json()) as {
-      figures: Array<{ docRef: string; baseFigureRef: string | null; usedInCount: number }>;
+      figures: Array<{ docRef: string; title: string | null; baseFigureRef: string | null }>;
     };
-    const saved = figures.find((f) => f.docRef === figureRef);
-    expect(saved?.baseFigureRef).toBe("global:waltz:natural-turn");
-    expect(saved?.usedInCount).toBe(0);
+    const saved = figures.find((f) => f.docRef === NAT_TURN_REF);
+    expect(saved).toMatchObject({
+      docRef: NAT_TURN_REF,
+      title: "Natural Turn",
+      baseFigureRef: null,
+    });
   });
 
-  it("is idempotent — re-saving the same global figure returns the existing copy", async () => {
+  it("is idempotent — re-bookmarking the same catalog figure is a no-op", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_idem", docRef: "x", role: null });
     await seedDb({
       users: [{ id: "u_idem", displayName: "I", identityColor: "#111", plan: "free" }],
     });
 
     const first = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
-    const firstBody = (await first.json()) as { figureRef: string };
+    expect(await first.json()).toMatchObject({ alreadySaved: false });
 
     const second = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
     expect(second.status).toBe(200);
-    const secondBody = (await second.json()) as { figureRef: string; alreadySaved: boolean };
-    expect(secondBody.alreadySaved).toBe(true);
-    expect(secondBody.figureRef).toBe(firstBody.figureRef);
+    expect(await second.json()).toEqual({ alreadySaved: true });
 
-    // Exactly ONE copy exists for this (owner, base) — no duplicate row.
+    // Exactly ONE live entry — no duplicate row.
     const cnt = await env.DB.prepare(
-      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND type = 'account-figure' AND forkedFromRef = ? AND deletedAt IS NULL",
+      "SELECT COUNT(*) AS n FROM library_entry WHERE userId = ? AND figureRef = ? AND deletedAt IS NULL",
     )
-      .bind("u_idem", "global:waltz:natural-turn")
+      .bind("u_idem", NAT_TURN_REF)
       .first<{ n: number }>();
     expect(cnt?.n).toBe(1);
   });
@@ -464,7 +471,7 @@ describe("T5 save-to-library promotion", () => {
     expect(res.status).toBe(404);
   });
 
-  it("scopes idempotency per-owner — two users each get their own copy", async () => {
+  it("per-user isolation — two users bookmarking the SAME figure each get their own entry", async () => {
     const a = await authedContext({ keypair: kp, userId: "u_a", docRef: "x", role: null });
     const b = await authedContext({ keypair: kp, userId: "u_b", docRef: "x", role: null });
     await seedDb({
@@ -473,189 +480,27 @@ describe("T5 save-to-library promotion", () => {
         { id: "u_b", displayName: "B", identityColor: "#222", plan: "free" },
       ],
     });
-    const ra = (await (await saveToLibrary(a.authHeaders(), NAT_TURN)).json()) as {
-      figureRef: string;
-    };
-    const rb = (await (await saveToLibrary(b.authHeaders(), NAT_TURN)).json()) as {
-      figureRef: string;
-    };
-    // Distinct copies, each owned by its caller — no cross-user dedupe/write.
-    expect(ra.figureRef).not.toBe(rb.figureRef);
-    const owners = await env.DB.prepare(
-      "SELECT docRef, ownerId FROM document_registry WHERE forkedFromRef = 'global:waltz:natural-turn' AND ownerId IN ('u_a','u_b')",
-    ).all<{ docRef: string; ownerId: string }>();
-    expect(new Set(owners.results?.map((r) => r.ownerId))).toEqual(new Set(["u_a", "u_b"]));
-    expect(owners.results).toHaveLength(2);
-  });
+    await saveToLibrary(a.authHeaders(), NAT_TURN);
+    await saveToLibrary(b.authHeaders(), NAT_TURN);
 
-  it("US-034 edit-ripple: one saved figure is referenced by many routines (no duplication)", async () => {
-    // A personal-library figure reused across the user's routines is ONE doc — editing
-    // it flows into every referencing routine (the routines reference its docRef; the
-    // figure is never duplicated on edit). We prove the reuse shape: a single saved
-    // figure row, referenced by two routines, surfaces as usedInCount=2.
-    const ctx = await authedContext({ keypair: kp, userId: "u_rip", docRef: "x", role: null });
-    await seedDb({
-      users: [{ id: "u_rip", displayName: "R", identityColor: "#111", plan: "free" }],
-    });
-    const saved = (await (await saveToLibrary(ctx.authHeaders(), NAT_TURN)).json()) as {
-      figureRef: string;
-    };
-
-    // Two of the user's routines reference the SAME saved figure doc (placement edges).
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
+    // ONE shared figureRef, TWO independent LibraryEntry rows (one per user). D1
+    // is SHARED across the whole worker test run (isolatedStorage: false, per
+    // DEVELOPMENT.md), so other suites may ALSO hold a live entry for this same
+    // catalog ref — assert u_a/u_b are both present rather than an exact set.
+    const entries = await env.DB.prepare(
+      "SELECT userId FROM library_entry WHERE figureRef = ? AND deletedAt IS NULL",
     )
-      .bind("rt_one", saved.figureRef)
-      .run();
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO placement_edge (routineRef, figureRef) VALUES (?, ?)",
-    )
-      .bind("rt_two", saved.figureRef)
-      .run();
+      .bind(NAT_TURN_REF)
+      .all<{ userId: string }>();
+    const userIds = new Set(entries.results?.map((r) => r.userId));
+    expect(userIds.has("u_a")).toBe(true);
+    expect(userIds.has("u_b")).toBe(true);
 
-    const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
-    const { figures } = (await mine.json()) as {
-      figures: Array<{ docRef: string; usedInCount: number }>;
-    };
-    const refs = figures.filter((f) => f.docRef === saved.figureRef);
-    // Exactly one figure doc, reused by two routines — not two copies.
-    expect(refs).toHaveLength(1);
-    expect(refs[0]?.usedInCount).toBe(2);
+    expect(await mineDocRefs(a.authHeaders())).toContain(NAT_TURN_REF);
+    expect(await mineDocRefs(b.authHeaders())).toContain(NAT_TURN_REF);
   });
 
-  it("US-034 edit-ripple (LIVE): an edit to the saved figure shows in BOTH routines that reference it", async () => {
-    // The stronger proof the structural test can't give: a REAL edit to the saved
-    // account-figure's DO (ingested via the same applyRawChange sync path an editor's
-    // change takes) surfaces — once, identically — in every routine that references
-    // it. Two routines reference ONE figure doc; we edit that doc and read both
-    // routines' read-only snapshots. Single source, no duplication, no per-routine copy.
-    const ctx = await authedContext({ keypair: kp, userId: "u_live", docRef: "x", role: null });
-    const rtA = uniqueDocName("rt");
-    const rtB = uniqueDocName("rt");
-    await seedDb({
-      users: [{ id: "u_live", displayName: "L", identityColor: "#111", plan: "free" }],
-      docs: [
-        {
-          docRef: rtA,
-          type: "routine",
-          ownerId: "u_live",
-          doName: rtA,
-          dance: "waltz",
-          title: "A",
-        },
-        {
-          docRef: rtB,
-          type: "routine",
-          ownerId: "u_live",
-          doName: rtB,
-          dance: "waltz",
-          title: "B",
-        },
-      ],
-      memberships: [
-        { id: `m_${rtA}`, docRef: rtA, userId: "u_live", role: "editor" },
-        { id: `m_${rtB}`, docRef: rtB, userId: "u_live", role: "editor" },
-      ],
-    });
-
-    // Save the global figure → ONE account-figure doc (its DO seeded with name "Natural Turn").
-    const saved = (await (await saveToLibrary(ctx.authHeaders(), NAT_TURN)).json()) as {
-      figureRef: string;
-    };
-    const figureRef = saved.figureRef;
-
-    // Seed both routine DOs with a placement that references the SAME saved figure.
-    for (const ref of [rtA, rtB]) {
-      await docs.get(docs.idFromName(ref)).seedDoc({
-        id: ref,
-        title: ref,
-        dance: "waltz",
-        ownerId: "u_live",
-        sections: [
-          {
-            id: `sec_${ref}`,
-            name: "Intro",
-            placements: [{ id: `pl_${ref}`, figureRef, deletedAt: null }],
-            deletedAt: null,
-          },
-        ],
-        annotations: [],
-        schemaVersion: 1,
-        deletedAt: null,
-      });
-    }
-
-    // A LIVE edit to the figure doc: rename it via the real change-ingest path
-    // (applyRawChange = the US-015 sync entrypoint an editor's WebSocket change hits).
-    const figStub = docs.get(docs.idFromName(figureRef));
-    await runInDurableObject(
-      figStub as unknown as DurableObjectStub<import("../doc-do").DocDO>,
-      async (instance) => {
-        const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
-        const rows = doState.storage.sql
-          .exec("SELECT data FROM changes ORDER BY seq")
-          .toArray() as Array<{ data: ArrayBuffer }>;
-        let doc = A.init<Record<string, unknown>>();
-        [doc] = A.applyChanges(
-          doc,
-          rows.map((r) => new Uint8Array(r.data) as A.Change),
-        );
-        const edited = A.change(doc, (d: Record<string, unknown>) => {
-          d.name = "Natural Turn (edited)";
-        });
-        const changeBytes = A.getChanges(doc, edited);
-        const applyRaw = (
-          instance as unknown as { applyRawChange: (c: Uint8Array) => Promise<boolean> }
-        ).applyRawChange;
-        for (const ch of changeBytes) await applyRaw.call(instance, ch);
-      },
-    );
-
-    // Read BOTH routines' read-only snapshots; each hydrates the figure from its single DO.
-    const readFigureName = async (routineRef: string) => {
-      const res = await SELF.fetch(`https://x/api/routines/${routineRef}/snapshot`, {
-        headers: ctx.authHeaders(),
-      });
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as {
-        figures: Record<string, { name?: string } | undefined>;
-      };
-      return { figureKeys: Object.keys(body.figures), name: body.figures[figureRef]?.name };
-    };
-
-    const a = await readFigureName(rtA);
-    const b = await readFigureName(rtB);
-    // The edit rippled to BOTH — single source of truth.
-    expect(a.name).toBe("Natural Turn (edited)");
-    expect(b.name).toBe("Natural Turn (edited)");
-    // No duplication: each routine references the one figure doc by the same ref.
-    expect(a.figureKeys).toEqual([figureRef]);
-    expect(b.figureKeys).toEqual([figureRef]);
-  });
-
-  it("the DB partial unique index forbids a duplicate copy for the same (owner, base)", async () => {
-    // Deterministic proof of the TOCTOU guard (migration 0010): a second account-figure
-    // row with the SAME (ownerId, forkedFromRef) and deletedAt IS NULL is rejected by
-    // the partial unique index — the app-level SELECT is no longer the only line of defence.
-    await seedDb({
-      users: [{ id: "u_uniq", displayName: "U", identityColor: "#111", plan: "free" }],
-    });
-    const base = "global:waltz:reverse-turn";
-    const insert = (docRef: string) =>
-      env.DB.prepare(
-        "INSERT INTO document_registry (docRef, type, ownerId, doName, forkedFromRef, updatedAt) VALUES (?, 'account-figure', 'u_uniq', ?, ?, 1)",
-      )
-        .bind(docRef, docRef, base)
-        .run();
-    await insert("af_uniq_1");
-    await expect(insert("af_uniq_2")).rejects.toThrow();
-  });
-
-  it("concurrent saves of the same figure never duplicate and never 500 (race-safe)", async () => {
-    // Two saves issued together race the SELECT→INSERT window. The DB unique index is
-    // the real guard; the route catches the conflict and returns the existing copy.
-    // Invariant under any interleaving: both responses are 2xx for the SAME figureRef,
-    // and exactly ONE row exists — never a duplicate, never a 500.
+  it("concurrent bookmarks of the same figure never duplicate and never 500 (race-safe)", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_race", docRef: "x", role: null });
     await seedDb({
       users: [{ id: "u_race", displayName: "C", identityColor: "#111", plan: "free" }],
@@ -666,18 +511,219 @@ describe("T5 save-to-library promotion", () => {
       saveToLibrary(ctx.authHeaders(), fig),
       saveToLibrary(ctx.authHeaders(), fig),
     ]);
-    expect(r1.status).toBeLessThan(300);
-    expect(r2.status).toBeLessThan(300);
-    expect(r1.status).not.toBe(500);
-    expect(r2.status).not.toBe(500);
-    const b1 = (await r1.json()) as { figureRef: string };
-    const b2 = (await r2.json()) as { figureRef: string };
-    expect(b1.figureRef).toBe(b2.figureRef);
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
 
     const cnt = await env.DB.prepare(
-      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = 'u_race' AND type = 'account-figure' AND forkedFromRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
+      "SELECT COUNT(*) AS n FROM library_entry WHERE userId = 'u_race' AND figureRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
     ).first<{ n: number }>();
     expect(cnt?.n).toBe(1);
+  });
+});
+
+describe("v5 library bookmark — direct { figureRef } (account/choreo-local figures)", () => {
+  it("bookmarks an account figure the caller OWNS — no copy, appears in mine", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_own", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_own", displayName: "O", identityColor: "#111", plan: "free" }],
+    });
+    const rt = await seedOwnedRoutine("u_own");
+    const figureRef = uniqueDocName("fig");
+    await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "My Glue Step",
+        dance: "waltz",
+        figureType: "glue-step",
+        routineId: rt,
+      }),
+    });
+
+    // Choreo-local (unbookmarked) — must NOT appear in the library yet.
+    expect(await mineDocRefs(ctx.authHeaders())).not.toContain(figureRef);
+
+    const res = await saveToLibrary(ctx.authHeaders(), { figureRef });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ alreadySaved: false });
+    expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
+  });
+
+  it("403s bookmarking a figureRef the caller cannot READ, and writes nothing", async () => {
+    const owner = await authedContext({ keypair: kp, userId: "u_priv1", docRef: "x", role: null });
+    const stranger = await authedContext({
+      keypair: kp,
+      userId: "u_priv2",
+      docRef: "x",
+      role: null,
+    });
+    await seedDb({
+      users: [
+        { id: "u_priv1", displayName: "P1", identityColor: "#111", plan: "free" },
+        { id: "u_priv2", displayName: "P2", identityColor: "#222", plan: "free" },
+      ],
+    });
+    const rt = await seedOwnedRoutine("u_priv1");
+    const figureRef = uniqueDocName("fig");
+    await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...owner.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Private",
+        dance: "waltz",
+        figureType: "private-figure",
+        routineId: rt,
+      }),
+    });
+
+    const res = await saveToLibrary(stranger.authHeaders(), { figureRef });
+    expect(res.status).toBe(403);
+
+    const entry = await env.DB.prepare(
+      "SELECT 1 AS one FROM library_entry WHERE userId = ? AND figureRef = ?",
+    )
+      .bind("u_priv2", figureRef)
+      .first();
+    expect(entry).toBeNull();
+  });
+
+  it("bookmarking works via the ROUTINE CASCADE — a co-member can bookmark a figure they don't own", async () => {
+    // PLAN §5.1 cascade: a routine member's role extends to the figures that
+    // routine references — resolveEffectiveRole resolves non-null for the
+    // co-member too, so they CAN bookmark a partner's shared-choreo figure.
+    const owner = await authedContext({ keypair: kp, userId: "u_co1", docRef: "x", role: null });
+    const partner = await authedContext({ keypair: kp, userId: "u_co2", docRef: "x", role: null });
+    await seedDb({
+      users: [
+        { id: "u_co1", displayName: "C1", identityColor: "#111", plan: "free" },
+        { id: "u_co2", displayName: "C2", identityColor: "#222", plan: "free" },
+      ],
+    });
+    const rt = uniqueDocName("rt");
+    await seedDb({
+      docs: [{ docRef: rt, type: "routine", ownerId: "u_co1", doName: rt }],
+      memberships: [{ id: `m_${rt}`, docRef: rt, userId: "u_co2", role: "editor" }],
+    });
+    const figureRef = uniqueDocName("fig");
+    await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...owner.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Shared Glue Step",
+        dance: "waltz",
+        figureType: "shared-glue",
+        routineId: rt,
+      }),
+    });
+
+    const res = await saveToLibrary(partner.authHeaders(), { figureRef });
+    expect(res.status).toBe(200);
+    expect(await mineDocRefs(partner.authHeaders())).toContain(figureRef);
+    // The owner's own library is untouched by the partner's bookmark.
+    expect(await mineDocRefs(owner.authHeaders())).not.toContain(figureRef);
+  });
+
+  it("refuses an unauthenticated bookmark (401)", async () => {
+    const res = await SELF.fetch("https://x/api/figures/save-to-library", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ figureRef: "fig_x" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("v5 library un-bookmark — DELETE /api/figures/save-to-library", () => {
+  it("removes the entry — the figure doc + its placements are untouched", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_un", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_un", displayName: "U", identityColor: "#111", plan: "free" }],
+    });
+    const rt = await seedOwnedRoutine("u_un");
+    const figureRef = uniqueDocName("fig");
+    await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Un-bookmark me",
+        dance: "waltz",
+        figureType: "unb",
+        routineId: rt,
+      }),
+    });
+    await saveToLibrary(ctx.authHeaders(), { figureRef });
+    expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
+
+    const del = await unsaveFromLibrary(ctx.authHeaders(), figureRef);
+    expect(del.status).toBe(200);
+    expect(await mineDocRefs(ctx.authHeaders())).not.toContain(figureRef);
+
+    // The figure doc's registry row + its routine placement edge survive —
+    // un-bookmarking drops a REFERENCE, never the shared figure (§5.2).
+    const registryRow = await env.DB.prepare(
+      "SELECT docRef FROM document_registry WHERE docRef = ? AND deletedAt IS NULL",
+    )
+      .bind(figureRef)
+      .first();
+    expect(registryRow).not.toBeNull();
+    const edge = await env.DB.prepare(
+      "SELECT 1 AS one FROM placement_edge WHERE routineRef = ? AND figureRef = ?",
+    )
+      .bind(rt, figureRef)
+      .first();
+    expect(edge).not.toBeNull();
+  });
+
+  it("un-bookmarking a catalog ref drops only the CALLER's entry (other users' bookmarks survive)", async () => {
+    const a = await authedContext({ keypair: kp, userId: "u_del_a", docRef: "x", role: null });
+    const b = await authedContext({ keypair: kp, userId: "u_del_b", docRef: "x", role: null });
+    await seedDb({
+      users: [
+        { id: "u_del_a", displayName: "A", identityColor: "#111", plan: "free" },
+        { id: "u_del_b", displayName: "B", identityColor: "#222", plan: "free" },
+      ],
+    });
+    await saveToLibrary(a.authHeaders(), NAT_TURN);
+    await saveToLibrary(b.authHeaders(), NAT_TURN);
+
+    await unsaveFromLibrary(a.authHeaders(), NAT_TURN_REF);
+    expect(await mineDocRefs(a.authHeaders())).not.toContain(NAT_TURN_REF);
+    expect(await mineDocRefs(b.authHeaders())).toContain(NAT_TURN_REF);
+  });
+
+  it("is idempotent — un-bookmarking an absent entry still 200s", async () => {
+    const ctx = await authedContext({ keypair: kp, userId: "u_noop", docRef: "x", role: null });
+    await seedDb({
+      users: [{ id: "u_noop", displayName: "N", identityColor: "#111", plan: "free" }],
+    });
+    const res = await unsaveFromLibrary(ctx.authHeaders(), "global:waltz:never-saved");
+    expect(res.status).toBe(200);
+  });
+
+  it("refuses an unauthenticated un-bookmark (401)", async () => {
+    const res = await SELF.fetch("https://x/api/figures/save-to-library", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ figureRef: "fig_x" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("v5 library bookmark — the library_entry query is indexed (NFR: no D1 SCAN)", () => {
+  it("the per-user bookmark lookup hits the PRIMARY KEY, no full-table SCAN", async () => {
+    await seedDb({
+      libraryEntries: [{ userId: "u_explain", figureRef: "global:waltz:natural-turn" }],
+    });
+    await expectIndexedQuery(
+      env.DB,
+      "SELECT figureRef FROM library_entry WHERE userId = ?1 AND deletedAt IS NULL",
+      ["u_explain"],
+    );
   });
 });
 

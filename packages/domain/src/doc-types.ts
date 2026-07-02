@@ -138,6 +138,16 @@ export interface AccountDoc {
   ownerId: string;
   annotations: Annotation[];
   customKinds?: RegistryKind[];
+  /**
+   * The owner's library bookmarks (§2.2/§2.7, ⟳v5): a set of figureRefs — either
+   * an account-figure doc id or a catalog `global:<dance>:<figureType>` ref
+   * (`globalFigureRef`, library.ts) — "added to my library" by this user. A
+   * REFERENCE, never a copy: several users may hold the SAME figureRef in their
+   * own `libraryFigureRefs`. This account doc is the source of truth; the D1
+   * `library_entry` table (migration 0015) is its projection for list/search.
+   * Optional for lenient reads of a pre-v5 account doc (defaults to `[]`).
+   */
+  libraryFigureRefs?: string[];
   schemaVersion: number;
   deletedAt?: number | null;
 }

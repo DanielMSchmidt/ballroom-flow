@@ -84,6 +84,11 @@ export interface FigureTimelineProps {
   baseName?: string;
   /** The choreo/figure name, for the attribute info sheet footer (frame 1.13). */
   scopeLabel?: string;
+  /** Whether this (account) figure is already in the caller's library (⟳v5, §4.2/§5.2). */
+  isBookmarked?: boolean;
+  /** Bookmark this figure into the caller's library — shown for an OWNED (account)
+   *  figure only; a "↟ save" on a global figure lives on the Library screen instead. */
+  onAddToLibrary?: () => void;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -141,6 +146,8 @@ export function FigureTimeline({
   onForkIntoVariant,
   baseName,
   scopeLabel,
+  isBookmarked = false,
+  onAddToLibrary,
 }: FigureTimelineProps) {
   const attrs = attributes ?? [];
   // The open attribute overlay: a (timing, column) target, or null (frame 1.12).
@@ -247,6 +254,27 @@ export function FigureTimeline({
             ]}
           />
         </div>
+        {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2): an OWNED
+            (account) figure only — a global figure's bookmark affordance lives on
+            the Library screen's "↟ save" card, not here. */}
+        {!isGlobal &&
+          (isBookmarked ? (
+            <span
+              className="rounded-pill px-2 py-0.5 text-2xs font-semibold"
+              style={{
+                background: "var(--bf-scope-global-tint)",
+                color: "var(--bf-scope-global-ink)",
+              }}
+            >
+              In your library
+            </span>
+          ) : (
+            onAddToLibrary && (
+              <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
+                <span aria-hidden="true">↟</span> Add to my library
+              </Button>
+            )
+          ))}
       </div>
 
       {isGlobal && (

@@ -8,6 +8,7 @@ import {
   libraryFiguresForDance,
   libraryGroupsForDance,
   libraryGroupsForFilter,
+  parseGlobalFigureRef,
 } from "./library";
 import { parseAttributeWrite } from "./schemas";
 
@@ -118,6 +119,33 @@ describe("globalFigureRef — canonical provenance ref for a catalog figure (T5)
     // A Feather in Foxtrot vs Quickstep is its own global FigureDoc (§2.2), so the
     // refs must differ — saving the Foxtrot one must not dedupe against the Quickstep one.
     expect(globalFigureRef("foxtrot", "feather")).not.toBe(globalFigureRef("quickstep", "feather"));
+  });
+});
+
+describe("parseGlobalFigureRef — the inverse of globalFigureRef (⟳v5 bookmark projection)", () => {
+  it("recovers (dance, figureType) from a catalog ref", () => {
+    expect(parseGlobalFigureRef("global:waltz:natural-turn")).toEqual({
+      dance: "waltz",
+      figureType: "natural-turn",
+    });
+  });
+
+  it("tolerates a hyphenated figureType (no extra colon splitting)", () => {
+    expect(parseGlobalFigureRef("global:foxtrot:feather-step")).toEqual({
+      dance: "foxtrot",
+      figureType: "feather-step",
+    });
+  });
+
+  it("round-trips with globalFigureRef", () => {
+    const ref = globalFigureRef("quickstep", "natural-turn");
+    expect(parseGlobalFigureRef(ref)).toEqual({ dance: "quickstep", figureType: "natural-turn" });
+  });
+
+  it("returns null for a non-catalog ref (an account-figure docRef, e.g.)", () => {
+    expect(parseGlobalFigureRef("01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBeNull();
+    expect(parseGlobalFigureRef("")).toBeNull();
+    expect(parseGlobalFigureRef("global:onlyonepart")).toBeNull();
   });
 });
 

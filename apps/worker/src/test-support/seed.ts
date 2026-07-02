@@ -82,6 +82,14 @@ export interface SeedJournalEntry {
   deletedAt?: number | null;
 }
 
+/** A LibraryEntry row (§2.7, migration 0015, ⟳v5) — a bookmark, never a copy. */
+export interface SeedLibraryEntry {
+  userId: string;
+  figureRef: string;
+  createdAt?: number;
+  deletedAt?: number | null;
+}
+
 export interface SeedSpec {
   users?: SeedUser[];
   docs?: SeedDoc[];
@@ -90,6 +98,7 @@ export interface SeedSpec {
   familyNotes?: SeedFamilyNote[];
   placementEdges?: SeedPlacementEdge[];
   journalEntries?: SeedJournalEntry[];
+  libraryEntries?: SeedLibraryEntry[];
 }
 
 /**
@@ -203,6 +212,13 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
         now,
         j.deletedAt ?? null,
       ),
+    );
+  }
+  for (const l of spec.libraryEntries ?? []) {
+    stmts.push(
+      env.DB.prepare(
+        "INSERT OR IGNORE INTO library_entry (userId, figureRef, createdAt, deletedAt) VALUES (?, ?, ?, ?)",
+      ).bind(l.userId, l.figureRef, l.createdAt ?? now, l.deletedAt ?? null),
     );
   }
 
