@@ -412,8 +412,9 @@ app.post("/api/figures", async (c) => {
     // buildDoc drops undefined optionals, so an uncharted figure carries neither.
     ...(entryAlignment ? { entryAlignment } : {}),
     ...(exitAlignment ? { exitAlignment } : {}),
-    // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
-    // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
+    // The client-forwarded attributes are stored RAW — a ⟳v5 variant carries only
+    // its OWNED beats; overlay resolution against the live `baseFigureRef` happens
+    // CLIENT-side (§5.2). The worker never resolves; it persists what it's given.
     ...(baseFigureRef ? { baseFigureRef } : {}),
     schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,

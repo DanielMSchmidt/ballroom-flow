@@ -94,9 +94,10 @@ export const zCreateFigure = z.object({
    *  from the catalog chart, where charted. Optional — most figures carry none. */
   entryAlignment: zAlignment.optional(),
   exitAlignment: zAlignment.optional(),
-  /** Set when this figure is a copy-on-write COPY of a shared base (US-035): a
-   *  FROZEN snapshot carrying its own `attributes`; `baseFigureRef` is provenance
-   *  only — no live overlay (§5.2). Omitted for a fresh custom figure. */
+  /** Set when this figure is a v5 VARIANT of a base (⟳v5, §5.2): its `attributes`
+   *  are ONLY the OWNED beats and `baseFigureRef` is a LIVE link the CLIENT resolves
+   *  the untouched beats against. Omitted for a fresh custom figure. (A pre-v5 frozen
+   *  copy carrying its own full attributes still validates — it owns every beat.) */
   baseFigureRef: z.string().min(1).optional(),
 });
 export type CreateFigure = z.infer<typeof zCreateFigure>;

@@ -2,9 +2,10 @@
 //
 // Opening a routine to *read* it (the common case) shouldn't cost one live
 // WebSocket per routine + per figure. This model hydrates the whole routine + its
-// figures from ONE REST read (`GET /api/routines/:id/snapshot`, figures already
-// resolved server-side) and keeps it reasonably fresh with light polling +
-// refetch-on-focus — NO WebSockets, no per-figure connections. It exposes the
+// figures from ONE REST read (`GET /api/routines/:id/snapshot`, which also fans out
+// each variant's live base) and keeps it reasonably fresh with light polling +
+// refetch-on-focus — NO WebSockets, no per-figure connections. A variant is
+// resolved per-beat against its base CLIENT-side (⟳v5, §5.2). It exposes the
 // same read surface as the live store (`RoutineReadModel`), so a screen swaps
 // the cheap snapshot in for reading and upgrades to the live `RoutineStore` only
 // when the user actually edits. The live WS sync stays the edit path.
