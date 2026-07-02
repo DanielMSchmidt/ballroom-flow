@@ -58,7 +58,7 @@ The ~12 most load-bearing, each with the one-line WHY. Decisions marked ⟳v5 we
 | # | Decision | Why |
 |---|---|---|
 | **D6** | **Core `@automerge/automerge`**, NOT automerge-repo, behind `store/` | The M0.5 spike proved core + a thin custom DO sync is enough; automerge-repo's sync protocol is adoptable later if delta-efficiency demands it. Don't add it casually. |
-| **D10** | **Role-aware read/edit split**: viewers = zero WebSockets (REST snapshot + polling); editors/commenters = one live routine WS; a figure's own WS opens only when its editor opens | Kills per-figure socket fan-out for the dominant read path. **Rejected alternative (recorded in §8):** "read-by-default for everyone, upgrade on first edit" — a passive co-editor on a polled snapshot can't see another editor's edits live; it broke the US-015 convergence journeys. Also locks: snapshot-frame catch-up (one `A.save` blob, never per-change replay), reconnect resend of unacked changes (#161), broadcast-failure → resync. |
+| **D10** | **Role-aware read/edit split**: viewers = zero WebSockets (REST snapshot + polling); editors/commenters = one live routine WS; a figure's own WS opens only when its editor opens | Kills per-figure socket fan-out for the dominant read path. **Rejected alternative (recorded in §8):** "read-by-default for everyone, upgrade on first edit" — a passive co-editor on a polled snapshot can't see another editor's edits live; it broke the US-015 convergence journeys. Also locks — **all shipped in PR #134 (2026-07-02)**: snapshot-frame catch-up (one `A.save` blob, never per-change replay), reconnect resend of unacked changes (#161), broadcast-failure → close-for-resync (`SYNC_RESYNC_CLOSE_CODE`). Wire details in **ballroom-flow-crdt-reference** §7. |
 | **D12 ⟳v5** | Figures are **live wherever referenced**; editing a *global* figure as a non-admin spawns a **live overlay variant** (per-beat ownership + copy-down); *account* figures edit in place; fork copies account figures, variants stay variants; frozen copies **retired** | Propagation over isolation — the 2026-07-02 reversal of the 2026-06 frozen-copy model. The shipped code is still partly frozen-style (see weak points + the v5-migration-campaign skill). |
 | **D13** | **Automerge + a document graph** (one doc per figure/routine), not one big doc | Cross-routine figure inheritance, fork/merge, per-doc history and per-doc permissions all fall out of doc granularity. |
 | **D14** | **History-based per-user undo**, no op-log. Soundness (locked 2026-07-02): inverse targets list elements **by id** never index; an already-undone change is never re-selected; figure-editor undo targets **the figure doc** | Op-log undo had three researched blockers (cascading deletes, supersession, per-user dependency); inverting the user's own last change from CRDT history is sound and cheap. |
@@ -102,8 +102,9 @@ For any change touching data shape, boundaries, sync, permissions, or module str
       card counts).
 - [ ] **New doc field?** It must tolerate old docs that lack it (forward-compatible read),
       never store `undefined` (Automerge throws — see **ballroom-flow-crdt-reference**), and
-      deletion must be a tombstone. Consider whether the (currently unwired) migration ladder
-      needs a step and say so in the spec.
+      deletion must be a tombstone. Consider whether the migration ladder (now wired into the
+      DO load path, PR #135) needs a **new** step — never edit an existing one — and say so in
+      the spec.
 - [ ] **New list or reorder?** Fractional `sortKey` via `keyBetween`, read via `sortByOrder`.
       Never splice.
 - [ ] **New D1 query?** Ship the index migration and an `expectIndexedQuery` test in the same
@@ -120,28 +121,31 @@ For any change touching data shape, boundaries, sync, permissions, or module str
 - [ ] **Contradicting a locked decision?** Don't route around it — propose the change in
       PLAN.md §8/§12 in the same PR.
 
-## 4. Known weak points — as of 2026-07-02, HEAD `70eed7e` on `development`
+## 4. Known weak points — as of 2026-07-02, HEAD `3693ff6` on `development`
 
-State these plainly in any design that touches them. Points 1–4 ARE the active v5
+State these plainly in any design that touches them. Points 1–3 ARE the active v5
 milestone — the **single detailed audit** (per-item state, sequencing, fenced-off wrong
 paths) lives in **ballroom-flow-v5-migration-campaign** §2; here is only what this skill's
 own invariants depend on:
 
-1. **The migration ladder is NOT wired into any runtime path** —
-   `packages/domain/src/migrations.ts` is called only by fixtures/tests; production survives
-   on read-side aliases + defensive `ensureSortKeys` (PLAN §9 open item).
+1. **`development`'s tip is RED pending PR #140: live-doc vs persisted-lineage divergence.**
+   `migrateOnLoad` (PR #135) persists the migration change during transient reads
+   (`getFigureSnapshot`/connect catch-up call `loadPersisted` directly) without advancing the
+   instance's already-materialized `this.doc` — the persisted change log and the live doc
+   fork into different lineages, and a peer change built on the persisted heads is silently
+   swallowed by `ingestChange` (missing dep → heads unchanged → treated as duplicate).
+   `fork.test.ts` "is independent of the origin" fails deterministically. Fix pending as
+   PR #140 (`fix/migrate-on-load-live-doc`, 601032a): the change log must never contain a
+   change the live doc hasn't applied. Check `git log origin/development` before assuming.
 2. **The web store's figure resolution is still frozen-style** — `apps/web/src/store/routine.ts`
-   (~line 1115) returns a figure's OWN attributes with no live-base overlay; until v5 step 3
+   (~line 1117) returns a figure's OWN attributes with no live-base overlay; until v5 step 3
    lands, D12's "live wherever referenced" is true in the domain layer only.
-3. **Reconnect resend of unacknowledged changes is missing (#161)** — only a precursor
-   buffer exists in `apps/web/src/store/doc-connection.ts` (~line 110); D10 locks the
-   required behavior.
-4. **The account-doc CRDT is not wired to a DO** — `packages/domain/src/doc-account.ts` is
+3. **The account-doc CRDT is not wired to a DO** — `packages/domain/src/doc-account.ts` is
    built + tested but v1 family notes live in a D1 row; kept deliberately for a store-seam
    swap later. Don't delete it as dead code; don't assume family notes merge like CRDT data.
-5. **Per-document DO fan-out at scale is unmeasured** — explicit PLAN §12 watch-item; no
+4. **Per-document DO fan-out at scale is unmeasured** — explicit PLAN §12 watch-item; no
    load test exists.
-6. **`main` diverges from `development` beyond release lag.** `main` carries the #83
+5. **`main` diverges from `development` beyond release lag.** `main` carries the #83
    figure-data merge (9106f63) and its revert (#85, 720103d) plus a CLAUDE.md commit (#89)
    that are not part of `development`'s history; `development` is ~443 commits ahead.
    Releases merge `development → main`; never base work on `main`
@@ -159,9 +163,9 @@ own invariants depend on:
 | Doc schemas + builders/readers | `packages/domain/src/doc-types.ts`, `doc-internal.ts`, `doc-routine.ts`, `doc-figure.ts`, `doc-account.ts` |
 | Fork / variants / per-beat overlay (v5) | `packages/domain/src/fork.ts` |
 | History-based undo | `packages/domain/src/undo.ts` |
-| Migration ladder (unwired) | `packages/domain/src/migrations.ts` |
+| Migration ladder (runs on the DO load path since PR #135 — `doc-do.ts` `migrateOnLoad`) | `packages/domain/src/migrations.ts` |
 | Seed catalog + generated charts | `packages/domain/src/library.ts`, `library-data.ts`, `figure-steps.ts` (pipeline: **ballroom-flow-figure-data-pipeline**) |
-| Shared API contract (Zod + `SYNC_CAUGHT_UP`) | `packages/contract/src/index.ts` |
+| Shared API contract (Zod + the WS wire constants `SYNC_CAUGHT_UP` / `SYNC_FRAME_SNAPSHOT` / `SYNC_FRAME_CHANGE` / `SYNC_RESYNC_CLOSE_CODE`) | `packages/contract/src/index.ts` |
 | REST routes + auth + WS handoff | `apps/worker/src/index.ts`; Clerk verify in `apps/worker/src/auth/` (networkless with `CLERK_JWT_KEY`) |
 | The Durable Object (persistence/sync/permissions/alarm) | `apps/worker/src/doc-do.ts` (SQLite tables: `changes`, `snapshot`, `doc_meta`) |
 | D1 schema + query modules | `apps/worker/src/db/schema.ts` (+ `membership.ts`, `placement-edge.ts`, `routines.ts`, `figures.ts`, `invites.ts`, `journal.ts`, …); migrations in `apps/worker/migrations/` (13 files) |
@@ -172,24 +176,27 @@ own invariants depend on:
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against repo HEAD `70eed7e` on `development`. Verified directly against:
+Authored 2026-07-02 against repo HEAD `70eed7e`; **refreshed 2026-07-02 against HEAD `3693ff6`**
+(after PRs #133 fork-v5, #134 sync-hardening, #135 migration-ladder-wiring; PR #140 —
+the migrateOnLoad lineage fix, 601032a — **not yet merged** at refresh time) on `development`.
+Verified directly against:
 `docs/PLAN.md` v5.0 (§2.5.1 invariants, §5.3, §6, §8 D1–D31, §9), `packages/domain/src/{order,vocabulary,schemas,fork,migrations,doc-account}.ts`,
-`apps/worker/src/{index,doc-do}.ts`, `apps/worker/src/db/{schema,membership,placement-edge}.ts`,
+`apps/worker/src/{index,doc-do,fork}.ts`, `apps/worker/src/db/{schema,membership,placement-edge}.ts`,
 `apps/worker/src/test-support/explain.ts`, `apps/web/src/store/{routine,doc-connection}.ts`,
-and `git log origin/main`/`origin/development`.
+`packages/contract/src/index.ts`, and `git log origin/main`/`origin/development`.
 
 Re-verify what drifts:
 
 ```bash
 # Still the digest of the real §8? (decision table)
 grep -n "D28\|D30\|D31" docs/PLAN.md | head
-# Migration ladder wired yet? (empty = still unwired outside tests)
-grep -rn "migrate(" apps/worker/src apps/web/src --include="*.ts" | grep -v test
+# PR #140 (weak point 1) merged yet?
+git log origin/development --oneline -5
+# Migration ladder still on the load path?
+grep -n "migrateOnLoad" apps/worker/src/doc-do.ts
 grep -n "CURRENT_SCHEMA_VERSION" packages/domain/src/migrations.ts
 # Store still frozen-style? (comment vanishes when v5 step 3 lands)
 grep -n "no live overlay against a base" apps/web/src/store/routine.ts
-# Reconnect resend landed? (precursor comment vanishes when #161 ships)
-grep -n "#161" apps/web/src/store/doc-connection.ts
 # Component/store boundary intact (matches must be comments only)
 grep -rln "lib/rpc" apps/web/src --include="*.ts*" | grep -v store | grep -v test
 ```

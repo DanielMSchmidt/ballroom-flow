@@ -169,7 +169,7 @@ effect** on state.
 
 **Worked examples (three real holes, all in `apps/worker/src/`):**
 - **Effect-based commenter gate** (eb04a33, hardened 99fa1b9):
-  `DocDO.commenterChangeAllowed` (`apps/worker/src/doc-do.ts:484`) applies the frame
+  `DocDO.commenterChangeAllowed` (`apps/worker/src/doc-do.ts:567`) applies the frame
   to a **clone**, reads before/after with `includeDeleted: true`, and requires
   (1) structure untouched — everything except `annotations` JSON-equal — and
   (2) authorship against the socket's verified `sub`: create only your own annotations,
@@ -187,7 +187,7 @@ effect** on state.
   `"owner_conflict"` → route 409s with **zero writes**.
 - **Frozen-role-in-attachment** (99fa1b9 S1): role was resolved once at connect and
   stored in the DO hibernation attachment — a removed editor kept live write access
-  until reconnect. Fix: `refreshConnectedRoles()` (`apps/worker/src/doc-do.ts:543`)
+  until reconnect. Fix: `refreshConnectedRoles()` (`apps/worker/src/doc-do.ts:626`)
   re-resolves every open socket from D1, closes revoked members with code 1008, and
   re-attaches changed roles; called by member-removal and invite-redeem routes.
 
@@ -351,16 +351,16 @@ hydrated ≠ durable ≠ broadcast** — four separately-acknowledged facts:
 | State | Meaning | Acknowledgment mechanism (this repo) |
 |---|---|---|
 | **open** | socket connected | WS open event — proves nothing about content |
-| **hydrated** | server catch-up applied locally | `SYNC_CAUGHT_UP` marker frame (`packages/contract/src/index.ts:140`, sent by the DO at `apps/worker/src/doc-do.ts:430`; client flips to `"live"` only on receiving it, `apps/web/src/store/doc-connection.ts:332`) |
-| **durable** | content persisted server-side | server-side `seedDoc` RPC before any client connects (doc-do.ts:208, no-clobber) |
-| **broadcast** | other connected clients told | explicit `broadcast` after persist (seedDoc broadcasts its seed, doc-do.ts:222) |
+| **hydrated** | server catch-up applied locally | `SYNC_CAUGHT_UP` marker frame (`packages/contract/src/index.ts:140`, sent by the DO at `apps/worker/src/doc-do.ts:510` after the one-frame snapshot catch-up (PR #134); client flips to `"live"` only on receiving it, `apps/web/src/store/doc-connection.ts:296`) |
+| **durable** | content persisted server-side | server-side `seedDoc` RPC before any client connects (doc-do.ts:282, no-clobber) |
+| **broadcast** | other connected clients told | explicit `broadcast` after persist (seedDoc broadcasts its seed, doc-do.ts:296) |
 
 **Recipe**
 1. For any async resource, enumerate every state a peer could observe — including the
    embarrassing intermediate ones. Write the enum down as a type, not a boolean
-   (`SyncState = "connecting" | "live" | "closed"`, doc-connection.ts:88;
+   (`SyncState = "connecting" | "live" | "closed"`, doc-connection.ts:93;
    `FigureLoadStatus = "pending" | "loading" | "live" | "missing" | "error"`,
-   `apps/web/src/store/routine.ts:67`).
+   `apps/web/src/store/routine.ts:68`).
 2. For each transition, name its **explicit acknowledgment signal**. "The next step
    usually runs fast enough" is a localhost-timing proof, i.e. not one.
 3. Prove each distinct state renders/behaves distinctly — loading must never render
@@ -379,14 +379,16 @@ hydrated ≠ durable ≠ broadcast** — four separately-acknowledged facts:
   persisted** an empty placeholder into an unseeded DO — tripping seedDoc's no-clobber
   guard forever; and seedDoc persisted but never **broadcast**, so already-connected
   sockets stayed empty (durable ≠ broadcast). Fixes: `loadPersisted` (no
-  auto-materialize) on the catch-up path (doc-do.ts:159) + seedDoc broadcasts.
+  auto-materialize) on the catch-up path (doc-do.ts:194) + seedDoc broadcasts.
 - 9509d30: client opened the figure's DO connection **before** `POST /api/figures`
   seeded it → empty catch-up. Fix: connect only after create resolves.
 
-Same family, still open as of 2026-07-02 (PLAN §9, D10): reconnect resend of
-unacknowledged local changes (a change sent into a dying socket must not be silently
-lost) and broadcast-send failure → mark socket for resync. If you touch sync, these
-are the transitions to prove next — see ballroom-flow-v5-migration-campaign.
+Same family — **shipped 2026-07-02 (PR #134, D10)**: reconnect resend of unacknowledged
+local changes (the client merges the catch-up snapshot then re-sends what the server
+lacks) and broadcast-send failure → close-for-resync (`SYNC_RESYNC_CLOSE_CODE`). And the
+same family struck again the same day: the **migrateOnLoad lineage divergence** (persisted
+change log ≠ live doc; fix pending as PR #140) — see ballroom-flow-failure-archaeology
+pattern 2 and ballroom-flow-v5-migration-campaign §2 before touching the DO load path.
 
 ---
 
@@ -404,14 +406,15 @@ are the transitions to prove next — see ballroom-flow-v5-migration-campaign.
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against repo HEAD 70eed7e on `development`. Verified directly:
+Authored 2026-07-02 against repo HEAD 70eed7e; line anchors refreshed 2026-07-02 against
+HEAD `3693ff6` (post-#133/#134/#135; PR #140 pending) on `development`. Verified directly:
 `packages/domain/src/convergence.test.ts` and `order.test.ts` read in full and run
 green (8 and 23 tests); `__fixtures__/convergence.ts` helper signatures;
 `undo.ts` internals (revertedSet :79, recordIdentityOps :212, applyIdentityOps :316,
 invertChange :372); `fork.ts` `resolveFigure` :132 / `ownedBeats` :117;
-`apps/worker/src/doc-do.ts` `commenterChangeAllowed` :484 / `refreshConnectedRoles`
-:543 / SYNC_CAUGHT_UP send :430; `test-support/explain.ts` in full;
-`db/routines.ts` self-join :99-124 and its EXPLAIN test `doc-do.test.ts:727`;
+`apps/worker/src/doc-do.ts` `commenterChangeAllowed` :567 / `refreshConnectedRoles`
+:626 / SYNC_CAUGHT_UP send :510; `test-support/explain.ts` in full;
+`db/routines.ts` self-join :99-124 and its EXPLAIN test `doc-do.test.ts:770`;
 commit messages of 38dfba7, 58a11f6, eb04a33, 089dbc0, 99fa1b9, 3725ec9, 97e7fea,
 4ef16ac, 9edab0a. Internal ledger numbers (#63, #161, #202, #205) do NOT resolve on
 GitHub; PR numbers and hashes do.

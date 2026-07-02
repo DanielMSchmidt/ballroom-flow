@@ -288,6 +288,12 @@ Actuals from `pnpm coverage` on `development` HEAD `70eed7e`, 2026-07-02
 - worker **86.04 / 71.21 / 89.15 / 89.63** — 150 passed, 7 skipped
 - web **71.09 / 68.32 / 65.52 / 73.80** — 331 passed
 
+(Counts at the later same-day HEAD `3693ff6`, after PRs #133/#134/#135: domain 232/3 skipped,
+web 333, worker 161 passed + **1 deterministic failure** (`fork.test.ts` "is independent of
+the origin" — the known migrateOnLoad incident, fix pending as PR #140; 162/7 skipped once it
+lands) — see **ballroom-flow-v5-migration-campaign** §2. A red `development` tip is that
+incident, not license to weaken the test.)
+
 **Ratchet plan (PLAN.md §10.3 + the config comments):** thresholds sit at the *measured floor*
 so coverage can't silently regress; ratchet them **up** as the v5 milestone lands — domain
 toward **95** (lines), worker toward **90**. When your change raises actuals meaningfully, bump
@@ -310,14 +316,17 @@ floors. The configs are ground truth for what CI enforces today.
   feature/journey): update the map's coverage table in the **same PR**, and reference the
   US-key (or feature slug) in the test's header comment and, for stories, the test name.
 - **Its "Verification" test counts are stale** (last reconciled 2026-06-28: says domain
-  154 / web 114 / worker 101; actual on 2026-07-02: 227 / 331 / 150). Trust `pnpm test`
+  154 / web 114 / worker 101; actual on 2026-07-02 at HEAD `3693ff6`: 232 / 333 / 162-target
+  — see §6). Trust `pnpm test`
   output over the map's counts; treat the map as authoritative for *which file covers which
   story*, not for totals. If you're editing the map anyway, refreshing the counts is welcome
   but keep it date-stamped.
 
 ## Provenance and maintenance
 
-Written 2026-07-02 against repo HEAD `70eed7e` on `development`. Verified directly against:
+Written 2026-07-02 against repo HEAD `70eed7e`; test counts refreshed same day against HEAD
+`3693ff6` (post-#133/#134/#135; PR #140 — which turns the worker suite green again — not yet
+merged at refresh) on `development`. Verified directly against:
 `packages/domain/vitest.config.ts`, `apps/worker/vitest.config.ts`, `apps/web/vitest.config.ts`,
 `apps/web/playwright.config.ts`, `.github/workflows/{ci,nightly}.yml`, `docs/PLAN.md` §9/§10,
 `docs/TEST-MAP.md`, `docs/DEVELOPMENT.md`, CLAUDE.md, the fixture/helper sources listed in §2,

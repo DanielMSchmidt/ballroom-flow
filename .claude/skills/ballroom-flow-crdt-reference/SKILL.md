@@ -38,8 +38,8 @@ All five are documented in `docs/DEVELOPMENT.md` ("conventions that bite") and e
 | # | Symptom | Rule | Where enforced |
 |---|---|---|---|
 | 1 | `RangeError: Cannot assign undefined value at /path` at `A.from` or inside `A.change` | Automerge **cannot store `undefined`**. Strip `undefined`-valued keys before writing; **`null` is preserved** (`deletedAt: null` is a meaningful CRDT value, not an absent field). | `stripUndefined` in `packages/domain/src/doc-internal.ts:19`; every builder goes through `buildDoc` |
-| 2 | `RangeError: Attempting to change an outdated document. Use Automerge.clone()` | A doc reference is **consumed** by `change`/`merge`/`applyChanges` — the old reference is "outdated". `A.clone(base)` before reusing a doc as the base for a second independent lineage (two replicas from one fixture, a what-if apply). | `applyMutations`/`exchangeAndAssertConverged` in `packages/domain/src/__fixtures__/convergence.ts`; `commenterChangeAllowed` clones before its trial apply (`doc-do.ts:491`) |
-| 3 | Two converged docs fail a byte comparison | `A.save()` bytes are **NOT canonical across merge order** — identical logical state can serialize differently. Assert convergence via **sorted `getHeads`**. Byte equality is valid only for a single-doc save/load round-trip. | `assertHeadsEqual` (heads) vs `assertBytesEqual` (round-trip only) in `__fixtures__/convergence.ts:136/:146`; `headsEqual` in `doc-do.ts:67` |
+| 2 | `RangeError: Attempting to change an outdated document. Use Automerge.clone()` | A doc reference is **consumed** by `change`/`merge`/`applyChanges` — the old reference is "outdated". `A.clone(base)` before reusing a doc as the base for a second independent lineage (two replicas from one fixture, a what-if apply). | `applyMutations`/`exchangeAndAssertConverged` in `packages/domain/src/__fixtures__/convergence.ts`; `commenterChangeAllowed` clones before its trial apply (`doc-do.ts:574`) |
+| 3 | Two converged docs fail a byte comparison | `A.save()` bytes are **NOT canonical across merge order** — identical logical state can serialize differently. Assert convergence via **sorted `getHeads`**. Byte equality is valid only for a single-doc save/load round-trip. | `assertHeadsEqual` (heads) vs `assertBytesEqual` (round-trip only) in `__fixtures__/convergence.ts:136/:146`; `headsEqual` in `doc-do.ts:74` |
 | 4 | "Just delete the row" | **Tombstones, never hard deletes.** A hard removal cannot merge with a concurrent edit to the same entity (the edit resurrects nothing / targets nothing — divergent intent). A tombstone is a field write: the concurrent edit and the delete both land, readers resolve (`deletedAt` wins the display). Also load-bearing for variants (§5: a tombstoned attribute still claims its beat) and undo (nothing is ever unrecoverable). | `softDelete*` everywhere in `packages/domain/src/doc-*.ts`; repo-wide rule in CLAUDE.md §4 |
 | 5 | Slow test collection / bundle-size questions | Automerge is a **WASM module** (~2.6 MB raw; the bulk of the app's 920 KiB-gzip worker bundle, spike-measured — `docs/spike/SPIKE-FINDINGS.md`). It loads once per process. Never top-level-import it from a skipped test suite: use the dynamic-import pattern (`loadAutomerge` in `__fixtures__/convergence.ts`) or `import type`. | fixture pattern + CLAUDE.md §4 "never top-level-import a not-yet-built export" |
 
@@ -88,9 +88,13 @@ always exists between any two keys (there is always room to descend below). If y
 by hand, preserve it.
 
 Backfill paths: `addSection` (`packages/domain/src/doc-routine.ts`) backfills-then-appends, and
-the v3→v4 migration (`packages/domain/src/migrations.ts`) backfills. Note (as of 2026-07-02) the
-migration ladder is **not wired into any runtime path** — production ordering relies on the
-`sortByOrder` fallback + `ensureSortKeys` on write (open PLAN §9 checkbox).
+the v3→v4 migration (`packages/domain/src/migrations.ts`) backfills. As of PR #135 (2026-07-02)
+the migration ladder **runs on the DO load path**: `doc-do.ts` `migrateOnLoad` applies
+`migrateDraft` inside an `A.change` attributed to a fixed `MIGRATION_ACTOR` (never a user's, so
+per-user undo can't select it) and persists the upgrade; every seed site stamps
+`CURRENT_SCHEMA_VERSION`. The `sortByOrder` fallback + `ensureSortKeys` remain as read-side
+defence. (One load-path fix is still in flight — see the incident box in
+**ballroom-flow-v5-migration-campaign** §2 / PR #140.)
 
 ---
 
@@ -120,10 +124,12 @@ current timeline. Its `baseFigureRef` becoming live changes nothing until the ca
 on beats the copy never touched.
 
 **Do not confuse the two `resolveFigure`s.** The domain one above is the v5 overlay resolver. The
-web store has a private same-named function (`apps/web/src/store/routine.ts:1115`) that returns a
+web store has a private same-named function (`apps/web/src/store/routine.ts:1117`) that returns a
 figure's OWN attributes with **no base resolution** — still the frozen-copy read. **OPEN** (v5
 step 3): rewiring the store (and the worker snapshot, `apps/worker/src/index.ts` snapshot route)
-to overlay resolution on read.
+to overlay resolution on read. Fork v5 (step 5) **shipped** (PR #133): `apps/worker/src/fork.ts`
+copies referenced account figures via `copyFigureForFork` (variants stay variants) and leaves
+global refs live.
 
 ---
 
@@ -159,56 +165,77 @@ Related pieces:
   real dep DAG forward from the undo target: true iff a *different* actor's change causally
   depends on it ("built on" — exact relation, not a heuristic). A purely concurrent edit is NOT
   flagged. The UI only softens the toast; undo always proceeds. Call it on the **pre-undo** doc
-  (the undo itself perturbs the graph — see `apps/web/src/store/routine.ts:970-982`).
+  (the undo itself perturbs the graph — see `apps/web/src/store/routine.ts:972-984`).
 - `redoLastChange` (:486) — only if the actor's **last** change is an undo (1-deep toggle); a
   fresh edit clears redo. It must not blindly invert the last change or it would delete that edit.
 - Known accepted limit (Q-UNDO): undoing a write to a cell another actor *concurrently* also
   wrote restores the old value, superseding theirs — the CRDT merges, no refusal; disjoint
   concurrent edits survive untouched.
 - Actor plumbing: the store uses a **stable per-tab actor id** so the same actor authors and
-  undoes (`routine.ts:400-404`); DO-side mutations use a per-connection actor from the socket
+  undoes (`routine.ts:402-406`); DO-side mutations use a per-connection actor from the socket
   attachment, never the DO's own actor (`doc-do.ts` `newActorId` — 16 random bytes as **hex**;
   Automerge rejects non-hex actor ids like dashed UUIDs).
 - **OPEN** (PLAN §9): figure-editor undo targeting the figure doc (today undo targets the routine doc).
 
 ---
 
-## 7. The sync protocol as built
+## 7. The sync protocol as built (post-#134, 2026-07-02)
 
-One Durable Object per document; one WebSocket per doc per client. Wire = raw binary Automerge
-change frames + two text-frame conventions. Server: `apps/worker/src/doc-do.ts`; client:
-`apps/web/src/store/doc-connection.ts`; upgrade route: `apps/worker/src/index.ts` (`/docs/:id/connect`).
+One Durable Object per document; one WebSocket per doc per client. The wire is **asymmetric**
+(`packages/contract/src/index.ts` :144–186): **server→client binary frames carry a 1-byte type
+tag** — `SYNC_FRAME_SNAPSHOT` (0x01, the whole doc as one `A.save` blob) or `SYNC_FRAME_CHANGE`
+(0x02, one incremental change) — while **client→server frames stay raw Automerge change bytes**;
+plus the `SYNC_CAUGHT_UP` text marker. This was a **hard protocol cutover** (PR #134): an old
+client against a new server drops the tagged frames until reload — accepted; a WS-subprotocol
+version (`ballroom.sync.v2`) is the recorded escape hatch if a zero-downtime rollout is ever
+needed. Server: `apps/worker/src/doc-do.ts`; client: `apps/web/src/store/doc-connection.ts`;
+upgrade route: `apps/worker/src/index.ts` (`/docs/:id/connect`).
 
 **Connect + auth.** A browser WS handshake can't set `Authorization`, so the client offers the
 Clerk token as a WS subprotocol: `Sec-WebSocket-Protocol: ballroom.auth, <token>`
-(`AUTH_SUBPROTOCOL` in both `doc-connection.ts:32` and `index.ts:855`). The worker route extracts
+(`AUTH_SUBPROTOCOL` in both `doc-connection.ts:37` and `index.ts:860`). The worker route extracts
 it → `Authorization: Bearer` header → the DO authenticates fail-closed (401 no/bad token, 403
 non-member) *before* accepting the socket, and echoes the subprotocol on the 101 (browsers require
 it). The resolved role + verified `sub` + a fresh actor id ride the hibernation-safe
 `SocketAttachment`.
 
-**Catch-up.** On accept, the DO replays **all changes so far** to the new socket, then sends the
-text marker **`SYNC_CAUGHT_UP` = `"ballroom:sync:caught-up"`** (`packages/contract/src/index.ts:140`).
-The client stays `"connecting"` until that marker arrives, then goes `"live"` = **hydrated, safe
-to edit** — socket-open is NOT hydrated (the #202 lesson: flipping live on open let clients edit a
-not-yet-replayed doc). `DocConnection.onceLive()` defers seed writes accordingly. Catch-up reads
-via `loadPersisted()`, never `getDoc()`, so connecting to an unseeded doc does NOT persist an
-empty placeholder (which used to trip the seed's no-clobber guard).
+**Catch-up.** On accept, the DO sends the new socket **ONE `SYNC_FRAME_SNAPSHOT` frame** (an
+`A.save` blob of the whole doc — bounded on the wire, unlike the pre-#134 per-change replay,
+which grew without bound as a doc aged), then the text marker **`SYNC_CAUGHT_UP` =
+`"ballroom:sync:caught-up"`** (`packages/contract/src/index.ts:140`; sent at `doc-do.ts`
+:489–510). The client `A.load`s the blob and **`A.merge`s** it into its local doc
+(`mergeSnapshot`, `doc-connection.ts:385`) — merge is a union, so a reconnecting client's
+unacked local edits survive; it then diffs `A.getChanges(serverDoc, merged)` and **re-sends
+the changes the server lacks** (reconnect resend, internal #161; idempotent server-side). An
+unseeded doc sends no snapshot, just the marker; in that case the client resends
+`getAllChanges` at `SYNC_CAUGHT_UP`. The client stays `"connecting"` until the marker arrives,
+then goes `"live"` = **hydrated, safe to edit** — socket-open is NOT hydrated (the #202 lesson:
+flipping live on open let clients edit a not-yet-replayed doc). `DocConnection.onceLive()`
+defers seed writes accordingly. Catch-up reads via `loadPersisted()`, never `getDoc()`, so
+connecting to an unseeded doc does NOT persist an empty placeholder (which used to trip the
+seed's no-clobber guard).
 
-**Seeding.** `seedDoc(content)` (`doc-do.ts:208`) is called by the create routes so initial
+**Seeding.** `seedDoc(content)` (`doc-do.ts:282`) is called by the create routes so initial
 content is server-persisted the instant the doc exists (client-written seeds were lost on
 immediate reload). **No-clobber**: a no-op if any snapshot/changes already exist. It also
 **broadcasts** the seed to already-connected sockets (a collaborator who connected pre-seed would
 otherwise stay empty until reload).
 
-**Ingest.** `ingestChange` (`doc-do.ts:277`) applies a frame, and persists + relays it **only if
-heads changed** (`headsEqual`, order-independent) — duplicate delivery is a wire-level no-op,
-which is what makes dumb relaying safe. Malformed frames throw inside Automerge and are dropped.
-An Automerge `patchCallback` cheaply detects annotation-touching changes to arm the journal
-projection (no full-doc JSON diff on the hot path).
+**Ingest + relay.** `ingestChange` (`doc-do.ts:351`) applies a frame, and persists + relays it
+**only if heads changed** (`headsEqual` :74, order-independent) — duplicate delivery is a
+wire-level no-op, which is what makes dumb relaying safe (and what makes the client's reconnect
+resend safe). Malformed frames throw inside Automerge and are dropped. **Caveat:** "heads
+unchanged" also swallows a change whose **deps are missing** (Automerge defers it) — the
+mechanism behind the 2026-07-02 migrateOnLoad lineage-divergence incident (PR #140; see
+**ballroom-flow-debugging-playbook** row 12). An Automerge `patchCallback` cheaply detects
+annotation-touching changes to arm the journal projection (no full-doc JSON diff on the hot
+path). Relays go out as tagged `SYNC_FRAME_CHANGE` frames (`broadcast`, `doc-do.ts:709`); a
+**failed `send` closes that socket** with `SYNC_RESYNC_CLOSE_CODE` (4001, contract :186) — the
+client treats a close-after-open as a warm drop, auto-reconnects, and recovers the missed
+change from a fresh snapshot (no silent divergence).
 
 **Write gating (defence in depth past the connect check).** In `webSocketMessage`: editors/owners
-(`canEdit`) pass; a **commenter** passes only `commenterChangeAllowed` (:484) — the frame is
+(`canEdit`) pass; a **commenter** passes only `commenterChangeAllowed` (:567) — the frame is
 trial-applied to a **clone** and classified **by effect**, never by a client-declared label:
 (1) structure outside `annotations` must be byte-identical (compared with tombstones included, so
 a structural soft-delete still counts as structural); (2) authorship is checked against the
@@ -218,19 +245,21 @@ hard removals never pass. Viewers are read-only. `refreshConnectedRoles()` re-re
 socket's role from D1 after any membership write and closes revoked sockets with code 1008 — a
 role is not frozen at handshake (the 99fa1b9 fix).
 
-**Client resilience** (`DocConnection`): capped-backoff auto-reconnect (warm drops retry forever,
-cold handshake failures give up after `maxColdAttempts` → terminal `"closed"`, recoverable via
-`reconnectNow()`); fresh token per (re)open; local changes made while not-open are **buffered and
-flushed on open** (`pendingSends`); `materialized()` memoizes `A.toJS` **keyed by heads** so
-unrelated sync frames don't churn object identity (the editor-flicker fix — prefer it over
+**Client resilience** (`DocConnection`): capped-backoff auto-reconnect (warm drops — including a
+server-initiated `SYNC_RESYNC_CLOSE_CODE` close — retry forever; cold handshake failures give up
+after `maxColdAttempts` → terminal `"closed"`, recoverable via `reconnectNow()`); fresh token per
+(re)open; local changes made while not-open are **buffered and flushed on open** (`pendingSends`
+:118), and changes the server never saw are **re-sent from the snapshot diff on reconnect**
+(`resendMissing` :424 — the #161 core); unknown-tag binary frames are dropped (that's what an
+old server's untagged frames look like); `materialized()` memoizes `A.toJS` **keyed by heads**
+so unrelated sync frames don't churn object identity (the editor-flicker fix — prefer it over
 `A.toJS(conn.current())` on any hot read path).
 
-**OPEN gaps** (PLAN §9 step 1, unchecked as of 2026-07-02 — do not assume these exist; the
-detailed audit + sequencing live in **ballroom-flow-v5-migration-campaign**):
-- **Snapshot-frame catch-up**: connect catch-up is still a per-change replay, not one `A.save` blob.
-- **Reconnect resend** (internal #161): `pendingSends` only buffers frames made while *not* open — changes sent into a dying socket can be silently lost.
-- Broadcast `send` failure should mark that socket for resync (currently swallowed).
-- Migration ladder into the DO load path + stamping fresh docs `CURRENT_SCHEMA_VERSION`.
+**Shipped 2026-07-02** (the former D10 open gaps — snapshot-frame catch-up, reconnect resend,
+broadcast-failure resync in PR #134; migration ladder on the DO load path + fresh docs stamped
+`CURRENT_SCHEMA_VERSION` in PR #135). What remains open (figure-editor undo, v5 steps 3/4/6, and
+the **pending PR #140 migrateOnLoad fix**) is audited in **ballroom-flow-v5-migration-campaign**
+§2 — check there before assuming state.
 
 ---
 
@@ -246,17 +275,22 @@ detailed audit + sequencing live in **ballroom-flow-v5-migration-campaign**):
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against repo HEAD `70eed7e` on `development`. Verified directly against:
-`packages/domain/src/{fork,order,undo,doc-internal}.ts`, `packages/domain/src/__fixtures__/convergence.ts`,
+Authored 2026-07-02 against repo HEAD `70eed7e`; **refreshed 2026-07-02 against HEAD `3693ff6`**
+(after PR #134's protocol cutover, PR #135's migration-ladder wiring, PR #133's fork v5) on
+`development`. Verified directly against:
+`packages/domain/src/{fork,order,undo,doc-internal,migrations}.ts`, `packages/domain/src/__fixtures__/convergence.ts`,
 `apps/worker/src/doc-do.ts`, `apps/worker/src/index.ts` (connect route), `apps/web/src/store/{doc-connection,routine}.ts`,
 `packages/contract/src/index.ts`, `docs/DEVELOPMENT.md`, `docs/PLAN.md` §5.2/§5.4/§9/D10-D14,
-`docs/spike/SPIKE-FINDINGS.md`. Incident hashes (38dfba7, 3725ec9, 99fa1b9, PR #107/#132) from git
-history; "#63/#161/#202" are the repo's internal ledger numbers (they do NOT resolve on GitHub).
+`docs/spike/SPIKE-FINDINGS.md`. Incident hashes (38dfba7, 3725ec9, 99fa1b9, PR #107/#132/#133/#134/#135)
+from git history; "#63/#161/#202" are the repo's internal ledger numbers (they do NOT resolve on
+GitHub). At refresh time **PR #140** (601032a — the migrateOnLoad lineage fix) was **not yet
+merged**; the `ingestChange` caveat above stands until it lands.
 
 Re-verify drift-prone facts:
 
 ```bash
-grep -n "SYNC_CAUGHT_UP" packages/contract/src/index.ts            # marker string
+grep -n "SYNC_CAUGHT_UP\|SYNC_FRAME_\|SYNC_RESYNC" packages/contract/src/index.ts  # wire constants
+git log origin/development --oneline -5                            # PR #140 merged yet?
 grep -n "COMPACT_THRESHOLD" apps/worker/src/doc-do.ts              # compaction bound
 grep -n "resolveFigure" apps/web/src/store/routine.ts              # still frozen-style? (v5 step 3)
 grep -n "☐" docs/PLAN.md | head                                    # which v5 open boxes remain

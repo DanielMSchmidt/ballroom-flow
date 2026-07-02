@@ -75,7 +75,7 @@ order-of-magnitude, not SLA.
 | `pnpm build` | Exit 0. **Only `apps/web` has a build script** (`tsc --noEmit` + `vite build` → `apps/web/dist`). ~890 kB JS + 2.75 MB Automerge WASM; a chunk-size warning is **normal**; PWA `sw.js` generated, precache ~3596 KiB. domain/contract/worker build nothing. | 13.3s |
 | `pnpm typecheck` | Exit 0 across all 4 workspaces (`pnpm -r typecheck`). | 12.2s |
 | `pnpm lint` | Exit 0, 279 files, ~340ms. **1 pre-existing warning**: `packages/domain/src/fork.test.ts:282` unused `variantAttributesForEdit`. If you see exactly one warning there, that's baseline, not your change. | 1.3s |
-| `pnpm test` | Exit 0. **domain 227 passed / 3 skipped** (23 files; skips = `seed-library.test.ts`, US-054); **contract 11 passed**; **web 331 passed / 0 skipped** (41 files, jsdom); **worker 150 passed / 7 skipped** (21 files; `ops.test.ts` ×5 US-049, `me-profile.test.ts` ×2 US-053). Worker tests run in **real workerd** via vitest-pool-workers — the 48s is genuine. | ~58s total |
+| `pnpm test` | At HEAD `3693ff6` (2026-07-02, post-#133/#134/#135): **domain 232 passed / 3 skipped** (23 files; skips = `seed-library.test.ts`, US-054); **contract 11 passed**; **web 333 passed / 0 skipped** (41 files, jsdom); **worker 161 passed / 7 skipped + 1 KNOWN deterministic failure** — `routes/fork.test.ts` "is independent of the origin" (the migrateOnLoad incident; fix pending as PR #140, after which the worker suite is 162/7 and `pnpm test` exits 0 again). That exact failure is baseline, not your change. Worker tests run in **real workerd** via vitest-pool-workers — the ~50s is genuine; under heavy sandbox load `starter.test.ts` can additionally hit its 5s timeout (environmental; passes in isolation). | ~60s total |
 | `pnpm coverage` | Exit 0. Thresholds are **armed** — a drop below any floor fails. Per-metric floors, measured actuals, and ratchet semantics are single-homed in **ballroom-flow-validation-and-qa** §6. | 65.7s |
 | `node scripts/gen-library.mjs` / `node scripts/gen-figure-charts.mjs` | Both exit 0 — offline, byte-deterministic (`git diff` stays empty on unchanged seeds). Output counts, seed semantics, and the charting workflow: **ballroom-flow-figure-data-pipeline**. | seconds |
 | `pnpm --filter web exec playwright test --list` | 87 tests in 14 files across 3 projects; with `--grep @smoke --project=chromium-desktop` → 24 tests. | ~5s |
@@ -230,7 +230,9 @@ expected move (see **ballroom-flow-change-control**).
 
 ## Provenance and maintenance
 
-- **Date-stamp:** 2026-07-02, repo HEAD `70eed7e` on `development`.
+- **Date-stamp:** 2026-07-02, repo HEAD `70eed7e`; test-count row refreshed same day at HEAD
+  `3693ff6` (post-#133/#134/#135; PR #140 pending — until it merges, `pnpm test` exits
+  non-zero on the one known worker failure) on `development`.
 - **Verified against:** live execution of every command in §2 in a fresh sandbox on
   2026-07-02; direct reads of `package.json`, `.nvmrc`, `pnpm-workspace.yaml`,
   `lefthook.yml`, `packages/domain/vitest.config.ts`, `apps/worker/vitest.config.ts`,

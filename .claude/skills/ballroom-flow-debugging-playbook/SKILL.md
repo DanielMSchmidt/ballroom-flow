@@ -48,6 +48,7 @@ build/install/env problems (pnpm allowlist, Playwright browser pinning, secrets)
 | 9 | Worker test "no such table" flake | Shared-D1 migration bookkeeping race | direct SQL in `test-support/seed.ts` |
 | 10 | `a11y.test.tsx` axe timeouts under CI load | axe is O(DOM nodes) | render one dance + headroom |
 | 11 | Scary wrangler/workerd/jsdom log lines | Known harmless noise | §11 → diagnostics §3 — do nothing |
+| 12 | Peer/RPC change silently ignored: `applyRawChange`/`ingestChange` returns false, heads unchanged | Live-doc vs persisted-lineage divergence | the migrateOnLoad incident; PR #140 |
 
 ---
 
@@ -58,7 +59,7 @@ Every remote change re-renders through the store. Two distinct root causes, both
 - **Unstable materialization** (42f7d39, PR #121): the store called `A.toJS` on every sync
   frame → fresh object identity per render; plus the role-aware hybrid could swap a stale
   REST snapshot under an open editor. Fix pattern: `DocConnection.materialized()` is
-  **memoized by Automerge heads** (`apps/web/src/store/doc-connection.ts:253-263` — an
+  **memoized by Automerge heads** (`apps/web/src/store/doc-connection.ts:266-276` — an
   unchanged doc returns the *same* object reference), `readPlacements` reuses arrays, the
   view latches to live once hydrated, and the step editor waits for the figure's own live doc.
 - **Effect keyed on an inline closure** (90bed2d, PR #130): `useOverlay` keyed its effect on
@@ -83,21 +84,21 @@ The 2026-06-28 seed-race cluster (PRs #78/#79/#80 superseded by #81, then #94):
 
 - **Client raced the seed** (9509d30): `addPlacement` opened the figure-doc WebSocket
   *before* `POST /api/figures` had seeded the DO → empty catch-up, figure "missing"
-  until reload. Fix: the `pendingFigures` gate (`apps/web/src/store/routine.ts:473`) —
+  until reload. Fix: the `pendingFigures` gate (`apps/web/src/store/routine.ts:475`) —
   connect only after create resolves.
 - **Server side** (c43ebed): connect catch-up used `getDoc()`, which auto-materialized
   **and persisted** an empty placeholder into an unseeded DO, tripping `seedDoc`'s
   no-clobber guard forever; and `seedDoc` persisted but never broadcast to already-connected
   sockets. Fix: `loadPersisted` (no auto-materialize) on the connect path
-  (`apps/worker/src/doc-do.ts:145-159,421-423`); `seedDoc` broadcasts (`doc-do.ts:208`).
+  (`apps/worker/src/doc-do.ts:194,499-505`); `seedDoc` broadcasts (`doc-do.ts:282`).
 - **Two-state model collapse** (621721e, then 2cdeee8/PR #94): "null figure" used to render
   "Unknown figure" while still loading. Now there are **five** states —
   `FigureLoadStatus = "pending" | "loading" | "live" | "missing" | "error"`
-  (`apps/web/src/store/routine.ts:67`) — plus a registry preflight to distinguish missing
+  (`apps/web/src/store/routine.ts:68`) — plus a registry preflight to distinguish missing
   vs failed, and `DocConnection` auto-reconnect with capped backoff.
 
 **Discriminating experiment:** which of the five states is the placement actually in
-(`figureStatus`, `routine.ts:561`)? `pending` stuck → the create POST never resolved (check
+(`figureStatus`, `routine.ts:563`)? `pending` stuck → the create POST never resolved (check
 network / worker 4xx). `loading` stuck → WS catch-up never completed (check for
 `SYNC_CAUGHT_UP` arrival; server-side, `debugChangeRowCount` on the figure DO — see
 ballroom-flow-diagnostics-and-tooling). `missing` → registry row exists but doc unseeded
@@ -114,8 +115,9 @@ Two separate bugs that look identical (the flake-class lesson — see Rule zero)
 - **Hydration** (97e7fea, PR #57): the store flipped "live" on socket **OPEN**, before
   catch-up applied — edits went into a not-yet-replayed doc. Passed on localhost timing
   only. Fix: the DO sends `SYNC_CAUGHT_UP` (`"ballroom:sync:caught-up"`,
-  `packages/contract/src/index.ts:140`; sent at `apps/worker/src/doc-do.ts:430`) and "live"
-  means catch-up-applied (`apps/web/src/store/doc-connection.ts:332`).
+  `packages/contract/src/index.ts:140`; sent at `apps/worker/src/doc-do.ts:510`, after the
+  one-frame snapshot catch-up since PR #134) and "live" means catch-up-applied
+  (`apps/web/src/store/doc-connection.ts:296,342-364`).
 - **Durability** (4ef16ac, PR #58): initial content was written by the **client** after
   create — an immediate reload showed "Untitled routine". Fix: server-side
   `seedDoc(content)` DO RPC, no-clobber, seeded before any client connects. Caught only by
@@ -123,16 +125,18 @@ Two separate bugs that look identical (the flake-class lesson — see Rule zero)
 
 **Discriminating experiment:** is the data *in the DO* after the symptom?
 Reproduce in a worker test using `reloadForTest()` (drops in-memory state, forces reload
-from SQLite; `apps/worker/src/doc-do.ts:638`) and inspect the doc. Data present but the UI
+from SQLite; `apps/worker/src/doc-do.ts:756`) and inspect the doc. Data present but the UI
 missed it → hydration/broadcast class (client). Data absent → durability class (the write
 never reached the DO, or was clobbered — check `seedDoc` ordering and no-clobber).
 In E2E, `--repeat-each=10` on the journey plus a hard reload step separates
 "sometimes stale" (hydration) from "always lost after reload" (durability).
 
 **Fix pattern:** every lifecycle transition (open → hydrated → durable → broadcast) needs
-an explicit acknowledged signal; never infer one from another. The open reconnect-resend
-work (unacknowledged local changes, internal #161, PLAN §9) is the same family — treat
-"edits lost across a reconnect" as that open item, not a new bug.
+an explicit acknowledged signal; never infer one from another. Reconnect resend
+(unacknowledged local changes, internal #161) **shipped in PR #134** — the client merges the
+catch-up snapshot and re-sends what the server lacks (`doc-connection.ts` `mergeSnapshot`
+:385 / `resendMissing` :424) — so "edits lost across a reconnect" is now a regression of
+that fix, not an open item. Also check row 12 (lineage divergence) before blaming resend.
 
 ### 4. Replicas appear to diverge
 
@@ -146,10 +150,12 @@ bytes or JSON-order comparison, it is probably a false alarm.
 **If heads genuinely differ after both peers are idle and connected:** a change was never
 delivered/applied. Check, in order: (a) the sender was actually live (row 3 — writes before
 `SYNC_CAUGHT_UP`); (b) the receiver's socket survived (`DocConnection` reconnect/backoff);
-(c) the DO broadcast it (`doc-do.ts` `broadcast` :615 — a failed `send` marking is an open
-PLAN §9 item); (d) the change wasn't rejected at the boundary as a permission violation
-(row 6). **If heads match but rendered content differs** → not a CRDT bug: stale
-materialization (row 1) or the store's read path.
+(c) the DO broadcast it (`doc-do.ts` `broadcast` :709 — since PR #134 a failed `send` closes
+that socket with `SYNC_RESYNC_CLOSE_CODE` so the client reconnects to a fresh snapshot);
+(d) the change wasn't rejected at the boundary as a permission violation (row 6); (e) the
+change wasn't silently deferred on a diverged lineage (row 12). **If heads match but
+rendered content differs** → not a CRDT bug: stale materialization (row 1) or the store's
+read path.
 
 **If content *converges* but wrongly** (e.g. concurrent reorder loses an edit): identity-vs-
 position bug. Reorder was once a delete-and-reinsert splice that clobbered concurrent
@@ -173,11 +179,11 @@ from `apps/worker/`; for the E2E database add
 keeps its state). Empty `ownerId` or NULL `title` on a doc that has content → a
 destructive projection wrote it. Also check `deletedAt` — everything is soft-deleted;
 "vanished" rows are usually tombstoned, and every list query filters `deletedAt IS NULL`.
-In tests, drive the alarm deterministically with `runAlarmForTest()` (`doc-do.ts:737`).
+In tests, drive the alarm deterministically with `runAlarmForTest()` (`doc-do.ts:855`).
 
 **Fix pattern:** D1 is a *derived* index — the doc is the source of truth. Projections
 must derive identity **from the loaded doc** and upsert non-destructively (CASE/COALESCE,
-see `projectToD1`, `doc-do.ts:796`). Related: alarm steps (compact / project / journal /
+see `projectToD1`, `doc-do.ts:914`). Related: alarm steps (compact / project / journal /
 expire invites) each run in their own try/catch (6c3b8ab) so one failure can't skip the
 rest — a "missing" side effect may be a swallowed, logged step failure, not a logic bug.
 
@@ -191,11 +197,11 @@ Two verified traps, one enforcement rule:
   that's how an owner's own figureType notes vanished from their own routine.
 - **Role was frozen at the WS handshake** (99fa1b9): a removed editor kept live write
   access until reconnect, because the role lived in the hibernation attachment. Fix:
-  `refreshConnectedRoles()` (`doc-do.ts:543`) re-resolves from D1 and closes revoked
+  `refreshConnectedRoles()` (`doc-do.ts:626`) re-resolves from D1 and closes revoked
   sockets with code 1008; it's called by member-removal and invite-redeem. A stale-role
   symptom means some *new* membership-mutation path forgot to call it.
 - Commenters are gated by **effect, not label** (eb04a33; `commenterChangeAllowed`,
-  `doc-do.ts:484`): a frame is classified by applying it and diffing; annotation authorship
+  `doc-do.ts:567`): a frame is classified by applying it and diffing; annotation authorship
   is checked against the socket-verified Clerk `sub`, never a client-sent `authorId`.
 
 **Discriminating experiment:** `GET /api/docs/:id/access` (the 401/403/200-with-role
@@ -223,7 +229,7 @@ Most reports here are **working as designed** — check the rules before debuggi
 **Discriminating experiment:** inspect the invite row (`redeemedAt`, `expiresAt`, `role`)
 and count the user's owned routines (`deletedAt IS NULL`) in D1. If behavior contradicts
 the table above, *then* it's a bug — start at `POST /api/invites/:token/redeem`
-(`apps/worker/src/index.ts:653`) and check that `refreshConnectedRoles` fired (row 6).
+(`apps/worker/src/index.ts:658`) and check that `refreshConnectedRoles` fired (row 6).
 
 ### 8. Worker test failures from DO id reuse
 
@@ -274,13 +280,36 @@ touching timeouts.
 Wrangler telemetry 403s, workerd `Broken pipe` at E2E shutdown, jsdom's
 `Failed to parse URL` stderr, the deliberate `doc-do alarm ... projection failed`
 error-path test line, the Vite chunk-size warning, and the single pre-existing biome
-warning at `fork.test.ts:282` are all verified harmless (as of 2026-07-02) — do not
+warning in domain `fork.test.ts` (:282, unused variable) are all verified harmless (as
+of 2026-07-02, HEAD `3693ff6`) — do not
 "fix" them, do not let them distract a triage. The canonical table with per-line
 interpretation lives in **ballroom-flow-diagnostics-and-tooling** §3; the rule of
 thumb: a line is only noise if the run's exit code and test verdicts are green.
 
 Also not a code bug: Playwright browser-version mismatches in sandboxes (`playwright
 install` blocked by proxy) — that's an environment issue; see ballroom-flow-build-and-env.
+
+### 12. A change is silently swallowed (`ingestChange`/`applyRawChange` → false, heads unchanged)
+
+`ingestChange` treats "heads unchanged after apply" as a duplicate — but Automerge also
+leaves heads unchanged when it **defers** a change whose deps are missing, so a change built
+on a lineage the live doc never applied is silently dropped. That is exactly the 2026-07-02
+**migrateOnLoad incident** (#133/#135 interaction, fix pending as PR #140/`601032a`):
+`migrateOnLoad` persisted its migration change during transient reads (`getFigureSnapshot`,
+connect catch-up — both call `loadPersisted` directly, not `getDoc`) without advancing the
+instance's materialized `this.doc`, so the persisted change log and the live doc forked.
+
+**Discriminating experiment:** decode the persisted change log (`A.decodeChange` over the
+DO's stored changes; `debugChangeRowCount` for the count) and compare against
+`A.getAllChanges(live doc)` / their heads. If the persisted log contains a change the live
+doc lacks (the incident's signature: persisted = `[seed, ballroom:migrate(deps seed)]`,
+live = `[seed]`), you have lineage divergence — the swallowed change is *deferred*, not
+duplicate.
+
+**Fix pattern:** the change log must never contain a change the live doc hasn't applied —
+any path that persists a change must also advance the in-memory doc (PR #140's fix), the
+invariant `ingestChange` itself maintains by persisting only after a successful apply.
+Pattern 2 in **ballroom-flow-failure-archaeology** ("open ≠ hydrated ≠ durable").
 
 ---
 
@@ -317,7 +346,7 @@ reach for during triage:
 - **Two-user E2E helpers** — `openTwoUsers` / `expectConverged` in
   `apps/web/e2e/support/two-users.ts` for any convergence or flicker repro.
 - **DO debug hooks** — `reloadForTest`, `debugChangeRowCount`, `buildChangeForTest`,
-  `runAlarmForTest`, `debugPersistedSize` on `DocDO` (`apps/worker/src/doc-do.ts:638-737,1085`)
+  `runAlarmForTest`, `debugPersistedSize` on `DocDO` (`apps/worker/src/doc-do.ts:756-855,1203`)
   for hydrated-vs-durable and alarm questions.
 - **Playwright traces** — config already sets `retries: 1` + `trace: "on-first-retry"`
   (`apps/web/playwright.config.ts:21,32`); a CI E2E failure's second attempt has a full
@@ -329,7 +358,10 @@ When the fix is scoped: TDD + PR-into-`development` rules are in
 
 ## Provenance and maintenance
 
-Written 2026-07-02 against repo HEAD `70eed7e` on `development`. All file:line pointers,
+Written 2026-07-02 against repo HEAD `70eed7e`; **refreshed 2026-07-02 against HEAD `3693ff6`**
+(after PRs #133/#134/#135 — line anchors in `doc-do.ts`/`doc-connection.ts`/`routine.ts`
+re-verified; row 12 added for the migrateOnLoad incident, whose fix **PR #140**/`601032a` was
+not yet merged at refresh) on `development`. All file:line pointers,
 enum values, table/column names, and commit hashes verified directly against the working
 tree and `git log` on that date; historical narratives cross-checked against commit
 messages and in-code comments (e.g. `seed.ts:98-104`, `do-id.ts` header, `a11y.test.tsx`
