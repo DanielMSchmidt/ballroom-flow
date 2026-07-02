@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LIBRARY_FIGURES } from "./library";
+import { CURRENT_SCHEMA_VERSION } from "./migrations";
 import { buildGoldenWaltzBasic } from "./starter-routine";
 
 const seq = () => {
@@ -20,7 +21,10 @@ describe("buildGoldenWaltzBasic", () => {
     expect(section?.name).toBe("Basic");
     expect(section?.placements).toHaveLength(6);
     expect(routine.annotations).toEqual([]);
-    expect(routine.schemaVersion).toBe(1);
+    // A freshly-minted doc is born at CURRENT — never a hardcoded legacy `1`
+    // (v5 milestone step 1, PLAN §7: the ladder runs on the DO load path, so
+    // every fresh doc must already carry the current schema).
+    expect(routine.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
   it("creates 6 owned waltz figures in the listed order, each with library attributes", () => {

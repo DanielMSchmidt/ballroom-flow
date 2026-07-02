@@ -9,6 +9,7 @@
 import type { DanceId } from "./dances";
 import type { Attribute, FigureDoc, RoutineDoc } from "./doc-types";
 import { LIBRARY_FIGURES } from "./library";
+import { CURRENT_SCHEMA_VERSION } from "./migrations";
 import { keyBetween, sequentialKeys } from "./order";
 
 /** The starter's figures, in choreography order, by their canonical figureType. */
@@ -52,7 +53,7 @@ export function buildGoldenWaltzBasic(
       name: lib.name,
       source: "custom",
       attributes: (lib.attributes ?? []) as Attribute[],
-      schemaVersion: 1,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       deletedAt: null,
     });
   }
@@ -79,7 +80,7 @@ export function buildGoldenWaltzBasic(
       },
     ],
     annotations: [],
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   };
 

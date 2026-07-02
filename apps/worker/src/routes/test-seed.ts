@@ -4,6 +4,7 @@
 // see wrangler.toml [env.e2e]) — never in dev/staging/prod, where the flag is
 // unset and the routes 404. They mirror the seedDb shape used by the worker
 // unit tests, but write to the live D1 binding via drizzle.
+import { CURRENT_SCHEMA_VERSION } from "@ballroom/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { documentRegistry, membership, users } from "../db/schema";
@@ -144,7 +145,7 @@ testSeed.post("/api/test/seed", async (c) => {
           })),
         })),
         annotations: [],
-        schemaVersion: 1,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
         deletedAt: null,
       });
     }
@@ -197,7 +198,7 @@ testSeed.post("/api/test/seed", async (c) => {
       name: f.name,
       source: f.scope === "global" ? "library" : "custom",
       attributes: f.attributes ?? [],
-      schemaVersion: 1,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       deletedAt: null,
     });
     seeded++;

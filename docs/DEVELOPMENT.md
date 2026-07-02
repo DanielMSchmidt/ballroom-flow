@@ -120,9 +120,10 @@ beforeAll(async () => {
 });
 ```
 
-(The migrations dir is empty until M2; `readD1Migrations` returns `[]` for it,
-which is fine.) Building the `seedDb` / `authedContext` fixtures on top of this
-is the test engineer's job.
+(M2 landed the D1 schema — `apps/worker/migrations/` now holds the real,
+numbered `.sql` files `applyD1Migrations` replays per suite; `readD1Migrations`
+returning `[]` was only ever the pre-M2 bootstrap state.) The `seedDb` /
+`authedContext` fixtures build on top of this.
 
 ### EXPLAIN QUERY PLAN gate
 

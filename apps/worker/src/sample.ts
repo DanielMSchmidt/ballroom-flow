@@ -4,7 +4,7 @@
 // the seed is fully idempotent across cold starts: the same ids are produced on
 // every invocation, and seedDoc + ON CONFLICT DO NOTHING guard against clobbering.
 // Distinct from the onboarding gift (starter.ts) which FORKS this template.
-import { buildGoldenWaltzBasic } from "@ballroom/domain";
+import { buildGoldenWaltzBasic, CURRENT_SCHEMA_VERSION } from "@ballroom/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { createFigureRows } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
@@ -87,7 +87,7 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
     ...routine,
     ownerId: APP_OWNER,
     templateOf: routine.id,
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   } as unknown as Record<string, unknown>);
 

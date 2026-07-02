@@ -176,6 +176,9 @@ export interface DomainApi {
   // US-013 migration ladder
   CURRENT_SCHEMA_VERSION: number;
   migrate(doc: unknown): { schemaVersion: number } & Record<string, unknown>;
+  // v5 milestone step 1 (PLAN §7) — the DO-load-path draft-mutating counterpart
+  // of `migrate`, called inside an Automerge `A.change`.
+  migrateDraft(draft: { schemaVersion: number } & Record<string, unknown>): void;
 
   // US-020 (re-exported permission helpers, used by the worker layer too)
   capabilitiesFor?(role: MembershipRole): { canEdit: boolean; canAnnotate: boolean };

@@ -240,3 +240,97 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     expect(migrated.figureType).toBe("feather");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// v5 milestone step 1 (PLAN §7) — `migrateDraft`: the DO-load-path
+// draft-mutating counterpart of `migrate`, called inside an Automerge
+// `A.change`. Exercised here against plain mutable objects (a Draft duck-types
+// as a plain object for get/set/delete/enumerate — see `proxies.js`'s
+// `ownKeys`/`getOwnPropertyDescriptor` traps — so a plain-object test proves
+// the same write-back logic the DO relies on).
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
+  it("mutates a v1 draft in place to the same result migrate() would compute", async () => {
+    const { migrate, migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const shape = () => ({
+      schemaVersion: 1,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [{ id: "a1", kind: "step", count: 1, value: "H" }],
+    });
+    const draft = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    migrateDraft(draft);
+    expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrate(shape())).toEqual(draft);
+  });
+
+  it("is a total no-op — no key is written — when the draft is already current", async () => {
+    const { migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const target = { schemaVersion: CURRENT_SCHEMA_VERSION, kind: "routine", sections: [] };
+    // A Proxy that throws on any write/delete trap: proves migrateDraft performs
+    // ZERO mutations on an already-current doc (PLAN §7: "no empty change, no
+    // version downgrade" — the enclosing A.change must produce nothing to persist).
+    const guarded = new Proxy(target, {
+      set() {
+        throw new Error("migrateDraft wrote to an already-current draft");
+      },
+      deleteProperty() {
+        throw new Error("migrateDraft deleted a key on an already-current draft");
+      },
+    }) as unknown as { schemaVersion: number } & Record<string, unknown>;
+    expect(() => migrateDraft(guarded)).not.toThrow();
+    expect(target).toEqual({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      kind: "routine",
+      sections: [],
+    });
+  });
+
+  it("leaves an untouched sub-tree's object identity alone (only changed keys are written)", async () => {
+    const { migrateDraft } = await importDomain();
+    // schemaVersion 3 → 4 only backfills sortKeys; a figure-shaped draft (no
+    // `sections`) has nothing for the v3→v4 step to do, so `attributes` must
+    // survive as the SAME array reference (never rebuilt/reassigned).
+    const attributes = [{ id: "a1", kind: "footwork", count: 1, value: "H" }];
+    const draft = {
+      schemaVersion: 3,
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes,
+    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    migrateDraft(draft);
+    expect(draft.schemaVersion).toBe(4);
+    expect(draft.attributes).toBe(attributes); // untouched — same reference
+  });
+
+  it("deletes a stripped key (v2→v3 overlay) rather than assigning undefined", async () => {
+    const { migrateDraft } = await importDomain();
+    const draft = {
+      schemaVersion: 2,
+      figureType: "feather",
+      dance: "foxtrot",
+      attributes: [],
+      overlay: { overrides: {}, tombstones: [], additions: [] },
+    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    migrateDraft(draft);
+    expect("overlay" in draft).toBe(false);
+    for (const v of Object.values(draft)) expect(v).not.toBeUndefined();
+  });
+
+  it("is deterministic — migrating two identically-shaped drafts yields identical output", async () => {
+    const { migrateDraft } = await importDomain();
+    const shape = () => ({
+      schemaVersion: 2,
+      sections: [
+        { id: "s1", name: "A", placements: [{ id: "p1", figureRef: "f1" }] },
+        { id: "s2", name: "B", placements: [] },
+      ],
+    });
+    const d1 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    const d2 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    migrateDraft(d1);
+    migrateDraft(d2);
+    expect(d1).toEqual(d2);
+  });
+});

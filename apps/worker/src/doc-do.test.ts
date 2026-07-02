@@ -1,6 +1,12 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import * as A from "@automerge/automerge";
 import { SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
+import {
+  CURRENT_SCHEMA_VERSION,
+  type RoutineDoc,
+  readRoutine,
+  undoLastChange,
+} from "@ballroom/domain";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { listRoutines } from "./db/routines";
 import { authedContext } from "./test-support/authed-context";
@@ -772,6 +778,141 @@ describe("US-025 DO alarm: routine-card projection (bars / figureCount / forkedF
         "WHERE dr.ownerId = ? AND dr.type = 'routine' AND dr.deletedAt IS NULL " +
         "ORDER BY dr.updatedAt DESC",
       ["u_card"],
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// v5 milestone step 1 (PLAN §7, 2026-07-02 review): "the ladder runs on the DO
+// load path, and fresh docs are stamped CURRENT_SCHEMA_VERSION". Before this,
+// `migrate()`/`CURRENT_SCHEMA_VERSION` had zero production callers — every seed
+// site stamped a hardcoded `schemaVersion: 1` and the system survived on
+// lenient reads only. These tests pin the load-path wiring in doc-do.ts
+// (`loadPersisted` → `migrateOnLoad`, `packages/domain/src/migrations.ts`
+// `migrateDraft`).
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("v5 milestone step 1 — migration ladder wired into the DO load path", () => {
+  it("migrates a persisted v1-shaped doc on load and the upgrade STAYS persisted after reload", async () => {
+    // Arrange: a routine seeded at schemaVersion 1 — legacy shape: a section/
+    // placement with no sortKey (v3→v4), plus a stray top-level `attributes`
+    // array carrying a legacy `step`-kind entry (v1→v2 footwork retag; the
+    // ladder only checks for the array's presence, so exercising both steps on
+    // one doc is legitimate here even though a real routine doc never carries
+    // `attributes`).
+    const { stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: "rt_legacy",
+      title: "Legacy Routine",
+      dance: "waltz",
+      ownerId: "u_legacy",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          placements: [{ id: "p1", figureRef: "f1", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      attributes: [{ id: "a1", kind: "step", count: 1, value: "H" }],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+
+    // seedDoc caches the UNMIGRATED doc straight into memory (this.doc) — force
+    // the SQLite cold-load path so `loadPersisted`/`migrateOnLoad` actually runs.
+    await stub.reloadForTest();
+    const migrated = await stub.getSnapshot();
+
+    const migratedTyped = migrated as unknown as {
+      schemaVersion: number;
+      sections: Array<{ sortKey?: string; placements: Array<{ sortKey?: string }> }>;
+      attributes: Array<{ kind: string }>;
+    };
+    expect(migratedTyped.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migratedTyped.sections[0]?.sortKey).toEqual(expect.any(String));
+    expect(migratedTyped.sections[0]?.placements[0]?.sortKey).toEqual(expect.any(String));
+    expect(migratedTyped.attributes[0]?.kind).toBe("footwork"); // step → footwork retag (v1→v2)
+
+    // STAYS migrated: the upgrade was PERSISTED as a real change, not just
+    // recomputed on this one read — a further eviction/reload must read back
+    // the SAME migrated state (identical sortKeys — no re-migration artifact).
+    await stub.reloadForTest();
+    const again = await stub.getSnapshot();
+    expect(again).toEqual(migrated);
+  });
+
+  it("a brand-new doc is born at CURRENT_SCHEMA_VERSION, never a hardcoded legacy version", async () => {
+    const { stub } = freshDoc("routine");
+    // No seedDoc: the FIRST touch auto-materializes the empty routine (getDoc's
+    // never-before-used path), which must itself stamp CURRENT — not `1`.
+    await stub.applyChange({ op: "addSection", name: "Basic" });
+    const fresh = await stub.getSnapshot();
+    expect(fresh.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it("a doc already at CURRENT passes through untouched — no extra change is persisted", async () => {
+    const { stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: "rt_current",
+      title: "Already Current",
+      dance: "waltz",
+      ownerId: "u_cur",
+      sections: [],
+      annotations: [],
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      deletedAt: null,
+    });
+    const rowsAfterSeed = await stub.debugChangeRowCount();
+    await stub.reloadForTest(); // forces loadPersisted/migrateOnLoad to run
+    expect(await stub.debugChangeRowCount()).toBe(rowsAfterSeed); // no migration change appended
+    expect((await stub.getSnapshot()).schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it("the migration change is never a user's undo target — undo reverts the user's edit, not the schema upgrade", async () => {
+    const realDocs = env.DOC_DO;
+    const name = uniqueDocName("routine");
+    const id = realDocs.idFromName(name);
+    const stub = realDocs.get(id) as unknown as DocStub;
+
+    // A legacy v1 doc, migrated on load (as above).
+    await stub.seedDoc({
+      id: name,
+      title: "Legacy",
+      dance: "waltz",
+      ownerId: "u_undo",
+      sections: [{ id: "s1", name: "Intro", placements: [] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.reloadForTest(); // runs + persists the migration
+
+    // A real user's op-based edit AFTER the migration.
+    await stub.applyChange({ op: "addSection", name: "UserEdit" });
+
+    await runInDurableObject(
+      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (instance) => {
+        const doc = (instance as unknown as { getDoc: () => A.Doc<RoutineDoc> }).getDoc();
+        const changes = A.getAllChanges(doc).map((c) => A.decodeChange(c));
+        const migration = changes.find((c) => c.message === "ballroom:migrate");
+        expect(migration).toBeDefined();
+        const userEdit = changes[changes.length - 1];
+        expect(userEdit?.message).not.toBe("ballroom:migrate");
+        // The migration and the user's op-based edit are attributed to DIFFERENT
+        // actors — the structural guarantee that keeps per-user undo
+        // (`undoLastChange`, which filters strictly by actor id) from ever
+        // selecting the migration change.
+        expect(userEdit?.actor).not.toBe(migration?.actor);
+
+        // Undo, scoped to the user's own actor: reverts ONLY their edit.
+        const undone = undoLastChange(doc, userEdit?.actor as string);
+        const routine = readRoutine(undone);
+        expect(routine.sections.some((s) => s.name === "UserEdit")).toBe(false);
+        // The migration's effects (schemaVersion bump) are untouched by the undo.
+        expect(routine.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      },
     );
   });
 });
