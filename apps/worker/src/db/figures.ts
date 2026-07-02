@@ -17,47 +17,60 @@ export interface NewFigure {
   baseFigureRef?: string | null;
 }
 
+export type CreateFigureResult = "ok" | "owner_conflict";
+
 /**
- * Eager-create a figure's D1 rows atomically: a registry row (type="account-figure",
- * so it never counts against the owned-ROUTINE quota) + the creator's owner
- * membership (role=editor — same belt-and-suspenders as routines). Idempotent on
- * figureRef so a re-create (or a retried request) is a no-op upsert. The CRDT
- * figure doc itself is seeded by the client into its DO once this lands.
+ * Eager-create a figure's D1 rows: a registry row (type="account-figure", so it
+ * never counts against the owned-ROUTINE quota) + the creator's owner membership
+ * (role=editor — same belt-and-suspenders as routines). Idempotent on figureRef
+ * for the SAME owner (a retried request is a no-op). The CRDT figure doc itself
+ * is seeded into its DO once this lands.
+ *
+ * AUTHZ (2026-07-02 review): this must never be an upsert. Posting an EXISTING
+ * figureRef owned by someone else previously (a) rewrote the victim's registry
+ * title and (b) inserted the CALLER's editor membership on the victim's doc — a
+ * viewer→editor escalation, since figureRefs leak to every viewer of any shared
+ * routine. Now: guarded insert (`onConflictDoNothing`), then re-read the row —
+ * if it belongs to a different owner, report `owner_conflict` and write NOTHING
+ * else (the insert-then-check order stays race-safe: the loser of a concurrent
+ * insert sees the winner's ownerId on the re-read).
  */
-export async function createFigureRows(db: D1Database, f: NewFigure): Promise<void> {
+export async function createFigureRows(db: D1Database, f: NewFigure): Promise<CreateFigureResult> {
   const now = Date.now();
   const d = drizzle(db);
-  await d.batch([
-    d
-      .insert(documentRegistry)
-      .values({
-        docRef: f.figureRef,
-        type: "account-figure",
-        ownerId: f.ownerId,
-        doName: f.figureRef,
-        title: f.name,
-        dance: f.dance,
-        figureType: f.figureType,
-        // forkedFromRef carries the figure's baseFigureRef lineage (reused index
-        // column, no migration) — a variant has a base, a custom figure is null.
-        forkedFromRef: f.baseFigureRef ?? null,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: documentRegistry.docRef,
-        set: { title: f.name, updatedAt: now },
-      }),
-    d
-      .insert(membership)
-      .values({
-        id: `mem_${f.ownerId}_${f.figureRef}`,
-        docRef: f.figureRef,
-        userId: f.ownerId,
-        role: "editor",
-        createdAt: now,
-      })
-      .onConflictDoNothing(),
-  ]);
+  await d
+    .insert(documentRegistry)
+    .values({
+      docRef: f.figureRef,
+      type: "account-figure",
+      ownerId: f.ownerId,
+      doName: f.figureRef,
+      title: f.name,
+      dance: f.dance,
+      figureType: f.figureType,
+      // forkedFromRef carries the figure's baseFigureRef lineage (reused index
+      // column, no migration) — a variant has a base, a custom figure is null.
+      forkedFromRef: f.baseFigureRef ?? null,
+      updatedAt: now,
+    })
+    .onConflictDoNothing();
+  const row = await d
+    .select({ ownerId: documentRegistry.ownerId })
+    .from(documentRegistry)
+    .where(eq(documentRegistry.docRef, f.figureRef))
+    .get();
+  if (!row || row.ownerId !== f.ownerId) return "owner_conflict"; // fail closed
+  await d
+    .insert(membership)
+    .values({
+      id: `mem_${f.ownerId}_${f.figureRef}`,
+      docRef: f.figureRef,
+      userId: f.ownerId,
+      role: "editor",
+      createdAt: now,
+    })
+    .onConflictDoNothing();
+  return "ok";
 }
 
 export interface GlobalFigureRow {

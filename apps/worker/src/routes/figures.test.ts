@@ -16,6 +16,15 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // must be rejected 400 BEFORE any seeding.
 // ─────────────────────────────────────────────────────────────────────────
 
+/** Seed a routine OWNED by `userId` and return its ref — POST /api/figures
+ *  requires edit rights on `routineId` (2026-07-02 authz: the placement edge
+ *  feeds the role cascade, so figure-create is gated on the routine). */
+async function seedOwnedRoutine(userId: string): Promise<string> {
+  const rt = uniqueDocName("rt");
+  await seedDb({ docs: [{ docRef: rt, type: "routine", ownerId: userId, doName: rt }] });
+  return rt;
+}
+
 describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
   let kp2: TestKeypair;
   const docs2 = env.DOC_DO as unknown as DocNamespace;
@@ -36,6 +45,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
     await seedDb({
       users: [{ id: "u_attr", displayName: "A", identityColor: "#111", plan: "free" }],
     });
+    const rtAttr = await seedOwnedRoutine("u_attr");
 
     const res = await SELF.fetch("https://x/api/figures", {
       method: "POST",
@@ -45,7 +55,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
         name: "Natural Turn",
         dance: "waltz",
         figureType: "natural-turn",
-        routineId: "rt_test",
+        routineId: rtAttr,
         attributes: [
           {
             id: "wdsf-natural-turn-waltz-s1",
@@ -198,6 +208,7 @@ describe("#187 figure-doc projection", () => {
     await seedDb({
       users: [{ id: "u_fig", displayName: "F", identityColor: "#111", plan: "free" }],
     });
+    const rtFig = await seedOwnedRoutine("u_fig");
 
     const res = await SELF.fetch("https://x/api/figures", {
       method: "POST",
@@ -207,7 +218,7 @@ describe("#187 figure-doc projection", () => {
         name: "Feather",
         dance: "foxtrot",
         figureType: "feather",
-        routineId: "rt_test",
+        routineId: rtFig,
       }),
     });
     expect(res.status).toBe(201);
@@ -241,6 +252,7 @@ describe("#187 figure-doc projection", () => {
     const figureRef = uniqueDocName("fig");
     const ctx = await authedContext({ keypair: kp, userId: "u_p", docRef: figureRef, role: null });
     await seedDb({ users: [{ id: "u_p", displayName: "P", identityColor: "#111", plan: "free" }] });
+    const rtP = await seedOwnedRoutine("u_p");
 
     // Before projection: the owner can't reach their own (un-indexed) figure.
     expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
@@ -254,7 +266,7 @@ describe("#187 figure-doc projection", () => {
         name: "Feather",
         dance: "foxtrot",
         figureType: "feather",
-        routineId: "rt_test",
+        routineId: rtP,
       }),
     });
     expect(res.status).toBe(201);
@@ -283,6 +295,7 @@ describe("#187 figure-doc projection", () => {
         { id: "u_s", displayName: "S", identityColor: "#222", plan: "free" },
       ],
     });
+    const rtO = await seedOwnedRoutine("u_o");
     await SELF.fetch("https://x/api/figures", {
       method: "POST",
       headers: { ...owner.authHeaders(), "content-type": "application/json" },
@@ -291,7 +304,7 @@ describe("#187 figure-doc projection", () => {
         name: "Three Step",
         dance: "foxtrot",
         figureType: "three_step",
-        routineId: "rt_test",
+        routineId: rtO,
       }),
     });
     const conn = await tryConnect(figureRef, stranger.authHeaders());
@@ -302,6 +315,7 @@ describe("#187 figure-doc projection", () => {
     const figureRef = uniqueDocName("fig");
     const ctx = await authedContext({ keypair: kp, userId: "u_q", docRef: figureRef, role: null });
     await seedDb({ users: [{ id: "u_q", displayName: "Q", identityColor: "#111", plan: "free" }] });
+    const rtQ = await seedOwnedRoutine("u_q");
     await SELF.fetch("https://x/api/figures", {
       method: "POST",
       headers: { ...ctx.authHeaders(), "content-type": "application/json" },
@@ -310,7 +324,7 @@ describe("#187 figure-doc projection", () => {
         name: "Reverse Wave",
         dance: "waltz",
         figureType: "reverse_wave",
-        routineId: "rt_test",
+        routineId: rtQ,
       }),
     });
     // The figure is NOT a routine: the routine list (and thus the quota count) excludes it.
@@ -664,5 +678,186 @@ describe("T5 save-to-library promotion", () => {
       "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = 'u_race' AND type = 'account-figure' AND forkedFromRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
     ).first<{ n: number }>();
     expect(cnt?.n).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 2026-07-02 review authz regressions — POST /api/figures cross-user attacks.
+//
+// The route previously (a) never checked the caller's rights on `routineId`
+// and (b) upserted the registry row + inserted the caller's editor membership
+// on ANY posted figureRef. Combined with the role cascade (a routine editor
+// may edit the figures the routine references), that was a viewer→editor
+// privilege escalation on any figure whose ref leaked (refs are visible to
+// every viewer of any shared routine). These tests pin the closed holes.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("2026-07-02 authz: POST /api/figures cross-user attacks", () => {
+  it("403s when the caller cannot edit the target routine, writing nothing", async () => {
+    const figureRef = uniqueDocName("fig");
+    const victimRoutine = uniqueDocName("rt");
+    const attacker = await authedContext({
+      keypair: kp,
+      userId: "u_atk1",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [
+        { id: "u_atk1", displayName: "A", identityColor: "#111", plan: "free" },
+        { id: "u_vic1", displayName: "V", identityColor: "#222", plan: "free" },
+      ],
+      // The routine belongs to the victim; the attacker has NO membership on it.
+      docs: [{ docRef: victimRoutine, type: "routine", ownerId: "u_vic1", doName: victimRoutine }],
+    });
+
+    const res = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...attacker.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Sneaky",
+        dance: "waltz",
+        figureType: "natural-turn",
+        routineId: victimRoutine,
+      }),
+    });
+    expect(res.status).toBe(403);
+
+    // Nothing was written: no registry row, no membership, no placement edge.
+    const row = await env.DB.prepare("SELECT docRef FROM document_registry WHERE docRef = ?")
+      .bind(figureRef)
+      .first();
+    expect(row).toBeNull();
+    const edge = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM placement_edge WHERE figureRef = ?",
+    )
+      .bind(figureRef)
+      .first<{ n: number }>();
+    expect(edge?.n).toBe(0);
+  });
+
+  it("409s on a figureRef owned by someone else — no rewrite, no membership, no cascade", async () => {
+    // The escalation scenario: the victim owns a figure; the attacker re-POSTs
+    // the victim's figureRef bound to the attacker's OWN routine, which used to
+    // (a) rewrite the victim's registry title, (b) insert the attacker's editor
+    // membership on the victim's doc, and (c) create a placement edge that
+    // cascades the attacker to editor. All three must be refused.
+    const figureRef = uniqueDocName("fig");
+    const victim = await authedContext({
+      keypair: kp,
+      userId: "u_vic2",
+      docRef: figureRef,
+      role: null,
+    });
+    const attacker = await authedContext({
+      keypair: kp,
+      userId: "u_atk2",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [
+        { id: "u_vic2", displayName: "V", identityColor: "#111", plan: "free" },
+        { id: "u_atk2", displayName: "A", identityColor: "#222", plan: "free" },
+      ],
+    });
+    const victimRoutine = await seedOwnedRoutine("u_vic2");
+    const attackerRoutine = await seedOwnedRoutine("u_atk2");
+
+    // Victim legitimately creates the figure.
+    const create = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...victim.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Victim Figure",
+        dance: "waltz",
+        figureType: "natural-turn",
+        routineId: victimRoutine,
+      }),
+    });
+    expect(create.status).toBe(201);
+
+    // Attacker re-POSTs the victim's figureRef into their own routine.
+    const attack = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...attacker.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        figureRef,
+        name: "Defaced",
+        dance: "waltz",
+        figureType: "natural-turn",
+        routineId: attackerRoutine,
+      }),
+    });
+    expect(attack.status).toBe(409);
+
+    // The victim's registry row is untouched (owner AND title).
+    const row = await env.DB.prepare(
+      "SELECT ownerId, title FROM document_registry WHERE docRef = ?",
+    )
+      .bind(figureRef)
+      .first<{ ownerId: string; title: string }>();
+    expect(row).toMatchObject({ ownerId: "u_vic2", title: "Victim Figure" });
+
+    // No attacker membership row was inserted.
+    const mem = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM membership WHERE docRef = ? AND userId = 'u_atk2'",
+    )
+      .bind(figureRef)
+      .first<{ n: number }>();
+    expect(mem?.n).toBe(0);
+
+    // No placement edge from the attacker's routine (no cascade path).
+    const edge = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM placement_edge WHERE routineRef = ? AND figureRef = ?",
+    )
+      .bind(attackerRoutine, figureRef)
+      .first<{ n: number }>();
+    expect(edge?.n).toBe(0);
+
+    // Net effect: the attacker still cannot connect to the victim's figure.
+    const conn = await tryConnect(figureRef, attacker.authHeaders());
+    expect(conn.status).toBe(403);
+  });
+
+  it("stays idempotent for the legitimate owner (retried request → 201, single membership)", async () => {
+    const figureRef = uniqueDocName("fig");
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_own3",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_own3", displayName: "O", identityColor: "#111", plan: "free" }],
+    });
+    const rt = await seedOwnedRoutine("u_own3");
+    const body = JSON.stringify({
+      figureRef,
+      name: "Mine",
+      dance: "waltz",
+      figureType: "whisk",
+      routineId: rt,
+    });
+    const first = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body,
+    });
+    const retry = await SELF.fetch("https://x/api/figures", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body,
+    });
+    expect(first.status).toBe(201);
+    expect(retry.status).toBe(201);
+    const mem = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM membership WHERE docRef = ? AND userId = 'u_own3'",
+    )
+      .bind(figureRef)
+      .first<{ n: number }>();
+    expect(mem?.n).toBe(1);
   });
 });

@@ -345,7 +345,18 @@ app.post("/api/figures", async (c) => {
     return c.json({ error: "invalid_attribute" }, 400);
   }
 
-  await createFigureRows(c.env.DB, {
+  // AUTHZ (2026-07-02 review): creating a figure binds it to `routineId` — the
+  // placement edge feeds the role CASCADE, so linking a figure into a routine
+  // grants that routine's editors edit rights on it. The caller must therefore
+  // be able to EDIT the routine; without this check any authenticated user could
+  // link a victim's figureRef into their own routine and cascade themselves to
+  // editor on it.
+  const routineRole = await resolveEffectiveRole(c.env.DB, routineId, user.sub);
+  if (routineRole !== "editor" && routineRole !== "owner") {
+    return c.json({ error: "forbidden" }, 403);
+  }
+
+  const created = await createFigureRows(c.env.DB, {
     figureRef,
     ownerId: user.sub,
     name,
@@ -353,6 +364,12 @@ app.post("/api/figures", async (c) => {
     figureType,
     baseFigureRef,
   });
+  // A figureRef that already belongs to someone else is rejected outright —
+  // no registry rewrite, no membership, no placement edge, no seed (see
+  // createFigureRows' authz note).
+  if (created === "owner_conflict") {
+    return c.json({ error: "figure_ref_conflict" }, 409);
+  }
   // Record the routine→figure edge so the routine's co-members get read access to
   // this figure (cascade): figure docs are otherwise shared independently (US-020).
   await linkPlacement(c.env.DB, routineId, figureRef);
@@ -426,8 +443,9 @@ app.post("/api/figures/save-to-library", async (c) => {
   // conflict, resolve the row the winning request inserted and return it as
   // alreadySaved — never a 500. (seedDoc runs only after the rows commit, so a
   // loser never seeds an orphan DO.)
+  let created: Awaited<ReturnType<typeof createFigureRows>>;
   try {
-    await createFigureRows(c.env.DB, {
+    created = await createFigureRows(c.env.DB, {
       figureRef,
       ownerId: user.sub,
       name,
@@ -441,6 +459,15 @@ app.post("/api/figures/save-to-library", async (c) => {
       return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
     }
     throw err;
+  }
+  // The loser of the unique-index race now surfaces as a skipped insert (guarded
+  // `onConflictDoNothing`) rather than a throw — resolve the winner's copy.
+  if (created === "owner_conflict") {
+    const winner = await findSavedLibraryFigure(c.env.DB, user.sub, baseFigureRef);
+    if (winner) {
+      return c.json({ figureRef: winner, baseFigureRef, alreadySaved: true }, 200);
+    }
+    return c.json({ error: "figure_ref_conflict" }, 409);
   }
   // Seed the figure's CRDT content durably (#205): a FROZEN snapshot of the
   // catalog figure's attributes; `source: "library"` + `baseFigureRef` provenance
