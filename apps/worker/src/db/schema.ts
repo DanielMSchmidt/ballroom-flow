@@ -20,6 +20,20 @@ export const users = sqliteTable("users", {
 
 export type UserRow = typeof users.$inferSelect;
 
+/**
+ * Cache of a user's human name derived from their Clerk session-token claims
+ * (migration 0013). Populated on GET /api/me so co-members can resolve a name for
+ * a logged-in-but-not-onboarded user (who has no `users` row). Keyed by Clerk
+ * `sub`. NOT a substitute for `users` — writing here never implies onboarding.
+ */
+export const userNameCache = sqliteTable("user_name_cache", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  updatedAt: integer("updatedAt").notNull(),
+});
+
+export type UserNameCacheRow = typeof userNameCache.$inferSelect;
+
 /** Per-document membership (US-020). Keyed per (docRef, userId); soft-delete. */
 export const membership = sqliteTable("membership", {
   id: text("id").primaryKey(),

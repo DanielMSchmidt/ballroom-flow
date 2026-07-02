@@ -29,6 +29,9 @@ export interface AuthedContextOptions {
   role?: MembershipRole | null;
   /** Mint an already-expired token (negative path). */
   expired?: boolean;
+  /** Extra JWT claims to embed (e.g. Clerk identity claims like `name`/`email`
+   *  emitted by the session-token template). Merged over the base `{ sub }`. */
+  claims?: Record<string, unknown>;
 }
 
 export interface AuthedContext {
@@ -50,10 +53,10 @@ export interface AuthedContext {
  * forged-connection case (valid JWT, no membership) the DO must reject.
  */
 export async function authedContext(opts: AuthedContextOptions): Promise<AuthedContext> {
-  const { keypair, userId, docRef, role = null, expired = false } = opts;
+  const { keypair, userId, docRef, role = null, expired = false, claims } = opts;
   const token = expired
     ? await makeExpiredJWT(keypair, userId)
-    : await makeTestJWT(keypair, { sub: userId });
+    : await makeTestJWT(keypair, { sub: userId, ...claims });
   const membership: SeedMembership | null = role
     ? { id: `mem_${userId}_${docRef}`, docRef, userId, role }
     : null;

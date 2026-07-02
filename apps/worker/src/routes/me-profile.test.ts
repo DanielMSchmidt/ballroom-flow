@@ -39,6 +39,27 @@ describe("US-019 Clerk sign-in + onboarding (server)", () => {
     expect(await res.json()).toMatchObject({ sub: "user_abc" });
   });
 
+  it("returns a Clerk-claims display name for a not-yet-onboarded user", async () => {
+    // Intent: a logged-in user who hasn't onboarded still shows a real name (from
+    // their Clerk session-token claims) instead of the raw Clerk user id.
+    // Arrange: a verified token carrying a `name` claim, no users row.
+    // Act: GET /api/me. Assert: 200 { onboarded:false, displayName:"Ada Lovelace" }.
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "user_claims",
+      docRef: "n/a",
+      role: null,
+      claims: { name: "Ada Lovelace" },
+    });
+    const res = await SELF.fetch("https://x/api/me", { headers: ctx.authHeaders() });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      sub: "user_claims",
+      onboarded: false,
+      displayName: "Ada Lovelace",
+    });
+  });
+
   it("persists displayName + identityColor on onboarding", async () => {
     // Intent: onboarding writes the User row (displayName + identity color).
     // Arrange: a verified new user. Act: POST /api/onboarding {displayName, identityColor}.

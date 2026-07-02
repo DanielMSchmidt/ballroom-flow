@@ -130,7 +130,15 @@ export function AccountControls(): React.JSX.Element {
   return (
     <>
       <SignedOut>
-        <SignInButton />
+        {/* Render Clerk's SignInButton as the app's real Button (not the bare
+            unstyled default link) so sign-in reads as a proper CTA and matches
+            the E2E control below. SignInButton clones this child + wires its
+            onClick; Button forwards it via {...rest}. */}
+        <SignInButton>
+          <Button variant="primary" size="sm">
+            Sign in
+          </Button>
+        </SignInButton>
       </SignedOut>
       <SignedIn>
         <UserButton />
