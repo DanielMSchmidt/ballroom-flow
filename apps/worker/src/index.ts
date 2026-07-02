@@ -667,6 +667,13 @@ app.post("/api/invites/:token/redeem", async (c) => {
     if (result.reason === "expired") return c.json({ error: "invite_expired" }, 410);
     return c.json({ error: "invite_already_redeemed" }, 409);
   }
+  // A role change (e.g. viewer → editor upgrade) reaches the user's OPEN sockets
+  // too (§5.1 hardening) — best-effort, next connect enforces regardless.
+  try {
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(result.docRef)).refreshConnectedRoles();
+  } catch (err) {
+    console.error("invite redeem: role refresh on open sockets failed", err);
+  }
   return c.json(
     {
       docRef: result.docRef,
@@ -699,6 +706,15 @@ app.delete("/api/docs/:id/members/:userId", async (c) => {
   const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
   if (!role || !can(role, "canInvite")) return c.json({ error: "forbidden" }, 403);
   await removeMember(c.env.DB, docRef, c.req.param("userId"));
+  // §5.1 boundary hardening (2026-07-02): revocation must reach OPEN sockets —
+  // the removed member's live connection is closed by the DO, not left writable
+  // until they happen to reconnect. Best-effort: the membership row is already
+  // tombstoned, so a failure here only delays enforcement to the next connect.
+  try {
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).refreshConnectedRoles();
+  } catch (err) {
+    console.error("member removal: role refresh on open sockets failed", err);
+  }
   return c.json({ ok: true }, 200);
 });
 

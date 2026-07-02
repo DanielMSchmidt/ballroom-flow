@@ -18,6 +18,7 @@ import {
   type Anchor,
   type AnnotationKind,
   addAnnotation,
+  addReply,
   addSection,
   barsForFigure,
   buildDoc,
@@ -43,12 +44,16 @@ interface SocketAttachment {
   actor: string;
   /** The connection's resolved per-document role (US-021); gates socket writes. */
   role: EffectiveRole;
+  /** The authenticated user (Clerk sub) — annotation authorship + role refresh
+   *  (§5.1 boundary hardening, 2026-07-02). Absent only on pre-upgrade sockets. */
+  sub?: string;
 }
 
 /** A high-level mutation request the DO knows how to apply to a routine doc. */
 export type DocOp =
   | ({ op: "addSection"; name: string } & Record<string, unknown>)
   | ({ op: "addAnnotation"; text: string } & Record<string, unknown>)
+  | ({ op: "addReply"; annotationId: string; text: string } & Record<string, unknown>)
   | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
 
 /**
@@ -320,6 +325,11 @@ export class DocDO extends DurableObject<Env> {
             : [{ type: "figure", figureRef: "f1" }],
         });
       }
+      case "addReply":
+        return addReply(doc, String(op.annotationId), {
+          authorId: typeof op.authorId === "string" ? op.authorId : "tester",
+          text: String(op.text),
+        });
       case "deleteAnnotation":
         return softDeleteAnnotation(doc, String(op.id));
       default:
@@ -394,7 +404,7 @@ export class DocDO extends DurableObject<Env> {
     // the DO's own actor, which would break per-user undo), plus the connection's
     // resolved role so webSocketMessage can refuse a read-only socket's writes.
     // Survives hibernation via the socket attachment.
-    const attachment: SocketAttachment = { actor: newActorId(), role };
+    const attachment: SocketAttachment = { actor: newActorId(), role, sub: user.sub };
     server.serializeAttachment(attachment);
 
     // Accept as a Hibernatable WebSocket (handlers are DO methods, so they
@@ -441,11 +451,13 @@ export class DocDO extends DurableObject<Env> {
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === "string") return; // sync frames are binary; ignore text
-    const role = this.socketRole(ws);
+    const att = this.socketAttachment(ws);
+    const role = att?.role ?? null;
     if (!role) return; // no/garbled attachment → read-only
     const bytes = new Uint8Array(message);
     const allowed =
-      can(role, "canEdit") || (can(role, "canAnnotate") && this.touchesOnlyAnnotations(bytes));
+      can(role, "canEdit") ||
+      (can(role, "canAnnotate") && this.commenterChangeAllowed(bytes, att?.sub));
     if (!allowed) return;
     try {
       await this.ingestChange(bytes, ws);
@@ -456,14 +468,21 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Classify a change by EFFECT (US-039/#117): does applying it to the current
-   * doc change anything OTHER than `annotations`? Used to admit a commenter's
-   * annotation while refusing a structural edit, without trusting any
-   * client-supplied label. An unapplyable (malformed) frame is not an annotation.
-   * Compares with tombstones INCLUDED so a structural soft-delete still counts as
-   * structural.
+   * Classify a commenter's change by EFFECT (US-039/#117 + §5.1 boundary
+   * hardening, 2026-07-02): the change must (1) touch ONLY `annotations` — no
+   * structural edit smuggled through a mislabelled frame — and (2) respect
+   * AUTHORSHIP against the socket's verified identity (`sub`), never the
+   * client-controlled `authorId` alone:
+   *   • a created annotation (and any reply) must be authored by `sub`;
+   *   • another author's annotation may only GAIN replies authored by `sub` —
+   *     its own fields (text, tombstone, anchors…) are untouchable;
+   *   • a reply may be edited/tombstoned only by its own author (§4.0
+   *     "reply delete = author-only"); hard removals never pass (soft-delete only).
+   * An unapplyable (malformed) frame is not an annotation. Comparisons include
+   * tombstones so a structural soft-delete still counts as structural.
    */
-  private touchesOnlyAnnotations(change: Uint8Array): boolean {
+  private commenterChangeAllowed(change: Uint8Array, sub: string | undefined): boolean {
+    if (!sub) return false; // pre-upgrade attachment (no identity) → fail closed
     const before = this.getDoc();
     let after: A.Doc<RoutineDoc>;
     try {
@@ -473,16 +492,91 @@ export class DocDO extends DurableObject<Env> {
     } catch {
       return false;
     }
-    const nonAnnotation = (doc: A.Doc<RoutineDoc>): string =>
-      JSON.stringify({ ...readRoutine(doc, { includeDeleted: true }), annotations: [] });
-    return nonAnnotation(before) === nonAnnotation(after);
+    const b = readRoutine(before, { includeDeleted: true });
+    const a = readRoutine(after, { includeDeleted: true });
+    // (1) Structure untouched.
+    if (JSON.stringify({ ...b, annotations: [] }) !== JSON.stringify({ ...a, annotations: [] })) {
+      return false;
+    }
+    // (2) Annotation authorship.
+    const prevById = new Map(b.annotations.map((x) => [x.id, x]));
+    for (const ann of a.annotations) {
+      const prev = prevById.get(ann.id);
+      prevById.delete(ann.id);
+      if (!prev) {
+        // Created: the annotation and everything in it must be sub's.
+        if (ann.authorId !== sub) return false;
+        if (ann.replies.some((r) => r.authorId !== sub)) return false;
+        continue;
+      }
+      if (JSON.stringify(prev) === JSON.stringify(ann)) continue; // untouched
+      // Non-reply fields may change only on the commenter's OWN annotation.
+      const sansReplies = (x: typeof ann): string => JSON.stringify({ ...x, replies: [] });
+      if (sansReplies(prev) !== sansReplies(ann) && prev.authorId !== sub) return false;
+      // Reply diff: created replies must be sub's; edits/tombstones only on own.
+      const prevReplies = new Map(prev.replies.map((r) => [r.id, r]));
+      for (const r of ann.replies) {
+        const pr = prevReplies.get(r.id);
+        prevReplies.delete(r.id);
+        if (!pr) {
+          if (r.authorId !== sub) return false;
+        } else if (JSON.stringify(pr) !== JSON.stringify(r) && pr.authorId !== sub) {
+          return false;
+        }
+      }
+      if (prevReplies.size > 0) return false; // hard-removed a reply
+    }
+    if (prevById.size > 0) return false; // hard-removed an annotation
+    return true;
   }
 
-  /** The connection's resolved role from its socket attachment, or null. */
-  private socketRole(ws: WebSocket): EffectiveRole | null {
+  /**
+   * Re-resolve every connected socket's role from D1 (§5.1 boundary hardening,
+   * 2026-07-02 — S1): a membership removal or downgrade must reach OPEN sockets,
+   * not just future connects. The member routes call this after any membership
+   * write. A user who no longer resolves is CLOSED (1008 — the client's access
+   * preflight then reports denied, not offline); a changed role is re-attached
+   * so the very next webSocketMessage enforces it. A socket with no verified
+   * identity (pre-upgrade attachment) is closed too — fail closed; the client
+   * reconnects with a fresh token.
+   */
+  async refreshConnectedRoles(): Promise<void> {
+    const doName = this.ctx.storage.sql
+      .exec<{ doName: string | null }>("SELECT doName FROM doc_meta WHERE id = 0")
+      .toArray()[0]?.doName;
+    if (!doName) return; // never connected → nothing attached
+    for (const ws of this.ctx.getWebSockets()) {
+      let att: SocketAttachment | null = null;
+      try {
+        att = ws.deserializeAttachment() as SocketAttachment | null;
+      } catch {
+        // fall through to fail-closed close below
+      }
+      if (!att?.sub) {
+        try {
+          ws.close(1008, "access revoked");
+        } catch {
+          // already closing/closed
+        }
+        continue;
+      }
+      const role = await resolveEffectiveRole(this.env.DB, doName, att.sub);
+      if (!role) {
+        try {
+          ws.close(1008, "access revoked");
+        } catch {
+          // already closing/closed
+        }
+        continue;
+      }
+      if (role !== att.role) ws.serializeAttachment({ ...att, role });
+    }
+  }
+
+  /** The connection's attachment (role + verified identity), or null. */
+  private socketAttachment(ws: WebSocket): SocketAttachment | null {
     try {
-      const att = ws.deserializeAttachment() as SocketAttachment | null;
-      return att?.role ?? null;
+      return (ws.deserializeAttachment() as SocketAttachment | null) ?? null;
     } catch {
       return null; // no/garbled attachment (e.g. a never-accepted socket) → read-only
     }
