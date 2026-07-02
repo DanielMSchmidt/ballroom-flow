@@ -7,6 +7,7 @@
 import type { EffectiveRole, MembershipRole } from "@ballroom/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { isAdmin } from "./admin";
 import { cascadeFigureRole } from "./placement-edge";
 import { documentRegistry, membership, userNameCache, users } from "./schema";
 
@@ -40,6 +41,21 @@ export async function ownerOf(db: D1Database, docRef: string): Promise<string | 
   return row?.ownerId ?? null;
 }
 
+/** The document's registry `type` + `ownerId` in ONE indexed PK lookup, or null
+ *  if the doc isn't indexed. Used by the effective-role resolver so the
+ *  global-figure branch and the owner check share a single read. */
+async function registryFor(
+  db: D1Database,
+  docRef: string,
+): Promise<{ type: string; ownerId: string } | null> {
+  const row = await drizzle(db)
+    .select({ type: documentRegistry.type, ownerId: documentRegistry.ownerId })
+    .from(documentRegistry)
+    .where(eq(documentRegistry.docRef, docRef))
+    .get();
+  return row ?? null;
+}
+
 /**
  * The user's EFFECTIVE role on a document for the permission boundary (US-021).
  * A stored membership wins; otherwise the document owner is elevated to "owner"
@@ -53,8 +69,19 @@ export async function resolveEffectiveRole(
 ): Promise<EffectiveRole | null> {
   const role = await roleFor(db, docRef, userId);
   if (role) return role;
-  const owner = await ownerOf(db, docRef);
-  if (owner !== null && owner === userId) return "owner";
+  const reg = await registryFor(db, docRef);
+  if (reg) {
+    if (reg.ownerId === userId) return "owner";
+    // Global figure docs (⟳v5, §5.1/D28): every signed-in user is an implicit
+    // VIEWER; only admins (User.isAdmin) are editors. A non-admin edit is realized
+    // client-side as a variant spawn (§5.2), and the DO boundary rejects a direct
+    // non-admin write. This precedes the routine→figure cascade below so a routine
+    // editor who merely PLACES a catalog figure never gets write access to the
+    // shared, admin-curated catalog doc (which would defeat variant protection).
+    if (reg.type === "global-figure") {
+      return (await isAdmin(db, userId)) ? "editor" : "viewer";
+    }
+  }
   // Cascade (2026-06-27): a routine member gets access to the figures that routine
   // references — an EDITOR may edit them, a commenter/viewer reads — so sharing a
   // routine shares its figures (+ annotations, which already live in the routine

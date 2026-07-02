@@ -75,6 +75,28 @@ export async function createFigureRows(db: D1Database, f: NewFigure): Promise<Cr
   return "ok";
 }
 
+/**
+ * Additively project a GLOBAL figure's D1 registry row (⟳v5 seeder, D30). Keyed
+ * by its cross-dance ref `globalFigureRef(dance, figureType)` = docRef = doName;
+ * `ownerId = "app"`; type `global-figure` (the effective-role global branch, not a
+ * membership, grants read to every user / write to admins). `INSERT OR IGNORE`
+ * makes it idempotent — an existing row is the source of truth (D30), never
+ * overwritten. Returns true when a NEW row was inserted. No owner membership row:
+ * global docs are gated by `type`, not membership (resolveEffectiveRole).
+ */
+export async function createGlobalFigureRow(
+  db: D1Database,
+  f: { docRef: string; name: string; dance: string; figureType: string },
+): Promise<boolean> {
+  const res = await db
+    .prepare(
+      "INSERT OR IGNORE INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, updatedAt) VALUES (?, 'global-figure', 'app', ?, ?, ?, ?, ?)",
+    )
+    .bind(f.docRef, f.docRef, f.figureType, f.dance, f.name, Date.now())
+    .run();
+  return (res.meta?.changes ?? 0) > 0;
+}
+
 export interface GlobalFigureRow {
   docRef: string;
   figureType: string | null;
