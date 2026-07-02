@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
-import {
-  figureMatchesLibraryOrigin,
-  globalFigureRef,
-  LIBRARY_FIGURES,
-  type LibraryFigure,
-  libraryFiguresForDance,
-  libraryGroupsForDance,
-  libraryGroupsForFilter,
-  parseGlobalFigureRef,
-} from "./library";
+import { figureMatchesLibraryOrigin, globalFigureRef, LIBRARY_FIGURES, libraryFigureByRef, libraryFiguresForDance, libraryGroupsForDance, libraryGroupsForFilter, parseGlobalFigureRef, type LibraryFigure } from "./library";
 import { parseAttributeWrite } from "./schemas";
 
 // US-032 — the application-global figure library (client-bundled catalog shaped
@@ -146,6 +137,23 @@ describe("parseGlobalFigureRef — the inverse of globalFigureRef (⟳v5 bookmar
     expect(parseGlobalFigureRef("01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBeNull();
     expect(parseGlobalFigureRef("")).toBeNull();
     expect(parseGlobalFigureRef("global:onlyonepart")).toBeNull();
+  });
+});
+
+describe("libraryFigureByRef — global ref → catalog figure (⟳v5 base fallback)", () => {
+  it("round-trips globalFigureRef for a real catalog figure", () => {
+    // The bundled-catalog fallback the client uses to resolve a variant's base when
+    // no live base doc is at hand (§5.2). It must recover the SAME figure the ref
+    // was minted from — including a hyphenated figureType.
+    const nat = LIBRARY_FIGURES.find((f) => f.dance === "waltz" && f.figureType === "natural-turn");
+    const found = libraryFigureByRef(globalFigureRef("waltz", "natural-turn"));
+    expect(found).toBe(nat);
+    expect(found?.name).toBe(nat?.name);
+  });
+
+  it("returns null for a non-catalog ref or a ULID (an account figure's id)", () => {
+    expect(libraryFigureByRef("01HB0000000000000000000000")).toBeNull();
+    expect(libraryFigureByRef("global:waltz:not-a-real-family")).toBeNull();
   });
 });
 
