@@ -1,4 +1,6 @@
 import { env, runInDurableObject } from "cloudflare:test";
+import * as A from "@automerge/automerge";
+import { SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { listRoutines } from "./db/routines";
 import { authedContext } from "./test-support/authed-context";
@@ -237,6 +239,41 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     expect(after).toEqual(before);
     // The duplicate must NOT append a second row for the same change.
     expect(await stub.debugChangeRowCount()).toBe(rowsBefore);
+  });
+
+  it("catches a new client up with ONE snapshot frame, not a per-change replay (D10)", async () => {
+    // Intent: the on-connect catch-up is a SINGLE tagged snapshot frame (the whole
+    //   doc as an A.save blob), NOT one binary frame per historical change. As a
+    //   doc ages the old replay grew unbounded on the wire (compaction bounds the
+    //   SQLite log, not the replay); the snapshot is O(1) frames regardless of N.
+    // Assert: exactly ONE frame; its 1-byte tag is SYNC_FRAME_SNAPSHOT; and
+    //   A.load of the payload reconstructs the doc's full state.
+    const { stub } = freshDoc("routine");
+    // N>1 changes: a per-change replay would be 4+ frames (plus the seed change).
+    for (const name of ["A", "B", "C", "D"]) await stub.applyChange({ op: "addSection", name });
+
+    const frames = await stub.catchUpFramesForTest();
+    expect(frames).toHaveLength(1); // ONE snapshot frame, not a per-change replay
+    const frame = frames[0];
+    if (!frame) throw new Error("expected a catch-up frame");
+    expect(frame[0]).toBe(SYNC_FRAME_SNAPSHOT); // the 1-byte type tag
+
+    // A.load of the payload (frame minus the tag byte) equals the doc.
+    const loaded = A.toJS(A.load<{ sections?: { name: string }[] }>(frame.slice(1))) as {
+      sections?: { name: string }[];
+    };
+    const snap = await stub.getSnapshot();
+    expect((loaded.sections ?? []).map((s) => s.name)).toEqual(
+      (snap.sections ?? []).map((s) => s.name),
+    );
+  });
+
+  it("sends NO snapshot frame for a not-yet-seeded doc (only the caught-up marker)", async () => {
+    // A connect to an unseeded doc must not synthesize a placeholder snapshot —
+    // it sends no snapshot frame at all (the client keeps its own empty init and
+    // goes live on the caught-up marker; a later seedDoc broadcasts the content).
+    const { stub } = freshDoc("routine");
+    expect(await stub.catchUpFramesForTest()).toHaveLength(0);
   });
 
   it("drops a malformed WS frame without crashing the handler (frames are untrusted)", async () => {
