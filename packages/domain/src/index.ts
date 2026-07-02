@@ -69,7 +69,7 @@ export {
   libraryGroupsForDance,
   libraryGroupsForFilter,
 } from "./library";
-export { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
+export { CURRENT_SCHEMA_VERSION, migrate, migrateDraft } from "./migrations";
 export {
   ensureSortKeys,
   keyBetween,

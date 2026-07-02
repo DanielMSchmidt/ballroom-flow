@@ -18,6 +18,13 @@
 // v3→v4: backfill section/placement `sortKey`). A future v5 step adds TWO
 // localized edits here (add a `MIGRATIONS[4]` entry AND bump
 // CURRENT_SCHEMA_VERSION = 5), with no caller changes.
+//
+// WIRED (2026-07-02, v5 milestone step 1, PLAN §7): the DO load path
+// (`apps/worker/src/doc-do.ts` `loadPersisted`) runs this ladder on every
+// persisted doc via {@link migrateDraft} below and PERSISTS the upgrade as a
+// normal (migration-actor-attributed) change, so an older doc is brought
+// current in storage — not just lenient-read-shimmed on the way out. Every
+// fresh-doc call site stamps `CURRENT_SCHEMA_VERSION` (never a literal `1`).
 
 import { sequentialKeys } from "./order";
 
@@ -36,8 +43,7 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
 
 /**
  * The ordered ladder, keyed by source version. `MIGRATIONS[n]` upgrades a v`n`
- * doc to v`n+1`. Empty today (no schema change since v1); add `1: (doc) => …`
- * here when v2 lands.
+ * doc to v`n+1`. A v5 step adds `MIGRATIONS[4]` here (see the file header).
  */
 const MIGRATIONS: Record<number, MigrationStep> = {
   // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
@@ -173,3 +179,64 @@ export function migrate(doc: unknown): VersionedDoc {
 
 /** Re-exported so tests can build a synthetic ladder. @internal */
 export type { MigrationStep };
+
+/**
+ * A live, mutable document — same shape as {@link VersionedDoc}, but a caller
+ * passes an Automerge DRAFT (the object inside an `A.change` callback), not a
+ * detached plain object. Kept as a structural type (no `@automerge/automerge`
+ * import here) — a draft behaves like a plain object for reads/writes/deletes,
+ * which is all this file needs.
+ */
+type MutableVersionedDoc = { schemaVersion: number } & Record<string, unknown>;
+
+/**
+ * Bring an Automerge DRAFT up to `CURRENT_SCHEMA_VERSION`, mutating it in
+ * place — the DO load path's counterpart to {@link migrate} (which returns a
+ * new plain object; a draft must instead be WRITTEN TO inside its `A.change`
+ * transaction so the upgrade is captured as a real, persistable change).
+ *
+ * `migrate` (the pure ladder over a plain object) stays the single source of
+ * truth for WHAT a migration does; this function only decides HOW to replay
+ * that onto a live draft: read the draft as a detached snapshot (a draft
+ * enumerates/serializes like a plain object — see `proxies.js`'s `ownKeys`/
+ * `getOwnPropertyDescriptor` traps — so a JSON round-trip is a safe, cheap
+ * materialize), run the ladder once, then write back only the top-level keys
+ * that actually changed (plus delete any key the ladder dropped, e.g. the
+ * v2→v3 `overlay` strip) — never touching keys the ladder left alone, so an
+ * untouched sub-tree keeps its Automerge object identity.
+ *
+ * A doc already at or above `CURRENT_SCHEMA_VERSION` is left COMPLETELY
+ * untouched (no field writes) — the caller can therefore tell "nothing to do"
+ * apart from "migrated" by checking whether the enclosing `A.change` produced
+ * any changes at all (PLAN §7: no empty change, no version downgrade).
+ *
+ * DETERMINISM (PLAN §5.3): `migrate` is pure and the v3→v4 sortKey backfill
+ * assigns keys from array order alone, so two callers who migrate the same
+ * starting doc bytes compute byte-identical `after` values — the ladder's
+ * existing convergence guarantee carries over unchanged; this function adds
+ * no non-determinism of its own (no randomness, no wall-clock reads).
+ */
+export function migrateDraft(draft: MutableVersionedDoc): void {
+  const from = typeof draft.schemaVersion === "number" ? draft.schemaVersion : 1;
+  if (from >= CURRENT_SCHEMA_VERSION) return; // already current — untouched.
+
+  const before = JSON.parse(JSON.stringify(draft)) as VersionedDoc;
+  const after = migrate(before);
+
+  // Drop any key the ladder removed (e.g. the v2→v3 `overlay` strip). NEVER
+  // assign `undefined` — Automerge cannot store it — so a removed key is
+  // deleted, not nulled out.
+  for (const key of Object.keys(before)) {
+    if (!(key in after)) delete draft[key];
+  }
+  // Write back only keys whose value actually changed, so an untouched
+  // sub-tree (the common case for most docs — most steps are no-ops on most
+  // shapes) keeps its existing Automerge object identity/history.
+  for (const key of Object.keys(after)) {
+    if (key === "schemaVersion") continue; // set once, below.
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+      draft[key] = after[key];
+    }
+  }
+  draft.schemaVersion = after.schemaVersion;
+}
