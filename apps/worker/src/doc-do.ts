@@ -251,7 +251,18 @@ export class DocDO extends DurableObject<Env> {
     const changes = A.getChanges(doc, migrated);
     if (changes.length === 0) return doc; // migrateDraft found nothing to do.
     this.persist(changes);
-    return A.clone(migrated); // fresh actor for this instance's future changes.
+    const fresh = A.clone(migrated); // fresh actor for this instance's future changes.
+    // CRITICAL: the instance itself must ADOPT the migrated doc. loadPersisted is
+    // also called by read paths (getFigureSnapshot, the HTTP snapshot fan-out)
+    // while `this.doc` may already be set from an earlier seed/edit — leaving it
+    // pre-migration would diverge memory from SQLite: a client that then builds a
+    // change on snapshot-derived state (whose deps include the migration change)
+    // gets silently QUEUED against the stale in-memory doc, and its edit is
+    // dropped until the DO evicts. Assigning is monotonically safe: every
+    // ingested change is persisted immediately, so `this.doc`'s state is always
+    // a prefix of what SQLite replays — the migrated doc is strictly ahead.
+    this.doc = fresh;
+    return fresh;
   }
 
   /**
