@@ -666,11 +666,14 @@ app.post("/api/invites/:token/redeem", async (c) => {
     return c.json({ error: "invite_already_redeemed" }, 409);
   }
   // A role change (e.g. viewer → editor upgrade) reaches the user's OPEN sockets
-  // too (§5.1 hardening) — best-effort, next connect enforces regardless.
-  try {
-    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(result.docRef)).refreshConnectedRoles();
-  } catch (err) {
-    console.error("invite redeem: role refresh on open sockets failed", err);
+  // too (§5.1 hardening) — best-effort, next connect enforces regardless. Skipped
+  // for an already-member redirect: no role changed, so there's nothing to push.
+  if (!result.alreadyMember) {
+    try {
+      await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(result.docRef)).refreshConnectedRoles();
+    } catch (err) {
+      console.error("invite redeem: role refresh on open sockets failed", err);
+    }
   }
   return c.json(
     {
@@ -678,6 +681,7 @@ app.post("/api/invites/:token/redeem", async (c) => {
       role: result.role,
       requestedRole: result.requestedRole,
       downgraded: result.downgraded,
+      alreadyMember: result.alreadyMember ?? false,
     },
     200,
   );
