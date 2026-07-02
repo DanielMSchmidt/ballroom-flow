@@ -300,11 +300,15 @@ describe("US-021 Permission boundary at the DO connection", () => {
     await runInDurableObject(
       docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
       async (inst) => {
-        const wsAs = (role: string) =>
-          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+        const wsAs = (role: string, sub = "u_co") =>
+          ({ deserializeAttachment: () => ({ actor: "x", role, sub }) }) as unknown as WebSocket;
 
-        // A commenter's ANNOTATION change → applied.
-        const anno = await inst.buildChangeForTest({ op: "addAnnotation", text: "rise earlier" });
+        // A commenter's ANNOTATION change (authored as THEMSELVES) → applied.
+        const anno = await inst.buildChangeForTest({
+          op: "addAnnotation",
+          text: "rise earlier",
+          authorId: "u_co",
+        });
         const rows0 = await inst.debugChangeRowCount();
         await inst.webSocketMessage(wsAs("commenter"), anno.buffer as ArrayBuffer);
         expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
@@ -322,6 +326,129 @@ describe("US-021 Permission boundary at the DO connection", () => {
         expect(await inst.debugChangeRowCount()).toBe(rows2);
       },
     );
+  });
+
+  it("enforces annotation AUTHORSHIP for commenters (§5.1 hardening, 2026-07-02 S2)", async () => {
+    // Intent: the effect-based gate alone let a commenter edit/tombstone ANY
+    //   author's annotation (authorId is client-controlled). Now the socket's
+    //   verified identity bounds what a commenter may touch: create their own,
+    //   reply to anyone's, but never modify/tombstone another author's
+    //   annotation, forge authorship, or delete someone else's reply.
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_com", displayName: "Co", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(
+      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      async (inst) => {
+        const wsAs = (role: string, sub: string) =>
+          ({ deserializeAttachment: () => ({ actor: "x", role, sub }) }) as unknown as WebSocket;
+
+        // The OWNER authors an annotation (applied via the editor path).
+        const ownerAnno = await inst.buildChangeForTest({
+          op: "addAnnotation",
+          text: "owner note",
+          authorId: "u_owner",
+        });
+        await inst.webSocketMessage(wsAs("editor", "u_owner"), ownerAnno.buffer as ArrayBuffer);
+        const snap = await inst.getSnapshot();
+        const target = snap.annotations.find((a) => a.text === "owner note");
+        expect(target).toBeDefined();
+        const targetId = (target as { id: string }).id;
+
+        // A commenter TOMBSTONING the owner's annotation → dropped.
+        const kill = await inst.buildChangeForTest({ op: "deleteAnnotation", id: targetId });
+        const rows0 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter", "u_com"), kill.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows0);
+
+        // A commenter FORGING authorship (creating an annotation "as" the owner) → dropped.
+        const forged = await inst.buildChangeForTest({
+          op: "addAnnotation",
+          text: "forged",
+          authorId: "u_owner",
+        });
+        const rows1 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter", "u_com"), forged.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows1);
+
+        // A commenter REPLYING (as themselves) to the owner's annotation → applied.
+        const reply = await inst.buildChangeForTest({
+          op: "addReply",
+          annotationId: targetId,
+          text: "makes sense",
+          authorId: "u_com",
+        });
+        const rows2 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter", "u_com"), reply.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows2 + 1);
+
+        // The SAME tombstone bytes from the AUTHOR (commenter role) → applied —
+        // authorship, not role, was the gate.
+        const rows3 = await inst.debugChangeRowCount();
+        await inst.webSocketMessage(wsAs("commenter", "u_owner"), kill.buffer as ArrayBuffer);
+        expect(await inst.debugChangeRowCount()).toBe(rows3 + 1);
+      },
+    );
+  });
+
+  it("revocation reaches OPEN sockets: refreshConnectedRoles closes a removed member (§5.1, 2026-07-02 S1)", async () => {
+    // Intent: removing a member used to leave their live WebSocket writable
+    //   indefinitely (role frozen in the hibernation attachment). The member
+    //   routes now tell the DO to re-resolve roles: a removed member's socket
+    //   is CLOSED; a still-valid member's stays open.
+    const docRef = uniqueDocName("rt");
+    const editor = await authedContext({
+      keypair: kp,
+      userId: "u_gone",
+      docRef,
+      role: "editor",
+    });
+    const keeper = await authedContext({
+      keypair: kp,
+      userId: "u_stays",
+      docRef,
+      role: "editor",
+    });
+    await seedDb({
+      users: [
+        { id: "u_gone", displayName: "G", identityColor: "#111", plan: "free" },
+        { id: "u_stays", displayName: "S", identityColor: "#222", plan: "free" },
+      ],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+      memberships: [editor.membership, keeper.membership].flatMap((m) => (m ? [m] : [])),
+    });
+
+    const connect = async (headers: Record<string, string>) => {
+      const res = await tryConnect(docRef, headers);
+      expect(res.status).toBe(101);
+      const ws = res.webSocket as WebSocket;
+      ws.accept();
+      return ws;
+    };
+    const goneWs = await connect(editor.authHeaders());
+    const staysWs = await connect(keeper.authHeaders());
+    const closed: string[] = [];
+    goneWs.addEventListener("close", () => closed.push("gone"));
+    staysWs.addEventListener("close", () => closed.push("stays"));
+
+    // Tombstone u_gone's membership, then refresh (what the member route does).
+    await env.DB.prepare(
+      "UPDATE membership SET deletedAt = ? WHERE docRef = ? AND userId = 'u_gone'",
+    )
+      .bind(Date.now(), docRef)
+      .run();
+    const stub = docs.get(docs.idFromName(docRef)) as unknown as {
+      refreshConnectedRoles(): Promise<void>;
+    };
+    await stub.refreshConnectedRoles();
+    // Let the close event propagate to the client side.
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(closed).toContain("gone");
+    expect(closed).not.toContain("stays");
   });
 
   it("cascades VIEWER on a referenced figure to a routine co-member (sharing a routine shares its figures)", async () => {

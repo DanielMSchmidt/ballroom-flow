@@ -49,7 +49,15 @@ export {
   SUB_BEATS,
 } from "./figure-grid";
 export { matchesFigureType } from "./figuretype";
-export { cloneRoutine, copyOnWrite } from "./fork";
+export {
+  cloneRoutine,
+  copyFigureForFork,
+  copyOnWrite,
+  ownedBeats,
+  resolveFigure,
+  spawnVariant,
+  variantAttributesForEdit,
+} from "./fork";
 export { newId } from "./ids";
 export {
   figureMatchesLibraryOrigin,

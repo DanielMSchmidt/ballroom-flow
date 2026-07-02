@@ -223,4 +223,85 @@ describe("US-010 History-based per-user undo", () => {
     expect(undone.title).toBe("Intro"); // A's string restored (not "")
     expect(undone.note).toBe("B-note"); // B's concurrent edit survives
   });
+
+  // ── PLAN §5.4 soundness regressions (2026-07-02 review) ──────────────────
+  // The two verified failure modes of the positional-replay implementation:
+  // (1) list inverses replayed by index deleted a CONCURRENT peer's element;
+  // (2) a second undo press re-inverted the same change destructively.
+
+  type ItemsDoc = { items: { id: string; label: string }[] };
+
+  it("undoing A's list insert removes ONLY A's element under a concurrent B insert (identity, not index)", async () => {
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    const base = A.from<ItemsDoc>({ items: [{ id: "i1", label: "a" }] }, ACTOR_B);
+    // A and B each insert at index 0, concurrently.
+    const aEdit = A.change(A.clone(base, { actor: ACTOR_A }), (d) =>
+      d.items.splice(0, 0, { id: "A-ins", label: "from A" }),
+    );
+    const bEdit = A.change(A.clone(base, { actor: ACTOR_B }), (d) =>
+      d.items.splice(0, 0, { id: "B-ins", label: "from B" }),
+    );
+    const merged = A.merge(A.merge(A.init<ItemsDoc>(), A.clone(aEdit)), A.clone(bEdit));
+    expect(merged.items).toHaveLength(3);
+    const undone = undoLastChange(merged, ACTOR_A);
+    const ids = undone.items.map((i) => i.id);
+    expect(ids).not.toContain("A-ins"); // A's own insert reverted…
+    expect(ids).toContain("B-ins"); // …B's concurrent insert SURVIVES
+    expect(ids).toContain("i1");
+  });
+
+  it("a second undo press never re-inverts the same change (no destructive repeat)", async () => {
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    const base = A.from<ItemsDoc>(
+      {
+        items: [
+          { id: "x", label: "x" },
+          { id: "y", label: "y" },
+        ],
+      },
+      ACTOR_B,
+    );
+    let doc = A.change(A.clone(base, { actor: ACTOR_A }), (d) =>
+      d.items.splice(1, 0, { id: "NEW", label: "new" }),
+    );
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual(["x", "y"]);
+    // The old bug: the second press replayed `del @1` again and deleted "y".
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual(["x", "y"]); // no-op — nothing of A's left to undo
+  });
+
+  it("successive undos walk back through the actor's own changes, each reverted at most once", async () => {
+    const A = await loadAutomerge();
+    const { undoLastChange } = await importDomain();
+    const base = A.from<ItemsDoc>({ items: [] }, ACTOR_B);
+    let doc = A.change(A.clone(base, { actor: ACTOR_A }), (d) =>
+      d.items.push({ id: "i3", label: "3" }),
+    );
+    doc = A.change(doc, (d) => d.items.push({ id: "i4", label: "4" }));
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual(["i3"]); // last change reverted
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual([]); // walked back to the previous change
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual([]); // nothing left → no-op
+  });
+
+  it("redo restores the exact undone list element, and undo can then revert it again", async () => {
+    const A = await loadAutomerge();
+    const { redoLastChange, undoLastChange } = await importDomain();
+    const base = A.from<ItemsDoc>({ items: [{ id: "i1", label: "a" }] }, ACTOR_B);
+    let doc = A.change(A.clone(base, { actor: ACTOR_A }), (d) =>
+      d.items.splice(1, 0, { id: "i2", label: "b" }),
+    );
+    doc = undoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual(["i1"]);
+    doc = redoLastChange(doc, ACTOR_A);
+    expect(doc.items.map((i) => i.id)).toEqual(["i1", "i2"]); // element restored with its content
+    expect(doc.items[1]?.label).toBe("b");
+    doc = undoLastChange(doc, ACTOR_A); // the redo re-armed the target
+    expect(doc.items.map((i) => i.id)).toEqual(["i1"]);
+  });
 });

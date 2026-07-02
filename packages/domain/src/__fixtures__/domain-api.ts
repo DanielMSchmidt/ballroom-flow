@@ -139,6 +139,26 @@ export interface DomainApi {
     byUser: string,
   ): { variant: FigureDoc | null; placement: Placement };
 
+  // ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02)
+  ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number>;
+  resolveFigure(
+    base: Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment">,
+    variant: FigureDoc,
+  ): FigureDoc;
+  variantAttributesForEdit(
+    base: Pick<FigureDoc, "attributes">,
+    edited: Attribute[],
+    opts?: { now?: number },
+  ): Attribute[];
+  spawnVariant(
+    placement: Placement,
+    globalFigure: FigureDoc,
+    byUser: string,
+    editedAttributes?: Attribute[],
+    opts?: { now?: number },
+  ): { variant: FigureDoc; placement: Placement };
+  copyFigureForFork(figure: FigureDoc, byUser: string): FigureDoc;
+
   // US-010 undo.ts
   undoLastChange<T>(doc: T, actorId: string): T;
   redoLastChange<T>(doc: T, actorId: string): T;

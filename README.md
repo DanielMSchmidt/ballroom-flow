@@ -62,7 +62,6 @@ research/           deep-dive research behind the plan's decisions
 ## Where to read more
 
 - **[`docs/PLAN.md`](docs/PLAN.md)** — the single source of truth (domain model, architecture, milestones, locked decisions).
-- **[`docs/USER-STORIES.md`](docs/USER-STORIES.md)** — the v1 backlog (US-001…054), each annotated with the tests that should pass when it's done.
 - **[`CLAUDE.md`](CLAUDE.md)** — the working guide that routes contributors (human or agent) to the right doc for their task.
 
 > **Status:** Foundations laid (M0 done; design, backlog, test harness, design system, and a full skipped-test scaffold in place). Building starts at **M1 — domain core**.

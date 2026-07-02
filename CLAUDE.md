@@ -18,8 +18,7 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | Document | What it is | Read it when… |
 |---|---|---|
 | **[`docs/PLAN.md`](docs/PLAN.md)** | **The single source of truth.** Domain model, controlled vocabularies, features-by-screen, collaboration/fork/permissions/undo, architecture, NFRs, **locked technical decisions** (§8), milestone roadmap (§9), testing strategy (§10). | **Always, first.** Any ambiguity is resolved here. |
-| [`docs/USER-STORIES.md`](docs/USER-STORIES.md) | The v1 backlog: 52 stories (US-001…054, minus the retired US-047/048 JSON export/import — forking supersedes) mapped to milestones M1–M9. Each story has acceptance criteria, dependencies, **and an "unskip when done" block naming the exact tests that should pass when it's implemented.** | Picking up a unit of work; knowing what "done" means. |
-| [`docs/TEST-MAP.md`](docs/TEST-MAP.md) | Story → test-file × layer coverage matrix; flagged sub-AC gaps. | Finding which tests cover a story, or what's not yet asserted. |
+| [`docs/TEST-MAP.md`](docs/TEST-MAP.md) | Feature/story-key → test-file × layer coverage matrix; flagged gaps. (The old `USER-STORIES.md` backlog was removed 2026-07-02 — `US-…` ids survive only as stable keys in this map, in test names, and in PLAN.md; PLAN.md §9 is the roadmap/status.) | Finding which tests cover a feature, or what's not yet asserted. |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | How to install, run locally, run each test layer, manage env/secrets, and **the test-harness conventions you must follow**. | Setting up; running things; writing tests. |
 | [`docs/TOOLING.md`](docs/TOOLING.md) | What dev/test tooling exists, why, and what's deferred (Sentry/Analytics → M8, Lighthouse → M9). | Touching CI, configs, or test infra. |
 | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) | Token reference, primitive component inventory (`apps/web/src/ui`), responsive/a11y conventions, how to add a component. | Building any UI. |
@@ -44,8 +43,8 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 
 ## 2. By task — where to look
 
-- **Implementing a backlog story** → `USER-STORIES.md` (the story + its "unskip when done" tests) → unskip those tests → make them pass (TDD, §4) → check `PLAN.md` for the precise rule.
-- **Domain logic** (`packages/domain`: doc schemas, overlay resolution, fork/copy-on-write, undo, registry, timing) → `PLAN.md` §2/§3/§5 + the matching `*.test.ts` (already written, skipped).
+- **Implementing a feature** → `PLAN.md` §9 (roadmap + the active milestone) for scope → `TEST-MAP.md` for the covering tests → write/unskip tests first, make them pass (TDD, §4) → check `PLAN.md` for the precise rule.
+- **Domain logic** (`packages/domain`: doc schemas, variant/overlay resolution, fork, undo, registry, timing) → `PLAN.md` §2/§3/§5 + the matching `*.test.ts`.
 - **Worker / Durable Object / sync / permissions / D1** → `PLAN.md` §6 + `SPIKE-FINDINGS.md` + `DEVELOPMENT.md` (harness conventions) + the skipped `apps/worker/src/**/*.test.ts`.
 - **UI / components / screens** → **prototype the change in Claude Design first** (update `docs/design/project/*.dc.html`), then `DESIGN-SYSTEM.md` (use the primitives in `apps/web/src/ui`) + the `docs/design/` bundle (the canonical visual source — recreate it pixel-for-pixel) + `PLAN.md` §4.
 - **Tests / fixtures / E2E** → `TEST-MAP.md` + `DEVELOPMENT.md` (§ harness) + existing fixtures in `packages/domain/src/__fixtures__`, `apps/worker/src/test-support`, `apps/web/e2e/support`.
@@ -96,8 +95,8 @@ pnpm coverage         # coverage (thresholds: domain ≥95%, worker ≥90% — u
 ## 6. Status & how to proceed
 
 - **Done:** M1 domain core; M2 DO sync (per-doc DO, hibernatable WS, alarm compaction, D1 index); M3 auth + permissions + quota + create/build loop — US-001…030 (the relevant ones), plus the Clerk auth chain end-to-end (verify → fail-closed DO boundary → figure-doc projection → WS-token plumbing). **Staging is live and sign-in works** (`ballroom-flow-staging.danielmschmidt.workers.dev`).
-- **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey — see `docs/USER-STORIES.md` § "Feature epics (E2E-anchored delivery)". `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
-- **Now:** **#191 — wire E2E auth-mode so the journeys actually run** (the verification keystone), starting with `authoring.spec`. Then build feature-at-a-time (FE-2 share UI, FE-3 figures/fork, …) per the feature-epic table.
+- **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey (`apps/web/e2e/*.spec.ts`). `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
+- **Now (2026-07-02):** the **v5 migration milestone** — `PLAN.md` §9 — converts the figure layer to the live-figure/overlay-variant model (PLAN v5.0, §5.2) and lands the review hardening (undo soundness, figures-route authorization, non-destructive projections, post-connect role enforcement, bounded catch-up).
 - **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves.
 
 ---

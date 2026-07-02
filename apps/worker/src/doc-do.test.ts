@@ -341,6 +341,83 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
     expect(row).toMatchObject({ title: "Projected", dance: "foxtrot" });
   });
 
+  it("projection WITHOUT setMetadata derives identity from the doc and never clobbers the eager row (2026-07-02 C2)", async () => {
+    // Production never calls setMetadata: docs get their doName from the connect
+    // header (rememberDoName) and nothing else. The projection used to upsert
+    // ownerId="" / type='routine' / title=NULL over the route-created registry
+    // row — the owner lost DELETE rights (ownerId mismatch), the routine dropped
+    // out of the quota count, and figure docs were re-typed as routines. Pin:
+    // identity now comes from the seeded DOC, and unknown fields never blank
+    // known ones.
+    const { name, stub } = freshDoc("routine");
+    // The eager row the create route writes (createOwnedRoutine analog).
+    await env.DB.prepare(
+      "INSERT INTO document_registry (docRef, type, ownerId, doName, title, dance, updatedAt) VALUES (?1, 'routine', 'u_eager', ?1, 'Eager Title', 'waltz', 1)",
+    )
+      .bind(name)
+      .run();
+    await stub.seedDoc({
+      id: name,
+      title: "Doc Title",
+      dance: "waltz",
+      ownerId: "u_eager",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.setMetadata({ doName: name }); // ONLY the key — like a bare connect
+
+    await stub.runAlarmForTest();
+
+    const row = await env.DB.prepare(
+      "SELECT type, ownerId, title, dance FROM document_registry WHERE doName = ?",
+    )
+      .bind(name)
+      .first<{ type: string; ownerId: string; title: string; dance: string }>();
+    // Owner survives (delete rights + quota count intact); the title projects
+    // from the DOC (so CRDT renames reach the list), not NULL.
+    expect(row).toMatchObject({
+      type: "routine",
+      ownerId: "u_eager",
+      title: "Doc Title",
+      dance: "waltz",
+    });
+  });
+
+  it("a FIGURE doc's projection keeps its type/owner without setMetadata (2026-07-02 C2)", async () => {
+    const { name, stub } = freshDoc("fig");
+    await env.DB.prepare(
+      "INSERT INTO document_registry (docRef, type, ownerId, doName, title, dance, figureType, updatedAt) VALUES (?1, 'account-figure', 'u_figowner', ?1, 'Feather', 'foxtrot', 'feather', 1)",
+    )
+      .bind(name)
+      .run();
+    await stub.seedDoc({
+      id: name,
+      scope: "account",
+      ownerId: "u_figowner",
+      figureType: "feather",
+      dance: "foxtrot",
+      name: "Feather",
+      source: "custom",
+      attributes: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.setMetadata({ doName: name }); // bare key, as on connect
+
+    await stub.runAlarmForTest();
+
+    const row = await env.DB.prepare(
+      "SELECT type, ownerId, title FROM document_registry WHERE doName = ?",
+    )
+      .bind(name)
+      .first<{ type: string; ownerId: string; title: string }>();
+    // Previously re-typed to 'routine' with ownerId "" — the figure vanished
+    // from its owner's library and lost its owner.
+    expect(row).toMatchObject({ type: "account-figure", ownerId: "u_figowner", title: "Feather" });
+  });
+
   it("expires THIS doc's due invites on the alarm, leaving other docs' invites alone (#127)", async () => {
     // Intent: expired invites are reaped off the request path — but a per-document
     //   DO reaps ONLY its own invites (#127), never another doc's rows.
