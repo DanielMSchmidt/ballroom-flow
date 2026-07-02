@@ -102,7 +102,7 @@ export function RoutineReadingView({
   );
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
-      <div className="flex items-center gap-2">
+      <div data-tour="role-toggle" className="flex items-center gap-2">
         <span className="text-2xs font-bold uppercase tracking-wider text-ink-label">
           Steps for
         </span>

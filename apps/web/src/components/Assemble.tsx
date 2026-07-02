@@ -36,6 +36,7 @@ import { useMe } from "../store/me";
 import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Button,
   Card,
@@ -335,6 +336,9 @@ export function Assemble({
   // ThreadSheetContents (for the thread panel) costs zero extra network hops.
   const me = useMe();
   const membersQ = useMembers(routineId);
+  // First-visit tour: the reading programme's lenses + share + quick note.
+  // Held until the store is open (so the anchors exist) and only in read mode.
+  useFirstVisitTour("assemble", mode === "read" && !offlineProp && store !== null);
   const memberColorMap = useMemo(
     () => resolveMemberColors(membersQ.data?.members, currentUserId, me.data?.identityColor),
     [membersQ.data, me.data, currentUserId],
@@ -423,6 +427,7 @@ export function Assemble({
             <IconButton
               label={mode === "edit" ? "Reading view" : "List view"}
               variant={mode === "edit" ? "filled" : "plain"}
+              data-tour="lens-toggle"
               onClick={() => setMode(mode === "edit" ? "read" : "edit")}
             >
               <EditIcon size={16} />
@@ -431,7 +436,7 @@ export function Assemble({
                 also kept on the editing header so an editor can share without
                 first switching lenses (US-024). */}
             {canShare && (
-              <IconButton label="Share" onClick={() => setShareOpen(true)}>
+              <IconButton label="Share" data-tour="share" onClick={() => setShareOpen(true)}>
                 <ShareIcon size={16} />
               </IconButton>
             )}
@@ -562,6 +567,7 @@ export function Assemble({
                   <button
                     type="button"
                     data-testid="quick-note-fab"
+                    data-tour="quick-note"
                     onClick={() => setThreadAnchor({ figureRef: firstFigureRef })}
                     className="fixed right-4 inline-flex min-h-[var(--bf-touch-target)] items-center gap-[7px] rounded-pill bg-surface-inverse px-[17px] py-[13px] text-xs font-bold text-ink-inverse"
                     style={{

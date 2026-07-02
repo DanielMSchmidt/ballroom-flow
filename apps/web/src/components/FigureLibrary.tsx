@@ -19,6 +19,7 @@ import {
 } from "@ballroom/domain";
 import { useEffect, useMemo, useState } from "react";
 import type { MineFigure, SaveToLibraryResult } from "../store/figures";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Card, Chip, EditIcon, EmptyState, IconButton, SectionDivider, useToast } from "../ui";
 
 /** The dance filter is a real dance or the "all" cross-dance view. */
@@ -72,7 +73,12 @@ function DanceChips({
 }) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: single-select filter chips (each a real <button>); role="group" labels the set without a <fieldset>'s form semantics.
-    <div role="group" aria-label="Filter by dance" className="flex flex-wrap gap-2">
+    <div
+      role="group"
+      aria-label="Filter by dance"
+      data-tour="library-filter"
+      className="flex flex-wrap gap-2"
+    >
       <Chip tone="accent" selected={value === "all"} onClick={() => onChange("all")}>
         All
       </Chip>
@@ -208,6 +214,8 @@ export function FigureLibrary({
   onViewMine?: () => void;
 }) {
   const toast = useToast();
+  // First-visit tour: the Catalog/My-figures split, the dance filter, ↟ save.
+  useFirstVisitTour("library");
   const [dance, setDance] = useState<DanceFilter>(initialDance);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -280,6 +288,7 @@ export function FigureLibrary({
                           <button
                             type="button"
                             aria-label={`Save ${fig.name} to My figures`}
+                            data-tour="library-save"
                             onClick={() => handleSave(fig)}
                             disabled={saving === key}
                             className="inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-[9px] border-[1.5px] px-3 py-2 text-2xs font-bold disabled:opacity-50"

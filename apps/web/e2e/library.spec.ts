@@ -35,18 +35,18 @@ test.describe("@smoke figure library", () => {
     // 1b. Save a global figure to the personal library (T5) and confirm it lands in
     //     "My figures" (a frozen account-figure copy — PLAN §5.2).
     await page.getByRole("button", { name: /save/i }).first().click();
-    await expect(page.getByText(/saved to your library/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/saved to My figures/i)).toBeVisible({ timeout: 15_000 });
     await page.getByRole("tab", { name: /my figures/i }).click();
-    await expect(page.getByText(/used in 0 routines/i).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/not in a choreo yet/i).first()).toBeVisible({ timeout: 15_000 });
     // Re-saving the same figure is idempotent — no duplicate, a gentle toast instead.
-    await page.getByRole("tab", { name: /^all$/i }).click();
+    await page.getByRole("tab", { name: /^catalog$/i }).click();
     await page.getByRole("button", { name: /save/i }).first().click();
-    await expect(page.getByText(/already in your library/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/already in My figures/i)).toBeVisible({ timeout: 15_000 });
 
     // 2. Create a Foxtrot routine and add the Feather Step FROM the library.
     await page.getByRole("button", { name: "Choreo" }).click();
     await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Routine name").fill("Library Foxtrot");
+    await page.getByLabel("Choreo name").fill("Library Foxtrot");
     await page.getByRole("button", { name: "Foxtrot" }).click();
     await page
       .getByRole("dialog")

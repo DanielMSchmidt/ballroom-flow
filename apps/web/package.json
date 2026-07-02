@@ -23,6 +23,7 @@
     "@fontsource/caveat": "^5.2.8",
     "@fontsource/inconsolata": "^5.2.8",
     "@tanstack/react-query": "^5.101.1",
+    "driver.js": "^1.6.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

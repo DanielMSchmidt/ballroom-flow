@@ -13,6 +13,7 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
   Button,
@@ -150,6 +151,8 @@ export function ChoreoList({
   onSearch,
   searchResults = [],
 }: ChoreoListProps) {
+  // First-visit tour: orient the user on the choreo list + the tab bar.
+  useFirstVisitTour("choreos");
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -206,6 +209,7 @@ export function ChoreoList({
             )}
             <IconButton
               label="New choreo"
+              data-tour="new-choreo"
               onClick={onNew}
               style={{
                 background: "var(--bf-accent)",

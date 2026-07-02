@@ -154,15 +154,17 @@ function AppHome(): React.JSX.Element {
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (
           <>
-            <Tabs
-              label="Library view"
-              items={[
-                { value: "all", label: "Catalog" },
-                { value: "mine", label: "My figures" },
-              ]}
-              value={libTab}
-              onChange={(v) => setLibTab(v as "all" | "mine")}
-            />
+            <div data-tour="library-tabs">
+              <Tabs
+                label="Library view"
+                items={[
+                  { value: "all", label: "Catalog" },
+                  { value: "mine", label: "My figures" },
+                ]}
+                value={libTab}
+                onChange={(v) => setLibTab(v as "all" | "mine")}
+              />
+            </div>
             <FigureLibrary
               tab={libTab}
               loadMine={loadMine}

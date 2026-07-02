@@ -25,7 +25,7 @@ test.describe("@smoke core authoring journey", () => {
 
     // 1. Create a routine (US-025) — server-side create + quota gate.
     await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Routine name").fill("E2E Foxtrot");
+    await page.getByLabel("Choreo name").fill("E2E Foxtrot");
     await page.getByRole("button", { name: "Foxtrot" }).click();
     await page
       .getByRole("dialog")
@@ -107,7 +107,7 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /list view/i }).click();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
-    await page.getByRole("button", { name: /all routines/i }).click();
+    await page.getByRole("button", { name: /all choreos/i }).click();
     await expect(page.getByText("E2E Foxtrot")).toBeVisible();
   });
 
@@ -122,7 +122,7 @@ test.describe("@smoke core authoring journey", () => {
 
     // create routine → section → figure (reuse the existing pattern)
     await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Routine name").fill("E2E Kinds");
+    await page.getByLabel("Choreo name").fill("E2E Kinds");
     await page.getByRole("button", { name: "Foxtrot" }).click();
     await page
       .getByRole("dialog")

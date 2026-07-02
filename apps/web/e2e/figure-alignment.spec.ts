@@ -28,7 +28,7 @@ test.describe("@smoke catalog figure alignment", () => {
     // 1. Create a Waltz routine.
     await page.getByRole("button", { name: "Choreo", exact: true }).click();
     await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Routine name").fill("Alignment Waltz");
+    await page.getByLabel("Choreo name").fill("Alignment Waltz");
     await page.getByRole("button", { name: "Waltz", exact: true }).click();
     await page
       .getByRole("dialog")

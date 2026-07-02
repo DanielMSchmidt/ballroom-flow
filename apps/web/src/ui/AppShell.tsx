@@ -44,6 +44,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
             <button
               key={item.value}
               type="button"
+              data-tour={`nav-${item.value}`}
               aria-current={active ? "page" : undefined}
               onClick={() => onNavigate(item.value)}
               className={cx(
@@ -80,6 +81,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
               <button
                 key={item.value}
                 type="button"
+                data-tour={`nav-${item.value}`}
                 aria-current={active ? "page" : undefined}
                 onClick={() => onNavigate(item.value)}
                 className={cx(

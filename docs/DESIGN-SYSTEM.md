@@ -5,6 +5,8 @@
 
 **Source of truth for rules:** [`docs/design/DESIGN-PRINCIPLES.md`](design/DESIGN-PRINCIPLES.md) (the 28 numbered principles — referenced below as `#n`). Colors/scopes trace to [`docs/PLAN.md`](PLAN.md) §3 and the visual language in `docs/design/Ballroom Builder.dc.html`.
 
+> **Builder v2 refresh (2026-07-02):** the visual language now follows `docs/design/project/Ballroom Builder v2.dc.html`. Deltas from v1: `AttrChip` renders kind **tint + ink + 1px kind border** (no solid fill/white text); `--bf-ink-faint` darkened to `#8a857b` and a new `--bf-ink-label` (`#6f6a61`) covers eyebrow labels; off-beat counts read in the accent (size still differentiates); note affordances are accent “✎ Add note” with ≥36px hit areas and author-initial avatars; the attribute explainer is a full page with a kind pager. The first-visit tour popover (driver.js) is themed via the `.bf-tour` overrides in `styles/index.css` — tokens only.
+
 ---
 
 ## 1. Styling approach — and why

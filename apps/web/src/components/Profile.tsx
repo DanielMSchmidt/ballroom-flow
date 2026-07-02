@@ -14,6 +14,7 @@ import { useAppAuth } from "../auth/app-auth";
 import { useAccountKinds, useSaveAccountKind } from "../store/custom-kinds";
 import { useMe, useOnboard } from "../store/me";
 import { useRoutines } from "../store/routines";
+import { useFirstVisitTour, useReplayTours } from "../tour/useFirstVisitTour";
 import { Badge, Button, Card, IDENTITY_COLORS, IDENTITY_HEX, Input, ScreenHeader } from "../ui";
 import { AttributeTypesManager } from "./AttributeTypesManager";
 
@@ -68,6 +69,9 @@ export function Profile({
 }: ProfileProps) {
   const [name, setName] = useState(displayName ?? "");
   const [color, setColor] = useState<string>(identityColor ?? DEFAULT_COLOR);
+  // First-visit tour + the "see them again" escape hatch below.
+  useFirstVisitTour("profile");
+  const replayTours = useReplayTours("profile");
   // Adopt server values once they load (the query resolves after first render).
   useEffect(() => {
     if (displayName !== undefined) setName(displayName);
@@ -93,14 +97,16 @@ export function Profile({
           >
             {initial}
           </span>
-          <Input
-            label="Display name"
-            hideLabel
-            placeholder="How you appear to co-editors"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="text-center text-lg font-bold"
-          />
+          <div data-tour="profile-name" className="w-full">
+            <Input
+              label="Display name"
+              hideLabel
+              placeholder="How you appear to co-editors"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="text-center text-lg font-bold"
+            />
+          </div>
         </section>
 
         {/* PROFILE COLOUR — the identity tint applied to every note/reply (DP #5). */}
@@ -111,7 +117,7 @@ export function Profile({
           <p className="text-2xs italic text-ink-secondary">
             Every note &amp; reply of yours is tinted with this, across shared choreos.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div data-tour="profile-colour" className="flex flex-wrap gap-3">
             {IDENTITY_SWATCHES.map((swatch, i) => {
               const selected = color.toLowerCase() === swatch.value.toLowerCase();
               return (
@@ -172,6 +178,17 @@ export function Profile({
         {/* Attribute types manager (frame 1.17) — a SECTION below identity, not a
             replacement: standard (locked) + custom (choreo-scoped) kinds. */}
         <AttributeTypesManager customKinds={customKinds} onCreateKind={onCreateKind} />
+
+        {/* Replay the first-visit tours: clears every per-page seen flag so each
+            page shows its intro again, starting with this one. */}
+        <section className="border-t border-border-subtle pt-4">
+          <Button variant="secondary" size="sm" onClick={replayTours}>
+            Replay the intro tours
+          </Button>
+          <p className="mt-1 text-2xs text-ink-faint">
+            Shows each page's quick walkthrough again on its next visit.
+          </p>
+        </section>
 
         <div className="flex items-center justify-between gap-2">
           <Button

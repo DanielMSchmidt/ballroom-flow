@@ -4,6 +4,10 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppAuthProvider } from "./auth/app-auth";
 import { isE2E } from "./lib/e2e-auth";
+// driver.js base styles for the first-visit UI tours; themed to the --bf-*
+// tokens by the `.bf-tour` overrides in styles/index.css. CSS stays imported
+// only at the app root (components are CSS-import-free — DESIGN-SYSTEM §7).
+import "driver.js/dist/driver.css";
 import "./styles/index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
