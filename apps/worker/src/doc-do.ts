@@ -28,11 +28,13 @@ import {
   barsForFigure,
   buildDoc,
   buildRoutineDoc,
+  CURRENT_SCHEMA_VERSION,
   can,
   DANCES,
   type DanceId,
   type EffectiveRole,
   type FigureDoc,
+  migrateDraft,
   type RoutineDoc,
   readFigure,
   readRoutine,
@@ -113,10 +115,24 @@ function emptyRoutine(): RoutineDoc {
     ownerId: "",
     sections: [],
     annotations: [],
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   };
 }
+
+/**
+ * The Automerge actor id every migration change is attributed to (v5 milestone
+ * step 1, PLAN §7). Fixed and non-random — NEVER a real per-connection actor
+ * (`newActorId()` above) — so per-user undo (`packages/domain/src/undo.ts`
+ * `changesByActor`, which filters strictly by exact actor id) can never select
+ * it as an undo target: a user's undo after a migrated load reverts their own
+ * edit, not the schema upgrade. 32 hex chars (16 bytes), matching the shape
+ * Automerge requires for an actor id.
+ */
+const MIGRATION_ACTOR = `${"0".repeat(31)}1`;
+
+/** The Automerge change message stamped on every migration change (PLAN §7). */
+const MIGRATION_MESSAGE = "ballroom:migrate";
 
 export class DocDO extends DurableObject<Env> {
   /** In-memory Automerge doc; `null` until first load/cold-load from SQLite. */
@@ -196,7 +212,46 @@ export class DocDO extends DurableObject<Env> {
       const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
       [doc] = A.applyChanges(doc, changes);
     }
-    return doc;
+    return this.migrateOnLoad(doc);
+  }
+
+  /**
+   * v5 milestone step 1 (PLAN §7): "the ladder runs on the DO load path, and
+   * fresh docs are stamped `CURRENT_SCHEMA_VERSION`". Every persisted doc
+   * passes through `loadPersisted` (directly, or via `getDoc`), so this is the
+   * single choke-point that brings an older doc current and PERSISTS the
+   * upgrade as a normal change — not a lenient-read shim that re-derives the
+   * same fix-up on every load. A doc already at/above CURRENT is returned
+   * UNTOUCHED: no clone, no `A.change`, no empty change, no version downgrade
+   * (an untagged doc is treated as v1, mirroring `runLadder`).
+   *
+   * The change is attributed to the fixed {@link MIGRATION_ACTOR} (never a real
+   * per-connection actor), so per-user undo can never select it. We then clone
+   * BACK to a fresh (random) actor for the doc this instance keeps using — the
+   * migration actor must brand only this one change, not every future
+   * server-driven mutation (`applyOp`) this DO instance happens to make.
+   *
+   * Determinism (PLAN §5.3): `migrateDraft` delegates to the pure `migrate`
+   * ladder — the same bytes in always produce the same migrated shape out — so
+   * two DO instances that independently migrate the same persisted state
+   * compute the identical upgrade; the sortKey backfill's convergence guarantee
+   * carries over unchanged.
+   */
+  private migrateOnLoad(doc: A.Doc<RoutineDoc>): A.Doc<RoutineDoc> {
+    // `doc.schemaVersion` is untyped-optional at RUNTIME (a pre-envelope doc, or
+    // any doc a bug seeded without one) even though `RoutineDoc` declares it
+    // required — mirrors `runLadder`'s "an untagged doc is treated as v1".
+    const version: unknown = doc.schemaVersion;
+    if (typeof version === "number" && version >= CURRENT_SCHEMA_VERSION) return doc;
+
+    const migrating = A.clone(doc, { actor: MIGRATION_ACTOR });
+    const migrated = A.change(migrating, { message: MIGRATION_MESSAGE }, (draft) => {
+      migrateDraft(draft as unknown as { schemaVersion: number } & Record<string, unknown>);
+    });
+    const changes = A.getChanges(doc, migrated);
+    if (changes.length === 0) return doc; // migrateDraft found nothing to do.
+    this.persist(changes);
+    return A.clone(migrated); // fresh actor for this instance's future changes.
   }
 
   /**

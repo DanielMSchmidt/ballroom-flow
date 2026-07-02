@@ -6,6 +6,7 @@ import {
   zSaveToLibrary,
 } from "@ballroom/contract";
 import {
+  CURRENT_SCHEMA_VERSION,
   can,
   type FigureDoc,
   globalFigureRef,
@@ -222,7 +223,7 @@ app.post("/api/routines", async (c) => {
     ownerId: user.sub,
     sections: [],
     annotations: [],
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   });
   return c.json({ docRef, title, dance, plan }, 201);
@@ -396,7 +397,7 @@ app.post("/api/figures", async (c) => {
     // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
     // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
     ...(baseFigureRef ? { baseFigureRef } : {}),
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   });
   return c.json({ figureRef, name, dance, figureType, ownerId: user.sub }, 201);
@@ -483,7 +484,7 @@ app.post("/api/figures/save-to-library", async (c) => {
     source: "library",
     attributes,
     baseFigureRef,
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
   });
   return c.json({ figureRef, baseFigureRef, alreadySaved: false }, 201);
