@@ -251,6 +251,12 @@ export class DocDO extends DurableObject<Env> {
     const changes = A.getChanges(doc, migrated);
     if (changes.length === 0) return doc; // migrateDraft found nothing to do.
     this.persist(changes);
+    // Keep the LIVE doc on the same lineage: a transient read (getFigureSnapshot
+    // and the connect catch-up call loadPersisted directly, not getDoc) must not
+    // persist a migration change the in-memory doc never applies — otherwise a
+    // peer change built on the persisted heads arrives with deps this.doc lacks
+    // and is silently deferred as a "duplicate" (heads unchanged) by ingestChange.
+    if (this.doc) [this.doc] = A.applyChanges(this.doc, changes);
     return A.clone(migrated); // fresh actor for this instance's future changes.
   }
 
