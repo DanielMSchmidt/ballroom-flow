@@ -19,6 +19,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
@@ -125,10 +126,12 @@ app.get("/api/me", async (c) => {
     displayName: row.displayName,
     identityColor: row.identityColor,
     plan: row.plan,
-    // The free-plan owned-routine cap, sourced from the ONE server constant so the
-    // client never hardcodes a second copy (#176) — the Choreo list gates the
-    // upsell on this, and the POST /api/routines 402 enforces the same value.
-    routineCap: FREE_ROUTINE_CAP,
+    // The owned-routine cap the client gates the upsell on — the admin-granted
+    // per-user override (D31) when set, else the ONE server constant (#176). The
+    // POST /api/routines 402 enforces the SAME value via routineCapFor.
+    routineCap: row.routineCapOverride ?? FREE_ROUTINE_CAP,
+    // D31: expose the admin flag so the profile/admin surfaces can gate on it.
+    isAdmin: row.isAdmin,
   });
 });
 
@@ -197,14 +200,14 @@ app.post("/api/routines", async (c) => {
   }
   const { title, dance } = parsed.data;
 
-  const db = drizzle(c.env.DB);
-  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
-  const plan = me?.plan ?? "free";
-
-  // SERVER-SIDE quota: count OWNED routines (indexed; shared-in excluded).
+  // SERVER-SIDE quota (D21/D31): the cap honours a per-user `routineCapOverride`
+  // (an admin grant) BEFORE the plan default (routineCapFor); pro is unbounded.
+  // Only OWNED routines count (shared-in membership rows don't). Enforced here so
+  // a client bypass is still blocked.
+  const { plan, cap } = await routineCapFor(c.env.DB, user.sub);
   const owned = await countOwnedRoutines(c.env.DB, user.sub);
-  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
-    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
+  if (owned >= cap) {
+    return c.json({ upsell: true, reason: "quota", cap, owned, plan }, 402);
   }
 
   const docRef = newId();

@@ -3,12 +3,10 @@
 // POST /api/routines/:id/fork route so the onboarding gift (starter.ts) can
 // reuse the exact same snapshot-clone logic without duplicating it.
 import { copyFigureForFork, type FigureDoc, newId } from "@ballroom/domain";
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { routineCapFor } from "./db/admin";
 import { createFigureRows, findSavedLibraryFigure, getRegistryTypes } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
-import { countOwnedRoutines, createOwnedRoutine, FREE_ROUTINE_CAP } from "./db/routines";
-import { users } from "./db/schema";
+import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
 import type { Env } from "./index";
 import { APP_OWNER } from "./sample";
 
@@ -41,17 +39,17 @@ export async function forkRoutineFor(
   env: Env,
   { originRef, userId, skipQuota }: { originRef: string; userId: string; skipQuota?: boolean },
 ): Promise<ForkSuccess | ForkUpsell> {
-  // Resolve the forker's plan once (used for the quota gate AND returned to the
-  // caller for its response body, so the route needn't query it again).
-  const db = drizzle(env.DB);
-  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).get();
-  const plan = me?.plan ?? "free";
+  // Resolve the forker's cap + plan once (D31: routineCapFor honours a per-user
+  // `routineCapOverride` before the plan default; pro is unbounded). The plan is
+  // also returned to the caller for its response body, so the route needn't
+  // re-query it.
+  const { plan, cap } = await routineCapFor(env.DB, userId);
 
   // Quota gate (unless caller explicitly bypasses for gifting).
   if (!skipQuota) {
     const owned = await countOwnedRoutines(env.DB, userId);
-    if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
-      return { upsell: true, cap: FREE_ROUTINE_CAP, owned, plan };
+    if (owned >= cap) {
+      return { upsell: true, cap, owned, plan };
     }
   }
 
