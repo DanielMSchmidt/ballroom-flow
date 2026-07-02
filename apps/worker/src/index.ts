@@ -232,11 +232,15 @@ app.post("/api/routines", async (c) => {
 // MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
 // it into a NEW owned routine. App-owned templates (ownerId="app") may also be
 // forked by any authenticated user without a membership row (US-045/Task 6).
-// The fork is FROZEN + INDEPENDENT: we snapshot the origin's CRDT content and
-// seed a brand-new doc with it (no shared history), so later origin edits never
-// appear in the fork. `forkedFromRef` records lineage (provenance only).
-// Referenced figures stay shared (placements keep their figureRefs).
-// A fork COUNTS against the forker's quota.
+// The fork is INDEPENDENT of its ORIGIN (v5, PLAN §2.4/§5.2, D12): we snapshot
+// the origin's CRDT content and seed a brand-new doc with it (no shared
+// history), so later origin STRUCTURAL edits never appear in the fork, AND we
+// copy every referenced ACCOUNT figure for the forker (a variant copied as a
+// variant — catalog flow-in continues) so a later edit to the origin's account
+// figures doesn't leak into the fork either (forkRoutineFor). GLOBAL (catalog)
+// figure refs stay LIVE — the fork keeps receiving catalog improvements like
+// every other routine. `forkedFromRef` records the routine's lineage
+// (provenance only — no pull). A fork COUNTS against the forker's quota.
 app.post("/api/routines/:id/fork", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);

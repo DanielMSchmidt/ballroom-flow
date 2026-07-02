@@ -4,7 +4,7 @@
 // later a copy-on-write variant, US-035) it must be projected to the D1 index +
 // given an owner membership, or the fail-closed DO boundary (US-021) can't
 // owner-resolve a connect to that figure → 403. This mirrors createOwnedRoutine.
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { documentRegistry, membership } from "./schema";
 
@@ -135,6 +135,33 @@ export async function findSavedLibraryFigure(
     .bind(userId, baseFigureRef)
     .first<{ docRef: string }>();
   return row?.docRef ?? null;
+}
+
+/**
+ * Batch-resolve each `docRef`'s registry `type` (§2.7) — used by the v5 fork
+ * flow (fork.ts) to tell an ACCOUNT figure ref (copy it for the forker) apart
+ * from a GLOBAL (catalog) ref (leave it live) or a ref with no registry row at
+ * all (a dangling/legacy reference — left untouched, there's nothing to copy).
+ * Chunked at 100 refs/query — D1's bound-parameter cap — since a routine can
+ * reference dozens of figures; still just one or two round-trips in practice.
+ */
+export async function getRegistryTypes(
+  db: D1Database,
+  docRefs: string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (docRefs.length === 0) return out;
+  const d = drizzle(db);
+  const CHUNK = 100;
+  for (let i = 0; i < docRefs.length; i += CHUNK) {
+    const chunk = docRefs.slice(i, i + CHUNK);
+    const rows = await d
+      .select({ docRef: documentRegistry.docRef, type: documentRegistry.type })
+      .from(documentRegistry)
+      .where(inArray(documentRegistry.docRef, chunk));
+    for (const r of rows) out.set(r.docRef, r.type);
+  }
+  return out;
 }
 
 /** Count a user's OWNED figures (for tests/quota separation — figures are uncapped). */
