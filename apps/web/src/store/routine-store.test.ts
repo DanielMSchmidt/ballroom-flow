@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
-import type { FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
+import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
 import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@ballroom/domain";
 import { describe, expect, it, vi } from "vitest";
 import { type OpenOptions, openRoutine } from "./routine";
@@ -1081,6 +1081,283 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // The placement still references the shared figure (never re-pointed).
     const rp = store.readPlacements().find((p) => p.placement.id === "p1");
     expect(rp?.placement.figureRef).toBe("fa");
+    store.close();
+  });
+});
+
+describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edited'", () => {
+  // The figure editor's auto-save contract ("no Save button — an undo exists") is
+  // only honest if figure edits are undoable THERE. `undoFigure`/`redoFigure`
+  // target the FIGURE's own doc (via its DocConnection), mirroring the routine
+  // undo path (`undoLastChange`/`redoLastChange` against this tab's actor).
+
+  const ACTOR_A = "00aa00aa00aa00aa";
+  const ACTOR_B = "00bb00bb00bb00bb";
+  const SEED_ACTOR = "00cc00cc00cc00cc"; // stands in for the server-side DO seed
+
+  /** A routine (owned by "me") whose one section places `figureRef`. */
+  const routineWith = (figureRef: string): RoutineDoc =>
+    buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    }) as RoutineDoc;
+
+  const beat = (id: string, count: number, value: string): Attribute => ({
+    id,
+    kind: "step",
+    count,
+    value,
+    role: null,
+    deletedAt: null,
+  });
+
+  it("(a) undoFigure reverts the user's last figure edit and syncs the inverse on the FIGURE's socket", async () => {
+    // Intent: the hero-flow safety net — a mis-tap in the step grid is recoverable,
+    //   and the inverse rides the FIGURE doc's socket (not the routine's), §5.4.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: ACTOR_A,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith("fig1"));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements(); // opens the (lazy-in-eager-mode) figure connection
+
+    // fig1 is account-owned by the current user → edits in place (no COW spawn).
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+    );
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(figDoc);
+    sockets.get("fig1")?.fireCaughtUp();
+
+    store.setFigureAttributes("fig1", [beat("b-2-T", 2, "T")]);
+    const before = store.readPlacements().find((p) => p.placement.figureRef === "fig1")?.figure;
+    expect(before?.attributes.some((a) => a.value === "T" && a.deletedAt == null)).toBe(true);
+
+    const sentBefore = sockets.get("fig1")?.sent.length ?? 0;
+    const result = store.undoFigure("fig1");
+    expect(result.undone).toBe(true);
+    // The inverse SYNCED on the figure's own socket.
+    expect(sockets.get("fig1")?.sent.length ?? 0).toBeGreaterThan(sentBefore);
+    // …and the edit is reverted.
+    const after = store.readPlacements().find((p) => p.placement.figureRef === "fig1")?.figure;
+    expect(after?.attributes.some((a) => a.value === "T" && a.deletedAt == null)).toBe(false);
+    store.close();
+  });
+
+  it("(b) routine undo() still targets the ROUTINE doc while a figure conn is open", async () => {
+    // Intent: the two surfaces are independent — the routine toolbar's undo reverts
+    //   a routine-doc edit even though a figure editor (its own doc) is also open.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: ACTOR_A,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith("fig1"));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+    );
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(figDoc);
+    sockets.get("fig1")?.fireCaughtUp();
+
+    // One edit on EACH surface: a routine-doc rename and a figure-doc beat.
+    store.renameSection("s1", "Verse");
+    store.setFigureAttributes("fig1", [beat("b-1-T", 1, "T")]);
+
+    // The ROUTINE undo reverts the section rename — the figure edit is untouched.
+    const r = store.undo();
+    expect(r.undone).toBe(true);
+    expect(store.readRoutine().sections.find((s) => s.id === "s1")?.name).not.toBe("Verse");
+    const fig = store.readPlacements().find((p) => p.placement.figureRef === "fig1")?.figure;
+    expect(fig?.attributes.some((a) => a.value === "T" && a.deletedAt == null)).toBe(true);
+    store.close();
+  });
+
+  it("(c) a peer's concurrent figure edit survives my figure-undo (US-038 AC-2 on the figure doc)", async () => {
+    // Intent: per-actor undo on the figure doc inherits the domain guarantee —
+    //   undoFigure reverts only MY beat; B's concurrent beat survives.
+    const root = A.from(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as unknown as Record<
+        string,
+        unknown
+      >,
+      SEED_ACTOR,
+    ) as unknown as A.Doc<FigureDoc>;
+    // A and B fork the same seed and each add a distinct beat — genuinely concurrent.
+    const aDoc = A.change(A.clone(root, { actor: ACTOR_A }), (d) => {
+      d.attributes.push(beat("beatA", 1, "A"));
+    });
+    const bDoc = A.change(A.clone(root, { actor: ACTOR_B }), (d) => {
+      d.attributes.push(beat("beatB", 2, "B"));
+    });
+    const merged = A.merge(A.clone(aDoc), A.clone(bDoc));
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: ACTOR_A,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith("fig1"));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(merged);
+    sockets.get("fig1")?.fireCaughtUp();
+
+    const result = store.undoFigure("fig1");
+    expect(result.undone).toBe(true);
+    const after = store.readPlacements().find((p) => p.placement.figureRef === "fig1")?.figure;
+    // My beat is gone; the peer's concurrent beat survives.
+    expect(after?.attributes.some((a) => a.value === "A" && a.deletedAt == null)).toBe(false);
+    expect(after?.attributes.some((a) => a.value === "B" && a.deletedAt == null)).toBe(true);
+    store.close();
+  });
+
+  it("(d) redoFigure restores the undone figure edit", async () => {
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: ACTOR_A,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith("fig1"));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+    const figDoc = buildFigureDoc(
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+    );
+    sockets.get("fig1")?.fireOpen();
+    sockets.get("fig1")?.load(figDoc);
+    sockets.get("fig1")?.fireCaughtUp();
+
+    store.setFigureAttributes("fig1", [beat("b-3-S", 3, "S")]);
+    store.undoFigure("fig1");
+    expect(
+      store
+        .readPlacements()
+        .find((p) => p.placement.figureRef === "fig1")
+        ?.figure?.attributes.some((a) => a.value === "S" && a.deletedAt == null),
+    ).toBe(false);
+    store.redoFigure("fig1");
+    expect(
+      store
+        .readPlacements()
+        .find((p) => p.placement.figureRef === "fig1")
+        ?.figure?.attributes.some((a) => a.value === "S" && a.deletedAt == null),
+    ).toBe(true);
+    store.close();
+  });
+
+  it("(e) undoFigure on a catalog live-reference is a graceful no-op (⟳v5 §4.3)", async () => {
+    // A catalog reference has no own connection and the user owns no changes on it
+    //   (a user edit spawns a VARIANT) — figure-undo must be a quiet no-op, not throw.
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      eagerFigures: false,
+    });
+    const ref = globalFigureRef("waltz", "natural-turn");
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith(ref));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.openFigure(ref); // no-op for a catalog ref: opens NO socket
+
+    expect(store.undoFigure(ref)).toEqual({ undone: false, supersededByOthers: false });
+    expect(() => store.redoFigure(ref)).not.toThrow();
+    expect(sockets.has(ref)).toBe(false); // never opened a figure socket
+    store.close();
+  });
+
+  it("(f) undoing a spawned variant's first owned-beat edit resolves it back to the base (§5.2)", async () => {
+    // Intent (⟳v5): a fresh variant seeded server-side owns NOTHING; the user's first
+    //   edit owns a beat. Undoing that edit leaves the variant owning nothing, so the
+    //   beat resolves LIVE from the base again — correct per-beat-ownership behavior.
+    const baseRef = globalFigureRef("waltz", "natural-turn");
+    // The variant AS SEEDED server-side (SEED_ACTOR): identity + a LIVE base link,
+    // owning no beats (untouched beats resolve live from the base, §2.5.2).
+    const seeded = A.from(
+      aFigure({
+        id: "v1",
+        scope: "account",
+        ownerId: "me",
+        figureType: "natural_turn",
+        dance: "waltz",
+        baseFigureRef: baseRef,
+        attributes: [],
+      }) as unknown as Record<string, unknown>,
+      SEED_ACTOR,
+    ) as unknown as A.Doc<FigureDoc>;
+    // The USER's FIRST edit: own count 1 with a leader direction that overrides the
+    // base's (the catalog's leader count-1 direction is "forward"; owning the beat
+    // hides ALL of the base's count-1 attributes — per-beat ownership, §2.5.1).
+    const withEdit = A.change(A.clone(seeded, { actor: ACTOR_A }), (d) => {
+      d.attributes.push({
+        id: "own1",
+        kind: "direction",
+        count: 1,
+        value: "side",
+        role: "leader",
+        deletedAt: null,
+      });
+    });
+    const baseLeaderDir1 = (a: Attribute): boolean =>
+      a.count === 1 && a.role === "leader" && a.kind === "direction" && a.value === "forward";
+
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      actor: ACTOR_A,
+      eagerFigures: false,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routineWith("v1"));
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.openFigure("v1");
+    sockets.get("v1")?.fireOpen();
+    sockets.get("v1")?.load(withEdit);
+    sockets.get("v1")?.fireCaughtUp();
+
+    // Before undo: the variant OWNS beat 1 → resolved shows the user's own edit,
+    // and the base's leader "forward" is hidden (the whole beat is variant-owned).
+    const before = store.readPlacements().find((p) => p.placement.figureRef === "v1")?.figure;
+    expect(before?.attributes.some((a) => a.id === "own1")).toBe(true);
+    expect(before?.attributes.some(baseLeaderDir1)).toBe(false);
+
+    const result = store.undoFigure("v1");
+    expect(result.undone).toBe(true);
+
+    // After undo the variant owns nothing at count 1 → it resolves LIVE from the
+    // base (the bundled catalog Natural Turn): the user's edit is gone and the
+    // base's own count-1 leader direction ("forward") shows through again.
+    const after = store.readPlacements().find((p) => p.placement.figureRef === "v1")?.figure;
+    expect(after?.attributes.some((a) => a.id === "own1")).toBe(false);
+    expect(after?.attributes.some(baseLeaderDir1)).toBe(true);
     store.close();
   });
 });

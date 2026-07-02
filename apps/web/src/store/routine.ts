@@ -244,6 +244,22 @@ export interface RoutineStore extends RoutineReadModel {
   undo(): UndoResult;
   /** Per-actor history redo (US-010). */
   redo(): void;
+  /**
+   * Figure-scoped undo/redo — "undo follows the surface being edited" (§5.4).
+   * In the Assemble view `undo()` targets the ROUTINE doc; inside the figure
+   * editor these target THAT FIGURE's own doc, so a mis-tap in the step grid is
+   * recoverable — the figure editor's auto-save contract ("no Save button — an
+   * undo exists") is only honest if figure edits are actually undoable there.
+   *
+   * Mirrors the routine path exactly: `undoLastChange`/`redoLastChange` against
+   * this client's per-tab actor on the figure's `DocConnection`, committed so the
+   * inverse SYNCS. A graceful no-op (`{ undone: false }`) when the figure has no
+   * own connection — a catalog live-reference (⟳v5 §4.3: the user owns no changes
+   * on it; a first edit spawns a variant) or a figure not yet opened/hydrated.
+   */
+  undoFigure(figureRef: string): UndoResult;
+  /** Figure-scoped redo — the inverse-of-the-inverse on the figure's doc (§5.4). */
+  redoFigure(figureRef: string): void;
   /** Subscribe to any change (local or synced); returns an unsubscribe fn. */
   subscribe(fn: () => void): () => void;
   /** The routine connection's sync lifecycle, for a "syncing…" indicator (US-018). */
@@ -542,7 +558,14 @@ export async function openRoutine(
     let conn = figureConns.get(figureRef);
     if (!conn) {
       conn = new DocConnection<FigureDoc>(
-        A.init<FigureDoc>(),
+        // Seed with the SAME per-tab actor as the routine conn (#70): the figure
+        // editor writes this client's step/attribute/bars edits through this
+        // connection, and figure-scoped undo (`undoFigure`, §5.4) targets that
+        // actor's last change on THIS doc. An anonymous `A.init()` would author
+        // figure edits under a random actor, so `undoLastChange(doc, actor)` would
+        // find nothing to revert — the auto-save "an undo exists" contract would be
+        // a lie. DocConnection.mergeSnapshot preserves this actor across sync.
+        A.init<FigureDoc>(actor),
         connectUrl(baseUrl, figureRef),
         openSocket,
         { getToken, reconnect, schedule, cancel }, // a FRESH token at each (re)open (#189)
@@ -998,6 +1021,35 @@ export async function openRoutine(
       return { undone, supersededByOthers: undone && superseded };
     },
     redo: () => routineConn.commit(redoLastChange(routineConn.current(), actor ?? "local")),
+
+    undoFigure: (figureRef) => {
+      const neutral: UndoResult = { undone: false, supersededByOthers: false };
+      // ⟳v5 (§4.3/§5.2): a catalog live-reference has NO own connection and the
+      // user owns no changes on it — a user edit spawns a VARIANT rather than
+      // writing this doc — so figure-undo on it is a graceful no-op, not an error.
+      if (libraryFigureByRef(figureRef)) return neutral;
+      const conn = figureConns.get(figureRef);
+      // No own connection yet (not opened/edited/hydrated) → nothing this actor
+      // can undo on the figure. (Lazy mode never opens a figure conn on a read.)
+      if (!conn) return neutral;
+      const actorId = actor ?? "local";
+      const before = conn.current();
+      // Peek the soft "superseded" hint on the PRE-undo doc (US-038 AC-3, §5.4) —
+      // the undo itself adds a change that would perturb the dependency graph.
+      // Undo still always proceeds; this is advisory only. Mirrors the routine path.
+      const superseded = wasSupersededByOthers(before, actorId);
+      const after = undoLastChange(before, actorId);
+      // undoLastChange returns the SAME doc reference on a no-op (nothing to undo).
+      const undone = after !== before;
+      conn.commit(after); // committed so the inverse SYNCS on the figure's socket
+      return { undone, supersededByOthers: undone && superseded };
+    },
+    redoFigure: (figureRef) => {
+      if (libraryFigureByRef(figureRef)) return; // catalog ref: no own doc to redo
+      const conn = figureConns.get(figureRef);
+      if (!conn) return;
+      conn.commit(redoLastChange(conn.current(), actor ?? "local"));
+    },
 
     subscribe: (fn) => {
       listeners.add(fn);

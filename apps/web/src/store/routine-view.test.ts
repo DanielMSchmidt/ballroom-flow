@@ -46,6 +46,8 @@ function fakeLive() {
   };
   const addSection = vi.fn();
   const openFigure = vi.fn();
+  const undoFigure = vi.fn(() => ({ undone: true, supersededByOthers: false }));
+  const redoFigure = vi.fn();
   const store: RoutineStore = {
     readRoutine: () => routineDoc("from-live"),
     readPlacements: () => [],
@@ -78,11 +80,15 @@ function fakeLive() {
     createCustomKind: vi.fn(),
     undo: vi.fn(),
     redo: vi.fn(),
+    undoFigure,
+    redoFigure,
   };
   return {
     store,
     addSection,
     openFigure,
+    undoFigure,
+    redoFigure,
     setLive: () => {
       state = "live";
       notify();
@@ -187,6 +193,39 @@ describe("openRoutineView — editor mode", () => {
     });
     view.openFigure("fig1");
     await vi.waitFor(() => expect(live.openFigure).toHaveBeenCalledWith("fig1"));
+    view.close();
+  });
+
+  it("undoFigure forwards to the live store once hydrated and returns its real result (§5.4)", async () => {
+    // The figure-editor undo enables only once the live store is hydrated, so the
+    // common path forwards to live.undoFigure and gets the real superseded signal.
+    const live = fakeLive();
+    const view = openRoutineView("rt", {
+      editable: true,
+      openSnapshot: () => fakeSnapshot(),
+      openLive: async () => live.store,
+    });
+    // Pre-hydration: deferred, neutral result (nothing reverted yet).
+    expect(view.undoFigure("fig1")).toEqual({ undone: false, supersededByOthers: false });
+    live.setLive();
+    await vi.waitFor(() => expect(view.syncState()).toBe("live"));
+    // Hydrated: forwards to the live store and returns its real result synchronously.
+    expect(view.undoFigure("fig1")).toEqual({ undone: true, supersededByOthers: false });
+    expect(live.undoFigure).toHaveBeenCalledWith("fig1");
+    view.redoFigure("fig1");
+    await vi.waitFor(() => expect(live.redoFigure).toHaveBeenCalledWith("fig1"));
+    view.close();
+  });
+
+  it("undoFigure is a no-op for a viewer (read-only)", () => {
+    const live = fakeLive();
+    const view = openRoutineView("rt", {
+      editable: false,
+      openSnapshot: () => fakeSnapshot(),
+      openLive: async () => live.store,
+    });
+    expect(view.undoFigure("fig1")).toEqual({ undone: false, supersededByOthers: false });
+    expect(live.undoFigure).not.toHaveBeenCalled();
     view.close();
   });
 });
