@@ -229,6 +229,19 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
       return neutral;
     },
     redo: editAction((s) => s.redo),
+    // Figure-scoped undo/redo (§5.4, "undo follows the surface being edited"):
+    // same live-gating as `undo`/`redo` above — the editor only enables the figure
+    // Undo once the live store is hydrated, so the common path forwards to
+    // live.undoFigure() and gets the real superseded signal; a pre-hydration press
+    // still defers the action and reports the neutral (nothing-reverted) result.
+    undoFigure: (figureRef): UndoResult => {
+      const neutral: UndoResult = { undone: false, supersededByOthers: false };
+      if (!editable) return neutral;
+      if (live && live.syncState() === "live") return live.undoFigure(figureRef);
+      void ensureLive().then((s) => whenLive(s, () => s.undoFigure(figureRef)));
+      return neutral;
+    },
+    redoFigure: editAction((s) => s.redoFigure),
   };
 }
 

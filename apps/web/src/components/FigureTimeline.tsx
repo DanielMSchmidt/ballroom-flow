@@ -14,9 +14,12 @@
 // (US-004). Empty sub-beat/whole-beat slots are placeholders — a value written to
 // one creates the moment on demand at the right count (order preserved).
 //
-// Everything AUTO-SAVES (edits emit `onChange`/`onBarsChange` immediately; an undo
-// exists) — there is no figure-level Save. The per-attribute overlay carries only
-// a Save (confirm + close) and Remove (clear) for that one attribute.
+// Everything AUTO-SAVES (edits emit `onChange`/`onBarsChange` immediately) — there
+// is no figure-level Save. The safety net is the editor header's Undo/Redo, wired
+// by the Assemble FullScreen host to `store.undoFigure`/`redoFigure` so it targets
+// THIS figure's own doc (§5.4, "undo follows the surface being edited") — a mis-tap
+// in the grid is recoverable. The per-attribute overlay carries only a Save (confirm
+// + close) and Remove (clear) for that one attribute.
 //
 // Role is a VIEW, not an identity (US-030, principle #25): a per-device lens (the
 // "Steps for" toggle), never a stored role. role=null ("both") always shows;

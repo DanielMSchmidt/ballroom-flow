@@ -58,6 +58,8 @@ function fakeStore(
     retryFigure: () => {},
     undo: () => ({ undone: false, supersededByOthers: false }),
     redo: () => {},
+    undoFigure: () => ({ undone: false, supersededByOthers: false }),
+    redoFigure: () => {},
     subscribe: () => () => {},
     syncState: () => "live",
     close: () => {},
@@ -645,6 +647,97 @@ describe("US-038 Per-user undo / redo UX", () => {
     renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(undoRoutine(), [])} />);
     expect(screen.queryByRole("button", { name: /^undo$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /^redo$/i })).toBeNull();
+  });
+});
+
+describe("§5.4 figure-editor undo — 'undo follows the surface being edited'", () => {
+  // The figure editor's auto-save contract ("no Save button — an undo exists") is
+  // only honest if figure edits are undoable THERE: the FULL-SCREEN editor header
+  // carries its own Undo/Redo, wired to store.undoFigure/redoFigure (the figure's
+  // OWN doc), with the same "Undone" toast contract as the Assemble toolbar.
+  const oneFigure = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p = placement("p1", "feather");
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p, figure: figure("feather", "Feather"), status: "live" }],
+    };
+  };
+
+  /** The open FULL-SCREEN figure editor, scoped so its header Undo/Redo don't
+   *  collide with the Assemble toolbar's routine-level ones (both are in the DOM). */
+  const editor = () => within(screen.getByRole("dialog", { name: /steps · feather/i }));
+
+  it("shows Undo/Redo in the editor header and undoes THIS figure's doc with an 'Undone' toast", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const undoFigure = vi.fn(() => ({ undone: true, supersededByOthers: false }));
+    const redoFigure = vi.fn();
+    const { routine, resolved } = oneFigure();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { undoFigure, redoFigure })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+
+    await userEvent.click(editor().getByRole("button", { name: /^undo$/i }));
+    // Targets the FIGURE's own doc (§5.4), not the routine.
+    expect(undoFigure).toHaveBeenCalledWith("feather");
+    expect(await screen.findByText(/^undone$/i)).toBeInTheDocument();
+
+    await userEvent.click(editor().getByRole("button", { name: /^redo$/i }));
+    expect(redoFigure).toHaveBeenCalledWith("feather");
+  });
+
+  it("softens the toast when a peer had built on the undone figure change (US-038 AC-3)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const undoFigure = vi.fn(() => ({ undone: true, supersededByOthers: true }));
+    const { routine, resolved } = oneFigure();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { undoFigure })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    await userEvent.click(editor().getByRole("button", { name: /^undo$/i }));
+    expect(await screen.findByText(/others had built on this change/i)).toBeInTheDocument();
+  });
+
+  it("disables the editor Undo/Redo until the figure's own live doc has hydrated (load on open)", async () => {
+    // Intent (C/E): an undo must never land pre-replay — the header affordance is
+    //   gated on the same `fromLiveDoc` readiness as the step grid body.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine } = oneFigure();
+    const p = placement("p1", "feather");
+    const resolved: ResolvedPlacement[] = [
+      { placement: p, figure: figure("feather", "Feather"), status: "live", fromLiveDoc: false },
+    ];
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    // The body is still gated (loading), and the header Undo/Redo are disabled.
+    expect(editor().getByRole("button", { name: /^undo$/i })).toBeDisabled();
+    expect(editor().getByRole("button", { name: /^redo$/i })).toBeDisabled();
+  });
+
+  it("hides the editor Undo/Redo from a viewer (read-only figure editor)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = oneFigure();
+    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
+    expect(editor().queryByRole("button", { name: /^undo$/i })).toBeNull();
+    expect(editor().queryByRole("button", { name: /^redo$/i })).toBeNull();
   });
 });
 

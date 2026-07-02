@@ -707,8 +707,11 @@ export function Assemble({
 
       {/* Notate a figure (US-028 hero flow, frames 1.11/1.12): a FULL-SCREEN editor
           (‹ back), not a modal-within-modal. The editor writes to the figure's OWN
-          doc via the store and auto-saves (undo exists — no figure-level Save); a
-          viewer sees it read-only. Re-reads live so a collaborator's edit flows in. */}
+          doc via the store and auto-saves — there is no figure-level Save; the
+          safety net is the header Undo/Redo, which (§5.4, "undo follows the surface
+          being edited") targets THIS figure's own doc via store.undoFigure, so a
+          mis-tap in the step grid is recoverable. A viewer sees it read-only.
+          Re-reads live so a collaborator's edit flows in. */}
       <FullScreen
         open={notating !== null}
         onClose={() => {
@@ -719,6 +722,47 @@ export function Assemble({
         }}
         title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
         backLabel="Back"
+        actions={
+          // Figure-scoped undo/redo (§5.4): editor-only, and disabled until the
+          // figure's own live doc has hydrated (the same "load on open" gate the
+          // body uses — an edit/undo must never land pre-replay). Same primitives
+          // + "Undone" toast contract (incl. the soft superseded variant) as the
+          // Assemble editing toolbar's routine-level undo/redo.
+          canEdit ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Undo"
+                disabled={!notatingFigureReady}
+                onClick={() => {
+                  const ref = notatingFigure?.id ?? notating;
+                  if (!ref) return;
+                  const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
+                  if (supersededByOthers) {
+                    toast.show("Undone — others had built on this change", { tone: "warning" });
+                  } else {
+                    toast.show("Undone");
+                  }
+                }}
+              >
+                <span aria-hidden="true">↶</span> Undo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Redo"
+                disabled={!notatingFigureReady}
+                onClick={() => {
+                  const ref = notatingFigure?.id ?? notating;
+                  if (ref) store.redoFigure(ref);
+                }}
+              >
+                <span aria-hidden="true">↷</span> Redo
+              </Button>
+            </>
+          ) : undefined
+        }
       >
         {notating !== null && !notatingFigureReady && (
           // Load on open (C/E): wait for the figure's own live doc before showing

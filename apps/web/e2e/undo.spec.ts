@@ -91,3 +91,51 @@ test.describe("@smoke per-user undo across two clients", () => {
     await closeUsers(a, b);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Figure-editor undo — "undo follows the surface being edited" (PLAN §5.4). The
+// full-screen figure editor auto-saves with no Save button; its honesty rests on
+// an undo existing THERE, targeting the figure's OWN doc (store.undoFigure). This
+// drives the real journey: open the editor → set an attribute → undo → the cell
+// is empty again.
+//
+// @smoke — part of the CI PR smoke subset.
+// ─────────────────────────────────────────────────────────────────────────
+test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () => {
+  test("set a step attribute in the figure editor, then undo it — the cell empties", async ({
+    page,
+  }) => {
+    const user = "user_fig_undo";
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: user, displayName: "Solo", identityColor: "#3344ff" }],
+    });
+    await seedAuth(page, user);
+
+    // Create a routine → a section → a NON-catalog custom figure (an empty figure
+    // to notate by hand; a catalog name would arrive pre-filled and spawn a variant).
+    const docRef = await createRoutineAsOwner(page, "Undo Figure Waltz");
+    expect(docRef).toBeTruthy();
+    await addSection(page, "Steps");
+    await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByLabel("Figure name").fill("My Step");
+    await page.getByLabel("Figure name").press("Enter");
+    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
+
+    // Open the figure's full-screen editor and set a single attribute at count 1:
+    // tap the Step cell → the overlay → DIRECTION "Forward" → Save (closes overlay).
+    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    const editor = page.getByRole("dialog", { name: /steps · my step/i });
+    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Forward$/ }).click();
+    await page.getByRole("button", { name: /^Save$/ }).click();
+    // The edit landed: count 1 now carries the "forward" headline.
+    await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
+
+    // Undo from the EDITOR HEADER (scoped to the dialog so it's the figure's undo,
+    // not the routine toolbar's) → "Undone" toast, and count 1 empties again (§5.4).
+    await editor.getByRole("button", { name: /^undo$/i }).click();
+    await expect(page.getByText(/^undone$/i)).toBeVisible();
+    await expect(page.getByTestId("step-headline-1")).toHaveCount(0, { timeout: 15_000 });
+  });
+});
