@@ -4,8 +4,10 @@
 // later a copy-on-write variant, US-035) it must be projected to the D1 index +
 // given an owner membership, or the fail-closed DO boundary (US-021) can't
 // owner-resolve a connect to that figure → 403. This mirrors createOwnedRoutine.
+import { LIBRARY_FIGURES, parseGlobalFigureRef } from "@ballroom/domain";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { listLibraryFigureRefs } from "./library";
 import { documentRegistry, membership } from "./schema";
 
 export interface NewFigure {
@@ -98,43 +100,74 @@ export interface MineFigureRow extends GlobalFigureRow {
   usedInCount: number;
 }
 
-/** The caller's account figures (variants + custom) with a usage count from the edges. */
-export async function listMineFigures(db: D1Database, userId: string): Promise<MineFigureRow[]> {
-  // forkedFromRef carries the figure's baseFigureRef lineage (reused index column,
-  // no migration) — surfaced as baseFigureRef so the UI can badge variant vs custom.
-  const res = await db
-    .prepare(
-      "SELECT r.docRef AS docRef, r.figureType AS figureType, r.dance AS dance, r.title AS title, " +
-        "r.forkedFromRef AS baseFigureRef, " +
-        "(SELECT COUNT(*) FROM placement_edge pe WHERE pe.figureRef = r.docRef) AS usedInCount " +
-        "FROM document_registry r WHERE r.ownerId = ?1 AND r.type = 'account-figure' AND r.deletedAt IS NULL " +
-        "ORDER BY r.updatedAt DESC",
-    )
-    .bind(userId)
-    .all<MineFigureRow>();
-  return res.results ?? [];
-}
-
 /**
- * The caller's existing account-figure that was saved FROM a given global-catalog
- * figure, identified by its provenance `baseFigureRef` (stored in forkedFromRef).
- * Returns the copy's docRef, or null. This is what makes "save to my library"
- * idempotent — re-saving the same global figure resolves the prior copy instead of
- * minting a duplicate. Scoped to the owner so it never reads another user's copy.
+ * The caller's LIBRARY — their bookmarked figures (⟳v5, §4.2/§5.2, D28), driven
+ * by `library_entry` (the LibraryEntry projection, §2.7), NOT ownership: a
+ * choreo-local account figure with no bookmark must NOT appear here, and a
+ * bookmarked figure a CO-MEMBER created (e.g. your partner's shared-choreo
+ * figure) DOES — the library is a set of references, not a set of owned docs.
+ *
+ * A bookmark resolves one of two ways:
+ *  - an account-figure docRef  → joined against `document_registry` for its
+ *    title/dance/figureType/lineage (`baseFigureRef`, carried in the reused
+ *    `forkedFromRef` column) + its usedInCount from `placement_edge`.
+ *  - a catalog `global:<dance>:<figureType>` ref (bookmarked straight off the
+ *    global library, no copy) → has no registry row of its own; resolved from
+ *    the bundled `LIBRARY_FIGURES` reference data instead. Its `baseFigureRef`
+ *    is null (it's the catalog original, not a variant of anything) and its
+ *    `usedInCount` reads `placement_edge` the same way — 0 until a live catalog
+ *    reference is placed (global figure docs/live catalog placements land in the
+ *    v5 milestone's step 3).
  */
-export async function findSavedLibraryFigure(
-  db: D1Database,
-  userId: string,
-  baseFigureRef: string,
-): Promise<string | null> {
-  const row = await db
-    .prepare(
-      "SELECT docRef FROM document_registry WHERE ownerId = ?1 AND type = 'account-figure' " +
-        "AND forkedFromRef = ?2 AND deletedAt IS NULL LIMIT 1",
-    )
-    .bind(userId, baseFigureRef)
-    .first<{ docRef: string }>();
-  return row?.docRef ?? null;
+export async function listMineFigures(db: D1Database, userId: string): Promise<MineFigureRow[]> {
+  const refs = await listLibraryFigureRefs(db, userId);
+  if (refs.length === 0) return [];
+
+  const accountRefs = refs.filter((r) => parseGlobalFigureRef(r) == null);
+  const catalogRefs = refs.filter((r) => parseGlobalFigureRef(r) != null);
+
+  const rows: MineFigureRow[] = [];
+
+  if (accountRefs.length > 0) {
+    // forkedFromRef carries the figure's baseFigureRef lineage (reused index
+    // column, no migration) — surfaced as baseFigureRef so the UI can badge
+    // variant vs custom. docRef is the PRIMARY KEY, so `IN (...)` is an indexed
+    // lookup, not a scan.
+    const placeholders = accountRefs.map((_, i) => `?${i + 2}`).join(",");
+    const res = await db
+      .prepare(
+        "SELECT r.docRef AS docRef, r.figureType AS figureType, r.dance AS dance, r.title AS title, " +
+          "r.forkedFromRef AS baseFigureRef, " +
+          "(SELECT COUNT(*) FROM placement_edge pe WHERE pe.figureRef = r.docRef) AS usedInCount " +
+          `FROM document_registry r WHERE r.type = ?1 AND r.deletedAt IS NULL AND r.docRef IN (${placeholders}) ` +
+          "ORDER BY r.updatedAt DESC",
+      )
+      .bind("account-figure", ...accountRefs)
+      .all<MineFigureRow>();
+    rows.push(...(res.results ?? []));
+  }
+
+  for (const ref of catalogRefs) {
+    const parsed = parseGlobalFigureRef(ref);
+    if (!parsed) continue; // narrows for TS; catalogRefs is already filtered
+    const catalog = LIBRARY_FIGURES.find(
+      (f) => f.dance === parsed.dance && f.figureType === parsed.figureType,
+    );
+    const used = await db
+      .prepare("SELECT COUNT(*) AS n FROM placement_edge WHERE figureRef = ?1")
+      .bind(ref)
+      .first<{ n: number }>();
+    rows.push({
+      docRef: ref,
+      figureType: parsed.figureType,
+      dance: parsed.dance,
+      title: catalog?.name ?? parsed.figureType,
+      baseFigureRef: null, // the catalog original, not a variant of anything
+      usedInCount: used?.n ?? 0,
+    });
+  }
+
+  return rows;
 }
 
 /**

@@ -186,9 +186,11 @@ describe("US-032/033 Figure library browse (global + account variants)", () => {
 
   it("lists the user's account variants + custom figures with 'used in N routines'", async () => {
     // Intent: my variants/custom figures show lineage + usage count.
-    // Arrange: seed an account-figure owned by u1 referenced by 2 of u1's routines.
-    // Act: GET /api/figures/mine. Assert: 200; the variant shows usedInCount: 2.
-    // Covers US-033 AC-1 (variants/custom listed) + AC-2 ("used in N routines").
+    // Arrange: seed an account-figure owned by u1, BOOKMARKED by u1 (⟳v5 — the
+    // library is bookmark-driven, not ownership-driven; §4.2/§5.2), referenced by
+    // 2 of u1's routines. Act: GET /api/figures/mine. Assert: 200; the variant
+    // shows usedInCount: 2. Covers US-033 AC-1 (variants/custom listed) + AC-2
+    // ("used in N routines").
     const ctx = await authedContext({ keypair: kp, userId: "u1", docRef: "n/a", role: null });
     await seedDb({
       users: [{ id: "u1", displayName: "U1", identityColor: "#111", plan: "free" }],
@@ -209,6 +211,7 @@ describe("US-032/033 Figure library browse (global + account variants)", () => {
         { routineRef: "rtA", figureRef: "var1" },
         { routineRef: "rtB", figureRef: "var1" },
       ],
+      libraryEntries: [{ userId: "u1", figureRef: "var1" }],
     });
     const res = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
     expect(res.status).toBe(200);
