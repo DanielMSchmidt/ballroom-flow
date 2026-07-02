@@ -2,15 +2,20 @@
 //
 // A `DocConnection` holds an in-memory Automerge doc for ONE document and keeps
 // it in sync with that document's Durable Object over the WebSocket the worker
-// exposes at `/docs/:id/connect` (US-017 Phase 1). It speaks the same raw-binary
-// change protocol the DO speaks (US-015): incoming binary frames are Automerge
-// changes to apply; local edits are sent as change bytes. Malformed frames are
-// dropped (the wire is untrusted until US-021), mirroring the DO's own guard.
+// exposes at `/docs/:id/connect` (US-017 Phase 1). It speaks the D10 sync wire
+// (US-015 + 2026-07-02 hardening): server→client BINARY frames carry a 1-byte
+// TYPE tag — a SYNC_FRAME_SNAPSHOT (the whole doc, `A.load`ed + `A.merge`d on
+// (re)connect) or a SYNC_FRAME_CHANGE (one incremental change to apply). Local
+// edits are sent as RAW change bytes (client→server frames are untagged — see
+// @ballroom/contract SYNC_FRAME_* for the asymmetry). On (re)connect, after
+// merging the catch-up snapshot, the client RESENDS the local changes the server
+// is missing (#161), so an edit made into a dying socket is never silently lost.
+// Malformed frames are dropped (the wire is untrusted until US-021).
 //
 // The WebSocket factory is injectable so the seam is testable without a live
 // server (jsdom has no WS server); production passes the global `WebSocket`.
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP } from "@ballroom/contract";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_CHANGE, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
 
 /** Minimal structural view of a WebSocket (so tests can inject a fake). */
 export interface SocketLike {
@@ -107,8 +112,15 @@ export class DocConnection<T> {
   // buffered here and flushed once it opens — otherwise a brand-new doc's seed
   // change (a figure's name/attributes), or an edit made during a reconnect gap,
   // is silently dropped and never reaches its DO, so it's lost on the next
-  // reload. (A precursor to full reconnect resend, #161.)
+  // reload. This handles the socket-not-open case; the SNAPSHOT-diff resend on
+  // (re)connect (#161) is the complementary belt-and-braces that recovers a
+  // change which WAS sent into a socket that then died before it hit the wire.
   private pendingSends: Uint8Array[] = [];
+  // Whether the current connection has received its catch-up SNAPSHOT frame yet.
+  // Reset per socket (in `attach`); drives the reconnect-resend at SYNC_CAUGHT_UP
+  // for the rare unseeded-server case (no snapshot ⇒ the server is missing ALL
+  // our local changes). The seeded case resends from the snapshot diff directly.
+  private snapshotSinceConnect = false;
 
   private readonly url: string;
   private readonly openSocket: SocketFactory;
@@ -165,6 +177,7 @@ export class DocConnection<T> {
   /** Wire up a freshly-opened socket. */
   private attach(socket: SocketLike): void {
     this.socket = socket;
+    this.snapshotSinceConnect = false; // a new connection hasn't caught up yet
     socket.binaryType = "arraybuffer";
     socket.addEventListener("message", (ev) => this.receive(ev.data));
     // On open, flush any changes buffered while connecting — but do NOT go
@@ -325,18 +338,78 @@ export class DocConnection<T> {
     this.onChange?.();
   }
 
-  /** Apply a raw incoming change frame from a peer. Drops malformed frames. */
+  /**
+   * Handle an incoming server→client frame. TEXT = the SYNC_CAUGHT_UP marker;
+   * BINARY = a D10-tagged frame (byte 0 = type, rest = payload): a SNAPSHOT to
+   * merge, or one CHANGE to apply. Malformed / unknown-tag frames are dropped.
+   */
   private receive(data: unknown): void {
-    // The DO's catch-up-complete marker (a TEXT frame): the full replay has been
-    // applied, so this connection is HYDRATED → go "live" (#202).
+    // The DO's catch-up-complete marker (a TEXT frame): the catch-up is done, so
+    // this connection is HYDRATED → go "live" (#202).
     if (data === SYNC_CAUGHT_UP) {
+      // No snapshot arrived this connection ⇒ the server has NO state for this
+      // doc (unseeded), so it is missing ALL our local changes — resend them.
+      // (The seeded case already resent from the snapshot diff in `mergeSnapshot`.
+      // On a fresh empty doc this is a no-op: getAllChanges is empty.)
+      if (!this.snapshotSinceConnect) this.resendMissing(A.getAllChanges(this.doc));
       this.attempt = 0; // a clean hydration resets the backoff schedule
       this.setState("live");
       return;
     }
     if (!(data instanceof ArrayBuffer)) return; // sync frames are binary
+    const framed = new Uint8Array(data);
+    if (framed.byteLength === 0) return; // an empty frame carries no tag — drop
+    const tag = framed[0];
+    // `slice(1)` COPIES the payload off the tagged frame (a subarray view could
+    // confuse the wasm loader, which reads the whole backing buffer).
+    const payload = framed.slice(1);
+    if (tag === SYNC_FRAME_SNAPSHOT) {
+      this.mergeSnapshot(payload);
+    } else if (tag === SYNC_FRAME_CHANGE) {
+      this.applyChangeFrame(payload);
+    }
+    // else: an unknown tag (e.g. a raw change frame from an OLD server during a
+    // rollout — its first byte is Automerge magic, not one of ours) → drop it.
+  }
+
+  /**
+   * Apply the catch-up SNAPSHOT (#161 core): `A.load` the server's whole-doc blob
+   * and `A.merge` it into our local doc, so a RECONNECTING client with unacked
+   * local edits keeps them (merge is a union, not a replace) while gaining every
+   * change the server advanced past us. Then compute the changes the SERVER is
+   * missing — the local-ahead delta — and RESEND them, so an edit that was lost
+   * into a dying socket (sent, but never reached the wire) is recovered. The
+   * server's `ingestChange` is idempotent, so re-sending a change it already has
+   * is a safe no-op.
+   */
+  private mergeSnapshot(saved: Uint8Array): void {
+    this.snapshotSinceConnect = true;
+    let serverDoc: A.Doc<T>;
     try {
-      const [next] = A.applyChanges(this.doc, [new Uint8Array(data) as A.Change]);
+      serverDoc = A.load<T>(saved);
+    } catch {
+      return; // malformed snapshot blob — drop it (the wire is untrusted)
+    }
+    const beforeHeads = A.getHeads(this.doc).join();
+    // Merge the server's state INTO our doc — mutating `this.doc`'s handle in
+    // place so it KEEPS this connection's Automerge actor id (critical: a fresh
+    // `A.clone(this.doc)` would fork a NEW random actor and break per-actor undo).
+    // We clone only `serverDoc` (merge freezes its second arg) so the original
+    // `serverDoc` stays readable for the getChanges diff below.
+    const merged = A.merge(this.doc, A.clone(serverDoc));
+    // Changes present in `merged` but not in `serverDoc` = exactly our local
+    // changes the server hasn't seen. (Safe: `merged` ⊇ `serverDoc`, so
+    // getChanges never hits its "old has changes new lacks" crash.)
+    const missing = A.getChanges(serverDoc, merged);
+    this.doc = merged;
+    if (A.getHeads(merged).join() !== beforeHeads) this.onChange?.();
+    this.resendMissing(missing);
+  }
+
+  /** Apply one incremental CHANGE frame from a peer. Drops malformed frames. */
+  private applyChangeFrame(change: Uint8Array): void {
+    try {
+      const [next] = A.applyChanges(this.doc, [change as A.Change]);
       // Heads unchanged ⇒ duplicate/no-op; skip the notify.
       if (A.getHeads(next).join() === A.getHeads(this.doc).join()) return;
       this.doc = next;
@@ -344,6 +417,12 @@ export class DocConnection<T> {
     } catch {
       // Malformed frame (not a valid Automerge change) — drop it.
     }
+  }
+
+  /** Send changes the server is missing (reconnect resend, #161). Routes through
+   *  `send` so a not-yet-open socket buffers them for the flush on open. */
+  private resendMissing(changes: A.Change[]): void {
+    for (const c of changes) this.send(c as Uint8Array);
   }
 
   private send(change: Uint8Array): void {
@@ -376,11 +455,30 @@ export class DocConnection<T> {
     }
   }
 
+  /**
+   * Dispose this connection: stop reconnecting and close the socket. TERMINAL —
+   * `disposed` is never cleared, so a later drop never reconnects.
+   *
+   * pendingSends on dispose: any changes still buffered here (never flushed to a
+   * socket) are DROPPED — but this is not the silent-loss path #161 guards. close()
+   * is a deliberate owner teardown (navigating away / disposing the store): the
+   * in-memory doc these changes belong to is being discarded WITH them, so there
+   * is nothing left to be inconsistent with. The loss path that matters — a change
+   * dropped while the connection stays LIVE (a warm reconnect) — is covered by the
+   * snapshot-diff resend on reconnect. We surface the count for observability
+   * rather than swallowing it entirely.
+   */
   close(): void {
     this.disposed = true;
     if (this.reconnectTimer != null) {
       this.cancel(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+    if (this.pendingSends.length > 0) {
+      // Not an error — see the note above; logged so an unexpected drop is visible.
+      console.debug(
+        `DocConnection.close: dropping ${this.pendingSends.length} unflushed change(s)`,
+      );
     }
     this.socket?.close();
   }

@@ -453,10 +453,11 @@ export async function openRoutine(
       await apiPost<unknown>("/api/account/custom-kinds", token, k);
     });
 
-  // Start from a TRULY empty doc (A.init) — the DO replays its full history
-  // (getAllChanges, incl. the doc's creation) on connect, so the client builds
-  // the identical doc by applying those changes. Seeding content here would
-  // create a divergent root that can't cleanly load the DO's history.
+  // Start from a TRULY empty doc (A.init) — on connect the DO sends ONE snapshot
+  // frame (the whole doc as an `A.save` blob, D10) which DocConnection `A.load`s
+  // and MERGES into this empty doc, so the client ends up with the identical doc.
+  // Seeding content here would create a divergent root; A.init keeps the merge a
+  // clean superset of the server's state.
   const routineConn = new DocConnection<RoutineDoc>(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
