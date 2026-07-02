@@ -1,6 +1,7 @@
 // US-023 — invite redemption screen (/invite/:token). Redeems the invite once on
 // mount, then deep-links into the joined routine. A bad/expired/already-used
-// invite shows a calm error instead of a dead end.
+// invite shows a calm error instead of a dead end — plus an explicit button back
+// to the redeemer's own choreography overview so they're never stranded.
 //
 // US-022 × US-023: if the invite was an EDITOR link but the server downgraded it
 // to commenter (the redeemer is at their routine-edit limit on the free plan), we
@@ -30,12 +31,20 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
   }, [token, redeem]);
 
   if (redeem.isError) {
+    // Dead-end guard: a signed-in visitor whose invite is expired/invalid/used
+    // shouldn't be stranded here. Offer an explicit way to their own
+    // choreography overview (the routine list at `/`). A signed-out visitor only
+    // reaches this card AFTER signing in (App routes them through SignInPrompt
+    // first), so this same button is their post-sign-in path to the overview.
     return (
       <Card>
         <p className="text-sm font-bold text-ink">This invite can’t be opened</p>
         <p className="mt-1 text-2xs text-ink-muted">
           The link may be invalid, expired, or already used. Ask for a fresh invite.
         </p>
+        <div className="mt-3">
+          <Button onClick={() => navigate("/")}>Go to my choreography</Button>
+        </div>
       </Card>
     );
   }
