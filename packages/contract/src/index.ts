@@ -102,19 +102,27 @@ export const zCreateFigure = z.object({
 export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
- * Save-to-library request (T5 / US-034 reuse). Promotes a GLOBAL-catalog figure
- * into the caller's personal library as a FROZEN account-figure copy (PLAN §5.2):
- * the client identifies the catalog figure by its cross-dance identity
- * `(dance, figureType, name)`; the SERVER resolves it from the bundled catalog,
- * stamps ownerId from the verified JWT sub, mints the copy's figureRef, and
- * records `baseFigureRef = globalFigureRef(dance, figureType)` as provenance. The
- * promotion is idempotent on `(owner, baseFigureRef)` — re-saving is a no-op.
+ * Save-to-library request (T5 / US-034 reuse; ⟳v5 — "add to my library" is a
+ * BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). The v5 shape is direct: the client
+ * names the figureRef to bookmark (an account-figure docRef, or a catalog
+ * `global:<dance>:<figureType>` ref minted client-side via `globalFigureRef`).
+ *
+ * The legacy `(dance, figureType, name)` triple is accepted for BACK-COMPAT with
+ * the existing global-library "↟ save" card (FigureLibrary.tsx), which still
+ * identifies a catalog figure by its cross-dance identity rather than minting the
+ * ref itself: the SERVER resolves it from the bundled catalog and bookmarks
+ * `globalFigureRef(dance, figureType)` — still no copy. Both shapes are
+ * idempotent per-caller: re-saving the same figureRef is a no-op
+ * (`alreadySaved: true`).
  */
-export const zSaveToLibrary = z.object({
-  dance: z.enum(DANCE_IDS),
-  figureType: z.string().trim().min(1).max(120),
-  name: z.string().trim().min(1).max(80),
-});
+export const zSaveToLibrary = z.union([
+  z.object({ figureRef: z.string().min(1) }),
+  z.object({
+    dance: z.enum(DANCE_IDS),
+    figureType: z.string().trim().min(1).max(120),
+    name: z.string().trim().min(1).max(80),
+  }),
+]);
 export type SaveToLibrary = z.infer<typeof zSaveToLibrary>;
 
 /**
