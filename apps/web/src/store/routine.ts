@@ -667,6 +667,14 @@ export async function openRoutine(
    */
   const figureFromLiveDoc = (figureRef: string): boolean => {
     if (pendingFigures.has(figureRef)) return false;
+    // A catalog live-reference (⟳v5, §4.3) is ALWAYS editor-ready: its content is
+    // definitionally available (bundled catalog / snapshot base — §6.2 keeps it
+    // poll-fresh, not live), and any user edit spawns a VARIANT rather than
+    // writing to this doc — so there is no own-doc hydration to wait for. Without
+    // this, opening the editor on a catalog figure in an environment whose global
+    // docs aren't seeded (or whose connect is still catching up) hangs the "load
+    // on open" gate forever.
+    if (libraryFigureByRef(figureRef)) return true;
     const conn = eagerFigures ? figureConn(figureRef) : figureConns.get(figureRef);
     return conn ? readFigureDoc(conn) !== null : false;
   };
@@ -679,6 +687,12 @@ export async function openRoutine(
       // its editor is open. Idempotent — figureConn caches; eager mode already
       // connected it. The onAdvance wiring re-renders as its content hydrates.
       if (pendingFigures.has(figureRef)) return;
+      // A catalog live-reference needs NO own connection (⟳v5, §6.2): its content
+      // comes from the bundled catalog / snapshot, admin edits arrive on the next
+      // poll, and a user edit spawns a variant (which then opens ITS connection).
+      // Opening one anyway would 403 wherever the global docs aren't seeded and
+      // churn the reconnect/backoff machinery for nothing.
+      if (libraryFigureByRef(figureRef)) return;
       figureConn(figureRef);
       notify();
     },

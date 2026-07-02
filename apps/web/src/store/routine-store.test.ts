@@ -255,6 +255,25 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
   });
 
+  it("a catalog reference is EDITOR-READY with zero figure sockets (openFigure is a no-op)", async () => {
+    // Regression (screenshots/e2e CI, 2026-07-02): opening the step editor on a
+    // catalog live-reference used to open a WS to the global doc and gate the
+    // editor on its hydration — in any environment whose global docs aren't
+    // seeded, that connect 403s and the "load on open" gate hangs forever. A
+    // catalog ref's content is definitionally available (bundled catalog /
+    // snapshot base, §6.2 poll-fresh), and a user edit spawns a VARIANT anyway —
+    // so the editor must be ready without any own-doc connection.
+    const { store, sockets } = await openWithSection();
+    store.addPlacement("s1", "Natural Turn", "natural-turn");
+    const ref = globalFigureRef("waltz", "natural-turn");
+    const socketsBefore = sockets.size;
+    store.openFigure(ref); // must NOT open a socket for the catalog ref
+    expect(sockets.size).toBe(socketsBefore);
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
+    expect(rp?.status).toBe("live");
+    expect(rp?.fromLiveDoc).toBe(true); // the editor's load-on-open gate releases
+  });
+
   it("resolves a TYPED multi-word catalog name to its canonical global ref", async () => {
     const createFigure = vi.fn(async () => {});
     const { store } = await openWithSection(createFigure);
