@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 /**
  * Shared overlay behavior for Sheet / Modal:
@@ -13,6 +13,18 @@ export function useOverlay(
   onClose: () => void,
   panelRef: RefObject<HTMLElement | null>,
 ) {
+  // Read the latest onClose through a ref so the effect below does NOT depend on
+  // its identity. Callers pass an inline handler (`onClose={() => setX(null)}`)
+  // that is a fresh closure every render, and the routine editor re-renders on
+  // every background sync frame (a collaborator's live edit). If the effect
+  // re-ran on each of those, it would restore focus to the background and then
+  // re-grab it into the panel — and toggle the body scroll lock — on every
+  // frame, which reads as the overlay "flickering" and steals focus from an
+  // input the user is typing in. Keying the effect on `open` alone makes the
+  // open/focus/lock setup run once per open, immune to background re-renders.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
 
@@ -28,7 +40,7 @@ export function useOverlay(
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab" && panel) {
@@ -58,5 +70,5 @@ export function useOverlay(
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose, panelRef]);
+  }, [open, panelRef]);
 }
