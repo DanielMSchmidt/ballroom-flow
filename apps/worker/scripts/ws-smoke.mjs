@@ -12,12 +12,21 @@
 //   # or override the base: WS_BASE=ws://localhost:8801 node …/ws-smoke.mjs
 //
 // It exercises: (1) A's change reaches B + both converge (heads-equal);
-// (2) a fresh client catches up via the full-log replay on connect;
+// (2) a fresh client catches up via the on-connect SNAPSHOT frame;
 // (3) a duplicate change is a no-op. Exits non-zero on any failure.
 //
 // Uses Node's built-in `WebSocket` (Node 22+/24) — no `ws` dependency — and the
 // real `@automerge/automerge` to build/apply changes the way the DO's wire does.
+//
+// D10 wire (2026-07-02): server→client BINARY frames carry a 1-byte TYPE tag —
+// SNAPSHOT (whole doc, A.load+merge on connect) or CHANGE (one incremental
+// change). Client→server frames stay RAW change bytes (untagged). These byte
+// constants MIRROR @ballroom/contract's SYNC_FRAME_* (kept inline so this plain
+// node script needs no TS/workspace resolution).
 import * as A from "@automerge/automerge";
+
+const SYNC_FRAME_SNAPSHOT = 0x01;
+const SYNC_FRAME_CHANGE = 0x02;
 
 const BASE = process.env.WS_BASE ?? "ws://localhost:8787";
 const docId = `smoke-${Math.random().toString(16).slice(2)}`;
@@ -25,23 +34,35 @@ const url = `${BASE}/docs/${docId}/connect`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Open a WS client; buffers incoming binary frames as Uint8Array. */
+/** Open a WS client; buffers incoming BINARY frames (ignores the text caught-up
+ *  marker) as Uint8Array, tag byte included. */
 function connect(label) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     const received = [];
-    ws.addEventListener("message", (ev) => received.push(new Uint8Array(ev.data)));
+    ws.addEventListener("message", (ev) => {
+      if (ev.data instanceof ArrayBuffer) received.push(new Uint8Array(ev.data));
+      // text frames (SYNC_CAUGHT_UP) carry no doc bytes — ignore.
+    });
     ws.addEventListener("open", () => resolve({ ws, received, label }));
     ws.addEventListener("error", (e) => reject(new Error(`${label} ws error: ${e.message ?? e}`)));
     setTimeout(() => reject(new Error(`${label} connect timeout`)), 8000);
   });
 }
 
-/** Apply all buffered change frames to a doc, returning the advanced doc. */
+/** Merge all buffered server→client frames into a doc: a SNAPSHOT frame is
+ *  A.load+merge'd; CHANGE frames are applied. Strips the 1-byte type tag. */
 function applyFrames(doc, frames) {
-  if (frames.length === 0) return doc;
-  const [next] = A.applyChanges(doc, frames);
+  let next = doc;
+  const changes = [];
+  for (const f of frames) {
+    if (f.byteLength === 0) continue;
+    const payload = f.slice(1);
+    if (f[0] === SYNC_FRAME_SNAPSHOT) next = A.merge(next, A.load(payload));
+    else if (f[0] === SYNC_FRAME_CHANGE) changes.push(payload);
+  }
+  if (changes.length > 0) [next] = A.applyChanges(next, changes);
   return next;
 }
 
@@ -102,7 +123,7 @@ async function main() {
   await sleep(600);
   const docC = applyFrames(A.init(), c.received.splice(0));
   check(
-    "(2) reconnecting client C catches up via full-log replay (has A's edit)",
+    "(2) reconnecting client C catches up via the on-connect snapshot (has A's edit)",
     (docC.sections ?? []).some((s) => s.name === "FromA"),
   );
   check("(2b) C converged with A (heads-equal)", headsEqual(docC, docA));

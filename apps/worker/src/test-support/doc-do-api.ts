@@ -31,6 +31,9 @@ export interface DocStub {
   seedDoc(content: Record<string, unknown>): Promise<void>;
   /** Set the D1-projected metadata (title/dance/owner/figureType). */
   setMetadata(meta: Record<string, unknown>): Promise<void>;
+  /** Test hook: the exact BINARY catch-up frames a connect would send — post-D10,
+   *  exactly one tagged snapshot frame for a seeded doc (or none if unseeded). */
+  catchUpFramesForTest(): Promise<Uint8Array[]>;
   /** Test hook: drop the in-memory doc + re-run cold-load (simulates eviction). */
   reloadForTest(): Promise<void>;
   /** Test hook: number of rows in the SQLite change log (incremental-persist assertions). */

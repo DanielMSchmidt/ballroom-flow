@@ -13,7 +13,12 @@
 
 import { DurableObject } from "cloudflare:workers";
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP } from "@ballroom/contract";
+import {
+  SYNC_CAUGHT_UP,
+  SYNC_FRAME_CHANGE,
+  SYNC_FRAME_SNAPSHOT,
+  SYNC_RESYNC_CLOSE_CODE,
+} from "@ballroom/contract";
 import {
   type Anchor,
   type AnnotationKind,
@@ -68,6 +73,20 @@ function headsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   const sortedB = [...b].sort();
   return [...a].sort().every((h, i) => h === sortedB[i]);
+}
+
+/**
+ * Frame a server→client BINARY payload with its 1-byte type tag (D10 wire
+ * envelope). `tag` is SYNC_FRAME_SNAPSHOT (whole-doc `A.save` blob) or
+ * SYNC_FRAME_CHANGE (one incremental change); the client strips byte 0 and
+ * routes on it. Only server→client frames are tagged — client→server changes
+ * stay raw (see @ballroom/contract's SYNC_FRAME_* doc for the asymmetry).
+ */
+function frame(tag: number, payload: Uint8Array): Uint8Array {
+  const out = new Uint8Array(payload.byteLength + 1);
+  out[0] = tag;
+  out.set(payload, 1);
+  return out;
 }
 
 /**
@@ -363,9 +382,9 @@ export class DocDO extends DurableObject<Env> {
   /**
    * WebSocket entrypoint. Upgrades the request to a Hibernatable WebSocket the
    * runtime owns (so the DO can hibernate while idle and wake on a message
-   * WITHOUT dropping state — state lives in SQLite). On connect we replay the
-   * full change log to the new client so it catches up, then it exchanges
-   * incremental changes via `webSocketMessage`.
+   * WITHOUT dropping state — state lives in SQLite). On connect we send the new
+   * client ONE snapshot frame (the whole doc as an `A.save` blob — D10, bounded
+   * on the wire), then it exchanges incremental changes via `webSocketMessage`.
    */
   override async fetch(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") {
@@ -411,21 +430,27 @@ export class DocDO extends DurableObject<Env> {
     // survive hibernation — unlike addEventListener closures).
     this.ctx.acceptWebSocket(server);
 
-    // Catch the new client up with the full current state (all changes so far),
-    // then signal catch-up-complete (#202) so the client knows the doc is
-    // HYDRATED — not merely socket-open — and may safely begin editing. The
-    // marker is a TEXT frame, distinct from the binary change frames above.
+    // Catch the new client up with ONE snapshot frame — the whole doc as an
+    // `A.save` blob (D10 sync hardening, 2026-07-02) — then signal catch-up-
+    // complete (#202) so the client knows the doc is HYDRATED (not merely
+    // socket-open) and may safely begin editing. This replaces the old per-change
+    // history replay (`getAllChanges` → one frame per change), which grew
+    // UNBOUNDED on the wire as a doc aged — compaction bounds the SQLite log, not
+    // the replay. The client `A.load`s the blob and `A.merge`s it into its local
+    // doc, so a RECONNECTING client with unacked local edits keeps them (and then
+    // resends the changes the server is missing — client side, #161). The marker
+    // is a TEXT frame, distinct from the tagged binary snapshot/change frames.
     //
     // IMPORTANT: read via loadPersisted(), NOT getDoc() — a connect to a
     // not-yet-seeded doc must NOT auto-materialize + persist an empty-routine
     // placeholder. Doing so used to no-clobber a subsequent seedDoc, so a
     // collaborator who connected before the create's seed left the doc empty
-    // forever. Here an unseeded doc just sends an empty catch-up; when seedDoc
-    // runs it broadcasts the seed to this already-connected socket (below).
+    // forever. Here an unseeded doc sends NO snapshot (just SYNC_CAUGHT_UP); when
+    // seedDoc runs it broadcasts the seed to this already-connected socket.
     const current = this.doc ?? this.loadPersisted();
     if (current) {
       this.doc = current;
-      for (const change of A.getAllChanges(current)) server.send(change as Uint8Array);
+      server.send(frame(SYNC_FRAME_SNAPSHOT, A.save(current)));
     }
     server.send(SYNC_CAUGHT_UP);
 
@@ -433,9 +458,12 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * A change arrived from a connected client. Binary frames are raw Automerge
-   * change bytes; apply (idempotently) and relay to the OTHER clients so all
-   * connections converge.
+   * A change arrived from a connected client. Client→server binary frames are
+   * RAW Automerge change bytes — NOT tagged (only server→client frames carry the
+   * D10 1-byte envelope; see @ballroom/contract SYNC_FRAME_* for the asymmetry).
+   * We apply (idempotently) and relay to the OTHER clients so all connections
+   * converge. A reconnecting client's resend of its unacked changes (#161) also
+   * arrives here as raw frames; the idempotence guard makes re-delivery a no-op.
    *
    * US-021 + US-039 permission boundary: writes are gated by the connection's
    * role. An editor/owner (`canEdit`) may make any change. A COMMENTER
@@ -610,22 +638,57 @@ export class DocDO extends DurableObject<Env> {
   /**
    * Relay change bytes to every connected client except `from` (the socket the
    * change arrived on). Uses the Hibernation API's `getWebSockets()` so it works
-   * even after the DO has hibernated and woken.
+   * even after the DO has hibernated and woken. Each change goes out as a tagged
+   * SYNC_FRAME_CHANGE frame (D10 wire envelope) so the client can tell it from
+   * the on-connect snapshot frame.
+   *
+   * BROADCAST-RESYNC (D10, 2026-07-02): a per-socket `send` failure is NOT
+   * swallowed — a swallowed failure leaves that client silently DIVERGED (it
+   * never sees this change until it happens to reconnect). Instead we CLOSE that
+   * socket with SYNC_RESYNC_CLOSE_CODE; the client treats a close after it had
+   * opened as a transient warm drop and auto-reconnects, pulling a fresh snapshot
+   * catch-up that includes the change it missed. We collect the failed sockets
+   * and close them AFTER the send loop so closing one never perturbs delivery to
+   * the others.
    */
   private broadcast(changes: A.Change[], from: WebSocket | null): void {
     const sockets = this.ctx.getWebSockets();
     if (sockets.length === 0) return;
+    const failed = new Set<WebSocket>();
     for (const change of changes) {
-      const bytes = change as Uint8Array;
+      const bytes = frame(SYNC_FRAME_CHANGE, change as Uint8Array);
       for (const ws of sockets) {
-        if (ws === from) continue;
+        if (ws === from || failed.has(ws)) continue;
         try {
           ws.send(bytes);
         } catch {
-          // a closing socket can't receive — skip it.
+          // This socket couldn't receive the change → it's now behind. Mark it
+          // for a resync-close so it reconnects and re-catches-up (below).
+          failed.add(ws);
         }
       }
     }
+    for (const ws of failed) {
+      try {
+        ws.close(SYNC_RESYNC_CLOSE_CODE, "resync");
+      } catch {
+        // already closing/closed — the client will reconnect regardless.
+      }
+    }
+  }
+
+  /**
+   * Test-only: the exact BINARY catch-up frames a connect would send this client,
+   * in order (see `fetch`). Post-D10 this is EXACTLY ONE tagged SYNC_FRAME_SNAPSHOT
+   * frame for a seeded doc (never a per-change replay), or none for an unseeded
+   * doc — so a test can assert the frame COUNT and that `A.load` of the snapshot
+   * payload equals the doc, deterministically, WITHOUT driving a full WS delivery
+   * cycle (which vitest-pool-workers can't — SPIKE-FINDINGS sharp-edge #3).
+   */
+  async catchUpFramesForTest(): Promise<Uint8Array[]> {
+    const current = this.doc ?? this.loadPersisted();
+    if (!current) return [];
+    return [frame(SYNC_FRAME_SNAPSHOT, A.save(current))];
   }
 
   /**

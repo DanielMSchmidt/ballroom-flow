@@ -139,6 +139,52 @@ export type IssueInvite = z.infer<typeof zIssueInvite>;
  */
 export const SYNC_CAUGHT_UP = "ballroom:sync:caught-up";
 
+/**
+ * Sync wire — server→client BINARY frame envelope (D10 "sync hardening",
+ * 2026-07-02). Every binary frame the DO sends a client carries a 1-byte TYPE
+ * PREFIX so the two binary payloads stay distinguishable on the wire:
+ *
+ *   • {@link SYNC_FRAME_SNAPSHOT} — the WHOLE document as one `A.save(doc)` blob.
+ *     Sent ONCE on (re)connect as the catch-up: the client `A.load`s it and
+ *     `A.merge`s it into its local doc (so a reconnecting client with local
+ *     unacked edits loses nothing). This replaces the old per-change history
+ *     replay (`getAllChanges` → one frame per change), which was UNBOUNDED on the
+ *     wire as a doc aged (compaction bounds SQLite, not the replay).
+ *   • {@link SYNC_FRAME_CHANGE} — one incremental Automerge change, as the DO
+ *     broadcasts live edits after connect. The client strips the tag and applies.
+ *
+ * ASYMMETRY (deliberate, documented): only SERVER→CLIENT frames are prefixed.
+ * CLIENT→SERVER frames stay RAW Automerge change bytes (no tag) — the DO's
+ * `webSocketMessage` reads them unprefixed. This keeps the client's send path and
+ * the resend-on-reconnect path (which forward raw `A.getChanges` bytes) untouched,
+ * and the two directions never share a decoder, so there is no ambiguity.
+ *
+ * DEPLOYMENT-COMPAT WINDOW (accepted, not versioned): this is a HARD protocol
+ * cutover. A browser running the OLD client bundle against a NEW worker sees
+ * tagged frames and drops them (an old client `A.applyChanges`-es `[tag,…]` →
+ * "Invalid magic bytes"); a NEW client against an OLD worker sees raw change
+ * frames whose first byte (Automerge magic `0x85`) is an unknown tag and drops
+ * them. Either way the affected tab fails to hydrate until it RELOADS onto the
+ * matching bundle (Cloudflare deploys worker + web assets together, and the DO
+ * restarts with new code, so the mismatch only spans open tabs during a rollout).
+ * Auto-reconnect can't bridge it — a reload can. Acceptable at this stage; revisit
+ * with a WS-subprotocol version (`ballroom.sync.v2`) if a zero-downtime rollout is
+ * ever required.
+ */
+export const SYNC_FRAME_SNAPSHOT = 0x01;
+export const SYNC_FRAME_CHANGE = 0x02;
+
+/**
+ * WS close code the DO uses when a broadcast `send` to a socket FAILS (D10
+ * broadcast-resync): rather than swallow the error and leave that client
+ * silently diverged (missing the change until it happens to reconnect), the DO
+ * CLOSES the socket. The client treats any close AFTER it had opened as a
+ * transient "warm drop" and auto-reconnects, pulling a fresh {@link
+ * SYNC_FRAME_SNAPSHOT} catch-up — so the missed change is recovered. In the
+ * app-private 4xxx range so it never collides with a protocol close code.
+ */
+export const SYNC_RESYNC_CLOSE_CODE = 4001;
+
 /** A merged-registry attribute kind (US-003/US-043), shared shape. */
 export const zRegistryKind = z.object({
   kind: z.string().min(1),

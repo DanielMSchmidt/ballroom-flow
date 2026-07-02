@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP } from "@ballroom/contract";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
 import type { FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
 import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
 import { describe, expect, it, vi } from "vitest";
@@ -48,12 +48,14 @@ class FakeSocket {
   fireCaughtUp(): void {
     this.msg?.({ data: SYNC_CAUGHT_UP });
   }
-  /** Replay a doc's FULL history to the client (what the DO does on connect). */
+  /** Deliver the DO's on-connect catch-up: ONE tagged SNAPSHOT frame (the whole
+   *  doc as an `A.save` blob), which the client `A.load`s + `A.merge`s (D10). */
   load(doc: A.Doc<unknown>): void {
-    for (const c of A.getAllChanges(doc)) {
-      const u = c as Uint8Array;
-      this.msg?.({ data: u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) });
-    }
+    const saved = A.save(doc);
+    const frame = new Uint8Array(saved.byteLength + 1);
+    frame[0] = SYNC_FRAME_SNAPSHOT;
+    frame.set(saved, 1);
+    this.msg?.({ data: frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength) });
   }
 }
 
