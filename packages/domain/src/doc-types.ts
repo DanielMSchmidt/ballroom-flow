@@ -55,9 +55,12 @@ export interface FigureDoc {
   bars?: number;
   attributes: Attribute[];
   /**
-   * Provenance only (§2.2, §5.2): the figure this doc was copied from, for
-   * lineage display and the "custom" badge. NOT resolved live — a copy is a
-   * frozen snapshot carrying its own `attributes`.
+   * The base this figure resolves against (§2.2, §5.2, ⟳v5). For a VARIANT this is
+   * a LIVE link: the variant carries only its OWNED beats and resolves the rest
+   * live from the base (`resolveFigure(base, variant)`), so catalog improvements
+   * flow into untouched beats. Also powers lineage display + the "custom" badge.
+   * Null for a standalone figure; a legacy frozen copy owns every beat, so its live
+   * base changes nothing until the base adds beats the copy never used (back-compat).
    */
   baseFigureRef?: string | null;
   schemaVersion: number;

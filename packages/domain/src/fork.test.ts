@@ -279,7 +279,7 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
   });
 
   it("the Passing Tumble Turn: base additions reach untouched beats only (§5.2)", async () => {
-    const { resolveFigure, spawnVariant, variantAttributesForEdit } = await importDomain();
+    const { resolveFigure, spawnVariant } = await importDomain();
     const base = structuredClone(tumbleTurnBase()) as never as {
       attributes: ReturnType<typeof attr>[];
     };
@@ -360,6 +360,48 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     // Same content, different ids — the comparison is by MEANING (#20).
     const edited = base.attributes.map((a) => ({ ...a, id: `re-${a.id}` }));
     expect(variantAttributesForEdit(base as never, edited)).toEqual([]);
+  });
+
+  it("§9 back-compat: a legacy full copy owning EVERY beat resolves to exactly its own content", async () => {
+    // A pre-v5 frozen copy carries its OWN complete timeline (it owns every beat it
+    // has content on). Its `baseFigureRef` becoming a LIVE link changes nothing: base
+    // values on OWNED beats never leak in — so resolution returns exactly the copy's
+    // current content (zero behavior change for existing data). Only a base value on
+    // a beat the copy never used would appear.
+    const { resolveFigure } = await importDomain();
+    const base = structuredClone(tumbleTurnBase()) as never as {
+      attributes: ReturnType<typeof attr>[];
+    };
+    // The legacy copy: its OWN full timeline (different ids + a diverged beat-4 value),
+    // owning beats 1,2,4,5 — every beat the base charts.
+    const legacyCopy = {
+      ...structuredClone(tumbleTurnBase()),
+      id: "fig_legacy",
+      scope: "account",
+      ownerId: "u_me",
+      source: "custom",
+      baseFigureRef: "gfig_slowfox_tumble-turn",
+      attributes: [
+        attr("c1", "direction", 1, "forward"),
+        attr("c2", "footwork", 1, "HT"),
+        attr("c3", "direction", 2, "side"),
+        attr("c4", "direction", 4, "forward"), // diverged from the base's "back"
+        attr("c5", "footwork", 4, "T"),
+        attr("c6", "direction", 5, "close"),
+      ],
+    } as never;
+    // The catalog later gains a NEW KIND on beats the copy already OWNS — must NOT leak.
+    base.attributes.push(attr("n1", "sway", 1, "to_L"), attr("n4", "sway", 4, "to_R"));
+    const resolved = resolveFigure(base as never, legacyCopy);
+    // Exactly the copy's own attributes — no base values on any owned beat.
+    expect(resolved.attributes.map((a: { id: string }) => a.id).sort()).toEqual([
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+    ]);
   });
 
   it("copyFigureForFork keeps a variant a VARIANT (live base link) under a new owner", async () => {

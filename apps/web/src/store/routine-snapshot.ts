@@ -2,19 +2,23 @@
 //
 // Opening a routine to *read* it (the common case) shouldn't cost one live
 // WebSocket per routine + per figure. This model hydrates the whole routine + its
-// figures from ONE REST read (`GET /api/routines/:id/snapshot`, figures already
-// resolved server-side) and keeps it reasonably fresh with light polling +
-// refetch-on-focus — NO WebSockets, no per-figure connections. It exposes the
+// figures from ONE REST read (`GET /api/routines/:id/snapshot`, which also fans out
+// each variant's live base) and keeps it reasonably fresh with light polling +
+// refetch-on-focus — NO WebSockets, no per-figure connections. A variant is
+// resolved per-beat against its base CLIENT-side (⟳v5, §5.2). It exposes the
 // same read surface as the live store (`RoutineReadModel`), so a screen swaps
 // the cheap snapshot in for reading and upgrades to the live `RoutineStore` only
 // when the user actually edits. The live WS sync stays the edit path.
 import {
   type Annotation,
   CURRENT_SCHEMA_VERSION,
+  defaultFigureBars,
   type FigureDoc,
   isReservedKind,
+  libraryFigureByRef,
   type RegistryKind,
   type RoutineDoc,
+  resolveFigure as resolveVariantOverlay,
 } from "@ballroom/domain";
 import { apiGet } from "../lib/rpc";
 import type { TokenProvider } from "./doc-connection";
@@ -23,8 +27,64 @@ import type { FigureLoadStatus, ResolvedPlacement, RoutineReadModel } from "./ro
 /** The shape returned by `GET /api/routines/:id/snapshot`. */
 export interface RoutineSnapshot {
   routine: RoutineDoc;
-  /** Referenced figures, keyed by figureRef, variant overlays already resolved. */
+  /** Referenced figures, keyed by figureRef. A variant carries only its OWNED beats
+   *  (⟳v5) — the client resolves it against its base below. */
   figures: Record<string, FigureDoc>;
+  /** Live BASES each variant resolves against (⟳v5, §5.2), keyed by baseFigureRef —
+   *  fanned out server-side so the client can fill a variant's untouched beats.
+   *  Optional for back-compat with an older worker that didn't send it. */
+  bases?: Record<string, FigureDoc>;
+}
+
+/**
+ * Resolve a snapshot figure to its effective content (⟳v5, §5.2). A VARIANT
+ * (non-null `baseFigureRef`) resolves per-beat against its base — from the fanned-out
+ * `bases`, another placed figure, or the bundled catalog fallback (always available
+ * for a `global:` base). A standalone figure resolves to itself.
+ */
+function resolveSnapshotFigure(fig: FigureDoc, snap: RoutineSnapshot): FigureDoc {
+  if (!fig.baseFigureRef) return fig;
+  const liveBase = snap.bases?.[fig.baseFigureRef] ?? snap.figures[fig.baseFigureRef];
+  if (liveBase) return resolveVariantOverlay(liveBase, fig);
+  const cat = libraryFigureByRef(fig.baseFigureRef);
+  if (cat) {
+    return resolveVariantOverlay(
+      {
+        attributes: cat.attributes ?? [],
+        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
+        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
+      },
+      fig,
+    );
+  }
+  return fig; // base unavailable → the variant's own (owned) beats
+}
+
+/**
+ * A full FigureDoc synthesized from the bundled catalog for a `global:` ref (⟳v5,
+ * §4.3) — so a live catalog reference renders PRE-FILLED even if the snapshot
+ * hasn't caught it yet (a freshly-added placement before the next refetch). Null
+ * for a non-catalog ref (a real account/custom figure loads from the snapshot).
+ */
+function catalogSnapshotFigure(ref: string): FigureDoc | null {
+  const cat = libraryFigureByRef(ref);
+  if (!cat) return null;
+  const attributes = (cat.attributes ?? []).map((a) => ({ ...a }));
+  return {
+    id: ref,
+    scope: "global",
+    ownerId: "app",
+    figureType: cat.figureType,
+    dance: cat.dance,
+    name: cat.name,
+    source: "library",
+    bars: defaultFigureBars(attributes, cat.dance),
+    attributes,
+    ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
+    ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
+    schemaVersion: 1,
+    deletedAt: null,
+  };
 }
 
 /** A read model that can also be told to refetch now (e.g. after an edit upgrade). */
@@ -165,17 +225,25 @@ export function openRoutineSnapshot(
     readPlacements: () => {
       if (placementsCache && placementsCache.snapshot === snapshot) return placementsCache.value;
       const routine = currentRoutine();
-      const figures = snapshot?.figures ?? {};
+      const snap = snapshot;
+      const figures = snap?.figures ?? {};
       const out: ResolvedPlacement[] = [];
       for (const section of routine.sections) {
         for (const placement of section.placements) {
           // A break has no figure to resolve — it's read structurally (US-004a).
           if (placement.source === "break" || !placement.figureRef) continue;
-          const figure = figures[placement.figureRef] ?? null;
-          // The snapshot resolves every referenced figure server-side: present →
-          // live; absent → genuinely missing (deleted / no access). Before the
-          // first snapshot lands the whole view reads "connecting" (syncState).
-          const status: FigureLoadStatus = figure ? "live" : snapshot ? "missing" : "loading";
+          const raw = figures[placement.figureRef] ?? null;
+          // ⟳v5: a variant carries only its owned beats — resolve it per-beat against
+          // its live base (fanned-out `bases` / bundled catalog fallback). A catalog
+          // reference points directly at the global doc (present in `figures`), so it
+          // resolves to itself. A ref absent from the snapshot that IS a `global:`
+          // catalog ref still renders from the bundle (pre-filled, §4.3).
+          const figure = raw
+            ? resolveSnapshotFigure(raw, snap as RoutineSnapshot)
+            : (catalogSnapshotFigure(placement.figureRef) ?? null);
+          // present → live; absent → genuinely missing (deleted / no access). Before
+          // the first snapshot lands the whole view reads "connecting" (syncState).
+          const status: FigureLoadStatus = figure ? "live" : snap ? "missing" : "loading";
           // A REST snapshot figure is NEVER served by its own live doc — the editor
           // gates on this to wait for the live figure connection ("load on open").
           out.push({ placement, figure, status, fromLiveDoc: false });
@@ -197,7 +265,11 @@ export function openRoutineSnapshot(
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
-    figureFor: (figureRef) => snapshot?.figures[figureRef] ?? null,
+    // The RAW figure (a variant still carries only its owned beats) OR a fanned-out
+    // BASE — the live store's lazy `figureContent` fallback uses this both for a
+    // placed figure and to resolve its base (⟳v5). The live store does its own
+    // overlay resolution, so this must NOT pre-resolve.
+    figureFor: (figureRef) => snapshot?.figures[figureRef] ?? snapshot?.bases?.[figureRef] ?? null,
     refetch: load,
     close: () => {
       closed = true;

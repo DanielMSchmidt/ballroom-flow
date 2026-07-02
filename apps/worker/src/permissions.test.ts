@@ -173,10 +173,12 @@ describe("US-021 Permission boundary at the DO connection", () => {
   it("rejects a forged connection (valid JWT, no membership) on a routine AND a figure doc", async () => {
     // Intent: the forged-connection case — a real Clerk token but no Membership —
     //   is rejected on BOTH document types (the §10.2 routine-AND-figure invariant).
-    // Arrange: seed a routine doc and a figure doc, neither with a row for the actor;
-    //   mint a VALID JWT (passes auth) for that actor.
+    // Arrange: seed a routine doc and an ACCOUNT figure doc, neither with a row for
+    //   the actor; mint a VALID JWT (passes auth) for that actor.
     // Act: connect to each. Assert: both 403.
-    // Covers US-021 AC-3 (forged rejected on routine AND figure).
+    // Covers US-021 AC-3 (forged rejected on routine AND figure). NB (⟳v5): an
+    //   ACCOUNT figure still requires membership/ownership; the forged-rejection
+    //   invariant no longer uses a GLOBAL figure, which is readable by all (below).
     const routineRef = uniqueDocName("rt");
     const figureRef = uniqueDocName("fig");
     const ctx = await authedContext({
@@ -189,11 +191,30 @@ describe("US-021 Permission boundary at the DO connection", () => {
       users: [{ id: "u_forge", displayName: "F", identityColor: "#666", plan: "free" }],
       docs: [
         { docRef: routineRef, type: "routine", ownerId: "u_owner", doName: routineRef },
-        { docRef: figureRef, type: "global-figure", ownerId: "app", doName: figureRef },
+        { docRef: figureRef, type: "account-figure", ownerId: "u_owner", doName: figureRef },
       ],
     });
     expect((await tryConnect(routineRef, ctx.authHeaders())).status).toBe(403);
     expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(403);
+  });
+
+  it("admits ANY authenticated user (no membership) to a GLOBAL figure doc as a viewer (⟳v5)", async () => {
+    // ⟳v5 (§5.1/D28): global figure docs are readable by every signed-in user —
+    // an implicit viewer, no membership row. So a valid-token connection with no
+    // membership is admitted (101), NOT forged. (A non-admin's edit spawns a
+    // variant client-side; the write-gating at the boundary is exercised elsewhere.)
+    const figureRef = uniqueDocName("gfig");
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_anyreader",
+      docRef: figureRef,
+      role: null,
+    });
+    await seedDb({
+      users: [{ id: "u_anyreader", displayName: "A", identityColor: "#777", plan: "free" }],
+      docs: [{ docRef: figureRef, type: "global-figure", ownerId: "app", doName: figureRef }],
+    });
+    expect((await tryConnect(figureRef, ctx.authHeaders())).status).toBe(101);
   });
 
   it("rejects a connection with a MISSING token (fail-closed) — no open path", async () => {

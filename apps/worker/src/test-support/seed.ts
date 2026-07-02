@@ -26,6 +26,9 @@ export interface SeedUser {
   displayName: string;
   identityColor: string;
   plan: "free" | "pro";
+  /** D31 admin seam (migration 0014) — defaults to a non-admin, uncapped-override user. */
+  isAdmin?: boolean;
+  routineCapOverride?: number | null;
 }
 
 export interface SeedDoc {
@@ -148,8 +151,15 @@ export async function seedDb(spec: SeedSpec): Promise<SeedSpec> {
     // per-test unique docRef, so a collision there is a real isolation bug.
     stmts.push(
       env.DB.prepare(
-        "INSERT OR IGNORE INTO users (id, displayName, identityColor, plan) VALUES (?, ?, ?, ?)",
-      ).bind(u.id, u.displayName, u.identityColor, u.plan),
+        "INSERT OR IGNORE INTO users (id, displayName, identityColor, plan, isAdmin, routineCapOverride) VALUES (?, ?, ?, ?, ?, ?)",
+      ).bind(
+        u.id,
+        u.displayName,
+        u.identityColor,
+        u.plan,
+        u.isAdmin ? 1 : 0,
+        u.routineCapOverride ?? null,
+      ),
     );
   }
   for (const d of spec.docs ?? []) {

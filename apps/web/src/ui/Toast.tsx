@@ -37,7 +37,7 @@ const ToastContext = createContext<ToastApi | null>(null);
 /**
  * useToast — fire confirmations. Standard messages (DESIGN-PRINCIPLES
  * #16) are emitted by callers, e.g.:
- *   toast.show("Copied as your variant")              // copy-on-write
+ *   toast.show("Made this figure yours")              // copy-on-write
  *   toast.show("Undone", { action: { label: "Redo", … } })
  *   toast.show("You've reached 3 routines on the free plan", { tone: "warning", … })  // quota upsell
  */

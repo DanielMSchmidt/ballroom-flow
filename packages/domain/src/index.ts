@@ -67,6 +67,7 @@ export {
   LIBRARY_FIGURES,
   type LibraryFigure,
   type LibraryGroup,
+  libraryFigureByRef,
   libraryFiguresForDance,
   libraryGroupsForDance,
   libraryGroupsForFilter,

@@ -118,6 +118,22 @@ export function parseGlobalFigureRef(ref: string): { dance: DanceId; figureType:
 }
 
 /**
+ * Resolve a `global:<dance>:<figureType>` ref back to its bundled catalog figure,
+ * or null when the ref isn't a catalog ref / has no matching entry (⟳v5). This is
+ * the **bundled-catalog fallback** for variant resolution (§5.2): the client
+ * resolves a variant against its base, and when the live base doc isn't at hand
+ * (no snapshot base, no open connection) it falls back to the catalog content —
+ * always available in the client bundle. Dance ids carry no colon, so splitting on
+ * the first two colons recovers (dance, figureType) even for hyphenated types.
+ */
+export function libraryFigureByRef(ref: string): LibraryFigure | null {
+  const match = /^global:([^:]+):(.+)$/.exec(ref);
+  if (!match) return null;
+  const [, dance, figureType] = match;
+  return LIBRARY_FIGURES.find((f) => f.dance === dance && f.figureType === figureType) ?? null;
+}
+
+/**
  * The grouped global browse for one filter: a specific dance (delegates to
  * {@link libraryGroupsForDance}) or `"all"` — every dance's figures grouped by
  * figureType, preserving first-seen order. The Library tab's "All" chip renders

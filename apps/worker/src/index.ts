@@ -19,6 +19,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
+import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
@@ -42,6 +43,7 @@ import type { DocDO } from "./doc-do";
 import { forkRoutineFor } from "./fork";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
+import { seedGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
@@ -125,10 +127,12 @@ app.get("/api/me", async (c) => {
     displayName: row.displayName,
     identityColor: row.identityColor,
     plan: row.plan,
-    // The free-plan owned-routine cap, sourced from the ONE server constant so the
-    // client never hardcodes a second copy (#176) — the Choreo list gates the
-    // upsell on this, and the POST /api/routines 402 enforces the same value.
-    routineCap: FREE_ROUTINE_CAP,
+    // The owned-routine cap the client gates the upsell on — the admin-granted
+    // per-user override (D31) when set, else the ONE server constant (#176). The
+    // POST /api/routines 402 enforces the SAME value via routineCapFor.
+    routineCap: row.routineCapOverride ?? FREE_ROUTINE_CAP,
+    // D31: expose the admin flag so the profile/admin surfaces can gate on it.
+    isAdmin: row.isAdmin,
   });
 });
 
@@ -197,14 +201,14 @@ app.post("/api/routines", async (c) => {
   }
   const { title, dance } = parsed.data;
 
-  const db = drizzle(c.env.DB);
-  const me = await db.select({ plan: users.plan }).from(users).where(eq(users.id, user.sub)).get();
-  const plan = me?.plan ?? "free";
-
-  // SERVER-SIDE quota: count OWNED routines (indexed; shared-in excluded).
+  // SERVER-SIDE quota (D21/D31): the cap honours a per-user `routineCapOverride`
+  // (an admin grant) BEFORE the plan default (routineCapFor); pro is unbounded.
+  // Only OWNED routines count (shared-in membership rows don't). Enforced here so
+  // a client bypass is still blocked.
+  const { plan, cap } = await routineCapFor(c.env.DB, user.sub);
   const owned = await countOwnedRoutines(c.env.DB, user.sub);
-  if (plan === "free" && owned >= FREE_ROUTINE_CAP) {
-    return c.json({ upsell: true, reason: "quota", cap: FREE_ROUTINE_CAP, owned, plan }, 402);
+  if (owned >= cap) {
+    return c.json({ upsell: true, reason: "quota", cap, owned, plan }, 402);
   }
 
   const docRef = newId();
@@ -310,6 +314,20 @@ app.get("/api/figures/mine", async (c) => {
   return c.json({ figures });
 });
 
+// POST /api/admin/seed-global-figures — import the bundled catalog into REAL
+// global figure docs (⟳v5, D30). ADMIN-ONLY (D31): a non-admin gets 403 before
+// any work. Additive + idempotent — it only creates docs that don't exist yet and
+// never overwrites one (the doc is the source of truth after import), so re-running
+// is safe and only fills gaps. Returns the created/skipped counts. This is the
+// ops action that stands up the catalog until the admin UI (§11) lands.
+app.post("/api/admin/seed-global-figures", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
+  const result = await seedGlobalFigures(c.env);
+  return c.json({ ok: true, ...result });
+});
+
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).
 // The client mints the figureRef + metadata; the SERVER stamps ownerId from the
 // verified JWT (never a client field). Projecting the registry row + owner
@@ -394,8 +412,9 @@ app.post("/api/figures", async (c) => {
     // buildDoc drops undefined optionals, so an uncharted figure carries neither.
     ...(entryAlignment ? { entryAlignment } : {}),
     ...(exitAlignment ? { exitAlignment } : {}),
-    // A copy is a FROZEN snapshot carrying its OWN attributes (forwarded above);
-    // `baseFigureRef` is provenance only — no overlay, no live resolution (§5.2).
+    // The client-forwarded attributes are stored RAW — a ⟳v5 variant carries only
+    // its OWNED beats; overlay resolution against the live `baseFigureRef` happens
+    // CLIENT-side (§5.2). The worker never resolves; it persists what it's given.
     ...(baseFigureRef ? { baseFigureRef } : {}),
     schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
@@ -713,14 +732,22 @@ app.get("/api/docs/:id/access", async (c) => {
 });
 
 // GET /api/routines/:id/snapshot — the READ-ONLY snapshot path (read/edit split).
-// A single REST read hydrates a routine + ALL its referenced figures (each
-// carrying its own attributes — frozen copies, no overlay) with NO per-document
-// WebSocket — so opening a
-// routine to *read* it (the common case) costs one request and zero persistent
-// sockets, instead of one live WS per routine + per figure. The live WS sync
-// (US-015) is reserved for the EDIT path. Same gate as /access: a non-member 403s
-// (the fail-closed DO boundary, US-021, remains the real gate for the WS path).
-//   • unauthenticated → 401  • non-member → 403  • member/owner → 200 { routine, figures }
+// A single REST read hydrates a routine + ALL its referenced figures — plus, for
+// any figure that is a v5 VARIANT, the live BASE it resolves against — with NO
+// per-document WebSocket. Opening a routine to *read* it (the common case) then
+// costs one request and zero persistent sockets, instead of one live WS per
+// routine + per figure. The live WS sync (US-015) is reserved for the EDIT path.
+// Same gate as /access: a non-member 403s (the fail-closed DO boundary, US-021,
+// remains the real gate for the WS path).
+//   • unauthenticated → 401  • non-member → 403
+//   • member/owner → 200 { routine, figures, bases }
+//
+// ⟳v5 (§5.2): a placed figure with a non-null `baseFigureRef` (a variant) carries
+// only its OWNED beats; its untouched beats resolve LIVE from the base. The client
+// renders `resolveFigure(base, variant)`, so the snapshot fans out to each
+// distinct base (typically a global catalog doc) and returns them in `bases`,
+// keyed by ref. A catalog figure placed as a live reference points directly at the
+// global doc, so it lands in `figures` and needs no base.
 app.get("/api/routines/:id/snapshot", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
@@ -740,10 +767,9 @@ app.get("/api/routines/:id/snapshot", async (c) => {
     }
   }
 
-  // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes —
-  // a copy is a frozen snapshot (no overlay, no base resolution; §5.2), mirroring
-  // the client store's resolveFigure. A never-seeded/empty figure is omitted → the
-  // client renders it missing.
+  // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes (a
+  // variant carries only its owned beats). A never-seeded/empty figure is omitted →
+  // the client renders it missing.
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
@@ -755,7 +781,25 @@ app.get("/api/routines/:id/snapshot", async (c) => {
     }),
   );
 
-  return c.json({ routine, figures });
+  // Fan out to each distinct BASE a variant resolves against (⟳v5). The client
+  // needs the base's live content to fill a variant's untouched beats
+  // (`resolveFigure`). Skip a base already present as a placed figure (a routine
+  // that places both the catalog figure AND a variant of it), and drop
+  // never-seeded bases (a legacy full copy still resolves to itself).
+  const baseRefs = new Set<string>();
+  for (const fig of Object.values(figures)) {
+    if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
+  }
+  const bases: Record<string, FigureDoc> = {};
+  await Promise.all(
+    [...baseRefs].map(async (ref) => {
+      const base = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      if (!base?.figureType) return;
+      bases[ref] = base;
+    }),
+  );
+
+  return c.json({ routine, figures, bases });
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in

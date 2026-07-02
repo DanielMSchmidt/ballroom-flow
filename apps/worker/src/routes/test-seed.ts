@@ -9,9 +9,22 @@ import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { documentRegistry, membership, users } from "../db/schema";
 import type { Env } from "../index";
+import { seedGlobalFigures } from "../seed-global-figures";
 
 interface SeedBody {
-  users?: { id: string; displayName: string; identityColor: string; plan?: "free" | "pro" }[];
+  users?: {
+    id: string;
+    displayName: string;
+    identityColor: string;
+    plan?: "free" | "pro";
+    /** D31 admin seam — lets an E2E journey stand up an admin (global-figure editor). */
+    isAdmin?: boolean;
+    routineCapOverride?: number | null;
+  }[];
+  /** ⟳v5 — stand up the REAL global figure docs from the bundled catalog (the same
+   *  additive seeder the admin route runs) so a journey can place live catalog
+   *  references. */
+  seedGlobalFigures?: boolean;
   docs?: {
     docRef: string;
     type: string;
@@ -107,10 +120,18 @@ testSeed.post("/api/test/seed", async (c) => {
         displayName: u.displayName,
         identityColor: u.identityColor,
         plan: u.plan ?? "free",
+        isAdmin: u.isAdmin ?? false,
+        routineCapOverride: u.routineCapOverride ?? null,
         createdAt: now,
       })
       .onConflictDoNothing();
     seeded++;
+  }
+
+  // ⟳v5 — additively stand up the global figure docs (same seeder as the admin
+  // route), so a journey can place live catalog references. Idempotent.
+  if (body.seedGlobalFigures) {
+    await seedGlobalFigures(c.env);
   }
   for (const doc of body.docs ?? []) {
     await d

@@ -16,6 +16,13 @@ export const users = sqliteTable("users", {
     .notNull()
     .default("free"),
   createdAt: integer("createdAt"),
+  // D31 (⟳v5) admin seam (migration 0014). `isAdmin` gates in-app global-figure
+  // editing (an admin resolves to `editor` on a global-figure doc) + the §11 admin
+  // surfaces; `routineCapOverride` is a nullable per-user owned-routine cap an
+  // admin can RAISE above the plan default, read by the quota seam (routineCapFor)
+  // BEFORE the plan cap. Both default to "not elevated / no override".
+  isAdmin: integer("isAdmin", { mode: "boolean" }).notNull().default(false),
+  routineCapOverride: integer("routineCapOverride"),
 });
 
 export type UserRow = typeof users.$inferSelect;
