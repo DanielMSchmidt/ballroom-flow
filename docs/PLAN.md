@@ -446,12 +446,12 @@ Fork/inheritance is in v1, so the document-graph, the fork/copy-on-write helpers
 
 Converts the shipped v4.x figure layer to the live model (D12/D28/D30/D31 ⟳v5) and lands the 2026-07-02 review's hardening. Sequenced to keep the suite green throughout:
 
-1. **Hardening first (no model change):** undo soundness (identity-targeted inverse; repeat-press no-op — §5.4/D14); the `POST /api/figures` authorization gap (editor-of-routine required; no cross-owner upsert); non-destructive alarm projection with production-wired doc metadata; role re-enforcement post-connect + annotation authorship (§5.1); snapshot-frame catch-up + reconnect resend (D10); wire the migration ladder into the DO load path + stamp fresh docs `CURRENT_SCHEMA_VERSION` (§7).
-2. **Domain v5:** `resolveFigure(base, variant)` per-beat ownership, copy-down, variant spawn, fork-copy (replaces the frozen `copyOnWrite`); §2.5.1 #14–18 as tests.
-3. **Global figure docs:** additive seeder into real docs; admin read/write boundary; new catalog placements become live references; the snapshot returns variant **bases**.
-4. **Library-as-bookmark:** account-doc `libraryFigureRefs` + `LibraryEntry` + the "add to my library" affordance; `save-to-library` becomes a bookmark.
-5. **Fork v5:** account-figure copies (variants stay variants) + live catalog refs.
-6. **Admin seams:** `isAdmin` + `routineCapOverride` columns; quota reads the override; elevation as an ops action (queue UI v1.1).
+1. **Hardening first (no model change):** ✅ undo soundness (identity-anchored inverse; a change reverted at most once — §5.4/D14); ✅ the `POST /api/figures` authorization gap (editor-of-routine required; no cross-owner upsert); ✅ non-destructive alarm projection with doc-derived identity; ✅ role re-enforcement post-connect + annotation authorship (§5.1). ☐ snapshot-frame catch-up + reconnect resend (D10); ☐ wire the migration ladder into the DO load path + stamp fresh docs `CURRENT_SCHEMA_VERSION` (§7); ☐ figure-editor undo targets the figure doc (§5.4).
+2. **Domain v5:** ✅ `resolveFigure(base, variant)` per-beat ownership, `variantAttributesForEdit` (copy-down incl. tombstoned cleared beats), `spawnVariant`, `copyFigureForFork` — §2.5.1 #14–18 pinned by tests incl. the Passing Tumble Turn scenario (`packages/domain/src/fork.ts`). The legacy frozen `copyOnWrite` is retained read-only for pre-v5 data until step 3 rewires the store.
+3. ☐ **Global figure docs:** additive seeder into real docs; admin read/write boundary; new catalog placements become live references; the snapshot returns variant **bases**; the store's edit-global path switches from frozen-copy to `spawnVariant` + overlay resolution on read.
+4. ☐ **Library-as-bookmark:** account-doc `libraryFigureRefs` + `LibraryEntry` + the "add to my library" affordance; `save-to-library` becomes a bookmark.
+5. ☐ **Fork v5:** account-figure copies (variants stay variants) + live catalog refs.
+6. ☐ **Admin seams:** `isAdmin` + `routineCapOverride` columns; quota reads the override; elevation as an ops action (queue UI v1.1).
 
 **Back-compat (no data migration):** an existing v4 frozen copy owns **every** beat it has content on, so `resolveFigure` returns exactly its current timeline — its `baseFigureRef` becoming live changes nothing until the catalog adds values on beats the copy never used. Existing catalog-seeded placements keep their account docs; only **new** catalog adds become live references.
 
