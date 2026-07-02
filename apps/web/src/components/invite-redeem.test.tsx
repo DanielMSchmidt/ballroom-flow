@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderUi, screen } from "../test-support/render";
+import { renderUi, screen, userEvent } from "../test-support/render";
 import { InviteRedeem } from "./InviteRedeem";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ import { InviteRedeem } from "./InviteRedeem";
 // ─────────────────────────────────────────────────────────────────────────
 
 const h = vi.hoisted(() => ({
+  isError: false,
   result: {
     docRef: "rt9",
     role: "editor" as "editor" | "commenter" | "viewer",
@@ -20,17 +21,25 @@ const h = vi.hoisted(() => ({
 }));
 
 // Replace the store seam: drive onSuccess synchronously with a controllable
-// redeem result (no network, no real React Query mutation).
+// redeem result (no network, no real React Query mutation). `h.isError` flips
+// the seam into its error state (expired/invalid/used) without calling onSuccess.
 vi.mock("../store/invites", () => ({
   useRedeemInvite: () => ({
-    isError: false,
-    mutate: (_token: string, opts?: { onSuccess?: (res: typeof h.result) => void }) =>
-      opts?.onSuccess?.(h.result),
+    isError: h.isError,
+    mutate: (_token: string, opts?: { onSuccess?: (res: typeof h.result) => void }) => {
+      if (!h.isError) opts?.onSuccess?.(h.result);
+    },
   }),
 }));
 
+// The router seam — assert the escape-hatch button navigates to the overview.
+const nav = vi.hoisted(() => ({ to: vi.fn() }));
+vi.mock("../lib/router", () => ({ navigate: nav.to }));
+
 describe("InviteRedeem downgrade notice", () => {
   beforeEach(() => {
+    h.isError = false;
+    nav.to.mockClear();
     h.result = { docRef: "rt9", role: "editor", requestedRole: "editor", downgraded: false };
   });
 
@@ -48,5 +57,17 @@ describe("InviteRedeem downgrade notice", () => {
     h.result = { docRef: "rt9", role: "editor", requestedRole: "editor", downgraded: false };
     renderUi(<InviteRedeem token="tok" />);
     expect(screen.queryByText(/joined as a commenter/i)).not.toBeInTheDocument();
+  });
+
+  // An expired/invalid/used invite must NOT strand the (now signed-in) visitor:
+  // the error card offers an explicit button back to their choreography overview.
+  it("offers a button back to the choreography overview when the invite can't be opened", async () => {
+    h.isError = true;
+    renderUi(<InviteRedeem token="tok" />);
+    expect(await screen.findByText(/this invite can’t be opened/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /go to my choreography/i });
+    await userEvent.click(button);
+    // Navigates to the overview (the routine list at `/`), never a dead end.
+    expect(nav.to).toHaveBeenCalledWith("/");
   });
 });
