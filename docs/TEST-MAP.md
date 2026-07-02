@@ -1,4 +1,9 @@
-# Test Map — US → test file × layer
+# Test Map — feature/story key → test file × layer
+
+> **Note (2026-07-02):** the `USER-STORIES.md` backlog was removed. The `US-…` ids
+> below survive as **stable keys** (in test names, headers, and PLAN.md) — this map
+> and each test's header comment are now their only definition. Roadmap/status
+> live in `PLAN.md` §9.
 
 **Status (updated 2026-06-28):** the TDD suite was authored ahead of the build as
 fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **most of it has since
@@ -163,9 +168,8 @@ tests across 3 projects.
 
 Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into one
 `it` per acceptance criterion, and a US-009 AC-4 "convergence across a fork (cloned
-doc)" property test was added. Each story in `USER-STORIES.md` now carries a
-`Tests (unskip when done)` block naming the exact file(s) + test names to pass.
-Inline gaps flagged there (none leave a US uncovered): US-024 AC-4 role microcopy
+doc)" property test was added. Inline
+gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
 (Share component test when the screen lands); US-037 AC-1 fork→quota count.
 
 **Gaps RESOLVED in this program (reconciled 2026-06):**

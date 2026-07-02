@@ -182,4 +182,4 @@ describe("D7 Quota status in Profile (design 1.18)", () => {
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe
 // "US-038 Per-user undo / redo UX"). The two-client "only my change reverts;
 // redo restores" proof is the E2E test (`undo.spec.ts`). AC-3 (the soft
-// "superseded" hint) is deferred — see USER-STORIES.md US-038.
+// "superseded" hint) is deferred — see PLAN.md §5.4 (US-038).
