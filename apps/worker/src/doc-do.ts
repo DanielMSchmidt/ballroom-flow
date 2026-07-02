@@ -494,8 +494,11 @@ export class DocDO extends DurableObject<Env> {
    * only sets `doName`; `setMetadata` fills the rest of the index fields.
    */
   private rememberDoName(doName: string): void {
+    // No `type` guess here (2026-07-02 review): this runs for FIGURE docs too,
+    // and a hardcoded 'routine' used to poison the projection. Identity fields
+    // are derived from the doc itself at projection time (projectToD1).
     this.ctx.storage.sql.exec(
-      `INSERT INTO doc_meta (id, doName, type) VALUES (0, ?, 'routine')
+      `INSERT INTO doc_meta (id, doName) VALUES (0, ?)
        ON CONFLICT(id) DO UPDATE SET doName = COALESCE(doc_meta.doName, excluded.doName)`,
       doName,
     );
@@ -710,33 +713,68 @@ export class DocDO extends DurableObject<Env> {
         "SELECT doName, docRef, type, ownerId, title, dance, figureType FROM doc_meta WHERE id = 0",
       )
       .toArray()[0];
-    if (!meta?.doName) return; // nothing to project until metadata is set
+    if (!meta?.doName) return; // nothing to project until a connect/seed names us
 
-    const docRef = meta.docRef ?? meta.doName;
-    const type = meta.type ?? "routine";
+    // Identity comes from the DOC FIRST (2026-07-02 review, C2): production
+    // never calls setMetadata, so a meta-only projection used to upsert
+    // ownerId="" / type='routine' / title=NULL over the eager-created registry
+    // row — the owner lost delete rights, the routine dropped out of quota, and
+    // figure docs were re-typed as routines. Every seeded doc carries its own
+    // id/ownerId/title|name/dance (+ figureType for figures), and reading the
+    // doc also means a CRDT title rename actually projects. doc_meta remains an
+    // explicit override (tests, special cases).
+    const d = this.getDoc() as unknown as {
+      id?: unknown;
+      scope?: unknown;
+      ownerId?: unknown;
+      title?: unknown;
+      name?: unknown;
+      dance?: unknown;
+      figureType?: unknown;
+    };
+    const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+    const docRef = meta.docRef ?? str(d.id) ?? meta.doName;
+    const docFigureType = meta.figureType ?? str(d.figureType);
+    // `type` is CONFIDENT when meta declares it, or the doc's shape shows it
+    // (figures carry figureType; routines carry a title). An empty/never-seeded
+    // doc yields a guess that must never overwrite an existing row's type.
+    const typeKnown = meta.type != null || docFigureType != null || str(d.title) != null;
+    const type =
+      meta.type ??
+      (docFigureType ? (d.scope === "global" ? "global-figure" : "account-figure") : "routine");
+    const ownerId = meta.ownerId ?? str(d.ownerId);
+    const title = meta.title ?? str(d.title) ?? str(d.name);
+    const dance = meta.dance ?? str(d.dance);
     // US-025 card counts (bars/figureCount). forkedFromRef is left untouched here:
     // it's set by the eager create (createOwnedRoutine) and the alarm must never
     // clobber it — hence NULL on insert and absent from the ON CONFLICT update.
-    const { bars, figureCount } = await this.computeCardCounts(type, meta.dance);
+    const { bars, figureCount } = await this.computeCardCounts(type, dance);
+    // The upsert is NON-DESTRUCTIVE: identity fields only overwrite when this
+    // projection actually knows them — an unknown value keeps the eager-created
+    // row's value instead of blanking it.
     await this.env.DB.prepare(
       `INSERT INTO document_registry (docRef, type, ownerId, doName, figureType, dance, title, forkedFromRef, bars, figureCount, updatedAt, deletedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, ?8, ?9, ?10, NULL)
        ON CONFLICT(doName) DO UPDATE SET
-         type = excluded.type, ownerId = excluded.ownerId, figureType = excluded.figureType,
-         dance = excluded.dance, title = excluded.title, bars = excluded.bars,
-         figureCount = excluded.figureCount, updatedAt = excluded.updatedAt`,
+         type = CASE WHEN ?11 THEN excluded.type ELSE document_registry.type END,
+         ownerId = CASE WHEN excluded.ownerId != '' THEN excluded.ownerId ELSE document_registry.ownerId END,
+         figureType = COALESCE(excluded.figureType, document_registry.figureType),
+         dance = COALESCE(excluded.dance, document_registry.dance),
+         title = COALESCE(excluded.title, document_registry.title),
+         bars = excluded.bars, figureCount = excluded.figureCount, updatedAt = excluded.updatedAt`,
     )
       .bind(
         docRef,
         type,
-        meta.ownerId ?? "",
+        ownerId ?? "",
         meta.doName,
-        meta.figureType,
-        meta.dance,
-        meta.title,
+        docFigureType,
+        dance,
+        title,
         bars,
         figureCount,
         Date.now(),
+        typeKnown ? 1 : 0,
       )
       .run();
   }
