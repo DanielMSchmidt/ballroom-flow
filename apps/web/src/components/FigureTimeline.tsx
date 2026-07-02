@@ -281,7 +281,7 @@ export function FigureTimeline({
         <div className="flex flex-col gap-1">
           {(copied || forked) && (
             <p role="status" className="text-2xs text-accent">
-              {forked ? `Variant of ${baseName ?? "the base figure"}` : "Copied as your variant"}
+              {forked ? `Variant of ${baseName ?? "the base figure"}` : "Made this figure yours"}
             </p>
           )}
           {editable && !forked && (

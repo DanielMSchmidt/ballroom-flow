@@ -17,27 +17,31 @@ import {
   addReply,
   addSection,
   CURRENT_SCHEMA_VERSION,
-  copyOnWrite,
   DANCES,
   defaultFigureBars,
   ensureSortKeys,
   type FigureDoc,
+  globalFigureRef,
   isReservedKind,
   keyBetween,
   keyForMove,
   kindAppliesToDance,
   LIBRARY_FIGURES,
+  libraryFigureByRef,
   newId,
   type Placement,
   type RegistryKind,
   type RoutineDoc,
   readRoutine,
   redoLastChange,
+  resolveFigure as resolveVariantOverlay,
   softDeleteAnnotation,
   softDeleteReply,
   softDeleteSection,
   sortByOrder,
+  spawnVariant,
   undoLastChange,
+  variantAttributesForEdit,
   wasSupersededByOthers,
 } from "@ballroom/domain";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
@@ -736,7 +740,6 @@ export async function openRoutine(
     },
 
     addPlacement: (sectionId, figureName, figureTypeArg, barsArg, beforePlacementId) => {
-      const figureRef = newId();
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
       // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
@@ -751,61 +754,59 @@ export async function openRoutine(
               (f) => f.dance === dance && f.figureType === figureTypeArg && f.name === name,
             )
           : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
-      // figureType is immutable once set (#91): the matched preset's canonical slug, else the
-      // explicit arg, else a slug derived from the custom name.
-      const figureType = preset?.figureType ?? figureTypeArg ?? (slugify(name) || figureRef);
 
-      // Mark the figure pending BEFORE the placement appears, so the re-render
-      // this change triggers shows the placement as loading without eagerly
-      // opening (and racing the seed of) its not-yet-created DO.
+      /** Append/insert a placement referencing `figureRef` (shared by both paths). */
+      const placeRef = (figureRef: string): void => {
+        // `sections?` guards the not-yet-synced (empty A.init) doc edge.
+        routineConn.change((draft) => {
+          const section = draft.sections?.find((s) => s.id === sectionId);
+          if (section) {
+            // Insert before the anchor (insert-between) or append (#63). Backfill any
+            // legacy keyless placements first so the new key sorts correctly.
+            ensureSortKeys(section.placements);
+            section.placements.push({
+              id: newId(),
+              figureRef,
+              sortKey: insertSortKey(section.placements, beforePlacementId),
+              deletedAt: null,
+            });
+          }
+        });
+      };
+
+      // ⟳v5 (§4.3): a CATALOG pick places a LIVE REFERENCE to the global figure doc
+      // — no POST /api/figures, no account copy, no seeding. The placement points at
+      // `globalFigureRef(dance, figureType)`; it renders from the (admin-seeded)
+      // global doc, falling back to the bundled catalog content by construction
+      // (pre-filled). A non-admin's first edit spawns a variant (editFigure below).
+      if (preset) {
+        placeRef(globalFigureRef(dance, preset.figureType));
+        notify(); // re-render so the live reference resolves + renders
+        return;
+      }
+
+      // Only a name with NO catalog match mints a true CUSTOM (empty, choreo-local)
+      // figure doc — projected + server-seeded like before (#187/#205).
+      const figureRef = newId();
+      // figureType is immutable once set (#91): the explicit arg, else a slug from the name.
+      const figureType = figureTypeArg ?? (slugify(name) || figureRef);
+      // Mark the figure pending BEFORE the placement appears, so the re-render this
+      // change triggers shows the placement as loading without eagerly opening (and
+      // racing the seed of) its not-yet-created DO.
       pendingFigures.add(figureRef);
+      placeRef(figureRef);
 
-      // Add the placement to the routine immediately (it only references figureRef).
-      // `sections?` guards the not-yet-synced (empty A.init) doc edge.
-      routineConn.change((draft) => {
-        const section = draft.sections?.find((s) => s.id === sectionId);
-        if (section) {
-          // Insert before the anchor (insert-between) or append (#63). Backfill any
-          // legacy keyless placements first so the new key sorts correctly.
-          ensureSortKeys(section.placements);
-          section.placements.push({
-            id: newId(),
-            figureRef,
-            sortKey: insertSortKey(section.placements, beforePlacementId),
-            deletedAt: null,
-          });
-        }
-      });
-
-      // A catalog pick carries the per-step timeline (US-032 + WDSF seed); a custom has none.
-      const attributes = preset?.attributes ?? [];
-      // Seed the figure's authored length (PLAN §2.5): the create flow's chosen
-      // `bars` when given, else ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
-      // attributes (a catalog figure's charted steps; 1 for a fresh custom). The
-      // editor's bars stepper adjusts it later.
-      const bars = barsArg ?? defaultFigureBars(attributes, dance);
-      // …and its charted figure-level alignment (where it started / ended), where present.
-      const entryAlignment = preset?.entryAlignment;
-      const exitAlignment = preset?.exitAlignment;
+      // A fresh custom carries no charted timeline; its authored length defaults to
+      // the create flow's chosen `bars`, else 1 bar (defaultFigureBars of []).
+      const bars = barsArg ?? defaultFigureBars([], dance);
 
       // Project the figure to D1 + an owner membership AND server-seed its CRDT
-      // content durably (#187/#205): POST /api/figures now both projects the
-      // registry/membership rows AND seeds the figure doc into its DO server-side,
-      // so the figure's name/attributes are DO-persisted the instant it exists —
-      // no racy client seed write that could be lost on an immediate reload. We
-      // then just OPEN the figure connection so its (server-seeded) content
-      // replays into the local store on catch-up.
-      createFigure({
-        figureRef,
-        name,
-        dance,
-        figureType,
-        routineId,
-        attributes,
-        bars,
-        entryAlignment,
-        exitAlignment,
-      })
+      // content durably (#187/#205): POST /api/figures both projects the registry/
+      // membership rows AND seeds the figure doc into its DO server-side, so the
+      // figure name is DO-persisted the instant it exists — no racy client seed
+      // write that could be lost on an immediate reload. We then just OPEN the
+      // figure connection so its (server-seeded) content replays on catch-up.
+      createFigure({ figureRef, name, dance, figureType, routineId, attributes: [], bars })
         .then(() => {
           // Created server-side (DO seeded) → safe to open: the catch-up replay
           // now carries the seed, so the figure hydrates deterministically.
@@ -814,10 +815,10 @@ export async function openRoutine(
           notify(); // re-render so resolveFigure now opens + reads the figure
         })
         .catch((err) => {
-          // Create failed (auth/network/quota): stop gating so the placement
-          // isn't a permanent skeleton — a later render falls back to the normal
-          // lazy connect (and the figure simply reads empty if it truly doesn't
-          // exist), rather than hanging on "loading" forever.
+          // Create failed (auth/network/quota): stop gating so the placement isn't a
+          // permanent skeleton — a later render falls back to the normal lazy
+          // connect (and the figure simply reads empty if it truly doesn't exist),
+          // rather than hanging on "loading" forever.
           pendingFigures.delete(figureRef);
           console.warn("figure create failed; placement will retry connecting lazily", err);
           notify();
@@ -1002,68 +1003,97 @@ export async function openRoutine(
   };
 
   /**
-   * Apply a partial edit (attributes and/or bars) to a figure doc. Account/owned
-   * figures change IN PLACE (the DO permission boundary decides if the write
-   * sticks); a global (app-owned library) figure forks a FROZEN owned copy first
-   * (copy-on-write, §5.2 / US-035) that carries the merged content, re-points the
-   * placement, and toasts. The base is never mutated. Shared by
-   * `setFigureAttributes` and `setFigureBars` so both edits fork identically.
+   * Apply a partial edit (attributes and/or bars) to a figure doc (⟳v5, §5.2).
+   *
+   *  • A GLOBAL (catalog) figure spawns a live overlay VARIANT (`spawnVariant`):
+   *    a new account figure owning ONLY the edited beats, `baseFigureRef` a LIVE
+   *    link — the placement re-points and the screen toasts "made this figure
+   *    yours". The base is never mutated (§2.5.1 #17).
+   *  • An ACCOUNT figure edits IN PLACE (yours, or a co-member's via the routine
+   *    cascade — the shared doc converges, US-034). When it is itself a VARIANT and
+   *    its base is at hand, the attribute write goes through `variantAttributesForEdit`
+   *    so an edit that REVERTS a beat to the base's content releases ownership of
+   *    that beat (§2.5.1 #15–16); otherwise a whole-array write (bars-only, a
+   *    from-scratch custom, or the base unavailable).
+   *
+   * Shared by `setFigureAttributes` and `setFigureBars`.
    */
   function editFigure(figureRef: string, patch: { attributes?: Attribute[]; bars?: number }): void {
     const figure = readFigureDoc(figureConn(figureRef));
-    if (figure?.scope !== "global") {
-      // Account figures edit IN PLACE — whether you own it, or it's a co-member's
-      // figure you can edit via the routine cascade (the shared doc converges to
-      // its owner, US-034). Copy-on-write fires ONLY for global figures below.
-      figureConn(figureRef).change((draft) => {
-        if (patch.attributes !== undefined) draft.attributes = patch.attributes;
-        if (patch.bars !== undefined) draft.bars = patch.bars;
-      });
+
+    // ⟳v5 variant-on-edit of a GLOBAL figure (non-admin). The DO boundary rejects a
+    // non-admin's direct write regardless; the client realizes the edit as a variant.
+    if (figure?.scope === "global") {
+      spawnVariantForEdit(figureRef, figure, patch);
       return;
     }
-    // Copy-on-write: editing a global (app-owned library) figure spawns an owned,
-    // FROZEN copy that carries its OWN content (a snapshot, no overlay, no flow-up —
-    // §5.2 / §2.5.1 #14–18), re-points the placement, and stores the user's edit.
-    const base = figure;
-    // The copy carries the merged content: the edited field from `patch`, the
-    // untouched fields from the base (so a bars-only edit keeps the base's steps,
-    // and an attributes-only edit keeps the base's authored bar length).
-    const attributes = patch.attributes ?? base.attributes;
-    const bars = patch.bars ?? base.bars;
+
+    const conn = figureConn(figureRef);
+    // A variant's base (when this account figure IS a variant and we can resolve it)
+    // — used to re-diff the edited timeline so reverting a beat releases ownership.
+    const base =
+      patch.attributes !== undefined && figure?.baseFigureRef
+        ? resolveBaseContent(figure.baseFigureRef)
+        : null;
+    conn.change((draft) => {
+      if (patch.attributes !== undefined) {
+        draft.attributes = base
+          ? variantAttributesForEdit(base, patch.attributes)
+          : patch.attributes;
+      }
+      if (patch.bars !== undefined) draft.bars = patch.bars;
+    });
+  }
+
+  /**
+   * Spawn a live overlay variant for a non-admin editing a GLOBAL figure (§5.2).
+   * The variant owns ONLY the edited beats (`spawnVariant` → `variantAttributesForEdit`);
+   * `bars`/alignment resolve live from the base until the variant authors its own
+   * (§2.5.2), so they are forwarded only when the user actually patched `bars`.
+   */
+  function spawnVariantForEdit(
+    figureRef: string,
+    base: FigureDoc,
+    patch: { attributes?: Attribute[]; bars?: number },
+  ): void {
     const loc = findPlacement(figureRef);
     if (!loc) return;
-    const { variant, placement: rePointed } = copyOnWrite(loc.placement, base, currentUserId);
-    // defensive: a global figure always yields a variant
-    if (!variant) return;
-    // M2: guard against duplicate orphan variants on rapid double-edits.
+    // Guard against duplicate orphan variants on rapid double-edits (a 2nd spawn
+    // before the first re-point lands would orphan a variant). Cleared on both paths.
     if (cowInFlight.has(figureRef)) return;
     cowInFlight.add(figureRef);
-    // 1) Project the copy (account-figure row + copy DO seeded w/ base ref as
-    //    provenance). Only AFTER it succeeds do we write the content, re-point the
-    //    placement, and toast — so a failed POST never leaves the placement
-    //    pointing at a copy doc that was never created (consistent state; the
-    //    edit drops).
+
+    // The editor operates on the RESOLVED timeline (a global figure is standalone,
+    // so that's its own attributes); spawnVariant diffs it against the base to keep
+    // only the owned (changed) beats.
+    const editedAttributes = patch.attributes ?? base.attributes;
+    const { variant, placement: rePointed } = spawnVariant(
+      loc.placement,
+      base,
+      currentUserId,
+      editedAttributes,
+    );
+
+    // 1) Project the variant (account-figure row + DO seeded with the LIVE base
+    //    ref). Only AFTER it succeeds do we write content, re-point, and toast — so
+    //    a failed POST never leaves the placement pointing at an uncreated doc.
     createFigure({
       figureRef: variant.id,
       name: variant.name,
       dance: variant.dance,
       figureType: variant.figureType,
       routineId,
-      attributes,
-      ...(bars != null ? { bars } : {}),
-      // Preserve the base's figure-level alignment onto the frozen copy — the user
-      // edited steps/length, not where the figure starts/ends, so the copy keeps the
-      // base's entry/exit alignment. Undefined when the base has none.
-      entryAlignment: base.entryAlignment,
-      exitAlignment: base.exitAlignment,
-      baseFigureRef: base.id,
+      attributes: variant.attributes, // ⟳v5: ONLY the owned beats, not a full copy
+      // bars/alignment are NOT copied — they resolve live from the base (§2.5.2)
+      // until the variant authors its own; forward `bars` only if the user set it.
+      ...(patch.bars != null ? { bars: patch.bars } : {}),
+      baseFigureRef: variant.baseFigureRef ?? base.id,
     })
       .then(() => {
         const conn = figureConn(variant.id);
-        // 2) Write the user's edited content directly onto the copy — deferred until
-        //    the copy DO's catch-up replay has been applied (#202 / C1). Without
-        //    onceLive the write races the server seed: both are causally
-        //    independent, so ~50% of the time the seed wins and the edit is lost.
+        // 2) Write the variant's content onto its DO — deferred until the DO's
+        //    catch-up replay has been applied (#202 / C1), so the client write lands
+        //    causally AFTER the server seed and always wins (no silent edit loss).
         conn.onceLive(() => {
           conn.change((draft) => {
             draft.id = variant.id;
@@ -1073,30 +1103,30 @@ export async function openRoutine(
             draft.figureType = variant.figureType;
             draft.dance = variant.dance;
             draft.name = variant.name;
-            draft.baseFigureRef = base.id; // provenance only — frozen, no overlay
-            draft.attributes = attributes;
-            if (bars != null) draft.bars = bars;
+            draft.baseFigureRef = variant.baseFigureRef ?? base.id; // LIVE link
+            draft.attributes = variant.attributes; // owned beats only
+            if (patch.bars != null) draft.bars = patch.bars;
             draft.schemaVersion = base.schemaVersion;
             draft.deletedAt = null;
           });
         });
-        // 3) Re-point the placement in the routine doc — only on success.
+        // 3) Re-point the placement to the variant — only on success.
         routineConn.change((draft) => {
           for (const section of draft.sections ?? []) {
             const p = section.placements?.find((pp) => pp.id === rePointed.id);
             if (p) p.figureRef = variant.id;
           }
         });
-        // 4) Tell the screen to toast "copied as your variant".
+        // 4) Tell the screen to toast "made this figure yours".
         onCopyOnWrite?.(variant.id);
-        cowInFlight.delete(figureRef); // M2: release the in-flight guard on success
+        cowInFlight.delete(figureRef);
       })
       .catch((err) => {
         // The variant POST failed (auth/network/quota): leave the placement on the
-        // base figure (no re-point, no toast) — the edit is dropped rather than
-        // corrupting state with a dangling variant reference.
-        console.warn("copy-on-write failed; placement left on the base figure", err);
-        cowInFlight.delete(figureRef); // M2: release the in-flight guard on failure too
+        // base figure (no re-point, no toast) — the edit drops rather than corrupting
+        // state with a dangling variant reference.
+        console.warn("variant spawn failed; placement left on the base figure", err);
+        cowInFlight.delete(figureRef);
       });
   }
 
@@ -1112,24 +1142,82 @@ export async function openRoutine(
     return null;
   }
 
-  /** Resolve a placement's figure: a figure's effective content is its OWN attributes
-   *  (frozen copies carry their own attributes — no live overlay against a base). */
+  /**
+   * The live/snapshot/bundle content a base ref resolves to, for `resolveVariantOverlay`
+   * (⟳v5, §5.2). A variant fills its untouched beats from this. Order: an OPEN live
+   * base connection → the routine snapshot (`figureContent`) → the bundled catalog
+   * (always available for a `global:` base). Returns null when no source has it.
+   */
+  const resolveBaseContent = (
+    baseRef: string,
+  ): Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment"> | null => {
+    const conn = figureConns.get(baseRef);
+    const live = conn ? readFigureDoc(conn) : null;
+    if (live) return live;
+    const snap = figureContent?.(baseRef);
+    if (snap) return snap;
+    const cat = libraryFigureByRef(baseRef);
+    if (cat) {
+      return {
+        attributes: cat.attributes ?? [],
+        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
+        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
+      };
+    }
+    return null;
+  };
+
+  /**
+   * A full FigureDoc synthesized from the bundled catalog for a `global:` ref — so a
+   * live catalog reference (⟳v5, §4.3) renders PRE-FILLED by construction, even
+   * before its (admin-seeded) DO hydrates or appears in the snapshot. Returns null
+   * for a non-catalog ref (a real account/custom figure loads from its own doc).
+   */
+  const catalogFigureFor = (ref: string): FigureDoc | null => {
+    const cat = libraryFigureByRef(ref);
+    if (!cat) return null;
+    const attributes = (cat.attributes ?? []).map((a) => ({ ...a }));
+    return {
+      id: ref,
+      scope: "global",
+      ownerId: "app",
+      figureType: cat.figureType,
+      dance: cat.dance,
+      name: cat.name,
+      source: "library",
+      bars: defaultFigureBars(attributes, cat.dance),
+      attributes,
+      ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
+      ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+  };
+
+  /**
+   * Resolve a placement's figure to its effective content (⟳v5, §5.2). A VARIANT
+   * (non-null `baseFigureRef`) resolves per-beat against its live base
+   * (`resolveVariantOverlay`): owned beats read from the variant, untouched beats
+   * live from the base. A standalone figure — a catalog reference, a from-scratch
+   * custom, or a legacy full copy that owns all its beats — resolves to itself.
+   */
   function resolveFigure(figureRef: string): FigureDoc | null {
     // A just-minted figure whose server-side create is still in flight: render it
     // as loading (null) WITHOUT opening its DO — opening now would race the seed
     // (see pendingFigures). The createFigure resolution opens it + re-renders.
     if (pendingFigures.has(figureRef)) return null;
     // Eager mode opens the figure's connection; lazy mode only uses one that's
-    // ALREADY open (edited / openFigure'd), else falls back to the snapshot.
+    // ALREADY open (edited / openFigure'd), else falls back to the snapshot; a
+    // `global:` catalog reference falls back to the bundled catalog (pre-filled).
     const conn = eagerFigures ? figureConn(figureRef) : (figureConns.get(figureRef) ?? null);
-    const figure = conn ? readFigureDoc(conn) : null;
-    if (!figure) {
-      // No live content. In lazy mode fall back to the snapshot; in eager mode
-      // it's simply loading.
-      return eagerFigures ? null : (figureContent?.(figureRef) ?? null);
+    const live = conn ? readFigureDoc(conn) : null;
+    const figure = live ?? figureContent?.(figureRef) ?? catalogFigureFor(figureRef);
+    if (!figure) return null; // truly loading / missing
+    // Resolve a variant against its live base; a standalone figure is its own content.
+    if (figure.baseFigureRef) {
+      const base = resolveBaseContent(figure.baseFigureRef);
+      if (base) return resolveVariantOverlay(base, figure);
     }
-    // A figure's content is its own attributes — a copy is a frozen snapshot, so
-    // there is no base resolution (§5.2). `baseFigureRef` is provenance only.
     return figure;
   }
 

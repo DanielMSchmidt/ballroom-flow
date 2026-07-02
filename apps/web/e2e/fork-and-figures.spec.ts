@@ -154,11 +154,11 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
   test("@smoke editing a GLOBAL figure auto-creates your frozen copy; original untouched (US-035)", async ({
     page,
   }) => {
-    // Intent: editing a global (app-owned library) figure silently spawns an owned
-    // FROZEN copy (its own attributes, no overlay), re-points the placement, and shows
-    // "Copied as your variant" (US-035). The base global figure is untouched — proved
-    // at the worker layer (the copy carries its own attributes; this test verifies the
-    // UI observables: toast + the divergence-derived "Custom" badge).
+    // Intent: editing a global (catalog) figure silently spawns a live overlay
+    // VARIANT (owning only the edited beats — ⟳v5, §5.2), re-points the placement,
+    // and shows "Made this figure yours". The base global figure is untouched —
+    // proved at the worker layer; this test verifies the UI observables: toast + the
+    // divergence-derived "Custom" badge.
     await resetDb(page);
     await seedDb(page, {
       users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
@@ -208,10 +208,10 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // global figure triggers copy-on-write.
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
 
-    // The FigureTimeline immediately shows "Copied as your variant" (local state).
+    // The FigureTimeline immediately shows "Made this figure yours" (local state).
     // Use .first() because both FigureTimeline (on `copied`) and Assemble (`copiedToast`)
     // can briefly show this text simultaneously — M3 strict-mode flake guard.
-    await expect(page.getByText(/copied as your variant/i).first()).toBeVisible({
+    await expect(page.getByText(/made this figure yours/i).first()).toBeVisible({
       timeout: 15_000,
     });
 

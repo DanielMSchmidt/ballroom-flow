@@ -218,10 +218,11 @@ export function Assemble({
   const offlineProp = connection === "offline";
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
   const [notating, setNotating] = useState<string | null>(null);
-  // Toast shown when a COW fork happens (US-035): "Copied as your variant".
+  // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
+  // figure yours".
   const [copiedToast, setCopiedToast] = useState(false);
-  // Stable COW callback: re-points notating to the new variant id so the open
-  // sheet follows it, and surfaces the "Copied as your variant" status.
+  // Stable variant-spawn callback: re-points notating to the new variant id so the
+  // open sheet follows it, and surfaces the "Made this figure yours" status.
   // useCallback with [] is correct — the setX fns from useState are always stable.
   const onCopyOnWrite = useCallback((variantRef: string) => {
     setCopiedToast(true);
@@ -470,12 +471,12 @@ export function Assemble({
           </div>
         )}
 
-        {/* COW toast: "Copied as your variant" — shown when a non-owned figure edit
-            triggers copy-on-write (US-035). role="status" is the E2E observable hook.
-            Cleared when the notation Sheet closes. */}
+        {/* Variant toast: "Made this figure yours" — shown when editing a GLOBAL
+            (catalog) figure spawns a live overlay variant (⟳v5, §5.2). role="status"
+            is the E2E observable hook. Cleared when the notation Sheet closes. */}
         {copiedToast && (
           <p role="status" className="text-2xs text-accent">
-            Copied as your variant
+            Made this figure yours
           </p>
         )}
 

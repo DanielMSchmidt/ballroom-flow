@@ -3,7 +3,7 @@ import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
 import type { FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
-import { buildFigureDoc, buildRoutineDoc } from "@ballroom/domain";
+import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@ballroom/domain";
 import { describe, expect, it, vi } from "vitest";
 import { type OpenOptions, openRoutine } from "./routine";
 
@@ -210,69 +210,85 @@ describe("figure hydration race — a just-added figure's DO opens only after it
   });
 });
 
-describe("#205 addPlacement forwards library figure attributes to createFigure", () => {
-  it("forwards a library figure's attributes to createFigure on pick", async () => {
-    const { opts } = fakeWiring();
-    const seen: Array<{ figureType: string; attributes?: unknown[] }> = [];
-    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
-      seen.push(meta);
-      return Promise.resolve();
+describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
+  // Open a routine already carrying an empty section "s1" so a placement lands on
+  // it. Lazy figures (eagerFigures:false) so a live catalog reference resolves from
+  // the BUNDLED catalog with no socket — the ⟳v5 pre-filled render (§4.3).
+  async function openWithSection(
+    createFigure?: OpenOptions["createFigure"],
+  ): Promise<{ store: Awaited<ReturnType<typeof openRoutine>>; sockets: Map<string, FakeSocket> }> {
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      createFigure,
+      currentUserId: "me",
+      eagerFigures: false,
     });
-    const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    // "natural-turn" in waltz is a charted figure: its direction+footwork CORE is
-    // 6 counts × 2 roles × {direction, footwork} = 24 (plus richer rise/sway/turn/CBM
-    // on top). The default routine dance is "waltz" (from emptyRoutine).
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    return { store, sockets };
+  }
+
+  it("places a live global reference for a catalog pick — NO createFigure (§4.3)", async () => {
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
     store.addPlacement("s1", "Natural Turn", "natural-turn");
-
-    expect(createFigure).toHaveBeenCalledTimes(1);
-    expect(seen[0]?.figureType).toBe("natural-turn");
-    const attrs = (seen[0]?.attributes ?? []) as Array<{ kind: string }>;
+    // ⟳v5: a catalog pick places a LIVE reference to the global doc — no POST.
+    expect(createFigure).not.toHaveBeenCalled();
+    const ref = globalFigureRef("waltz", "natural-turn");
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
+    expect(rp).toBeDefined();
+    // It renders PRE-FILLED from the bundled catalog by construction: the charted
+    // direction+footwork CORE is 6 counts × 2 roles × {direction, footwork} = 24.
+    const attrs = rp?.figure?.attributes ?? [];
     expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
-    expect(attrs.length).toBeGreaterThan(24); // richer attributes are forwarded too
   });
 
-  it("forwards a charted figure's entry/exit alignment to createFigure on pick", async () => {
-    // The Waltz Closed Change is charted with constant alignment (facing Diagonal
-    // Centre, no turn) — picking it from the catalog forwards that figure-level
-    // alignment to the server seed so the placed figure shows where it starts/ends.
-    const { opts } = fakeWiring();
-    const seen: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
-    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
-      seen.push(meta);
-      return Promise.resolve();
-    });
-    const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    store.addPlacement("s1", "Closed Change on RF", "closed-change-on-rf");
-    expect(seen[0]?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    expect(seen[0]?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-  });
-
-  it("forwards an empty attributes list for a custom (non-catalog) figure", async () => {
-    const { opts } = fakeWiring();
-    const seen: Array<{ attributes?: unknown[] }> = [];
-    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
-      seen.push(meta);
-      return Promise.resolve();
-    });
-    const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    store.addPlacement("s1", "My Move"); // no figureType → custom
-    expect((seen[0]?.attributes ?? []).length).toBe(0);
-  });
-
-  it("resolves a TYPED multi-word catalog name to its canonical figureType + attributes", async () => {
-    const { opts } = fakeWiring();
-    const seen: Array<{ figureType: string; attributes?: unknown[] }> = [];
-    const createFigure = vi.fn((meta: (typeof seen)[number]) => {
-      seen.push(meta);
-      return Promise.resolve();
-    });
-    const store = await openRoutine("rt_sample", { ...opts, createFigure });
-    // Typed name, NO figureType arg — a name-slug would be "natural_turn" (underscore) and
-    // miss the hyphenated catalog "natural-turn"; the name lookup must still resolve it.
+  it("resolves a TYPED multi-word catalog name to its canonical global ref", async () => {
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
+    // Typed name, NO figureType — resolved by name; a name-slug ("natural_turn")
+    // can't reproduce the hyphenated catalog "natural-turn", so the name lookup must.
     store.addPlacement("s1", "Natural Turn");
-    expect(seen[0]?.figureType).toBe("natural-turn");
-    const attrs = (seen[0]?.attributes ?? []) as Array<{ kind: string }>;
-    expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
+    expect(createFigure).not.toHaveBeenCalled();
+    const rp = store.readPlacements()[0];
+    expect(rp?.placement.figureRef).toBe(globalFigureRef("waltz", "natural-turn"));
+  });
+
+  it("a charted catalog pick renders its entry/exit alignment (from the live reference)", async () => {
+    // The Waltz Closed Change is charted with constant alignment (facing Diagonal
+    // Centre). The live reference renders it straight from the bundled catalog.
+    const { store } = await openWithSection();
+    store.addPlacement("s1", "Closed Change on RF", "closed-change-on-rf");
+    const ref = globalFigureRef("waltz", "closed-change-on-rf");
+    const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
+    expect(rp?.figure?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    expect(rp?.figure?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+  });
+
+  it("mints a custom figure (POST, empty attributes) for a non-catalog name", async () => {
+    const seen: Array<{ attributes?: unknown[]; figureRef: string }> = [];
+    const createFigure = vi.fn((meta: { attributes?: unknown[]; figureRef: string }) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const { store } = await openWithSection(createFigure as OpenOptions["createFigure"]);
+    store.addPlacement("s1", "My Move"); // no catalog match → a choreo-local custom
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect((seen[0]?.attributes ?? []).length).toBe(0);
+    // A custom mints a ULID ref, NOT a global: reference.
+    expect(seen[0]?.figureRef.startsWith("global:")).toBe(false);
   });
 });
 
@@ -831,10 +847,11 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 
-  it("copy-on-write preserves the base figure's entry/exit alignment on the copy", async () => {
-    // Intent: editing a global figure's STEPS spawns a frozen copy — the user changed
-    //   the footwork, not where the figure starts/ends, so the copy must keep the
-    //   base's figure-level entry/exit alignment (else the copy loses it on every COW).
+  it("⟳v5: a spawned variant does NOT copy the base's alignment (it resolves live)", async () => {
+    // Intent (⟳v5, §2.5.2): editing a global figure's STEPS spawns a live overlay
+    //   variant. A variant resolves bars/alignment LIVE from its base until it
+    //   authors its own — so the spawn must NOT copy the base's entry/exit alignment
+    //   into the variant's POST (that would freeze it, defeating catalog flow-in).
     const { opts, sockets } = fakeWiring();
     const created: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
     const createFigure = vi.fn(async (m: { entryAlignment?: unknown; exitAlignment?: unknown }) => {
@@ -883,13 +900,13 @@ describe("US-017 store/ seam (multi-doc)", () => {
     sockets.get("fg")?.load(fg);
     sockets.get("fg")?.fireCaughtUp();
 
-    // Edit the footwork on the non-owned figure → copy-on-write.
+    // Edit the footwork on the non-owned figure → spawns a variant.
     store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
 
     expect(createFigure).toHaveBeenCalledTimes(1);
-    // The copy's server seed carries the base's alignment, unchanged.
-    expect(created[0]?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    expect(created[0]?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    // The variant's POST does NOT carry the base's alignment — it resolves live.
+    expect(created[0]?.entryAlignment).toBeUndefined();
+    expect(created[0]?.exitAlignment).toBeUndefined();
   });
 
   it("C1: onceLive defers the copy's attribute write until after the DO seed replay, preventing silent edit loss", async () => {

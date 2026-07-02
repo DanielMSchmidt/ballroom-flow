@@ -148,22 +148,21 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
   });
 });
 
-describe("US-035 Auto-variant on editing a non-owned figure (copy-on-write toast)", () => {
-  it("shows a 'copied as your variant' toast when editing a global figure", async () => {
-    // Intent: editing a non-owned figure silently creates a variant + shows the toast.
-    // User scenario: an editor opens a GLOBAL figure in their routine and edits a step.
-    // Arrange: render <FigureTimeline> bound to a global figure (not owned), role=editor.
-    // Act: change a step value (triggers copy-on-write). Assert: a "copied as your variant"
-    //   toast appears; no blocking dialog (auto, US-035 AC-4).
-    // Covers US-035 AC-2 (toast) + AC-4 (no prompt) — §10.2 "'copied as your variant'".
+describe("US-035 Auto-variant on editing a global figure (⟳v5 variant-spawn toast)", () => {
+  it("shows a 'made this figure yours' toast when editing a global figure", async () => {
+    // Intent: editing a global figure silently spawns a live overlay variant + shows
+    //   the toast (⟳v5, §5.2). User scenario: an editor opens a GLOBAL figure in their
+    //   routine and edits a step. Arrange: render <FigureTimeline> bound to a global
+    //   figure, role=editor. Act: change a step value (triggers the variant spawn).
+    //   Assert: a "made this figure yours" toast appears; no blocking dialog (auto).
     const { FigureTimeline } = await importComponent<FigureTimelineModule>(
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" figureScope="global" />);
-    // Editing a global figure via a cell overlay triggers copy-on-write.
+    // Editing a global figure via a cell overlay spawns a variant.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    expect(await screen.findByText(/copied as your variant/i)).toBeInTheDocument();
+    expect(await screen.findByText(/made this figure yours/i)).toBeInTheDocument();
   });
 });
 

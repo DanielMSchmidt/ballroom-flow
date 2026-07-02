@@ -332,7 +332,7 @@ export function Styleguide() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => toast.show("Copied as your variant")}
+            onClick={() => toast.show("Made this figure yours")}
           >
             Toast: copy-on-write
           </Button>
