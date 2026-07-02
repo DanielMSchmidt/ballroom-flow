@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { DanceId } from "./dances";
 import {
   addFamilyNote,
+  addLibraryRef,
   buildAccountDoc,
   readAccount,
+  removeLibraryRef,
   resolveFamilyNotesFor,
   softDeleteAccountAnnotation,
 } from "./doc-account";
@@ -90,5 +92,50 @@ describe("account doc + family-note resolution", () => {
     const id = readAccount(doc).annotations[0]?.id ?? "";
     doc = softDeleteAccountAnnotation(doc, id);
     expect(readAccount(doc).annotations).toHaveLength(0);
+  });
+});
+
+describe("library bookmarks (§2.2/§4.2/§5.2, ⟳v5) — a REFERENCE, never a copy", () => {
+  it("readAccount defaults libraryFigureRefs to [] for a doc without the field", () => {
+    // Lenient read: a pre-v5 account doc has no `libraryFigureRefs` at all.
+    const doc = buildAccountDoc(acct());
+    expect(readAccount(doc).libraryFigureRefs).toEqual([]);
+  });
+
+  it("addLibraryRef records the figureRef", () => {
+    let doc = buildAccountDoc(acct());
+    doc = addLibraryRef(doc, "fig_1");
+    expect(readAccount(doc).libraryFigureRefs).toEqual(["fig_1"]);
+  });
+
+  it("addLibraryRef is idempotent — bookmarking the same ref twice doesn't duplicate", () => {
+    let doc = buildAccountDoc(acct());
+    doc = addLibraryRef(doc, "fig_1");
+    doc = addLibraryRef(doc, "fig_1");
+    expect(readAccount(doc).libraryFigureRefs).toEqual(["fig_1"]);
+  });
+
+  it("addLibraryRef accumulates distinct refs (several bookmarks)", () => {
+    let doc = buildAccountDoc(acct());
+    doc = addLibraryRef(doc, "fig_1");
+    doc = addLibraryRef(doc, "global:waltz:natural-turn");
+    expect(readAccount(doc).libraryFigureRefs).toEqual(["fig_1", "global:waltz:natural-turn"]);
+  });
+
+  it("removeLibraryRef un-bookmarks a figure without touching the others", () => {
+    let doc = buildAccountDoc(acct());
+    doc = addLibraryRef(doc, "fig_1");
+    doc = addLibraryRef(doc, "fig_2");
+    doc = removeLibraryRef(doc, "fig_1");
+    expect(readAccount(doc).libraryFigureRefs).toEqual(["fig_2"]);
+  });
+
+  it("removeLibraryRef on an absent ref (or an empty set) is a no-op", () => {
+    let doc = buildAccountDoc(acct());
+    doc = removeLibraryRef(doc, "never_added"); // no libraryFigureRefs field yet
+    expect(readAccount(doc).libraryFigureRefs).toEqual([]);
+    doc = addLibraryRef(doc, "fig_1");
+    doc = removeLibraryRef(doc, "not_this_one");
+    expect(readAccount(doc).libraryFigureRefs).toEqual(["fig_1"]);
   });
 });

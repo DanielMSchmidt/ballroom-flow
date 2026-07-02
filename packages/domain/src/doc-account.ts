@@ -1,4 +1,7 @@
 // US-040 — account document: figure-FAMILY notes + family-note resolution.
+// ⟳v5 (§2.2/§2.7/§4.2/§5.2, D28) — also the library BOOKMARK set
+// (`libraryFigureRefs` + `addLibraryRef`/`removeLibraryRef`): "add to my
+// library" records a figureRef here, a REFERENCE never a copy.
 //
 // A `figureType` note is account-scoped (owned by one user) and anchored to a
 // figure FAMILY rather than a specific figure doc, so it surfaces on every figure
@@ -9,10 +12,12 @@
 //
 // STORAGE NOTE: in v1 a family note's content lives in the worker's D1 index row
 // (figure_type_note_index; server-mediated — single-author reference data, no
-// concurrent edit). This account-doc CRDT (buildAccountDoc + the addFamilyNote/
-// addAccountReply/softDelete… mutators) is built + tested as the intended home if
-// family notes ever need offline/concurrent edit, but is NOT yet wired into a DO.
-// It is kept deliberately so that migration is a store-seam swap, not a rebuild.
+// concurrent edit) and a library bookmark's in `library_entry` (migration 0015)
+// the same way. This account-doc CRDT (buildAccountDoc + the addFamilyNote/
+// addAccountReply/addLibraryRef/removeLibraryRef/softDelete… mutators) is built +
+// tested as the intended home once account docs get offline/concurrent edit, but
+// is NOT yet wired into a live DO. It is kept deliberately so that migration is a
+// store-seam swap, not a rebuild.
 //
 // Whether ANOTHER user may see one of these notes (the option-2 co-membership
 // gate) is the worker's concern (US-041), never this module's.
@@ -38,7 +43,37 @@ export function readAccount(doc: A.Doc<AccountDoc>, opts?: ReadOptions): Account
       replies: filterDeleted(annotation.replies, opts),
     })),
     customKinds: plain.customKinds ?? [],
+    // Lenient read (§2.2 ⟳v5): a pre-v5 account doc has no `libraryFigureRefs`
+    // field at all — default it to [] rather than surfacing `undefined`, the same
+    // forward-compat treatment `customKinds` gets above.
+    libraryFigureRefs: plain.libraryFigureRefs ?? [],
   };
+}
+
+/**
+ * Bookmark a figure into the owner's library (§2.2/§4.2/§5.2, ⟳v5 — "add to my
+ * library"): a REFERENCE, never a copy. Idempotent: bookmarking an
+ * already-present figureRef is a no-op (no duplicate entry).
+ */
+export function addLibraryRef(doc: A.Doc<AccountDoc>, figureRef: string): A.Doc<AccountDoc> {
+  return mutate(doc, (draft) => {
+    if (!draft.libraryFigureRefs) draft.libraryFigureRefs = [];
+    if (!draft.libraryFigureRefs.includes(figureRef)) draft.libraryFigureRefs.push(figureRef);
+  });
+}
+
+/**
+ * Un-bookmark a figure (§4.2/§5.2, ⟳v5): removes the reference from the owner's
+ * library set. Never touches the figure doc itself or any placement referencing
+ * it — un-bookmarking drops a reference, not the shared figure. Idempotent:
+ * removing an absent figureRef is a no-op.
+ */
+export function removeLibraryRef(doc: A.Doc<AccountDoc>, figureRef: string): A.Doc<AccountDoc> {
+  return mutate(doc, (draft) => {
+    if (!draft.libraryFigureRefs) return;
+    const idx = draft.libraryFigureRefs.indexOf(figureRef);
+    if (idx !== -1) draft.libraryFigureRefs.splice(idx, 1);
+  });
 }
 
 /**

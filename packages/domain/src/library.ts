@@ -90,12 +90,31 @@ export function libraryGroupsForDance(dance: DanceId): LibraryGroup[] {
 /**
  * The canonical provenance ref for a global-catalog figure (T5 / PLAN §5.2). A
  * bundled catalog figure has no Automerge URL of its own (it's reference data, not
- * a DO), so the cross-dance identity `(dance × figureType)` is its stable id — the
- * value recorded as a saved copy's `baseFigureRef` (provenance only) and used to
- * make "save to my library" idempotent.
+ * a DO), so the cross-dance identity `(dance × figureType)` is its stable id.
+ * ⟳v5: this is now also a directly BOOKMARKABLE ref — "add to my library" on an
+ * unedited catalog figure records THIS string in the caller's `libraryFigureRefs`
+ * (no copy is minted; see library.ts callers in the worker's save-to-library
+ * route). A variant's `baseFigureRef` uses the same value for lineage.
  */
 export function globalFigureRef(dance: DanceId, figureType: string): string {
   return `global:${dance}:${figureType}`;
+}
+
+/**
+ * The inverse of {@link globalFigureRef}: recovers `(dance, figureType)` from a
+ * catalog ref, or `null` for anything else (an account-figure docRef never has
+ * this shape). Used to tell a bookmarked catalog ref apart from a bookmarked
+ * account-figure docRef when projecting the library list (§2.7 LibraryEntry).
+ */
+export function parseGlobalFigureRef(ref: string): { dance: DanceId; figureType: string } | null {
+  if (!ref.startsWith("global:")) return null;
+  const rest = ref.slice("global:".length);
+  const sep = rest.indexOf(":");
+  if (sep === -1) return null;
+  const dance = rest.slice(0, sep);
+  const figureType = rest.slice(sep + 1);
+  if (!dance || !figureType) return null;
+  return { dance: dance as DanceId, figureType };
 }
 
 /**

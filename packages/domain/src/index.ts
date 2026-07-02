@@ -5,8 +5,10 @@ export { DANCE_IDS, DANCES, type DanceId, type DanceMeta } from "./dances";
 export {
   addAccountReply,
   addFamilyNote,
+  addLibraryRef,
   buildAccountDoc,
   readAccount,
+  removeLibraryRef,
   resolveFamilyNotesFor,
   softDeleteAccountAnnotation,
 } from "./doc-account";
@@ -68,6 +70,7 @@ export {
   libraryFiguresForDance,
   libraryGroupsForDance,
   libraryGroupsForFilter,
+  parseGlobalFigureRef,
 } from "./library";
 export { CURRENT_SCHEMA_VERSION, migrate, migrateDraft } from "./migrations";
 export {
