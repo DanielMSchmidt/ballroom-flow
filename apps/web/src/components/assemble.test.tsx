@@ -440,6 +440,119 @@ describe("US-027 Add / reorder / delete figure placements", () => {
   });
 });
 
+describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5.2)", () => {
+  /** An ACCOUNT-scope (choreo-local) figure — the only kind the placement card's
+   *  bookmark affordance targets (a global/catalog reference bookmarks from the
+   *  Library screen's "↟ save" card instead). */
+  const accountFigure = (id: string, name: string): FigureDoc => ({
+    id,
+    scope: "account",
+    ownerId: "u",
+    figureType: id,
+    dance: "foxtrot",
+    name,
+    source: "custom",
+    attributes: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  const seededAccount = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p1 = placement("p1", "glue1");
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p1, figure: accountFigure("glue1", "Glue Step"), status: "live" }],
+    };
+  };
+
+  it("offers 'add to my library' on a choreo-local ACCOUNT figure, and calls onAddToLibrary with its figureRef", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onAddToLibrary = vi.fn(async () => ({ alreadySaved: false }));
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={onAddToLibrary}
+      />,
+    );
+
+    const addButton = screen.getByRole("button", { name: /add glue step to my library/i });
+    await userEvent.click(addButton);
+    expect(onAddToLibrary).toHaveBeenCalledWith("glue1");
+    expect(await screen.findByText(/added to your library/i)).toBeInTheDocument();
+  });
+
+  it("shows 'in your library' (no button) once the figure is bookmarked", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onAddToLibrary = vi.fn();
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set(["glue1"])}
+        onAddToLibrary={onAddToLibrary}
+      />,
+    );
+
+    expect(screen.getByText(/in your library/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add glue step to my library/i })).toBeNull();
+  });
+
+  it("toasts 'already in your library' when re-bookmarking resolves alreadySaved", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const onAddToLibrary = vi.fn(async () => ({ alreadySaved: true }));
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={onAddToLibrary}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add glue step to my library/i }));
+    expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
+  });
+
+  it("hides the affordance for a non-editor (viewer)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="viewer"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /add glue step to my library/i })).toBeNull();
+  });
+
+  it("hides the affordance entirely when the caller doesn't wire onAddToLibrary", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    expect(screen.queryByRole("button", { name: /add glue step to my library/i })).toBeNull();
+    expect(screen.queryByText(/in your library/i)).toBeNull();
+  });
+});
+
 describe("US-037 Choreo fork ('make it your own')", () => {
   /** A minimal routine for exercising the fork affordance + lineage badge. */
   const baseRoutine = (overrides: Partial<RoutineDoc> = {}): RoutineDoc => ({

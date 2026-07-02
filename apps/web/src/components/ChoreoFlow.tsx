@@ -9,10 +9,11 @@
 //
 // US-045/US-046: on mount, fetch templates + wire header search + fork.
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
+import { useBookmarkFigure, useMineFigures } from "../store/figures";
 import { useMe } from "../store/me";
 import {
   isQuotaError,
@@ -54,6 +55,21 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // opening the heavy WS store, so a non-member sees the calm access-denied state
   // rather than a connectivity-looking offline flash (DP #20).
   const access = useDocAccess(openRoutineId ?? "", { enabled: Boolean(openRoutineId) });
+
+  // The viewer's library bookmarks (⟳v5, §4.2/§5.2): fetched only when a routine
+  // is open, and reduced to a figureRef set so Assemble can O(1)-test "is this
+  // placed figure already in my library" for the "add to my library" ↔ "in your
+  // library" affordance (PlacementCard / FigureTimeline).
+  const mineQ = useMineFigures({ enabled: Boolean(openRoutineId) });
+  const bookmarkedFigureRefs = useMemo(
+    () => new Set((mineQ.data ?? []).map((f) => f.docRef)),
+    [mineQ.data],
+  );
+  const bookmark = useBookmarkFigure();
+  const onAddToLibrary = useCallback(
+    (figureRef: string) => bookmark.mutateAsync(figureRef),
+    [bookmark],
+  );
 
   // US-045: template list (app-owned sample routines).
   const [templates, setTemplates] = useState<RoutineListItem[]>([]);
@@ -205,6 +221,8 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
                 onSuccess: (res) => navigate(`/routines/${res.docRef}`),
               })
             }
+            bookmarkedFigureRefs={bookmarkedFigureRefs}
+            onAddToLibrary={onAddToLibrary}
           />
         )}
       </div>

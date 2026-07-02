@@ -52,11 +52,17 @@ export async function apiPost<T>(path: string, token: string | null, body: unkno
   return (await res.json()) as T;
 }
 
-/** Typed DELETE. Throws an {@link ApiError} on non-2xx. */
-export async function apiDelete<T>(path: string, token: string | null): Promise<T> {
+/** Typed DELETE. Throws an {@link ApiError} on non-2xx. `body`, when given, is
+ *  JSON-encoded and sent as the DELETE payload (e.g. un-bookmark: a figureRef can
+ *  contain `/`/`:`, so it rides in the body rather than a path param). */
+export async function apiDelete<T>(path: string, token: string | null, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(body !== undefined ? { "content-type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (!res.ok)
     throw new ApiError(res.status, await readBody(res), `DELETE ${path} -> ${res.status}`);
