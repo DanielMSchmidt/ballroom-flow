@@ -38,7 +38,7 @@ const ROLE_INFO: Record<Member["role"] | "owner", { label: string; pill: string;
       pill: "commenter",
       blurb: "Can add annotations, but not edit.",
     },
-    viewer: { label: "Viewer", pill: "viewer", blurb: "Can view the routine, read-only." },
+    viewer: { label: "Viewer", pill: "viewer", blurb: "Can view the choreo, read-only." },
   };
 
 /** Role pill (frame 4.2): lowercase role label, with ▾ indicator for roles that
@@ -145,7 +145,7 @@ export function ShareView({
   const youLabel = viewer?.displayName?.trim() || viewer?.userId || "You";
 
   return (
-    <section aria-label="Share this routine" className="flex flex-col gap-4">
+    <section aria-label="Share this choreo" className="flex flex-col gap-4">
       <ScreenHeader
         title="Share"
         subtitle={routineName}
@@ -157,7 +157,7 @@ export function ShareView({
           section header, lowercase role pills with ▾ for changeable roles. */}
       <div className="flex flex-col gap-2">
         <h2 className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-          Partners on this routine
+          Partners on this choreo
         </h2>
         {/* The current viewer, surfaced first as the "you" row (frame 4.2). */}
         {viewer && (
@@ -208,8 +208,8 @@ export function ShareView({
           explicit, so an editor knows a figure edit ripples to every routine. */}
       <Card className="border-info bg-info-tint">
         <p className="text-2xs text-info-ink">
-          Editing a shared figure changes it for every routine that uses it. To branch off on your
-          own, fork the routine — you'll get a frozen, independent copy.
+          Everyone on this choreo edits the same figures — changes stay inside this choreo. To
+          branch off on your own, fork it: a frozen, independent copy.
         </p>
       </Card>
 
@@ -281,7 +281,7 @@ export function ShareView({
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            {pendingRemove?.displayName ?? pendingRemove?.userId} will lose access to this routine.
+            {pendingRemove?.displayName ?? pendingRemove?.userId} will lose access to this choreo.
             You can invite them again with a new link.
           </p>
           <div className="flex justify-end gap-2">

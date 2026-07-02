@@ -22,7 +22,7 @@ describe("US-053 Account / profile + plan status", () => {
     const { Profile } = await importComponent<ProfileModule>("../components/Profile");
     renderUi(<Profile plan="free" ownedRoutineCount={2} />);
     expect(screen.getByText(/free plan/i)).toBeInTheDocument();
-    expect(screen.getByText(/2 routines|owned: 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 choreos|owned: 2/i)).toBeInTheDocument();
     await userEvent.clear(screen.getByLabelText(/display name/i));
     await userEvent.type(screen.getByLabelText(/display name/i), "Dancer");
     expect(screen.getByLabelText(/display name/i)).toHaveValue("Dancer");
@@ -57,13 +57,13 @@ describe("US-053 Account / profile + plan status", () => {
 // colour as the hex the onboarding endpoint stores (§4.8, server validates hex).
 // ─────────────────────────────────────────────────────────────────────────
 describe("T7 Profile design parity (frame 4.1)", () => {
-  it("labels the profile colour and explains it tints every note across shared routines", async () => {
+  it("labels the profile colour and explains it tints every note across shared choreos", async () => {
     const { Profile } = await importComponent<ProfileModule>("../components/Profile");
     renderUi(<Profile plan="free" ownedRoutineCount={0} />);
     expect(screen.getByText(/profile colour/i)).toBeInTheDocument();
     // The tint microcopy (DP #5: colour carries authorship across shared routines).
     expect(screen.getByText(/tinted with this/i)).toBeInTheDocument();
-    expect(screen.getByText(/shared routines/i)).toBeInTheDocument();
+    expect(screen.getByText(/shared choreos/i)).toBeInTheDocument();
   });
 
   it("offers exactly the six identity-colour swatches", async () => {
@@ -156,16 +156,16 @@ describe("T4 Profile attribute-types manager (frame 1.17)", () => {
 // "Profile shows status 'Free · 2 of 3 routines'" — concise plan+cap summary.
 // ─────────────────────────────────────────────────────────────────────────
 describe("D7 Quota status in Profile (design 1.18)", () => {
-  it("shows 'Free · N of M routines' when plan is free and routineCap is known", async () => {
+  it("shows 'Free · N of M choreos' when plan is free and routineCap is known", async () => {
     const { Profile } = await importComponent<ProfileModule>("../components/Profile");
     renderUi(<Profile plan="free" ownedRoutineCount={2} routineCap={3} />);
-    expect(screen.getByText(/free · 2 of 3 routines/i)).toBeInTheDocument();
+    expect(screen.getByText(/free · 2 of 3 choreos/i)).toBeInTheDocument();
   });
 
   it("falls back to the standard ownership sentence when cap is unknown", async () => {
     const { Profile } = await importComponent<ProfileModule>("../components/Profile");
     renderUi(<Profile plan="free" ownedRoutineCount={2} />);
-    expect(screen.getByText(/you own 2 routines/i)).toBeInTheDocument();
+    expect(screen.getByText(/you own 2 choreos/i)).toBeInTheDocument();
     expect(screen.queryByText(/free · /i)).toBeNull();
   });
 

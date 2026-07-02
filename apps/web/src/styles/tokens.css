@@ -33,10 +33,11 @@
   /* ---- Ink (text) ---- */
   --bf-ink: #1c1c1e; /* primary text on paper (AA on #fff & paper) */
   --bf-ink-secondary: #5a554c; /* secondary text */
+  --bf-ink-label: #6f6a61; /* eyebrow/section labels (v2: darkened for AA at 9px) */
   --bf-ink-muted: #9a958c; /* muted labels / metadata (AA large only) */
-  --bf-ink-faint: #c0bab0; /* faint hints (decorative, non-essential) */
+  --bf-ink-faint: #8a857b; /* faint hints (v2: darkened from #c0bab0 for legibility) */
   --bf-ink-inverse: #ffffff; /* text on charcoal surfaces */
-  --bf-offbeat-ink: #9aa7bb; /* off-beat count tokens (&,a,e,i) — muted slate (#5) */
+  --bf-offbeat-ink: var(--bf-accent); /* off-beat count tokens (&,a,e,i) — v2: accent, sized smaller (#5) */
 
   /* ---- Brand / interactive accent (studio blue) ---- */
   --bf-accent: #2f5d8f; /* default UI accent (links, focus, selected) */

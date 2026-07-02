@@ -14,12 +14,12 @@ export function SignInPrompt({ invited = false }: { invited?: boolean }): React.
   return (
     <Card>
       <p className="text-sm font-bold text-ink">
-        {invited ? "You’ve been invited to a routine" : "Sign in to build choreography"}
+        {invited ? "You’ve been invited to a choreo" : "Sign in to build choreography"}
       </p>
       <p className="mt-1 text-2xs text-ink-muted">
         {invited
           ? "Sign in to open the shared choreography — Ballroom Flow keeps it in sync across your devices."
-          : "Ballroom Flow keeps your routines in sync across your devices."}
+          : "Ballroom Flow keeps your choreos in sync across your devices."}
       </p>
       <div className="mt-3">
         <AccountControls />

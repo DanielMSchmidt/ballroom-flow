@@ -157,13 +157,18 @@ function AppHome(): React.JSX.Element {
             <Tabs
               label="Library view"
               items={[
-                { value: "all", label: "All" },
+                { value: "all", label: "Catalog" },
                 { value: "mine", label: "My figures" },
               ]}
               value={libTab}
               onChange={(v) => setLibTab(v as "all" | "mine")}
             />
-            <FigureLibrary tab={libTab} loadMine={loadMine} onSaveToLibrary={onSaveToLibrary} />
+            <FigureLibrary
+              tab={libTab}
+              loadMine={loadMine}
+              onSaveToLibrary={onSaveToLibrary}
+              onViewMine={() => setLibTab("mine")}
+            />
           </>
         ) : tab === "journal" ? (
           <Journal

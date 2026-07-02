@@ -6,7 +6,7 @@ export interface AccessDeniedProps {
   /** Override the default title. */
   title?: string;
   description?: ReactNode;
-  /** Optional action (e.g. "Back to your routines"). */
+  /** Optional action (e.g. "Back to your choreos"). */
   action?: ReactNode;
   className?: string;
 }
@@ -39,7 +39,7 @@ export function AccessDenied({ title, description, action, className }: AccessDe
       <h3 className="text-sm font-bold">{title ?? "You don't have access"}</h3>
       <p className="max-w-xs text-2xs" style={{ color: "var(--bf-ink-secondary)" }}>
         {description ??
-          "You're not a member of this routine, so it can't be opened. Ask the owner for an invite link to join."}
+          "You're not a member of this choreo, so it can't be opened. Ask the owner for an invite link to join."}
       </p>
       {action}
     </div>

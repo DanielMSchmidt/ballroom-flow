@@ -50,6 +50,7 @@
 
   --color-ink: var(--bf-ink);
   --color-ink-secondary: var(--bf-ink-secondary);
+  --color-ink-label: var(--bf-ink-label);
   --color-ink-muted: var(--bf-ink-muted);
   --color-ink-faint: var(--bf-ink-faint);
   --color-ink-inverse: var(--bf-ink-inverse);

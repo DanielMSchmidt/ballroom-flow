@@ -76,7 +76,7 @@ export function Profile({
     if (identityColor) setColor(identityColor);
   }, [identityColor]);
 
-  const routineWord = ownedRoutineCount === 1 ? "routine" : "routines";
+  const routineWord = ownedRoutineCount === 1 ? "choreo" : "choreos";
   const initial = (name.trim()[0] ?? "?").toUpperCase();
 
   return (
@@ -109,7 +109,7 @@ export function Profile({
             Profile colour
           </legend>
           <p className="text-2xs italic text-ink-secondary">
-            Every note &amp; reply of yours is tinted with this, across shared routines.
+            Every note &amp; reply of yours is tinted with this, across shared choreos.
           </p>
           <div className="flex flex-wrap gap-3">
             {IDENTITY_SWATCHES.map((swatch, i) => {
@@ -161,7 +161,7 @@ export function Profile({
         <section className="flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
           <p className="text-2xs text-ink-muted">
             {plan === "free" && routineCap != null
-              ? `Free · ${ownedRoutineCount} of ${routineCap} routines`
+              ? `Free · ${ownedRoutineCount} of ${routineCap} choreos`
               : `You own ${ownedRoutineCount} ${routineWord}${plan === "free" && routineCap ? ` of ${routineCap}` : ""}.`}
           </p>
           <Badge tone={plan === "pro" ? "accent" : "neutral"}>

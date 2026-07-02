@@ -1,13 +1,16 @@
-// Frame 1.13 — Attribute info sheet: a plain-language reference for ONE attribute
-// kind. Header: a colour swatch + the kind title + a short subtitle. Body: a prose
+// The attribute explainer (Builder v2, review U2 — was a bottom sheet): a
+// plain-language reference for ONE attribute kind, now a FULL PAGE so long value
+// glossaries read like a reference, not a cramped sheet. Header: ‹ back + a
+// colour swatch + the kind title + "attribute explainer" subtitle. Body: a prose
 // description (the Caveat note voice) + a VALUES glossary (chip + definition) +
-// a "Used in N steps" footer. Registry-derived: the values come from the merged
-// registry, so it works for custom kinds too (which simply have no prose).
+// a "Used in N steps" footer. Footer: an optional ‹ prev / next › pager that
+// walks the sibling kinds (wired by the caller). Registry-derived: the values
+// come from the merged registry, so it works for custom kinds too (no prose).
 //
 // Read-only reference, NOT an editor — but a value chip is tappable to jump to
 // "every step that uses it" (onSelectValue), matching the frame's footer hint.
 import type { RegistryKind } from "@ballroom/domain";
-import { cx, Sheet } from "../ui";
+import { cx, FullScreen } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { glossFor } from "./attribute-info";
 
@@ -29,6 +32,16 @@ export interface AttributeInfoSheetProps {
   scopeLabel?: string;
   /** Tapping a value chip jumps to every step that uses it (optional). */
   onSelectValue?: (value: string) => void;
+  /** Optional ‹ prev / next › pager across sibling kinds (Builder v2 footer).
+   *  Both handlers + labels must be provided for the pager bar to render. */
+  pager?: {
+    prevLabel: string;
+    nextLabel: string;
+    /** e.g. "2 of 5" */
+    positionLabel: string;
+    onPrev: () => void;
+    onNext: () => void;
+  };
 }
 
 function isStandardKind(kind: string): kind is AttributeKind {
@@ -52,19 +65,26 @@ export function AttributeInfoSheet({
   usageCount,
   scopeLabel,
   onSelectValue,
+  pager,
 }: AttributeInfoSheetProps) {
   const gloss = glossFor(kind.kind);
   const accent = kindColor(kind);
   // One or more kinds (the merged Step slot holds direction + footwork). A single
-  // kind renders without a per-kind heading (the Sheet title IS its label); a
+  // kind renders without a per-kind heading (the page title IS its label); a
   // combined slot labels each section so the two kinds read apart.
   const kinds = [kind, ...extraKinds];
   const multi = kinds.length > 1;
 
   return (
-    <Sheet open={open} onClose={onClose} title={title ?? kind.label}>
-      <div className="flex flex-col gap-4">
-        {/* Header row: colour swatch + subtitle (the title is the Sheet's h2). */}
+    <FullScreen
+      open={open}
+      onClose={onClose}
+      title={title ?? kind.label}
+      subtitle="attribute explainer · back returns to your spot"
+      backLabel="Back to your spot"
+    >
+      <div className="flex flex-col gap-4 p-4">
+        {/* Header row: colour swatch + subtitle (the title is the page's h2). */}
         <div className="flex items-center gap-2">
           <span
             aria-hidden="true"
@@ -88,7 +108,35 @@ export function AttributeInfoSheet({
           {onSelectValue ? " Tap a value to see every step that uses it." : ""}
         </p>
       </div>
-    </Sheet>
+
+      {/* ‹ prev / next › pager across sibling kinds (Builder v2 footer bar). */}
+      {pager && (
+        <div
+          className="sticky bottom-0 flex items-center gap-2 border-t border-border-subtle bg-surface-raised px-4 py-[10px]"
+          style={{ paddingBottom: "calc(10px + env(safe-area-inset-bottom))" }}
+        >
+          <button
+            type="button"
+            onClick={pager.onPrev}
+            className="inline-flex min-h-[var(--bf-touch-target)] items-center rounded-[9px] border-[1.5px] border-accent-border px-[13px] text-xs font-bold text-accent"
+          >
+            <span aria-hidden="true">‹ </span>
+            {pager.prevLabel}
+          </button>
+          <span className="flex-1 text-center text-[9px] font-semibold text-ink-faint">
+            {pager.positionLabel}
+          </span>
+          <button
+            type="button"
+            onClick={pager.onNext}
+            className="inline-flex min-h-[var(--bf-touch-target)] items-center rounded-[9px] border-[1.5px] border-accent-border px-[13px] text-xs font-bold text-accent"
+          >
+            {pager.nextLabel}
+            <span aria-hidden="true"> ›</span>
+          </button>
+        </div>
+      )}
+    </FullScreen>
   );
 }
 

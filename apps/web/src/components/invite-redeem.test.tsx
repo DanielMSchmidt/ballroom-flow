@@ -50,7 +50,7 @@ describe("InviteRedeem downgrade notice", () => {
     expect(await screen.findByText(/joined as a commenter/i)).toBeInTheDocument();
     expect(screen.getByText(/limit/i)).toBeInTheDocument();
     // …and an explicit way to continue into the routine.
-    expect(screen.getByRole("button", { name: /open routine/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open choreo/i })).toBeInTheDocument();
   });
 
   it("does NOT show the downgrade notice on a normal (non-downgraded) redeem", async () => {

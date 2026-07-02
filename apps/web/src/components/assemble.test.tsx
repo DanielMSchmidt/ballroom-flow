@@ -1077,7 +1077,7 @@ describe("D5 'Make it mine' fork banner (read mode, design 1.19)", () => {
         onFork={onFork}
       />,
     );
-    expect(screen.getByText(/viewing a read-only routine/i)).toBeInTheDocument();
+    expect(screen.getByText(/viewing a read-only choreo/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /make it mine/i }));
     expect(onFork).toHaveBeenCalledTimes(1);
   });
@@ -1095,7 +1095,7 @@ describe("D5 'Make it mine' fork banner (read mode, design 1.19)", () => {
         onFork={onFork}
       />,
     );
-    expect(screen.queryByText(/viewing a read-only routine/i)).toBeNull();
+    expect(screen.queryByText(/viewing a read-only choreo/i)).toBeNull();
     expect(screen.queryByRole("button", { name: /make it mine/i })).toBeNull();
   });
 
@@ -1112,7 +1112,7 @@ describe("D5 'Make it mine' fork banner (read mode, design 1.19)", () => {
         onFork={onFork}
       />,
     );
-    expect(screen.queryByText(/viewing a read-only routine/i)).toBeNull();
+    expect(screen.queryByText(/viewing a read-only choreo/i)).toBeNull();
   });
 });
 

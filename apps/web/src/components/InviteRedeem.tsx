@@ -54,12 +54,12 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
       <Card>
         <p className="text-sm font-bold text-ink">Joined as a commenter</p>
         <p className="mt-1 text-2xs text-ink-muted">
-          You’re at your limit of routines you can edit on the free plan, so you’ve joined this
+          You’re at your limit of choreos you can edit on the free plan, so you’ve joined this
           routine as a commenter — you can read and comment, but not edit it. Upgrade to edit more
           routines.
         </p>
         <div className="mt-3">
-          <Button onClick={() => navigate(`/routines/${downgraded.docRef}`)}>Open routine</Button>
+          <Button onClick={() => navigate(`/routines/${downgraded.docRef}`)}>Open choreo</Button>
         </div>
       </Card>
     );
@@ -68,7 +68,7 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
   return (
     <Card>
       <p className="text-sm font-bold text-ink">Joining…</p>
-      <p className="mt-1 text-2xs text-ink-muted">Adding this routine to your list.</p>
+      <p className="mt-1 text-2xs text-ink-muted">Adding this choreo to your list.</p>
     </Card>
   );
 }
