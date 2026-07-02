@@ -127,6 +127,55 @@ describe("T6 GET /api/journal", () => {
     expect(lesson?.anchors[0]?.label).toBe("Natural Turn · step 2");
   });
 
+  it("resolves a CATALOG live-reference anchor label from the bundled catalog (no registry row, ⟳v5)", async () => {
+    // Regression (fast-gate journal journey, 2026-07-02): under v5 a notated
+    // catalog figure's placement points at `global:<dance>:<figureType>` — which
+    // has NO document_registry row until the admin seeder runs. The journal
+    // projection must still resolve the chip label ("↳ Natural Turn") from the
+    // bundled catalog, exactly like the client's own fallback.
+    const routineRef = "rt_journal_cat";
+    await seedDb({
+      users: [{ id: "owner_cat", displayName: "Ava", identityColor: "#1f8a5b", plan: "free" }],
+      docs: [
+        {
+          docRef: routineRef,
+          type: "routine",
+          ownerId: "owner_cat",
+          doName: routineRef,
+          dance: "waltz",
+        },
+      ],
+      memberships: [{ id: "m_owner_cat", docRef: routineRef, userId: "owner_cat", role: "editor" }],
+    });
+    const stub = docs.get(docs.idFromName(routineRef));
+    await stub.setMetadata({
+      doName: routineRef,
+      docRef: routineRef,
+      type: "routine",
+      ownerId: "owner_cat",
+      dance: "waltz",
+      title: "Bronze Waltz",
+    });
+    // Anchor the lesson to the CATALOG ref — deliberately NO registry row for it.
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "lesson",
+      authorId: "owner_cat",
+      text: "rise later through 2-3",
+      anchors: [{ type: "figure", figureRef: "global:waltz:natural-turn" }],
+    });
+    await stub.runAlarmForTest();
+
+    const token = await makeTestJWT(kp, { sub: "owner_cat" });
+    const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      entries: Array<{ text: string; anchors: Array<{ label?: string }> }>;
+    };
+    const lesson = body.entries.find((e) => e.text === "rise later through 2-3");
+    expect(lesson?.anchors[0]?.label).toBe("Natural Turn"); // from the bundle, not D1
+  });
+
   it("co-membership gate: a member sees the routine's entries; a non-member sees none", async () => {
     const routineRef = "rt_journal_shared";
     await seedDb({

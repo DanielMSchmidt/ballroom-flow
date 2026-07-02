@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
-import { figureMatchesLibraryOrigin, globalFigureRef, LIBRARY_FIGURES, libraryFigureByRef, libraryFiguresForDance, libraryGroupsForDance, libraryGroupsForFilter, parseGlobalFigureRef, type LibraryFigure } from "./library";
+import {
+  figureMatchesLibraryOrigin,
+  globalFigureRef,
+  LIBRARY_FIGURES,
+  type LibraryFigure,
+  libraryFigureByRef,
+  libraryFiguresForDance,
+  libraryGroupsForDance,
+  libraryGroupsForFilter,
+  parseGlobalFigureRef,
+} from "./library";
 import { parseAttributeWrite } from "./schemas";
 
 // US-032 — the application-global figure library (client-bundled catalog shaped

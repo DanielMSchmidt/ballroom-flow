@@ -34,6 +34,7 @@ import {
   type DanceId,
   type EffectiveRole,
   type FigureDoc,
+  libraryFigureByRef,
   migrateDraft,
   type RoutineDoc,
   readFigure,
@@ -1146,11 +1147,22 @@ export class DocDO extends DurableObject<Env> {
   private async resolveFigureNames(refs: string[]): Promise<Map<string, string>> {
     const out = new Map<string, string>();
     if (refs.length === 0) return out;
-    const ph = refs.map(() => "?").join(",");
+    // A catalog live-reference (⟳v5, §4.3 — `global:<dance>:<figureType>`) may
+    // predate the admin seeding of its registry row; its name is definitionally
+    // available from the bundled catalog either way (the same fallback the client
+    // uses), so resolve those WITHOUT a D1 read and query only real doc refs.
+    const dbRefs: string[] = [];
+    for (const ref of refs) {
+      const cat = libraryFigureByRef(ref);
+      if (cat) out.set(ref, cat.name);
+      else dbRefs.push(ref);
+    }
+    if (dbRefs.length === 0) return out;
+    const ph = dbRefs.map(() => "?").join(",");
     const res = await this.env.DB.prepare(
       `SELECT docRef, title FROM document_registry WHERE docRef IN (${ph})`,
     )
-      .bind(...refs)
+      .bind(...dbRefs)
       .all<{ docRef: string; title: string | null }>();
     for (const r of res.results ?? []) if (r.title) out.set(r.docRef, r.title);
     return out;
