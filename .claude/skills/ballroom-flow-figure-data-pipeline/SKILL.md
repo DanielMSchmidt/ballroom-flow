@@ -240,34 +240,47 @@ in plan v4.3 (8f49169) — don't re-derive them from memory.
 | Charted vs scaffold inventory | 147 of 204 library figures have verified charts; the other 57 are ISTD-only identity rows with no timing (scaffold impossible — they show an empty timeline). A timed figure whose chart was removed shows the start/finish scaffold. | To upgrade a figure, follow §4. To see the split: compare keys of `GENERATED_FIGURE_STEPS` against `LIBRARY_FIGURE_DATA` rows with `timing`. |
 | Empty `attributes: []` in ISTD/WDSF seeds | Deliberate: per-count technique is NOT in the public syllabi (paid technique books). Content arrives via figure-charts.json only. | Never populate those arrays by hand. |
 
-## 7. v5 note — the seeder becomes additive-only (status: OPEN)
+## 7. v5 — the global-figure seeder is SHIPPED (additive-only, D30)
 
-PLAN.md v5 (D30 ⟳v5, Q-GLOBAL-DOCS; roadmap §9 step 3 is an **unchecked box** at
-HEAD 70eed7e, 2026-07-02): global catalog figures become **real, admin-owned
-Automerge docs** (one Durable Object each). The seed pipeline's role changes:
+PLAN.md v5 (D30 ⟳v5; roadmap §9 step 3 ✅ as of 2026-07-02, PR #137): global catalog
+figures are **real, admin-owned Automerge docs** (one Durable Object each). The
+seeder exists — `seedGlobalFigures` in **`apps/worker/src/seed-global-figures.ts`**
+— exposed as the **admin-only** route `POST /api/admin/seed-global-figures`
+(`apps/worker/src/index.ts`; a non-admin gets 403) and reused by the E2E test-seed
+path (`routes/test-seed.ts`, `seedGlobalFigures: true`). Its D30 contract:
 
-- **One-time import per figure** into a real global figure doc; **after import the
-  DOC is the source of truth**, refined by admin in-app edits — not re-imports.
-- **Re-running the seeder only ADDS figures that don't exist yet; it never
-  overwrites an existing doc.** A seed-JSON correction after import does NOT reach
-  already-imported figures — those are fixed by an admin editing the doc.
+- **One-time import per figure** into a real global figure doc keyed by
+  `globalFigureRef(dance, figureType)` = `global:<dance>:<figureType>`; **after
+  import the DOC is the source of truth**, refined by admin in-app edits — not
+  re-imports.
+- **Additive + idempotent:** re-running only ADDS figures that don't exist yet; it
+  never overwrites an existing doc (`INSERT OR IGNORE` registry row + no-clobber
+  `seedDoc`). A seed-JSON correction after import does NOT reach already-imported
+  figures — those are fixed by an admin editing the doc.
 - The bundled catalog (`library-data.ts`) remains the browse/picker index (names,
-  families, dances); figure content in routines will read from the docs.
+  families, dances); **figure content in routines reads from the docs** (PLAN §9
+  content workstream). The store still uses the bundle as the last-resort render
+  fallback for a `global:` ref whose doc/snapshot hasn't hydrated
+  (`catalogFigureFor` / `resolveBaseContent` in `apps/web/src/store/routine.ts`),
+  so a catalog placement is pre-filled by construction.
 
-Until step 3 lands, everything in §1–§6 is the live behavior: the bundle IS the
-content, and regenerating + shipping updates every user's catalog. When working on
-step 3 itself, see **ballroom-flow-v5-migration-campaign**; re-check the box state
-first (command below).
+Everything in §1–§6 stays the live authoring pipeline for the SEEDS + bundle;
+what changed is the runtime authority once a figure doc exists. Deployment note:
+the seeder is an ops action per environment (see **ballroom-flow-run-and-operate**
+§7); regenerating the bundle no longer rewrites content for already-seeded figures.
 
 ## Provenance and maintenance
 
-Written 2026-07-02 against repo HEAD `70eed7e` on `development`. Verified directly:
+Written 2026-07-02 against repo HEAD `70eed7e`; **§7 refreshed 2026-07-02 — verified at HEAD
+`c9622c9`** (PR #137: `seedGlobalFigures` + admin route shipped, PLAN §9 step 3 ✅) on
+`development`. Verified directly:
 both generator scripts read in full; seed metas and entry counts recounted from the
 JSON (`python3 -c "import json; print(len(json.load(open('docs/seed/figure-charts.json'))['figures']))"` → 147; istd 121, wdsf 147); `library-data.ts` → 204 rows;
 `wdsf-timing.ts` / `figure-steps.ts` / `library.ts` read in full; guard tests read
 (`figure-steps.test.ts`, `library.test.ts`, `wdsf-timing.test.ts`, `library-data.test.ts`);
+`apps/worker/src/seed-global-figures.ts` + the admin route read at `c9622c9`;
 commits 1f67e38, 58a11f6, 01284a9, 4b9cf8a, d2d4b75 messages read via `git log`;
-PLAN.md D30/D31/Q-LIBSEED/Q-GLOBAL-DOCS and §9 step-3 checkbox read.
+PLAN.md D30/D31/Q-LIBSEED and the §9 content-workstream wording read.
 
 Re-verify before trusting volatile facts:
 
@@ -279,7 +292,8 @@ import json
 for f in ["figure-charts","istd-standard-figures","wdsf-standard-figures"]:
     d = json.load(open(f"docs/seed/{f}.json")); print(f, len(d["figures"]))
 EOF
-# v5 seeder status (is roadmap step 3 still an open checkbox?)
+# v5 seeder still shipped + additive (D30)?
+grep -n "seedGlobalFigures" apps/worker/src/seed-global-figures.ts apps/worker/src/index.ts
 grep -n "Global figure docs" docs/PLAN.md
 # the step-count guard test still exists
 grep -n "step count matches its timing" packages/domain/src/figure-steps.test.ts

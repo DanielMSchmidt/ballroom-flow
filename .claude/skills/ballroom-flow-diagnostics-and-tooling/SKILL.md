@@ -75,15 +75,15 @@ RESULT: all checks green
 ```
 
 Exits non-zero if anything failed; re-run the failing check directly (e.g.
-`pnpm --filter worker test`) to see its real output. Baseline as of 2026-07-02 (HEAD `3693ff6`,
-post-#133/#134/#135): domain 232 passed/3 skipped, contract 11, web 333, worker 161 passed/7
-skipped **+ 1 known deterministic failure** (`fork.test.ts` "is independent of the origin" —
-the migrateOnLoad incident, fix pending as PR #140; 162/7 once it lands). A red worker suite
-matching exactly that test is the known incident, not your change.
+`pnpm --filter worker test`) to see its real output. Baseline as of 2026-07-02 (HEAD `c9622c9`,
+post-#139/#136/#137): **all green** — domain 245 passed/3 skipped, contract 14, web 343,
+worker 180 passed/7 skipped. (The earlier known `fork.test.ts` "is independent of the origin"
+failure was the migrateOnLoad incident, fixed by PR #139/903d109 — a red worker suite now is
+your change or a genuine regression.)
 
 ### `explain-query.mjs` — query-plan probe against the real D1 schema
 
-Applies all 13 migrations in `apps/worker/migrations/` to a throwaway in-memory SQLite DB
+Applies all 15 migrations in `apps/worker/migrations/` to a throwaway in-memory SQLite DB
 (D1 *is* SQLite, so the planner output matches) and runs `EXPLAIN QUERY PLAN` on your SQL.
 No worker, no Cloudflare state, no network.
 
@@ -96,7 +96,7 @@ node .claude/skills/ballroom-flow-diagnostics-and-tooling/scripts/explain-query.
 Verified output (exit 0 on all-indexed, exit 1 on any SCAN):
 
 ```
-EXPLAIN QUERY PLAN (schema: 13 migrations applied)
+EXPLAIN QUERY PLAN (schema: 15 migrations applied)
   ✓  SEARCH membership USING INDEX membership_doc_idx (docRef=?)
 OK: every access path uses an index or PK search.
 ```
@@ -193,14 +193,14 @@ vitest-pool-workers test observe/drive this without reaching into storage. Typed
 
 | Hook (doc-do.ts line) | What it does | What it proves |
 |---|---|---|
-| `reloadForTest()` :756 | Drops the in-memory doc, re-runs cold load from SQLite | **Eviction survival**: the pool keeps a DO warm, so without this the rehydration/replay path is never exercised |
-| `debugChangeRowCount()` :766 | `SELECT COUNT(*) FROM changes` | Persistence is **incremental** (one row per change, not full-doc rewrites); also gate assertions — a rejected viewer frame must add **zero** rows |
-| `buildChangeForTest(op)` :776 | Mints valid, lineage-compatible change bytes against the current doc **without applying** | Feed real bytes through `webSocketMessage` to prove the socket role gate: same bytes dropped for a viewer, applied for an editor |
-| `runAlarmForTest()` :855 | Runs the alarm body synchronously (no timer) | Deterministically drive compaction, D1 index projection, journal projection, invite expiry — and their **isolation** (one step failing must not skip the rest) |
-| `debugPersistedSize()` :1203 | `SUM(LENGTH(data))` over snapshot + change log | **Compaction bounds storage**: after the alarm folds changes into the snapshot, persisted bytes must not grow unbounded with edit count |
-| `catchUpFramesForTest()` :743 | Returns the frames a fresh connect would receive | Post-#134, exactly ONE tagged `SYNC_FRAME_SNAPSHOT` for a seeded doc — pins the one-frame catch-up |
+| `reloadForTest()` :768 | Drops the in-memory doc, re-runs cold load from SQLite | **Eviction survival**: the pool keeps a DO warm, so without this the rehydration/replay path is never exercised |
+| `debugChangeRowCount()` :778 | `SELECT COUNT(*) FROM changes` | Persistence is **incremental** (one row per change, not full-doc rewrites); also gate assertions — a rejected viewer frame must add **zero** rows |
+| `buildChangeForTest(op)` :788 | Mints valid, lineage-compatible change bytes against the current doc **without applying** | Feed real bytes through `webSocketMessage` to prove the socket role gate: same bytes dropped for a viewer, applied for an editor |
+| `runAlarmForTest()` :867 | Runs the alarm body synchronously (no timer) | Deterministically drive compaction, D1 index projection, journal projection, invite expiry — and their **isolation** (one step failing must not skip the rest) |
+| `debugPersistedSize()` :1226 | `SUM(LENGTH(data))` over snapshot + change log | **Compaction bounds storage**: after the alarm folds changes into the snapshot, persisted bytes must not grow unbounded with edit count |
+| `catchUpFramesForTest()` :755 | Returns the frames a fresh connect would receive | Post-#134, exactly ONE tagged `SYNC_FRAME_SNAPSHOT` for a seeded doc — pins the one-frame catch-up |
 
-Companion facts: `COMPACT_THRESHOLD = 64` (doc-do.ts:71) — the change log triggers a coalesced
+Companion facts: `COMPACT_THRESHOLD = 64` (doc-do.ts:72) — the change log triggers a coalesced
 compaction alarm past 64 rows (doc-do.test.ts asserts `debugChangeRowCount() < 70` after a
 burst). Worker tests run with `isolatedStorage: false` (SQLite DOs break the pool's teardown —
 M0.5 finding), so storage persists across tests: **every test must mint a unique DO id** via
@@ -273,7 +273,6 @@ build-and-env §4) point here rather than re-listing it.
 | `workerd … Broken pipe` ERROR | end of an E2E run | workerd's shutdown race when the Playwright webServer is killed | None if tests already reported their verdict |
 | `Failed to parse URL from /api/figures` (fetch TypeError on stderr) | `pnpm --filter web test` (jsdom) | jsdom has no origin, so relative `fetch` URLs can't resolve; components under test tolerate the rejected fetch | None — assertions don't depend on it; observed baseline 2026-07-02 |
 | `doc-do alarm: D1 index projection failed …` (console.error) | worker suite | The **alarm-isolation error-path test** (`doc-do.test.ts` ~:455) deliberately forces the projection to throw to prove the other alarm steps still run | None when the suite is green — it's the test doing its job. The same line in *production* logs IS a real signal (see ballroom-flow-run-and-operate) |
-| biome: 1 warning, `fork.test.ts:282` unused `variantAttributesForEdit` | `pnpm lint` | Known pre-existing warning (not an error; lint still exits 0) | Leave it unless you're touching that test |
 | `(!) Some chunks are larger than 500 kB` + the 2.75 MB Automerge WASM asset | `pnpm build` | Known, accepted for v1 (see §2.7 — the WASM dominates by design) | None — do not "fix" by splitting the WASM |
 | `ExperimentalWarning: SQLite is an experimental feature` | `explain-query.mjs` | Node 22's `node:sqlite` flag status | None |
 
@@ -284,9 +283,9 @@ The same text with a red suite means start at **ballroom-flow-debugging-playbook
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against HEAD `70eed7e`; suite-baseline counts refreshed same day against
-HEAD `3693ff6` (post-#133/#134/#135; PR #140 pending — worker suite red on the known
-fork.test.ts failure until it merges) on `development`. Every command above was executed
+Authored 2026-07-02 against HEAD `70eed7e`; suite-baseline counts, migration counts, and
+DO-hook line anchors refreshed same day — **verified at HEAD `c9622c9`** (post-#139/#136/#137;
+all suites green) on `development`. Every command above was executed
 (scripts run-verified end-to-end: `verify-generated.sh` exit 0, `suite-health.sh` full run all
 green in ~100s, `explain-query.mjs` verified on indexed/SCAN/`--tables` cases); every
 file:line was read from source. Volatile facts (test counts, coverage floors, bundle sizes,

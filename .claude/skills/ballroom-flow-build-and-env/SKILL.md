@@ -74,8 +74,8 @@ order-of-magnitude, not SLA.
 |---|---|---|
 | `pnpm build` | Exit 0. **Only `apps/web` has a build script** (`tsc --noEmit` + `vite build` → `apps/web/dist`). ~890 kB JS + 2.75 MB Automerge WASM; a chunk-size warning is **normal**; PWA `sw.js` generated, precache ~3596 KiB. domain/contract/worker build nothing. | 13.3s |
 | `pnpm typecheck` | Exit 0 across all 4 workspaces (`pnpm -r typecheck`). | 12.2s |
-| `pnpm lint` | Exit 0, 279 files, ~340ms. **1 pre-existing warning**: `packages/domain/src/fork.test.ts:282` unused `variantAttributesForEdit`. If you see exactly one warning there, that's baseline, not your change. | 1.3s |
-| `pnpm test` | At HEAD `3693ff6` (2026-07-02, post-#133/#134/#135): **domain 232 passed / 3 skipped** (23 files; skips = `seed-library.test.ts`, US-054); **contract 11 passed**; **web 333 passed / 0 skipped** (41 files, jsdom); **worker 161 passed / 7 skipped + 1 KNOWN deterministic failure** — `routes/fork.test.ts` "is independent of the origin" (the migrateOnLoad incident; fix pending as PR #140, after which the worker suite is 162/7 and `pnpm test` exits 0 again). That exact failure is baseline, not your change. Worker tests run in **real workerd** via vitest-pool-workers — the ~50s is genuine; under heavy sandbox load `starter.test.ts` can additionally hit its 5s timeout (environmental; passes in isolation). | ~60s total |
+| `pnpm lint` | Exit 0, 285 files, ~350ms. **No warnings** at HEAD `c9622c9` (the old `fork.test.ts:282` baseline warning is gone). | 1.3s |
+| `pnpm test` | At HEAD `c9622c9` (2026-07-02, post-#139/#136/#137): **all green, exit 0** — **domain 245 passed / 3 skipped** (23 files; skips = `seed-library.test.ts`, US-054); **contract 14 passed**; **web 343 passed / 0 skipped** (41 files, jsdom); **worker 180 passed / 7 skipped**. Worker tests run in **real workerd** via vitest-pool-workers — the ~55s is genuine; under heavy sandbox load `starter.test.ts` can hit its 5s timeout (environmental; passes in isolation). | ~90s total |
 | `pnpm coverage` | Exit 0. Thresholds are **armed** — a drop below any floor fails. Per-metric floors, measured actuals, and ratchet semantics are single-homed in **ballroom-flow-validation-and-qa** §6. | 65.7s |
 | `node scripts/gen-library.mjs` / `node scripts/gen-figure-charts.mjs` | Both exit 0 — offline, byte-deterministic (`git diff` stays empty on unchanged seeds). Output counts, seed semantics, and the charting workflow: **ballroom-flow-figure-data-pipeline**. | seconds |
 | `pnpm --filter web exec playwright test --list` | 87 tests in 14 files across 3 projects; with `--grep @smoke --project=chromium-desktop` → 24 tests. | ~5s |
@@ -159,9 +159,9 @@ cd apps/web && pnpm exec playwright test --grep @smoke --project=chromium-deskto
 
 Scary-looking but harmless output — wrangler telemetry 403s, workerd `Broken pipe`
 at E2E shutdown, the jsdom `Failed to parse URL` stderr, the deliberate
-alarm-projection error-path log, the Vite chunk-size warning, and the single
-pre-existing biome warning at `fork.test.ts:282` — is catalogued once, with
-interpretations, in **ballroom-flow-diagnostics-and-tooling** §3. If a run's exit
+alarm-projection error-path log, and the Vite chunk-size warning — is catalogued
+once, with interpretations, in **ballroom-flow-diagnostics-and-tooling** §3.
+(`pnpm lint` is warning-free at HEAD `c9622c9`.) If a run's exit
 code and test verdicts are green, check that table before debugging any log line.
 
 ---
@@ -218,9 +218,9 @@ re-verify with the one-liner if you suspect drift.
 |---|---|---|---|
 | 1 | `docs/DEVELOPMENT.md:10` + CLAUDE.md: **pnpm 10** | Pin is **pnpm 11.9.0** | `grep packageManager package.json` |
 | 2 | `docs/TOOLING.md:56` / `DEVELOPMENT.md:73`: coverage thresholds "commented out"; CLAUDE.md: "uncomment when suites land" | **Armed** at the measured floors: domain 90 lines, worker 88 lines. (CLAUDE.md's 95/90 figures are the PLAN §10.3 ratchet *targets*, not stale claims — full table: **ballroom-flow-validation-and-qa** §6) | `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts` |
-| 3 | `docs/DEVELOPMENT.md:123`: "migrations dir is empty until M2" | **13 migrations** exist | `ls apps/worker/migrations \| wc -l` |
+| 3 | `docs/DEVELOPMENT.md:123`: "migrations dir is empty until M2" | **15 migrations** exist | `ls apps/worker/migrations \| wc -l` |
 | 4 | `DEVELOPMENT.md:78` / `TOOLING.md:40`: E2E webServer is `vite preview`, "build first" | webServer is **`e2e/serve.sh`** — self-building, real wrangler-dev backend | `grep -n serve.sh apps/web/playwright.config.ts` |
-| 5 | `docs/TEST-MAP.md:11`: domain 154 / web 114 / worker 101 tests | **227 / 331 / 150** (as of 2026-07-02) | `pnpm test` and read the summaries |
+| 5 | `docs/TEST-MAP.md:11`: domain 154 / web 114 / worker 101 tests | **245 / 355 / 180** (as of 2026-07-02, HEAD `759b3a8`) | `pnpm test` and read the summaries |
 | 6 | (implied by its existence) `scripts/screenshot-diff.test.mjs` runs somewhere | Wired into **no runner**; orphaned | `grep -rn "screenshot-diff.test" package.json apps/*/package.json .github/workflows/` |
 
 If you touch one of these areas, fixing the stale doc line in the same PR is the
@@ -230,9 +230,9 @@ expected move (see **ballroom-flow-change-control**).
 
 ## Provenance and maintenance
 
-- **Date-stamp:** 2026-07-02, repo HEAD `70eed7e`; test-count row refreshed same day at HEAD
-  `3693ff6` (post-#133/#134/#135; PR #140 pending — until it merges, `pnpm test` exits
-  non-zero on the one known worker failure) on `development`.
+- **Date-stamp:** 2026-07-02, repo HEAD `70eed7e`; test/lint/migration rows refreshed same
+  day — **verified at HEAD `c9622c9`** (post-#139/#136/#137; all suites green, `pnpm test`
+  exits 0) on `development`.
 - **Verified against:** live execution of every command in §2 in a fresh sandbox on
   2026-07-02; direct reads of `package.json`, `.nvmrc`, `pnpm-workspace.yaml`,
   `lefthook.yml`, `packages/domain/vitest.config.ts`, `apps/worker/vitest.config.ts`,
@@ -246,5 +246,5 @@ expected move (see **ballroom-flow-change-control**).
   - Coverage thresholds: `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts`
   - Test/skip counts: `pnpm test` (counts in §2 are a 2026-07-02 snapshot)
   - Playwright pin: `node -e "console.log(require('@playwright/test/package.json').version)"` from `apps/web`
-  - Lint baseline: `pnpm lint` (expect exactly the one `fork.test.ts:282` warning)
+  - Lint baseline: `pnpm lint` (expect zero warnings)
   - CI steps: `grep -n "run:" .github/workflows/ci.yml`
