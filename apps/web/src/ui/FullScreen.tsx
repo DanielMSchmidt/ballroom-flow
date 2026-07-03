@@ -30,7 +30,8 @@ export function FullScreen({
   onClose,
   title,
   subtitle,
-  backLabel = "Back",
+  // Default back label is localized by ScreenHeader (undefined passes through).
+  backLabel,
   actions,
   children,
 }: FullScreenProps) {

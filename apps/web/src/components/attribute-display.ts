@@ -7,6 +7,7 @@
 // "com", quarter_R → "¼R"). `direction` is never a column: it's the step's
 // headline ("RF forward"); foot (L/R) is not modelled — steps alternate feet
 // automatically (see vocabulary.ts) — so it's derived from the step's order.
+import { getLocale, type Locale } from "../i18n";
 import type { AttributeKind } from "../ui/tokens";
 
 /** A technique column in the reading table / editor header (design order). */
@@ -34,7 +35,9 @@ export const ATTR_COLUMNS: AttrColumn[] = [
 /** Kinds that own a column (so other kinds can be detected as "extra"). */
 export const COLUMN_KINDS = new Set<string>(ATTR_COLUMNS.flatMap((c) => c.kinds));
 
-/** Short cell codes per kind value — chosen to fit the design's tight columns. */
+/** Short cell codes per kind value — chosen to fit the design's tight columns.
+ *  LOCALE-INDEPENDENT by decision: these are notation codes (like the values
+ *  themselves), not prose — German syllabi quote the English HT/TH codes too. */
 const ABBREV: Record<string, Record<string, string>> = {
   rise: {
     commence: "Com",
@@ -127,8 +130,9 @@ const ABBREV: Record<string, Record<string, string>> = {
   },
 };
 
-/** Readable direction labels for the step headline. */
-const DIRECTION_LABEL: Record<string, string> = {
+/** Readable direction labels for the step headline, per locale. The German map
+ *  mirrors the English one key-for-key (`typeof` pins the shape). */
+const DIRECTION_LABEL_EN = {
   forward: "forward",
   back: "back",
   side: "side",
@@ -141,6 +145,21 @@ const DIRECTION_LABEL: Record<string, string> = {
   diag_forward: "diagonal",
   diag_back: "diagonal",
 };
+const DIRECTION_LABEL_DE: typeof DIRECTION_LABEL_EN = {
+  forward: "vorwärts",
+  back: "rückwärts",
+  side: "seitwärts",
+  behind: "hinterkreuzt",
+  close: "schließen",
+  diagonal: "diagonal",
+  in_place: "am Platz",
+  diag_forward: "diagonal",
+  diag_back: "diagonal",
+};
+const DIRECTION_LABEL: Record<Locale, Record<string, string>> = {
+  en: DIRECTION_LABEL_EN,
+  de: DIRECTION_LABEL_DE,
+};
 
 /**
  * Full descriptive label per value, shown in the EDIT picker (the reading overview
@@ -149,7 +168,7 @@ const DIRECTION_LABEL: Record<string, string> = {
  * The one-line EXPLANATION lives in the registry `valueDefs` (info overlay + the
  * editor's inline note); this is just the chip's headline.
  */
-const FULL_LABEL: Record<string, Record<string, string>> = {
+const FULL_LABEL_EN: Record<string, Record<string, string>> = {
   direction: {
     forward: "Forward",
     back: "Back",
@@ -238,11 +257,111 @@ const FULL_LABEL: Record<string, Record<string, string>> = {
   },
 };
 
+/** German full labels — same kinds/keys as FULL_LABEL_EN. German ballroom
+ *  teaching vocabulary (DTV-style): Ferse/Spitze/Ballen for the foot parts,
+ *  Heben & Senken for rise, Neigung for sway. Established English loanwords
+ *  (CBM, Oversway, Shaping, Wing, Tandem, CBMP) stay untranslated. */
+const FULL_LABEL_DE: typeof FULL_LABEL_EN = {
+  direction: {
+    forward: "Vorwärts",
+    back: "Rückwärts",
+    side: "Seite",
+    behind: "Hinter",
+    close: "Schließen",
+    diagonal: "Diagonal",
+    in_place: "Am Platz",
+  },
+  footwork: {
+    HT: "Ferse-Spitze",
+    TH: "Spitze-Ferse",
+    T: "Spitze",
+    H: "Ferse",
+    B: "Ballen",
+    WF: "Ganzer Fuß",
+    BF: "Ballen-flach",
+    IE: "Innenkante",
+    flat: "Flacher Fuß",
+    "heel turn": "Fersendrehung",
+    "heel pull": "Fersenzug",
+    BH: "Ballen-Ferse",
+    HTH: "Ferse-Spitze-Ferse",
+    THT: "Spitze-Ferse-Spitze",
+    "T/H/T": "Spitze / Ferse / Spitze",
+    "H/T": "Ferse / Spitze",
+    "T/H": "Spitze / Ferse",
+    "T/TH": "Spitze / Spitze-Ferse",
+    "TH/T": "Spitze-Ferse / Spitze",
+  },
+  footPosition: {
+    first: "Erste",
+    second: "Zweite",
+    third: "Dritte",
+    fourth_open: "Vierte offen",
+    fourth_closed: "Vierte geschlossen",
+    fifth: "Fünfte",
+  },
+  rise: {
+    commence: "Beginn",
+    body_rise: "Körperheben",
+    foot_rise: "Fußheben",
+    up: "Oben",
+    continue: "Fortsetzen",
+    lowering: "Senken",
+    body_lower: "Körpersenken",
+    NFR: "Kein Fußheben",
+  },
+  position: {
+    closed: "Geschlossen",
+    promenade: "Promenade",
+    counter_promenade: "Gegenpromenade",
+    outside_partner: "Außenseitlich",
+    left_side: "Linksseitlich",
+    right_side: "Rechtsseitlich",
+    tandem: "Tandem",
+    wing: "Wing",
+    CBMP: "CBMP",
+  },
+  bodyActions: {
+    CBM: "CBM",
+    side_leading: "Seitführung",
+    shaping: "Shaping",
+    oversway: "Oversway",
+    leg_line: "Beinlinie",
+  },
+  sway: { to_L: "Neigung links", to_R: "Neigung rechts", none: "Keine Neigung" },
+  turn: {
+    none: "Keine Drehung",
+    eighth_L: "⅛ links",
+    eighth_R: "⅛ rechts",
+    quarter_L: "¼ links",
+    quarter_R: "¼ rechts",
+    three_eighth_L: "⅜ links",
+    three_eighth_R: "⅜ rechts",
+    half_L: "½ links",
+    half_R: "½ rechts",
+    five_eighth_L: "⅝ links",
+    five_eighth_R: "⅝ rechts",
+    three_quarter_L: "¾ links",
+    three_quarter_R: "¾ rechts",
+    seven_eighth_L: "⅞ links",
+    seven_eighth_R: "⅞ rechts",
+    full_L: "Ganze Drehung links",
+    full_R: "Ganze Drehung rechts",
+  },
+};
+
+const FULL_LABEL: Record<Locale, Record<string, Record<string, string>>> = {
+  en: FULL_LABEL_EN,
+  de: FULL_LABEL_DE,
+};
+
 /** The full descriptive label for a value (the edit picker), or the humanized raw
  *  value when unmapped (custom kinds, future values). */
 export function labelValue(kind: string, value: unknown): string {
   const raw = String(value);
-  return FULL_LABEL[kind]?.[raw] ?? raw.replace(/_/g, " ");
+  return (
+    FULL_LABEL[getLocale()][kind]?.[raw] ?? FULL_LABEL_EN[kind]?.[raw] ?? raw.replace(/_/g, " ")
+  );
 }
 
 /** A short, column-friendly code for one attribute value. Falls back to a
@@ -270,7 +389,7 @@ export function shortKindLabel(label: string): string {
 /** The readable label for a `direction` value (the step headline body). */
 export function humanizeDirection(value: unknown): string {
   const raw = String(value);
-  return DIRECTION_LABEL[raw] ?? raw.replace(/_/g, " ");
+  return DIRECTION_LABEL[getLocale()][raw] ?? raw.replace(/_/g, " ");
 }
 
 /** The step headline — the (humanized) direction, e.g. "forward". An em dash

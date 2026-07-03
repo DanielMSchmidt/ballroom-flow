@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { Spinner } from "./Spinner";
 
@@ -49,6 +51,7 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
+  const t = useMessages(uiMessages);
   return (
     <button
       type={type}
@@ -67,7 +70,7 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <Spinner size={16} label="Working" />
+        <Spinner size={16} label={t.working} />
       ) : (
         leadingIcon && (
           <span aria-hidden="true" className="inline-flex">

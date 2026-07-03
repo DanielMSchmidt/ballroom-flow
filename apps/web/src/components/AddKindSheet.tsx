@@ -1,6 +1,8 @@
 import type { RegistryKind } from "@ballroom/domain";
 import { isReservedKind, slugifyKind } from "@ballroom/domain";
 import { useCallback, useMemo, useState } from "react";
+import { useMessages } from "../i18n";
+import { attributesMessages } from "../i18n/messages/attributes";
 import { Button, Input, Select, Sheet, Toggle } from "../ui";
 
 export interface AddKindSheetProps {
@@ -8,16 +10,6 @@ export interface AddKindSheetProps {
   onClose?: () => void;
   onCreate?: (kind: RegistryKind) => void;
 }
-
-const CARDINALITY_OPTIONS = [
-  { value: "single", label: "Single" },
-  { value: "multi", label: "Multi" },
-];
-
-const VALUE_TYPE_OPTIONS = [
-  { value: "enum", label: "Enum (fixed list)" },
-  { value: "text", label: "Text (free-form)" },
-];
 
 /**
  * AddKindSheet — bottom-sheet form for creating a user-defined attribute kind
@@ -30,6 +22,17 @@ const VALUE_TYPE_OPTIONS = [
  * — a kind left blank simply omits them and degrades gracefully.
  */
 export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetProps) {
+  const t = useMessages(attributesMessages);
+  // Stored values ("single"/"enum"/…) are locale-independent; only the labels
+  // the user sees are translated.
+  const cardinalityOptions = [
+    { value: "single", label: t.cardinalitySingle },
+    { value: "multi", label: t.cardinalityMulti },
+  ];
+  const valueTypeOptions = [
+    { value: "enum", label: t.valueTypeEnum },
+    { value: "text", label: t.valueTypeText },
+  ];
   const [label, setLabel] = useState("");
   const [color, setColor] = useState("#888888");
   const [cardinality, setCardinality] = useState<"single" | "multi">("single");
@@ -86,7 +89,7 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
 
     const trimmedLabel = label.trim();
     if (!trimmedLabel) {
-      setError({ field: "label", msg: "Label is required" });
+      setError({ field: "label", msg: t.errorLabelRequired });
       return;
     }
 
@@ -95,16 +98,16 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
     // check above but slugify strips non-alphanumeric chars → empty slug, which
     // would create a kind with an empty `kind` key (invalid). Block it early.
     if (!slug) {
-      setError({ field: "label", msg: "Enter a valid name" });
+      setError({ field: "label", msg: t.errorInvalidName });
       return;
     }
     if (isReservedKind(slug)) {
-      setError({ field: "label", msg: "That name is reserved" });
+      setError({ field: "label", msg: t.errorReservedName });
       return;
     }
 
     if (valueType === "enum" && parsedValues.length === 0) {
-      setError({ field: "values", msg: "At least one value is required for enum kinds" });
+      setError({ field: "values", msg: t.errorEnumValues });
       return;
     }
 
@@ -136,11 +139,11 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
   }
 
   return (
-    <Sheet open={open} onClose={handleClose} title="Add attribute kind">
+    <Sheet open={open} onClose={handleClose} title={t.addKindTitle}>
       <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
         <Input
-          label="Label"
-          placeholder="e.g. Energy"
+          label={t.labelField}
+          placeholder={t.labelPlaceholder}
           value={label}
           onChange={(e) => {
             setLabel(e.target.value);
@@ -151,52 +154,52 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
           error={error?.field === "label" ? error.msg : undefined}
         />
         <Input
-          label="Description"
-          placeholder="e.g. How much drive the step carries"
+          label={t.descriptionField}
+          placeholder={t.descriptionPlaceholder}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={140}
-          hint="One line shown in the attribute info sheet (optional)"
+          hint={t.descriptionHint}
         />
         <Input
-          label="Color"
+          label={t.colorField}
           type="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
         />
         <Select
-          label="Cardinality"
-          options={CARDINALITY_OPTIONS}
+          label={t.cardinalityField}
+          options={cardinalityOptions}
           value={cardinality}
           onChange={(e) => setCardinality(e.target.value as "single" | "multi")}
         />
         <Select
-          label="Value type"
-          options={VALUE_TYPE_OPTIONS}
+          label={t.valueTypeField}
+          options={valueTypeOptions}
           value={valueType}
           onChange={(e) => setValueType(e.target.value)}
         />
         <Input
-          label="Values"
-          placeholder="e.g. low, medium, high"
+          label={t.valuesField}
+          placeholder={t.valuesPlaceholder}
           value={values}
           onChange={(e) => {
             setValues(e.target.value);
             setError(null);
           }}
-          hint="Comma-separated list (used for enum kinds)"
+          hint={t.valuesHint}
           error={error?.field === "values" ? error.msg : undefined}
         />
         {valueType === "enum" && parsedValues.length > 0 && (
           <fieldset className="flex flex-col gap-2 border-0 p-0">
             <legend className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-muted">
-              Value definitions (optional)
+              {t.valueDefsLegend}
             </legend>
             {parsedValues.map((v) => (
               <Input
                 key={v}
-                label={`Definition for "${v}"`}
-                placeholder={`What "${v}" means`}
+                label={t.definitionFor(v)}
+                placeholder={t.definitionPlaceholder(v)}
                 value={valueDefs[v] ?? ""}
                 maxLength={140}
                 onChange={(e) => setValueDefs((prev) => ({ ...prev, [v]: e.target.value }))}
@@ -204,14 +207,10 @@ export function AddKindSheet({ open = false, onClose, onCreate }: AddKindSheetPr
             ))}
           </fieldset>
         )}
-        <Toggle label="Differs by leader / follower" checked={roleAware} onChange={setRoleAware} />
-        <Toggle
-          label="Required (a core slot for every step)"
-          checked={required}
-          onChange={setRequired}
-        />
+        <Toggle label={t.differsByRole} checked={roleAware} onChange={setRoleAware} />
+        <Toggle label={t.requiredToggle} checked={required} onChange={setRequired} />
         <Button type="submit" variant="primary">
-          Create
+          {t.create}
         </Button>
       </form>
     </Sheet>

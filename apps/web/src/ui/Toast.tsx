@@ -8,6 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { CloseIcon } from "./icons";
 
@@ -60,6 +62,7 @@ const TONE_STYLE: Record<ToastTone, { bg: string; fg: string }> = {
  * dismissible and auto-dismiss; they never trap focus (#16).
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const msg = useMessages(uiMessages);
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
   const idRef = useRef(0);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
@@ -111,7 +114,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           bottom: "calc(var(--bf-touch-target) + env(safe-area-inset-bottom) + 1.5rem)",
           zIndex: "var(--bf-z-toast)",
         }}
-        aria-label="Notifications"
+        aria-label={msg.notifications}
       >
         <div aria-live="polite" aria-atomic="false" className="contents">
           {toasts.map((t) => {
@@ -145,7 +148,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 )}
                 <button
                   type="button"
-                  aria-label="Dismiss notification"
+                  aria-label={msg.dismissNotification}
                   onClick={() => dismiss(t.id)}
                   className="-mr-1 inline-flex size-6 shrink-0 items-center justify-center opacity-70"
                 >

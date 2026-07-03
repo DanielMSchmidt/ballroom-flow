@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
+import { LanguageToggle } from "./LanguageToggle";
 
 export interface NavItem {
   value: string;
@@ -27,11 +30,12 @@ export interface AppShellProps {
  * every target is ≥44px (#3) and keyboard-operable (#7, #8).
  */
 export function AppShell({ nav, current, onNavigate, children }: AppShellProps) {
+  const t = useMessages(uiMessages);
   return (
     <div className="flex min-h-dvh flex-col bg-backdrop lg:flex-row">
       {/* Desktop side rail (lg+) */}
       <nav
-        aria-label="Primary navigation"
+        aria-label={t.navPrimaryLabel}
         className={cx(
           "hidden shrink-0 border-r border-border-subtle bg-surface-raised px-2 py-4",
           "lg:flex lg:w-56 lg:flex-col lg:gap-1",
@@ -59,6 +63,11 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
             </button>
           );
         })}
+        {/* Language shortcut pinned to the rail's bottom — the same live
+            EN/DE switch Profile carries, always reachable on desktop. */}
+        <div className="mt-auto px-3 pb-1">
+          <LanguageToggle />
+        </div>
       </nav>
 
       {/* Content column — centered + max width so desktop is intentional (#2) */}
@@ -69,7 +78,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
 
         {/* Mobile bottom nav (hidden on lg+) */}
         <nav
-          aria-label="Tab bar"
+          aria-label={t.navTabBarLabel}
           className={cx(
             "sticky bottom-0 flex border-t border-border-subtle bg-surface-raised lg:hidden",
           )}

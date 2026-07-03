@@ -8,6 +8,8 @@
 import type { JournalEntry as ContractJournalEntry } from "@ballroom/contract";
 import type { Anchor, AnnotationKind } from "@ballroom/domain";
 import { LIBRARY_FIGURES } from "@ballroom/domain";
+import { getLocale, pickMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import { apiGet } from "../lib/rpc";
 import { openRoutineView } from "./routine-view";
 
@@ -174,10 +176,11 @@ export function applyJournalFilter(entries: JournalEntry[], filter: JournalFilte
 
 /** The display label for a link chip (the server pre-resolves `label`; fallback otherwise). */
 export function chipLabel(anchor: JournalAnchor): string {
+  const t = pickMessages(journalMessages);
   if (anchor.label) return anchor.label;
-  if (anchor.type === "point") return `step ${(anchor.count ?? 0) + 1}`;
-  if (anchor.type === "figure") return anchor.figureRef ?? "this figure";
-  return anchor.figureType ?? "figure";
+  if (anchor.type === "point") return t.stepChip((anchor.count ?? 0) + 1);
+  if (anchor.type === "figure") return anchor.figureRef ?? t.thisFigureChip;
+  return anchor.figureType ?? t.figureChip;
 }
 
 /**
@@ -185,18 +188,20 @@ export function chipLabel(anchor: JournalAnchor): string {
  * injectable for deterministic tests.
  */
 export function relativeDate(createdAt: number, now: number = Date.now()): string {
+  const t = pickMessages(journalMessages);
+  const dateLocale = getLocale() === "de" ? "de-DE" : "en-US";
   const day = 24 * 60 * 60 * 1000;
-  const startOf = (t: number): number => {
-    const d = new Date(t);
+  const startOf = (ts: number): number => {
+    const d = new Date(ts);
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   };
   const diffDays = Math.round((startOf(now) - startOf(createdAt)) / day);
-  if (diffDays <= 0) return "today";
-  if (diffDays === 1) return "yesterday";
+  if (diffDays <= 0) return t.today;
+  if (diffDays === 1) return t.yesterday;
   if (diffDays < 7) {
-    return new Date(createdAt).toLocaleDateString("en-US", { weekday: "short" });
+    return new Date(createdAt).toLocaleDateString(dateLocale, { weekday: "short" });
   }
-  return new Date(createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  return new Date(createdAt).toLocaleDateString(dateLocale, { day: "numeric", month: "short" });
 }
 
 /** A figure family for the link picker FIGURE step (distinct across the catalog). */

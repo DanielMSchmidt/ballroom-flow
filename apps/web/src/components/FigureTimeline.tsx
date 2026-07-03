@@ -41,6 +41,8 @@ import {
   type RegistryKind,
 } from "@ballroom/domain";
 import { type ReactNode, useMemo, useState } from "react";
+import { pickMessages, useLocale, useMessages } from "../i18n";
+import { timelineMessages } from "../i18n/messages/timeline";
 import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
@@ -105,10 +107,11 @@ const SUB_BEAT_VULGAR: Record<string, string> = { e: "¼", "&": "½", a: "¾" };
  * "count N"; a sub-beat reads "the & (½ beat)" (the symbol + its fraction).
  */
 function timingTitle(count: number): string {
-  if (Number.isInteger(count)) return `count ${count}`;
+  const t = pickMessages(timelineMessages);
+  if (Number.isInteger(count)) return t.countN(count);
   const symbol = offBeatSymbol(count) ?? "";
   const vulgar = SUB_BEAT_VULGAR[symbol];
-  return vulgar ? `the ${symbol} (${vulgar} beat)` : `count ${countLabel(count)}`;
+  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(countLabel(count));
 }
 
 /** The registry kind(s) a column's overlay edits: the merged Step column edits
@@ -152,6 +155,8 @@ export function FigureTimeline({
   isBookmarked = false,
   onAddToLibrary,
 }: FigureTimelineProps) {
+  const t = useMessages(timelineMessages);
+  const locale = useLocale();
   const attrs = attributes ?? [];
   // The open attribute overlay: a (timing, column) target, or null (frame 1.12).
   const [openCell, setOpenCell] = useState<{ count: number; column: ReadingColumn } | null>(null);
@@ -194,7 +199,8 @@ export function FigureTimeline({
 
   // The grid columns: every kind applicable to the dance (all-applicable, so empty
   // cells are addable) — the EDIT counterpart to the reading view's used-columns.
-  const columns = useMemo(() => allColumns(dance, customKinds), [dance, customKinds]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies(locale): allColumns reads the active locale via getLocale(), so its labels must recompute on switch.
+  const columns = useMemo(() => allColumns(dance, customKinds), [dance, customKinds, locale]);
   const colorByKind = useMemo(() => {
     const map = new Map<string, string>();
     for (const k of customKinds) map.set(k.kind, k.color);
@@ -234,9 +240,9 @@ export function FigureTimeline({
       <div className="flex flex-wrap items-center gap-3">
         {editable && onBarsChange && (
           <Stepper
-            label="Bars"
+            label={t.barsStepperLabel}
             hideLabel
-            unit="bars"
+            unit={t.barsStepperUnit}
             min={1}
             max={32}
             value={resolvedBars}
@@ -245,15 +251,15 @@ export function FigureTimeline({
         )}
         <div className="flex items-center gap-2">
           <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-            Steps for
+            {t.stepsFor}
           </span>
           <SegmentedToggle<RoleView>
-            ariaLabel="Steps for"
+            ariaLabel={t.stepsFor}
             value={view}
             onChange={setView}
             options={[
-              { value: "leader", label: "Leader" },
-              { value: "follower", label: "Follower" },
+              { value: "leader", label: t.leader },
+              { value: "follower", label: t.follower },
             ]}
           />
         </div>
@@ -269,12 +275,12 @@ export function FigureTimeline({
                 color: "var(--bf-scope-global-ink)",
               }}
             >
-              In your library
+              {t.inYourLibrary}
             </span>
           ) : (
             onAddToLibrary && (
               <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
-                <span aria-hidden="true">↟</span> Add to my library
+                <span aria-hidden="true">↟</span> {t.addToMyLibrary}
               </Button>
             )
           ))}
@@ -284,7 +290,7 @@ export function FigureTimeline({
         <div className="flex flex-col gap-1">
           {(copied || forked) && (
             <p role="status" className="text-2xs text-accent">
-              {forked ? `Variant of ${baseName ?? "the base figure"}` : "Made this figure yours"}
+              {forked ? t.variantOf(baseName) : t.madeYours}
             </p>
           )}
           {editable && !forked && (
@@ -296,7 +302,7 @@ export function FigureTimeline({
                 onForkIntoVariant?.();
               }}
             >
-              Fork into variant
+              {t.forkIntoVariant}
             </Button>
           )}
         </div>
@@ -305,11 +311,11 @@ export function FigureTimeline({
       {/* The column grid: sticky count column + one column per applicable kind,
           grouped into bars (a "bar N" divider precedes each bar's beats). */}
       <div className="overflow-x-auto">
-        <table className="w-max border-separate border-spacing-y-1" aria-label="Step grid">
+        <table className="w-max border-separate border-spacing-y-1" aria-label={t.stepGrid}>
           <thead>
             <tr>
               <th scope="col" className="sticky left-0 z-10 bg-surface">
-                <span className="bf-sr-only">Count</span>
+                <span className="bf-sr-only">{t.countHeader}</span>
               </th>
               {columns.map((col) => (
                 <th
@@ -320,7 +326,7 @@ export function FigureTimeline({
                 >
                   <button
                     type="button"
-                    aria-label={`About ${col.label}`}
+                    aria-label={t.aboutColumn(col.label)}
                     onClick={() => setInfoCol(col)}
                     className="cursor-pointer"
                     style={{ color: "inherit" }}
@@ -372,9 +378,7 @@ export function FigureTimeline({
       </div>
 
       {/* Helper caption (frame 1.11). */}
-      <p className="text-2xs italic text-ink-faint">
-        tap a cell to add / edit one attribute · * required · scroll → Head &amp; custom types
-      </p>
+      <p className="text-2xs italic text-ink-faint">{t.helperCaption}</p>
 
       {/* Always-visible per-count recap (the headline word + this count's value
           words) — the readable summary the authoring journey reads, present as soon
@@ -400,7 +404,7 @@ export function FigureTimeline({
               {stepAction(direction?.value)}
             </span>
             <ul
-              aria-label={`count ${row.count} attributes`}
+              aria-label={t.countAttributes(row.count)}
               className="flex flex-wrap items-center gap-2"
             >
               {slots.map((a) => (
@@ -476,6 +480,7 @@ function BarRowGroup({
   span: number;
   children: ReactNode;
 }) {
+  const t = useMessages(timelineMessages);
   return (
     <>
       {showDivider && (
@@ -484,7 +489,7 @@ function BarRowGroup({
             colSpan={span + 1}
             className="pt-2 pb-0.5 text-2xs font-bold uppercase tracking-wider text-ink-faint"
           >
-            bar {bar}
+            {t.barN(bar)}
           </td>
         </tr>
       )}
@@ -529,8 +534,10 @@ function GridCell({
   color?: string;
   onOpen: () => void;
 }) {
-  const verb = label ? "Edit" : "Add";
-  const cellLabel = `${verb} ${column.label} at count ${countLabel(count)}`;
+  const t = useMessages(timelineMessages);
+  const cellLabel = label
+    ? t.editCell(column.label, countLabel(count))
+    : t.addCell(column.label, countLabel(count));
   const content = label ? (
     <AttrChip kind={column.kind} label={label} color={color} dimmed={offBeat} />
   ) : (

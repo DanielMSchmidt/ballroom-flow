@@ -23,6 +23,8 @@ import {
   type RoutineDoc,
 } from "@ballroom/domain";
 import { memo, useMemo, useRef, useState } from "react";
+import { useMessages } from "../i18n";
+import { timelineMessages } from "../i18n/messages/timeline";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import {
   AttrChip,
@@ -88,6 +90,7 @@ export function RoutineReadingView({
    *  whole-figure note omits `count` (US-004a). */
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
+  const t = useMessages(timelineMessages);
   const dance = routine.dance as DanceId;
   const resolvedByPlacement = useMemo(
     () => new Map(placements.map((p) => [p.placement.id, p])),
@@ -113,27 +116,27 @@ export function RoutineReadingView({
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
       <div data-tour="role-toggle" className="flex items-center gap-2">
         <span className="text-2xs font-bold uppercase tracking-wider text-ink-label">
-          Steps for
+          {t.stepsFor}
         </span>
         <SegmentedToggle<RoleView>
-          ariaLabel="Steps for"
+          ariaLabel={t.stepsFor}
           value={roleView}
           onChange={onRoleViewChange}
           options={[
-            { value: "leader", label: "Leader" },
-            { value: "follower", label: "Follower" },
+            { value: "leader", label: t.leader },
+            { value: "follower", label: t.follower },
           ]}
         />
       </div>
 
       {routine.sections.length === 0 ? (
-        <p className="text-2xs text-ink-faint">This choreo has no sections yet.</p>
+        <p className="text-2xs text-ink-faint">{t.noSections}</p>
       ) : (
         routine.sections.map((section) => (
           <section key={section.id} className="flex flex-col gap-[9px]">
             <SectionDivider label={section.name} />
             {section.placements.length === 0 ? (
-              <p className="text-2xs text-ink-faint">No figures in this section.</p>
+              <p className="text-2xs text-ink-faint">{t.noFiguresInSection}</p>
             ) : (
               section.placements.map((pl) => {
                 const numbered = numberByPlacement.get(pl.id);
@@ -254,6 +257,7 @@ function numberRoutineBeats_forRoutine(
 /** A break/wait row in the reading view (US-004a): a muted row showing the beat
  *  span it occupies (e.g. "beats 4–6") + its bar count. Advances the counter. */
 function BreakReadout({ numbered }: { numbered?: Extract<NumberedBeatEntry, { kind: "break" }> }) {
+  const t = useMessages(timelineMessages);
   const span = numbered?.span ?? "break";
   const bars = numbered?.bars ?? 1;
   return (
@@ -265,11 +269,11 @@ function BreakReadout({ numbered }: { numbered?: Extract<NumberedBeatEntry, { ki
       <span aria-hidden="true" className="text-2xs font-bold text-ink-faint">
         ❚❚
       </span>
-      <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">Break</span>
-      <span className="text-2xs text-ink-muted">{span}</span>
-      <span className="text-2xs font-medium text-ink-faint">
-        · {bars} bar{bars === 1 ? "" : "s"}
+      <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+        {t.breakLabel}
       </span>
+      <span className="text-2xs text-ink-muted">{span}</span>
+      <span className="text-2xs font-medium text-ink-faint">· {t.bars(bars)}</span>
     </div>
   );
 }
@@ -323,6 +327,7 @@ const FigureReadout = memo(function FigureReadout({
   // a value chip or a column header opens the plain-language reference. State is
   // per-figure so usage counts + columns are scoped to the figure that was tapped.
   const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
+  const t = useMessages(timelineMessages);
   if (!figure) {
     // A loading figure shows a skeleton (never silently vanishes); a genuinely
     // unavailable one says so plainly. A transient error reads as unavailable
@@ -330,7 +335,7 @@ const FigureReadout = memo(function FigureReadout({
     if (status === "missing" || status === "error") {
       return (
         <p className="text-2xs text-ink-faint" role="status">
-          This figure is unavailable.
+          {t.figureUnavailable}
         </p>
       );
     }
@@ -338,7 +343,7 @@ const FigureReadout = memo(function FigureReadout({
       <div aria-busy="true">
         <Skeleton className="w-32" />
         <span className="sr-only" role="status">
-          Loading figure…
+          {t.loadingFigure}
         </span>
       </div>
     );
@@ -380,9 +385,7 @@ const FigureReadout = memo(function FigureReadout({
         </button>
         {counts.length > 0 && <CountPill counts={beatTokens} />}
         {counts.length > 0 && (
-          <span className="text-2xs font-medium text-ink-muted">
-            {bars} bar{bars === 1 ? "" : "s"}
-          </span>
+          <span className="text-2xs font-medium text-ink-muted">{t.bars(bars)}</span>
         )}
       </div>
 
@@ -401,11 +404,11 @@ const FigureReadout = memo(function FigureReadout({
       )}
 
       {counts.length === 0 ? (
-        <p className="text-2xs text-ink-faint">No steps noted yet.</p>
+        <p className="text-2xs text-ink-faint">{t.noStepsYet}</p>
       ) : (
         <>
           <ColumnHeader columns={columns} onOpenInfo={setInfoCol} />
-          <ol className="flex flex-col gap-[5px]" aria-label={`${figure.name} steps`}>
+          <ol className="flex flex-col gap-[5px]" aria-label={t.figureSteps(figure.name)}>
             {counts.map((count) => (
               <StepRow
                 key={count}
@@ -443,7 +446,7 @@ const FigureReadout = memo(function FigureReadout({
               ? {
                   prevLabel: prev.label,
                   nextLabel: next.label,
-                  positionLabel: `${idx + 1} of ${columns.length}`,
+                  positionLabel: t.pagerPosition(idx + 1, columns.length),
                   onPrev: () => setInfoCol(prev),
                   onNext: () => setInfoCol(next),
                 }
@@ -475,6 +478,7 @@ function ColumnHeader({
   columns: ReadingColumn[];
   onOpenInfo: (col: ReadingColumn) => void;
 }) {
+  const t = useMessages(timelineMessages);
   return (
     <div className="flex min-h-[40px] items-center gap-1 px-[2px]">
       <span className="w-[18px] flex-none" aria-hidden="true" />
@@ -482,7 +486,7 @@ function ColumnHeader({
         <button
           key={col.id}
           type="button"
-          aria-label={`About ${col.label}`}
+          aria-label={t.aboutColumn(col.label)}
           onClick={() => onOpenInfo(col)}
           className="flex-1 cursor-pointer py-3 text-center text-2xs font-bold leading-none tracking-wide"
           style={{ color: columnColor(col) }}
@@ -540,6 +544,7 @@ function StepRow({
   onOpenInfo: (col: ReadingColumn) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
+  const t = useMessages(timelineMessages);
   const offBeat = isOffBeatCount(count);
   return (
     <li className="flex flex-col gap-[3px]">
@@ -562,7 +567,7 @@ function StepRow({
               {label ? (
                 <button
                   type="button"
-                  aria-label={`About ${col.label} — ${label}`}
+                  aria-label={t.aboutValue(col.label, label)}
                   onClick={() => onOpenInfo(col)}
                   className="cursor-pointer"
                 >
@@ -618,6 +623,7 @@ function InlineComments({
   memberNames?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
+  const t = useMessages(timelineMessages);
   const latest = comments.slice(-2);
   const more = Math.max(0, comments.length - latest.length);
   const anchor = { figureRef: figureId, count };
@@ -639,7 +645,7 @@ function InlineComments({
             className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
             onClick={() => onOpenThread?.(anchor)}
           >
-            +{more} more
+            {t.moreComments(more)}
           </button>
         )}
         {canComment && <AddNoteButton onClick={() => onOpenThread?.(anchor)} />}
@@ -684,14 +690,15 @@ function CommentLine({
 
 /** The "✎ Add note" affordance (Builder v2) — accent-coloured with a ≥36px hit
  *  area, replacing the old faint "+ add comment" hint. */
-function AddNoteButton({ onClick, label = "Add note" }: { onClick: () => void; label?: string }) {
+function AddNoteButton({ onClick, label }: { onClick: () => void; label?: string }) {
+  const t = useMessages(timelineMessages);
   return (
     <button
       type="button"
       className="inline-flex min-h-[36px] items-center gap-[5px] py-2 text-left text-2xs font-bold text-accent"
       onClick={onClick}
     >
-      <span aria-hidden="true">✎</span> {label}
+      <span aria-hidden="true">✎</span> {label ?? t.addNote}
     </button>
   );
 }
@@ -721,13 +728,14 @@ function WholeFigureNotes({
   memberNames?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
+  const t = useMessages(timelineMessages);
   const latest = comments.slice(-2);
   const more = Math.max(0, comments.length - latest.length);
   const anchor = { figureRef: figureId };
   return (
     <div data-testid="whole-figure-notes" className="ml-[15px] flex flex-col gap-[2px]">
       <span className="self-start rounded-[4px] bg-accent-tint px-[5px] py-[1px] text-[7px] font-bold uppercase tracking-wider text-accent">
-        Whole figure
+        {t.wholeFigure}
       </span>
       {latest.map((c) => (
         <CommentLine
@@ -745,11 +753,11 @@ function WholeFigureNotes({
             className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
             onClick={() => onOpenThread?.(anchor)}
           >
-            +{more} more
+            {t.moreComments(more)}
           </button>
         )}
         {canComment && (
-          <AddNoteButton label="Add note — whole figure" onClick={() => onOpenThread?.(anchor)} />
+          <AddNoteButton label={t.addNoteWholeFigure} onClick={() => onOpenThread?.(anchor)} />
         )}
       </div>
     </div>
@@ -766,6 +774,7 @@ function identityColor(authorId: string): string {
 /** The figure's scope dot — blue (library) / amber (custom). The visible scope
  *  word rides as sr-only text so the cue isn't color-only (#5). */
 function ScopeDot({ scope }: { scope: FigureScope }) {
+  const t = useMessages(timelineMessages);
   const color = scope === "library" ? kindVar("direction") : kindVar("footwork");
   return (
     <span className="inline-flex flex-none items-center">
@@ -774,7 +783,7 @@ function ScopeDot({ scope }: { scope: FigureScope }) {
         className="h-[9px] w-[9px] rounded-full"
         style={{ background: color }}
       />
-      <span className="bf-sr-only">{scope === "library" ? "Library" : "Custom"} figure</span>
+      <span className="bf-sr-only">{scope === "library" ? t.libraryFigure : t.customFigure}</span>
     </span>
   );
 }

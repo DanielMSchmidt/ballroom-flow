@@ -10,6 +10,8 @@
 // Read-only reference, NOT an editor — but a value chip is tappable to jump to
 // "every step that uses it" (onSelectValue), matching the frame's footer hint.
 import type { RegistryKind } from "@ballroom/domain";
+import { useMessages } from "../i18n";
+import { attributesMessages } from "../i18n/messages/attributes";
 import { cx, FullScreen } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { glossFor } from "./attribute-info";
@@ -67,6 +69,7 @@ export function AttributeInfoSheet({
   onSelectValue,
   pager,
 }: AttributeInfoSheetProps) {
+  const t = useMessages(attributesMessages);
   const gloss = glossFor(kind.kind);
   const accent = kindColor(kind);
   // One or more kinds (the merged Step slot holds direction + footwork). A single
@@ -80,8 +83,8 @@ export function AttributeInfoSheet({
       open={open}
       onClose={onClose}
       title={title ?? kind.label}
-      subtitle="attribute explainer · back returns to your spot"
-      backLabel="Back to your spot"
+      subtitle={t.explainerSubtitle}
+      backLabel={t.backToSpot}
     >
       <div className="flex flex-col gap-4 p-4">
         {/* Header row: colour swatch + subtitle (the title is the page's h2). */}
@@ -103,9 +106,8 @@ export function AttributeInfoSheet({
           className={cx("rounded-lg bg-surface-sunken px-3 py-2 text-sm text-ink-muted")}
           style={{ fontFamily: "var(--bf-font-note)" }}
         >
-          Used in {usageCount} step{usageCount === 1 ? "" : "s"}
-          {scopeLabel ? ` across ${scopeLabel}` : ""}.
-          {onSelectValue ? " Tap a value to see every step that uses it." : ""}
+          {t.usedIn(usageCount, scopeLabel)}
+          {onSelectValue ? ` ${t.tapValueHint}` : ""}
         </p>
       </div>
 
@@ -152,6 +154,7 @@ function KindDetail({
   showHeading: boolean;
   onSelectValue?: (value: string) => void;
 }) {
+  const t = useMessages(attributesMessages);
   const values = kind.values ?? [];
   const accent = kindColor(kind);
   const description = kind.description;
@@ -181,7 +184,9 @@ function KindDetail({
       )}
 
       {/* VALUES glossary: a chip (tinted to the kind) + its definition. */}
-      <h4 className="text-2xs font-bold uppercase tracking-wide text-ink-muted">Values</h4>
+      <h4 className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+        {t.valuesHeading}
+      </h4>
       <ul className="flex flex-col gap-2">
         {values.map((value) => {
           const def = valueDefs?.[value];
@@ -198,7 +203,7 @@ function KindDetail({
               {onSelectValue ? (
                 <button
                   type="button"
-                  aria-label={`See steps using ${value}`}
+                  aria-label={t.seeStepsUsing(value)}
                   onClick={() => onSelectValue(value)}
                   className="flex-none cursor-pointer"
                 >

@@ -8,6 +8,8 @@
 // (principle #26) — the worker still enforces it (a client bypass is refused 403).
 import { can, type EffectiveRole } from "@ballroom/domain";
 import { useState } from "react";
+import { useMessages } from "../i18n";
+import { shareMessages } from "../i18n/messages/share";
 import { useMe } from "../store/me";
 import {
   type IssuedInvite,
@@ -27,31 +29,19 @@ import {
   useToast,
 } from "../ui";
 
-/** Human label + one-line explanation for each role (the role microcopy, DP #15).
- *  `pill` is the lowercase label shown in the role pill (frame 4.2 design). */
-const ROLE_INFO: Record<Member["role"] | "owner", { label: string; pill: string; blurb: string }> =
-  {
-    owner: { label: "Owner", pill: "owner", blurb: "Full control, including sharing." },
-    editor: { label: "Editor", pill: "editor", blurb: "Can edit structure, figures, and timing." },
-    commenter: {
-      label: "Commenter",
-      pill: "commenter",
-      blurb: "Can add annotations, but not edit.",
-    },
-    viewer: { label: "Viewer", pill: "viewer", blurb: "Can view the choreo, read-only." },
-  };
-
 /** Role pill (frame 4.2): lowercase role label, with ▾ indicator for roles that
  *  may be changed (editor / commenter). The ▾ is a visual affordance for a
- *  future role-change flow; it is not interactive in this release. */
+ *  future role-change flow; it is not interactive in this release. The role
+ *  microcopy (label + pill + blurb per role, DP #15) lives in the share catalog. */
 function RolePill({ role }: { role: Member["role"] }) {
+  const t = useMessages(shareMessages);
   const changeable = role === "editor" || role === "commenter";
   return (
     <span
       className="ml-auto inline-flex flex-none items-center gap-[3px] rounded-[5px] border px-2 py-0.5 text-2xs font-medium text-ink-secondary"
       style={{ borderColor: "var(--bf-border-strong)" }}
     >
-      {ROLE_INFO[role].pill}
+      {t.roles[role].pill}
       {changeable && (
         <span aria-hidden="true" className="text-[9px] leading-none text-ink-faint">
           ▾
@@ -83,11 +73,8 @@ function Avatar({ label, userId }: { label: string; userId: string }) {
   );
 }
 
-const INVITE_ROLE_OPTIONS = [
-  { value: "viewer", label: "Viewer — can view" },
-  { value: "commenter", label: "Commenter — can annotate" },
-  { value: "editor", label: "Editor — can edit" },
-] as const;
+/** The invitable roles, in select order (labels come from the share catalog). */
+const INVITE_ROLE_OPTIONS = ["viewer", "commenter", "editor"] as const;
 
 export interface ShareViewProps {
   /** The viewer's own role on this routine (gates the manage affordances). */
@@ -136,18 +123,19 @@ export function ShareView({
   issuing,
   forking,
 }: ShareViewProps) {
+  const t = useMessages(shareMessages);
   const canManage = can(viewerRole, "canInvite");
   const [inviteRole, setInviteRole] = useState<Member["role"]>("viewer");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<Member | null>(null);
   const toast = useToast();
 
-  const youLabel = viewer?.displayName?.trim() || viewer?.userId || "You";
+  const youLabel = viewer?.displayName?.trim() || viewer?.userId || t.you;
 
   return (
-    <section aria-label="Share this choreo" className="flex flex-col gap-4">
+    <section aria-label={t.shareRegionLabel} className="flex flex-col gap-4">
       <ScreenHeader
-        title="Share"
+        title={t.title}
         subtitle={routineName}
         onBack={onBack}
         className="border-b-0 px-0"
@@ -157,22 +145,24 @@ export function ShareView({
           section header, lowercase role pills with ▾ for changeable roles. */}
       <div className="flex flex-col gap-2">
         <h2 className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-          Partners on this choreo
+          {t.partnersHeading}
         </h2>
         {/* The current viewer, surfaced first as the "you" row (frame 4.2). */}
         {viewer && (
           <div className="flex min-h-[44px] items-center gap-3 rounded-md border border-line px-3 py-2">
             <Avatar label={youLabel} userId={viewer.userId} />
             <span className="font-medium text-ink">{youLabel}</span>
-            <span className="ml-auto text-2xs font-medium text-ink-muted">you · {viewerRole}</span>
+            <span className="ml-auto text-2xs font-medium text-ink-muted">
+              {t.youRole(t.roles[viewerRole].pill)}
+            </span>
           </div>
         )}
         {loading ? (
           <div className="flex items-center gap-2 text-ink-faint" role="status">
-            <Spinner /> <span className="text-2xs">Loading members…</span>
+            <Spinner /> <span className="text-2xs">{t.loadingMembers}</span>
           </div>
         ) : members.length === 0 && !viewer ? (
-          <p className="text-2xs text-ink-faint">Just you so far. Invite someone below.</p>
+          <p className="text-2xs text-ink-faint">{t.emptyRoster}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {members.map((m) => (
@@ -183,7 +173,7 @@ export function ShareView({
                 <Avatar label={m.displayName ?? m.userId} userId={m.userId} />
                 <span className="flex min-w-0 flex-col">
                   <span className="font-medium text-ink">{m.displayName ?? m.userId}</span>
-                  <span className="text-2xs text-ink-muted">{ROLE_INFO[m.role].blurb}</span>
+                  <span className="text-2xs text-ink-muted">{t.roles[m.role].blurb}</span>
                 </span>
                 {/* Role pill: lowercase label, ▾ indicator for changeable roles
                     (editor/commenter may be downgraded — future role-change flow). */}
@@ -192,10 +182,10 @@ export function ShareView({
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={`Remove ${m.displayName ?? m.userId}`}
+                    aria-label={t.removeMemberAria(m.displayName ?? m.userId)}
                     onClick={() => setPendingRemove(m)}
                   >
-                    Remove
+                    {t.removeMember}
                   </Button>
                 )}
               </li>
@@ -207,10 +197,7 @@ export function ShareView({
       {/* Shared-edit microcopy (DP #15): make the CRDT-shared-figure consequence
           explicit, so an editor knows a figure edit ripples to every routine. */}
       <Card className="border-info bg-info-tint">
-        <p className="text-2xs text-info-ink">
-          Everyone on this choreo edits the same figures — changes stay inside this choreo. To
-          branch off on your own, fork it: a frozen, independent copy.
-        </p>
+        <p className="text-2xs text-info-ink">{t.coEditExplainer}</p>
       </Card>
 
       {/* Fork — a frozen, independent copy (DP #15 escape hatch; frame 4.2 CTA ②).
@@ -223,7 +210,7 @@ export function ShareView({
           leadingIcon={<span aria-hidden="true">⑂</span>}
           onClick={() => onFork()}
         >
-          Fork — make it your own
+          {t.fork}
         </Button>
       )}
 
@@ -235,8 +222,11 @@ export function ShareView({
             <div className="flex flex-col gap-2">
               <div className="flex items-end gap-2">
                 <Select
-                  label="Role"
-                  options={INVITE_ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  label={t.inviteRoleSelectLabel}
+                  options={INVITE_ROLE_OPTIONS.map((value) => ({
+                    value,
+                    label: t.inviteRoleLabels[value],
+                  }))}
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as Member["role"])}
                 />
@@ -245,7 +235,7 @@ export function ShareView({
                   loading={issuing}
                   onClick={() => onIssueInvite?.(inviteRole)}
                 >
-                  Create link
+                  {t.createLink}
                 </Button>
               </div>
               {issuedInvite && (
@@ -258,17 +248,17 @@ export function ShareView({
                     size="sm"
                     onClick={() => {
                       void navigator.clipboard?.writeText(inviteUrl(issuedInvite.token));
-                      toast.show("Invite link copied", { tone: "success" });
+                      toast.show(t.inviteCopied, { tone: "success" });
                     }}
                   >
-                    Copy
+                    {t.copy}
                   </Button>
                 </div>
               )}
             </div>
           )}
           <Button variant="secondary" fullWidth onClick={() => setInviteOpen(true)}>
-            + invite someone
+            {t.inviteSomeone}
           </Button>
         </>
       )}
@@ -277,16 +267,15 @@ export function ShareView({
       <Sheet
         open={pendingRemove !== null}
         onClose={() => setPendingRemove(null)}
-        title="Remove this person?"
+        title={t.removeConfirmTitle}
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            {pendingRemove?.displayName ?? pendingRemove?.userId} will lose access to this choreo.
-            You can invite them again with a new link.
+            {t.removeConfirmBody(pendingRemove?.displayName ?? pendingRemove?.userId ?? "")}
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingRemove(null)}>
-              Cancel
+              {t.cancel}
             </Button>
             <Button
               variant="danger"
@@ -295,7 +284,7 @@ export function ShareView({
                 setPendingRemove(null);
               }}
             >
-              Remove access
+              {t.removeAccess}
             </Button>
           </div>
         </div>

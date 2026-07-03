@@ -12,6 +12,8 @@
 // native radio group (the family identity the tests assert on).
 import type { Anchor, DanceId } from "@ballroom/domain";
 import { useState } from "react";
+import { useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import { Chip } from "../ui";
 
 export interface AnchorPickerProps {
@@ -34,6 +36,7 @@ export function AnchorPicker({
   figureRef = "",
   onPick,
 }: AnchorPickerProps): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [scope, setScope] = useState<Scope>("this");
 
@@ -48,7 +51,7 @@ export function AnchorPicker({
   };
 
   return (
-    <fieldset aria-label="Anchor this note to" className="flex flex-col gap-2">
+    <fieldset aria-label={t.anchorLegend} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1">
         <Chip
           selected={choice === "step"}
@@ -57,7 +60,7 @@ export function AnchorPicker({
             onPick?.({ type: "point", figureRef, count: 0, role: null });
           }}
         >
-          this step
+          {t.anchorStep}
         </Chip>
         <Chip
           selected={choice === "figure"}
@@ -66,17 +69,17 @@ export function AnchorPicker({
             onPick?.({ type: "figure", figureRef });
           }}
         >
-          this figure here
+          {t.anchorFigure}
         </Chip>
         <Chip selected={choice === "family"} onClick={() => pickFamily(scope)}>
-          this figure family
+          {t.anchorFamily}
         </Chip>
       </div>
 
       {choice === "family" && (
         <fieldset className="flex flex-wrap items-center gap-3 rounded-md border border-line p-2">
           <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
-            Across
+            {t.across}
           </legend>
           <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
             <input
@@ -85,7 +88,7 @@ export function AnchorPicker({
               checked={scope === "this"}
               onChange={() => pickFamily("this")}
             />
-            this dance
+            {t.thisDance}
           </label>
           <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
             <input
@@ -94,7 +97,7 @@ export function AnchorPicker({
               checked={scope === "all"}
               onChange={() => pickFamily("all")}
             />
-            all dances
+            {t.allDances}
           </label>
         </fieldset>
       )}

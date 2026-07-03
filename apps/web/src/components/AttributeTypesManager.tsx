@@ -9,8 +9,10 @@
 // colour dot, cardinality, an "L/F" badge for a role-aware kind (`roleAware`),
 // a "required" marker for a core slot (`required`), and the scope label. A
 // custom kind that carries `roleAware`/`required` gets the same affordances.
-import { ATTRIBUTE_REGISTRY, type RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
+import { useLocalizedRegistry, useMessages } from "../i18n";
+import { attributesMessages } from "../i18n/messages/attributes";
 import { Button, PlusIcon } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
@@ -33,9 +35,10 @@ export function AttributeTypesManager({
   customKinds = [],
   onCreateKind,
 }: AttributeTypesManagerProps) {
+  const t = useMessages(attributesMessages);
   const [building, setBuilding] = useState(false);
   // Standard kinds first (locked), then the custom (choreo-scoped) ones.
-  const standard = Object.values(ATTRIBUTE_REGISTRY);
+  const standard = Object.values(useLocalizedRegistry());
   const rows: { kind: RegistryKind; custom: boolean }[] = [
     ...standard.map((kind) => ({ kind, custom: false })),
     ...customKinds.map((kind) => ({ kind, custom: true })),
@@ -45,7 +48,7 @@ export function AttributeTypesManager({
     <section className="flex flex-col gap-3 border-t border-border-subtle pt-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
-          Attribute types
+          {t.attributeTypes}
         </h2>
         <Button
           variant="ghost"
@@ -53,7 +56,7 @@ export function AttributeTypesManager({
           leadingIcon={<PlusIcon size={12} />}
           onClick={() => setBuilding(true)}
         >
-          new type
+          {t.newType}
         </Button>
       </div>
 
@@ -82,8 +85,8 @@ export function AttributeTypesManager({
                 <span
                   role="img"
                   className="ml-0.5 align-super text-2xs text-ink-muted"
-                  title="Required attribute type"
-                  aria-label="required"
+                  title={t.requiredKindTitle}
+                  aria-label={t.requiredBadge}
                 >
                   *
                 </span>
@@ -92,9 +95,9 @@ export function AttributeTypesManager({
             {kind.roleAware && (
               <span
                 className="flex-none rounded-[5px] border border-border-subtle px-1.5 py-0.5 text-[9px] font-bold text-ink-muted"
-                title="Commonly differs by leader / follower"
+                title={t.roleAwareTitle}
               >
-                L/F
+                {t.roleAwareBadge}
               </span>
             )}
             <span className="flex-none text-2xs text-ink-muted">{kind.cardinality}</span>
@@ -105,15 +108,14 @@ export function AttributeTypesManager({
               className="flex-none text-2xs font-semibold"
               style={{ color: custom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink-faint)" }}
             >
-              {custom ? "this choreo" : "standard"}
+              {custom ? t.scopeThisChoreo : t.scopeStandard}
             </span>
           </li>
         ))}
       </ul>
 
       <p className="text-2xs italic text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
-        Standard types are shared by everyone · custom types are scoped to a choreo so partners see
-        them.
+        {t.typesExplainer}
       </p>
 
       {/* The custom-type builder (frame 1.16). */}

@@ -28,6 +28,8 @@ import {
   type Section,
 } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { pickMessages, useMessages } from "../i18n";
+import { assembleMessages } from "../i18n/messages/assemble";
 import { buildMemberColorMap, type ColorableMember } from "../lib/identity-colors";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
@@ -236,6 +238,7 @@ export function Assemble({
   onAddToLibrary,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
+  const t = useMessages(assembleMessages);
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
   const [notating, setNotating] = useState<string | null>(null);
   // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
@@ -328,14 +331,14 @@ export function Assemble({
       if (!onAddToLibrary) return;
       try {
         const res = await onAddToLibrary(figureRef);
-        toast.show(res.alreadySaved ? "Already in your library" : "Added to your library", {
+        toast.show(res.alreadySaved ? t.alreadyInLibrary : t.addedToLibrary, {
           tone: res.alreadySaved ? "neutral" : "success",
         });
       } catch {
-        toast.show("Couldn't add to your library", { tone: "danger" });
+        toast.show(t.addToLibraryFailed, { tone: "danger" });
       }
     },
-    [onAddToLibrary, toast],
+    [onAddToLibrary, toast, t],
   );
 
   // Identity colour map for reading-view inline dots (T9b): build from the
@@ -388,7 +391,7 @@ export function Assemble({
   if (!store) {
     return (
       <div className="flex items-center gap-2 p-6 text-ink-faint" role="status">
-        <Spinner /> <span className="text-2xs">Connecting…</span>
+        <Spinner /> <span className="text-2xs">{t.connecting}</span>
       </div>
     );
   }
@@ -419,25 +422,25 @@ export function Assemble({
   const notatingFigureReady =
     notatingFigure !== null && (!editable || notatingRP?.fromLiveDoc !== false);
 
-  const modeLabel = mode === "read" ? "reading" : "editing";
+  const modeLabel = mode === "read" ? t.modeReading : t.modeEditing;
   return (
     <div className="flex flex-col">
       {/* Compact per-screen header (frame 1.6/1.7): ‹ back · title · mode ·
           ✎ toggle (+ ↗ Share in reading). Undo/Redo/Make-a-copy live below in
           the editing toolbar — the reading lens stays the clean programme. */}
       <ScreenHeader
-        title={routine.title || "Untitled choreo"}
+        title={routine.title || t.untitledChoreo}
         // Fork lineage as provenance (US-037 AC-3) — surfaced, not pulled-from.
-        subtitle={routine.forkedFromRef ? `${modeLabel} · forked copy` : modeLabel}
+        subtitle={routine.forkedFromRef ? t.forkedSubtitle(modeLabel) : modeLabel}
         onBack={onBack}
-        backLabel="All choreos"
+        backLabel={t.allChoreos}
         actions={
           <>
             {/* Read ⇄ edit lens toggle. In editing the ✎ is active/filled; in
                 reading it's plain. Labels stay "Reading view"/"List view" so the
                 action names survive across the redesign. */}
             <IconButton
-              label={mode === "edit" ? "Reading view" : "List view"}
+              label={mode === "edit" ? t.readingView : t.listView}
               variant={mode === "edit" ? "filled" : "plain"}
               data-tour="lens-toggle"
               onClick={() => setMode(mode === "edit" ? "read" : "edit")}
@@ -448,7 +451,7 @@ export function Assemble({
                 also kept on the editing header so an editor can share without
                 first switching lenses (US-024). */}
             {canShare && (
-              <IconButton label="Share" data-tour="share" onClick={() => setShareOpen(true)}>
+              <IconButton label={t.share} data-tour="share" onClick={() => setShareOpen(true)}>
                 <ShareIcon size={16} />
               </IconButton>
             )}
@@ -462,7 +465,7 @@ export function Assemble({
           <div className="flex items-center gap-2">
             {syncing && (
               <span className="flex items-center gap-1 text-2xs text-ink-faint" role="status">
-                <Spinner /> Syncing…
+                <Spinner /> {t.syncing}
               </span>
             )}
             {/* Per-user undo/redo (US-038): inverts only THIS actor's last change
@@ -473,25 +476,25 @@ export function Assemble({
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Undo"
+                  aria-label={t.undo}
                   onClick={() => {
                     // Undo always proceeds (CRDT merges). When another actor had
                     // built on the reverted change, soften the toast — advisory
                     // only, no modal, no refusal (US-038 AC-3, PLAN §5.4).
                     const supersededByOthers = store.undo()?.supersededByOthers ?? false;
                     if (supersededByOthers) {
-                      toast.show("Undone — others had built on this change", {
+                      toast.show(t.undoneSupersededToast, {
                         tone: "warning",
                       });
                     } else {
-                      toast.show("Undone");
+                      toast.show(t.undoneToast);
                     }
                   }}
                 >
-                  <span aria-hidden="true">↶</span> Undo
+                  <span aria-hidden="true">↶</span> {t.undo}
                 </Button>
-                <Button variant="ghost" size="sm" aria-label="Redo" onClick={() => store.redo()}>
-                  <span aria-hidden="true">↷</span> Redo
+                <Button variant="ghost" size="sm" aria-label={t.redo} onClick={() => store.redo()}>
+                  <span aria-hidden="true">↷</span> {t.redo}
                 </Button>
               </>
             )}
@@ -505,7 +508,7 @@ export function Assemble({
                 loading={forking}
                 onClick={onFork}
               >
-                Make a copy
+                {t.makeACopy}
               </Button>
             )}
           </div>
@@ -516,17 +519,17 @@ export function Assemble({
             is the E2E observable hook. Cleared when the notation Sheet closes. */}
         {copiedToast && (
           <p role="status" className="text-2xs text-accent">
-            Made this figure yours
+            {t.madeFigureYours}
           </p>
         )}
 
         {/* Share screen: roster + roles, remove (confirmed), invite link (US-024).
             T9b: wire routineName + onFork so the design's subtitle + Fork CTA show. */}
-        <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this choreo">
+        <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title={t.shareSheetTitle}>
           <Share
             docRef={routineId}
             viewerRole={role}
-            routineName={routine.title || "Untitled choreo"}
+            routineName={routine.title || t.untitledChoreo}
             onFork={onFork}
           />
         </Sheet>
@@ -545,10 +548,10 @@ export function Assemble({
                 }}
               >
                 <p className="flex-1 text-xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
-                  Viewing a read-only choreo
+                  {t.readOnlyBanner}
                 </p>
                 <Button variant="primary" size="sm" loading={forking} onClick={onFork}>
-                  Make it mine
+                  {t.makeItMine}
                 </Button>
               </div>
             )}
@@ -588,7 +591,7 @@ export function Assemble({
                       zIndex: "var(--bf-z-nav)",
                     }}
                   >
-                    <span aria-hidden="true">✎</span> note
+                    <span aria-hidden="true">✎</span> {t.quickNote}
                   </button>
                 );
               })()}
@@ -694,13 +697,13 @@ export function Assemble({
                                 share the row evenly, so neither reads as primary. */}
                             <DashedAddButton
                               className="flex-1"
-                              label="add figure"
+                              label={t.addFigure}
                               tone="figure"
                               onClick={() => setAddingFigureTo({ sectionId: section.id })}
                             />
                             <DashedAddButton
                               className="flex-1"
-                              label="add break"
+                              label={t.addBreak}
                               tone="break"
                               onClick={() => store.addBreak(section.id)}
                             />
@@ -721,7 +724,11 @@ export function Assemble({
       {/* Thread panel (T8 QUAL-2 fix): opens the annotation thread for a
           specific step anchor from the reading view. Uses a child component so
           the identity data hooks (useMe/useMembers) are only mounted when open. */}
-      <Sheet open={threadAnchor !== null} onClose={() => setThreadAnchor(null)} title="Thread">
+      <Sheet
+        open={threadAnchor !== null}
+        onClose={() => setThreadAnchor(null)}
+        title={t.threadSheetTitle}
+      >
         {threadAnchor && (
           <ThreadSheetContents
             routineId={routineId}
@@ -755,7 +762,7 @@ export function Assemble({
       <Sheet
         open={addingFigureTo !== null}
         onClose={() => setAddingFigureTo(null)}
-        title="Add a figure"
+        title={t.addFigureSheetTitle}
       >
         <AddFigurePicker
           dance={routine.dance as DanceId}
@@ -788,8 +795,8 @@ export function Assemble({
           setAddKindOpen(false);
           setCopiedToast(false);
         }}
-        title={`Steps · ${notatingFigure?.name ?? "Figure"}`}
-        backLabel="Back"
+        title={t.stepsTitle(notatingFigure?.name ?? t.figureFallback)}
+        backLabel={t.back}
         actions={
           // Figure-scoped undo/redo (§5.4): editor-only, and disabled until the
           // figure's own live doc has hydrated (the same "load on open" gate the
@@ -801,32 +808,32 @@ export function Assemble({
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label="Undo"
+                aria-label={t.undo}
                 disabled={!notatingFigureReady}
                 onClick={() => {
                   const ref = notatingFigure?.id ?? notating;
                   if (!ref) return;
                   const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
                   if (supersededByOthers) {
-                    toast.show("Undone — others had built on this change", { tone: "warning" });
+                    toast.show(t.undoneSupersededToast, { tone: "warning" });
                   } else {
-                    toast.show("Undone");
+                    toast.show(t.undoneToast);
                   }
                 }}
               >
-                <span aria-hidden="true">↶</span> Undo
+                <span aria-hidden="true">↶</span> {t.undo}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label="Redo"
+                aria-label={t.redo}
                 disabled={!notatingFigureReady}
                 onClick={() => {
                   const ref = notatingFigure?.id ?? notating;
                   if (ref) store.redoFigure(ref);
                 }}
               >
-                <span aria-hidden="true">↷</span> Redo
+                <span aria-hidden="true">↷</span> {t.redo}
               </Button>
             </>
           ) : undefined
@@ -836,7 +843,7 @@ export function Assemble({
           // Load on open (C/E): wait for the figure's own live doc before showing
           // the timeline, so we never render then swap out stale snapshot content.
           <div className="flex items-center gap-2 p-4 text-ink-faint" role="status">
-            <Spinner /> <span className="text-2xs">Loading figure…</span>
+            <Spinner /> <span className="text-2xs">{t.loadingFigure}</span>
           </div>
         )}
         {notatingFigure && notatingFigureReady && (
@@ -847,8 +854,8 @@ export function Assemble({
               <div className="flex items-center gap-2">
                 {notatingFigure.entryAlignment && (
                   <Chip tone="accent" asStatic>
-                    {notatingFigure.entryAlignment.qualifier}{" "}
-                    {DIRECTION_LABEL[notatingFigure.entryAlignment.direction]}
+                    {t.qualifierLabel[notatingFigure.entryAlignment.qualifier]}{" "}
+                    {t.directionLabel[notatingFigure.entryAlignment.direction]}
                   </Chip>
                 )}
                 {notatingFigure.entryAlignment && notatingFigure.exitAlignment && (
@@ -858,8 +865,8 @@ export function Assemble({
                 )}
                 {notatingFigure.exitAlignment && (
                   <Chip tone="accent" asStatic>
-                    {notatingFigure.exitAlignment.qualifier}{" "}
-                    {DIRECTION_LABEL[notatingFigure.exitAlignment.direction]}
+                    {t.qualifierLabel[notatingFigure.exitAlignment.qualifier]}{" "}
+                    {t.directionLabel[notatingFigure.exitAlignment.direction]}
                   </Chip>
                 )}
               </div>
@@ -943,11 +950,11 @@ export function Assemble({
               <div className="flex items-center gap-2">
                 {canEdit && (
                   <Button variant="secondary" size="sm" onClick={() => setAddKindOpen(true)}>
-                    Add kind
+                    {t.addKind}
                   </Button>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setLanesOpen((prev) => !prev)}>
-                  Lanes
+                  {t.lanes}
                 </Button>
               </div>
               {lanesOpen && (
@@ -987,15 +994,13 @@ export function Assemble({
       <Sheet
         open={pendingDeletePlacement !== null}
         onClose={() => setPendingDeletePlacement(null)}
-        title="Remove figure?"
+        title={t.removeFigureTitle}
       >
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-ink-secondary">
-            This figure will be removed from the section. You can still recover it from history.
-          </p>
+          <p className="text-sm text-ink-secondary">{t.removeFigureBody}</p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingDeletePlacement(null)}>
-              Cancel
+              {t.cancel}
             </Button>
             <Button
               variant="danger"
@@ -1009,7 +1014,7 @@ export function Assemble({
                 setPendingDeletePlacement(null);
               }}
             >
-              Remove figure
+              {t.removeFigure}
             </Button>
           </div>
         </div>
@@ -1019,16 +1024,15 @@ export function Assemble({
       <Sheet
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        title="Delete section?"
+        title={t.deleteSectionTitle}
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            "{pendingDelete?.name}" and its placements will be removed from this choreo. You can
-            still recover it from history.
+            {t.deleteSectionBody(pendingDelete?.name ?? "")}
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingDelete(null)}>
-              Cancel
+              {t.cancel}
             </Button>
             <Button
               variant="danger"
@@ -1037,7 +1041,7 @@ export function Assemble({
                 setPendingDelete(null);
               }}
             >
-              Delete section
+              {t.deleteSection}
             </Button>
           </div>
         </div>
@@ -1055,10 +1059,13 @@ function sectionMeta(
   dance: DanceId,
   collapsed: boolean,
 ): string {
+  // Resolve the catalog per call (locale can change at runtime); callers render
+  // inside a component that subscribes via useMessages, so a switch re-renders.
+  const t = pickMessages(assembleMessages);
   if (collapsed) {
     // Count figures only — a break isn't a figure (US-004a).
     const n = section.placements.filter((p) => p.source !== "break").length;
-    return `${n} fig${n === 1 ? "" : "s"}`;
+    return t.figCount(n);
   }
   const beatsPerBar = DANCES[dance].beatsPerBar;
   let bars = 0;
@@ -1073,7 +1080,7 @@ function sectionMeta(
     const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
     if (counts.length > 0) bars += barsForFigure(counts, dance);
   }
-  return `${bars} bar${bars === 1 ? "" : "s"}`;
+  return t.barCount(bars);
 }
 
 /** A section's green header (frames 1.7/1.9): ▾/▸ collapse toggle + name + green
@@ -1101,6 +1108,7 @@ function SectionHeader({
   onMove: (direction: "up" | "down") => void;
   onDelete: () => void;
 }) {
+  const t = useMessages(assembleMessages);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(section.name);
 
@@ -1117,13 +1125,13 @@ function SectionHeader({
         }}
       >
         <Input
-          label="Section name"
+          label={t.sectionNameLabel}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <Button type="submit" variant="primary" size="sm">
-          Save
+          {t.save}
         </Button>
       </form>
     );
@@ -1140,7 +1148,7 @@ function SectionHeader({
     >
       <button
         type="button"
-        aria-label={`${collapsed ? "Expand" : "Collapse"} ${section.name}`}
+        aria-label={collapsed ? t.expandSection(section.name) : t.collapseSection(section.name)}
         aria-expanded={!collapsed}
         onClick={onToggle}
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -1160,24 +1168,24 @@ function SectionHeader({
       </span>
       {canEdit && (
         <div className="-mr-1 flex flex-none items-center">
-          <IconButton label={`Rename ${section.name}`} onClick={() => setRenaming(true)}>
+          <IconButton label={t.renameNamed(section.name)} onClick={() => setRenaming(true)}>
             ✎
           </IconButton>
           <IconButton
-            label={`Move ${section.name} up`}
+            label={t.moveUpNamed(section.name)}
             disabled={isFirst}
             onClick={() => onMove("up")}
           >
             ↑
           </IconButton>
           <IconButton
-            label={`Move ${section.name} down`}
+            label={t.moveDownNamed(section.name)}
             disabled={isLast}
             onClick={() => onMove("down")}
           >
             ↓
           </IconButton>
-          <IconButton label={`Delete ${section.name}`} onClick={onDelete}>
+          <IconButton label={t.deleteNamed(section.name)} onClick={onDelete}>
             ✕
           </IconButton>
         </div>
@@ -1232,10 +1240,11 @@ function DashedAddButton({
  *  rather than only appended. Reads quiet until tapped so it never competes with
  *  the placement cards. */
 function InsertSpot({ onClick }: { onClick: () => void }) {
+  const t = useMessages(assembleMessages);
   return (
     <button
       type="button"
-      aria-label="Insert figure here"
+      aria-label={t.insertFigureHere}
       onClick={onClick}
       className="group flex w-full items-center gap-2 py-0.5 text-ink-faint"
     >
@@ -1273,6 +1282,7 @@ function BreakCard({
   onChangeBeats: (next: number) => void;
   onDelete: () => void;
 }) {
+  const t = useMessages(assembleMessages);
   return (
     <div
       data-testid="break-card"
@@ -1283,31 +1293,29 @@ function BreakCard({
         ❚❚
       </span>
       <span className="flex-1 text-2xs font-bold uppercase tracking-wider text-ink-muted">
-        Break
+        {t.breakLabel}
       </span>
       {canEdit ? (
         <div className="flex items-center gap-2">
           <IconButton
-            label="fewer beats"
+            label={t.fewerBeats}
             onClick={() => onChangeBeats(beats - 1)}
             disabled={beats <= 1}
           >
             <span aria-hidden="true">−</span>
           </IconButton>
           <span className="min-w-[52px] text-center text-2xs font-bold tabular-nums text-ink">
-            {beats} beat{beats === 1 ? "" : "s"}
+            {t.beatCount(beats)}
           </span>
-          <IconButton label="more beats" onClick={() => onChangeBeats(beats + 1)}>
+          <IconButton label={t.moreBeats} onClick={() => onChangeBeats(beats + 1)}>
             <span aria-hidden="true">＋</span>
           </IconButton>
-          <IconButton label="remove break" onClick={onDelete}>
+          <IconButton label={t.removeBreak} onClick={onDelete}>
             <span aria-hidden="true">×</span>
           </IconButton>
         </div>
       ) : (
-        <span className="text-2xs font-bold tabular-nums text-ink-muted">
-          {beats} beat{beats === 1 ? "" : "s"}
-        </span>
+        <span className="text-2xs font-bold tabular-nums text-ink-muted">{t.beatCount(beats)}</span>
       )}
     </div>
   );
@@ -1323,6 +1331,7 @@ function AddSection({
   variant: "empty" | "inline";
   onAdd: (name: string) => void;
 }) {
+  const t = useMessages(assembleMessages);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const toast = useToast();
@@ -1337,7 +1346,7 @@ function AddSection({
           const next = name.trim();
           if (!next) return;
           onAdd(next);
-          toast.show(`Added ${next}`);
+          toast.show(t.addedSection(next));
           setName("");
           setOpen(false);
         }}
@@ -1346,11 +1355,11 @@ function AddSection({
           className="mb-2 text-2xs font-bold uppercase tracking-wide"
           style={{ color: "var(--bf-section-label)" }}
         >
-          Name this section
+          {t.nameThisSection}
         </p>
         <Input
-          label="Section name"
-          placeholder="e.g. 1st Long Side"
+          label={t.sectionNameLabel}
+          placeholder={t.sectionNamePlaceholder}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -1359,14 +1368,14 @@ function AddSection({
           className="my-2 text-[13px]"
           style={{ color: "var(--bf-section-caption)", fontFamily: "var(--bf-font-note)" }}
         >
-          e.g. 1st Long Side · Corner · Intro · Spin section — anything you like
+          {t.sectionNameCaption}
         </p>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
-            Cancel
+            {t.cancel}
           </Button>
           <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-            Add section
+            {t.addSection}
           </Button>
         </div>
       </form>
@@ -1383,34 +1392,37 @@ function AddSection({
         >
           ＋
         </span>
-        <p className="text-sm font-bold text-ink-secondary">No sections yet</p>
+        <p className="text-sm font-bold text-ink-secondary">{t.noSectionsYet}</p>
         <p
           className="max-w-[16rem] text-sm text-ink-muted"
           style={{ fontFamily: "var(--bf-font-note)" }}
         >
-          Add a section (e.g. "1st Long Side"), then drop figures into it.
+          {t.emptyStateHint}
         </p>
         <Button
           variant="primary"
           size="sm"
-          aria-label="Add section"
+          aria-label={t.addSection}
           onClick={() => setOpen(true)}
           leadingIcon={<span aria-hidden="true">＋</span>}
         >
-          add section
+          {t.addSectionDashed}
         </Button>
       </div>
     );
   }
 
-  return <DashedAddButton label="add section" tone="section" onClick={() => setOpen(true)} />;
+  return (
+    <DashedAddButton label={t.addSectionDashed} tone="section" onClick={() => setOpen(true)} />
+  );
 }
 
 /** The editing empty state (frame 1.8). For a viewer (no edit rights) it's just
  *  the honest "No sections yet" line; an editor gets the add-section affordance. */
 function EmptyState({ canEdit, onAdd }: { canEdit: boolean; onAdd: (name: string) => void }) {
+  const t = useMessages(assembleMessages);
   if (!canEdit) {
-    return <p className="py-12 text-center text-sm text-ink-muted">No sections yet.</p>;
+    return <p className="py-12 text-center text-sm text-ink-muted">{t.noSectionsYetViewer}</p>;
   }
   return <AddSection variant="empty" onAdd={onAdd} />;
 }
@@ -1448,6 +1460,7 @@ function PlacementCard({
    *  from here — that's the Library screen's "↟ save" card). */
   onAddToLibrary?: () => void;
 }) {
+  const t = useMessages(assembleMessages);
   // A figure is its own doc on its own connection, loaded lazily. Distinguish the
   // transient states (just-added / still-hydrating) from genuine failures so a
   // figure never reads as the alarming "Unknown figure": show a skeleton while it
@@ -1458,7 +1471,7 @@ function PlacementCard({
       return (
         <Card>
           <p className="text-2xs text-ink-faint" role="status">
-            This figure is unavailable — it may have been removed, or you don’t have access.
+            {t.figureUnavailable}
           </p>
         </Card>
       );
@@ -1468,11 +1481,11 @@ function PlacementCard({
         <Card>
           <div className="flex items-center gap-2">
             <span className="text-2xs text-ink-faint" role="status">
-              Couldn’t load this figure.
+              {t.figureLoadFailed}
             </span>
             {onRetry && (
               <Button variant="ghost" size="sm" className="ml-auto" onClick={onRetry}>
-                Retry
+                {t.retry}
               </Button>
             )}
           </div>
@@ -1485,7 +1498,7 @@ function PlacementCard({
         <div className="flex items-center gap-2" aria-busy="true">
           <Skeleton className="w-32" />
           <span className="sr-only" role="status">
-            Loading figure…
+            {t.loadingFigure}
           </span>
         </div>
       </Card>
@@ -1513,12 +1526,12 @@ function PlacementCard({
             className="h-2 w-2 rounded-full"
             style={{ background: isCustom ? kindVar("footwork") : kindVar("direction") }}
           />
-          <span className="bf-sr-only">{isCustom ? "Custom" : "Library"} figure</span>
+          <span className="bf-sr-only">{t.scopeSr(isCustom)}</span>
         </span>
         {/* The name opens the figure's step timeline — editors notate, others view. */}
         <button
           type="button"
-          aria-label={`${canEdit ? "Edit" : "View"} steps: ${label}`}
+          aria-label={t.openSteps(canEdit, label)}
           onClick={onOpen}
           className="min-w-0 flex-1 truncate text-left text-[13px] font-bold"
           style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
@@ -1534,7 +1547,7 @@ function PlacementCard({
               color: "var(--bf-scope-custom-ink)",
             }}
           >
-            Custom
+            {t.customPill}
           </span>
         )}
         {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a choreo-local
@@ -1548,13 +1561,13 @@ function PlacementCard({
                 color: "var(--bf-scope-global-ink)",
               }}
             >
-              In your library
+              {t.inYourLibrary}
             </span>
           ) : (
             onAddToLibrary && (
               <button
                 type="button"
-                aria-label={`Add ${label} to my library`}
+                aria-label={t.addToLibraryAria(label)}
                 onClick={onAddToLibrary}
                 className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
                 style={{
@@ -1563,7 +1576,7 @@ function PlacementCard({
                   background: "var(--bf-surface)",
                 }}
               >
-                <span aria-hidden="true">↟</span> add to library
+                <span aria-hidden="true">↟</span> {t.addToLibrary}
               </button>
             )
           ))}
@@ -1578,20 +1591,20 @@ function PlacementCard({
         {canEdit && (
           <div className="-mr-1 flex flex-none items-center">
             <IconButton
-              label={`Move ${label} up`}
+              label={t.moveUpNamed(label)}
               disabled={isFirst}
               onClick={() => onMove?.("up")}
             >
               ↑
             </IconButton>
             <IconButton
-              label={`Move ${label} down`}
+              label={t.moveDownNamed(label)}
               disabled={isLast}
               onClick={() => onMove?.("down")}
             >
               ↓
             </IconButton>
-            <IconButton label={`Remove ${label}`} onClick={onDelete}>
+            <IconButton label={t.removeNamed(label)} onClick={onDelete}>
               ✕
             </IconButton>
           </div>
@@ -1617,6 +1630,7 @@ function AddFigurePicker({
   dance: DanceId;
   onAdd: (name: string, figureType?: string, bars?: number) => void;
 }) {
+  const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
   // The new custom figure's authored length (PLAN §2.5) — chosen here on creation
@@ -1630,15 +1644,18 @@ function AddFigurePicker({
   return (
     <div className="flex flex-col gap-3">
       <Input
-        label="Filter figures"
-        placeholder="Search the library…"
+        label={t.filterFigures}
+        placeholder={t.searchLibraryPlaceholder}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
       {presets.length === 0 ? (
-        <p className="text-2xs text-ink-faint">No library figures match — create your own below.</p>
+        <p className="text-2xs text-ink-faint">{t.noLibraryMatches}</p>
       ) : (
-        <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label="Library figures">
+        <ul
+          className="flex max-h-64 flex-col gap-1 overflow-y-auto"
+          aria-label={t.libraryFiguresAria}
+        >
           {presets.map((f) => (
             // figureType is NOT unique within a dance (figure families repeat it —
             // e.g. foxtrot's base + "incorporating Feather Finish" Reverse Turns),
@@ -1669,17 +1686,19 @@ function AddFigurePicker({
         }}
       >
         <Input
-          label="Figure name"
-          placeholder="…or create your own"
+          label={t.figureNameLabel}
+          placeholder={t.createYourOwnPlaceholder}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <div className="flex items-center justify-between">
-          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">Length</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+            {t.length}
+          </span>
           <Stepper
-            label="Bars"
+            label={t.barsLabel}
             hideLabel
-            unit="bars"
+            unit={t.barsUnit}
             min={1}
             max={32}
             value={bars}
@@ -1687,7 +1706,7 @@ function AddFigurePicker({
           />
         </div>
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-          Add custom
+          {t.addCustom}
         </Button>
       </form>
     </div>
@@ -1706,18 +1725,6 @@ const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
   "DC_against",
 ];
 
-/** Human-readable labels for alignment directions (frame 1.20). */
-const DIRECTION_LABEL: Record<Alignment["direction"], string> = {
-  LOD: "LOD",
-  ALOD: "against LOD",
-  wall: "wall",
-  centre: "centre",
-  DW: "diag wall",
-  DC: "diag centre",
-  DW_against: "diag wall ↩",
-  DC_against: "diag centre ↩",
-};
-
 /** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
  *  facing-direction the figure starts and ends on. Editor-only. */
 function AlignmentEditor({
@@ -1727,17 +1734,18 @@ function AlignmentEditor({
   figure: FigureDoc;
   onSet: (edge: "entry" | "exit", alignment: Alignment | null) => void;
 }) {
+  const t = useMessages(assembleMessages);
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-3">
-      <h3 className="text-sm font-bold text-ink">Alignment</h3>
+      <h3 className="text-sm font-bold text-ink">{t.alignment}</h3>
       <AlignmentEdge
-        label="Entry"
+        label={t.entry}
         current={figure.entryAlignment ?? null}
         onChange={onSet}
         edge="entry"
       />
       <AlignmentEdge
-        label="Exit"
+        label={t.exit}
         current={figure.exitAlignment ?? null}
         onChange={onSet}
         edge="exit"
@@ -1762,14 +1770,15 @@ function AlignmentEdge({
   current: Alignment | null;
   onChange: (edge: "entry" | "exit", alignment: Alignment | null) => void;
 }) {
+  const t = useMessages(assembleMessages);
   const qualifier = current?.qualifier ?? "facing";
   const direction = current?.direction ?? "";
   return (
-    <fieldset aria-label={`${label} alignment`} className="flex flex-col gap-2">
+    <fieldset aria-label={t.edgeAlignmentAria(label)} className="flex flex-col gap-2">
       {/* QUALIFIER row */}
       <div>
         <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          Qualifier
+          {t.qualifier}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {ALIGNMENT_QUALIFIERS.map((q) => (
@@ -1786,7 +1795,7 @@ function AlignmentEdge({
                 })
               }
             >
-              {q}
+              {t.qualifierLabel[q]}
             </Chip>
           ))}
         </div>
@@ -1794,11 +1803,11 @@ function AlignmentEdge({
       {/* DIRECTION row */}
       <div>
         <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          Direction
+          {t.direction}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Chip tone="neutral" selected={direction === ""} onClick={() => onChange(edge, null)}>
-            — not set
+            {t.notSet}
           </Chip>
           {ALIGNMENT_DIRECTIONS.map((d) => (
             <Chip
@@ -1807,7 +1816,7 @@ function AlignmentEdge({
               selected={direction === d}
               onClick={() => onChange(edge, { qualifier, direction: d })}
             >
-              {DIRECTION_LABEL[d]}
+              {t.directionLabel[d]}
             </Chip>
           ))}
         </div>
@@ -1818,10 +1827,13 @@ function AlignmentEdge({
 
 /** A short human summary of the figure's (live) attributes. */
 function attributeSummary(attributes: Attribute[]): string {
+  // pickMessages per call: callers render inside components that already
+  // subscribe via useMessages, so a locale switch re-renders through them.
+  const t = pickMessages(assembleMessages);
   const live = attributes.filter((a) => a.deletedAt == null);
-  if (live.length === 0) return "No attributes";
+  if (live.length === 0) return t.noAttributes;
   const kinds = [...new Set(live.map((a) => a.kind))];
-  return `${live.length} attribute${live.length === 1 ? "" : "s"} · ${kinds.join(", ")}`;
+  return t.attributeSummary(live.length, kinds.join(", "));
 }
 
 /**
@@ -1829,18 +1841,28 @@ function attributeSummary(attributes: Attribute[]): string {
  * D6: shows qualifier + readable direction label, e.g. "entry facing diag wall".
  */
 function AlignmentChips({ placement, figure }: { placement: Placement; figure: FigureDoc | null }) {
+  const t = useMessages(assembleMessages);
   const chips: Array<{ key: string; label: string }> = [];
   if (figure?.entryAlignment) {
     const { qualifier, direction } = figure.entryAlignment;
-    chips.push({ key: "entry", label: `entry ${qualifier} ${DIRECTION_LABEL[direction]}` });
+    chips.push({
+      key: "entry",
+      label: t.entryChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
+    });
   }
   if (figure?.exitAlignment) {
     const { qualifier, direction } = figure.exitAlignment;
-    chips.push({ key: "exit", label: `exit ${qualifier} ${DIRECTION_LABEL[direction]}` });
+    chips.push({
+      key: "exit",
+      label: t.exitChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
+    });
   }
   if (placement.perPlacementAlignment) {
     const { qualifier, direction } = placement.perPlacementAlignment;
-    chips.push({ key: "here", label: `here ${qualifier} ${DIRECTION_LABEL[direction]}` });
+    chips.push({
+      key: "here",
+      label: t.hereChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
+    });
   }
   if (chips.length === 0) return null;
   return (
@@ -1894,6 +1916,7 @@ function ThreadSheetContents({
   onDeleteReply: (annotationId: string, replyId: string) => void;
 }) {
   // Only called when the Sheet is open (component is mounted) — see note above.
+  const t = useMessages(assembleMessages);
   const me = useMe();
   const membersQ = useMembers(routineId);
 
@@ -1923,8 +1946,10 @@ function ThreadSheetContents({
   const isWholeFigure = anchor.count == null;
   const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
   const figureName = figure?.name ?? anchor.figureRef;
-  const threadTitle = isWholeFigure ? figureName : `${figureName} · step ${anchor.count}`;
-  const threadSubtitle = isWholeFigure ? "whole figure" : undefined;
+  const threadTitle = isWholeFigure
+    ? figureName
+    : t.stepThreadTitle(figureName, anchor.count as number);
+  const threadSubtitle = isWholeFigure ? t.wholeFigure : undefined;
 
   // A whole-figure thread keys on a `figure` anchor (no count); a per-step thread
   // on the exact `point` anchor (US-004a).

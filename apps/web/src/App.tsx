@@ -8,6 +8,8 @@ import { Landing } from "./components/Landing";
 import { appGate } from "./components/landing-visibility";
 import { ProfileScreen } from "./components/Profile";
 import { SignInPrompt } from "./components/SignInPrompt";
+import { useMessages } from "./i18n";
+import { appMessages } from "./i18n/messages/app";
 import { navigate, useRoute } from "./lib/router";
 import { createFamilyNote } from "./store/family-notes";
 import { loadMineFigures, saveFigureToLibrary } from "./store/figures";
@@ -45,13 +47,6 @@ function isStyleguideRoute(): boolean {
   );
 }
 
-const NAV: NavItem[] = [
-  { value: "choreo", label: "Choreo", icon: () => <StepsIcon size={22} /> },
-  { value: "library", label: "Library", icon: () => <LibraryIcon size={22} /> },
-  { value: "journal", label: "Journal", icon: () => <JournalIcon size={22} /> },
-  { value: "profile", label: "Profile", icon: () => <PersonIcon size={22} /> },
-];
-
 export function App(): React.JSX.Element {
   return <ToastProvider>{isStyleguideRoute() ? <Styleguide /> : <AppHome />}</ToastProvider>;
 }
@@ -63,10 +58,17 @@ export function App(): React.JSX.Element {
  * screens). The open routine and invite redemption are URL-driven (lib/router.ts).
  */
 function AppHome(): React.JSX.Element {
+  const t = useMessages(appMessages);
   const route = useRoute();
   const { isLoaded, isSignedIn, getToken } = useAppAuth();
   const me = useMe();
   const [tab, setTab] = useState("choreo");
+  const nav: NavItem[] = [
+    { value: "choreo", label: t.navChoreo, icon: () => <StepsIcon size={22} /> },
+    { value: "library", label: t.navLibrary, icon: () => <LibraryIcon size={22} /> },
+    { value: "journal", label: t.navJournal, icon: () => <JournalIcon size={22} /> },
+    { value: "profile", label: t.navProfile, icon: () => <PersonIcon size={22} /> },
+  ];
   // US-033: "My figures" toggle — stable so FigureLibrary's effect deps don't refetch on every render.
   const [libTab, setLibTab] = useState<"all" | "mine">("all");
   const loadMine = useCallback(async () => loadMineFigures(await getToken()), [getToken]);
@@ -127,7 +129,7 @@ function AppHome(): React.JSX.Element {
 
   return (
     <AppShell
-      nav={NAV}
+      nav={nav}
       current={tab}
       onNavigate={(t) => {
         setTab(t);
@@ -141,11 +143,9 @@ function AppHome(): React.JSX.Element {
         {needsOnboarding && (
           <Card>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-2xs text-ink-secondary">
-                Add your name and note colour so co-editors know who's who.
-              </p>
+              <p className="text-2xs text-ink-secondary">{t.onboardingNudge}</p>
               <Button variant="primary" size="sm" onClick={() => setTab("profile")}>
-                Set up profile
+                {t.setUpProfile}
               </Button>
             </div>
           </Card>
@@ -168,10 +168,10 @@ function AppHome(): React.JSX.Element {
           <>
             <div data-tour="library-tabs">
               <Tabs
-                label="Library view"
+                label={t.libraryViewLabel}
                 items={[
-                  { value: "all", label: "Catalog" },
-                  { value: "mine", label: "My figures" },
+                  { value: "all", label: t.libraryTabCatalog },
+                  { value: "mine", label: t.libraryTabMine },
                 ]}
                 value={libTab}
                 onChange={(v) => setLibTab(v as "all" | "mine")}
@@ -197,8 +197,8 @@ function AppHome(): React.JSX.Element {
           <ProfileScreen />
         ) : (
           <Card>
-            <p className="text-sm font-bold text-ink">Coming soon</p>
-            <p className="mt-1 text-2xs text-ink-muted">This screen lands in a later milestone.</p>
+            <p className="text-sm font-bold text-ink">{t.comingSoon}</p>
+            <p className="mt-1 text-2xs text-ink-muted">{t.comingSoonBody}</p>
           </Card>
         )}
       </div>
@@ -212,9 +212,10 @@ function AppHome(): React.JSX.Element {
  * exactly once — no logged-out flash for a returning signed-in user.
  */
 function AuthLoading(): React.JSX.Element {
+  const t = useMessages(appMessages);
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface text-ink-muted">
-      <Spinner size={24} label="Loading Ballroom Flow" />
+      <Spinner size={24} label={t.loadingApp} />
     </div>
   );
 }

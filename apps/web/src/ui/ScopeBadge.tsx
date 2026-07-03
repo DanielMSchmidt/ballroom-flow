@@ -1,3 +1,5 @@
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { CustomIcon, GlobeIcon } from "./icons";
 import type { FigureScope } from "./tokens";
@@ -10,7 +12,6 @@ export interface ScopeBadgeProps {
 }
 
 interface ScopeMeta {
-  word: string;
   Icon: typeof GlobeIcon;
   bg: string;
   fg: string;
@@ -18,17 +19,16 @@ interface ScopeMeta {
 }
 
 // Each scope = a distinct, consistent treatment carried by WORD + ICON
-// + COLOR together — color is never the only signal (#5, #11).
+// + COLOR together — color is never the only signal (#5, #11). The word
+// itself is localized (uiMessages) and resolved in the component.
 const META: Record<FigureScope, ScopeMeta> = {
   library: {
-    word: "Library",
     Icon: GlobeIcon,
     bg: "var(--bf-scope-global-tint)",
     fg: "var(--bf-scope-global-ink)",
     bd: "var(--bf-scope-global-border)",
   },
   custom: {
-    word: "Custom",
     Icon: CustomIcon,
     bg: "var(--bf-scope-custom-tint)",
     fg: "var(--bf-scope-custom-ink)",
@@ -43,8 +43,10 @@ const META: Record<FigureScope, ScopeMeta> = {
  * consistent text + icon + color treatment (DESIGN-PRINCIPLES #11).
  */
 export function ScopeBadge({ scope, compact, className }: ScopeBadgeProps) {
+  const t = useMessages(uiMessages);
   const m = META[scope];
   const { Icon } = m;
+  const word = scope === "library" ? t.scopeLibrary : t.scopeCustom;
 
   // Meaning is carried by visible text (the scope word) — no aria-label needed
   // (#5). In compact (icon-only) mode the scope word moves to sr-only so AT
@@ -61,11 +63,14 @@ export function ScopeBadge({ scope, compact, className }: ScopeBadgeProps) {
         <Icon size={12} />
       </span>
       {compact ? (
-        <span className="bf-sr-only">{m.word} figure</span>
+        <span className="bf-sr-only">
+          {word}
+          {t.scopeFigureSuffix}
+        </span>
       ) : (
         <>
-          <span>{m.word}</span>
-          <span className="bf-sr-only"> figure</span>
+          <span>{word}</span>
+          <span className="bf-sr-only">{t.scopeFigureSuffix}</span>
         </>
       )}
     </span>

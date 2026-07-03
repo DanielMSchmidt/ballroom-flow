@@ -8,20 +8,21 @@
 // reads (no I/O), shared by RoutineReadingView so the column logic is testable
 // in isolation.
 import {
-  ATTRIBUTE_REGISTRY,
   type Attribute,
   type DanceId,
   kindAppliesToDance,
   mergeRegistry,
   type RegistryKind,
 } from "@ballroom/domain";
+import { getLocale, type Locale, localizedRegistry } from "../i18n";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
 
 export type { RoleView };
 
-/** Compact direction codes for the merged Step chip (forward → "fwd"). */
-const DIRECTION_ABBREV: Record<string, string> = {
+/** Compact direction codes for the merged Step chip (forward → "fwd"), per
+ *  locale — German uses the customary vw/rw shorthand. */
+const DIRECTION_ABBREV_EN = {
   forward: "fwd",
   back: "back",
   side: "side",
@@ -33,11 +34,26 @@ const DIRECTION_ABBREV: Record<string, string> = {
   diag_forward: "diag",
   diag_back: "diag",
 };
+const DIRECTION_ABBREV_DE: typeof DIRECTION_ABBREV_EN = {
+  forward: "vw",
+  back: "rw",
+  side: "seit",
+  behind: "hint",
+  close: "schl",
+  diagonal: "diag",
+  in_place: "Platz",
+  diag_forward: "diag",
+  diag_back: "diag",
+};
+const DIRECTION_ABBREV: Record<Locale, Record<string, string>> = {
+  en: DIRECTION_ABBREV_EN,
+  de: DIRECTION_ABBREV_DE,
+};
 
 /** A short, chip-friendly code for a `direction` value. */
 export function directionAbbrev(value: unknown): string {
   const raw = String(value);
-  return DIRECTION_ABBREV[raw] ?? raw.replace(/_/g, " ").slice(0, 5);
+  return DIRECTION_ABBREV[getLocale()][raw] ?? raw.replace(/_/g, " ").slice(0, 5);
 }
 
 /**
@@ -65,15 +81,29 @@ export interface ReadingColumn {
   isStep?: boolean;
 }
 
-/** Header label per standard kind (the design's abbreviated column heads). */
-const COLUMN_LABEL: Record<string, string> = {
-  rise: "Rise",
-  position: "Pos",
-  footPosition: "Feet",
-  sway: "Sway",
-  turn: "Turn",
-  bodyActions: "Body",
+/** Header label per standard kind (the design's abbreviated column heads),
+ *  per locale. The merged first column's head lives in STEP_LABEL below. */
+const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
+  en: {
+    rise: "Rise",
+    position: "Pos",
+    footPosition: "Feet",
+    sway: "Sway",
+    turn: "Turn",
+    bodyActions: "Body",
+  },
+  de: {
+    rise: "Heben",
+    position: "Pos",
+    footPosition: "Füße",
+    sway: "Neig",
+    turn: "Dreh",
+    bodyActions: "Körper",
+  },
 };
+
+/** The merged direction+footwork column's header, per locale. */
+const STEP_LABEL: Record<Locale, string> = { en: "Step", de: "Schritt" };
 
 /** Technique kinds that get a column, in the design's left-to-right order
  *  (Rise · Pos · Feet · Body · Sway · Turn). */
@@ -95,22 +125,24 @@ function titleCase(kind: string): string {
  * user-defined "Head") in first-seen order.
  */
 export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[] {
+  const locale = getLocale();
+  const labels = COLUMN_LABEL[locale];
   const live = attrs.filter((a) => a.deletedAt == null);
   const present = new Set(live.map((a) => a.kind));
   const cols: ReadingColumn[] = [];
   if (present.has("direction") || present.has("footwork")) {
-    cols.push({ id: "step", label: "Step", kind: "direction", isStep: true });
+    cols.push({ id: "step", label: STEP_LABEL[locale], kind: "direction", isStep: true });
   }
   for (const k of ORDERED_KINDS) {
     if (present.has(k) && kindAppliesToDance(k, dance)) {
-      cols.push({ id: k, label: COLUMN_LABEL[k] ?? titleCase(k), kind: k });
+      cols.push({ id: k, label: labels[k] ?? titleCase(k), kind: k });
     }
   }
   const known = new Set([...STEP_KINDS, ...ORDERED_KINDS]);
   // Custom / non-standard kinds, in stable first-seen order.
   for (const a of live) {
     if (!known.has(a.kind) && !cols.some((c) => c.id === a.kind)) {
-      cols.push({ id: a.kind, label: COLUMN_LABEL[a.kind] ?? titleCase(a.kind), kind: a.kind });
+      cols.push({ id: a.kind, label: labels[a.kind] ?? titleCase(a.kind), kind: a.kind });
     }
   }
   return cols;
@@ -132,11 +164,15 @@ const EDIT_ORDERED_KINDS = ["rise", "position", "footPosition", "bodyActions", "
  * edit grid renders empty cells so a value can be added to any applicable kind.
  */
 export function allColumns(dance?: DanceId, customKinds: RegistryKind[] = []): ReadingColumn[] {
-  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
-  const cols: ReadingColumn[] = [{ id: "step", label: "Step", kind: "direction", isStep: true }];
+  const locale = getLocale();
+  const labels = COLUMN_LABEL[locale];
+  const reg = mergeRegistry(localizedRegistry(getLocale()), customKinds);
+  const cols: ReadingColumn[] = [
+    { id: "step", label: STEP_LABEL[locale], kind: "direction", isStep: true },
+  ];
   for (const k of EDIT_ORDERED_KINDS) {
     if (kindAppliesToDance(k, dance)) {
-      cols.push({ id: k, label: COLUMN_LABEL[k] ?? titleCase(k), kind: k });
+      cols.push({ id: k, label: labels[k] ?? titleCase(k), kind: k });
     }
   }
   // Custom (non-builtin) kinds, in stable registry order, honoring appliesToDances.
@@ -144,7 +180,7 @@ export function allColumns(dance?: DanceId, customKinds: RegistryKind[] = []): R
     if (k.builtin || STEP_KINDS.has(k.kind) || EDIT_ORDERED_KINDS.includes(k.kind)) continue;
     if (k.appliesToDances && dance !== undefined && !k.appliesToDances.includes(dance)) continue;
     if (cols.some((c) => c.id === k.kind)) continue;
-    cols.push({ id: k.kind, label: COLUMN_LABEL[k.kind] ?? k.label, kind: k.kind });
+    cols.push({ id: k.kind, label: labels[k.kind] ?? k.label, kind: k.kind });
   }
   return cols;
 }
@@ -185,7 +221,7 @@ export function infoKindsForColumn(
   customKinds: RegistryKind[],
   live: Attribute[],
 ): RegistryKind[] {
-  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+  const reg = mergeRegistry(localizedRegistry(getLocale()), customKinds);
   const wanted = col.isStep ? ["direction", "footwork"] : [col.kind];
   return wanted.map((kid) => {
     const found = reg[kid];
