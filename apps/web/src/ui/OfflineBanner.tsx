@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 
 // Browser connectivity as an external store — `navigator.onLine` + the
 // online/offline events. SSR/jsdom default to "online".
@@ -20,6 +22,7 @@ const isOnline = (): boolean => (typeof navigator === "undefined" ? true : navig
  * color-only (#5). Renders nothing while online.
  */
 export function OfflineBanner() {
+  const t = useMessages(uiMessages);
   const online = useSyncExternalStore(subscribe, isOnline, () => true);
   if (online) return null;
   return (
@@ -30,7 +33,7 @@ export function OfflineBanner() {
       className="flex items-center gap-2 rounded-md border border-border-strong bg-surface-sunken px-3 py-2 text-2xs font-semibold text-ink-secondary"
     >
       <span aria-hidden="true">⚠︎</span>
-      You're offline — showing what's saved on this device. Changes sync when you're back online.
+      {t.offlineBanner}
     </div>
   );
 }

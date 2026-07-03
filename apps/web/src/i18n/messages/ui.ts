@@ -14,6 +14,8 @@ const en = {
   scopeCustom: "Custom",
   // Leading space: appended directly after the scope word for screen readers.
   scopeFigureSuffix: " figure",
+  offlineBanner:
+    "You're offline — showing what's saved on this device. Changes sync when you're back online.",
   notifications: "Notifications",
   dismissNotification: "Dismiss notification",
   close: "Close",
@@ -35,6 +37,8 @@ const de: typeof en = {
   scopeLibrary: "Bibliothek",
   scopeCustom: "Eigene",
   scopeFigureSuffix: " Figur",
+  offlineBanner:
+    "Du bist offline — angezeigt wird, was auf diesem Gerät gespeichert ist. Änderungen werden synchronisiert, sobald du wieder online bist.",
   notifications: "Benachrichtigungen",
   dismissNotification: "Benachrichtigung schließen",
   close: "Schließen",
