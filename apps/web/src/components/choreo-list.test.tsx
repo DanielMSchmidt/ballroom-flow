@@ -63,7 +63,7 @@ describe("US-025 Create a routine (UI)", () => {
     renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={onCreate} />);
     await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
     const sheet = await screen.findByRole("dialog", { name: /new choreography/i });
-    await userEvent.type(within(sheet).getByLabelText(/routine name/i), "Showcase");
+    await userEvent.type(within(sheet).getByLabelText(/choreo name/i), "Showcase");
     await userEvent.click(within(sheet).getByRole("button", { name: /create choreo/i }));
     expect(onCreate).toHaveBeenCalledWith({ title: "Showcase", dance: "waltz" });
   });

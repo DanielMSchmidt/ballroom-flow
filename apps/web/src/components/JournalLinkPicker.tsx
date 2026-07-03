@@ -223,7 +223,7 @@ export function JournalLinkPicker({
             />
             <ListRow
               title={`All ${titleCase(family.dance)} choreos`}
-              subtitle="same dance, every routine"
+              subtitle="same dance, every choreo"
               onClick={() => pickFigureType(family.dance)}
             />
             <ListRow

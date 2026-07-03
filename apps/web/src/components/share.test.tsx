@@ -38,7 +38,7 @@ describe("US-024 Share screen (member list + roles)", () => {
     expect(screen.getByText("commenter")).toBeInTheDocument();
     expect(screen.getByText("viewer")).toBeInTheDocument();
     // Section heading is "Partners on this routine" (uppercase via CSS).
-    expect(screen.getByText(/partners on this routine/i)).toBeInTheDocument();
+    expect(screen.getByText(/partners on this choreo/i)).toBeInTheDocument();
   });
 
   it("shows displayName in the member row when available", () => {
@@ -81,10 +81,10 @@ describe("US-024 Share screen (member list + roles)", () => {
     renderShare({ viewerRole: "editor", members: MEMBERS });
     // Role blurbs (the microcopy that makes roles legible).
     expect(screen.getByText(/can add annotations, but not edit/i)).toBeInTheDocument();
-    expect(screen.getByText(/can view the routine, read-only/i)).toBeInTheDocument();
+    expect(screen.getByText(/can view the choreo, read-only/i)).toBeInTheDocument();
     // The shared-figure ripple warning (DP #15) — info card copy (no variant line
     // in frame 4.2 — card was trimmed to the fork CTA).
-    expect(screen.getByText(/editing a shared figure changes it/i)).toBeInTheDocument();
+    expect(screen.getByText(/everyone on this choreo edits the same figures/i)).toBeInTheDocument();
   });
 
   // ───────────────────────────────────────────────────────────────────────

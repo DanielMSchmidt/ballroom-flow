@@ -27,7 +27,7 @@ const STUDENT = "user_student";
 async function createRoutineAsCoach(page: Page, title: string): Promise<string> {
   await page.goto("/");
   await page.getByRole("button", { name: /new choreo/i }).click();
-  await page.getByLabel("Routine name").fill(title);
+  await page.getByLabel("Choreo name").fill(title);
   // Waltz is the pre-selected chip in the New-choreo sheet, so no dance pick needed.
   await page
     .getByRole("dialog")

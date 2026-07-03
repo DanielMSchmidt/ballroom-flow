@@ -33,7 +33,7 @@ test.describe("@smoke journal journey", () => {
     await rail.getByRole("button", { name: "Choreo" }).click();
     await page.getByRole("button", { name: /new choreo/i }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Routine name").fill("E2E Journal");
+    await dialog.getByLabel("Choreo name").fill("E2E Journal");
     await dialog.getByRole("button", { name: "Waltz", exact: true }).click();
     await dialog.getByRole("button", { name: /create choreo/i }).click();
 

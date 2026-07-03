@@ -36,6 +36,7 @@ import { useMe } from "../store/me";
 import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Button,
   Card,
@@ -92,6 +93,25 @@ function resolveMemberColors(
     else list.push({ userId: currentUserId, identityColor: currentUserColor });
   }
   return buildMemberColorMap(list);
+}
+
+/**
+ * Build the routine's `userId → display name` map for the reading view's
+ * comment avatars (Builder v2 pairs each identity colour with the author's
+ * initial — #5). The current user's own name (useMe) overrides their roster row
+ * for the same freshness reason as the colour map above.
+ */
+function resolveMemberNames(
+  members: { userId: string; displayName?: string }[] | undefined,
+  currentUserId: string | undefined,
+  currentUserName: string | undefined,
+): Record<string, string> {
+  const names: Record<string, string> = {};
+  for (const m of members ?? []) {
+    if (m.displayName) names[m.userId] = m.displayName;
+  }
+  if (currentUserId && currentUserName) names[currentUserId] = currentUserName;
+  return names;
 }
 
 export interface AssembleProps {
@@ -316,8 +336,15 @@ export function Assemble({
   // ThreadSheetContents (for the thread panel) costs zero extra network hops.
   const me = useMe();
   const membersQ = useMembers(routineId);
+  // First-visit tour: the reading programme's lenses + share + quick note.
+  // Held until the store is open (so the anchors exist) and only in read mode.
+  useFirstVisitTour("assemble", mode === "read" && !offlineProp && store !== null);
   const memberColorMap = useMemo(
     () => resolveMemberColors(membersQ.data?.members, currentUserId, me.data?.identityColor),
+    [membersQ.data, me.data, currentUserId],
+  );
+  const memberNameMap = useMemo(
+    () => resolveMemberNames(membersQ.data?.members, currentUserId, me.data?.displayName),
     [membersQ.data, me.data, currentUserId],
   );
 
@@ -387,11 +414,11 @@ export function Assemble({
           ✎ toggle (+ ↗ Share in reading). Undo/Redo/Make-a-copy live below in
           the editing toolbar — the reading lens stays the clean programme. */}
       <ScreenHeader
-        title={routine.title || "Untitled routine"}
+        title={routine.title || "Untitled choreo"}
         // Fork lineage as provenance (US-037 AC-3) — surfaced, not pulled-from.
         subtitle={routine.forkedFromRef ? `${modeLabel} · forked copy` : modeLabel}
         onBack={onBack}
-        backLabel="All routines"
+        backLabel="All choreos"
         actions={
           <>
             {/* Read ⇄ edit lens toggle. In editing the ✎ is active/filled; in
@@ -400,6 +427,7 @@ export function Assemble({
             <IconButton
               label={mode === "edit" ? "Reading view" : "List view"}
               variant={mode === "edit" ? "filled" : "plain"}
+              data-tour="lens-toggle"
               onClick={() => setMode(mode === "edit" ? "read" : "edit")}
             >
               <EditIcon size={16} />
@@ -408,7 +436,7 @@ export function Assemble({
                 also kept on the editing header so an editor can share without
                 first switching lenses (US-024). */}
             {canShare && (
-              <IconButton label="Share" onClick={() => setShareOpen(true)}>
+              <IconButton label="Share" data-tour="share" onClick={() => setShareOpen(true)}>
                 <ShareIcon size={16} />
               </IconButton>
             )}
@@ -482,11 +510,11 @@ export function Assemble({
 
         {/* Share screen: roster + roles, remove (confirmed), invite link (US-024).
             T9b: wire routineName + onFork so the design's subtitle + Fork CTA show. */}
-        <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this routine">
+        <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Share this choreo">
           <Share
             docRef={routineId}
             viewerRole={role}
-            routineName={routine.title || "Untitled routine"}
+            routineName={routine.title || "Untitled choreo"}
             onFork={onFork}
           />
         </Sheet>
@@ -505,7 +533,7 @@ export function Assemble({
                 }}
               >
                 <p className="flex-1 text-xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
-                  Viewing a read-only routine
+                  Viewing a read-only choreo
                 </p>
                 <Button variant="primary" size="sm" loading={forking} onClick={onFork}>
                   Make it mine
@@ -518,12 +546,40 @@ export function Assemble({
               annotations={store.readAnnotations()}
               canComment={can(role, "canAnnotate")}
               memberColors={memberColorMap}
+              memberNames={memberNameMap}
               customKinds={store.customKinds()}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               onOpenFigure={(figureId) => setNotating(figureId)}
               onOpenThread={(anchor) => setThreadAnchor(anchor)}
             />
+            {/* Quick-note FAB (Builder v2): a floating "✎ note" pill on the
+                reading programme that jumps straight into a note on the first
+                figure — the fastest "write down what the coach just said" path.
+                Commenters+ only; hidden while the routine is still empty. */}
+            {can(role, "canAnnotate") &&
+              (() => {
+                const firstFigureRef = routine.sections
+                  .flatMap((s) => s.placements)
+                  .find((pl) => pl.source !== "break")?.figureRef;
+                if (!firstFigureRef) return null;
+                return (
+                  <button
+                    type="button"
+                    data-testid="quick-note-fab"
+                    data-tour="quick-note"
+                    onClick={() => setThreadAnchor({ figureRef: firstFigureRef })}
+                    className="fixed right-4 inline-flex min-h-[var(--bf-touch-target)] items-center gap-[7px] rounded-pill bg-surface-inverse px-[17px] py-[13px] text-xs font-bold text-ink-inverse"
+                    style={{
+                      bottom: "calc(var(--bf-touch-target) + env(safe-area-inset-bottom) + 1.5rem)",
+                      boxShadow: "var(--bf-shadow-toast)",
+                      zIndex: "var(--bf-z-nav)",
+                    }}
+                  >
+                    <span aria-hidden="true">✎</span> note
+                  </button>
+                );
+              })()}
           </>
         ) : routine.sections.length === 0 ? (
           // Empty state (frame 1.8): a freshly created/forked-empty routine.
@@ -955,7 +1011,7 @@ export function Assemble({
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            "{pendingDelete?.name}" and its placements will be removed from this routine. You can
+            "{pendingDelete?.name}" and its placements will be removed from this choreo. You can
             still recover it from history.
           </p>
           <div className="flex justify-end gap-2">

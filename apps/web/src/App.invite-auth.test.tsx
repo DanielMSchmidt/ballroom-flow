@@ -58,7 +58,7 @@ describe("share link — signed-out visitor on /invite/:token", () => {
     // A real sign-in affordance is present (the dead-end card had none).
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
     // Context makes clear this is a shared routine, not the generic app pitch.
-    expect(screen.getByText(/you’ve been invited to a routine/i)).toBeInTheDocument();
+    expect(screen.getByText(/you’ve been invited to a choreo/i)).toBeInTheDocument();
     // The old dead-end copy is gone.
     expect(screen.queryByText(/sign in to build choreography/i)).not.toBeInTheDocument();
   });

@@ -13,6 +13,7 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
   Button,
@@ -150,6 +151,8 @@ export function ChoreoList({
   onSearch,
   searchResults = [],
 }: ChoreoListProps) {
+  // First-visit tour: orient the user on the choreo list + the tab bar.
+  useFirstVisitTour("choreos");
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -206,6 +209,7 @@ export function ChoreoList({
             )}
             <IconButton
               label="New choreo"
+              data-tour="new-choreo"
               onClick={onNew}
               style={{
                 background: "var(--bf-accent)",
@@ -231,7 +235,7 @@ export function ChoreoList({
           label="Search"
           hideLabel
           type="search"
-          placeholder="Search routines…"
+          placeholder="Search choreos…"
           onChange={(e) => onSearch(e.target.value)}
         />
       )}
@@ -264,7 +268,7 @@ export function ChoreoList({
           <EmptyState
             icon={<StepsIcon size={28} />}
             title="No choreos yet"
-            description="Each dance gets its own routine — plus extras for practice. Start your first."
+            description="Each dance gets its own choreo — plus extras for practice. Start your first."
             actions={
               <Button variant="primary" leadingIcon={<PlusIcon size={16} />} onClick={onNew}>
                 Create choreo
@@ -378,7 +382,7 @@ export function ChoreoList({
             </div>
           </fieldset>
           <Input
-            label="Routine name"
+            label="Choreo name"
             placeholder="e.g. Gold Waltz — comp routine"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -408,7 +412,7 @@ export function ChoreoList({
           className="mb-3 text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-note)" }}
         >
-          Choose what to do with this routine
+          Choose what to do with this choreo
         </p>
         <div className="flex flex-col gap-2.5">
           <button
@@ -428,7 +432,7 @@ export function ChoreoList({
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-bold text-ink">Open</span>
-              <span className="text-2xs text-ink-muted">view &amp; edit this routine</span>
+              <span className="text-2xs text-ink-muted">view &amp; edit this choreo</span>
             </span>
           </button>
           <button
@@ -482,7 +486,7 @@ export function ChoreoList({
               </span>
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm font-bold text-danger">Delete</span>
-                <span className="text-2xs text-ink-muted">remove this routine from your list</span>
+                <span className="text-2xs text-ink-muted">remove this choreo from your list</span>
               </span>
             </button>
           )}
@@ -493,7 +497,7 @@ export function ChoreoList({
       <Modal
         open={confirmDelete != null}
         onClose={closeConfirmDelete}
-        title="Delete this routine?"
+        title="Delete this choreo?"
         confirm={{
           label: "Delete",
           variant: "danger",
@@ -510,10 +514,10 @@ export function ChoreoList({
       </Modal>
 
       {/* Quota upsell */}
-      <Sheet open={upsellOpen} onClose={closeUpsell} title="Upgrade for more routines">
+      <Sheet open={upsellOpen} onClose={closeUpsell} title="Upgrade for more choreos">
         <div className="flex flex-col gap-3">
           <p className="text-sm text-ink-secondary">
-            You've reached your free-plan cap{cap != null ? ` of ${cap} routines` : ""}. A paid plan
+            You've reached your free-plan cap{cap != null ? ` of ${cap} choreos` : ""}. A paid plan
             will let you create more — your existing routines stay exactly as they are.
           </p>
           {/* Billing is US-053; keep this honest rather than a dead live CTA. */}

@@ -12,6 +12,7 @@ import {
   type JournalFilter,
   relativeDate,
 } from "../store/journal";
+import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
 import { JournalEntryEditor } from "./JournalEntryEditor";
@@ -48,6 +49,8 @@ export function Journal(props: JournalProps): React.JSX.Element {
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<JournalFilter>("all");
   const [composing, setComposing] = useState(false);
+  // First-visit tour — held while the entry editor covers the tab.
+  useFirstVisitTour("journal", !composing);
 
   const refresh = useCallback(() => {
     setError(false);
@@ -83,13 +86,18 @@ export function Journal(props: JournalProps): React.JSX.Element {
     <section aria-label="Journal" className="flex flex-col gap-3">
       <header className="flex items-center justify-between">
         <h1 className="text-lg font-bold text-ink">Journal</h1>
-        <IconButton label="New entry" variant="filled" onClick={() => setComposing(true)}>
+        <IconButton
+          label="New entry"
+          variant="filled"
+          data-tour="journal-new"
+          onClick={() => setComposing(true)}
+        >
           <PlusIcon size={20} />
         </IconButton>
       </header>
 
       {entries !== null && entries.length > 0 && (
-        <fieldset className="flex flex-wrap items-center gap-1">
+        <fieldset data-tour="journal-filters" className="flex flex-wrap items-center gap-1">
           <legend className="bf-sr-only">Filter journal</legend>
           {FILTERS.map((f) => (
             <Chip key={f.value} selected={filter === f.value} onClick={() => setFilter(f.value)}>

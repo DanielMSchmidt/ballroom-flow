@@ -8,21 +8,33 @@ describe("AttrChip", () => {
     expect(screen.getByText("fwd·HT")).toBeInTheDocument();
   });
 
-  it("fills a step chip with the direction kind color (kindVar)", () => {
+  it("tints a step chip with the direction kind family (kindVar)", () => {
     renderUi(<AttrChip kind="direction" label="fwd·HT" />);
-    expect(screen.getByText("fwd·HT")).toHaveStyle({ background: "var(--bf-kind-direction)" });
+    // (borderColor is asserted with a hex in the custom-kind test below —
+    // jsdom's cssstyle drops `border-color: var(...)` declarations.)
+    expect(screen.getByText("fwd·HT")).toHaveStyle({
+      background: "var(--bf-kind-direction-tint)",
+      color: "var(--bf-kind-direction-ink)",
+    });
   });
 
   it("tints a kind chip by its kind", () => {
     renderUi(<AttrChip kind="rise" label="comm" />);
-    expect(screen.getByText("comm")).toHaveStyle({ background: "var(--bf-kind-rise)" });
+    expect(screen.getByText("comm")).toHaveStyle({
+      background: "var(--bf-kind-rise-tint)",
+      color: "var(--bf-kind-rise-ink)",
+    });
   });
 
   it("uses an explicit color for a user-defined kind not in the standard palette", () => {
     // A clearly synthetic, non-promotable kind id — so this stays valid even if
     // real kinds (e.g. Head) are later added to the standard palette.
     renderUi(<AttrChip kind="custom-x" label="left" color="#0f8a8a" />);
-    expect(screen.getByText("left")).toHaveStyle({ background: "#0f8a8a" });
+    expect(screen.getByText("left")).toHaveStyle({
+      color: "#0f8a8a",
+      borderColor: "#0f8a8a",
+      background: "var(--bf-surface-sunken)",
+    });
   });
 
   it("lowers opacity when dimmed", () => {

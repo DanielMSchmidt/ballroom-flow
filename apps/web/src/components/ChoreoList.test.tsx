@@ -68,7 +68,7 @@ describe("T2 Routine card (frame 1.1)", () => {
     renderUi(<ChoreoList ownedCount={1} plan="free" routines={[baseRoutine]} onOpen={onOpen} />);
     await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
     const sheet = await screen.findByRole("dialog");
-    expect(within(sheet).getByText(/choose what to do with this routine/i)).toBeInTheDocument();
+    expect(within(sheet).getByText(/choose what to do with this choreo/i)).toBeInTheDocument();
     // Opening the menu must NOT navigate (menu is separate from the card tap).
     expect(onOpen).not.toHaveBeenCalled();
   });
@@ -98,7 +98,7 @@ describe("T2 Empty state (frame 1.2)", () => {
     renderUi(<ChoreoList ownedCount={0} plan="free" />);
     expect(screen.getByText(/no choreos yet/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/each dance gets its own routine — plus extras for practice/i),
+      screen.getByText(/each dance gets its own choreo — plus extras for practice/i),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /create choreo/i })).toBeInTheDocument();
   });
@@ -181,7 +181,7 @@ describe("Delete a routine (owner-only, confirmed)", () => {
     const sheet = await screen.findByRole("dialog");
     await userEvent.click(within(sheet).getByRole("button", { name: /^delete/i }));
     // A confirm dialog appears BEFORE anything is deleted.
-    const confirm = await screen.findByRole("alertdialog", { name: /delete this routine/i });
+    const confirm = await screen.findByRole("alertdialog", { name: /delete this choreo/i });
     expect(onDelete).not.toHaveBeenCalled();
     await userEvent.click(within(confirm).getByRole("button", { name: /^delete$/i }));
     expect(onDelete).toHaveBeenCalledWith("rt1");
@@ -209,7 +209,7 @@ describe("T2 New-choreo sheet (frame 1.5)", () => {
     const sheet = await screen.findByRole("dialog", { name: /new choreography/i });
     // Pick a non-default dance via its chip.
     await userEvent.click(within(sheet).getByRole("button", { name: "Quickstep" }));
-    await userEvent.type(within(sheet).getByLabelText(/routine name/i), "Silver Quickstep");
+    await userEvent.type(within(sheet).getByLabelText(/choreo name/i), "Silver Quickstep");
     await userEvent.click(within(sheet).getByRole("button", { name: /create choreo/i }));
     expect(onCreate).toHaveBeenCalledWith({ title: "Silver Quickstep", dance: "quickstep" });
   });

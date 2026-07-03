@@ -192,7 +192,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           <AccessDenied
             action={
               <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
-                Back to your routines
+                Back to your choreos
               </Button>
             }
           />
@@ -261,7 +261,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           },
           onError: (err) => {
             if (isQuotaError(err)) setForkQuotaBlocked(true);
-            else toast.show("Couldn't fork this routine. Please try again.", { tone: "danger" });
+            else toast.show("Couldn't fork this choreo. Please try again.", { tone: "danger" });
           },
         })
       }
@@ -270,9 +270,9 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         // Confirm a success, and never silently swallow a failure (e.g. a non-owner
         // race or a network blip) — surface it as a danger toast.
         del.mutate(docRef, {
-          onSuccess: () => toast.show("Routine deleted"),
+          onSuccess: () => toast.show("Choreo deleted"),
           onError: () =>
-            toast.show("Couldn't delete this routine. Please try again.", { tone: "danger" }),
+            toast.show("Couldn't delete this choreo. Please try again.", { tone: "danger" }),
         })
       }
       sample={sample}

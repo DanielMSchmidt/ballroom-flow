@@ -224,6 +224,7 @@ Standard kinds (v1): **`direction`** (the step headline — **closed enum** `for
 | Capability | v1 decision |
 |---|---|
 | Auth / onboarding | Clerk hosted sign-in (Google + passkeys); onboarding: displayName, identity color. |
+| **First-visit UI tours** | **v1 (2026-07-02)** — each top-level page (Choreo list, Library, Journal, Profile, Assemble-reading) shows a short, **skippable** coach-mark tour on its first view. Library: **driver.js** (MIT, ~5 kB, dependency-free, CSS-themable to the `--bf-*` tokens — chosen over react-joyride/shepherd/intro.js). Per-page `bb_tour_<page>` localStorage flags (same best-effort pattern as `bb_role`); seen is stamped at start so a skip never re-nags; "Replay the intro tours" lives on Profile. Auto-run is disabled under vitest and the `.bf-e2e` build (`apps/web/src/tour/`). |
 | Account / settings | Edit displayName/color; sign out; **plan/quota status**; **figure library** management. |
 | Delete flows | routine/section/placement/figure/attribute/annotation; reply delete = author-only. Confirm dialogs. |
 | Reorder | sections, placements (within a section), attributes (by count). |
@@ -635,7 +636,8 @@ Not in v1. Annotations carry `media[]`; UI "coming soon". When built: R2 presign
 | Document | What it adds | Status |
 |---|---|---|
 | [`docs/superpowers/specs/2026-06-24-testing-plan.md`](superpowers/specs/2026-06-24-testing-plan.md) | Verbatim per-screen surface checklist | Predates v2–v4; surface only. |
-| [`docs/design/project/Ballroom Builder.dc.html`](design/project/Ballroom%20Builder.dc.html) | Wireframe prototype (Pencil) | **Design-parity program (2026-06-29) brought the shipped UI to full parity with this and [`docs/design/project/Ballroom Wireframes v4.dc.html`](design/project/Ballroom%20Wireframes%20v4.dc.html); these wireframes are now the authoritative design reference.** |
+| [`docs/design/project/Ballroom Builder v2.dc.html`](design/project/Ballroom%20Builder%20v2.dc.html) | Wireframe prototype (Builder **v2**, 2026-07-02 handoff) | **The authoritative design reference.** The v2 refresh (implemented 2026-07-02) tints attribute chips (kind tint + ink + border, no more solid/white), darkens the faint/label inks, enforces ≥40–44px hit areas, adds author-initial avatars + “✎ Add note” affordances + a quick-note FAB to the reading programme, makes the attribute explainer a full page with a kind pager, splits the Library into **Catalog ❘ My figures**, and renames user-facing “routine”→“choreo”. |
+| [`docs/design/project/Ballroom Builder.dc.html`](design/project/Ballroom%20Builder.dc.html) | Wireframe prototype (v1) | Superseded by Builder v2 (kept for provenance; the 2026-06-29 design-parity program targeted this and [`docs/design/project/Ballroom Wireframes v4.dc.html`](design/project/Ballroom%20Wireframes%20v4.dc.html)). |
 | `research/domain.md` | Ballroom domain reference | Behind §3. |
 | `research/platform.md` | Platform/architecture research | Behind §6/§8. |
 | `research/extensibility-crdt.md`, `research/critique-sync.md` | CRDT + sync reviews | **Load-bearing** for §6 (document graph, per-doc permission boundary). |

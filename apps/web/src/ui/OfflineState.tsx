@@ -38,7 +38,7 @@ export function OfflineState({ title, description, action, className }: OfflineS
       <h3 className="text-sm font-bold">{title ?? "You're offline"}</h3>
       <p className="max-w-xs text-2xs">
         {description ??
-          "This routine's data needs a connection to load. The app itself still works — reconnect to see the latest."}
+          "This choreo's data needs a connection to load. The app itself still works — reconnect to see the latest."}
       </p>
       {action}
     </div>

@@ -43,7 +43,7 @@ test.describe("@screenshots landing imagery", () => {
 
     // 1. Create-routine modal (Waltz).
     await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Routine name").fill("Bronze Waltz");
+    await page.getByLabel("Choreo name").fill("Bronze Waltz");
     // Waltz is the pre-selected chip in the New-choreo sheet.
     await expect(page.getByRole("dialog", { name: "New choreography" })).toBeVisible();
     await page.screenshot({ path: shot("create.png") });

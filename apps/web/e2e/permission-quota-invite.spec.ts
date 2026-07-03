@@ -74,7 +74,7 @@ test.describe("@smoke quota upsell (4th owned routine)", () => {
     await page.getByRole("button", { name: /new choreo/i }).click();
     await expect(page.getByText(/upgrade|limit|upsell/i)).toBeVisible();
     // The create form did NOT open (no routine is being created).
-    await expect(page.getByLabel("Routine name")).toHaveCount(0);
+    await expect(page.getByLabel("Choreo name")).toHaveCount(0);
   });
 });
 
@@ -105,7 +105,7 @@ test.describe("@smoke invite redemption", () => {
     // reads "Untitled routine" because test-seed projects only the D1 index, not
     // the CRDT doc — the doc is empty until a real create seeds it.)
     await expect(page).toHaveURL(/\/routines\/rt_sample/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /untitled routine/i })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /untitled choreo/i })).toBeVisible({
       timeout: 15_000,
     });
     // Not denied, and commenter ≠ editor → no structural-edit affordances.
@@ -144,7 +144,7 @@ test.describe("@smoke invite deep-link (signed-out visitor)", () => {
     // Not a dead end: an invite-aware sign-in prompt (names the shared routine)
     //   with a real sign-in control — and it must NOT auto-redeem or bounce to
     //   the marketing Landing while signed out.
-    await expect(page.getByText(/you.?ve been invited to a routine/i)).toBeVisible({
+    await expect(page.getByText(/you.?ve been invited to a choreo/i)).toBeVisible({
       timeout: 15_000,
     });
     const signIn = page.getByRole("button", { name: /sign in/i });
@@ -192,9 +192,9 @@ test.describe("@smoke share screen (roster + invite from the UI)", () => {
     await shareButton.click();
 
     // 1. Roster (AC-1): the existing viewer member shows with their role.
-    const shareSheet = page.getByRole("dialog", { name: /share this routine/i });
+    const shareSheet = page.getByRole("dialog", { name: /share this choreo/i });
     // Frame 4.2: section heading is "PARTNERS ON THIS ROUTINE" (CSS uppercase).
-    await expect(shareSheet.getByText(/partners on this routine/i)).toBeVisible();
+    await expect(shareSheet.getByText(/partners on this choreo/i)).toBeVisible();
     // Frame 4.2: the member row shows their displayName (T9b: m.displayName ?? m.userId).
     await expect(shareSheet.getByText("Member")).toBeVisible();
     // Frame 4.2: role pill is lowercase "viewer" (not "Viewer" Badge; the invite

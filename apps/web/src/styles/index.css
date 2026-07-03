@@ -50,6 +50,7 @@
 
   --color-ink: var(--bf-ink);
   --color-ink-secondary: var(--bf-ink-secondary);
+  --color-ink-label: var(--bf-ink-label);
   --color-ink-muted: var(--bf-ink-muted);
   --color-ink-faint: var(--bf-ink-faint);
   --color-ink-inverse: var(--bf-ink-inverse);
@@ -220,7 +221,74 @@
 }
 
 /* -----------------------------------------------------------------
- * 4c. Keyframes (motion-gated by the global reduced-motion rule).
+ * 4c. First-visit tour popover (driver.js) — themed to the tokens.
+ * Base structure/positioning comes from driver.js/dist/driver.css
+ * (imported in main.tsx); these overrides restyle the popover to the
+ * studio-paper language (mono UI face, token surfaces/inks, accent
+ * buttons) so the tour reads as part of the app, not a plugin.
+ * --------------------------------------------------------------- */
+.driver-popover.bf-tour {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  font-family: var(--bf-font-ui);
+  border: 1.5px solid var(--bf-border);
+  border-radius: var(--bf-radius-lg);
+  box-shadow: var(--bf-shadow-md);
+  padding: 16px;
+}
+.driver-popover.bf-tour .driver-popover-title {
+  font: var(--bf-weight-bold) var(--bf-text-base) var(--bf-font-ui);
+  color: var(--bf-ink);
+}
+.driver-popover.bf-tour .driver-popover-description {
+  font-family: var(--bf-font-ui);
+  font-size: var(--bf-text-sm);
+  line-height: var(--bf-leading-normal);
+  color: var(--bf-ink-secondary);
+}
+.driver-popover.bf-tour .driver-popover-progress-text {
+  font-size: var(--bf-text-2xs);
+  font-weight: var(--bf-weight-semibold);
+  color: var(--bf-ink-faint);
+}
+.driver-popover.bf-tour button.driver-popover-next-btn,
+.driver-popover.bf-tour button.driver-popover-prev-btn {
+  font: var(--bf-weight-bold) var(--bf-text-2xs) var(--bf-font-ui);
+  text-shadow: none;
+  border-radius: var(--bf-radius-md);
+  padding: 8px 13px;
+  min-height: 36px;
+}
+.driver-popover.bf-tour button.driver-popover-next-btn {
+  background: var(--bf-accent);
+  color: var(--bf-ink-inverse);
+  border: 1.5px solid var(--bf-accent);
+}
+.driver-popover.bf-tour button.driver-popover-prev-btn {
+  background: var(--bf-surface);
+  color: var(--bf-accent);
+  border: 1.5px solid var(--bf-accent-border);
+}
+.driver-popover.bf-tour button.driver-popover-close-btn {
+  color: var(--bf-ink-muted);
+  min-width: 36px;
+  min-height: 36px;
+}
+.driver-popover.bf-tour .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--bf-surface);
+}
+.driver-popover.bf-tour .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--bf-surface);
+}
+.driver-popover.bf-tour .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--bf-surface);
+}
+.driver-popover.bf-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--bf-surface);
+}
+
+/* -----------------------------------------------------------------
+ * 4d. Keyframes (motion-gated by the global reduced-motion rule).
  * --------------------------------------------------------------- */
 @keyframes bf-screen-in {
   from {

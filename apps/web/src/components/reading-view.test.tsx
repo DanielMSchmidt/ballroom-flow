@@ -198,7 +198,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1", count: 2 });
   });
 
-  it("shows '+ add comment' with ZERO comments when the user can comment", async () => {
+  it("shows '✎ Add note' with ZERO comments when the user can comment", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     ({ RoutineReadingView } = await importComponent<ReadingModule>(
       "../components/RoutineReadingView",
@@ -227,13 +227,13 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
         onOpenThread={onOpenThread}
       />,
     );
-    const add = screen.getByRole("button", { name: /add comment/i });
+    const add = screen.getByRole("button", { name: "Add note" });
     expect(add).toBeInTheDocument();
     await userEvent.click(add);
     expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1", count: 1 });
   });
 
-  it("hides '+ add comment' for a viewer (cannot comment)", async () => {
+  it("hides '✎ Add note' for a viewer (cannot comment)", async () => {
     ({ RoutineReadingView } = await importComponent<ReadingModule>(
       "../components/RoutineReadingView",
     ));
@@ -274,7 +274,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     // A viewer still READS the comment…
     expect(screen.getByText("keep posture")).toBeInTheDocument();
     // …but never sees the add affordance.
-    expect(screen.queryByRole("button", { name: /add comment/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /add note/i })).toBeNull();
   });
 
   it("uses the real member identity colour for inline comment dots (T9b)", async () => {

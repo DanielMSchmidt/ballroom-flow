@@ -78,10 +78,10 @@ describe("T5 — ↟ Save to my library (promote a global figure)", () => {
         name: expect.any(String),
       }),
     );
-    expect(await screen.findByText(/saved to your library/i)).toBeInTheDocument();
+    expect(await screen.findByText(/saved to My figures/i)).toBeInTheDocument();
   });
 
-  it("toasts 'already in your library' when the figure was already saved (idempotent)", async () => {
+  it("toasts 'Already in My figures' when the figure was already saved (idempotent)", async () => {
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
     );
@@ -90,7 +90,7 @@ describe("T5 — ↟ Save to my library (promote a global figure)", () => {
     const [saveButton] = await screen.findAllByRole("button", { name: /save/i });
     if (!saveButton) throw new Error("no save button rendered");
     await userEvent.click(saveButton);
-    expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Already in My figures/i)).toBeInTheDocument();
   });
 });
 
@@ -114,7 +114,7 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
     },
   ];
 
-  it("shows lineage, 'used in N', and the two-state scope badge per figure", async () => {
+  it("shows lineage, 'used in N', and the two-state saved/custom badge per figure", async () => {
     // Intent: a saved (baseFigureRef) figure reads its lineage ("based on …") + a
     // Library-derived badge; a from-scratch figure reads "your own figure" + Custom
     // (frame 2.3). Usage count is shown. Covers US-033 AC-1/AC-2 + the §4.2 two-state badge.
@@ -122,14 +122,14 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
       "../components/FigureLibrary",
     );
     renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
-    expect(await screen.findByText(/used in 2 routines/i)).toBeInTheDocument();
-    expect(screen.getByText(/used in 1 routine$/i)).toBeInTheDocument();
+    expect(await screen.findByText(/used in 2 choreos/i)).toBeInTheDocument();
+    expect(screen.getByText(/used in 1 choreo$/i)).toBeInTheDocument();
     // Lineage copy (frame 2.3): saved → "based on …"; own → "your own figure".
     expect(screen.getByText(/based on/i)).toBeInTheDocument();
     expect(screen.getByText(/your own figure/i)).toBeInTheDocument();
-    // Two-state ScopeBadge: one Library (saved), one Custom (own) — "Variant" is gone.
-    expect(screen.getByText(/^Library$/)).toBeInTheDocument();
-    expect(screen.getByText(/^Custom$/)).toBeInTheDocument();
+    // Two-state badge (Builder v2): one "saved" (catalog-derived), one "custom" (own).
+    expect(screen.getByText(/^saved$/)).toBeInTheDocument();
+    expect(screen.getByText(/^custom$/)).toBeInTheDocument();
     expect(screen.queryByText(/^variant$/i)).toBeNull();
     // Each figure offers an edit affordance.
     expect(screen.getAllByRole("button", { name: /edit/i }).length).toBeGreaterThanOrEqual(2);
@@ -140,11 +140,11 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
       "../components/FigureLibrary",
     );
     renderUi(<FigureLibrary tab="mine" loadMine={loadMine} />);
-    await screen.findByText(/used in 2 routines/i);
+    await screen.findByText(/used in 2 choreos/i);
     // Filter to a dance with nothing saved → the guided empty state (exact copy).
     await userEvent.click(screen.getByRole("button", { name: /^tango$/i }));
-    expect(screen.getByText(/nothing saved for this dance yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/save a figure from the library to reuse it/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing in My figures for this dance yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/save a catalog figure and it lands here/i)).toBeInTheDocument();
   });
 });
 

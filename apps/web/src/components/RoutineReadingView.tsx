@@ -27,6 +27,7 @@ import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import {
   AttrChip,
   CountPill,
+  cx,
   IDENTITY_COLORS,
   kindVar,
   SectionDivider,
@@ -51,6 +52,7 @@ export function RoutineReadingView({
   annotations = [],
   canComment = false,
   memberColors,
+  memberNames,
   customKinds = [],
   roleView,
   onRoleViewChange,
@@ -65,9 +67,13 @@ export function RoutineReadingView({
    *  Gates the inline "+ add comment" affordance (a viewer reads comments only). */
   canComment?: boolean;
   /** Real `authorId → stored hex` map built from `useMembers` + `useMe` by the
-   *  caller (Assemble). When an authorId is found here, the inline dot uses the
-   *  stored colour directly. Unknown authors fall back to the hash. */
+   *  caller (Assemble). When an authorId is found here, the inline avatar uses
+   *  the stored colour directly. Unknown authors fall back to the hash. */
   memberColors?: Record<string, string>;
+  /** `authorId → display name` map (same source) — drives the initial inside
+   *  the inline comment avatar (Builder v2: colour is paired with an initial,
+   *  never colour alone — #5). Unknown authors show no initial. */
+  memberNames?: Record<string, string>;
   /** User-defined kinds merged into the registry (US-043) — so the attribute info
    *  overlay (frame 1.13) can describe a custom kind's prose/values too. */
   customKinds?: RegistryKind[];
@@ -96,8 +102,8 @@ export function RoutineReadingView({
   );
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
-      <div className="flex items-center gap-2">
-        <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+      <div data-tour="role-toggle" className="flex items-center gap-2">
+        <span className="text-2xs font-bold uppercase tracking-wider text-ink-label">
           Steps for
         </span>
         <SegmentedToggle<RoleView>
@@ -112,7 +118,7 @@ export function RoutineReadingView({
       </div>
 
       {routine.sections.length === 0 ? (
-        <p className="text-2xs text-ink-faint">This routine has no sections yet.</p>
+        <p className="text-2xs text-ink-faint">This choreo has no sections yet.</p>
       ) : (
         routine.sections.map((section) => (
           <section key={section.id} className="flex flex-col gap-[9px]">
@@ -142,6 +148,7 @@ export function RoutineReadingView({
                     annotations={annotations}
                     canComment={canComment}
                     memberColors={memberColors}
+                    memberNames={memberNames}
                     customKinds={customKinds}
                     scopeLabel={routine.title}
                     onOpenFigure={onOpenFigure}
@@ -236,6 +243,7 @@ function FigureReadout({
   annotations,
   canComment,
   memberColors,
+  memberNames,
   customKinds = [],
   scopeLabel,
   onOpenFigure,
@@ -251,6 +259,7 @@ function FigureReadout({
   annotations: Annotation[];
   canComment: boolean;
   memberColors?: Record<string, string>;
+  memberNames?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
   onOpenFigure?: (figureId: string) => void;
@@ -332,6 +341,7 @@ function FigureReadout({
           figureId={figure.id}
           canComment={canComment}
           memberColors={memberColors}
+          memberNames={memberNames}
           onOpenThread={onOpenThread}
         />
       )}
@@ -355,6 +365,7 @@ function FigureReadout({
                 figureId={figure.id}
                 canComment={canComment}
                 memberColors={memberColors}
+                memberNames={memberNames}
                 onOpenInfo={setInfoCol}
                 onOpenThread={onOpenThread}
               />
@@ -363,12 +374,26 @@ function FigureReadout({
         </>
       )}
 
-      {/* The attribute info overlay (frame 1.13) — opened by tapping a value chip
-          or a column header. The merged Step column describes direction + footwork. */}
+      {/* The attribute explainer (Builder v2 — a full page) — opened by tapping a
+          value chip or a column header. The merged Step column describes
+          direction + footwork. The footer pager walks this figure's columns. */}
       {infoCol &&
         (() => {
           const [primary, ...rest] = infoKindsForColumn(infoCol, customKinds, live);
           if (!primary) return null;
+          const idx = columns.findIndex((c) => c.id === infoCol.id);
+          const prev = columns[(idx - 1 + columns.length) % columns.length];
+          const next = columns[(idx + 1) % columns.length];
+          const pager =
+            columns.length > 1 && idx >= 0 && prev && next
+              ? {
+                  prevLabel: prev.label,
+                  nextLabel: next.label,
+                  positionLabel: `${idx + 1} of ${columns.length}`,
+                  onPrev: () => setInfoCol(prev),
+                  onNext: () => setInfoCol(next),
+                }
+              : undefined;
           return (
             <AttributeInfoSheet
               open
@@ -378,6 +403,7 @@ function FigureReadout({
               usageCount={columnUsage(live, [primary, ...rest])}
               scopeLabel={scopeLabel}
               onClose={() => setInfoCol(null)}
+              pager={pager}
             />
           );
         })()}
@@ -396,7 +422,7 @@ function ColumnHeader({
   onOpenInfo: (col: ReadingColumn) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 px-[2px]">
+    <div className="flex min-h-[40px] items-center gap-1 px-[2px]">
       <span className="w-[18px] flex-none" aria-hidden="true" />
       {columns.map((col) => (
         <button
@@ -404,7 +430,7 @@ function ColumnHeader({
           type="button"
           aria-label={`About ${col.label}`}
           onClick={() => onOpenInfo(col)}
-          className="flex-1 cursor-pointer text-center text-[8px] font-bold leading-none"
+          className="flex-1 cursor-pointer py-3 text-center text-2xs font-bold leading-none tracking-wide"
           style={{ color: columnColor(col) }}
         >
           {col.label}
@@ -442,6 +468,7 @@ function StepRow({
   figureId,
   canComment,
   memberColors,
+  memberNames,
   onOpenInfo,
   onOpenThread,
 }: {
@@ -454,6 +481,7 @@ function StepRow({
   figureId: string;
   canComment: boolean;
   memberColors?: Record<string, string>;
+  memberNames?: Record<string, string>;
   /** Tapping a value chip opens that kind's attribute info overlay (frame 1.13). */
   onOpenInfo: (col: ReadingColumn) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
@@ -463,12 +491,13 @@ function StepRow({
     <li className="flex flex-col gap-[3px]">
       <div
         data-offbeat={offBeat ? "true" : undefined}
-        className="flex items-center gap-1 rounded-[7px] px-[2px] py-[5px]"
-        style={{ background: offBeat ? "var(--bf-surface-sunken)" : "var(--bf-surface)" }}
+        className="flex min-h-[44px] items-center gap-1 rounded-[8px] bg-surface-muted px-[5px] py-[5px]"
       >
         <span
-          className="w-[18px] flex-none text-center text-[11px] font-bold tabular-nums"
-          style={{ color: offBeat ? "var(--bf-offbeat-ink)" : kindVar("direction") }}
+          className={cx(
+            "w-[18px] flex-none text-center font-bold text-accent tabular-nums",
+            offBeat ? "text-[10px]" : "text-[12px]",
+          )}
         >
           {label}
         </span>
@@ -483,7 +512,7 @@ function StepRow({
                   onClick={() => onOpenInfo(col)}
                   className="cursor-pointer"
                 >
-                  <AttrChip kind={col.kind} label={label} dimmed={offBeat} />
+                  <AttrChip kind={col.kind} label={label} />
                 </button>
               ) : (
                 <EmptySlot />
@@ -501,6 +530,7 @@ function StepRow({
           count={count}
           canComment={canComment}
           memberColors={memberColors}
+          memberNames={memberNames}
           onOpenThread={onOpenThread}
         />
       )}
@@ -508,18 +538,20 @@ function StepRow({
   );
 }
 
-/** Inline comments under a step: the latest ~2 read-only (truncated,
- *  profile-colored dot + Caveat text), plus a "+ add comment" affordance shown
- *  only to a member who may comment (commenter/editor — never a pure viewer).
- *  Tapping any of them opens the annotation thread for this specific anchor
- *  (QUAL-2 fix: passes { figureRef, count } so the thread panel opens on the
- *  right anchor — not the figure timeline). */
+/** Inline comments under a step: the latest ~2 read-only (truncated, an
+ *  author-coloured avatar with the author's initial + Caveat text), a "+N more"
+ *  hint, plus an "✎ Add note" affordance shown only to a member who may comment
+ *  (commenter/editor — never a pure viewer). Tapping any of them opens the
+ *  annotation thread for this specific anchor (QUAL-2 fix: passes { figureRef,
+ *  count } so the thread panel opens on the right anchor — not the figure
+ *  timeline). */
 function InlineComments({
   comments,
   figureId,
   count,
   canComment,
   memberColors,
+  memberNames,
   onOpenThread,
 }: {
   comments: Annotation[];
@@ -529,43 +561,90 @@ function InlineComments({
   /** Real `authorId → stored hex` map — use this first; hash-fallback only for
    *  unknown authors (e.g. very old annotations before T8 wired identity). */
   memberColors?: Record<string, string>;
+  memberNames?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const latest = comments.slice(-2);
+  const more = Math.max(0, comments.length - latest.length);
   const anchor = { figureRef: figureId, count };
   return (
     <div className="ml-[22px] flex flex-col gap-[2px]">
       {latest.map((c) => (
-        <button
+        <CommentLine
           key={c.id}
-          type="button"
-          className="flex items-center gap-[5px] text-left"
+          comment={c}
+          memberColors={memberColors}
+          memberNames={memberNames}
           onClick={() => onOpenThread?.(anchor)}
-        >
-          <span
-            aria-hidden="true"
-            className="h-[7px] w-[7px] flex-none rounded-full"
-            style={{ background: memberColors?.[c.authorId] ?? identityColor(c.authorId) }}
-          />
-          <span
-            className="flex-1 truncate text-[13px] text-ink-secondary"
-            style={{ fontFamily: "var(--bf-font-note)" }}
-          >
-            {c.text}
-          </span>
-        </button>
+        />
       ))}
-      {canComment && (
-        <button
-          type="button"
-          className="text-left text-[8px] font-semibold text-ink-faint"
-          onClick={() => onOpenThread?.(anchor)}
-        >
-          + add comment
-        </button>
-      )}
+      <div className="flex items-center gap-[10px]">
+        {more > 0 && (
+          <button
+            type="button"
+            className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
+            onClick={() => onOpenThread?.(anchor)}
+          >
+            +{more} more
+          </button>
+        )}
+        {canComment && <AddNoteButton onClick={() => onOpenThread?.(anchor)} />}
+      </div>
     </div>
   );
+}
+
+/** One truncated read-only comment line: the author's identity-coloured avatar
+ *  (initial inside — colour is never the only signal, #5) + Caveat text. */
+function CommentLine({
+  comment,
+  memberColors,
+  memberNames,
+  onClick,
+}: {
+  comment: Annotation;
+  memberColors?: Record<string, string>;
+  memberNames?: Record<string, string>;
+  onClick: () => void;
+}) {
+  const name = memberNames?.[comment.authorId];
+  return (
+    <button type="button" className="flex items-center gap-[6px] text-left" onClick={onClick}>
+      <span
+        aria-hidden="true"
+        className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-full text-[8px] font-bold text-ink-inverse"
+        style={{ background: memberColors?.[comment.authorId] ?? identityColor(comment.authorId) }}
+      >
+        {authorInitial(name)}
+      </span>
+      {name && <span className="bf-sr-only">{name}:</span>}
+      <span
+        className="flex-1 truncate text-[13px] text-ink-secondary"
+        style={{ fontFamily: "var(--bf-font-note)" }}
+      >
+        {comment.text}
+      </span>
+    </button>
+  );
+}
+
+/** The "✎ Add note" affordance (Builder v2) — accent-coloured with a ≥36px hit
+ *  area, replacing the old faint "+ add comment" hint. */
+function AddNoteButton({ onClick, label = "Add note" }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-[36px] items-center gap-[5px] py-2 text-left text-2xs font-bold text-accent"
+      onClick={onClick}
+    >
+      <span aria-hidden="true">✎</span> {label}
+    </button>
+  );
+}
+
+/** The author's display initial for the comment avatar — empty when unknown. */
+function authorInitial(name: string | undefined): string {
+  return name?.trim().charAt(0).toUpperCase() ?? "";
 }
 
 /** WHOLE-FIGURE notes (US-004a): a note block under the figure header, distinct
@@ -578,64 +657,47 @@ function WholeFigureNotes({
   figureId,
   canComment,
   memberColors,
+  memberNames,
   onOpenThread,
 }: {
   comments: Annotation[];
   figureId: string;
   canComment: boolean;
   memberColors?: Record<string, string>;
+  memberNames?: Record<string, string>;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const latest = comments.slice(-2);
   const more = Math.max(0, comments.length - latest.length);
   const anchor = { figureRef: figureId };
   return (
-    <div
-      data-testid="whole-figure-notes"
-      className="ml-[16px] flex flex-col gap-[2px] border-l-2 pl-[8px]"
-      style={{ borderColor: "var(--bf-border-strong)" }}
-    >
-      <span className="text-[8px] font-bold uppercase tracking-wider text-ink-faint">
+    <div data-testid="whole-figure-notes" className="ml-[15px] flex flex-col gap-[2px]">
+      <span className="self-start rounded-[4px] bg-accent-tint px-[5px] py-[1px] text-[7px] font-bold uppercase tracking-wider text-accent">
         Whole figure
       </span>
       {latest.map((c) => (
-        <button
+        <CommentLine
           key={c.id}
-          type="button"
-          className="flex items-center gap-[5px] text-left"
+          comment={c}
+          memberColors={memberColors}
+          memberNames={memberNames}
           onClick={() => onOpenThread?.(anchor)}
-        >
-          <span
-            aria-hidden="true"
-            className="h-[7px] w-[7px] flex-none rounded-full"
-            style={{ background: memberColors?.[c.authorId] ?? identityColor(c.authorId) }}
-          />
-          <span
-            className="flex-1 truncate text-[13px] text-ink-secondary"
-            style={{ fontFamily: "var(--bf-font-note)" }}
-          >
-            {c.text}
-          </span>
-        </button>
+        />
       ))}
-      {more > 0 && (
-        <button
-          type="button"
-          className="text-left text-[8px] font-semibold text-ink-faint"
-          onClick={() => onOpenThread?.(anchor)}
-        >
-          +{more} more
-        </button>
-      )}
-      {canComment && (
-        <button
-          type="button"
-          className="text-left text-[8px] font-semibold text-ink-faint"
-          onClick={() => onOpenThread?.(anchor)}
-        >
-          + note on whole figure
-        </button>
-      )}
+      <div className="flex items-center gap-[10px]">
+        {more > 0 && (
+          <button
+            type="button"
+            className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
+            onClick={() => onOpenThread?.(anchor)}
+          >
+            +{more} more
+          </button>
+        )}
+        {canComment && (
+          <AddNoteButton label="Add note — whole figure" onClick={() => onOpenThread?.(anchor)} />
+        )}
+      </div>
     </div>
   );
 }
