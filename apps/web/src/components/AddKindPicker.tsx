@@ -9,7 +9,8 @@
 // caller can open that kind's editor for the step.
 import { type DanceId, mergeRegistry, type RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
-import { useLocalizedRegistry } from "../i18n";
+import { useLocalizedRegistry, useMessages } from "../i18n";
+import { attributesMessages } from "../i18n/messages/attributes";
 import { ChevronRightIcon, cx, PlusIcon, Sheet } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
@@ -42,6 +43,7 @@ export function AddKindPicker({
   onSelectKind,
   onCreate,
 }: AddKindPickerProps) {
+  const t = useMessages(attributesMessages);
   const [building, setBuilding] = useState(false);
 
   // Dance-scoped, registry-merged list (custom kinds appear too).
@@ -50,7 +52,7 @@ export function AddKindPicker({
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title="Add an attribute">
+    <Sheet open={open} onClose={onClose} title={t.addAttributeTitle}>
       <ul className="flex flex-col gap-2">
         {kinds.map((kind) => (
           <li key={kind.kind}>
@@ -71,8 +73,8 @@ export function AddKindPicker({
                   <span
                     role="img"
                     className="ml-0.5 align-super text-2xs text-ink-muted"
-                    title="Required attribute type"
-                    aria-label="required"
+                    title={t.requiredKindTitle}
+                    aria-label={t.requiredBadge}
                   >
                     *
                   </span>
@@ -81,13 +83,13 @@ export function AddKindPicker({
               {kind.roleAware && (
                 <span
                   className="flex-none rounded-[5px] border border-border-subtle px-1.5 py-0.5 text-[9px] font-bold text-ink-muted"
-                  title="Commonly differs by leader / follower"
+                  title={t.roleAwareTitle}
                 >
-                  L/F
+                  {t.roleAwareBadge}
                 </span>
               )}
               {kind.cardinality === "multi" && (
-                <span className="flex-none text-2xs text-ink-faint">multi</span>
+                <span className="flex-none text-2xs text-ink-faint">{t.multiBadge}</span>
               )}
               {!kind.builtin && (
                 <span
@@ -97,7 +99,7 @@ export function AddKindPicker({
                     color: "var(--bf-scope-custom-ink)",
                   }}
                 >
-                  custom
+                  {t.customBadge}
                 </span>
               )}
               <span aria-hidden="true" className="flex-none text-ink-faint">
@@ -118,7 +120,7 @@ export function AddKindPicker({
         )}
       >
         <PlusIcon size={12} />
-        new attribute type
+        {t.newAttributeType}
       </button>
 
       <AddKindSheet

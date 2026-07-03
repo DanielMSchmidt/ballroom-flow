@@ -17,6 +17,8 @@
 // prefers-reduced-motion by disabling the popover/stage animations (#9).
 import { type Driver, driver } from "driver.js";
 import { useCallback, useEffect } from "react";
+import { pickMessages } from "../i18n/messages";
+import { tourMessages } from "../i18n/messages/tours";
 import { TOURS, type TourPageId, type TourStepDef } from "./tours";
 
 /** The per-page "already shown" localStorage key. */
@@ -105,14 +107,18 @@ export function startTour(page: TourPageId): Driver | null {
   // so a growing page left the spotlight pinned to a stale rect. Watch the body
   // and re-measure the active highlight on any reflow.
   let reflowWatch: ResizeObserver | undefined;
+  // Resolved at start time so the chrome follows the active locale. The
+  // {{current}}/{{total}} placeholders are driver.js template syntax and are
+  // kept verbatim in every language of the catalog.
+  const chrome = pickMessages(tourMessages).chrome;
   const d = driver({
     steps,
     animate: !reducedMotion,
     showProgress: steps.length > 1,
-    progressText: "{{current}} of {{total}}",
-    nextBtnText: "Next",
-    prevBtnText: "Back",
-    doneBtnText: "Got it",
+    progressText: chrome.progress,
+    nextBtnText: chrome.next,
+    prevBtnText: chrome.back,
+    doneBtnText: chrome.done,
     // allowClose (default true) keeps every skip path open: ✕, overlay, Escape.
     overlayOpacity: 0.55,
     stagePadding: 6,

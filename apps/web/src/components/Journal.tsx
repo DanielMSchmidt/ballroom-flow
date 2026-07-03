@@ -5,6 +5,8 @@
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
 import type { AnnotationKind } from "@ballroom/domain";
 import { useCallback, useEffect, useState } from "react";
+import { useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import {
   applyJournalFilter,
   chipLabel,
@@ -36,15 +38,18 @@ export interface JournalProps {
   currentUserId?: string;
 }
 
-const FILTERS: { value: JournalFilter; label: string }[] = [
-  { value: "all", label: "all" },
-  { value: "lessons", label: "lessons" },
-  { value: "practice", label: "practice" },
-  { value: "byFigure", label: "by figure" },
-];
+/** Filter pill VALUES (stable ids); display labels come from the journal catalog. */
+const FILTERS: JournalFilter[] = ["all", "lessons", "practice", "byFigure"];
 
 export function Journal(props: JournalProps): React.JSX.Element {
   const { loadEntries, currentUserId } = props;
+  const t = useMessages(journalMessages);
+  const filterLabels: Record<JournalFilter, string> = {
+    all: t.filterAll,
+    lessons: t.filterLessons,
+    practice: t.filterPractice,
+    byFigure: t.filterByFigure,
+  };
   const [entries, setEntries] = useState<JournalEntry[] | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<JournalFilter>("all");
@@ -83,11 +88,11 @@ export function Journal(props: JournalProps): React.JSX.Element {
   const visible = entries ? applyJournalFilter(entries, filter) : [];
 
   return (
-    <section aria-label="Journal" className="flex flex-col gap-3">
+    <section aria-label={t.journalTitle} className="flex flex-col gap-3">
       <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ink">Journal</h1>
+        <h1 className="text-lg font-bold text-ink">{t.journalTitle}</h1>
         <IconButton
-          label="New entry"
+          label={t.newEntry}
           variant="filled"
           data-tour="journal-new"
           onClick={() => setComposing(true)}
@@ -98,22 +103,22 @@ export function Journal(props: JournalProps): React.JSX.Element {
 
       {entries !== null && entries.length > 0 && (
         <fieldset data-tour="journal-filters" className="flex flex-wrap items-center gap-1">
-          <legend className="bf-sr-only">Filter journal</legend>
+          <legend className="bf-sr-only">{t.filterJournal}</legend>
           {FILTERS.map((f) => (
-            <Chip key={f.value} selected={filter === f.value} onClick={() => setFilter(f.value)}>
-              {f.label}
+            <Chip key={f} selected={filter === f} onClick={() => setFilter(f)}>
+              {filterLabels[f]}
             </Chip>
           ))}
         </fieldset>
       )}
 
-      {entries === null && !error && <Spinner size={24} label="Loading journal" />}
+      {entries === null && !error && <Spinner size={24} label={t.loadingJournal} />}
 
       {error && (
         <Card>
-          <p className="text-2xs text-ink-secondary">Couldn't load your journal.</p>
+          <p className="text-2xs text-ink-secondary">{t.loadFailed}</p>
           <Button variant="secondary" size="sm" onClick={refresh}>
-            Retry
+            {t.retry}
           </Button>
         </Card>
       )}
@@ -121,18 +126,18 @@ export function Journal(props: JournalProps): React.JSX.Element {
       {entries !== null && entries.length === 0 && (
         <EmptyState
           icon={<JournalIcon size={28} />}
-          title="No entries yet"
-          description="Log a lesson or a practice session — link it to the figures & attributes you worked on."
+          title={t.emptyTitle}
+          description={t.emptyDescription}
           actions={
             <Button variant="primary" size="sm" onClick={() => setComposing(true)}>
-              + New entry
+              {t.emptyNewEntry}
             </Button>
           }
         />
       )}
 
       {entries !== null && entries.length > 0 && (
-        <ul aria-label="journal entries" className="flex flex-col gap-3">
+        <ul aria-label={t.journalEntries} className="flex flex-col gap-3">
           {visible.map((e) => (
             <li key={e.id}>
               <JournalCard entry={e} currentUserId={currentUserId} />
@@ -151,7 +156,9 @@ function JournalCard({
   entry: JournalEntry;
   currentUserId?: string;
 }): React.JSX.Element {
-  const author = entry.authorId === currentUserId ? "you" : (entry.displayName ?? "someone");
+  const t = useMessages(journalMessages);
+  const author =
+    entry.authorId === currentUserId ? t.authorYou : (entry.displayName ?? t.authorSomeone);
   const tint = entry.identityColor ?? "var(--bf-border-strong)";
   return (
     <article
@@ -160,7 +167,7 @@ function JournalCard({
     >
       <p className="flex flex-wrap items-center gap-1.5 text-2xs">
         <Chip tone="neutral" asStatic data-kind={entry.kind}>
-          {entry.kind === "lesson" ? "LESSON" : "PRACTICE"}
+          {entry.kind === "lesson" ? t.kindChipLesson : t.kindChipPractice}
         </Chip>
         <span className="font-bold" style={{ color: tint }}>
           {author}

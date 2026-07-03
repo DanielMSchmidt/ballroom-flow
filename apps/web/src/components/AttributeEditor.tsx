@@ -20,7 +20,8 @@ import {
   type StandardRegistry,
 } from "@ballroom/domain";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { useLocalizedRegistry } from "../i18n";
+import { useLocalizedRegistry, useMessages } from "../i18n";
+import { attributesMessages } from "../i18n/messages/attributes";
 import { Button, Chip, IconButton, InfoIcon, Input, SegmentedToggle } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -85,6 +86,7 @@ export function AttributeEditor({
   onDone,
   onChange,
 }: AttributeEditorProps) {
+  const t = useMessages(attributesMessages);
   const editable = role === "editor";
   const focused = onlyKinds != null;
   const [showMore, setShowMore] = useState(defaultExpanded);
@@ -198,7 +200,7 @@ export function AttributeEditor({
         <legend className="mb-1 flex w-full items-center gap-1">
           <h3 className="text-2xs font-bold text-ink-faint">{kind.label}</h3>
           {/* Per-kind info affordance → the plain-language reference (frame 1.13). */}
-          <IconButton label={`About ${kind.label}`} onClick={() => setInfoKind(kind)}>
+          <IconButton label={t.aboutKind(kind.label)} onClick={() => setInfoKind(kind)}>
             <InfoIcon size={14} />
           </IconButton>
         </legend>
@@ -273,7 +275,7 @@ export function AttributeEditor({
             aria-expanded={showMore}
             onClick={() => setShowMore((v) => !v)}
           >
-            {showMore ? "Fewer attributes" : "More attributes"}
+            {showMore ? t.fewerAttributes : t.moreAttributes}
           </Button>
           {showMore && secondary.map((k) => renderKind(k, scope))}
         </div>
@@ -282,18 +284,20 @@ export function AttributeEditor({
   );
 
   return (
-    <section className="flex flex-col gap-3" aria-label={`Attributes for count ${count}`}>
+    <section className="flex flex-col gap-3" aria-label={t.attributesForCount(count)}>
       {/* ROLES toggle (frame 1.12) — Same for both vs Per role. Editor-only. */}
       {editable && (
         <div className="flex items-center gap-2">
-          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">Roles</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+            {t.rolesLegend}
+          </span>
           <SegmentedToggle<RolesMode>
-            ariaLabel="Roles"
+            ariaLabel={t.rolesLegend}
             value={rolesMode}
             onChange={setRolesMode}
             options={[
-              { value: "both", label: "Same for both" },
-              { value: "perRole", label: "Per role" },
+              { value: "both", label: t.rolesSameForBoth },
+              { value: "perRole", label: t.rolesPerRole },
             ]}
           />
         </div>
@@ -321,12 +325,12 @@ export function AttributeEditor({
             className="rounded-md border px-3 py-2 text-xs font-bold"
             style={{ color: "var(--bf-danger)", borderColor: "var(--bf-danger)" }}
           >
-            {focused ? "Remove" : "remove attribute"}
+            {focused ? t.remove : t.removeAttribute}
           </button>
         )}
         {onDone && (
           <Button variant="primary" size="sm" onClick={onDone}>
-            Save
+            {t.save}
           </Button>
         )}
       </div>
@@ -397,6 +401,7 @@ function SelectedDefs({
  * action). Submitting a non-empty value calls `onAdd` and clears the input.
  */
 function FreeTextAdd({ label, onAdd }: { label: string; onAdd: (value: string) => void }) {
+  const t = useMessages(attributesMessages);
   const [text, setText] = useState("");
   const submit = (e: FormEvent): void => {
     e.preventDefault();
@@ -408,14 +413,14 @@ function FreeTextAdd({ label, onAdd }: { label: string; onAdd: (value: string) =
   return (
     <form onSubmit={submit} className="flex items-center gap-1">
       <Input
-        label={`Custom ${label}`}
+        label={t.customValueLabel(label)}
         hideLabel
-        placeholder={`Custom ${label.toLowerCase()}…`}
+        placeholder={t.customValuePlaceholder(label)}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
       <Button type="submit" variant="secondary" size="sm" disabled={!text.trim()}>
-        Add
+        {t.add}
       </Button>
     </form>
   );

@@ -1,3 +1,5 @@
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 
 export interface SpinnerProps {
@@ -13,7 +15,8 @@ export interface SpinnerProps {
  * Animation is gated by the global reduced-motion rule (#9): it still
  * renders as a static ring, so the busy state stays legible.
  */
-export function Spinner({ size = 18, label = "Loading", className }: SpinnerProps) {
+export function Spinner({ size = 18, label, className }: SpinnerProps) {
+  const t = useMessages(uiMessages);
   return (
     <span
       role="status"
@@ -36,7 +39,7 @@ export function Spinner({ size = 18, label = "Loading", className }: SpinnerProp
           strokeLinecap="round"
         />
       </svg>
-      <span className="bf-sr-only">{label}</span>
+      <span className="bf-sr-only">{label ?? t.loading}</span>
     </span>
   );
 }

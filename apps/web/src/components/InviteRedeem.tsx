@@ -8,11 +8,14 @@
 // DON'T silently drop them into a read-only routine — we show a notice explaining
 // what happened, and let them continue with an explicit tap.
 import { useEffect, useRef, useState } from "react";
+import { useMessages } from "../i18n";
+import { shareMessages } from "../i18n/messages/share";
 import { navigate } from "../lib/router";
 import { type RedeemResult, useRedeemInvite } from "../store/invites";
 import { Button, Card } from "../ui";
 
 export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
+  const t = useMessages(shareMessages);
   const redeem = useRedeemInvite();
   const started = useRef(false);
   const [downgraded, setDowngraded] = useState<RedeemResult | null>(null);
@@ -38,12 +41,10 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
     // first), so this same button is their post-sign-in path to the overview.
     return (
       <Card>
-        <p className="text-sm font-bold text-ink">This invite can’t be opened</p>
-        <p className="mt-1 text-2xs text-ink-muted">
-          The link may be invalid, expired, or already used. Ask for a fresh invite.
-        </p>
+        <p className="text-sm font-bold text-ink">{t.redeemErrorTitle}</p>
+        <p className="mt-1 text-2xs text-ink-muted">{t.redeemErrorBody}</p>
         <div className="mt-3">
-          <Button onClick={() => navigate("/")}>Go to my choreography</Button>
+          <Button onClick={() => navigate("/")}>{t.redeemGoToOverview}</Button>
         </div>
       </Card>
     );
@@ -52,14 +53,12 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
   if (downgraded) {
     return (
       <Card>
-        <p className="text-sm font-bold text-ink">Joined as a commenter</p>
-        <p className="mt-1 text-2xs text-ink-muted">
-          You’re at your limit of choreos you can edit on the free plan, so you’ve joined this
-          routine as a commenter — you can read and comment, but not edit it. Upgrade to edit more
-          routines.
-        </p>
+        <p className="text-sm font-bold text-ink">{t.redeemDowngradedTitle}</p>
+        <p className="mt-1 text-2xs text-ink-muted">{t.redeemDowngradedBody}</p>
         <div className="mt-3">
-          <Button onClick={() => navigate(`/routines/${downgraded.docRef}`)}>Open choreo</Button>
+          <Button onClick={() => navigate(`/routines/${downgraded.docRef}`)}>
+            {t.redeemOpenChoreo}
+          </Button>
         </div>
       </Card>
     );
@@ -67,8 +66,8 @@ export function InviteRedeem({ token }: { token: string }): React.JSX.Element {
 
   return (
     <Card>
-      <p className="text-sm font-bold text-ink">Joining…</p>
-      <p className="mt-1 text-2xs text-ink-muted">Adding this choreo to your list.</p>
+      <p className="text-sm font-bold text-ink">{t.redeemJoiningTitle}</p>
+      <p className="mt-1 text-2xs text-ink-muted">{t.redeemJoiningBody}</p>
     </Card>
   );
 }

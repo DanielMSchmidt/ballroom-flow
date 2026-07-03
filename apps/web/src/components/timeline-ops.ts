@@ -2,8 +2,11 @@
 // from the React component so the musical maths (durations, snap-grid resize) is
 // unit-testable in isolation.
 import type { Attribute } from "@ballroom/domain";
+import { pickMessages } from "../i18n/messages";
+import { assembleMessages } from "../i18n/messages/assemble";
 
-/** Snap-grid options for the editor's duration grid (design: ¼ · ⅛ · 1). */
+/** Snap-grid options for the editor's duration grid (design: ¼ · ⅛ · 1).
+ *  Labels are locale-invariant fraction glyphs, so they need no catalog. */
 export const SNAP_OPTIONS = [
   { value: 0.25, label: "¼" },
   { value: 0.125, label: "⅛" },
@@ -34,13 +37,16 @@ export function durationLabel(beats: number): string {
     "0.75": "¾",
     "0.875": "⅞",
   };
-  if (beats === 1) return "1 beat";
+  // Resolve the catalog per call (not at module top level): this is a non-React
+  // module, and the locale can change at runtime.
+  const t = pickMessages(assembleMessages);
+  if (beats === 1) return t.durationOneBeat;
   const whole = Math.floor(beats);
   const frac = snapTo(beats - whole);
   const glyph = FRACTIONS[String(frac)];
-  if (whole === 0 && glyph) return `${glyph} beat`;
-  if (glyph) return `${whole}${glyph} beats`;
-  return `${beats} beats`;
+  if (whole === 0 && glyph) return t.durationFractionBeat(glyph);
+  if (glyph) return t.durationWholeFractionBeats(whole, glyph);
+  return t.durationBeats(beats);
 }
 
 /**

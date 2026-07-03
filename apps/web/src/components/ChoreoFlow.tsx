@@ -11,6 +11,8 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
+import { useMessages } from "../i18n";
+import { choreoMessages } from "../i18n/messages/choreo";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
 import { useBookmarkFigure, useMineFigures } from "../store/figures";
@@ -44,6 +46,7 @@ function roleForOpen(
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React.JSX.Element {
+  const t = useMessages(choreoMessages);
   const routinesQ = useRoutines();
   const me = useMe();
   const create = useCreateRoutine();
@@ -163,12 +166,12 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           if (isQuotaError(err)) {
             setForkQuotaBlocked(true);
           } else {
-            toast.show("Couldn't start from template. Please try again.", { tone: "danger" });
+            toast.show(t.toastTemplateFailed, { tone: "danger" });
           }
         }
       })();
     },
-    [getToken, toast],
+    [getToken, toast, t],
   );
 
   const items = routinesQ.data?.routines ?? [];
@@ -192,7 +195,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           <AccessDenied
             action={
               <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
-                Back to your choreos
+                {t.backToChoreos}
               </Button>
             }
           />
@@ -200,7 +203,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           // Resolve access + the viewer's role BEFORE opening, so a shared routine
           // never flashes editor affordances (or an offline state) during the load.
           <div className="flex items-center gap-2 p-6 text-ink-faint" role="status">
-            <Spinner /> <span className="text-2xs">Loading…</span>
+            <Spinner /> <span className="text-2xs">{t.loading}</span>
           </div>
         ) : (
           <Assemble
@@ -256,12 +259,12 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         // SAME upsell path as a create/template-fork quota block.
         fork.mutate(docRef, {
           onSuccess: (res) => {
-            toast.show("Forked — independent copy");
+            toast.show(t.toastForked);
             navigate(`/routines/${res.docRef}`);
           },
           onError: (err) => {
             if (isQuotaError(err)) setForkQuotaBlocked(true);
-            else toast.show("Couldn't fork this choreo. Please try again.", { tone: "danger" });
+            else toast.show(t.toastForkFailed, { tone: "danger" });
           },
         })
       }
@@ -270,9 +273,8 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
         // Confirm a success, and never silently swallow a failure (e.g. a non-owner
         // race or a network blip) — surface it as a danger toast.
         del.mutate(docRef, {
-          onSuccess: () => toast.show("Choreo deleted"),
-          onError: () =>
-            toast.show("Couldn't delete this choreo. Please try again.", { tone: "danger" }),
+          onSuccess: () => toast.show(t.toastDeleted),
+          onError: () => toast.show(t.toastDeleteFailed, { tone: "danger" }),
         })
       }
       sample={sample}

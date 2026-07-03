@@ -6,8 +6,10 @@
 // the editor saves via createAnnotation. The "An attribute" row is the deferred
 // v1.1 predicate anchor — visibly disabled. Data arrives via injected loaders
 // (the store seam); the component holds no I/O of its own.
-import { type Anchor, countLabel, type DanceId } from "@ballroom/domain";
+import { type Anchor, countLabel, DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { useEffect, useState } from "react";
+import { danceName, type Locale, useLocale, useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import { type FigureFamilyOption, figureFamilies } from "../store/journal";
 import { Button, Input, List, ListRow, Sheet, Spinner } from "../ui";
 
@@ -65,6 +67,14 @@ function titleCase(s: string): string {
     .join(" ");
 }
 
+/** Display a dance value: the localized name for a known DanceId; anything else
+ *  (user/legacy data) falls back to title case, untranslated by design. */
+function danceLabel(dance: string, locale: Locale): string {
+  return DANCE_IDS.includes(dance as DanceId)
+    ? danceName(dance as DanceId, locale)
+    : titleCase(dance);
+}
+
 export function JournalLinkPicker({
   open,
   onClose,
@@ -73,6 +83,8 @@ export function JournalLinkPicker({
   loadRoutineFigures,
   families,
 }: JournalLinkPickerProps): React.JSX.Element | null {
+  const t = useMessages(journalMessages);
+  const locale = useLocale();
   const familyList = families ?? figureFamilies();
   const [step, setStep] = useState<Step>("type");
   const [family, setFamily] = useState<FigureFamilyOption | null>(null);
@@ -93,18 +105,19 @@ export function JournalLinkPicker({
   if (!open) return null;
 
   const titles: Record<Step, string> = {
-    type: "Link to…",
-    family: "Pick a figure",
-    scope: "Apply to…",
-    routine: "Pick a choreo",
-    figureInRoutine: routine ? `Pick a figure in ${routine.title}` : "Pick a figure",
-    figureGrain: pickedFigure ? `Where on ${pickedFigure.name}?` : "Where on the figure?",
+    type: t.titleType,
+    family: t.titleFamily,
+    scope: t.titleScope,
+    routine: t.titleRoutine,
+    figureInRoutine: routine ? t.titleFigureIn(routine.title) : t.titleFamily,
+    figureGrain: pickedFigure ? t.titleGrain(pickedFigure.name) : t.titleGrainFallback,
   };
 
   /** Finalize a figureType (account) link from the chosen family + dance scope. */
   const pickFigureType = (danceScope: string): void => {
     if (!family) return;
-    const scopeLabel = danceScope === "all" ? "all dances" : `all ${titleCase(danceScope)}`;
+    const scopeLabel =
+      danceScope === "all" ? t.allDances : t.scopeAllDance(danceLabel(danceScope, locale));
     onPick({
       home: "account",
       figureType: family.figureType,
@@ -114,7 +127,7 @@ export function JournalLinkPicker({
         figureType: family.figureType,
         danceScope: danceScope as DanceId | "all",
       },
-      label: `all ${titleCase(family.figureType)}s · ${scopeLabel}`,
+      label: `${t.allOfType(titleCase(family.figureType))} · ${scopeLabel}`,
     });
     onClose();
   };
@@ -137,8 +150,8 @@ export function JournalLinkPicker({
         : { type: "point", figureRef: pickedFigure.figureRef, count: grain };
     const label =
       grain === "whole"
-        ? `${pickedFigure.name} · whole figure`
-        : `${pickedFigure.name} · count ${countLabel(grain)}`;
+        ? t.wholeFigureChip(pickedFigure.name)
+        : t.countChip(pickedFigure.name, countLabel(grain));
     onPick({
       home: "routine",
       routineRef: routine.docRef,
@@ -159,24 +172,20 @@ export function JournalLinkPicker({
   return (
     <Sheet open={open} onClose={onClose} title={titles[step]}>
       {step === "type" && (
-        <List aria-label="Link type">
+        <List aria-label={t.linkTypeList}>
           <ListRow
-            title="Specific place"
-            subtitle="a step in one of your choreos"
+            title={t.specificPlace}
+            subtitle={t.specificPlaceHint}
             onClick={() => {
               setRoutineIntent("point");
               setStep("routine");
             }}
           />
+          <ListRow title={t.aFigure} subtitle={t.aFigureHint} onClick={() => setStep("family")} />
           <ListRow
-            title="A figure"
-            subtitle="all Whisks, all Natural Turns"
-            onClick={() => setStep("family")}
-          />
-          <ListRow
-            title="An attribute"
-            subtitle="all CBMPs, all left sways — needs a matching engine"
-            trailing={<span className="text-2xs text-ink-faint">coming later · v1.1</span>}
+            title={t.anAttribute}
+            subtitle={t.anAttributeHint}
+            trailing={<span className="text-2xs text-ink-faint">{t.comingLater}</span>}
             showChevron={false}
             disabled
           />
@@ -186,14 +195,14 @@ export function JournalLinkPicker({
       {step === "family" && (
         <div className="flex flex-col gap-2">
           <Button variant="ghost" size="sm" onClick={back}>
-            ‹ back
+            {t.backShort}
           </Button>
-          <List aria-label="Figure families" className="max-h-[60dvh] overflow-y-auto">
+          <List aria-label={t.figureFamilies} className="max-h-[60dvh] overflow-y-auto">
             {familyList.map((f) => (
               <ListRow
                 key={f.figureType}
                 title={f.name}
-                subtitle={titleCase(f.dance)}
+                subtitle={danceLabel(f.dance, locale)}
                 onClick={() => {
                   setFamily(f);
                   setStep("scope");
@@ -207,28 +216,28 @@ export function JournalLinkPicker({
       {step === "scope" && family && (
         <div className="flex flex-col gap-2">
           <Button variant="ghost" size="sm" onClick={back}>
-            ‹ back
+            {t.backShort}
           </Button>
           <p className="text-2xs text-ink-muted" style={{ fontFamily: "var(--bf-font-note)" }}>
-            linking: all {titleCase(family.figureType)}s
+            {t.linking(t.allOfType(titleCase(family.figureType)))}
           </p>
-          <List aria-label="Link scope">
+          <List aria-label={t.linkScope}>
             <ListRow
-              title="This choreo only"
-              subtitle="pick which of your choreos"
+              title={t.thisChoreoOnly}
+              subtitle={t.thisChoreoOnlyHint}
               onClick={() => {
                 setRoutineIntent("figure");
                 setStep("routine");
               }}
             />
             <ListRow
-              title={`All ${titleCase(family.dance)} choreos`}
-              subtitle="same dance, every choreo"
+              title={t.allDanceChoreos(danceLabel(family.dance, locale))}
+              subtitle={t.allDanceChoreosHint}
               onClick={() => pickFigureType(family.dance)}
             />
             <ListRow
-              title="Every dance"
-              subtitle="wherever this appears"
+              title={t.everyDance}
+              subtitle={t.everyDanceHint}
               onClick={() => pickFigureType("all")}
             />
           </List>
@@ -259,18 +268,18 @@ export function JournalLinkPicker({
       {step === "figureGrain" && pickedFigure && (
         <div className="flex flex-col gap-2">
           <Button variant="ghost" size="sm" onClick={back}>
-            ‹ back
+            {t.backShort}
           </Button>
-          <List aria-label="Where on the figure">
+          <List aria-label={t.figureGrainList}>
             <ListRow
-              title="The entire figure"
-              subtitle="note applies to the whole figure"
+              title={t.entireFigure}
+              subtitle={t.entireFigureHint}
               onClick={() => finalizeGrain("whole")}
             />
             {pickedFigure.counts.map((count) => (
               <ListRow
                 key={count}
-                title={`On count ${countLabel(count)}`}
+                title={t.onCount(countLabel(count))}
                 onClick={() => finalizeGrain(count)}
               />
             ))}
@@ -290,6 +299,8 @@ function RoutineChooser({
   onBack: () => void;
   onPick: (r: RoutineOption) => void;
 }): React.JSX.Element {
+  const t = useMessages(journalMessages);
+  const locale = useLocale();
   const [routines, setRoutines] = useState<RoutineOption[] | null>(null);
   useEffect(() => {
     let live = true;
@@ -304,19 +315,19 @@ function RoutineChooser({
   return (
     <div className="flex flex-col gap-2">
       <Button variant="ghost" size="sm" onClick={onBack}>
-        ‹ back
+        {t.backShort}
       </Button>
       {routines === null ? (
-        <Spinner size={20} label="Loading your choreos" />
+        <Spinner size={20} label={t.loadingChoreos} />
       ) : routines.length === 0 ? (
-        <p className="text-2xs text-ink-muted">No choreos yet — create one in the Choreo tab.</p>
+        <p className="text-2xs text-ink-muted">{t.noChoreos}</p>
       ) : (
-        <List aria-label="Your choreos" className="max-h-[60dvh] overflow-y-auto">
+        <List aria-label={t.yourChoreos} className="max-h-[60dvh] overflow-y-auto">
           {routines.map((r) => (
             <ListRow
               key={r.docRef}
-              title={r.title || "Untitled"}
-              subtitle={titleCase(r.dance)}
+              title={r.title || t.untitled}
+              subtitle={danceLabel(r.dance, locale)}
               onClick={() => onPick(r)}
             />
           ))}
@@ -339,6 +350,7 @@ function FigureInRoutineChooser({
   onBack: () => void;
   onPick: (f: RoutineFigureOption) => void;
 }): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const [figures, setFigures] = useState<RoutineFigureOption[] | null>(null);
   const [query, setQuery] = useState("");
   useEffect(() => {
@@ -367,25 +379,25 @@ function FigureInRoutineChooser({
   return (
     <div className="flex flex-col gap-2">
       <Button variant="ghost" size="sm" onClick={onBack}>
-        ‹ back
+        {t.backShort}
       </Button>
       {figures && figures.length > 0 && (
         <Input
-          label="Search figures"
+          label={t.searchFigures}
           hideLabel
-          placeholder="Search figures…"
+          placeholder={t.searchFiguresPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       )}
       {list === null ? (
-        <Spinner size={20} label="Loading figures" />
+        <Spinner size={20} label={t.loadingFigures} />
       ) : list.length === 0 ? (
         <p className="text-2xs text-ink-muted">
-          {query.trim() ? "No figures match your search." : "This choreo has no figures yet."}
+          {query.trim() ? t.noFiguresMatch : t.noFiguresYet}
         </p>
       ) : (
-        <List aria-label="Figures in this choreo" className="max-h-[60dvh] overflow-y-auto">
+        <List aria-label={t.figuresInChoreo} className="max-h-[60dvh] overflow-y-auto">
           {list.map((f) => (
             <ListRow
               key={f.figureRef}

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { IconButton } from "./IconButton";
 
@@ -25,16 +27,17 @@ export function ScreenHeader({
   title,
   subtitle,
   onBack,
-  backLabel = "Back",
+  backLabel,
   actions,
   className,
 }: ScreenHeaderProps) {
+  const t = useMessages(uiMessages);
   return (
     <div
       className={cx("flex items-center gap-2 border-b border-border-subtle px-3 py-1", className)}
     >
       {onBack && (
-        <IconButton label={backLabel} onClick={onBack}>
+        <IconButton label={backLabel ?? t.back} onClick={onBack}>
           <span className="text-lg leading-none">‹</span>
         </IconButton>
       )}

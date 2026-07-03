@@ -13,6 +13,8 @@
 import type { RoutineListItem, SearchResult } from "@ballroom/contract";
 import { DANCE_IDS, type DanceId } from "@ballroom/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { danceName, getLocale, pickMessages, useLocale, useMessages } from "../i18n";
+import { choreoMessages } from "../i18n/messages/choreo";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
@@ -26,14 +28,6 @@ import {
   Sheet,
 } from "../ui";
 import { BranchIcon, EditIcon, PlusIcon, StepsIcon, TrashIcon } from "../ui/icons";
-
-/** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
-function danceLabel(dance: DanceId): string {
-  return dance
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 /**
  * Dance → identity colour, mapped onto existing design tokens (no new hex):
@@ -53,7 +47,8 @@ const NEW_CHOREO_DANCES: readonly DanceId[] = DANCE_IDS;
 
 /**
  * Human "month year" / "today" stamp (frame 1.1: "Jun 2025" / "today"), never a
- * raw locale date like 6/29/2026. Fixed en-US so screenshots stay deterministic.
+ * raw locale date like 6/29/2026. en-US in English so screenshots stay
+ * deterministic; de-DE when the UI language is German.
  */
 function formatUpdated(ms: number): string {
   const d = new Date(ms);
@@ -63,9 +58,12 @@ function formatUpdated(ms: number): string {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   ) {
-    return "today";
+    return pickMessages(choreoMessages).today;
   }
-  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return d.toLocaleDateString(getLocale() === "de" ? "de-DE" : "en-US", {
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /**
@@ -151,6 +149,8 @@ export function ChoreoList({
   onSearch,
   searchResults = [],
 }: ChoreoListProps) {
+  const t = useMessages(choreoMessages);
+  const locale = useLocale();
   // First-visit tour: orient the user on the choreo list + the tab bar.
   useFirstVisitTour("choreos");
   const [upsellOpen, setUpsellOpen] = useState(false);
@@ -195,20 +195,20 @@ export function ChoreoList({
   const templateTarget = templates[0] ?? sample;
 
   return (
-    <section aria-label="Your choreography" className="flex flex-col gap-3">
+    <section aria-label={t.sectionLabel} className="flex flex-col gap-3">
       {/* D7: quota label (design 1.18) — "Free · N of M" inline with the header. */}
       <ScreenHeader
-        title="My Choreos"
+        title={t.title}
         className="border-b-0 px-0 py-0"
         actions={
           <>
             {plan === "free" && cap != null && (
               <span className="text-2xs font-semibold text-ink-muted">
-                Free · {ownedCount} of {cap}
+                {t.quota(ownedCount, cap)}
               </span>
             )}
             <IconButton
-              label="New choreo"
+              label={t.newChoreo}
               data-tour="new-choreo"
               onClick={onNew}
               style={{
@@ -226,23 +226,23 @@ export function ChoreoList({
       {/* Region heading for the routines list (sr-only). Keeps the heading order
           valid (h1 screen → h2 section → h3 EmptyState) without a visible label
           the design doesn't show. */}
-      <h2 className="bf-sr-only">Your choreography</h2>
+      <h2 className="bf-sr-only">{t.sectionLabel}</h2>
 
       {/* US-046: search box — kept available but visually subordinate (not in the
           design frame). It filters at any list size without dominating the header. */}
       {onSearch && (
         <Input
-          label="Search"
+          label={t.searchLabel}
           hideLabel
           type="search"
-          placeholder="Search choreos…"
+          placeholder={t.searchPlaceholder}
           onChange={(e) => onSearch(e.target.value)}
         />
       )}
 
       {/* US-046: search results rendered above the routine cards */}
       {searchResults.length > 0 && (
-        <ul className="flex flex-col gap-2" aria-label="Search results">
+        <ul className="flex flex-col gap-2" aria-label={t.searchResultsLabel}>
           {searchResults.map((r) => (
             <li key={r.docRef}>
               <button
@@ -253,7 +253,7 @@ export function ChoreoList({
                 <span className="flex flex-col">
                   <span className="font-bold text-ink">{r.title}</span>
                   {r.dance && (
-                    <span className="text-2xs text-ink-muted">{danceLabel(r.dance)}</span>
+                    <span className="text-2xs text-ink-muted">{danceName(r.dance, locale)}</span>
                   )}
                 </span>
               </button>
@@ -267,11 +267,11 @@ export function ChoreoList({
           {/* Frame 1.2 — the designed empty state. */}
           <EmptyState
             icon={<StepsIcon size={28} />}
-            title="No choreos yet"
-            description="Each dance gets its own choreo — plus extras for practice. Start your first."
+            title={t.emptyTitle}
+            description={t.emptyDescription}
             actions={
               <Button variant="primary" leadingIcon={<PlusIcon size={16} />} onClick={onNew}>
-                Create choreo
+                {t.emptyCreate}
               </Button>
             }
           />
@@ -286,9 +286,9 @@ export function ChoreoList({
               <span className="flex flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">
                   <span className="font-bold text-ink">{sample.title}</span>
-                  <Badge tone="neutral">Read-only sample</Badge>
+                  <Badge tone="neutral">{t.readOnlySample}</Badge>
                 </span>
-                <span className="text-2xs text-ink-muted">{danceLabel(sample.dance)}</span>
+                <span className="text-2xs text-ink-muted">{danceName(sample.dance, locale)}</span>
               </span>
             </button>
           )}
@@ -297,7 +297,7 @@ export function ChoreoList({
               variant="secondary"
               onClick={() => onStartFromTemplate?.(templateTarget.docRef)}
             >
-              Start from template
+              {t.startFromTemplate}
             </Button>
           )}
         </div>
@@ -309,12 +309,8 @@ export function ChoreoList({
             // Bars/figure-count come from the OPTIONAL parity fields; absent until
             // the store exposes them, in which case the segment is simply omitted.
             const barsLabel =
-              r.figureCount === 0
-                ? "no figures yet"
-                : r.bars != null
-                  ? `${r.bars} bars`
-                  : undefined;
-            const meta = [danceLabel(r.dance), barsLabel, formatUpdated(r.updatedAt)]
+              r.figureCount === 0 ? t.noFiguresYet : r.bars != null ? t.bars(r.bars) : undefined;
+            const meta = [danceName(r.dance, locale), barsLabel, formatUpdated(r.updatedAt)]
               .filter(Boolean)
               .join(" · ");
             return (
@@ -346,7 +342,7 @@ export function ChoreoList({
                         style={{ color: "var(--bf-scope-custom-ink)" }}
                       >
                         <span aria-hidden="true">⑂ </span>
-                        forked from {r.forkedFromTitle}
+                        {t.forkedFrom(r.forkedFromTitle ?? "")}
                       </span>
                     ) : (
                       <span className="truncate text-2xs text-ink-muted">{meta}</span>
@@ -354,7 +350,7 @@ export function ChoreoList({
                   </span>
                 </button>
                 <IconButton
-                  label={`More options for ${r.title}`}
+                  label={t.moreOptionsFor(r.title)}
                   onClick={() => setMenuFor(r)}
                   className="absolute right-1 top-1/2 -translate-y-1/2"
                 >
@@ -367,23 +363,23 @@ export function ChoreoList({
       )}
 
       {/* New-choreo sheet (frame 1.5) */}
-      <Sheet open={formOpen} onClose={closeForm} title="New choreography">
+      <Sheet open={formOpen} onClose={closeForm} title={t.newChoreographyTitle}>
         <form className="flex flex-col gap-4" onSubmit={submit}>
           <fieldset className="flex flex-col gap-2 border-0 p-0">
             <legend className="mb-1.5 text-2xs font-bold uppercase tracking-wide text-ink-muted">
-              Dance
+              {t.danceLegend}
             </legend>
             <div className="flex flex-wrap gap-2">
               {NEW_CHOREO_DANCES.map((d) => (
                 <Chip key={d} tone="accent" selected={dance === d} onClick={() => setDance(d)}>
-                  {danceLabel(d)}
+                  {danceName(d, locale)}
                 </Chip>
               ))}
             </div>
           </fieldset>
           <Input
-            label="Choreo name"
-            placeholder="e.g. Gold Waltz — comp routine"
+            label={t.choreoNameLabel}
+            placeholder={t.choreoNamePlaceholder}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
@@ -391,7 +387,7 @@ export function ChoreoList({
           />
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={closeForm} className="flex-1">
-              cancel
+              {t.cancel}
             </Button>
             <Button
               type="submit"
@@ -400,7 +396,7 @@ export function ChoreoList({
               disabled={!title.trim()}
               className="flex-1"
             >
-              create choreo
+              {t.createChoreoCta}
             </Button>
           </div>
         </form>
@@ -412,7 +408,7 @@ export function ChoreoList({
           className="mb-3 text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-note)" }}
         >
-          Choose what to do with this choreo
+          {t.menuIntro}
         </p>
         <div className="flex flex-col gap-2.5">
           <button
@@ -431,8 +427,8 @@ export function ChoreoList({
               <EditIcon size={16} />
             </span>
             <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-bold text-ink">Open</span>
-              <span className="text-2xs text-ink-muted">view &amp; edit this choreo</span>
+              <span className="text-sm font-bold text-ink">{t.open}</span>
+              <span className="text-2xs text-ink-muted">{t.openHint}</span>
             </span>
           </button>
           <button
@@ -459,10 +455,10 @@ export function ChoreoList({
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-bold" style={{ color: "var(--bf-scope-custom-ink)" }}>
-                Fork — make it your own
+                {t.forkAction}
               </span>
               <span className="text-2xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
-                a frozen, independent copy you fully own
+                {t.forkHint}
               </span>
             </span>
           </button>
@@ -485,8 +481,8 @@ export function ChoreoList({
                 <TrashIcon size={16} />
               </span>
               <span className="flex flex-col gap-0.5">
-                <span className="text-sm font-bold text-danger">Delete</span>
-                <span className="text-2xs text-ink-muted">remove this choreo from your list</span>
+                <span className="text-sm font-bold text-danger">{t.delete}</span>
+                <span className="text-2xs text-ink-muted">{t.deleteHint}</span>
               </span>
             </button>
           )}
@@ -497,9 +493,9 @@ export function ChoreoList({
       <Modal
         open={confirmDelete != null}
         onClose={closeConfirmDelete}
-        title="Delete this choreo?"
+        title={t.deleteConfirmTitle}
         confirm={{
-          label: "Delete",
+          label: t.delete,
           variant: "danger",
           loading: deleting,
           onClick: () => {
@@ -508,21 +504,16 @@ export function ChoreoList({
           },
         }}
       >
-        <p>
-          “{confirmDelete?.title}” will be removed from your choreos. This can't be undone here.
-        </p>
+        <p>{t.deleteConfirmBody(confirmDelete?.title ?? "")}</p>
       </Modal>
 
       {/* Quota upsell */}
-      <Sheet open={upsellOpen} onClose={closeUpsell} title="Upgrade for more choreos">
+      <Sheet open={upsellOpen} onClose={closeUpsell} title={t.upsellTitle}>
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-ink-secondary">
-            You've reached your free-plan cap{cap != null ? ` of ${cap} choreos` : ""}. A paid plan
-            will let you create more — your existing routines stay exactly as they are.
-          </p>
+          <p className="text-sm text-ink-secondary">{t.upsellBody(cap)}</p>
           {/* Billing is US-053; keep this honest rather than a dead live CTA. */}
           <Button variant="secondary" disabled>
-            Pro plans — coming soon
+            {t.upsellCta}
           </Button>
         </div>
       </Sheet>

@@ -1,4 +1,6 @@
 import { type ReactNode, useId, useRef } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { IconButton } from "./IconButton";
 import { CloseIcon } from "./icons";
@@ -22,6 +24,7 @@ export interface SheetProps {
  * (#7, #8). Animation is motion-gated (#9).
  */
 export function Sheet({ open, onClose, title, meta, children }: SheetProps) {
+  const t = useMessages(uiMessages);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useOverlay(open, onClose, panelRef);
@@ -37,7 +40,7 @@ export function Sheet({ open, onClose, title, meta, children }: SheetProps) {
       {/* scrim */}
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t.close}
         tabIndex={-1}
         onClick={onClose}
         className="absolute inset-0 bg-[rgba(20,18,12,0.35)]"
@@ -75,7 +78,7 @@ export function Sheet({ open, onClose, title, meta, children }: SheetProps) {
             </h2>
             {meta && <span className="text-2xs text-ink-muted">{meta}</span>}
             <IconButton
-              label="Close"
+              label={t.close}
               variant="filled"
               onClick={onClose}
               className="ml-auto lg:flex"

@@ -15,6 +15,8 @@
 // type/colour scale — and keeps the accessible names/roles the tests rely on.
 import type { Annotation, AnnotationKind, Role } from "@ballroom/domain";
 import { useState } from "react";
+import { getLocale, pickMessages, useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import { Button, Chip } from "../ui";
 
 /** A point or figure anchor the panel is composing against (Task 8 supplies it). */
@@ -105,6 +107,7 @@ export function AnnotationPanel({
   currentUserColor,
   currentUserName,
 }: AnnotationPanelProps): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const canAnnotate = role === "commenter" || role === "editor";
   const [draft, setDraft] = useState("");
   const [kind, setKind] = useState<AnnotationKind>("note");
@@ -155,7 +158,7 @@ export function AnnotationPanel({
   // ── Thread mode (frame 1.14): titled header + flat comment list + footer reply ──
   if (threadTitle) {
     return (
-      <section aria-label="Thread" className="flex flex-col gap-3">
+      <section aria-label={t.thread} className="flex flex-col gap-3">
         {/* Thread header: title ("Spin Turn · step 2") + comment count. */}
         <div className="flex flex-col gap-0.5">
           <h2 className="text-[15px] font-bold text-ink">{threadTitle}</h2>
@@ -164,10 +167,10 @@ export function AnnotationPanel({
               {threadSubtitle}
             </p>
           )}
-          <p className="text-2xs text-ink-muted">{visible.length} comments</p>
+          <p className="text-2xs text-ink-muted">{t.commentCount(visible.length)}</p>
         </div>
 
-        <ul aria-label="comment thread" className="flex flex-col gap-4">
+        <ul aria-label={t.commentThread} className="flex flex-col gap-4">
           {visible.map((a) => (
             <li key={a.id}>
               <ThreadComment
@@ -190,7 +193,7 @@ export function AnnotationPanel({
             Commenter+ only (viewers are read-only). */}
         {canAnnotate && (
           <form
-            aria-label="Add reply"
+            aria-label={t.addReply}
             className="flex items-center gap-2 border-t border-line pt-3"
             onSubmit={(e) => {
               e.preventDefault();
@@ -199,8 +202,8 @@ export function AnnotationPanel({
           >
             <AuthorAvatar name={currentUserName} color={currentUserColor} size="md" />
             <input
-              aria-label="add a reply"
-              placeholder="add a reply…"
+              aria-label={t.addReplyField}
+              placeholder={t.addReplyPlaceholder}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               className="flex-1 rounded-full border border-border-strong bg-surface-sunken px-4 text-sm text-ink placeholder:text-ink-faint min-h-[var(--bf-touch-target)] outline-none"
@@ -209,7 +212,7 @@ export function AnnotationPanel({
               }
             />
             <Button type="submit" variant="secondary" size="sm" disabled={!draft.trim()}>
-              send
+              {t.send}
             </Button>
           </form>
         )}
@@ -219,14 +222,14 @@ export function AnnotationPanel({
 
   // ── Standard mode: filter bar + annotation list + kind-select compose form ──
   return (
-    <section aria-label="Annotations" className="flex flex-col gap-3">
+    <section aria-label={t.annotations} className="flex flex-col gap-3">
       {/* Filter chips share the app's "pick one" pattern (#5/#7): a real button
           per filter, aria-pressed on the active one, 44px hit area via Chip. */}
       <fieldset className="flex flex-wrap items-center gap-1">
-        <legend className="bf-sr-only">Filter annotations</legend>
+        <legend className="bf-sr-only">{t.filterAnnotations}</legend>
         {(["all", "lessons", "practice"] as const).map((f) => (
           <Chip key={f} selected={filter === f} onClick={() => setFilter(f)}>
-            {f}
+            {t.annotationFilter(f)}
           </Chip>
         ))}
         {/* By-figure filters (US-042): one chip per anchored figure. */}
@@ -240,7 +243,7 @@ export function AnnotationPanel({
         })}
       </fieldset>
 
-      <ul aria-label="comment thread" className="flex flex-col gap-2">
+      <ul aria-label={t.commentThread} className="flex flex-col gap-2">
         {visible.map((a) => (
           <li key={a.id}>
             <AnnotationRow
@@ -256,7 +259,7 @@ export function AnnotationPanel({
 
       {canAnnotate && (
         <form
-          aria-label="Add annotation"
+          aria-label={t.addAnnotation}
           className="flex flex-col gap-2 border-t border-line pt-3"
           onSubmit={(e) => {
             e.preventDefault();
@@ -267,27 +270,28 @@ export function AnnotationPanel({
               text on each annotation so colour is never the only cue (#5).
               Native control stays keyboard/AT-friendly with a 44px target (#3/#7). */}
           <select
-            aria-label="Kind"
+            aria-label={t.kindSelect}
             value={kind}
             onChange={(e) => setKind(e.target.value as AnnotationKind)}
             className="w-full appearance-none rounded-md border border-border-strong bg-surface-sunken px-3.5 text-sm text-ink min-h-[var(--bf-touch-target)] outline-none"
           >
             {KINDS.map((k) => (
+              // Option VALUES are the stored kinds; only the visible label localizes.
               <option key={k} value={k}>
-                {k}
+                {t.kindLabel(k)}
               </option>
             ))}
           </select>
           <textarea
-            aria-label="note"
-            placeholder="Add a note…"
+            aria-label={t.noteField}
+            placeholder={t.notePlaceholder}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
             className="w-full rounded-md border border-border-strong bg-surface-sunken px-3.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none"
           />
           <Button type="submit" variant="primary" size="sm" disabled={!draft.trim()}>
-            add note
+            {t.addNote}
           </Button>
         </form>
       )}
@@ -299,18 +303,22 @@ export function AnnotationPanel({
 
 /** Relative time from a unix-ms timestamp (e.g. "2h", "3d ago", "3 May"). */
 function relativeTime(createdAt: number): string {
+  const t = pickMessages(journalMessages);
   const now = Date.now();
   const diffMs = now - createdAt;
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m`;
+  if (diffMin < 1) return t.justNow;
+  if (diffMin < 60) return t.minutesAgo(diffMin);
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h`;
+  if (diffHr < 24) return t.hoursAgo(diffHr);
   const diffDay = Math.floor(diffHr / 24);
-  if (diffDay === 1) return "yesterday";
-  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffDay === 1) return t.yesterday;
+  if (diffDay < 7) return t.daysAgo(diffDay);
   // Older: format as "3 May"
-  return new Date(createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return new Date(createdAt).toLocaleDateString(getLocale() === "de" ? "de-DE" : "en-GB", {
+    day: "numeric",
+    month: "short",
+  });
 }
 
 /** Round identity avatar: initial of the author name on their identity colour.
@@ -356,6 +364,7 @@ function ThreadComment({
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
 }): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const authorName = authorNameMap?.[a.authorId] ?? a.authorId;
   const authorColor = authorColorMap?.[a.authorId];
   const time = relativeTime(a.createdAt);
@@ -376,7 +385,7 @@ function ThreadComment({
         </p>
         {/* Threaded replies (indented) */}
         {a.replies.length > 0 && (
-          <ul aria-label="replies thread" className="mt-1 flex flex-col gap-1 pl-2">
+          <ul aria-label={t.repliesThread} className="mt-1 flex flex-col gap-1 pl-2">
             {a.replies.map((r) => (
               <li key={r.id} className="flex items-center gap-2 text-2xs text-ink-secondary">
                 <span>{r.text}</span>
@@ -387,7 +396,7 @@ function ThreadComment({
                     size="sm"
                     onClick={() => onDeleteReply(r.id)}
                   >
-                    delete reply
+                    {t.deleteReply}
                   </Button>
                 )}
               </li>
@@ -416,22 +425,23 @@ function AnnotationRow({
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
 }): React.JSX.Element {
+  const t = useMessages(journalMessages);
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-line p-2">
       <p className="flex items-center gap-1.5 text-sm">
         {/* kind shown as text so colour is never the sole signal (a11y #5). */}
         <Chip tone="neutral" asStatic data-kind={a.kind}>
-          {a.kind}
+          {t.kindLabel(a.kind)}
         </Chip>
         <span className="text-ink">{a.text}</span>
       </p>
-      <ul aria-label="replies thread" className="flex flex-col gap-1 pl-3">
+      <ul aria-label={t.repliesThread} className="flex flex-col gap-1 pl-3">
         {a.replies.map((r) => (
           <li key={r.id} className="flex items-center gap-2 text-2xs text-ink-secondary">
             <span>{r.text}</span>
             {r.authorId === currentUserId && onDeleteReply && (
               <Button type="button" variant="ghost" size="sm" onClick={() => onDeleteReply(r.id)}>
-                delete reply
+                {t.deleteReply}
               </Button>
             )}
           </li>
@@ -444,10 +454,11 @@ function AnnotationRow({
 
 /** A single inline reply composer. */
 function ReplyBox({ onSend }: { onSend: (text: string) => void }): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const [text, setText] = useState("");
   return (
     <form
-      aria-label="Reply"
+      aria-label={t.replyForm}
       className="flex items-center gap-2"
       onSubmit={(e) => {
         e.preventDefault();
@@ -458,14 +469,14 @@ function ReplyBox({ onSend }: { onSend: (text: string) => void }): React.JSX.Ele
       }}
     >
       <input
-        aria-label="reply"
+        aria-label={t.replyField}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Reply…"
+        placeholder={t.replyPlaceholder}
         className="flex-1 rounded-md border border-border-strong bg-surface-sunken px-3 text-sm text-ink placeholder:text-ink-faint min-h-[var(--bf-touch-target)] outline-none"
       />
       <Button type="submit" variant="secondary" size="sm" disabled={!text.trim()}>
-        post reply
+        {t.postReply}
       </Button>
     </form>
   );

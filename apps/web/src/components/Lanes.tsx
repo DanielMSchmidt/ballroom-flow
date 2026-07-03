@@ -24,7 +24,8 @@
 
 import { type Attribute, mergeRegistry, normalizeValue, type RegistryKind } from "@ballroom/domain";
 import { useMemo, useState } from "react";
-import { localizedRegistry, useLocale } from "../i18n";
+import { localizedRegistry, useLocale, useMessages } from "../i18n";
+import { timelineMessages } from "../i18n/messages/timeline";
 import { Button, Chip, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import {
@@ -72,6 +73,7 @@ export function Lanes({
   // FULLY CONTROLLED: attributes derive directly from the prop — no internal
   // copy. Only transient UI state (which count's picker is open, role view)
   // lives in the component.
+  const t = useMessages(timelineMessages);
   const attrs = attributes ?? [];
   const [openCount, setOpenCount] = useState<number | null>(null);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
@@ -146,17 +148,17 @@ export function Lanes({
           Label matches FigureTimeline exactly so the UX is consistent (#8). */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-ink-secondary">
-          Viewing: <span className="font-medium text-ink">{roleLabel(view)}</span>
+          {t.viewing} <span className="font-medium text-ink">{roleLabel(view)}</span>
         </span>
         <Button variant="secondary" size="sm" onClick={() => setView(flipped(view))}>
-          Flip role to {flipped(view)}
+          {t.flipRoleTo(flipped(view))}
         </Button>
       </div>
 
       {/* ARIA grid: grid → row → gridcell ownership chain. Explicit roles on
           <div> are required because aria-query in the test renderer does NOT
           map <table>/<tr>/<td> to grid/row/gridcell implicitly. */}
-      <div role="grid" aria-label={`${kindDescriptor?.label ?? kind} lane`}>
+      <div role="grid" aria-label={t.lane(kindDescriptor?.label ?? kind)}>
         <div role="row" className="flex gap-1">
           {cells.map((count) => {
             const onCount = byCount.get(count) ?? [];
@@ -173,7 +175,7 @@ export function Lanes({
                 {editable ? (
                   <button
                     type="button"
-                    aria-label={`count ${count}`}
+                    aria-label={t.countN(count)}
                     aria-expanded={isOpen}
                     onClick={() => setOpenCount(isOpen ? null : count)}
                     className={cx(

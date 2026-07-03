@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
 import { WarningIcon } from "./icons";
 
@@ -20,6 +22,7 @@ export interface AccessDeniedProps {
  * raised neutral surface (not the desaturated offline tint) so the two read apart.
  */
 export function AccessDenied({ title, description, action, className }: AccessDeniedProps) {
+  const t = useMessages(uiMessages);
   return (
     <div
       role="alert"
@@ -36,10 +39,9 @@ export function AccessDenied({ title, description, action, className }: AccessDe
       <span aria-hidden="true" style={{ color: "var(--bf-ink-muted)" }}>
         <WarningIcon size={28} />
       </span>
-      <h3 className="text-sm font-bold">{title ?? "You don't have access"}</h3>
+      <h3 className="text-sm font-bold">{title ?? t.accessDeniedTitle}</h3>
       <p className="max-w-xs text-2xs" style={{ color: "var(--bf-ink-secondary)" }}>
-        {description ??
-          "You're not a member of this choreo, so it can't be opened. Ask the owner for an invite link to join."}
+        {description ?? t.accessDeniedDescription}
       </p>
       {action}
     </div>

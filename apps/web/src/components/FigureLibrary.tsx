@@ -18,6 +18,8 @@ import {
   libraryGroupsForFilter,
 } from "@ballroom/domain";
 import { useEffect, useMemo, useState } from "react";
+import { danceName, pickMessages, useLocale, useMessages } from "../i18n";
+import { figureLibraryMessages } from "../i18n/messages/figure-library";
 import type { MineFigure, SaveToLibraryResult } from "../store/figures";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Card, Chip, EditIcon, EmptyState, IconButton, SectionDivider, useToast } from "../ui";
@@ -30,14 +32,6 @@ export interface SaveLibraryInput {
   dance: DanceId;
   figureType: string;
   name: string;
-}
-
-/** Humanize a dance id for display ("viennese_waltz" → "Viennese Waltz"). */
-function danceLabel(d: DanceId): string {
-  return d
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
 }
 
 /** Humanize a figureType slug for a family heading ("feather-step" → "Feather Step"). */
@@ -71,20 +65,22 @@ function DanceChips({
   value: DanceFilter;
   onChange: (v: DanceFilter) => void;
 }) {
+  const t = useMessages(figureLibraryMessages);
+  const locale = useLocale();
   return (
     // biome-ignore lint/a11y/useSemanticElements: single-select filter chips (each a real <button>); role="group" labels the set without a <fieldset>'s form semantics.
     <div
       role="group"
-      aria-label="Filter by dance"
+      aria-label={t.filterByDance}
       data-tour="library-filter"
       className="flex flex-wrap gap-2"
     >
       <Chip tone="accent" selected={value === "all"} onClick={() => onChange("all")}>
-        All
+        {t.all}
       </Chip>
       {DANCE_IDS.map((d) => (
         <Chip key={d} tone="accent" selected={value === d} onClick={() => onChange(d)}>
-          {danceLabel(d)}
+          {danceName(d, locale)}
         </Chip>
       ))}
     </div>
@@ -99,13 +95,16 @@ function baseFigureName(f: MineFigure): string {
     );
     if (origin) return origin.name;
   }
-  return f.figureType ? typeLabel(f.figureType) : "a library figure";
+  return f.figureType
+    ? typeLabel(f.figureType)
+    : pickMessages(figureLibraryMessages).libraryFigureFallback;
 }
 
 /** The "saved"/"custom" lineage chip on a My-figures card (Builder v2): amber
  *  word-chip — "saved" for a catalog-derived copy, "custom" for a from-scratch
  *  figure. Word + colour together (#5). */
 function MineBadge({ saved }: { saved: boolean }) {
+  const t = useMessages(figureLibraryMessages);
   return (
     <span
       className="rounded-[5px] px-1.5 py-0.5 text-2xs font-semibold"
@@ -114,13 +113,15 @@ function MineBadge({ saved }: { saved: boolean }) {
         color: "var(--bf-scope-custom)",
       }}
     >
-      {saved ? "saved" : "custom"}
+      {saved ? t.savedBadge : t.customBadge}
     </span>
   );
 }
 
 /** The "My figures" personal-library tab (frames 2.3/2.4). */
 function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> }) {
+  const t = useMessages(figureLibraryMessages);
+  const locale = useLocale();
   const [mine, setMine] = useState<MineFigure[] | null>(null);
   const [dance, setDance] = useState<DanceFilter>("all");
 
@@ -141,11 +142,9 @@ function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> 
   return (
     <div className="flex flex-col gap-4 p-4">
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-bold">Figure Library</h1>
+        <h1 className="text-lg font-bold">{t.title}</h1>
         <p className="text-2xs text-ink-muted">
-          {dance === "all"
-            ? "the shared figure catalogue · filter by dance"
-            : `Filter: ${danceLabel(dance)}`}
+          {dance === "all" ? t.subtitle : t.filter(danceName(dance, locale))}
         </p>
       </header>
 
@@ -153,14 +152,11 @@ function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> 
 
       <div className="flex items-center gap-2">
         <ScopeDot scope="custom" />
-        <SectionDivider label="My figures" />
+        <SectionDivider label={t.myFigures} />
       </div>
 
       {visible.length === 0 ? (
-        <EmptyState
-          title="Nothing in My figures for this dance yet"
-          description="↟ save a catalog figure and it lands here."
-        />
+        <EmptyState title={t.emptyMineTitle} description={t.emptyMineDescription} />
       ) : (
         <ul className="flex flex-col gap-2">
           {visible.map((f) => (
@@ -176,16 +172,13 @@ function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> 
                       </div>
                       <p className="text-2xs text-ink-faint">
                         <span style={{ fontFamily: "var(--bf-font-note)" }}>
-                          {f.baseFigureRef ? `based on ${baseFigureName(f)}` : "your own figure"}
+                          {f.baseFigureRef ? t.basedOn(baseFigureName(f)) : t.yourOwnFigure}
                         </span>{" "}
-                        ·{" "}
-                        {f.usedInCount === 0
-                          ? "not in a choreo yet"
-                          : `used in ${f.usedInCount} ${f.usedInCount === 1 ? "choreo" : "choreos"}`}
+                        · {f.usedInCount === 0 ? t.notInChoreoYet : t.usedIn(f.usedInCount)}
                       </p>
                     </div>
                   </div>
-                  <IconButton label={`Edit ${f.title ?? "figure"}`} variant="plain">
+                  <IconButton label={t.editFigure(f.title)} variant="plain">
                     <EditIcon size={18} />
                   </IconButton>
                 </div>
@@ -213,6 +206,8 @@ export function FigureLibrary({
    *  (Builder v2: "Saved to My figures · View"). */
   onViewMine?: () => void;
 }) {
+  const t = useMessages(figureLibraryMessages);
+  const locale = useLocale();
   const toast = useToast();
   // First-visit tour: the Catalog/My-figures split, the dance filter, ↟ save.
   useFirstVisitTour("library");
@@ -235,12 +230,12 @@ export function FigureLibrary({
         figureType: fig.figureType,
         name: fig.name,
       });
-      toast.show(res.alreadySaved ? "Already in My figures" : "Saved to My figures", {
+      toast.show(res.alreadySaved ? t.toastAlreadySaved : t.toastSaved, {
         tone: res.alreadySaved ? "neutral" : "success",
-        action: onViewMine ? { label: "View", onClick: onViewMine } : undefined,
+        action: onViewMine ? { label: t.toastView, onClick: onViewMine } : undefined,
       });
     } catch {
-      toast.show("Couldn't save to My figures", { tone: "danger" });
+      toast.show(t.toastSaveFailed, { tone: "danger" });
     } finally {
       setSaving(null);
     }
@@ -249,15 +244,17 @@ export function FigureLibrary({
   return (
     <div className="flex flex-col gap-4 p-4">
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-bold">Figure Library</h1>
-        <p className="text-2xs text-ink-muted">the shared figure catalogue · filter by dance</p>
+        <h1 className="text-lg font-bold">{t.title}</h1>
+        <p className="text-2xs text-ink-muted">{t.subtitle}</p>
       </header>
 
       <DanceChips value={dance} onChange={setDance} />
 
       <div className="flex items-center gap-2">
         <ScopeDot scope="global" />
-        <SectionDivider label={dance === "all" ? "Catalog" : `Catalog · ${danceLabel(dance)}`} />
+        <SectionDivider
+          label={dance === "all" ? t.catalog : t.catalogFor(danceName(dance, locale))}
+        />
       </div>
 
       <div className="flex flex-col gap-4">
@@ -278,7 +275,7 @@ export function FigureLibrary({
                             {dance === "all" && (
                               <div className="flex flex-wrap gap-1">
                                 <Chip tone="neutral" asStatic className="px-2 py-0.5 text-2xs">
-                                  {danceLabel(fig.dance)}
+                                  {danceName(fig.dance, locale)}
                                 </Chip>
                               </div>
                             )}
@@ -287,7 +284,7 @@ export function FigureLibrary({
                         {onSaveToLibrary && (
                           <button
                             type="button"
-                            aria-label={`Save ${fig.name} to My figures`}
+                            aria-label={t.saveAria(fig.name)}
                             data-tour="library-save"
                             onClick={() => handleSave(fig)}
                             disabled={saving === key}
@@ -298,7 +295,7 @@ export function FigureLibrary({
                               background: "var(--bf-surface)",
                             }}
                           >
-                            <span aria-hidden="true">↟</span> save
+                            <span aria-hidden="true">↟</span> {t.save}
                           </button>
                         )}
                       </div>

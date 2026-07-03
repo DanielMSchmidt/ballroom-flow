@@ -16,6 +16,8 @@ import {
   useAuth,
 } from "@clerk/clerk-react";
 import { createContext, type ReactNode, useContext } from "react";
+import { useMessages } from "../i18n";
+import { appMessages } from "../i18n/messages/app";
 import { completeE2ESignIn, E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
 import { Button } from "../ui";
 
@@ -126,6 +128,7 @@ export function AppAuthProvider({
  * marker in E2E (where there's no Clerk widget to render).
  */
 export function AccountControls(): React.JSX.Element {
+  const t = useMessages(appMessages);
   if (isE2E()) return <E2EAccountControls />;
   return (
     <>
@@ -136,7 +139,7 @@ export function AccountControls(): React.JSX.Element {
             onClick; Button forwards it via {...rest}. */}
         <SignInButton>
           <Button variant="primary" size="sm">
-            Sign in
+            {t.signIn}
           </Button>
         </SignInButton>
       </SignedOut>
@@ -155,17 +158,18 @@ export function AccountControls(): React.JSX.Element {
  * in the Clerk-less harness, mirroring Clerk returning the user signed-in.
  */
 function E2EAccountControls(): React.JSX.Element {
+  const t = useMessages(appMessages);
   const { isSignedIn } = useAppAuth();
   if (isSignedIn) {
     return (
       <span data-testid="e2e-account" className="text-2xs text-ink-muted">
-        Signed in
+        {t.signedIn}
       </span>
     );
   }
   return (
     <Button variant="primary" size="sm" onClick={() => completeE2ESignIn()}>
-      Sign in
+      {t.signIn}
     </Button>
   );
 }

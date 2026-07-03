@@ -1,4 +1,6 @@
 import { type ReactNode, useId, useRef } from "react";
+import { useMessages } from "../i18n";
+import { uiMessages } from "../i18n/messages/ui";
 import { Button, type ButtonVariant } from "./Button";
 import { cx } from "./cx";
 import { useOverlay } from "./useOverlay";
@@ -28,6 +30,7 @@ export interface ModalProps {
  * Same a11y plumbing as Sheet (#7, #8); motion-gated (#9).
  */
 export function Modal({ open, onClose, title, children, confirm, cancel }: ModalProps) {
+  const t = useMessages(uiMessages);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descId = useId();
@@ -41,7 +44,7 @@ export function Modal({ open, onClose, title, children, confirm, cancel }: Modal
     >
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t.close}
         tabIndex={-1}
         onClick={onClose}
         className="absolute inset-0 bg-[rgba(20,18,12,0.4)]"
@@ -71,7 +74,7 @@ export function Modal({ open, onClose, title, children, confirm, cancel }: Modal
         )}
         <div className="mt-5 flex gap-2">
           <Button variant="secondary" fullWidth onClick={cancel?.onClick ?? onClose}>
-            {cancel?.label ?? "Cancel"}
+            {cancel?.label ?? t.cancel}
           </Button>
           {confirm && (
             <Button

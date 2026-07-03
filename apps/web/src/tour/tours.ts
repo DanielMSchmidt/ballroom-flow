@@ -8,6 +8,11 @@
 //
 // Copy style: title = the control's name; description = one plain sentence on
 // what it's for. Keep tours ≤5 steps — they explain the screen, not the app.
+// The copy itself lives in i18n/messages/tours.ts; each page's steps are BUILT
+// on access (property getters + pickMessages), never frozen at module load, so
+// a tour started after a locale switch speaks the current language.
+import { pickMessages } from "../i18n/messages";
+import { tourMessages } from "../i18n/messages/tours";
 
 export const TOUR_PAGE_IDS = ["choreos", "library", "journal", "profile", "assemble"] as const;
 export type TourPageId = (typeof TOUR_PAGE_IDS)[number];
@@ -22,101 +27,45 @@ export interface TourStepDef {
 }
 
 export const TOURS: Record<TourPageId, TourStepDef[]> = {
-  choreos: [
-    {
-      title: "Welcome to Ballroom Flow",
-      description:
-        "This is your choreo list — every routine you build or join lives here. Here's a quick look around; skip any time.",
-    },
-    {
-      element: "[data-tour='new-choreo']",
-      title: "Start a choreo",
-      description: "Pick the dance, name it, and start placing figures section by section.",
-    },
-    {
-      element: "[data-tour='nav-library']",
-      title: "Figure Library",
-      description:
-        "Browse the shared figure catalog, and keep the figures you reuse under My figures.",
-    },
-    {
-      element: "[data-tour='nav-journal']",
-      title: "Journal",
-      description: "Lesson and practice notes, linked to the exact step or figure they're about.",
-    },
-    {
-      element: "[data-tour='nav-profile']",
-      title: "Profile",
-      description:
-        "Set your name and note colour — every note you write is tinted with it, so partners know who said what.",
-    },
-  ],
-  library: [
-    {
-      element: "[data-tour='library-tabs']",
-      title: "Catalog & My figures",
-      description:
-        "The Catalog is the shared figure reference. My figures holds the ones you've saved to reuse.",
-    },
-    {
-      element: "[data-tour='library-filter']",
-      title: "Filter by dance",
-      description: "Show only the figures of one dance, or All to browse everything.",
-    },
-    {
-      element: "[data-tour='library-save']",
-      title: "Save a figure",
-      description:
-        "↟ save puts a catalog figure into My figures — a frozen copy that's yours to adapt.",
-    },
-  ],
-  journal: [
-    {
-      element: "[data-tour='journal-new']",
-      title: "Write an entry",
-      description:
-        "Capture what changed in a lesson or practice — while it's fresh. Entries can link to a step, a figure, or a whole figure family.",
-    },
-    {
-      element: "[data-tour='journal-filters']",
-      title: "Find entries again",
-      description: "Filter by lessons, practice, or everything that touches one figure.",
-    },
-  ],
-  profile: [
-    {
-      element: "[data-tour='profile-name']",
-      title: "Your name",
-      description: "Shown to everyone you share a choreo with.",
-    },
-    {
-      element: "[data-tour='profile-colour']",
-      title: "Your note colour",
-      description:
-        "Every note and reply you write is tinted with this colour, across all shared choreos.",
-    },
-  ],
-  assemble: [
-    {
-      element: "[data-tour='role-toggle']",
-      title: "Leader or Follower",
-      description: "Flip the whole programme between the leader's and the follower's steps.",
-    },
-    {
-      element: "[data-tour='lens-toggle']",
-      title: "Read ⇄ edit",
-      description:
-        "You're in the reading programme. Tap ✎ to switch to the builder and change sections, figures and steps.",
-    },
-    {
-      element: "[data-tour='share']",
-      title: "Share",
-      description: "Invite your partner or coach — everyone edits the same choreo, live.",
-    },
-    {
-      element: "[data-tour='quick-note']",
-      title: "Quick note",
-      description: "Jot down what the coach just said without leaving the programme.",
-    },
-  ],
+  get choreos() {
+    const t = pickMessages(tourMessages).choreos;
+    return [
+      { ...t.welcome },
+      { element: "[data-tour='new-choreo']", ...t.newChoreo },
+      { element: "[data-tour='nav-library']", ...t.navLibrary },
+      { element: "[data-tour='nav-journal']", ...t.navJournal },
+      { element: "[data-tour='nav-profile']", ...t.navProfile },
+    ];
+  },
+  get library() {
+    const t = pickMessages(tourMessages).library;
+    return [
+      { element: "[data-tour='library-tabs']", ...t.tabs },
+      { element: "[data-tour='library-filter']", ...t.filter },
+      { element: "[data-tour='library-save']", ...t.save },
+    ];
+  },
+  get journal() {
+    const t = pickMessages(tourMessages).journal;
+    return [
+      { element: "[data-tour='journal-new']", ...t.newEntry },
+      { element: "[data-tour='journal-filters']", ...t.filters },
+    ];
+  },
+  get profile() {
+    const t = pickMessages(tourMessages).profile;
+    return [
+      { element: "[data-tour='profile-name']", ...t.name },
+      { element: "[data-tour='profile-colour']", ...t.colour },
+    ];
+  },
+  get assemble() {
+    const t = pickMessages(tourMessages).assemble;
+    return [
+      { element: "[data-tour='role-toggle']", ...t.roleToggle },
+      { element: "[data-tour='lens-toggle']", ...t.lensToggle },
+      { element: "[data-tour='share']", ...t.share },
+      { element: "[data-tour='quick-note']", ...t.quickNote },
+    ];
+  },
 };

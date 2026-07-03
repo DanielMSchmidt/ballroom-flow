@@ -8,6 +8,8 @@
 // saves via createFamilyEntry (createFamilyNote). Both are injected (store seam).
 import type { AnnotationKind } from "@ballroom/domain";
 import { useState } from "react";
+import { useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 import { Button, Card, IconButton, SegmentedToggle } from "../ui";
 import { CloseIcon } from "../ui/icons";
 import {
@@ -40,7 +42,7 @@ export interface JournalEntryEditorProps {
 }
 
 export function JournalEntryEditor({
-  authorLabel = "you",
+  authorLabel,
   onBack,
   onSaved,
   createFamilyEntry,
@@ -48,6 +50,7 @@ export function JournalEntryEditor({
   loadRoutineOptions,
   loadRoutineFigures,
 }: JournalEntryEditorProps): React.JSX.Element {
+  const t = useMessages(journalMessages);
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
   const [text, setText] = useState("");
   const [links, setLinks] = useState<JournalLink[]>([]);
@@ -89,40 +92,43 @@ export function JournalEntryEditor({
       }
       onSaved();
     } catch {
-      setError("Couldn't save this entry. Try again.");
+      setError(t.saveFailed);
       setSaving(false);
     }
   };
 
   return (
-    <section aria-label="Journal entry editor" className="flex flex-col gap-3">
+    <section aria-label={t.editorRegion} className="flex flex-col gap-3">
       <header className="flex items-center justify-between gap-2 border-b border-border-subtle pb-2">
         <div className="flex items-center gap-2">
-          <IconButton label="Back" onClick={onBack}>
+          <IconButton label={t.back} onClick={onBack}>
             <span className="text-lg leading-none">‹</span>
           </IconButton>
           <span className="text-sm font-bold text-ink">
-            {kind === "lesson" ? "Lesson" : "Practice"} · {authorLabel} · today
+            {t.editorHeader(
+              kind === "lesson" ? t.kindLesson : t.kindPractice,
+              authorLabel ?? t.authorYou,
+            )}
           </span>
         </div>
         <Button variant="primary" size="sm" onClick={() => void save()} disabled={!canSave}>
-          done
+          {t.done}
         </Button>
       </header>
 
       <SegmentedToggle
-        ariaLabel="Entry kind"
+        ariaLabel={t.entryKind}
         options={[
-          { value: "lesson", label: "Lesson" },
-          { value: "practice", label: "Practice" },
+          { value: "lesson", label: t.kindLesson },
+          { value: "practice", label: t.kindPractice },
         ]}
         value={kind}
         onChange={setKind}
       />
 
       <textarea
-        aria-label="entry text"
-        placeholder="What did you work on?"
+        aria-label={t.entryText}
+        placeholder={t.entryPlaceholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={4}
@@ -131,7 +137,9 @@ export function JournalEntryEditor({
       />
 
       <div className="flex flex-col gap-2">
-        <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">Links</p>
+        <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+          {t.linksHeading}
+        </p>
         {links.map((link, i) => (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: links can repeat (same label); index disambiguates.
@@ -140,7 +148,7 @@ export function JournalEntryEditor({
           >
             <span className="text-2xs text-studio-blue">↳ {link.label}</span>
             <IconButton
-              label={`Remove link ${link.label}`}
+              label={t.removeLink(link.label)}
               onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
             >
               <CloseIcon size={14} />
@@ -152,7 +160,7 @@ export function JournalEntryEditor({
           onClick={() => setPickerOpen(true)}
           className="rounded-lg border border-dashed border-border-strong px-3 py-3 text-center text-2xs text-ink-secondary min-h-[var(--bf-touch-target)]"
         >
-          + link to a step, figure or attribute
+          {t.addLink}
         </button>
       </div>
 
@@ -160,10 +168,10 @@ export function JournalEntryEditor({
       <button
         type="button"
         disabled
-        aria-label="Add media (coming soon)"
+        aria-label={t.addMedia}
         className="rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-2xs text-ink-faint opacity-60"
       >
-        + photo / video · coming soon
+        {t.addMediaHint}
       </button>
 
       {error && (
