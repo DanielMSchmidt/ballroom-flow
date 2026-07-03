@@ -75,7 +75,8 @@ const en = {
   assemble: {
     roleToggle: {
       title: "Leader or Follower",
-      description: "Flip the whole programme between the leader's and the follower's steps.",
+      description:
+        "L · F flips the whole programme between the leader's and the follower's steps. Remembered on this device.",
     },
     lensToggle: {
       title: "Read ⇄ edit",
@@ -85,6 +86,11 @@ const en = {
     share: {
       title: "Share",
       description: "Invite your partner or coach — everyone edits the same choreo, live.",
+    },
+    typeChips: {
+      title: "Show only what you're working on",
+      description:
+        "Tap a chip to tuck that column away — across the whole routine, and every choreo. Step always stays. “+N hidden” on a figure peeks at what's tucked; your picks are remembered.",
     },
     quickNote: {
       title: "Quick note",
@@ -169,7 +175,7 @@ const de: typeof en = {
     roleToggle: {
       title: "Leader oder Follower",
       description:
-        "Schalte das ganze Programm zwischen den Schritten des Leaders und des Followers um.",
+        "L · F schaltet das ganze Programm zwischen den Schritten des Leaders und des Followers um. Wird auf diesem Gerät gemerkt.",
     },
     lensToggle: {
       title: "Lesen ⇄ Bearbeiten",
@@ -179,6 +185,11 @@ const de: typeof en = {
     share: {
       title: "Teilen",
       description: "Lade deinen Partner oder Coach ein — alle bearbeiten dieselbe Choreo, live.",
+    },
+    typeChips: {
+      title: "Zeig nur, woran du gerade arbeitest",
+      description:
+        "Tippe auf einen Chip, um diese Spalte auszublenden — in der ganzen Choreo und in jeder anderen. Step bleibt immer sichtbar. „+N ausgeblendet“ an einer Figur zeigt kurz, was verborgen ist; deine Auswahl wird gemerkt.",
     },
     quickNote: {
       title: "Schnelle Notiz",

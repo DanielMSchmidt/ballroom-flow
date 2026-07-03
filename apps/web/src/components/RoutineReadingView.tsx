@@ -1,9 +1,14 @@
 // Reading lens (design frame 1.6 — Assemble · READING). A clean, read-only
-// "programme" of the whole routine: a STEPS-FOR Leader/Follower toggle, then per
-// section a SectionDivider, then per figure a compact table whose columns are
-// ONLY the attribute kinds that figure uses (the Step column merges direction +
-// footwork into one blue chip). Off-beat (sub-beat) rows render dimmed. Inline
-// comments surface the latest annotations on a step and open the thread.
+// "programme" of the whole routine: a TYPE-CHIPS filter row (design 1.23 —
+// tap a chip to hide/show that technique column across every figure; Step*
+// locked; remembered per device, across choreos), then per section a
+// SectionDivider, then per figure a compact table whose columns are ONLY the
+// attribute kinds that figure uses (the Step column merges direction +
+// footwork into one blue chip) minus the hidden ones — a "+N hidden" pill
+// peeks at what's tucked (collapses on the next scroll). The Leader/Follower
+// role lens moved to the screen header as a compact L·F (Assemble). Off-beat
+// (sub-beat) rows render dimmed. Inline comments surface the latest
+// annotations on a step and open the thread.
 //
 // Pure presentation over the same store reads (no editing, no I/O). A null
 // figure is rendered honestly per its load status (skeleton / unavailable),
@@ -22,7 +27,7 @@ import {
   type RoutineBeatEntry,
   type RoutineDoc,
 } from "@ballroom/domain";
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
@@ -33,8 +38,8 @@ import {
   IDENTITY_COLORS,
   kindVar,
   SectionDivider,
-  SegmentedToggle,
   Skeleton,
+  useToast,
 } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -46,6 +51,13 @@ import {
   type ReadingColumn,
   usedColumns,
 } from "./reading-columns";
+import {
+  hasSeenHiddenHint,
+  hiddenColumnCount,
+  markHiddenHintSeen,
+  useStoredHiddenColumns,
+  visibleColumns,
+} from "./reading-filter";
 import { filterByRoleView, type RoleView } from "./role-view";
 
 export function RoutineReadingView({
@@ -57,7 +69,6 @@ export function RoutineReadingView({
   memberNames,
   customKinds = [],
   roleView,
-  onRoleViewChange,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -79,9 +90,9 @@ export function RoutineReadingView({
   /** User-defined kinds merged into the registry (US-043) — so the attribute info
    *  overlay (frame 1.13) can describe a custom kind's prose/values too. */
   customKinds?: RegistryKind[];
-  /** The active Leader/Follower lens (controlled — persisted by the caller). */
+  /** The active Leader/Follower lens (controlled — persisted by the caller,
+   *  who renders the compact L·F toggle in the screen header — design 1.23). */
   roleView: RoleView;
-  onRoleViewChange: (view: RoleView) => void;
   /** Tap a figure name → Figure detail (existing open-figure flow). */
   onOpenFigure?: (figureId: string) => void;
   /** Tap a comment / "+ add comment" → open the annotation thread for that
@@ -112,22 +123,86 @@ export function RoutineReadingView({
   // figure whose notes changed gets a new array — every other FigureReadout
   // sees reference-equal props and skips its re-render (React.memo below).
   const annotationsByFigure = useStableAnnotationsByFigure(annotations);
+  const toast = useToast();
+  // The column filter (design 1.23): hidden column ids, per device + across
+  // choreos. The chips row covers every type USED anywhere in this routine
+  // (under the active role lens — same "only what's set" rule as the tables).
+  const [hiddenColumns, toggleHiddenColumn] = useStoredHiddenColumns();
+  const routineColumns = useMemo(() => {
+    const all: Attribute[] = [];
+    for (const rp of placements) {
+      if (!rp.figure) continue;
+      all.push(
+        ...filterByRoleView(
+          rp.figure.attributes.filter((a) => a.deletedAt == null),
+          roleView,
+        ),
+      );
+    }
+    return usedColumns(all, dance);
+  }, [placements, roleView, dance]);
+  // "+N hidden" peek (design 1.23 pin 2): ONE figure at a time expands to show
+  // everything; chips stay put; collapses on the next scroll (a 450ms grace
+  // absorbs the browser's own scroll on tap — same rule as the prototype).
+  const [peekedPlacement, setPeekedPlacement] = useState<string | null>(null);
+  const peekedAtRef = useRef(0);
+  const onChipTap = useCallback(
+    (col: ReadingColumn) => {
+      if (col.isStep) {
+        // Step* is required — never hideable (design 1.23).
+        toast.show(t.columnAlwaysShownToast(col.label));
+        return;
+      }
+      // The user plainly knows the filter now — never show the one-time hint.
+      markHiddenHintSeen();
+      setPeekedPlacement(null);
+      toggleHiddenColumn(col.id);
+    },
+    [toast, toggleHiddenColumn, t],
+  );
+  const onTogglePeek = useCallback((placementId: string) => {
+    peekedAtRef.current = Date.now();
+    setPeekedPlacement((prev) => (prev === placementId ? null : placementId));
+  }, []);
+  useEffect(() => {
+    if (peekedPlacement === null) return;
+    const onScroll = () => {
+      if (Date.now() - peekedAtRef.current > 450) setPeekedPlacement(null);
+    };
+    // Capture-phase so a scrolling ancestor container collapses the peek too.
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", onScroll, { capture: true });
+  }, [peekedPlacement]);
+  // Backup for tour skippers (design 1.26): the FIRST time a view hides data,
+  // a one-time toast points at the "+N hidden" affordance.
+  const hidesData = routineColumns.some((c) => !c.isStep && hiddenColumns.has(c.id));
+  useEffect(() => {
+    if (!hidesData || hasSeenHiddenHint()) return;
+    markHiddenHintSeen();
+    toast.show(t.hiddenColumnsHintToast);
+  }, [hidesData, toast, t]);
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
-      <div data-tour="role-toggle" className="flex items-center gap-2">
-        <span className="text-2xs font-bold uppercase tracking-wider text-ink-label">
-          {t.stepsFor}
-        </span>
-        <SegmentedToggle<RoleView>
-          ariaLabel={t.stepsFor}
-          value={roleView}
-          onChange={onRoleViewChange}
-          options={[
-            { value: "leader", label: t.leader },
-            { value: "follower", label: t.follower },
-          ]}
-        />
-      </div>
+      {/* Type chips (design 1.23 — ✓ chosen): one per used type, tap to hide /
+          show that column across EVERY figure. Default: everything on. The
+          Leader/Follower lens lives in the screen header (Assemble). */}
+      {routineColumns.length > 0 && (
+        <fieldset
+          data-tour="type-chips"
+          aria-label={t.shownColumns}
+          className="flex flex-wrap items-center gap-[5px]"
+        >
+          {routineColumns.map((col) => (
+            <FilterChip
+              key={col.id}
+              column={col}
+              on={col.isStep === true || !hiddenColumns.has(col.id)}
+              customKinds={customKinds}
+              onTap={onChipTap}
+            />
+          ))}
+        </fieldset>
+      )}
 
       {routine.sections.length === 0 ? (
         <p className="text-2xs text-ink-faint">{t.noSections}</p>
@@ -164,6 +239,10 @@ export function RoutineReadingView({
                     memberNames={memberNames}
                     customKinds={customKinds}
                     scopeLabel={routine.title}
+                    hiddenColumns={hiddenColumns}
+                    peekKey={pl.id}
+                    peeked={peekedPlacement === pl.id}
+                    onTogglePeek={onTogglePeek}
                     onOpenFigure={onOpenFigure}
                     onOpenThread={onOpenThread}
                   />
@@ -304,6 +383,10 @@ const FigureReadout = memo(function FigureReadout({
   memberNames,
   customKinds = [],
   scopeLabel,
+  hiddenColumns,
+  peekKey,
+  peeked,
+  onTogglePeek,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -320,6 +403,14 @@ const FigureReadout = memo(function FigureReadout({
   memberNames?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
+  /** The routine-wide hidden column ids (design 1.23 type chips). */
+  hiddenColumns: ReadonlySet<string>;
+  /** This readout's placement id — the peek key (stable across renders so the
+   *  memo bails; the single `onTogglePeek` callback stays shared). */
+  peekKey: string;
+  /** While peeked this figure shows EVERY used column ("– hide" collapses). */
+  peeked: boolean;
+  onTogglePeek: (peekKey: string) => void;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
@@ -355,7 +446,13 @@ const FigureReadout = memo(function FigureReadout({
     roleView,
   );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
-  const columns = usedColumns(live, dance);
+  // The figure's used columns, minus the routine-wide hidden ones (design
+  // 1.23) — unless peeked, which shows everything. The "+N hidden" pill counts
+  // the used-but-hidden columns; hiding never touches data (notes, breaks and
+  // whole-figure comments are never filtered).
+  const allUsedColumns = usedColumns(live, dance);
+  const hiddenHere = hiddenColumnCount(allUsedColumns, hiddenColumns);
+  const columns = visibleColumns(allUsedColumns, hiddenColumns, peeked);
   const bars = barsForFigure(counts, dance);
   // The continuous beat token per count (US-004a), zipped with the sorted counts.
   const tokenByCount = new Map(counts.map((c, i) => [c, beatTokens[i] ?? String(c)]));
@@ -407,7 +504,15 @@ const FigureReadout = memo(function FigureReadout({
         <p className="text-2xs text-ink-faint">{t.noStepsYet}</p>
       ) : (
         <>
-          <ColumnHeader columns={columns} onOpenInfo={setInfoCol} />
+          <ColumnHeader
+            columns={columns}
+            onOpenInfo={setInfoCol}
+            trailing={
+              hiddenHere > 0 ? (
+                <PeekPill count={hiddenHere} peeked={peeked} onTap={() => onTogglePeek(peekKey)} />
+              ) : undefined
+            }
+          />
           <ol className="flex flex-col gap-[5px]" aria-label={t.figureSteps(figure.name)}>
             {counts.map((count) => (
               <StepRow
@@ -470,13 +575,16 @@ const FigureReadout = memo(function FigureReadout({
 
 /** The per-figure column header: a count gutter then each used kind in its
  *  kind color (frame 1.6: Step · Rise · Pos · Sway · Turn). Each kind label is a
- *  button that opens that kind's attribute info overlay (frame 1.13). */
+ *  button that opens that kind's attribute info overlay (frame 1.13). The
+ *  trailing slot carries the "+N hidden" peek pill (design 1.23). */
 function ColumnHeader({
   columns,
   onOpenInfo,
+  trailing,
 }: {
   columns: ReadingColumn[];
   onOpenInfo: (col: ReadingColumn) => void;
+  trailing?: ReactNode;
 }) {
   const t = useMessages(timelineMessages);
   return (
@@ -494,23 +602,126 @@ function ColumnHeader({
           {col.label}
         </button>
       ))}
+      {trailing}
     </div>
   );
 }
 
+/** One type chip (design 1.23): ON = the kind's tint/ink/border family; OFF =
+ *  dashed grey over the plain surface (grey stays "empty / off", never data).
+ *  Step* is locked — tapping it only surfaces the "always shown" toast. A
+ *  custom kind passes its registry color through (border/ink + a leading dot,
+ *  like AttrChip) so user-defined types sit in the row like builtins. */
+function FilterChip({
+  column,
+  on,
+  customKinds,
+  onTap,
+}: {
+  column: ReadingColumn;
+  on: boolean;
+  customKinds: RegistryKind[];
+  onTap: (col: ReadingColumn) => void;
+}) {
+  const t = useMessages(timelineMessages);
+  const locked = column.isStep === true;
+  const family = columnChipFamily(column, customKinds);
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={
+        locked
+          ? t.columnAlwaysShown(column.label)
+          : on
+            ? t.hideColumn(column.label)
+            : t.showColumn(column.label)
+      }
+      onClick={() => onTap(column)}
+      className={cx(
+        "inline-flex min-h-[36px] items-center gap-1 rounded-[6px] border-[1.5px] px-2 py-1 text-2xs leading-none",
+        on ? "font-bold" : "border-dashed font-semibold",
+      )}
+      style={
+        on
+          ? { background: family.tint, color: family.ink, borderColor: family.border }
+          : {
+              background: "var(--bf-surface)",
+              color: "var(--bf-ink-faint)",
+              borderColor: "var(--bf-border-strong)",
+            }
+      }
+    >
+      {locked ? `${column.label}*` : column.label}
+      {family.dot && on && (
+        <span
+          aria-hidden="true"
+          className="h-[6px] w-[6px] flex-none rounded-full"
+          style={{ background: family.dot }}
+        />
+      )}
+    </button>
+  );
+}
+
+/** A chip's ON color family: standard kinds use their token family; a custom
+ *  kind passes its stored color through as border/ink over a neutral tint,
+ *  plus a leading dot (the AttrChip treatment — DESIGN-PRINCIPLES #24). */
+function columnChipFamily(
+  col: ReadingColumn,
+  customKinds: RegistryKind[],
+): { tint: string; ink: string; border: string; dot?: string } {
+  if (STANDARD_COLUMN_KINDS.includes(col.kind)) {
+    const kind = col.kind as Parameters<typeof kindVar>[0];
+    return {
+      tint: kindVar(kind, "tint"),
+      ink: kindVar(kind, "ink"),
+      border: kindVar(kind, "border"),
+    };
+  }
+  const custom = customKinds.find((k) => k.kind === col.kind)?.color;
+  return {
+    tint: "var(--bf-surface-sunken)",
+    ink: custom ?? "var(--bf-ink-secondary)",
+    border: custom ?? "var(--bf-border-strong)",
+    dot: custom,
+  };
+}
+
+/** The "+N hidden" peek pill (design 1.23 pin 2): sits at the end of a
+ *  figure's column-header row when the filter hides columns this figure uses.
+ *  Tap to peek (this figure shows everything, label flips to "– hide");
+ *  collapses on the next scroll. */
+function PeekPill({ count, peeked, onTap }: { count: number; peeked: boolean; onTap: () => void }) {
+  const t = useMessages(timelineMessages);
+  return (
+    <button
+      type="button"
+      aria-expanded={peeked}
+      aria-label={peeked ? t.peekCollapseLabel : t.peekHiddenLabel(count)}
+      onClick={onTap}
+      className="min-h-[36px] flex-none cursor-pointer rounded-[6px] bg-surface-sunken px-2 py-1 text-[10px] font-bold leading-none text-ink-muted"
+    >
+      {peeked ? t.peekCollapse : t.hiddenCountPill(count)}
+    </button>
+  );
+}
+
+/** The kind ids with a `--bf-kind-*` token family (headers + filter chips). */
+const STANDARD_COLUMN_KINDS = [
+  "direction",
+  "footwork",
+  "footPosition",
+  "rise",
+  "position",
+  "bodyActions",
+  "sway",
+  "turn",
+];
+
 /** A column's header/text color — the kind's base token, slate for unknowns. */
 function columnColor(col: ReadingColumn): string {
-  const standard = [
-    "direction",
-    "footwork",
-    "footPosition",
-    "rise",
-    "position",
-    "bodyActions",
-    "sway",
-    "turn",
-  ];
-  return standard.includes(col.kind)
+  return STANDARD_COLUMN_KINDS.includes(col.kind)
     ? kindVar(col.kind as Parameters<typeof kindVar>[0])
     : "var(--bf-ink-secondary)";
 }

@@ -1,6 +1,6 @@
 import type { Annotation, Attribute, FigureDoc, RoutineDoc } from "@ballroom/domain";
 import type { ComponentType } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen } from "../test-support/render";
@@ -10,13 +10,18 @@ interface ReadingProps {
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
   roleView: RoleView;
-  onRoleViewChange: (v: RoleView) => void;
   annotations?: Annotation[];
   canComment?: boolean;
   memberColors?: Record<string, string>;
   onOpenFigure?: (id: string) => void;
   onOpenThread?: (id: string) => void;
 }
+
+// The column filter + its one-time hint persist per device (bb_hidden_types /
+// bb_hidden_types_hint) — clear between tests so filters never leak across.
+beforeEach(() => {
+  localStorage.clear();
+});
 interface ReadingModule {
   RoutineReadingView: ComponentType<ReadingProps>;
 }
@@ -64,12 +69,7 @@ function renderReading(fig: FigureDoc, roleView: RoleView = "leader") {
     { placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" },
   ];
   return renderUi(
-    <RoutineReadingView
-      routine={routine}
-      placements={placements}
-      roleView={roleView}
-      onRoleViewChange={vi.fn()}
-    />,
+    <RoutineReadingView routine={routine} placements={placements} roleView={roleView} />,
   );
 }
 
@@ -91,8 +91,10 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     expect(screen.getByTestId("reading-view")).toBeInTheDocument();
     expect(screen.getByText("1st Long Side")).toBeInTheDocument();
     // Column headers: only what's set — Step, Rise, Turn (no Sway/Pos column).
+    // (Query by the info-overlay name: the filter chips row also renders the
+    // bare labels, so text queries would double-match.)
     for (const head of ["Step", "Rise", "Turn"]) {
-      expect(screen.getByText(head)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `About ${head}` })).toBeInTheDocument();
     }
     expect(screen.queryByText("Sway")).toBeNull();
     expect(screen.queryByText("Pos")).toBeNull();
@@ -111,7 +113,7 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
       "../components/RoutineReadingView",
     ));
     renderReading(figure({ attributes: [attr(1, "bodyActions", ["CBM"])] }));
-    expect(screen.getByText("Body")).toBeInTheDocument(); // titled column
+    expect(screen.getByRole("button", { name: "About Body" })).toBeInTheDocument(); // titled column
     expect(screen.getByText("CBM")).toBeInTheDocument(); // CBM → "CBM"
   });
 
@@ -180,7 +182,6 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
         routine={routine}
         placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
         roleView="leader"
-        onRoleViewChange={vi.fn()}
         annotations={[
           {
             id: "an1",
@@ -223,7 +224,6 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
         routine={routine}
         placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
         roleView="leader"
-        onRoleViewChange={vi.fn()}
         annotations={[]} // ZERO comments
         canComment
         onOpenThread={onOpenThread}
@@ -256,7 +256,6 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
         routine={routine}
         placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
         roleView="leader"
-        onRoleViewChange={vi.fn()}
         annotations={[
           {
             id: "an1",
@@ -301,7 +300,6 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
         routine={routine}
         placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
         roleView="leader"
-        onRoleViewChange={vi.fn()}
         memberColors={{ u2: "#1f8a5b" }} // real stored identity hex
         annotations={[
           {
@@ -357,13 +355,7 @@ describe("RoutineReadingView — continuous beat numbering + breaks (US-004a)", 
       schemaVersion: 1,
     };
     return renderUi(
-      <RoutineReadingView
-        routine={routine}
-        placements={placements}
-        roleView="leader"
-        onRoleViewChange={vi.fn()}
-        {...extra}
-      />,
+      <RoutineReadingView routine={routine} placements={placements} roleView="leader" {...extra} />,
     );
   }
 
@@ -517,5 +509,91 @@ describe("RoutineReadingView — attribute info overlay (frame 1.13)", () => {
     // The observed value renders as a chip even with no definition text.
     const values = screen.getAllByText("high");
     expect(values.length).toBeGreaterThan(0);
+  });
+});
+
+describe("RoutineReadingView — type-chip column filter (design 1.23)", () => {
+  // A figure using Step + Rise + Turn, so the chips row shows all three.
+  const threeKinds = () =>
+    figure({
+      attributes: [
+        attr(1, "direction", "forward"),
+        attr(1, "rise", "commence"),
+        attr(1, "turn", "quarter_R"),
+      ],
+    });
+
+  it("hides that column across the routine when a chip is tapped, persisted per device", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(threeKinds());
+    // Everything on by default (the row only ever reduces).
+    expect(screen.getByRole("button", { name: "About Rise" })).toBeInTheDocument();
+    const riseChip = screen.getByRole("button", { name: "Hide the Rise column" });
+    expect(riseChip).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(riseChip);
+    // The Rise column is gone from the figure's table (header + value)…
+    expect(screen.queryByRole("button", { name: "About Rise" })).toBeNull();
+    expect(screen.queryByText("Com")).toBeNull();
+    // …the chip flips to its dashed OFF state…
+    expect(screen.getByRole("button", { name: "Show the Rise column" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    // …and the choice is remembered per device, across choreos (bb_hidden_types).
+    expect(JSON.parse(localStorage.getItem("bb_hidden_types") ?? "[]")).toContain("rise");
+    // Hiding never touches data: the other columns still render their values.
+    expect(screen.getByText("fwd")).toBeInTheDocument();
+  });
+
+  it("keeps Step locked — tapping it only surfaces the always-shown toast", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(threeKinds());
+    await userEvent.click(screen.getByRole("button", { name: "Step column — always shown" }));
+    expect(screen.getByText("Step is always shown")).toBeInTheDocument();
+    // The Step column survives, and nothing was persisted.
+    expect(screen.getByRole("button", { name: "About Step" })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("bb_hidden_types") ?? "[]")).toHaveLength(0);
+  });
+
+  it("peeks a figure's hidden columns via '+N hidden' and collapses again", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    localStorage.setItem("bb_hidden_types", JSON.stringify(["rise", "turn"]));
+    localStorage.setItem("bb_hidden_types_hint", "done"); // hint already seen
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(threeKinds());
+    // Both hidden columns are tucked; the figure carries a "+2 hidden" pill.
+    expect(screen.queryByRole("button", { name: "About Rise" })).toBeNull();
+    const pill = screen.getByRole("button", { name: "Peek at 2 hidden columns" });
+    await userEvent.click(pill);
+    // Peek: THIS figure expands to everything; the chips stay put (still off).
+    expect(screen.getByRole("button", { name: "About Rise" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "About Turn" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show the Rise column" })).toBeInTheDocument();
+    // The pill flips to "– hide"; tapping again collapses the peek.
+    await userEvent.click(
+      screen.getByRole("button", { name: "Hide the tucked-away columns again" }),
+    );
+    expect(screen.queryByRole("button", { name: "About Rise" })).toBeNull();
+  });
+
+  it("shows the one-time 'tucked away' hint the first time a view hides data", async () => {
+    localStorage.setItem("bb_hidden_types", JSON.stringify(["rise"]));
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(threeKinds());
+    // The backup for tour skippers (design 1.26): a one-time toast points at
+    // the "+N hidden" affordance…
+    expect(screen.getByText(/some columns are tucked away/i)).toBeInTheDocument();
+    // …and never re-nags (the flag is stamped at show).
+    expect(localStorage.getItem("bb_hidden_types_hint")).toBe("done");
   });
 });

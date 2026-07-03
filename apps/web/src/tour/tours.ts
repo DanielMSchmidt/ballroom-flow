@@ -65,6 +65,11 @@ export const TOURS: Record<TourPageId, TourStepDef[]> = {
       { element: "[data-tour='role-toggle']", ...t.roleToggle },
       { element: "[data-tour='lens-toggle']", ...t.lensToggle },
       { element: "[data-tour='share']", ...t.share },
+      // Design 1.26: the chips stop slots in right after the header stops —
+      // one idea per stop; the quick-note FAB stays the final stop. The
+      // control stays live (driver.js doesn't block the highlighted element),
+      // so trying the chips doesn't end the tour.
+      { element: "[data-tour='type-chips']", ...t.typeChips },
       { element: "[data-tour='quick-note']", ...t.quickNote },
     ];
   },
