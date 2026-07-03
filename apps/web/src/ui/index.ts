@@ -21,6 +21,7 @@ export { Input, type InputProps } from "./Input";
 export * from "./icons";
 export { List, ListRow, type ListRowProps } from "./List";
 export { Modal, type ModalAction, type ModalProps } from "./Modal";
+export { OfflineBanner } from "./OfflineBanner";
 export { OfflineState, type OfflineStateProps } from "./OfflineState";
 export { ScopeBadge, type ScopeBadgeProps } from "./ScopeBadge";
 export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";

@@ -61,6 +61,45 @@ describe("useOverlay", () => {
     expect(document.body.style.overflow).toBe("auto");
   });
 
+  it("preserves the page scroll position across open/close (the note-sheet scroll loss)", () => {
+    // The incident: the app scrolls on the BODY; `overflow: hidden` alone lets
+    // the browser coerce the body's scrollTop toward 0 while an overlay is
+    // open, so closing the note Sheet dumped the reader back at the top of the
+    // choreo. The lock must fix the body at its current offset and restore the
+    // real scroll on close.
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    Object.defineProperty(window, "scrollY", { value: 480, configurable: true });
+
+    const { unmount } = render(<Overlay open bump={0} />);
+    // Locked: the body is fixed at the pre-open offset (no visual jump).
+    expect(document.body.style.position).toBe("fixed");
+    expect(document.body.style.top).toBe("-480px");
+
+    unmount();
+    // Unlocked: styles restored, and the page is scrolled back where it was.
+    expect(document.body.style.position).toBe("");
+    expect(scrollTo).toHaveBeenCalledWith(0, 480);
+
+    vi.unstubAllGlobals();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+  });
+
+  it("restores focus on close without scrolling the page (preventScroll)", () => {
+    const button = document.createElement("button");
+    document.body.appendChild(button);
+    button.focus();
+    const focusSpy = vi.spyOn(button, "focus");
+
+    const { unmount } = render(<Overlay open bump={0} />);
+    unmount();
+
+    // An un-preventScroll'ed focus restore scrolls the refocused element into
+    // view — compounding the scroll loss the lock above just fixed.
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    button.remove();
+  });
+
   it("Escape still closes using the latest onClose after re-renders", () => {
     const first = vi.fn();
     const second = vi.fn();

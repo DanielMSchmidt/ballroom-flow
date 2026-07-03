@@ -19,7 +19,16 @@ import {
 } from "./store/journal";
 import { useMe } from "./store/me";
 import { Styleguide } from "./styleguide/Styleguide";
-import { AppShell, Button, Card, type NavItem, Spinner, Tabs, ToastProvider } from "./ui";
+import {
+  AppShell,
+  Button,
+  Card,
+  type NavItem,
+  OfflineBanner,
+  Spinner,
+  Tabs,
+  ToastProvider,
+} from "./ui";
 import { JournalIcon, LibraryIcon, PersonIcon, StepsIcon } from "./ui/icons";
 
 /**
@@ -126,6 +135,9 @@ function AppHome(): React.JSX.Element {
       }}
     >
       <div className="flex flex-1 flex-col gap-3 p-4 lg:p-0 lg:pt-4">
+        {/* App-shell offline state (US-050 AC-2): the SW-cached shell still
+            loads with no network — say so plainly instead of failing quietly. */}
+        <OfflineBanner />
         {needsOnboarding && (
           <Card>
             <div className="flex items-center justify-between gap-3">

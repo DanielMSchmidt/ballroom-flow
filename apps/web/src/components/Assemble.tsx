@@ -295,6 +295,14 @@ export function Assemble({
   } | null>(null);
   // The Leader/Follower lens for the reading view — persisted across routines.
   const [roleView, setRoleView] = useStoredRoleView();
+  // Stable handler identities for the memoized reading view (FigureReadout is
+  // React.memo'd): an inline closure here would re-bust every row's props on
+  // each background sync re-render. useState setters are stable, so [] is right.
+  const openFigureFromReading = useCallback((figureId: string) => setNotating(figureId), []);
+  const openThreadFromReading = useCallback(
+    (anchor: { figureRef: string; count?: number }) => setThreadAnchor(anchor),
+    [],
+  );
   // Which sections are collapsed in the editing view (frame 1.9: ▾/▸).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleCollapsed = useCallback((sectionId: string) => {
@@ -337,8 +345,12 @@ export function Assemble({
   const me = useMe();
   const membersQ = useMembers(routineId);
   // First-visit tour: the reading programme's lenses + share + quick note.
-  // Held until the store is open (so the anchors exist) and only in read mode.
-  useFirstVisitTour("assemble", mode === "read" && !offlineProp && store !== null);
+  // Held until the store is HYDRATED ("live"), not merely open — `store !== null`
+  // flips before catch-up, so on a slow connection the tour opened over a
+  // still-loading screen and the content reflowed under its highlight. The
+  // subscribe(bump) effect re-renders on sync-state advances, so this predicate
+  // re-evaluates the moment hydration lands. Only in read mode.
+  useFirstVisitTour("assemble", mode === "read" && !offlineProp && store?.syncState() === "live");
   const memberColorMap = useMemo(
     () => resolveMemberColors(membersQ.data?.members, currentUserId, me.data?.identityColor),
     [membersQ.data, me.data, currentUserId],
@@ -550,8 +562,8 @@ export function Assemble({
               customKinds={store.customKinds()}
               roleView={roleView}
               onRoleViewChange={setRoleView}
-              onOpenFigure={(figureId) => setNotating(figureId)}
-              onOpenThread={(anchor) => setThreadAnchor(anchor)}
+              onOpenFigure={openFigureFromReading}
+              onOpenThread={openThreadFromReading}
             />
             {/* Quick-note FAB (Builder v2): a floating "✎ note" pill on the
                 reading programme that jumps straight into a note on the first

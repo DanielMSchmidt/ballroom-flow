@@ -98,9 +98,11 @@ describe("RoutineReadingView — per-figure used-columns table (frame 1.6)", () 
     expect(screen.queryByText("Pos")).toBeNull();
     // The Step column merges direction + footwork into one chip.
     expect(screen.getByText("fwd·H")).toBeInTheDocument();
-    // Values render as tight column codes, not raw enum strings.
+    // Values render as tight column codes, not raw enum strings. The turn chip
+    // splits the fraction glyph and the direction letter into two nodes (a
+    // deliberate 2px gap — AttrChip), so match on the chip's text CONTENT.
     expect(screen.getByText("Com")).toBeInTheDocument(); // rise: commence
-    expect(screen.getByText("¼R")).toBeInTheDocument(); // turn: quarter_R
+    expect(screen.getByRole("button", { name: "About Turn — ¼R" })).toBeInTheDocument(); // turn: quarter_R
     expect(screen.queryByText("quarter_R")).toBeNull();
   });
 

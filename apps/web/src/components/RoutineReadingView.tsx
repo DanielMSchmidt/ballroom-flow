@@ -22,7 +22,7 @@ import {
   type RoutineBeatEntry,
   type RoutineDoc,
 } from "@ballroom/domain";
-import { useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import {
   AttrChip,
@@ -88,18 +88,27 @@ export function RoutineReadingView({
    *  whole-figure note omits `count` (US-004a). */
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
-  const resolvedByPlacement = new Map(placements.map((p) => [p.placement.id, p]));
   const dance = routine.dance as DanceId;
+  const resolvedByPlacement = useMemo(
+    () => new Map(placements.map((p) => [p.placement.id, p])),
+    [placements],
+  );
   // Continuous beat numbering (US-004a): one running counter threads the whole
   // routine in placement order, wrapping at the dance's phrase length. Breaks
   // advance it too. We compute it ONCE here and hand each placement its result;
   // the edit view keeps per-figure LOCAL counts (this is display-only).
-  const numberByPlacement = numberRoutineBeats_forRoutine(
-    routine,
-    resolvedByPlacement,
-    roleView,
-    dance,
+  // MEMOIZED on the STRUCTURAL inputs (sections + resolved placements — both
+  // identity-stable across annotation-only changes thanks to the store's
+  // reconcile), so an added note re-uses every beat-token array and the
+  // memoized FigureReadouts below can bail out.
+  const numberByPlacement = useMemo(
+    () => numberRoutineBeats_forRoutine(routine.sections, resolvedByPlacement, roleView, dance),
+    [routine.sections, resolvedByPlacement, roleView, dance],
   );
+  // Per-figure annotation slices with STABLE identities: only the slice of the
+  // figure whose notes changed gets a new array — every other FigureReadout
+  // sees reference-equal props and skips its re-render (React.memo below).
+  const annotationsByFigure = useStableAnnotationsByFigure(annotations);
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
       <div data-tour="role-toggle" className="flex items-center gap-2">
@@ -137,6 +146,7 @@ export function RoutineReadingView({
                   );
                 }
                 const rp = resolvedByPlacement.get(pl.id);
+                const figureId = rp?.figure?.id;
                 return (
                   <FigureReadout
                     key={pl.id}
@@ -144,8 +154,8 @@ export function RoutineReadingView({
                     status={rp?.status ?? "loading"}
                     dance={dance}
                     roleView={roleView}
-                    beatTokens={numbered?.kind === "figure" ? numbered.tokens : []}
-                    annotations={annotations}
+                    beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
+                    annotations={(figureId && annotationsByFigure.get(figureId)) || NO_ANNOTATIONS}
                     canComment={canComment}
                     memberColors={memberColors}
                     memberNames={memberNames}
@@ -164,6 +174,46 @@ export function RoutineReadingView({
   );
 }
 
+// Stable empties: a figure with no notes / no beats must receive the SAME
+// array identity every render, or React.memo could never bail for it.
+const NO_ANNOTATIONS: Annotation[] = [];
+const NO_TOKENS: string[] = [];
+
+/**
+ * Group annotations by the figure they anchor to (point OR whole-figure
+ * anchors), keeping each group's ARRAY IDENTITY stable across regroupings when
+ * its members are unchanged. Annotation objects themselves are identity-stable
+ * across snapshots (store reconcile), so "unchanged" is a cheap reference scan.
+ * The result: adding a note to figure X hands ONLY X's FigureReadout a new
+ * `annotations` prop.
+ */
+function useStableAnnotationsByFigure(annotations: Annotation[]): Map<string, Annotation[]> {
+  const prevRef = useRef<Map<string, Annotation[]>>(new Map());
+  return useMemo(() => {
+    const next = new Map<string, Annotation[]>();
+    for (const a of annotations) {
+      if (a.deletedAt != null) continue;
+      const seen = new Set<string>();
+      for (const an of a.anchors) {
+        if ((an.type === "point" || an.type === "figure") && !seen.has(an.figureRef)) {
+          seen.add(an.figureRef);
+          const arr = next.get(an.figureRef);
+          if (arr) arr.push(a);
+          else next.set(an.figureRef, [a]);
+        }
+      }
+    }
+    for (const [figureRef, arr] of next) {
+      const prev = prevRef.current.get(figureRef);
+      if (prev && prev.length === arr.length && prev.every((x, i) => x === arr[i])) {
+        next.set(figureRef, prev);
+      }
+    }
+    prevRef.current = next;
+    return next;
+  }, [annotations]);
+}
+
 /** A figure's distinct, sorted counts under the active role lens — the same
  *  derivation FigureReadout renders from, so numbering aligns with the rows. */
 function figureCounts(figure: FigureDoc, roleView: RoleView): number[] {
@@ -178,7 +228,7 @@ function figureCounts(figure: FigureDoc, roleView: RoleView): number[] {
  *  numbered-entry map. Threads a single counter across every section/placement in
  *  order; a null (loading/missing) figure contributes no beats (best effort). */
 function numberRoutineBeats_forRoutine(
-  routine: RoutineDoc,
+  sections: RoutineDoc["sections"],
   resolved: Map<string, ResolvedPlacement>,
   roleView: RoleView,
   dance: DanceId,
@@ -186,7 +236,7 @@ function numberRoutineBeats_forRoutine(
   const beatsPerBar = DANCES[dance].beatsPerBar;
   const ids: string[] = [];
   const entries: RoutineBeatEntry[] = [];
-  for (const section of routine.sections) {
+  for (const section of sections) {
     for (const pl of section.placements) {
       ids.push(pl.id);
       if (pl.source === "break") {
@@ -233,8 +283,12 @@ function figureScope(figure: FigureDoc): FigureScope {
   return figureMatchesLibraryOrigin(figure) ? "library" : "custom";
 }
 
-/** One figure's notation, read-only: a compact count × used-columns table. */
-function FigureReadout({
+/** One figure's notation, read-only: a compact count × used-columns table.
+ *  MEMOIZED: with the store's reconcile keeping figure/annotation identities
+ *  stable, a note added elsewhere (or any unrelated doc change) leaves every
+ *  prop reference-equal and this whole subtree skips its re-render — only the
+ *  figure whose notes/content changed re-renders. */
+const FigureReadout = memo(function FigureReadout({
   figure,
   status,
   dance,
@@ -409,7 +463,7 @@ function FigureReadout({
         })()}
     </div>
   );
-}
+});
 
 /** The per-figure column header: a count gutter then each used kind in its
  *  kind color (frame 1.6: Step · Rise · Pos · Sway · Turn). Each kind label is a

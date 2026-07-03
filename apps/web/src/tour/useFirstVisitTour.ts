@@ -100,6 +100,11 @@ export function startTour(page: TourPageId): Driver | null {
   const reducedMotion =
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Late layout changes (content still hydrating below the anchor) reflow the
+  // page WITHOUT a window resize — driver.js only re-anchors on resize/scroll,
+  // so a growing page left the spotlight pinned to a stale rect. Watch the body
+  // and re-measure the active highlight on any reflow.
+  let reflowWatch: ResizeObserver | undefined;
   const d = driver({
     steps,
     animate: !reducedMotion,
@@ -113,8 +118,15 @@ export function startTour(page: TourPageId): Driver | null {
     stagePadding: 6,
     stageRadius: 10,
     popoverClass: "bf-tour",
+    onDestroyed: () => reflowWatch?.disconnect(),
   });
   d.drive();
+  if (typeof ResizeObserver !== "undefined") {
+    reflowWatch = new ResizeObserver(() => {
+      if (d.isActive()) d.refresh();
+    });
+    reflowWatch.observe(document.body);
+  }
   return d;
 }
 

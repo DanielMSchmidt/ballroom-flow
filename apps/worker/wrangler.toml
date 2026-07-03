@@ -3,6 +3,19 @@ main = "src/index.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
 
+# US-049 (M8): Smart Placement — the worker's hot path is D1 + DO round-trips,
+# so let Cloudflare place it near the data instead of the client. Inherited by
+# named environments (placement is not a binding), declared once here.
+[placement]
+mode = "smart"
+
+# US-049 (M8): product metrics (Analytics Engine). writeMetric() no-ops when the
+# binding is absent, so local dev without AE still runs. Bindings are NOT
+# inherited by named environments — redeclared per env below.
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_dev"
+
 # Serve the built SPA from the same Worker. API routes run worker-first;
 # everything else falls back to index.html (client-side routing).
 [assets]
@@ -94,6 +107,10 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_staging"
+
 # --- Production (deployed from the `main` branch).
 [env.production]
 name = "ballroom-flow-production"
@@ -113,3 +130,7 @@ migrations_dir = "migrations"
 [[env.production.durable_objects.bindings]]
 name = "DOC_DO"
 class_name = "DocDO"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_production"

@@ -53,6 +53,7 @@ import {
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
+import { reconcile } from "./reconcile";
 
 /**
  * Load status of a placement's figure (each figure is its own Automerge doc on
@@ -647,7 +648,12 @@ export async function openRoutine(
       if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds as RegistryKind[];
       value = fallback;
     } else {
-      value = readRoutine(doc);
+      // Structural sharing (reconcile): when the doc DID change, every subtree
+      // that didn't keeps its previous identity — so appending one annotation
+      // leaves `sections` (and every placement in it) reference-equal, the
+      // readPlacements stability guard holds, and only the annotation surfaces
+      // re-render. See store/reconcile.ts.
+      value = reconcile(routineJsCache?.value, readRoutine(doc));
     }
     routineJsCache = { key, value };
     return value;
@@ -701,6 +707,13 @@ export async function openRoutine(
     const conn = eagerFigures ? figureConn(figureRef) : figureConns.get(figureRef);
     return conn ? readFigureDoc(conn) !== null : false;
   };
+
+  // Referential stability (A) for the derived custom-kinds list — see customKinds().
+  let customKindsCache: {
+    routineKinds: RegistryKind[] | undefined;
+    accountKinds: RegistryKind[];
+    value: RegistryKind[];
+  } | null = null;
 
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
@@ -990,11 +1003,25 @@ export async function openRoutine(
     },
 
     customKinds: () => {
-      const routineKinds = readRoutineSafe().customKinds ?? [];
+      // Referential stability (A): both inputs are identity-stable while
+      // unchanged (the routine list via reconcile, the account list because
+      // createCustomKind replaces the array), so reuse the derived array and
+      // hand consumers the SAME reference across unrelated re-renders.
+      const routineKindsRaw = readRoutineSafe().customKinds;
+      if (
+        customKindsCache &&
+        customKindsCache.routineKinds === routineKindsRaw &&
+        customKindsCache.accountKinds === accountKinds
+      ) {
+        return customKindsCache.value;
+      }
+      const routineKinds = routineKindsRaw ?? [];
       const bySlug = new Map<string, RegistryKind>();
       for (const k of accountKinds) bySlug.set(k.kind, k);
       for (const k of routineKinds) bySlug.set(k.kind, k); // routine-embedded wins
-      return [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
+      const value = [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
+      customKindsCache = { routineKinds: routineKindsRaw, accountKinds, value };
+      return value;
     },
 
     retryFigure: (figureRef) => {

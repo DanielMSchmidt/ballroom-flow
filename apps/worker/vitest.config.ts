@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineWorkersConfig, readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
@@ -23,6 +24,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // migrations — `readD1Migrations` returns [] for an empty dir, which is fine.
 export default defineWorkersConfig(async () => {
   const migrations = await readD1Migrations(path.join(here, "migrations"));
+  // The REAL wrangler.toml, bound as a string so the US-049 config test can
+  // assert Smart Placement / envs / the AE binding against what actually deploys.
+  const wranglerToml = await readFile(path.join(here, "wrangler.toml"), "utf8");
 
   return {
     test: {
@@ -36,7 +40,11 @@ export default defineWorkersConfig(async () => {
             // worker under test (`SELF`) verifies our minted tokens networklessly
             // — it reads this STATIC binding, not a runtime env mutation. This is
             // the deferred M3 positive-auth wiring (CLAUDE.md / TEST-MAP.md).
-            bindings: { TEST_MIGRATIONS: migrations, CLERK_JWT_KEY: TEST_JWT_PUBLIC_KEY_PEM },
+            bindings: {
+              TEST_MIGRATIONS: migrations,
+              CLERK_JWT_KEY: TEST_JWT_PUBLIC_KEY_PEM,
+              WRANGLER_TOML: wranglerToml,
+            },
           },
           wrangler: { configPath: "./wrangler.toml" },
         },

@@ -62,13 +62,41 @@ export function useOverlay(
     }
 
     document.addEventListener("keydown", onKeyDown, true);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Body scroll lock that PRESERVES the scroll position. The app scrolls on
+    // the BODY (AppShell has no inner scroll container), and `overflow: hidden`
+    // alone lets browsers coerce the body's scrollTop toward 0 while locked —
+    // closing the note Sheet dumped the reader back at the TOP of the choreo.
+    // Fixing the body at its current offset keeps the visual position; cleanup
+    // restores the styles and the real scroll.
+    const scrollY = window.scrollY;
+    const bodyStyle = document.body.style;
+    const prev = {
+      overflow: bodyStyle.overflow,
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      left: bodyStyle.left,
+      right: bodyStyle.right,
+      width: bodyStyle.width,
+    };
+    bodyStyle.overflow = "hidden";
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
-      document.body.style.overflow = prevOverflow;
-      previouslyFocused?.focus?.();
+      bodyStyle.overflow = prev.overflow;
+      bodyStyle.position = prev.position;
+      bodyStyle.top = prev.top;
+      bodyStyle.left = prev.left;
+      bodyStyle.right = prev.right;
+      bodyStyle.width = prev.width;
+      window.scrollTo(0, scrollY);
+      // preventScroll: refocusing the opener must not scroll it into view —
+      // that would re-lose the position the lock above just preserved.
+      previouslyFocused?.focus?.({ preventScroll: true });
     };
   }, [open, panelRef]);
 }

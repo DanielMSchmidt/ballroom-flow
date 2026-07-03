@@ -137,18 +137,36 @@ describe("US-055 Starter routine seeded on first onboarding", () => {
   });
 });
 
-describe.skip("US-053 Account / profile + plan status", () => {
+describe("US-053 Account / profile + plan status", () => {
   it("returns plan + owned-routine count", async () => {
     // Intent: the profile shows plan status + how many routines the user owns.
     // Arrange: seed a free user owning 2 routines. Act: GET /api/profile.
     // Assert: 200 { plan: "free", ownedRoutineCount: 2 }.
     // Covers US-053 AC-2 (plan + owned-routine count).
-    const ctx = await authedContext({ keypair: kp, userId: "u_p", docRef: "n/a", role: null });
+    // Unique ids: the worker suite shares ONE D1 (isolatedStorage: false), so a
+    // generic "u_p"/"r1" could collide with another suite's rows and skew the
+    // owned count — same convention as unique DO names.
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_profile_count",
+      docRef: "n/a",
+      role: null,
+    });
     await seedDb({
-      users: [{ id: "u_p", displayName: "P", identityColor: "#111", plan: "free" }],
+      users: [{ id: "u_profile_count", displayName: "P", identityColor: "#111", plan: "free" }],
       docs: [
-        { docRef: "r1", type: "routine", ownerId: "u_p", doName: "r1" },
-        { docRef: "r2", type: "routine", ownerId: "u_p", doName: "r2" },
+        {
+          docRef: "rt_profile_c1",
+          type: "routine",
+          ownerId: "u_profile_count",
+          doName: "rt_profile_c1",
+        },
+        {
+          docRef: "rt_profile_c2",
+          type: "routine",
+          ownerId: "u_profile_count",
+          doName: "rt_profile_c2",
+        },
       ],
     });
     const res = await SELF.fetch("https://x/api/profile", { headers: ctx.authHeaders() });
@@ -161,9 +179,14 @@ describe.skip("US-053 Account / profile + plan status", () => {
     // Arrange: seed the user. Act: PATCH /api/profile {displayName, identityColor}.
     // Assert: 200; the users row reflects the new values.
     // Covers US-053 AC-1 (edit displayName + color).
-    const ctx = await authedContext({ keypair: kp, userId: "u_p2", docRef: "n/a", role: null });
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "u_profile_edit",
+      docRef: "n/a",
+      role: null,
+    });
     await seedDb({
-      users: [{ id: "u_p2", displayName: "Old", identityColor: "#000", plan: "free" }],
+      users: [{ id: "u_profile_edit", displayName: "Old", identityColor: "#000", plan: "free" }],
     });
     const res = await SELF.fetch("https://x/api/profile", {
       method: "PATCH",

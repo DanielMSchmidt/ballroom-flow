@@ -41,6 +41,7 @@ import {
 import { userNameCache, users } from "./db/schema";
 import type { DocDO } from "./doc-do";
 import { forkRoutineFor } from "./fork";
+import { reportError, writeMetric } from "./ops";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
 import { seedGlobalFigures } from "./seed-global-figures";
@@ -74,9 +75,39 @@ export type Env = {
   // "1" ONLY in the E2E wrangler run (wrangler.toml [env.e2e]); mounts the
   // /api/test/* fixtures routes. Unset everywhere else → those routes 404.
   E2E_TEST_ROUTES?: string;
+  // US-049 (M8) observability — both optional so dev/test run with neither:
+  // errors→Sentry (a Wrangler secret; see ops.ts) and product metrics→the
+  // Analytics Engine dataset bound in wrangler.toml.
+  SENTRY_DSN?: string;
+  ANALYTICS?: AnalyticsEngineDataset;
 };
 
 const app = new Hono<{ Bindings: Env }>();
+
+// US-049 AC-1: unhandled route errors are reported to Sentry (fire-and-forget —
+// waitUntil so the 500 isn't held up) and the client gets a structured 500.
+app.onError((err, c) => {
+  try {
+    c.executionCtx.waitUntil(reportError(c.env, err, { url: c.req.url, method: c.req.method }));
+  } catch {
+    // No execution context (some test harnesses): report best-effort instead.
+    void reportError(c.env, err, { url: c.req.url, method: c.req.method });
+  }
+  console.error("unhandled route error", err);
+  return c.json({ error: "internal" }, 500);
+});
+
+// US-049 AC-1: one product metric per API request (method, route, status,
+// duration). writeMetric is a no-op without the AE binding and never throws.
+app.use("/api/*", async (c, next) => {
+  const t0 = Date.now();
+  await next();
+  writeMetric(c.env.ANALYTICS, {
+    name: "api_request",
+    blobs: [c.req.method, new URL(c.req.url).pathname, String(c.res.status)],
+    doubles: [Date.now() - t0],
+  });
+});
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
@@ -180,6 +211,52 @@ app.post("/api/onboarding", async (c) => {
   }
 
   return c.json({ sub: user.sub, displayName, identityColor, plan: "free" });
+});
+
+// GET /api/profile — plan status + owned-routine count for the Profile screen
+// (US-053 AC-2). 404s for a not-yet-onboarded user (no users row) — the client
+// routes into onboarding on that.
+app.get("/api/profile", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const db = drizzle(c.env.DB);
+  const row = await db.select().from(users).where(eq(users.id, user.sub)).get();
+  if (!row) return c.json({ error: "not_onboarded" }, 404);
+  const ownedRoutineCount = await countOwnedRoutines(c.env.DB, user.sub);
+  return c.json({
+    plan: row.plan,
+    ownedRoutineCount,
+    displayName: row.displayName,
+    identityColor: row.identityColor,
+    routineCap: row.routineCapOverride ?? FREE_ROUTINE_CAP,
+    isAdmin: row.isAdmin,
+  });
+});
+
+// PATCH /api/profile — edit displayName + identity colour (US-053 AC-1). Same
+// validation as onboarding (the two write the same columns); PATCH never seeds
+// the starter and 404s when there is no users row to edit.
+app.patch("/api/profile", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const body = (await c.req.json().catch(() => null)) as {
+    displayName?: unknown;
+    identityColor?: unknown;
+  } | null;
+  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
+  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
+  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
+    return c.json({ error: "invalid_profile" }, 400);
+  }
+  const db = drizzle(c.env.DB);
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, user.sub))
+    .get();
+  if (!existing) return c.json({ error: "not_onboarded" }, 404);
+  await db.update(users).set({ displayName, identityColor }).where(eq(users.id, user.sub));
+  return c.json({ sub: user.sub, displayName, identityColor });
 });
 
 // POST /api/routines — create a routine (US-025 server path) with the SERVER-SIDE

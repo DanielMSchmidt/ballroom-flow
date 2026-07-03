@@ -48,6 +48,25 @@ describe("AttrChip", () => {
     expect(screen.getByText("side·T")).not.toHaveStyle({ opacity: "0.5" });
   });
 
+  it("separates a vulgar-fraction turn amount from its direction letter", () => {
+    // Inconsolata's vulgar-fraction glyphs (⅛ ¼ ⅜ …) overflow their advance
+    // width, so a directly-abutting L/R visually collides. The chip inserts a
+    // deterministic 2px gap between the fraction and the letter — reading
+    // order/content stays "⅛R" for assistive tech and copy/paste.
+    const { container } = renderUi(<AttrChip kind="turn" label="⅛R" />);
+    const chip = container.querySelector("span");
+    expect(chip?.textContent).toBe("⅛R");
+    const letter = container.querySelector("[data-turn-direction]");
+    expect(letter).not.toBeNull();
+    expect(letter).toHaveTextContent("R");
+    expect(letter).toHaveClass("ml-[2px]");
+  });
+
+  it("leaves non-fraction labels as a single text node", () => {
+    const { container } = renderUi(<AttrChip kind="direction" label="fwd·HT" />);
+    expect(container.querySelector("[data-turn-direction]")).toBeNull();
+  });
+
   it("has no axe violations", async () => {
     const { container } = renderUi(
       <div>

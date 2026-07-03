@@ -19,6 +19,8 @@ of the pure domain core (Milestone 1).
 | Local dev keys (`apps/web/.env.local`, `apps/worker/.dev.vars`) | ✅ present (`pk_test` / `sk_test`) |
 | `CLERK_SECRET_KEY` (Wrangler secret) — **staging** | ✅ set (`wrangler secret put … --env staging`) |
 | **`CLERK_SECRET_KEY` (Wrangler secret) — production** | ⬜ **TODO — you** — pending a Clerk **production** instance (`sk_live`); see §1 |
+| `SENTRY_DSN` (Wrangler secret, staging + production) | ⬜ **optional — you** — US-049 error reporting is wired (`apps/worker/src/ops.ts`, no SDK); without the secret it's a silent no-op. `wrangler secret put SENTRY_DSN --env staging\|production` with the project DSN from sentry.io |
+| Analytics Engine dataset | ✅ nothing to provision — the `ANALYTICS` binding in `wrangler.toml` auto-creates the dataset on first write (Workers Paid) |
 | `production` required-reviewer rule | ⬜ optional |
 
 CI now deploys on push: `development` → **staging**, `main` → **production** (see §3).
