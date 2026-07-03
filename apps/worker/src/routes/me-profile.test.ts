@@ -60,6 +60,27 @@ describe("US-019 Clerk sign-in + onboarding (server)", () => {
     });
   });
 
+  it("falls back to the email when a not-yet-onboarded user has no name claim", async () => {
+    // Intent: a logged-in user whose token carries only an email (no name/username)
+    // still shows something human — their email — instead of the raw Clerk user id.
+    // Arrange: a verified token carrying only an `email` claim, no users row.
+    // Act: GET /api/me. Assert: 200 { onboarded:false, displayName:"grace@example.com" }.
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "user_mailonly",
+      docRef: "n/a",
+      role: null,
+      claims: { email: "grace@example.com" },
+    });
+    const res = await SELF.fetch("https://x/api/me", { headers: ctx.authHeaders() });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      sub: "user_mailonly",
+      onboarded: false,
+      displayName: "grace@example.com",
+    });
+  });
+
   it("persists displayName + identityColor on onboarding", async () => {
     // Intent: onboarding writes the User row (displayName + identity color).
     // Arrange: a verified new user. Act: POST /api/onboarding {displayName, identityColor}.

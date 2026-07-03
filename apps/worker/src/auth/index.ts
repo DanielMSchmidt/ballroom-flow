@@ -6,36 +6,56 @@ export type AuthedUser = {
   sub: string;
   /** A human display name derived from the token's Clerk identity claims, when
    *  present (see `displayNameFromClaims`). Absent when the session token carries
-   *  no name/username/email claim (Clerk's default token is `sub`-only — add the
+   *  no name/username claim (Clerk's default token is `sub`-only — add the
    *  claims via the session-token template; see PROVISIONING.md). */
   name?: string;
+  /** The user's email from the token's Clerk claims, when present. Kept SEPARATE
+   *  from `name` so it can be shown as a distinct fallback (a member's full email
+   *  is more recognisable than the raw `user_…` id) when no real name exists.
+   *  See `emailFromClaims`. */
+  email?: string;
 };
 
 /** The Clerk verification keys an auth check needs (a subset of the worker Env). */
 type ClerkKeys = Pick<Env, "CLERK_SECRET_KEY" | "CLERK_JWT_KEY">;
 
+const trimmed = (v: unknown): string | undefined =>
+  typeof v === "string" && v.trim() ? v.trim() : undefined;
+
 /**
- * Derive a human display name from a verified Clerk JWT's claims, or `undefined`
- * when none are present. Prefers a full name, then a username, then the local
- * part of an email — accepting the common claim spellings so it works whether the
- * session-token template emits camelCase (`firstName`), snake_case (`first_name`),
- * or the OIDC standard (`given_name`). This is how we "get something better than
- * the raw Clerk user id" for a member's name (networkless — no Clerk fetch).
+ * Derive a human display NAME from a verified Clerk JWT's claims, or `undefined`
+ * when none are present. Prefers a full name, then a username — accepting the
+ * common claim spellings so it works whether the session-token template emits
+ * camelCase (`firstName`), snake_case (`first_name`), or the OIDC standard
+ * (`given_name`). Networkless (no Clerk fetch).
+ *
+ * Email is intentionally NOT folded in here — it's surfaced separately via
+ * `emailFromClaims` so a member with only an email claim shows their actual
+ * email address (a distinct fallback tier) rather than a bare local-part.
  */
 export function displayNameFromClaims(claims: Record<string, unknown>): string | undefined {
-  const str = (v: unknown): string | undefined =>
-    typeof v === "string" && v.trim() ? v.trim() : undefined;
-  const first = str(claims.firstName) ?? str(claims.first_name) ?? str(claims.given_name);
-  const last = str(claims.lastName) ?? str(claims.last_name) ?? str(claims.family_name);
+  const first =
+    trimmed(claims.firstName) ?? trimmed(claims.first_name) ?? trimmed(claims.given_name);
+  const last = trimmed(claims.lastName) ?? trimmed(claims.last_name) ?? trimmed(claims.family_name);
   const joined = [first, last].filter(Boolean).join(" ");
   const full =
-    str(claims.name) ?? str(claims.fullName) ?? str(claims.full_name) ?? (joined || undefined);
+    trimmed(claims.name) ??
+    trimmed(claims.fullName) ??
+    trimmed(claims.full_name) ??
+    (joined || undefined);
   if (full) return full;
-  const username = str(claims.username);
-  if (username) return username;
-  const email = str(claims.email) ?? str(claims.email_address) ?? str(claims.primaryEmail);
-  if (email) return email.split("@")[0] || undefined;
-  return undefined;
+  return trimmed(claims.username);
+}
+
+/**
+ * Derive the user's EMAIL from a verified Clerk JWT's claims, or `undefined`.
+ * Accepts the common claim spellings (`email`, `email_address`, `primaryEmail`)
+ * so it works across session-token templates. Networkless (no Clerk fetch).
+ * Used as the fallback shown for a member who is logged in but has no name yet —
+ * better than the raw `user_…` id (see `listMembers` / `/api/me`).
+ */
+export function emailFromClaims(claims: Record<string, unknown>): string | undefined {
+  return trimmed(claims.email) ?? trimmed(claims.email_address) ?? trimmed(claims.primaryEmail);
 }
 
 /**
@@ -57,9 +77,11 @@ export async function authenticateToken(
       secretKey: env.CLERK_SECRET_KEY,
       jwtKey: env.CLERK_JWT_KEY,
     });
+    const claims = payload as unknown as Record<string, unknown>;
     return {
       sub: payload.sub,
-      name: displayNameFromClaims(payload as unknown as Record<string, unknown>),
+      name: displayNameFromClaims(claims),
+      email: emailFromClaims(claims),
     };
   } catch {
     return null;

@@ -97,28 +97,35 @@ app.get("/api/me", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const db = drizzle(c.env.DB);
-  // Cache the human name from this user's Clerk claims so co-members can resolve
-  // it (even before this user onboards — they have no `users` row yet). Best-
-  // effort: a cache write must never fail /api/me. See migration 0013.
-  if (user.name) {
+  // Cache a human label from this user's Clerk claims so co-members can resolve it
+  // (even before this user onboards — they have no `users` row yet): their real
+  // name when the token carries one, else their email — anything better than the
+  // raw `user_…` id. Best-effort: a cache write must never fail /api/me. See
+  // migration 0013.
+  const cacheLabel = user.name ?? user.email;
+  if (cacheLabel) {
     try {
       const now = Date.now();
       await db
         .insert(userNameCache)
-        .values({ id: user.sub, name: user.name, updatedAt: now })
-        .onConflictDoUpdate({ target: userNameCache.id, set: { name: user.name, updatedAt: now } });
+        .values({ id: user.sub, name: cacheLabel, updatedAt: now })
+        .onConflictDoUpdate({
+          target: userNameCache.id,
+          set: { name: cacheLabel, updatedAt: now },
+        });
     } catch (err) {
       console.error("user name cache write failed", { userId: user.sub, err });
     }
   }
   const row = await db.select().from(users).where(eq(users.id, user.sub)).get();
-  // Not onboarded: still surface the Clerk-derived name (if any) so the client
-  // shows a real name instead of the raw user id until they set a profile.
+  // Not onboarded: still surface the Clerk-derived name — or, failing that, the
+  // email — so the client shows something human instead of the raw user id until
+  // they set a profile.
   if (!row)
     return c.json({
       sub: user.sub,
       onboarded: false,
-      displayName: user.name,
+      displayName: user.name ?? user.email,
       routineCap: FREE_ROUTINE_CAP,
     });
   return c.json({
