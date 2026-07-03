@@ -154,4 +154,12 @@ describe("tour scripts", () => {
       }
     }
   });
+
+  it("slots the type-chips stop after the header stops, with quick-note last (design 1.26)", () => {
+    const elements = TOURS.assemble.map((s) => s.element);
+    // Header stops (role · lens · share) first, then the chips, then the
+    // sticky ✎ note button as the final stop — "4 of 5" for the chips.
+    expect(elements.indexOf("[data-tour='type-chips']")).toBe(3);
+    expect(elements[elements.length - 1]).toBe("[data-tour='quick-note']");
+  });
 });

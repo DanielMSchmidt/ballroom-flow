@@ -5,11 +5,17 @@ import { useRef } from "react";
 import { cx } from "./cx";
 
 export interface SegmentedToggleProps<T extends string> {
-  options: { value: T; label: string }[];
+  /** `ariaLabel` gives a compact segment (e.g. "L") its full accessible name
+   *  ("Leader") so the visual abbreviation is never the only name (#5, #8). */
+  options: { value: T; label: string; ariaLabel?: string }[];
   value: T;
   onChange: (value: T) => void;
   /** Accessible group label (announced on the radiogroup). */
   ariaLabel: string;
+  /** "solid" (default) — the frame-1.6 studio-blue fill. "muted" — the compact
+   *  header variant (design 1.23 "L · F"): accent-tinted selected segment,
+   *  faint unselected text, neutral border. */
+  tone?: "solid" | "muted";
   className?: string;
 }
 
@@ -17,7 +23,8 @@ export interface SegmentedToggleProps<T extends string> {
  * SegmentedToggle — a small two/few-option segmented control (frame 1.6
  * "STEPS FOR [Leader|Follower]"). The selected segment fills with studio-blue
  * and shows white text; the rest are blue text on transparent inside a
- * 1.5px blue-tinted rounded border.
+ * 1.5px blue-tinted rounded border. The `muted` tone is the compact header
+ * variant (design 1.23): selected = accent text on the accent tint.
  *
  * A11y mirrors the radiogroup pattern: roving focus (only the selected radio
  * is tabbable) with Arrow keys moving the selection (#7, #8). State is carried
@@ -28,6 +35,7 @@ export function SegmentedToggle<T extends string>({
   value,
   onChange,
   ariaLabel,
+  tone = "solid",
   className,
 }: SegmentedToggleProps<T>) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -50,7 +58,8 @@ export function SegmentedToggle<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       className={cx(
-        "inline-flex overflow-hidden rounded-md border-[1.5px] border-accent-border",
+        "inline-flex overflow-hidden rounded-md border-[1.5px]",
+        tone === "muted" ? "border-border-strong" : "border-accent-border",
         className,
       )}
     >
@@ -65,13 +74,20 @@ export function SegmentedToggle<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-label={opt.ariaLabel}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => onKeyDown(e, idx)}
             className={cx(
               "inline-flex min-h-[var(--bf-touch-target)] items-center justify-center",
               "px-3 text-xs font-bold transition-colors",
-              selected ? "bg-accent text-ink-inverse" : "bg-transparent text-accent",
+              tone === "muted"
+                ? selected
+                  ? "bg-accent-tint text-accent"
+                  : "bg-transparent text-ink-faint"
+                : selected
+                  ? "bg-accent text-ink-inverse"
+                  : "bg-transparent text-accent",
             )}
             style={{ transitionDuration: "var(--bf-motion-fast)" }}
           >

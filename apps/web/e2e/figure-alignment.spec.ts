@@ -62,12 +62,28 @@ test.describe("@smoke catalog figure alignment", () => {
     await expect(reading.getByText("side·T")).toBeVisible();
     await expect(reading.getByText("close·TH")).toBeVisible();
 
-    // 5b. The follower dances her OWN footwork (role-aware, mirrored): flip the lens
+    // 5b. The follower dances her OWN footwork (role-aware, mirrored): flip the
+    //     lens — the compact L·F toggle in the screen header (design 1.23) —
     //     and her count-1 step reads LF back Toe-Heel → "back·TH".
-    await reading.getByRole("radio", { name: "Follower" }).click();
+    await page.getByRole("radio", { name: "Follower" }).click();
     await expect(reading.getByText("back·TH")).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("radio", { name: "Leader" }).click();
+
+    // 6. Type-chips column filter (design 1.23): hiding Rise tucks the column
+    //    away across the programme, the figure grows a "+1 hidden" peek pill,
+    //    and peeking brings the column back for THAT figure only (chips stay
+    //    put). Hiding never touches data — showing it again restores the column.
+    const riseHeader = reading.getByRole("button", { name: "About Rise", exact: true });
+    await page.getByRole("button", { name: "Hide the Rise column" }).click();
+    await expect(riseHeader).toHaveCount(0);
+    await reading.getByRole("button", { name: "Peek at 1 hidden column" }).click();
+    await expect(riseHeader).toBeVisible();
+    await reading.getByRole("button", { name: "Hide the tucked-away columns again" }).click();
+    await expect(riseHeader).toHaveCount(0);
+    await page.getByRole("button", { name: "Show the Rise column" }).click();
+    await expect(riseHeader).toBeVisible();
+
     await page.screenshot({ path: "test-results/closed-change-alignment.png", fullPage: true });
   });
 });

@@ -29,6 +29,18 @@ const en = {
   customFigure: "Custom figure",
   pagerPosition: (index: number, total: number) => `${index} of ${total}`,
 
+  // Type-chip column filter (design 1.23)
+  shownColumns: "Shown technique columns",
+  hideColumn: (column: string) => `Hide the ${column} column`,
+  showColumn: (column: string) => `Show the ${column} column`,
+  columnAlwaysShown: (column: string) => `${column} column — always shown`,
+  columnAlwaysShownToast: (column: string) => `${column} is always shown`,
+  hiddenColumnsHintToast: "Some columns are tucked away — “+N hidden” shows them",
+  hiddenCountPill: (n: number) => `+${n} hidden`,
+  peekCollapse: "– hide",
+  peekHiddenLabel: (n: number) => `Peek at ${n} hidden column${n === 1 ? "" : "s"}`,
+  peekCollapseLabel: "Hide the tucked-away columns again",
+
   // Figure timeline (FigureTimeline)
   barsStepperLabel: "Bars",
   barsStepperUnit: "bars",
@@ -76,6 +88,18 @@ const de: typeof en = {
   libraryFigure: "Bibliotheksfigur",
   customFigure: "Eigene Figur",
   pagerPosition: (index, total) => `${index} von ${total}`,
+
+  shownColumns: "Angezeigte Technik-Spalten",
+  hideColumn: (column) => `Spalte ${column} ausblenden`,
+  showColumn: (column) => `Spalte ${column} einblenden`,
+  columnAlwaysShown: (column) => `Spalte ${column} — immer sichtbar`,
+  columnAlwaysShownToast: (column) => `${column} wird immer angezeigt`,
+  hiddenColumnsHintToast: "Einige Spalten sind ausgeblendet — „+N ausgeblendet“ zeigt sie",
+  hiddenCountPill: (n) => `+${n} ausgeblendet`,
+  peekCollapse: "– ausblenden",
+  peekHiddenLabel: (n) =>
+    n === 1 ? "1 ausgeblendete Spalte ansehen" : `${n} ausgeblendete Spalten ansehen`,
+  peekCollapseLabel: "Ausgeblendete Spalten wieder verbergen",
 
   barsStepperLabel: "Takte",
   barsStepperUnit: "Takte",

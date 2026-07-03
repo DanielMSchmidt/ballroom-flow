@@ -30,6 +30,7 @@ import {
 import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { pickMessages, useMessages } from "../i18n";
 import { assembleMessages } from "../i18n/messages/assemble";
+import { timelineMessages } from "../i18n/messages/timeline";
 import { buildMemberColorMap, type ColorableMember } from "../lib/identity-colors";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
@@ -54,6 +55,7 @@ import {
   kindVar,
   OfflineState,
   ScreenHeader,
+  SegmentedToggle,
   ShareIcon,
   Sheet,
   Skeleton,
@@ -239,6 +241,9 @@ export function Assemble({
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   const t = useMessages(assembleMessages);
+  // The header's L·F role lens shares the reading/timeline "Steps for" copy
+  // (Leader/Follower stay untranslated by glossary convention).
+  const roleT = useMessages(timelineMessages);
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
   const [notating, setNotating] = useState<string | null>(null);
   // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
@@ -436,6 +441,25 @@ export function Assemble({
         backLabel={t.allChoreos}
         actions={
           <>
+            {/* Compact L·F role lens (design 1.23): the Leader/Follower toggle
+                moved into the header so the chips row could replace the old
+                STEPS FOR row — no net extra chrome. Reading lens only; the
+                abbreviated segments keep their full accessible names.
+                Remembered per device (bb_role), across choreos. */}
+            {mode === "read" && (
+              <span data-tour="role-toggle">
+                <SegmentedToggle
+                  ariaLabel={roleT.stepsFor}
+                  tone="muted"
+                  value={roleView}
+                  onChange={setRoleView}
+                  options={[
+                    { value: "leader", label: "L", ariaLabel: roleT.leader },
+                    { value: "follower", label: "F", ariaLabel: roleT.follower },
+                  ]}
+                />
+              </span>
+            )}
             {/* Read ⇄ edit lens toggle. In editing the ✎ is active/filled; in
                 reading it's plain. Labels stay "Reading view"/"List view" so the
                 action names survive across the redesign. */}
@@ -564,7 +588,6 @@ export function Assemble({
               memberNames={memberNameMap}
               customKinds={store.customKinds()}
               roleView={roleView}
-              onRoleViewChange={setRoleView}
               onOpenFigure={openFigureFromReading}
               onOpenThread={openThreadFromReading}
             />
