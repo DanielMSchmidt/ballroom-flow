@@ -16,6 +16,11 @@ expect.extend(axeMatchers);
 HTMLCanvasElement.prototype.getContext = (() =>
   null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
+// jsdom's window.scrollTo logs "Not implemented" — the overlay scroll-lock
+// restores the page position on close, which would spam every Sheet/Modal
+// test. A quiet no-op keeps output clean; real scroll behavior is E2E's job.
+window.scrollTo = (() => {}) as typeof window.scrollTo;
+
 afterEach(() => {
   cleanup();
 });

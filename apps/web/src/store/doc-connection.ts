@@ -16,6 +16,7 @@
 // server (jsdom has no WS server); production passes the global `WebSocket`.
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP, SYNC_FRAME_CHANGE, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
+import { reconcile } from "./reconcile";
 
 /** Minimal structural view of a WebSocket (so tests can inject a fake). */
 export interface SocketLike {
@@ -277,7 +278,11 @@ export class DocConnection<T> {
     const key = A.getHeads(this.doc).join("/");
     const cached = this.jsCache;
     if (cached && cached.key === key) return cached.value;
-    const value = A.toJS(this.doc) as T;
+    // Structural sharing (reconcile): when the doc DID change, keep the object
+    // identity of every subtree that didn't — so a one-field change hands React
+    // a snapshot where only the changed subtree (and its ancestors) is new, and
+    // everything else bails out of re-render. See store/reconcile.ts.
+    const value = reconcile(cached?.value, A.toJS(this.doc) as T);
     this.jsCache = { key, value };
     return value;
   }

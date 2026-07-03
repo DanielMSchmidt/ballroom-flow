@@ -22,6 +22,7 @@ import {
 } from "@ballroom/domain";
 import { apiGet } from "../lib/rpc";
 import type { TokenProvider } from "./doc-connection";
+import { reconcile } from "./reconcile";
 import type { FigureLoadStatus, ResolvedPlacement, RoutineReadModel } from "./routine";
 
 /** The shape returned by `GET /api/routines/:id/snapshot`. */
@@ -190,7 +191,11 @@ export function openRoutineSnapshot(
     void fetchSnapshot(routineId)
       .then((data) => {
         if (closed) return;
-        snapshot = data;
+        // Structural sharing (reconcile): a poll that returns unchanged content
+        // keeps the SAME snapshot object (so the placements cache holds and no
+        // identity churns); a changed one keeps every unchanged subtree's
+        // identity. See store/reconcile.ts.
+        snapshot = reconcile(snapshot, data);
         state = "live";
         notify();
       })
@@ -218,6 +223,9 @@ export function openRoutineSnapshot(
   // snapshot — an unchanged snapshot then hands consumers a STABLE array identity
   // instead of a fresh one on every read.
   let placementsCache: { snapshot: RoutineSnapshot | null; value: ResolvedPlacement[] } | null =
+    null;
+  // Referential stability (A) for the derived custom-kinds list — see customKinds().
+  let customKindsCache: { routineKinds: RegistryKind[] | undefined; value: RegistryKind[] } | null =
     null;
 
   const model: RoutineSnapshotModel = {
@@ -254,11 +262,19 @@ export function openRoutineSnapshot(
     },
     readAnnotations: () => currentRoutine().annotations,
     customKinds: () => {
-      const routineKinds = currentRoutine().customKinds ?? [];
+      // Referential stability (A): reuse the derived array while the routine's
+      // embedded list (identity-stable via reconcile) is unchanged.
+      const routineKindsRaw = currentRoutine().customKinds;
+      if (customKindsCache && customKindsCache.routineKinds === routineKindsRaw) {
+        return customKindsCache.value;
+      }
+      const routineKinds = routineKindsRaw ?? [];
       const bySlug = new Map<string, RegistryKind>();
       for (const k of accountKinds) bySlug.set(k.kind, k);
       for (const k of routineKinds) bySlug.set(k.kind, k); // routine-embedded wins
-      return [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
+      const value = [...bySlug.values()].filter((k) => !isReservedKind(k.kind));
+      customKindsCache = { routineKinds: routineKindsRaw, value };
+      return value;
     },
     syncState: () => state,
     subscribe: (fn) => {

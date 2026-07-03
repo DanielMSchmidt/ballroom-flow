@@ -1535,3 +1535,94 @@ describe("US-017 architecture boundary (components import only from store/)", ()
     expect(offenders).toEqual([]);
   });
 });
+
+describe("structural sharing — an annotation add must not churn structural identities", () => {
+  it("keeps sections + the placements array reference-equal when only a note is added", async () => {
+    // Intent: adding a note used to rematerialize the WHOLE routine with fresh
+    //   object identities — every placement prop churned, the entire choreo
+    //   re-rendered, and the reader lost their place. With reconcile-backed
+    //   materialization, an annotation-only change leaves `sections` (and the
+    //   readPlacements array) reference-equal — so only annotation surfaces see
+    //   new props. Pins the store half of "only the note component updates".
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "u1" });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.fireCaughtUp();
+    const routineFull = buildRoutineDoc({
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fv", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(routineFull);
+    store.readPlacements();
+    sockets.get("fv")?.load(
+      buildFigureDoc(
+        aFigure({
+          id: "fv",
+          name: "My Turn",
+          scope: "account",
+          attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
+        }) as FigureDoc,
+      ),
+    );
+
+    const routineBefore = store.readRoutine();
+    const placementsBefore = store.readPlacements();
+
+    store.createAnnotation({
+      kind: "note",
+      text: "hold, don't rush",
+      anchors: [{ type: "point", figureRef: "fv", count: 1 }],
+    });
+
+    const routineAfter = store.readRoutine();
+    // The routine DID change (a note landed) …
+    expect(routineAfter).not.toBe(routineBefore);
+    expect(routineAfter.annotations).toHaveLength(1);
+    expect(routineAfter.annotations[0]?.text).toBe("hold, don't rush");
+    // … but every STRUCTURAL identity is preserved: same sections tree, same
+    // placements array — nothing structural gets new props.
+    expect(routineAfter.sections).toBe(routineBefore.sections);
+    expect(store.readPlacements()).toBe(placementsBefore);
+    store.close();
+  });
+
+  it("keeps prior annotation objects' identities when another note is added", async () => {
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "u1" });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.fireCaughtUp();
+    sockets.get("rt_sample")?.load(
+      buildRoutineDoc({
+        id: "rt_sample",
+        title: "Sample",
+        dance: "waltz",
+        ownerId: "",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      }),
+    );
+    store.createAnnotation({ kind: "note", text: "first", anchors: [] });
+    const first = store.readAnnotations()[0];
+    store.createAnnotation({ kind: "note", text: "second", anchors: [] });
+    const after = store.readAnnotations();
+    expect(after).toHaveLength(2);
+    // The untouched first note keeps its identity — its comment line can bail.
+    expect(after.find((a) => a.text === "first")).toBe(first);
+    store.close();
+  });
+});

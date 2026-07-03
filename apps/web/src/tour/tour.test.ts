@@ -3,11 +3,18 @@
 // runs, what it's configured with), not the library's rendering.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { drive, driverFactory } = vi.hoisted(() => {
+const { drive, refresh, driverFactory } = vi.hoisted(() => {
   const drive = vi.fn();
+  const refresh = vi.fn();
   return {
     drive,
-    driverFactory: vi.fn((_config?: unknown) => ({ drive, destroy: vi.fn() })),
+    refresh,
+    driverFactory: vi.fn((_config?: unknown) => ({
+      drive,
+      refresh,
+      isActive: () => true,
+      destroy: vi.fn(),
+    })),
   };
 });
 vi.mock("driver.js", () => ({ driver: driverFactory }));
@@ -26,6 +33,7 @@ beforeEach(() => {
   localStorage.clear();
   driverFactory.mockClear();
   drive.mockClear();
+  refresh.mockClear();
 });
 
 afterEach(() => {
@@ -88,6 +96,43 @@ describe("startTour", () => {
     const config = driverFactory.mock.calls[0]?.[0] as { allowClose?: boolean };
     // driver.js defaults allowClose to true; we must never turn it off.
     expect(config.allowClose).not.toBe(false);
+  });
+});
+
+describe("startTour re-anchors under late layout changes", () => {
+  // The incident: on a slow connection the choreo hydrates AFTER the tour
+  // opened, the page grows under the popover, and the highlight stays pinned
+  // to a stale rect. driver.js only re-anchors on window resize/scroll — a
+  // content-driven reflow fires neither, so startTour watches the body with a
+  // ResizeObserver and refreshes the active highlight.
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("refreshes the active highlight when the body reflows, and disconnects on destroy", () => {
+    const observed: Element[] = [];
+    const disconnect = vi.fn();
+    let trigger: (() => void) | undefined;
+    class FakeResizeObserver {
+      constructor(cb: () => void) {
+        trigger = cb;
+      }
+      observe(el: Element) {
+        observed.push(el);
+      }
+      unobserve() {}
+      disconnect = disconnect;
+    }
+    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+
+    startTour("choreos");
+    expect(observed).toContain(document.body);
+    trigger?.();
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    const config = driverFactory.mock.calls[0]?.[0] as { onDestroyed?: () => void };
+    config.onDestroyed?.();
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });
 

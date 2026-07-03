@@ -18,6 +18,13 @@ function isStandardKind(kind: string): kind is AttributeKind {
   return (ATTRIBUTE_KINDS as readonly string[]).includes(kind);
 }
 
+// A turn label like "⅛R": a vulgar-fraction glyph directly followed by the
+// direction letter. Inconsolata's fraction artwork overflows its advance width,
+// so without a gap the numerals visually collide with the L/R (the design
+// bundle carries the same latent artifact — this is a deliberate, minimal
+// deviation). U+00BC–U+00BE (¼½¾) + U+2150–U+215E (⅛⅜⅝⅞ …).
+const FRACTION_THEN_DIRECTION = /^([¼-¾⅐-⅞])([LR])$/;
+
 /**
  * AttrChip — the small attribute chip in the reading grid (Builder v2). A
  * kind-tinted surface with the kind's dark ink text and a 1px border in the
@@ -51,7 +58,18 @@ export function AttrChip({ kind, label, color, dimmed, className }: AttrChipProp
       )}
       style={{ ...style, opacity: dimmed ? 0.5 : undefined }}
     >
-      {label}
+      {(() => {
+        const frac = label.match(FRACTION_THEN_DIRECTION);
+        if (!frac) return label;
+        return (
+          <>
+            {frac[1]}
+            <span className="ml-[2px]" data-turn-direction>
+              {frac[2]}
+            </span>
+          </>
+        );
+      })()}
     </span>
   );
 }
