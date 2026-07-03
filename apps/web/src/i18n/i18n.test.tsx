@@ -76,6 +76,30 @@ describe("vocabulary overlay", () => {
   });
 });
 
+describe("chrome LanguageToggle (landing header + desktop rail)", () => {
+  it("switches the locale live and persists it", async () => {
+    const { LanguageToggle } = await import("../ui");
+    renderUi(<LanguageToggle />);
+    await userEvent.click(screen.getByRole("radio", { name: "DE" }));
+    expect(getLocale()).toBe("de");
+    expect(localStorage.getItem("bf.locale")).toBe("de");
+    // The group label follows the locale it just set.
+    expect(screen.getByRole("radiogroup", { name: "Sprache" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "EN" }));
+    expect(getLocale()).toBe("en");
+  });
+
+  it("is pinned to the AppShell desktop rail", async () => {
+    const { AppShell } = await import("../ui");
+    renderUi(
+      <AppShell nav={[]} current="choreo" onNavigate={() => {}}>
+        <p>content</p>
+      </AppShell>,
+    );
+    expect(screen.getByRole("radiogroup", { name: "Language" })).toBeInTheDocument();
+  });
+});
+
 describe("Profile language switcher", () => {
   it("switches the UI to German live and back", async () => {
     renderUi(<Profile plan="free" ownedRoutineCount={2} />);

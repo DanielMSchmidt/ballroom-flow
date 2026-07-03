@@ -2,7 +2,7 @@ import { AccountControls } from "../auth/app-auth";
 import { useMessages } from "../i18n";
 import { landingMessages } from "../i18n/messages/landing";
 import { SCREENSHOTS, type Screenshot } from "../marketing/screenshots.manifest";
-import { Card } from "../ui";
+import { Card, LanguageToggle } from "../ui";
 
 // Resolve the committed PNGs to fingerprinted asset URLs at build time. The
 // manifest's `file` field is the key into this map.
@@ -49,7 +49,10 @@ export function Landing(): React.JSX.Element {
     <div className="min-h-dvh bg-surface text-ink">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
         <span className="text-lg font-bold tracking-tight">Ballroom Flow</span>
-        <AccountControls />
+        <div className="flex items-center gap-3">
+          <LanguageToggle />
+          <AccountControls />
+        </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-5">

@@ -19,6 +19,7 @@ export { FullScreen, type FullScreenProps } from "./FullScreen";
 export { IconButton, type IconButtonProps, type IconButtonVariant } from "./IconButton";
 export { Input, type InputProps } from "./Input";
 export * from "./icons";
+export { LanguageToggle } from "./LanguageToggle";
 export { List, ListRow, type ListRowProps } from "./List";
 export { Modal, type ModalAction, type ModalProps } from "./Modal";
 export { OfflineBanner } from "./OfflineBanner";

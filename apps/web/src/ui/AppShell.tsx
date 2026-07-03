@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useMessages } from "../i18n";
 import { uiMessages } from "../i18n/messages/ui";
 import { cx } from "./cx";
+import { LanguageToggle } from "./LanguageToggle";
 
 export interface NavItem {
   value: string;
@@ -62,6 +63,11 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
             </button>
           );
         })}
+        {/* Language shortcut pinned to the rail's bottom — the same live
+            EN/DE switch Profile carries, always reachable on desktop. */}
+        <div className="mt-auto px-3 pb-1">
+          <LanguageToggle />
+        </div>
       </nav>
 
       {/* Content column — centered + max width so desktop is intentional (#2) */}
