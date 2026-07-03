@@ -5,17 +5,19 @@
 > and each test's header comment are now their only definition. Roadmap/status
 > live in `PLAN.md` §9.
 
-**Status (updated 2026-06-28):** the TDD suite was authored ahead of the build as
-fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **most of it has since
-been unskipped and is executing green** as the product modules landed (M1–M7).
-On `development` HEAD the suite runs — **domain 154 passed / 3 skipped, web 114
-passed / 0 skipped, worker 101 passed / 7 skipped** — with only the
-not-yet-built stories still skipped (US-049 Ops, US-053 `/api/profile`, US-054
-ISTD seed, and the M9 PWA/all-dances-annotation E2E slices). Source of truth for
-"what GREEN means" per story is each test's header comment (US-ID, intent,
-multi-user scenario, arrange/act/assert, acceptance criteria + PLAN §10.2
-invariant); the original "everything is skipped" framing below describes the
-*authoring-time* baseline, not today's state.
+**Status (updated 2026-07-03):** the TDD suite was authored ahead of the build as
+fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **it has since been
+unskipped and is executing green** as the product modules landed (M1–M9).
+On `development` HEAD the suite runs — **domain 245 passed / 3 skipped, web 382
+passed / 0 skipped, worker 191 passed / 0 skipped** — with exactly ONE story
+still skipped: **US-054** (the book-verified full-syllabus ISTD seed), blocked
+on an external dependency (the paid ISTD/WDSF technique books — PLAN §9 content
+workstream), not on engineering. US-049 Ops, US-053 `/api/profile`, and the M9
+PWA / all-dances-annotation E2E slices were unskipped and shipped 2026-07-03.
+Source of truth for "what GREEN means" per story is each test's header comment
+(US-ID, intent, multi-user scenario, arrange/act/assert, acceptance criteria +
+PLAN §10.2 invariant); the original "everything is skipped" framing below
+describes the *authoring-time* baseline, not today's state.
 
 **How the skipped tests stay parsable** (no product code exists yet): tests
 never top-level-import a not-yet-built product export. They use typed dynamic
@@ -159,12 +161,12 @@ Domain 49 skipped (13 files), worker 47 skipped + 3 pre-existing pass (13 files)
 web 52 skipped (9 files); typecheck + lint clean; `playwright test --list` → 51
 tests across 3 projects.
 
-**Current (`development` HEAD, 2026-06-28):** the suite executes for real —
-- `pnpm --filter @ballroom/domain test` → **154 passed, 3 skipped** (only US-054 ISTD seed).
-- `pnpm --filter web test` → **114 passed, 0 skipped**.
-- `pnpm --filter worker test` → **101 passed, 7 skipped** (US-049 ops ×5, US-053 `/api/profile` ×2); worker `coverage` meets its armed thresholds (lines 89.5 / branches 69.2 / fns 87.9 / stmts 85.4).
-- `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (226 files).
-- E2E: `@smoke` Playwright runs as the CI gate (per-PR `ci.yml` + on-push `deploy.yml`); the full 3-device matrix runs nightly. Still `test.skip`: `pwa-a11y.spec` (M9) and the all-dances family-note slice at `fork-and-figures.spec:208`.
+**Current (`development` HEAD, 2026-07-03):** the suite executes for real —
+- `pnpm --filter @ballroom/domain test` → **245 passed, 3 skipped** (only US-054 ISTD seed — blocked on the external technique books, PLAN §9).
+- `pnpm --filter web test` → **382 passed, 0 skipped**.
+- `pnpm --filter worker test` → **191 passed, 0 skipped** (US-049 ops + US-053 `/api/profile` unskipped and green 2026-07-03); worker `coverage` meets its armed thresholds (lines 89.7 / branches 71.1 / fns 88.2 / stmts 85.9).
+- `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (294 files).
+- E2E: `@smoke` Playwright runs as the CI gate (per-PR `ci.yml` + on-push `deploy.yml`); the full 3-device matrix runs nightly. **No `test.skip` remains in `apps/web/e2e/`** — `pwa-a11y.spec` (US-050/051) and the all-dances family-note slice (US-040, `fork-and-figures.spec`) were unskipped + fully scripted 2026-07-03; chromium runs **30 passed** (25 of them `@smoke`).
 
 Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into one
 `it` per acceptance criterion, and a US-009 AC-4 "convergence across a fork (cloned
