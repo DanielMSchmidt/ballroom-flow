@@ -11,11 +11,22 @@
 import type { RegistryKind } from "@ballroom/domain";
 import { useEffect, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
+import { type Locale, setLocale, useLocale, useMessages } from "../i18n";
+import { profileMessages } from "../i18n/messages/profile";
 import { useAccountKinds, useSaveAccountKind } from "../store/custom-kinds";
 import { useMe, useOnboard } from "../store/me";
 import { useRoutines } from "../store/routines";
 import { useFirstVisitTour, useReplayTours } from "../tour/useFirstVisitTour";
-import { Badge, Button, Card, IDENTITY_COLORS, IDENTITY_HEX, Input, ScreenHeader } from "../ui";
+import {
+  Badge,
+  Button,
+  Card,
+  IDENTITY_COLORS,
+  IDENTITY_HEX,
+  Input,
+  ScreenHeader,
+  SegmentedToggle,
+} from "../ui";
 import { AttributeTypesManager } from "./AttributeTypesManager";
 
 /**
@@ -67,6 +78,8 @@ export function Profile({
   customKinds,
   onCreateKind,
 }: ProfileProps) {
+  const t = useMessages(profileMessages);
+  const locale = useLocale();
   const [name, setName] = useState(displayName ?? "");
   const [color, setColor] = useState<string>(identityColor ?? DEFAULT_COLOR);
   // First-visit tour + the "see them again" escape hatch below.
@@ -80,12 +93,11 @@ export function Profile({
     if (identityColor) setColor(identityColor);
   }, [identityColor]);
 
-  const routineWord = ownedRoutineCount === 1 ? "choreo" : "choreos";
   const initial = (name.trim()[0] ?? "?").toUpperCase();
 
   return (
     <div className="flex flex-col">
-      <ScreenHeader title="Profile" />
+      <ScreenHeader title={t.title} />
 
       <div className="flex flex-col gap-6 p-4">
         {/* Identity: avatar (initial on the user's colour) + editable name. */}
@@ -99,9 +111,9 @@ export function Profile({
           </span>
           <div data-tour="profile-name" className="w-full">
             <Input
-              label="Display name"
+              label={t.displayNameLabel}
               hideLabel
-              placeholder="How you appear to co-editors"
+              placeholder={t.displayNamePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="text-center text-lg font-bold"
@@ -112,11 +124,9 @@ export function Profile({
         {/* PROFILE COLOUR — the identity tint applied to every note/reply (DP #5). */}
         <fieldset className="flex flex-col gap-3">
           <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
-            Profile colour
+            {t.colourLegend}
           </legend>
-          <p className="text-2xs italic text-ink-secondary">
-            Every note &amp; reply of yours is tinted with this, across shared choreos.
-          </p>
+          <p className="text-2xs italic text-ink-secondary">{t.colourHint}</p>
           <div data-tour="profile-colour" className="flex flex-wrap gap-3">
             {IDENTITY_SWATCHES.map((swatch, i) => {
               const selected = color.toLowerCase() === swatch.value.toLowerCase();
@@ -124,7 +134,7 @@ export function Profile({
                 <button
                   key={swatch.value}
                   type="button"
-                  aria-label={`Use colour ${i + 1}`}
+                  aria-label={t.colourOption(i + 1)}
                   aria-pressed={selected}
                   onClick={() => setColor(swatch.value)}
                   className="relative flex size-10 items-center justify-center rounded-full border-2 transition-colors"
@@ -152,14 +162,11 @@ export function Profile({
             >
               {initial}
             </span>
-            <span className="text-2xs text-ink-secondary">This is how your notes appear.</span>
+            <span className="text-2xs text-ink-secondary">{t.notePreview}</span>
           </Card>
 
           {/* Leader/Follower is a per-figure timeline toggle, not identity (DP #11). */}
-          <p className="text-2xs italic text-ink-faint">
-            Leader / Follower is a per-figure timeline toggle (remembered between sessions), not a
-            profile setting.
-          </p>
+          <p className="text-2xs italic text-ink-faint">{t.roleNote}</p>
         </fieldset>
 
         {/* Plan + owned/cap count (US-053 AC-2).
@@ -167,11 +174,11 @@ export function Profile({
         <section className="flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
           <p className="text-2xs text-ink-muted">
             {plan === "free" && routineCap != null
-              ? `Free · ${ownedRoutineCount} of ${routineCap} choreos`
-              : `You own ${ownedRoutineCount} ${routineWord}${plan === "free" && routineCap ? ` of ${routineCap}` : ""}.`}
+              ? t.planFreeStatus(ownedRoutineCount, routineCap)
+              : t.planOwned(ownedRoutineCount, plan === "free" ? routineCap : undefined)}
           </p>
           <Badge tone={plan === "pro" ? "accent" : "neutral"}>
-            {plan === "pro" ? "Pro plan" : "Free plan"}
+            {plan === "pro" ? t.planPro : t.planFree}
           </Badge>
         </section>
 
@@ -179,15 +186,31 @@ export function Profile({
             replacement: standard (locked) + custom (choreo-scoped) kinds. */}
         <AttributeTypesManager customKinds={customKinds} onCreateKind={onCreateKind} />
 
+        {/* UI language — a client-side preference (i18n/locale.ts), applied live.
+            User-authored content (notes, custom kinds) is never translated. */}
+        <fieldset className="flex flex-col gap-2 border-t border-border-subtle pt-4">
+          <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+            {t.languageLegend}
+          </legend>
+          <SegmentedToggle<Locale>
+            ariaLabel={t.languageLegend}
+            options={[
+              { value: "en", label: "English" },
+              { value: "de", label: "Deutsch" },
+            ]}
+            value={locale}
+            onChange={setLocale}
+          />
+          <p className="text-2xs italic text-ink-faint">{t.languageHint}</p>
+        </fieldset>
+
         {/* Replay the first-visit tours: clears every per-page seen flag so each
             page shows its intro again, starting with this one. */}
         <section className="border-t border-border-subtle pt-4">
           <Button variant="secondary" size="sm" onClick={replayTours}>
-            Replay the intro tours
+            {t.replayTours}
           </Button>
-          <p className="mt-1 text-2xs text-ink-faint">
-            Shows each page's quick walkthrough again on its next visit.
-          </p>
+          <p className="mt-1 text-2xs text-ink-faint">{t.replayToursHint}</p>
         </section>
 
         <div className="flex items-center justify-between gap-2">
@@ -197,10 +220,10 @@ export function Profile({
             disabled={!name.trim()}
             onClick={() => onSave?.(name.trim(), color)}
           >
-            Save
+            {t.save}
           </Button>
           <Button variant="ghost" onClick={onSignOut}>
-            Sign out
+            {t.signOut}
           </Button>
         </div>
       </div>

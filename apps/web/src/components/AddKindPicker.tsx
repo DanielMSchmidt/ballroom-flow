@@ -7,13 +7,9 @@
 // Registry-driven: the standard rows come from ATTRIBUTE_REGISTRY; custom rows
 // from the passed-in kinds. Picking a kind hands it back via onSelectKind so the
 // caller can open that kind's editor for the step.
-import {
-  ATTRIBUTE_REGISTRY,
-  type DanceId,
-  mergeRegistry,
-  type RegistryKind,
-} from "@ballroom/domain";
+import { type DanceId, mergeRegistry, type RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
+import { useLocalizedRegistry } from "../i18n";
 import { ChevronRightIcon, cx, PlusIcon, Sheet } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
@@ -49,7 +45,7 @@ export function AddKindPicker({
   const [building, setBuilding] = useState(false);
 
   // Dance-scoped, registry-merged list (custom kinds appear too).
-  const kinds = Object.values(mergeRegistry(ATTRIBUTE_REGISTRY, customKinds)).filter(
+  const kinds = Object.values(mergeRegistry(useLocalizedRegistry(), customKinds)).filter(
     (k) => !k.appliesToDances || dance === undefined || k.appliesToDances.includes(dance),
   );
 

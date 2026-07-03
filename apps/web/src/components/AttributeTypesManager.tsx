@@ -9,8 +9,9 @@
 // colour dot, cardinality, an "L/F" badge for a role-aware kind (`roleAware`),
 // a "required" marker for a core slot (`required`), and the scope label. A
 // custom kind that carries `roleAware`/`required` gets the same affordances.
-import { ATTRIBUTE_REGISTRY, type RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
+import { useLocalizedRegistry } from "../i18n";
 import { Button, PlusIcon } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
@@ -35,7 +36,7 @@ export function AttributeTypesManager({
 }: AttributeTypesManagerProps) {
   const [building, setBuilding] = useState(false);
   // Standard kinds first (locked), then the custom (choreo-scoped) ones.
-  const standard = Object.values(ATTRIBUTE_REGISTRY);
+  const standard = Object.values(useLocalizedRegistry());
   const rows: { kind: RegistryKind; custom: boolean }[] = [
     ...standard.map((kind) => ({ kind, custom: false })),
     ...customKinds.map((kind) => ({ kind, custom: true })),

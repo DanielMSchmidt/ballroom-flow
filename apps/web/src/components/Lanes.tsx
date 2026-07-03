@@ -22,14 +22,9 @@
 // navigation is handled by the contained <button> (tab→button; arrows between
 // cells is a grid-level responsibility not yet implemented for this MVP lane).
 
-import {
-  ATTRIBUTE_REGISTRY,
-  type Attribute,
-  mergeRegistry,
-  normalizeValue,
-  type RegistryKind,
-} from "@ballroom/domain";
+import { type Attribute, mergeRegistry, normalizeValue, type RegistryKind } from "@ballroom/domain";
 import { useMemo, useState } from "react";
+import { localizedRegistry, useLocale } from "../i18n";
 import { Button, Chip, cx } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import {
@@ -88,11 +83,13 @@ export function Lanes({
     if (roleView === undefined) setLocalView(next);
   };
 
-  // Resolve the kind descriptor from the merged registry (custom kinds first).
+  // Resolve the kind descriptor from the merged registry (custom kinds first),
+  // in the active UI language (builtin prose only — custom kinds pass through).
+  const locale = useLocale();
   const kindDescriptor = useMemo(() => {
-    const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+    const reg = mergeRegistry(localizedRegistry(locale), customKinds);
     return reg[kind] ?? null;
-  }, [kind, customKinds]);
+  }, [kind, customKinds, locale]);
 
   // Build a per-count map scoped to this kind (ignore other kinds).
   const byCount = useMemo(() => {

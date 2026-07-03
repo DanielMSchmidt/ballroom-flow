@@ -12,14 +12,15 @@
 // next attribute set via `onChange`. The screen wires `onChange` to the store's
 // setAttribute mutation; component tests pass it directly.
 import {
-  ATTRIBUTE_REGISTRY,
   type Attribute,
   type DanceId,
   mergeRegistry,
   normalizeValue,
   type RegistryKind,
+  type StandardRegistry,
 } from "@ballroom/domain";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { useLocalizedRegistry } from "../i18n";
 import { Button, Chip, IconButton, InfoIcon, Input, SegmentedToggle } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -64,8 +65,8 @@ export interface AttributeEditorProps {
 }
 
 /** Registry kinds that apply to `dance` (drops e.g. rise for Tango). */
-function kindsFor(dance: DanceId | undefined, customKinds: RegistryKind[]) {
-  const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
+function kindsFor(base: StandardRegistry, dance: DanceId | undefined, customKinds: RegistryKind[]) {
+  const reg = mergeRegistry(base, customKinds);
   return Object.values(reg).filter(
     (k) => !k.appliesToDances || dance === undefined || k.appliesToDances.includes(dance),
   );
@@ -251,7 +252,7 @@ export function AttributeEditor({
   // (headline) + footwork — leads; the technique kinds (rise/position/sway/turn/
   // body actions + custom) sit behind a "More attributes" toggle so the common
   // case is one focused choice, not a wall of every kind at once.
-  const allKinds = kindsFor(dance, customKinds);
+  const allKinds = kindsFor(useLocalizedRegistry(), dance, customKinds);
   // Focused (single-attribute overlay): only this column's kind(s), all shown flat
   // with no disclosure. Full editor: the step identity leads, technique behind a
   // "More attributes" toggle.
