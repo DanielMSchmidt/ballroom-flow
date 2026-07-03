@@ -11,10 +11,9 @@ import { closeUsers, expectAbsent, openTwoUsers, openUser } from "./support/two-
 //            (its own attributes, no overlay), original untouched, "copied as your
 //            variant" toast.
 //
-// @smoke includes one fork/copy-on-write journey (PLAN §10.3). The choreo-fork
-// journey (US-037) is LIVE; the figure auto-update / COW (US-034/035) and
-// cross-dance figureType-note (US-040/041) journeys stay skipped until those
-// FE-3 figure-library / FE-6 annotation slices land.
+// @smoke includes one fork/copy-on-write journey (PLAN §10.3). All journeys in
+// this file are LIVE — the last skipped slice (the US-040 cross-dance
+// figureType-note journey) was unskipped and scripted 2026-07-03.
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Coach creates a routine via the UI; returns its docRef (from the URL). */
@@ -225,23 +224,111 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
   });
 });
 
-test.describe("cross-dance figureType notes + co-member visibility (option 2)", () => {
-  test.skip(true, "M6 annotations + cross-account read + screens + E2E auth not built yet");
-
-  test("an all-dances family note surfaces on a Feather in BOTH a Waltz and a Foxtrot routine", async ({
+test.describe("cross-dance figureType notes (US-040)", () => {
+  test("an all-dances family note surfaces on a Feather in BOTH a Foxtrot and a Waltz routine; a this-dance note stays in its dance", async ({
     page,
   }) => {
-    // Intent: a figureType note scoped "all dances" surfaces on every matching figure
-    //   across dances; a this-dance note only in that dance (US-040).
-    // User scenario: the user annotates "every Feather: keep the head left" (all dances).
+    // Intent: a figureType note scoped "all dances" surfaces on every matching
+    //   figure across dances; a this-dance note only in its dance (US-040).
+    // User scenario: the user annotates "every Feather: keep the head left"
+    //   (all dances) plus a foxtrot-only pointer, from the Foxtrot routine.
     // Steps/asserts:
-    //   1. From a figure family, add a family note scoped "all dances".
-    //   2. Open a Foxtrot routine with a Feather → the note shows.
-    //   3. Open a Waltz routine with a Feather → the note shows too (all-dances).
-    //   4. A this-dance (Foxtrot) note does NOT show in the Waltz routine.
-    await seedAuth(page, "user_owner");
-    await gotoRoutine(page, "rt_foxtrot_feather");
-    await expect(page).toHaveURL(/rt_foxtrot_feather/);
+    //   1. Seed two routines (foxtrot + waltz), each placing a figure of the
+    //      SAME family (feather_step) in its dance.
+    //   2. In the Foxtrot routine, author an all-dances family note and a
+    //      this-dance note.
+    //   3. The Waltz routine's Feather shows the all-dances note (cross-dance)
+    //      but NOT the foxtrot-only one.
+    await seedAuth(page, "xd_owner");
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: "xd_owner", displayName: "Owner", identityColor: "#c0563f" }],
+      figures: [
+        {
+          docRef: "fig_fox_feather",
+          scope: "account",
+          ownerId: "xd_owner",
+          name: "Feather Step",
+          dance: "foxtrot",
+          figureType: "feather_step",
+        },
+        {
+          docRef: "fig_waltz_feather",
+          scope: "account",
+          ownerId: "xd_owner",
+          name: "Waltz Feather",
+          dance: "waltz",
+          figureType: "feather_step",
+        },
+      ],
+      docs: [
+        {
+          docRef: "rt_fox_notes",
+          type: "routine",
+          ownerId: "xd_owner",
+          title: "Foxtrot Notes",
+          dance: "foxtrot",
+          sections: [
+            {
+              id: "s_fox",
+              name: "Main",
+              placements: [{ id: "p_fox", figureRef: "fig_fox_feather" }],
+            },
+          ],
+        },
+        {
+          docRef: "rt_waltz_notes",
+          type: "routine",
+          ownerId: "xd_owner",
+          title: "Waltz Notes",
+          dance: "waltz",
+          sections: [
+            {
+              id: "s_waltz",
+              name: "Main",
+              placements: [{ id: "p_waltz", figureRef: "fig_waltz_feather" }],
+            },
+          ],
+        },
+      ],
+      placementEdges: [
+        { routineRef: "rt_fox_notes", figureRef: "fig_fox_feather" },
+        { routineRef: "rt_waltz_notes", figureRef: "fig_waltz_feather" },
+      ],
+    });
+
+    // 1. Foxtrot routine: author the two family notes from the figure editor.
+    await gotoRoutine(page, "rt_fox_notes");
+    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to the list (edit) view
+    // where the per-figure "edit steps" affordance lives.
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    const foxFamily = page.getByRole("region", { name: /family notes/i });
+    await foxFamily.getByRole("button", { name: /this figure family/i }).click();
+    await foxFamily.getByRole("radio", { name: /all dances/i }).click();
+    await foxFamily.getByRole("textbox", { name: /family note/i }).fill("keep the head left");
+    await foxFamily.getByRole("button", { name: /add family note/i }).click();
+    await expect(foxFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
+
+    await foxFamily.getByRole("radio", { name: /this dance/i }).click();
+    await foxFamily
+      .getByRole("textbox", { name: /family note/i })
+      .fill("foxtrot only: lower earlier");
+    await foxFamily.getByRole("button", { name: /add family note/i }).click();
+    await expect(foxFamily.getByText("foxtrot only: lower earlier")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 2. Waltz routine, same family: the all-dances note surfaces (US-040 AC-1),
+    //    the foxtrot-only one does not (AC-2).
+    await gotoRoutine(page, "rt_waltz_notes");
+    await expect(page.getByText("Waltz Feather")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Waltz Feather/i }).click();
+    const waltzFamily = page.getByRole("region", { name: /family notes/i });
+    await expect(waltzFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
+    await expect(waltzFamily.getByText("foxtrot only: lower earlier")).not.toBeVisible();
   });
 });
 
