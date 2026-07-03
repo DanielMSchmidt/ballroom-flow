@@ -56,10 +56,14 @@ and update the prod GH variable then. You can always deploy manually with
    ```json
    { "name": "{{user.full_name}}", "email": "{{user.primary_email_address}}" }
    ```
-   The Worker reads these networklessly (`displayNameFromClaims`) and caches the
-   derived name (`UserNameCache`) so co-members see a real name. This is optional
-   and degrades gracefully — without it, names simply fall back to the user id
-   until the user onboards and sets their own display name.
+   The Worker reads these networklessly (`displayNameFromClaims` /
+   `emailFromClaims`) and caches both (`UserNameCache`) so co-members see a real
+   name — or, when only an `email` claim is present, that email — instead of the
+   raw id. This is optional and degrades gracefully: without ANY identity claim
+   (a `sub`-only token) the roster and comment threads fall back to the user id
+   until the user onboards and sets their own display name. **If members are still
+   showing as `user_…` in threads, this claim config is almost certainly the
+   cause** — the token isn't carrying `name`/`email`.
 
 ## 2. Cloudflare (hosting + D1)
 

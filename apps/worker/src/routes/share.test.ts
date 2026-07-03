@@ -100,6 +100,45 @@ describe("US-024 Share screen (member list + roles)", () => {
     expect(afterBody.members.find((m) => m.userId === "u_guest")?.displayName).toBe("Guest Dancer");
   });
 
+  it("falls back to a not-onboarded member's email when they have no name claim", async () => {
+    // Intent: a member whose Clerk token carries an email but no name still shows
+    //   something human in the roster (their email), not the raw `user_…` id.
+    // Arrange: seed a routine + editor + a profile-less member; the member hits
+    //   /api/me with only an `email` claim, caching their email.
+    // Act: GET /api/docs/:id/members as the editor.
+    // Assert: the member's displayName resolves to their email.
+    const docRef = "rt_share_email";
+    const editor = await authedContext({ keypair: kp, userId: "u_ede", docRef, role: "editor" });
+    const guest = await authedContext({
+      keypair: kp,
+      userId: "u_mailonly",
+      docRef,
+      role: "commenter",
+      claims: { email: "dancer@example.com" },
+    });
+    await seedDb({
+      users: [{ id: "u_ede", displayName: "Ed", identityColor: "#111", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_ede", doName: docRef }],
+      memberships: [
+        { id: "m_ede", docRef, userId: "u_ede", role: "editor" },
+        { id: "m_mailonly", docRef, userId: "u_mailonly", role: "commenter" },
+      ],
+    });
+
+    // The guest loads the app → /api/me caches their email (no name to derive).
+    await SELF.fetch("https://x/api/me", { headers: guest.authHeaders() });
+
+    const res = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
+      headers: editor.authHeaders(),
+    });
+    const body = (await res.json()) as {
+      members: Array<{ userId: string; displayName?: string }>;
+    };
+    expect(body.members.find((m) => m.userId === "u_mailonly")?.displayName).toBe(
+      "dancer@example.com",
+    );
+  });
+
   it("lets an editor/owner remove a member", async () => {
     // Intent: editors can remove members (soft-delete the membership).
     // Arrange: seed routine + editor + a viewer to remove. Act: DELETE the viewer

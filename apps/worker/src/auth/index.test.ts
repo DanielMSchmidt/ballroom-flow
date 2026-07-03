@@ -1,6 +1,6 @@
 import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { displayNameFromClaims } from "./index";
+import { displayNameFromClaims, emailFromClaims } from "./index";
 
 // Negative-path auth tests — deterministic without live Clerk keys.
 // The positive path (a real Clerk-issued token → 200 with sub) is exercised
@@ -30,13 +30,31 @@ describe("displayNameFromClaims — a real name from Clerk session-token claims"
     );
   });
 
-  it("falls back to username, then the email local-part", () => {
+  it("falls back to username", () => {
     expect(displayNameFromClaims({ username: "ada" })).toBe("ada");
-    expect(displayNameFromClaims({ email: "grace@example.com" })).toBe("grace");
   });
 
-  it("returns undefined when the token carries no identity claim (sub-only)", () => {
+  it("does NOT fold email into the name (email is its own fallback tier)", () => {
+    // An email-only token yields no NAME — the email is surfaced via
+    // emailFromClaims so a member shows their actual address, not a local-part.
+    expect(displayNameFromClaims({ email: "grace@example.com" })).toBeUndefined();
+  });
+
+  it("returns undefined when the token carries no name claim (sub-only)", () => {
     expect(displayNameFromClaims({ sub: "user_123" })).toBeUndefined();
     expect(displayNameFromClaims({ name: "   " })).toBeUndefined();
+  });
+});
+
+describe("emailFromClaims — the member's email as a fallback identity", () => {
+  it("reads the email across claim spellings", () => {
+    expect(emailFromClaims({ email: "grace@example.com" })).toBe("grace@example.com");
+    expect(emailFromClaims({ email_address: "ada@example.com" })).toBe("ada@example.com");
+    expect(emailFromClaims({ primaryEmail: "hedy@example.com" })).toBe("hedy@example.com");
+  });
+
+  it("returns undefined when the token carries no email claim", () => {
+    expect(emailFromClaims({ sub: "user_123", name: "Ada" })).toBeUndefined();
+    expect(emailFromClaims({ email: "   " })).toBeUndefined();
   });
 });

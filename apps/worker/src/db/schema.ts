@@ -28,10 +28,12 @@ export const users = sqliteTable("users", {
 export type UserRow = typeof users.$inferSelect;
 
 /**
- * Cache of a user's human name derived from their Clerk session-token claims
- * (migration 0013). Populated on GET /api/me so co-members can resolve a name for
- * a logged-in-but-not-onboarded user (who has no `users` row). Keyed by Clerk
- * `sub`. NOT a substitute for `users` — writing here never implies onboarding.
+ * Cache of a user's human identity derived from their Clerk session-token claims
+ * (migration 0013). Populated on GET /api/me so co-members can resolve a display
+ * for a logged-in-but-not-onboarded user (who has no `users` row) instead of the
+ * raw `user_…` id. `name` holds the resolved label: their Clerk NAME when the
+ * token carries one, else their EMAIL (see `/api/me`). Keyed by Clerk `sub`. NOT
+ * a substitute for `users` — writing here never implies onboarding.
  */
 export const userNameCache = sqliteTable("user_name_cache", {
   id: text("id").primaryKey(),

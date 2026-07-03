@@ -99,7 +99,10 @@ export interface MemberRow {
   role: MembershipRole;
   /** The member's stored identity colour hex (e.g. "#3b7dd8"). */
   identityColor?: string;
-  /** The member's display name. */
+  /** The member's display name: their chosen name if onboarded, else the name
+   *  from their Clerk claims, else their email — so a comment thread shows
+   *  something human rather than the raw `user_…` id. `undefined` only when the
+   *  member is logged-in-but-not-onboarded AND their token carried no name/email. */
   displayName?: string;
 }
 
@@ -111,8 +114,9 @@ export async function listMembers(db: D1Database, docRef: string): Promise<Membe
       role: membership.role,
       identityColor: users.identityColor,
       displayName: users.displayName,
-      // Fallback name for a member who's logged in but hasn't onboarded (no
-      // `users` row): the name cached from their Clerk claims (migration 0013).
+      // Fallback for a member who's logged in but hasn't onboarded (no `users`
+      // row): the label cached from their Clerk claims — their name, or else
+      // their email (migration 0013; resolved in `/api/me`).
       cachedName: userNameCache.name,
     })
     .from(membership)
@@ -124,7 +128,8 @@ export async function listMembers(db: D1Database, docRef: string): Promise<Membe
     userId: r.userId,
     role: r.role,
     identityColor: r.identityColor ?? undefined,
-    // A chosen (onboarded) name wins; else the cached Clerk name; else the id.
+    // A chosen (onboarded) name wins; else the cached Clerk name/email; else
+    // undefined (the client shows the raw id as a last resort).
     displayName: r.displayName ?? r.cachedName ?? undefined,
   }));
 }
