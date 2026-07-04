@@ -1,4 +1,4 @@
-# Ballroom Flow — Detailed Testing Plan
+# Weave Steps — Detailed Testing Plan
 
 > **⚠️ Predates the v2/v3 redesign.** The testing strategy now lives in [`docs/PLAN.md`](../../PLAN.md) (§10). Two owner-review passes changed the model and the architecture underneath this document:
 > - **Model (v2):** typed step-slots → **attributes on a float-count timeline** (extensible kinds, optional per-attribute role); sides (long/short/corner, auto-named) → **user-named sections**; couple + coach → **classic viewer/commenter/editor + owner**; separate threads/journal → **unified annotations** (v1 anchors: point + figure; query anchors deferred); plus **plans/quota** and **user-defined attribute kinds**.

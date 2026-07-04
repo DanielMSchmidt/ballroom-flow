@@ -1,12 +1,12 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import * as A from "@automerge/automerge";
-import { SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
+import { SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import {
   CURRENT_SCHEMA_VERSION,
   type RoutineDoc,
   readRoutine,
   undoLastChange,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { listRoutines } from "./db/routines";
 import { authedContext } from "./test-support/authed-context";

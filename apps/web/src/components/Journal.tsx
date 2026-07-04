@@ -3,7 +3,7 @@
 // with kind/by-figure filter pills, author-coloured cards with link chips, a
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
-import type { AnnotationKind } from "@ballroom/domain";
+import type { AnnotationKind } from "@weavesteps/domain";
 import { useCallback, useEffect, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

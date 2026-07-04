@@ -7,7 +7,7 @@
 // Styling: uses the `../ui` primitives (Button, Chip) for 44px targets and the
 // shared scale; kind + dance scope render as text so colour is never the only
 // signal (#5). Keeps the accessible region/textbox/button names the tests assert.
-import type { Anchor, AnnotationKind, DanceId } from "@ballroom/domain";
+import type { Anchor, AnnotationKind, DanceId } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

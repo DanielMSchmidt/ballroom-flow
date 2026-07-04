@@ -5,7 +5,7 @@
 > (`- [ ]`) syntax. Each workstream task is its own sub-plan: the dispatching brief carries the concrete
 > frame(s), file-map, and acceptance — authored at dispatch from the spec + inventories + rendered frames.
 
-**Goal:** Make the Ballroom Flow PWA look and behave like the canonical wireframes/prototype, with every user
+**Goal:** Make the Weave Steps PWA look and behave like the canonical wireframes/prototype, with every user
 workflow tested and every user-error / edge case handled.
 
 **Architecture:** Parity work on an already-built React PWA. Components consume data only through
@@ -111,7 +111,7 @@ RED→GREEN steps per primitive following the protocol.)
 **Files:** `apps/web/src/App.tsx`, `apps/web/src/ui/AppShell.tsx`, `apps/web/src/lib/router.ts` (optional tab
 routing behind existing seam), `apps/web/src/components/landing-visibility.ts`.
 **Frames:** tab bar in every frame; no persistent app-name header inner.
-**Acceptance:** inner screens drop the persistent "Ballroom Flow / Signed in" header (each screen owns its
+**Acceptance:** inner screens drop the persistent "Weave Steps / Signed in" header (each screen owns its
 compact header via `ScreenHeader`); tab bar icons + active styling match (Choreo/Library/Journal/Profile);
 desktop side-rail intact; first-run onboarding nudge preserved. Optionally deep-link tabs.
 

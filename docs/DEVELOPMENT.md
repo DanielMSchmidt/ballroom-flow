@@ -1,6 +1,6 @@
 # Development Guide
 
-How to install, run, and test Ballroom Flow locally. Architecture is in
+How to install, run, and test Weave Steps locally. Architecture is in
 [PLAN.md](PLAN.md); account/secret provisioning is in [PROVISIONING.md](../PROVISIONING.md);
 the test-harness rationale is in [TOOLING.md](TOOLING.md).
 
@@ -62,7 +62,7 @@ Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 
 | Layer | Command | Stack |
 |---|---|---|
-| **Domain** (unit/property) | `pnpm --filter @ballroom/domain test` | Node + `fast-check` + in-memory Automerge |
+| **Domain** (unit/property) | `pnpm --filter @weavesteps/domain test` | Node + `fast-check` + in-memory Automerge |
 | **Worker / DO / D1** | `pnpm --filter worker test` | real `workerd` via `vitest-pool-workers` |
 | **Component + a11y** | `pnpm --filter web test` | jsdom + Testing Library + `vitest-axe` |
 | **E2E** | `pnpm test:e2e` | Playwright (3 device projects) |

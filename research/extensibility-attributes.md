@@ -1,7 +1,7 @@
 # Extensibility Review — Adding New Step/Figure Attributes Over Time
 
-**Axis:** How hard is it to add new technique attributes (enum values, whole slots, dance/role-conditional slots) to Ballroom Flow as the domain reveals more of itself?
-**Reviewing:** `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` v2 against `research/domain.md` and `research/critique-domain.md`.
+**Axis:** How hard is it to add new technique attributes (enum values, whole slots, dance/role-conditional slots) to Weave Steps as the domain reveals more of itself?
+**Reviewing:** `docs/superpowers/specs/2026-06-24-weave-steps-design.md` v2 against `research/domain.md` and `research/critique-domain.md`.
 **Verdict:** The current model is *correct* for v1 content but *structurally hostile* to attribute growth, and the domain guarantees that growth. The fix is cheap now and expensive later. Adopt a **vocabulary/slot registry** (hybrid: keep the core slots as typed columns, but make the slot SET and per-dance/per-role applicability data-driven). Defer the generic EAV store.
 
 ---

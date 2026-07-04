@@ -1,6 +1,6 @@
-# Product & Collaboration Critique — Ballroom Flow
+# Product & Collaboration Critique — Weave Steps
 
-Adversarial review of `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` from a collaboration-model and product/UX angle. Cross-referenced against `research/design-spec.md` (original microcopy).
+Adversarial review of `docs/superpowers/specs/2026-06-24-weave-steps-design.md` from a collaboration-model and product/UX angle. Cross-referenced against `research/design-spec.md` (original microcopy).
 
 ---
 

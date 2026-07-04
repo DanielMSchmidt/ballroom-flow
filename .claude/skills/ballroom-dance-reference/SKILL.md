@@ -5,7 +5,7 @@ description: Load when work touches figures, attributes, timing, alignment, foot
 
 # Ballroom dance reference — the domain theory behind the code
 
-Ballroom Flow notates **International Standard ballroom choreography**. Every enum in
+Weave Steps notates **International Standard ballroom choreography**. Every enum in
 `packages/domain/src/vocabulary.ts` is a real dance-technique term with an official
 definition. This skill teaches enough ballroom to read, extend, and review that code
 without inventing domain data. Assume zero dance knowledge.

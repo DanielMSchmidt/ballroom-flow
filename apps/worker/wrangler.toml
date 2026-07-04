@@ -1,4 +1,4 @@
-name = "ballroom-flow"
+name = "weave-steps"
 main = "src/index.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
@@ -14,7 +14,7 @@ mode = "smart"
 # inherited by named environments — redeclared per env below.
 [[analytics_engine_datasets]]
 binding = "ANALYTICS"
-dataset = "ballroom_flow_dev"
+dataset = "weave_steps_dev"
 
 # Serve the built SPA from the same Worker. API routes run worker-first;
 # everything else falls back to index.html (client-side routing).
@@ -27,7 +27,7 @@ run_worker_first = ["/api/*", "/docs/*"]
 # Miniflare uses a local SQLite file and ignores database_id.
 [[d1_databases]]
 binding = "DB"
-database_name = "ballroom-flow-dev"
+database_name = "weave-steps-dev"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
@@ -55,7 +55,7 @@ new_sqlite_classes = ["DocDO"]
 # the VITE_E2E=1 auth bypass, so keeping it out of `dist` is what stops it from
 # ever reaching a real deploy.
 [env.e2e]
-name = "ballroom-flow-e2e"
+name = "weave-steps-e2e"
 
 [env.e2e.assets]
 directory = "../web/dist-e2e"
@@ -78,7 +78,7 @@ dQIDAQAB
 
 [[env.e2e.d1_databases]]
 binding = "DB"
-database_name = "ballroom-flow-e2e"
+database_name = "weave-steps-e2e"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
@@ -88,7 +88,15 @@ class_name = "DocDO"
 
 # --- Staging (deployed from the `development` branch).
 [env.staging]
-name = "ballroom-flow-staging"
+name = "weave-steps-staging"
+
+# Custom domain: serve staging at staging.weavesteps.com. `custom_domain = true`
+# makes Wrangler provision the DNS record + edge cert on deploy (the weavesteps.com
+# zone must already exist in this Cloudflare account). The *.workers.dev URL keeps
+# working alongside it.
+[[env.staging.routes]]
+pattern = "staging.weavesteps.com"
+custom_domain = true
 
 [env.staging.assets]
 directory = "../web/dist"
@@ -96,10 +104,11 @@ not_found_handling = "single-page-application"
 run_worker_first = ["/api/*", "/docs/*"]
 
 # Bindings are NOT inherited by named environments — redeclare per env.
-# Replace database_id after `wrangler d1 create ballroom-flow-staging`.
+# database_id binds the D1 instance (name is only a label); this id is the
+# existing staging index, so the renamed worker keeps its staging data.
 [[env.staging.d1_databases]]
 binding = "DB"
-database_name = "ballroom-flow-staging"
+database_name = "weave-steps-staging"
 database_id = "ad9ea4d2-3687-411d-a664-a938dc91b541"
 migrations_dir = "migrations"
 
@@ -109,21 +118,30 @@ class_name = "DocDO"
 
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"
-dataset = "ballroom_flow_staging"
+dataset = "weave_steps_staging"
 
 # --- Production (deployed from the `main` branch).
 [env.production]
-name = "ballroom-flow-production"
+name = "weave-steps-production"
+
+# Custom domain: serve production at the apex weavesteps.com. `custom_domain = true`
+# makes Wrangler provision the DNS record + edge cert on deploy (the weavesteps.com
+# zone must already exist in this Cloudflare account). The *.workers.dev URL keeps
+# working alongside it.
+[[env.production.routes]]
+pattern = "weavesteps.com"
+custom_domain = true
 
 [env.production.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*", "/docs/*"]
 
-# Replace database_id after `wrangler d1 create ballroom-flow-production`.
+# database_id binds the D1 instance (name is only a label); this id is the
+# existing production index.
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "ballroom-flow-production"
+database_name = "weave-steps-production"
 database_id = "55ba153e-a24e-4cf6-8579-213b236abae5"
 migrations_dir = "migrations"
 
@@ -133,4 +151,4 @@ class_name = "DocDO"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ANALYTICS"
-dataset = "ballroom_flow_production"
+dataset = "weave_steps_production"

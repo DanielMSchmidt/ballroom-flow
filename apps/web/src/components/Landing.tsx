@@ -48,7 +48,7 @@ export function Landing(): React.JSX.Element {
   return (
     <div className="min-h-dvh bg-surface text-ink">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-        <span className="text-lg font-bold tracking-tight">Ballroom Flow</span>
+        <span className="text-lg font-bold tracking-tight">Weave Steps</span>
         <div className="flex items-center gap-3">
           <LanguageToggle />
           <AccountControls />
@@ -101,7 +101,7 @@ export function Landing(): React.JSX.Element {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-5xl px-5 py-8 text-2xs text-ink-muted">Ballroom Flow</footer>
+      <footer className="mx-auto max-w-5xl px-5 py-8 text-2xs text-ink-muted">Weave Steps</footer>
     </div>
   );
 }

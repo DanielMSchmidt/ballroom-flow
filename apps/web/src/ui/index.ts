@@ -1,5 +1,5 @@
 /**
- * Ballroom Flow design system — public surface.
+ * Weave Steps design system — public surface.
  * Import primitives from "@/ui" (or relative "./ui"). The token layer
  * lives in styles/tokens.css; tokens.ts names them for TS consumers.
  */

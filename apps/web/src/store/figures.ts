@@ -2,8 +2,9 @@
 // §4.2/§5.2/D28). Components touch ONLY the store (this) + ui — never lib/rpc
 // directly (§3/AC-4). Built on the same react-query + lib/rpc pattern as
 // store/routines.ts.
-import type { SaveToLibrary } from "@ballroom/contract";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { SaveToLibrary } from "@weavesteps/contract";
 import { useAppAuth } from "../auth/app-auth";
 import { apiDelete, apiGet, apiPost } from "../lib/rpc";
 

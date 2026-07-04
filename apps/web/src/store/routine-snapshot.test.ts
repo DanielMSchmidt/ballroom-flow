@@ -1,4 +1,4 @@
-import type { FigureDoc, RoutineDoc } from "@ballroom/domain";
+import type { FigureDoc, RoutineDoc } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
 import { openRoutineSnapshot, type RoutineSnapshot } from "./routine-snapshot";
 

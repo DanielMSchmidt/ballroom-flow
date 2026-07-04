@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-change-control
-description: Load BEFORE making any change to the ballroom-flow repo — when classifying a change, choosing a branch, deciding which docs/gates apply, wondering whether something is allowed (new dependency, weakening a test, editing seed data, changing a locked decision), or preparing a commit/PR. Also load when a rule in CLAUDE.md feels inconvenient and you're tempted to route around it.
+description: Load BEFORE making any change to the weave-steps repo — when classifying a change, choosing a branch, deciding which docs/gates apply, wondering whether something is allowed (new dependency, weakening a test, editing seed data, changing a locked decision), or preparing a commit/PR. Also load when a rule in CLAUDE.md feels inconvenient and you're tempted to route around it.
 ---
 
-# Ballroom Flow — Change Control
+# Weave Steps — Change Control
 
 The rules for changing this repo, each with the incident that made it a rule. This codebase was built in 8 days / 131 PRs (2026-06-24 → 2026-07-02); every rule below was paid for. The internal issue numbers cited in commit messages (#63, #161, #168, …) are a gitignored ledger and do NOT resolve on GitHub — PR numbers do.
 

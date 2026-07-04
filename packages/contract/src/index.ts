@@ -1,6 +1,6 @@
-// @ballroom/contract — Zod request/response schemas shared by web + worker.
+// @weavesteps/contract — Zod request/response schemas shared by web + worker.
 // (Dependency direction: contract → domain; web/worker → contract.)
-import { DANCE_IDS } from "@ballroom/domain";
+import { DANCE_IDS } from "@weavesteps/domain";
 import { z } from "zod";
 
 /**

@@ -32,12 +32,6 @@ importers:
       '@automerge/automerge':
         specifier: ^3.2.6
         version: 3.2.6
-      '@ballroom/contract':
-        specifier: workspace:*
-        version: link:../../packages/contract
-      '@ballroom/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
       '@clerk/clerk-react':
         specifier: ^5.61.3
         version: 5.61.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -50,6 +44,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.101.1
         version: 5.101.1(react@19.2.7)
+      '@weavesteps/contract':
+        specifier: workspace:*
+        version: link:../../packages/contract
+      '@weavesteps/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       driver.js:
         specifier: ^1.6.0
         version: 1.6.0
@@ -123,15 +123,15 @@ importers:
       '@automerge/automerge':
         specifier: ^3.2.6
         version: 3.2.6
-      '@ballroom/contract':
-        specifier: workspace:*
-        version: link:../../packages/contract
-      '@ballroom/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
       '@clerk/backend':
         specifier: ^3.8.3
         version: 3.8.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@weavesteps/contract':
+        specifier: workspace:*
+        version: link:../../packages/contract
+      '@weavesteps/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260624.1)
@@ -160,7 +160,7 @@ importers:
 
   packages/contract:
     dependencies:
-      '@ballroom/domain':
+      '@weavesteps/domain':
         specifier: workspace:*
         version: link:../domain
       zod:

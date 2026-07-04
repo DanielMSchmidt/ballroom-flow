@@ -1,4 +1,4 @@
-import type { Annotation, Attribute, FigureDoc, RoutineDoc } from "@ballroom/domain";
+import type { Annotation, Attribute, FigureDoc, RoutineDoc } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement } from "../store/routine";

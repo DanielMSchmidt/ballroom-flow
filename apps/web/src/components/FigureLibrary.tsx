@@ -16,7 +16,7 @@ import {
   LIBRARY_FIGURES,
   type LibraryFigure,
   libraryGroupsForFilter,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { useEffect, useMemo, useState } from "react";
 import { danceName, pickMessages, useLocale, useMessages } from "../i18n";
 import { figureLibraryMessages } from "../i18n/messages/figure-library";

@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Typed shim for the NOT-YET-BUILT @ballroom/domain M1 surface.
+// Typed shim for the NOT-YET-BUILT @weavesteps/domain M1 surface.
 //
 // WHY THIS EXISTS:
 //   Skipped tests dynamic-import product functions that don't exist yet (M1 §9).
-//   `await import("@ballroom/domain")` would type against the real (empty)
+//   `await import("@weavesteps/domain")` would type against the real (empty)
 //   index and make every destructure a TS error — failing `pnpm -r typecheck`
 //   (the CI contract-drift gate). We can't use `any` (Biome noExplicitAny:error).
 //
@@ -93,7 +93,7 @@ export interface DanceMeta {
 export type DocHandle = unknown;
 
 /**
- * The M1 `@ballroom/domain` public surface the skipped tests exercise. Each
+ * The M1 `@weavesteps/domain` public surface the skipped tests exercise. Each
  * member maps to a §9 M1 deliverable / a US acceptance criterion. Implementers:
  * this is the contract — satisfy it and unskip the tests.
  */
@@ -186,7 +186,7 @@ export interface DomainApi {
   capabilitiesFor?(role: MembershipRole): { canEdit: boolean; canAnnotate: boolean };
 }
 
-const DOMAIN_PKG = "@ballroom/domain";
+const DOMAIN_PKG = "@weavesteps/domain";
 
 /**
  * Dynamically load the M1 domain module, typed as `DomainApi`. The specifier is

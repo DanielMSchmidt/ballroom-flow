@@ -1,4 +1,4 @@
-import type { Attribute, RegistryKind } from "@ballroom/domain";
+import type { Attribute, RegistryKind } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
 import {
   allColumns,

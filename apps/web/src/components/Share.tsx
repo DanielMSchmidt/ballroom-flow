@@ -6,7 +6,7 @@
 // viewer's own role. Membership management (remove / invite) is gated on the
 // SHARED capability table (can(role,"canInvite")) so the UI and the server agree
 // (principle #26) — the worker still enforces it (a client bypass is refused 403).
-import { can, type EffectiveRole } from "@ballroom/domain";
+import { can, type EffectiveRole } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { shareMessages } from "../i18n/messages/share";

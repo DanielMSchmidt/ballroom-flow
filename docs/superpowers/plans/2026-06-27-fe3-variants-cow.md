@@ -12,11 +12,11 @@
 
 - TS strict; no `any` without justification (Biome `noExplicitAny` = error). Run `pnpm lint && pnpm typecheck` before each commit.
 - TDD RED→GREEN→REFACTOR. Unskip the story's listed tests, watch them fail, make them pass.
-- IDs are client-generated ULIDs (`newId()` from `@ballroom/domain`). Soft-delete only (`deletedAt`), never hard removal.
+- IDs are client-generated ULIDs (`newId()` from `@weavesteps/domain`). Soft-delete only (`deletedAt`), never hard removal.
 - Worker DO tests: `isolatedStorage:false` → every test uses a unique DO id (`uniqueDocName`/`do-id.ts`). D1 is shared across the worker run — seed with unique per-test docRefs.
 - Components never import `@automerge/automerge` or the RPC client directly — only via `store/` and `ui/`.
 - Registry figure types: app-owned global figures → `type:"global-figure"`; user-owned variants/custom → `type:"account-figure"`. (Quota keys off `type='routine'`; cascade keys off `placement_edge` — both unaffected.)
-- Run worker tests: `pnpm --filter @ballroom/worker test <file>`; web tests: `pnpm --filter @ballroom/web test <file>`; domain: `pnpm --filter @ballroom/domain test <file>`; E2E: `pnpm test:e2e <file>` (or `:smoke`).
+- Run worker tests: `pnpm --filter @weavesteps/worker test <file>`; web tests: `pnpm --filter @weavesteps/web test <file>`; domain: `pnpm --filter @weavesteps/domain test <file>`; E2E: `pnpm test:e2e <file>` (or `:smoke`).
 - Commit message footer: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
 ---
@@ -232,7 +232,7 @@ describe("US-035 Auto-variant on editing a non-owned figure (stateless variant r
 
 - [ ] **Step 6: Run the worker figures tests — expect PASS**
 
-Run: `pnpm --filter @ballroom/worker test src/figures.test.ts`
+Run: `pnpm --filter @weavesteps/worker test src/figures.test.ts`
 Expected: both describes PASS. (If `authedContext` needs a real membership for the POST, the seed above grants u1 `editor` on the routine; the figure POST authorizes on the JWT sub, not doc role.)
 
 - [ ] **Step 7: lint + typecheck + commit**
@@ -348,7 +348,7 @@ And in that test's `seedDb`, add the two edges so the count is real:
 
 - [ ] **Step 4: Run search tests — expect PASS**
 
-Run: `pnpm --filter @ballroom/worker test src/routes/search.test.ts`
+Run: `pnpm --filter @weavesteps/worker test src/routes/search.test.ts`
 Expected: US-032/033 describe PASS (US-046 stays skipped). 
 
 - [ ] **Step 5: lint + typecheck + commit**
@@ -384,7 +384,7 @@ In `routine-store.test.ts`, find the variant-resolution test (around line 221, t
 
 - [ ] **Step 2: Run — expect FAIL**
 
-Run: `pnpm --filter @ballroom/web test src/store/routine-store.test.ts -t "variant"`
+Run: `pnpm --filter @weavesteps/web test src/store/routine-store.test.ts -t "variant"`
 Expected: FAIL — `figure.id` is `"fbase"` (the base id) not `"fv"`.
 
 - [ ] **Step 3: Stamp the variant identity in `resolveFigure`**
@@ -417,7 +417,7 @@ In `routine.ts`, replace the variant branch of `resolveFigure`:
 
 - [ ] **Step 4: Run — expect PASS**
 
-Run: `pnpm --filter @ballroom/web test src/store/routine-store.test.ts -t "variant"`
+Run: `pnpm --filter @weavesteps/web test src/store/routine-store.test.ts -t "variant"`
 Expected: PASS.
 
 - [ ] **Step 5: lint + typecheck + commit**
@@ -448,8 +448,8 @@ Semantics (mirror `resolve` in `packages/domain/src/overlay.ts`):
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-import type { Attribute, Overlay } from "@ballroom/domain";
-import { resolve } from "@ballroom/domain";
+import type { Attribute, Overlay } from "@weavesteps/domain";
+import { resolve } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
 import { overlayFromAttributes } from "./overlay-diff";
 
@@ -511,7 +511,7 @@ describe("overlayFromAttributes", () => {
 
 - [ ] **Step 2: Run — expect FAIL (module not found)**
 
-Run: `pnpm --filter @ballroom/web test src/store/overlay-diff.test.ts`
+Run: `pnpm --filter @weavesteps/web test src/store/overlay-diff.test.ts`
 Expected: FAIL — cannot find `./overlay-diff`.
 
 - [ ] **Step 3: Implement `overlay-diff.ts`**
@@ -521,7 +521,7 @@ Expected: FAIL — cannot find `./overlay-diff`.
 // attribute set (the RESOLVED timeline after an edit) into an Overlay of
 // divergences against a base figure, so a variant stores only what it changed
 // and non-overridden base edits still flow up via resolve() (US-006/US-036).
-import type { Attribute, Overlay } from "@ballroom/domain";
+import type { Attribute, Overlay } from "@weavesteps/domain";
 
 /** True when an attribute is present (not soft-deleted). */
 function live(a: Attribute): boolean {
@@ -558,7 +558,7 @@ export function overlayFromAttributes(baseAttrs: Attribute[], nextAttrs: Attribu
 
 - [ ] **Step 4: Run — expect PASS**
 
-Run: `pnpm --filter @ballroom/web test src/store/overlay-diff.test.ts`
+Run: `pnpm --filter @weavesteps/web test src/store/overlay-diff.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: lint + typecheck + commit**
@@ -578,7 +578,7 @@ git commit -m "feat(web/store): overlay-diff helper (timeline replace → Overla
 - Modify: `apps/web/src/store/routine-store.test.ts` (COW path test)
 
 **Interfaces:**
-- Consumes: `copyOnWrite`, `resolve` (`@ballroom/domain`); `overlayFromAttributes` (Task 4); `CreateFigureFn` (extend its arg with `baseFigureRef?: string`).
+- Consumes: `copyOnWrite`, `resolve` (`@weavesteps/domain`); `overlayFromAttributes` (Task 4); `CreateFigureFn` (extend its arg with `baseFigureRef?: string`).
 - Produces: `setFigureAttributes(figureRef, nextAttrs)` — when the resolved figure is **owned** by `currentUserId`, writes `attributes` in place (today's behavior). When **not owned**, performs copy-on-write: domain `copyOnWrite` → POST the variant (with `baseFigureRef`) via `createFigure` → re-point the placement's `figureRef` in the routine doc → write the overlay (`overlayFromAttributes(base, nextAttrs)`) to the variant doc. Adds `OpenOptions.onCopyOnWrite?: () => void` (the store invokes it so the screen can toast).
 
 - [ ] **Step 1: Extend `CreateFigureFn` and `OpenOptions`**
@@ -646,12 +646,12 @@ it("copy-on-write: editing a NON-owned figure spawns an owned variant + re-point
 
 - [ ] **Step 3: Run — expect FAIL**
 
-Run: `pnpm --filter @ballroom/web test src/store/routine-store.test.ts -t "copy-on-write"`
+Run: `pnpm --filter @weavesteps/web test src/store/routine-store.test.ts -t "copy-on-write"`
 Expected: FAIL — `setFigureAttributes` writes in place; no variant created.
 
 - [ ] **Step 4: Implement COW in `setFigureAttributes`**
 
-Add imports at the top of `routine.ts`: `copyOnWrite` from `@ballroom/domain` and `overlayFromAttributes` from `./overlay-diff`.
+Add imports at the top of `routine.ts`: `copyOnWrite` from `@weavesteps/domain` and `overlayFromAttributes` from `./overlay-diff`.
 
 Replace `setFigureAttributes`:
 
@@ -742,7 +742,7 @@ Add the two helpers inside `openRoutine` (near `resolveFigure`):
 
 - [ ] **Step 5: Run — expect PASS (and the existing in-place test still green)**
 
-Run: `pnpm --filter @ballroom/web test src/store/routine-store.test.ts`
+Run: `pnpm --filter @weavesteps/web test src/store/routine-store.test.ts`
 Expected: the new COW test PASSES; the existing `setFigureAttributes writes the timeline to the figure's own doc connection (US-028)` test still PASSES (that figure must be account-owned by the test's `currentUserId`; if it was global/un-owned and now triggers COW, adjust that fixture to `scope:"account", ownerId:<currentUserId>` so it still edits in place — the original intent).
 
 - [ ] **Step 6: lint + typecheck + commit**
@@ -771,7 +771,7 @@ In `figure-library.test.tsx`, change `describe.skip("US-035 …` and `describe.s
 
 - [ ] **Step 2: Run — expect FAIL**
 
-Run: `pnpm --filter @ballroom/web test src/components/figure-library.test.tsx -t "copy-on-write toast"`
+Run: `pnpm --filter @weavesteps/web test src/components/figure-library.test.tsx -t "copy-on-write toast"`
 Expected: FAIL — `FigureTimeline` has no `figureScope`, no toast, no "Fork into variant".
 
 - [ ] **Step 3: Implement in `FigureTimeline.tsx`**
@@ -836,7 +836,7 @@ Render, above the count timeline (`<ol …>`), the scope affordances:
 
 - [ ] **Step 4: Run — expect PASS (US-035 + US-036 component)**
 
-Run: `pnpm --filter @ballroom/web test src/components/figure-library.test.tsx`
+Run: `pnpm --filter @weavesteps/web test src/components/figure-library.test.tsx`
 Expected: US-032 (already green), US-035 ("copied as your variant" toast), US-036 ("variant of" after Fork into variant) PASS. US-033 still skipped.
 
 Note: US-035 test clicks `count 1` then a value button `H`. Ensure the `AttributeEditor` for a global figure still renders editable value buttons when `role="editor"` (it does — `role` gates editing, `figureScope` does not). The toast text "copied as your variant" matches `/copied as your variant/i`.
@@ -884,7 +884,7 @@ describe("US-033 Account variants + custom figures in library", () => {
 
 - [ ] **Step 2: Run — expect FAIL**
 
-Run: `pnpm --filter @ballroom/web test src/components/figure-library.test.tsx -t "used in 2 routines"`
+Run: `pnpm --filter @weavesteps/web test src/components/figure-library.test.tsx -t "used in 2 routines"`
 Expected: FAIL — `FigureLibrary` has no `tab`/`loadMine`.
 
 - [ ] **Step 3: Implement the "mine" tab in `FigureLibrary.tsx`**
@@ -957,7 +957,7 @@ Add `Badge` to the `../ui` import. If the architecture-boundary lint forbids `ap
 
 - [ ] **Step 4: Run — expect PASS**
 
-Run: `pnpm --filter @ballroom/web test src/components/figure-library.test.tsx`
+Run: `pnpm --filter @weavesteps/web test src/components/figure-library.test.tsx`
 Expected: all four describes (US-032/033/035/036) PASS.
 
 - [ ] **Step 5: lint + typecheck + commit**
@@ -1020,7 +1020,7 @@ In the notate `Sheet`, change the `FigureTimeline` render (Assemble.tsx:337-342)
 
 - [ ] **Step 3: Run the Assemble component tests — expect PASS (no regressions)**
 
-Run: `pnpm --filter @ballroom/web test src/components/assemble.test.tsx`
+Run: `pnpm --filter @weavesteps/web test src/components/assemble.test.tsx`
 Expected: existing Assemble tests still PASS (figureScope is additive).
 
 - [ ] **Step 4: lint + typecheck + commit**

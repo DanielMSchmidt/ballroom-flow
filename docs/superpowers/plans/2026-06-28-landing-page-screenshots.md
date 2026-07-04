@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a logged-out landing page that explains Ballroom Flow with real screenshots of an example Waltz routine, produced by a Playwright journey, with a CI pipeline that regenerates the photos, auto-commits them, and posts a before/after PR comment.
+**Goal:** Add a logged-out landing page that explains Weave Steps with real screenshots of an example Waltz routine, produced by a Playwright journey, with a CI pipeline that regenerates the photos, auto-commits them, and posts a before/after PR comment.
 
 **Architecture:** A `Landing` React component replaces the app shell for signed-out users and renders screenshots imported from `apps/web/src/marketing/screenshots/`. A `@screenshots`-tagged Playwright spec drives the real app (via the existing `#191` E2E harness) to build the routine and capture those PNGs. A GitHub Actions workflow runs the journey on PRs, pixel-diffs each image against the base branch, auto-commits regenerated images, and upserts a sticky before/after comment.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Package manager: `pnpm` (workspace). Node 22. Run all commands from the worktree root: `/Users/danielschmidt/fun/ballroom-flow/.claude/worktrees/landing-screenshots`.
+- Package manager: `pnpm` (workspace). Node 22. Run all commands from the worktree root: `/Users/danielschmidt/fun/weave-steps/.claude/worktrees/landing-screenshots`.
 - Branch: `feat/landing-screenshots` (already created off `origin/development`). PR targets `development`.
 - Lint/format: Biome (`pnpm lint`). Never use `git commit --no-verify`. Never pipe `git commit` through `grep` (fish `$status` masking — see project memory).
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
@@ -112,7 +112,7 @@ export const SCREENSHOTS: Screenshot[] = [
   {
     key: "hero",
     file: "hero.png",
-    alt: "A Waltz routine laid out in Ballroom Flow",
+    alt: "A Waltz routine laid out in Weave Steps",
     caption: "Your whole routine, figure by figure.",
   },
   {
@@ -283,7 +283,7 @@ export function Landing(): React.JSX.Element {
   return (
     <div className="min-h-dvh bg-surface text-ink">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-        <span className="text-lg font-bold tracking-tight">Ballroom Flow</span>
+        <span className="text-lg font-bold tracking-tight">Weave Steps</span>
         <AccountControls />
       </header>
 
@@ -295,7 +295,7 @@ export function Landing(): React.JSX.Element {
               Build ballroom choreography, step by step.
             </h1>
             <p className="text-sm text-ink-secondary lg:text-base">
-              Ballroom Flow is a mobile-first studio for couples and coaches to assemble routines,
+              Weave Steps is a mobile-first studio for couples and coaches to assemble routines,
               annotate every step's technique, and keep it all in sync across your devices.
             </p>
             <div className="mt-2">
@@ -339,7 +339,7 @@ export function Landing(): React.JSX.Element {
       </main>
 
       <footer className="mx-auto max-w-5xl px-5 py-8 text-2xs text-ink-muted">
-        Ballroom Flow
+        Weave Steps
       </footer>
     </div>
   );

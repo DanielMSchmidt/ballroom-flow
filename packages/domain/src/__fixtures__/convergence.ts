@@ -11,7 +11,7 @@
 //
 // IMPORTANT — lazy Automerge load:
 //   `@automerge/automerge` is a heavy WASM module and (as of this writing) is
-//   NOT yet declared as a dependency of @ballroom/domain (it ships in M1 — see
+//   NOT yet declared as a dependency of @weavesteps/domain (it ships in M1 — see
 //   TEST-MAP.md "Missing dependencies"). Importing it at the top level would
 //   (a) run the WASM on every test collection and (b) throw a resolution error
 //   today, breaking the whole (skipped) suite's collection. So we DYNAMIC-IMPORT
@@ -44,7 +44,7 @@ export interface AutomergeLike {
 /**
  * The Automerge package specifier as a runtime variable (NOT a string literal
  * inside `import(...)`). WHY: the package is not yet declared as a dependency of
- * @ballroom/domain (it ships in M1 — see TEST-MAP.md "Missing dependencies"), so
+ * @weavesteps/domain (it ships in M1 — see TEST-MAP.md "Missing dependencies"), so
  * a literal specifier makes `tsc` fail to resolve the module even inside a
  * dynamic import. A variable specifier defers resolution to runtime — which only
  * happens when a skipped test is unskipped AND the dependency exists. Replace

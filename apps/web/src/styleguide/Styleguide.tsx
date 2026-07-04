@@ -78,7 +78,7 @@ export function Styleguide() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pb-16">
       <header className="py-6">
-        <h1 className="text-xl font-bold tracking-tight text-ink">Ballroom Flow — Design System</h1>
+        <h1 className="text-xl font-bold tracking-tight text-ink">Weave Steps — Design System</h1>
         <p
           className="mt-1 text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-md)" }}

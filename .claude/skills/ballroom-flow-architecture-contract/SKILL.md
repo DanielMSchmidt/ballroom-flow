@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-architecture-contract
-description: Load when designing any change to Ballroom Flow that touches data shape, document boundaries, sync, permissions, or module structure — before writing a spec, adding a table/column, moving code between packages, or questioning a design decision. Digests the locked decisions (PLAN.md §8), the invariants that must hold (with where each is enforced), and the known weak points as of 2026-07-02.
+description: Load when designing any change to Weave Steps that touches data shape, document boundaries, sync, permissions, or module structure — before writing a spec, adding a table/column, moving code between packages, or questioning a design decision. Digests the locked decisions (PLAN.md §8), the invariants that must hold (with where each is enforced), and the known weak points as of 2026-07-02.
 ---
 
-# Ballroom Flow — the architecture contract
+# Weave Steps — the architecture contract
 
 This skill is the load-bearing map: what the system IS, which decisions are locked and why,
 which invariants your change must not break, and where the known cracks are.
@@ -20,7 +20,7 @@ PLAN.md ever disagree, PLAN.md wins and this skill has a bug.
 
 ## 1. The system in one screen
 
-Ballroom Flow is a collaborative, mobile-first PWA for building ballroom choreography.
+Weave Steps is a collaborative, mobile-first PWA for building ballroom choreography.
 Canonical state is a **graph of Automerge documents** (Automerge = a CRDT library:
 every replica can edit independently and all replicas deterministically converge).
 

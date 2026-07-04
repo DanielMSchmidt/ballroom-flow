@@ -4,7 +4,7 @@
 // "all"); the worker owns it (authorId from the JWT) and surfaces co-members'
 // notes on a shared routine (the co-membership gate lives server-side). Components
 // reach this ONLY through the store — never lib/rpc directly (the boundary test).
-import type { Anchor, AnnotationKind } from "@ballroom/domain";
+import type { Anchor, AnnotationKind } from "@weavesteps/domain";
 import { apiGet, apiPost } from "../lib/rpc";
 
 /** A family note as the worker returns it (content + a figureType anchor to match). */

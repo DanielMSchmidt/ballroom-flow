@@ -1,5 +1,5 @@
-import { ATTRIBUTE_REGISTRY, type RegistryKind } from "@ballroom/domain";
 import { act } from "@testing-library/react";
+import { ATTRIBUTE_REGISTRY, type RegistryKind } from "@weavesteps/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import { labelValue } from "../components/attribute-display";
 import { Profile } from "../components/Profile";

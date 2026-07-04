@@ -39,7 +39,7 @@ import {
   type GridSlot,
   offBeatSymbol,
   type RegistryKind,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { type ReactNode, useMemo, useState } from "react";
 import { pickMessages, useLocale, useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";

@@ -16,7 +16,7 @@ export const SCREENSHOTS: Screenshot[] = [
   {
     key: "hero",
     file: "hero.png",
-    alt: "A Waltz routine laid out in Ballroom Flow",
+    alt: "A Waltz routine laid out in Weave Steps",
     caption: "Your whole routine, figure by figure.",
   },
   {

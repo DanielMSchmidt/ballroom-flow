@@ -1,4 +1,4 @@
-import type { RoutineDoc } from "@ballroom/domain";
+import type { RoutineDoc } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
 import type { SyncState } from "./doc-connection";
 import type { ResolvedPlacement, RoutineStore } from "./routine";

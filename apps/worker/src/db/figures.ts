@@ -4,7 +4,7 @@
 // later a copy-on-write variant, US-035) it must be projected to the D1 index +
 // given an owner membership, or the fail-closed DO boundary (US-021) can't
 // owner-resolve a connect to that figure → 403. This mirrors createOwnedRoutine.
-import { LIBRARY_FIGURES, parseGlobalFigureRef } from "@ballroom/domain";
+import { LIBRARY_FIGURES, parseGlobalFigureRef } from "@weavesteps/domain";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { listLibraryFigureRefs } from "./library";

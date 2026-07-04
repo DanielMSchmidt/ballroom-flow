@@ -1,7 +1,7 @@
 // Frame 1.15 — Add-attribute type picker. A sheet listing the standard kinds +
 // any custom kinds, plus a dashed "＋ new attribute type" footer that opens the
 // custom-type builder (frame 1.16).
-import type { RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";

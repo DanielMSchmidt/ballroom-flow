@@ -68,10 +68,10 @@ Re-audit before relying on this — later sessions may have moved things (see Pr
 - **TDD.** Write/extend the failing test first (RED), implement (GREEN), refactor. See **ballroom-flow-change-control** for the full doctrine.
 - **Branch off `development`** (never `main` — the #83/#85 revert cost ~1269 lines). PR back into `development`.
 - **PLAN.md moves with the code:** flip the matching §9 checkbox and reconcile any superseded prose (and docs/TEST-MAP.md rows) **in the same PR**. Divergence between PLAN and code is a bug.
-- Commands (from repo root; package filters are `@ballroom/domain`, `worker`, `web`):
+- Commands (from repo root; package filters are `@weavesteps/domain`, `worker`, `web`):
 
 ```bash
-pnpm --filter @ballroom/domain test   # 245 passed / 3 skipped at c9622c9, ~5s
+pnpm --filter @weavesteps/domain test   # 245 passed / 3 skipped at c9622c9, ~5s
 pnpm --filter worker test             # 180 passed / 7 skipped at c9622c9 — GREEN (the migrateOnLoad
                                       #   incident is fixed, §2). ~55s. (Under heavy sandbox load
                                       #   starter.test.ts can hit its 5s timeout — environmental,
@@ -90,7 +90,7 @@ pnpm test:e2e:smoke                   # Playwright @smoke; in sandboxes add --pr
 ```bash
 git branch --show-current                       # must be a feature branch off development
 grep -n '☐' docs/PLAN.md                        # ZERO boxes at 759b3a8 — any hit means new milestone work opened after this skill
-pnpm --filter @ballroom/domain test             # baseline green before you touch anything
+pnpm --filter @weavesteps/domain test             # baseline green before you touch anything
 ```
 
 Read PLAN §5.2 (lines ~278–288), §5.4 (~:295–298), and §2.5.1 #14–20 in full.
@@ -116,7 +116,7 @@ Before building on any shipped step, prove it still holds — each has a named p
 
 | Shipped item | How to prove it still holds |
 |---|---|
-| Domain v5 helpers + back-compat (step 2) | `pnpm --filter @ballroom/domain test` — expect 245+/3 skipped, incl. fork.test.ts "the Passing Tumble Turn: base additions reach untouched beats only (§5.2)" and the §9 back-compat pin "legacy full copy resolves to its own content" (30d6868) |
+| Domain v5 helpers + back-compat (step 2) | `pnpm --filter @weavesteps/domain test` — expect 245+/3 skipped, incl. fork.test.ts "the Passing Tumble Turn: base additions reach untouched beats only (§5.2)" and the §9 back-compat pin "legacy full copy resolves to its own content" (30d6868) |
 | Sync hardening (PR #134) + migration ladder (PR #135 + #139) | `pnpm --filter worker test` — expect 180/7 skipped GREEN (fork.test.ts "is independent of the origin" passing IS the lineage-fix pin); `grep -n "this.doc = fresh" apps/worker/src/doc-do.ts` (the #139 adopt) |
 | Global docs + store rewiring (step 3) | worker: seeder + boundary + snapshot-bases tests (`seed-global-figures`/`snapshot`/`access` suites); web: `routine-store.test.ts` variant-spawn + overlay-resolution cases; E2E `fork-and-figures.spec.ts` @smoke variant journey (its US-035 test *name* still says "frozen copy" — the intent comment and assertions are variant semantics; a rename is cosmetic follow-up) |
 | Library-as-bookmark (step 4) | domain `doc-account.test.ts`; worker bookmark-route tests; `assemble.test.tsx` / `figure-timeline-beats.test.tsx` "add to my library" cases; E2E `library.spec.ts` @smoke |
@@ -206,5 +206,5 @@ grep -n "resolveVariantOverlay" apps/web/src/store/routine.ts      # store overl
 grep -rn "isAdmin\|routineCapOverride\|libraryFigureRefs" apps packages --include='*.ts' -l | head
 grep -n "SYNC_FRAME_SNAPSHOT" apps/worker/src/doc-do.ts            # snapshot catch-up in place
 grep -n "CURRENT_SCHEMA_VERSION" packages/domain/src/migrations.ts
-pnpm --filter @ballroom/domain test && pnpm --filter worker test   # current counts, both green
+pnpm --filter @weavesteps/domain test && pnpm --filter worker test   # current counts, both green
 ```

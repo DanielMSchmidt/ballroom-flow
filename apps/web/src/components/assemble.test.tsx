@@ -1,8 +1,8 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
-import type { Attribute, FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
-import { libraryFiguresForDance } from "@ballroom/domain";
+import type { Attribute, FigureDoc, Placement, RoutineDoc } from "@weavesteps/domain";
+import { libraryFiguresForDance } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement, RoutineStore } from "../store/routine";

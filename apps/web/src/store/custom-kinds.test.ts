@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // Import dynamically inside tests to avoid a top-level fetch mock requirement
 // (pattern from other store tests: module-level import is fine here since
-// these helpers don't import @ballroom/domain symbols that might not exist yet).
+// these helpers don't import @weavesteps/domain symbols that might not exist yet).
 import { listAccountKinds, saveAccountKind } from "./custom-kinds";
 
 describe("US-043 store/custom-kinds REST helpers", () => {

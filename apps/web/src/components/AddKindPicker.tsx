@@ -7,7 +7,7 @@
 // Registry-driven: the standard rows come from ATTRIBUTE_REGISTRY; custom rows
 // from the passed-in kinds. Picking a kind hands it back via onSelectKind so the
 // caller can open that kind's editor for the step.
-import { type DanceId, mergeRegistry, type RegistryKind } from "@ballroom/domain";
+import { type DanceId, mergeRegistry, type RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useLocalizedRegistry, useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";

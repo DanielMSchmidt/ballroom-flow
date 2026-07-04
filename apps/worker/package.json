@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@automerge/automerge": "^3.2.6",
-    "@ballroom/contract": "workspace:*",
-    "@ballroom/domain": "workspace:*",
+    "@weavesteps/contract": "workspace:*",
+    "@weavesteps/domain": "workspace:*",
     "@clerk/backend": "^3.8.3",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27"

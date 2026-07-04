@@ -9,8 +9,8 @@
 //
 // Redeem is single-use and race-safe: the redeemedAt stamp is claimed by an
 // atomic conditional UPDATE, so two concurrent redeems can't double-grant.
-import type { MembershipRole } from "@ballroom/domain";
-import { newId } from "@ballroom/domain";
+import type { MembershipRole } from "@weavesteps/domain";
+import { newId } from "@weavesteps/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { resolveEffectiveRole, roleFor } from "./membership";

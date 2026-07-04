@@ -2,8 +2,8 @@
 //
 // Mirrors the family-notes.ts pattern: thin wrappers around apiGet/apiPost that
 // components never call directly (they go through the store seam).
-import type { TemplateList } from "@ballroom/contract";
-import { zTemplateList } from "@ballroom/contract";
+import type { TemplateList } from "@weavesteps/contract";
+import { zTemplateList } from "@weavesteps/contract";
 import { apiGet, apiPost } from "../lib/rpc";
 
 /** List all app-owned template routines (US-045). */

@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-crdt-reference
-description: Load when work touches Automerge documents, sync, convergence, undo, variants, or list ordering in ballroom-flow and you haven't internalized CRDT reasoning — how docs/changes/heads work, the five Automerge 3.x sharp edges, the identity-vs-position cardinal rule, fractional-index ordering, per-beat overlay variants, history-based undo, and the WS sync protocol as built. Symptoms: "outdated document" RangeError, "Cannot assign undefined value", byte-comparison convergence failures, lost concurrent edits, undo deleting a peer's element, catch-up/hydration questions.
+description: Load when work touches Automerge documents, sync, convergence, undo, variants, or list ordering in weave-steps and you haven't internalized CRDT reasoning — how docs/changes/heads work, the five Automerge 3.x sharp edges, the identity-vs-position cardinal rule, fractional-index ordering, per-beat overlay variants, history-based undo, and the WS sync protocol as built. Symptoms: "outdated document" RangeError, "Cannot assign undefined value", byte-comparison convergence failures, lost concurrent edits, undo deleting a peer's element, catch-up/hydration questions.
 ---
 
-# Automerge / CRDT reference — as used in ballroom-flow
+# Automerge / CRDT reference — as used in weave-steps
 
 This is the CRDT reasoning skill: Automerge from first principles, then exactly how this
 repo uses it. Every claim below was verified against the repo on 2026-07-02.

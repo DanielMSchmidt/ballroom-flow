@@ -86,17 +86,17 @@ describe("AppShell tab bar", () => {
   });
 
   it("shows the app name in the desktop side-rail (span, not a heading)", () => {
-    // The design keeps "Ballroom Flow" only in the desktop side-rail.
+    // The design keeps "Weave Steps" only in the desktop side-rail.
     // It must be a <span> — NOT an <h1> — so inner screens remain heading-clean.
     renderUi(
       <AppShell nav={NAV} current="choreo" onNavigate={() => {}}>
         content
       </AppShell>,
     );
-    // A heading role would mean <h1>-<h6>. We expect none for "Ballroom Flow".
+    // A heading role would mean <h1>-<h6>. We expect none for "Weave Steps".
     expect(screen.queryByRole("heading", { name: /ballroom flow/i })).not.toBeInTheDocument();
     // But the text still appears in the side-rail (as a <span>).
-    expect(screen.getByText("Ballroom Flow")).toBeInTheDocument();
+    expect(screen.getByText("Weave Steps")).toBeInTheDocument();
   });
 
   it("has no axe violations", async () => {

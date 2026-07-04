@@ -1,6 +1,6 @@
-# Domain-Fidelity Critique — Ballroom Flow Design Spec
+# Domain-Fidelity Critique — Weave Steps Design Spec
 
-Adversarial review of `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` from the perspective of someone who actually dances/coaches International Standard and reads ISTD charts. Cross-checked against `research/domain.md` and `research/design-spec.md`.
+Adversarial review of `docs/superpowers/specs/2026-06-24-weave-steps-design.md` from the perspective of someone who actually dances/coaches International Standard and reads ISTD charts. Cross-checked against `research/domain.md` and `research/design-spec.md`.
 
 The spec is well-organized and its YAGNI instinct is mostly right. But several of the "leaner than the union" cuts are not YAGNI cuts — they are cuts that make the tool *describe the wrong dance*. A note app can be lean. A choreography-notation app that gets the notation wrong is worse than a blank notebook, because it teaches the couple a falsehood and they will trust it. The findings below separate "lean is fine" from "lean is wrong."
 

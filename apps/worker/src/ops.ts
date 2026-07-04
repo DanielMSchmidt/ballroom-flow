@@ -88,7 +88,7 @@ export async function reportError(
       method: "POST",
       headers: {
         "content-type": "application/x-sentry-envelope",
-        "x-sentry-auth": `Sentry sentry_version=7, sentry_client=ballroom-flow/1.0, sentry_key=${parsed.publicKey}`,
+        "x-sentry-auth": `Sentry sentry_version=7, sentry_client=weave-steps/1.0, sentry_key=${parsed.publicKey}`,
       },
       body: envelope,
     });

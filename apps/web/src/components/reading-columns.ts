@@ -13,7 +13,7 @@ import {
   kindAppliesToDance,
   mergeRegistry,
   type RegistryKind,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { getLocale, type Locale, localizedRegistry } from "../i18n";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
