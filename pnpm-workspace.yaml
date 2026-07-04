@@ -1,3 +1,19 @@
 packages:
   - "packages/*"
   - "apps/*"
+
+# Build-script allowlist for the pnpm 11 upgrade (#8). pnpm 11 no longer reads the
+# `pnpm.onlyBuiltDependencies` field from package.json — the allowlist lives here
+# as `allowBuilds` (a package → boolean map). These four are load-bearing and must
+# build: esbuild (vite builds), workerd (worker/DO vitest-pool-workers + dev),
+# wrangler (dev/deploy), lefthook (git hooks). The rest (@clerk/shared, @swc/core,
+# sharp) ran no build script under pnpm 10 either and the app works without them,
+# so they stay disallowed.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  workerd: true
+  wrangler: true
+  "@clerk/shared": false
+  "@swc/core": false
+  sharp: false

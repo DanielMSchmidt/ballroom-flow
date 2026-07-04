@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Inconsolata:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0}
+  body[data-floor="sig"] [data-sev="minor"]{display:none}
+  body[data-floor="sig"] [data-sev="nit"]{display:none}
+  body[data-floor="blk"] [data-sev="significant"]{display:none}
+  body[data-floor="blk"] [data-sev="minor"]{display:none}
+  body[data-floor="blk"] [data-sev="nit"]{display:none}
+  body[data-mocks="off"] [data-mock]{display:none}
+</style>
+</helmet>
+<x-import component-from-global-scope="doc-page" from="./doc-page.js" size="letter" margin="0.75in" hint-size="100%,1400px">
+
+  <h1 style="font:700 27px/1.25 Inconsolata,monospace;color:#1c1c1e;margin:0 0 4px">Ballroom Flow — design &amp; accessibility review</h1>
+  <div style="font:600 12px Inconsolata,monospace;color:#8a857b;margin:0 0 18px">Parity · undesigned UI · design-system adherence · WCAG AA · mobile-first &nbsp;·&nbsp; July 2, 2026 &nbsp;·&nbsp; canonical reference: <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:1px 6px">Ballroom Wireframes v4.dc.html</span></div>
+
+  <div style="border:1.5px solid #e1dcd2;border-radius:10px;padding:12px 14px;margin:0 0 20px;break-inside:avoid">
+    <div style="font:700 11px Inconsolata,monospace;color:#8a857b;letter-spacing:.5px;margin-bottom:6px">EVIDENCE REVIEWED — AND A GAP</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d">
+      Read in full: <b>Wireframes v4</b> (frames 1.1–1.21, 2.1–2.4, 3.1–3.7, 4.1–4.2), <b>DESIGN-SYSTEM.md</b>, <b>PLAN.md v4.4</b>; Builder prototype consulted for lineage. Shipped-UI evidence is thinner than the brief implies: <b>screenshots/01–03-fed.png are three identical captures of one screen</b> (Assemble · reading), and the two uploads/ captures are superseded builds (Jun 24 pre-Library-tab; Jun 29 pre-role-toggle, pre-column-grid). Screen-level parity is therefore <b>verified for the reading view only</b>; every other surface is judged from the source docs, and finding <b>F10</b> asks for the full screenshot matrix before the parity program is called done.
+    </div>
+  </div>
+
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:22px 0 2px">1 · Findings, by severity</h2>
+  <div style="font:400 13px/1.5 Georgia,serif;color:#6b665e;margin:0 0 6px">Each: screen + frame reference · what's wrong · minimal fix. "Impl drifted" = code should change; "bundle stale" = wireframes/docs should change.</div>
+
+  <!-- ============ BLOCKERS ============ -->
+  <div data-sev="blocker" style="break-inside:avoid;border-top:2px solid #c0563f;padding:10px 0 2px;margin-top:10px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#c0563f;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">BLOCKER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F1 — Reading view: ~8px interactive text, targets nowhere near 44px</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Assemble · reading &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.13</span> &nbsp;·&nbsp; screenshot 01-fed.png &nbsp;·&nbsp; impl drifted <b>and</b> bundle needs a scale note</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      The shipped view copies the wireframe's lo-fi pixel sizes literally: column headers (Step / Rise / Pos / Feet / Turn / Head), value chips, "+ add comment", "+1 more", and the STEPS FOR segmented control all render at ~8–9px with ~20–24px rows. All of these are <b>tap targets</b> — headers and chips open the info sheet (1.13), comment rows open threads (1.14), the toggle flips role. That breaks the system's own <code style="font:600 12px Inconsolata">--bf-touch-target: 44px</code> rule (#3), the rem type scale (#10), and WCAG 1.4.4 / 2.5.8. Root cause: "pixel-for-pixel parity" applied to a 320px-wide lo-fi frame — 8px there is shorthand, not a spec.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> map wireframe px to token roles — chips + headers ≥ <code style="font:600 12px Inconsolata">--bf-text-2xs</code> (~12px), step rows min-height 44px with the <i>whole cell</i> as the hit area, header row 44px tall (small-caps text can stay small; the padded cell is the target), "+ add comment" becomes a full-width 44px row. With >5 kinds in play (Head, custom types) the grid horizontally pans with a sticky count column + edge fade, instead of shrinking type further. Add the scale-mapping note to the bundle (edit list, item 7).</div>
+  </div>
+
+  <div data-sev="blocker" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#c0563f;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">BLOCKER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F2 — Contrast failures: solid chips, muted labels, ghost actions</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Assemble · reading + edit grid &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.11</span> &nbsp;·&nbsp; 01-fed.png &nbsp;·&nbsp; impl drifted (DS #6 pairings exist and are unused)</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Shipped chips are solid kind-color with white text — bespoke styling that bypasses the documented <i>-ink on -tint</i> pairings. At chip sizes white fails AA on most kinds: rise <code style="font:600 12px Inconsolata">#1f8a5b</code> ≈ 4.3:1, footwork <code style="font:600 12px Inconsolata">#a9742c</code> ≈ 3.9:1, foot-position <code style="font:600 12px Inconsolata">#2c8a85</code> ≈ 4.1:1, Head <code style="font:600 12px Inconsolata">#0f8a8a</code> ≈ 4.2:1 (small text needs 4.5). Secondary labels ("reading", "1ST LONG SIDE", "STEPS FOR" at ~<code style="font:600 12px Inconsolata">#9a958c</code>) ≈ 3.0:1; the "+ add comment" ghost (~<code style="font:600 12px Inconsolata">#c0bab0</code> on <code style="font:600 12px Inconsolata">#fafaf8</code>) ≈ 1.9:1 — below even the 3:1 UI-component floor.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> chips = <code style="font:600 12px Inconsolata">--bf-&lt;kind&gt;-tint</code> background + <code style="font:600 12px Inconsolata">-border</code> + <code style="font:600 12px Inconsolata">-ink</code> text (the tokens were chosen for exactly this); muted labels → <code style="font:600 12px Inconsolata">--bf-ink-secondary</code>; "+ add comment" → <code style="font:600 12px Inconsolata">--bf-accent-ink</code> at 12px. Registry-driven custom kinds derive tint/ink from their stored color — never solid bg + white.</div>
+  </div>
+
+  <!-- ============ SIGNIFICANT ============ -->
+  <div data-sev="significant" style="break-inside:avoid;border-top:2px solid #a9742c;padding:10px 0 2px;margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F3 — Parity: whole-figure notes moved above the step grid</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Assemble · reading &nbsp;·&nbsp; frame <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> &nbsp;·&nbsp; 01-fed.png &nbsp;·&nbsp; impl drifted</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      1.6 places the WHOLE FIGURE thread <b>after the last step row</b>; the shipped app puts it directly under the figure title, above the column headers — every annotated figure pushes its steps ~3 rows down. The bundle's order is deliberate (reading = "a clean programme for the floor": steps first, commentary after).
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> move the block back below the grid. If fast access to figure-level notes matters, add a small "2 ✎" count chip on the figure title row that scrolls to the thread — as a bundle addition, not by keeping the shipped order.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F4 — Identity color is the only author signal on inline comments</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Reading + thread &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.14</span> &nbsp;·&nbsp; 01-fed.png &nbsp;·&nbsp; <b>both</b> bundle and impl</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Inline comment rows attribute authorship by a 7px colored dot alone — DS #5 ("color never the only signal — member identity colors") is violated by the canonical wireframe itself; the thread view (1.14) pairs color + initial + name, inline does not. A coach's correction vs. a partner's reply is a real distinction between rounds, and it's invisible to color-blind users.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> replace the dot with a 16px identity chip carrying the author's <b>initial</b> (color + letter, <code style="font:600 12px Inconsolata">aria-label</code> = full name). Backport into 1.6's comment rows and the legend.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F5 — "Made this figure yours" misteaches the copy-on-write model</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Figure editor toast &nbsp;·&nbsp; frame <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.12</span> (canonical toast) &nbsp;·&nbsp; DS §3 &nbsp;·&nbsp; impl drifted + DS doc stale</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Three competing strings exist: bundle 1.12 says <b>"Copied into this choreo"</b>, DESIGN-SYSTEM.md §3 still says "Copied as your variant" (retired live-variant language), the app shipped "Made this figure yours". The app string is the worst of the three: "yours" implies personal ownership / personal library — but the copy is <b>choreo-owned</b>, edited jointly by everyone on the choreo, and it never entered your library. Microcopy here is the main way users learn the frozen-copy model.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> standardize on <b>"Copied into this choreo"</b> (PLAN §4.9/§5.2 language) everywhere; optional second line "The library figure is untouched." No Undo action on this toast — cross-document COW undo is explicitly out of scope (Q-UNDO). Update DS §3's example. Spec in §2-C below.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F6 — Undo/Redo in the figure editor: right feature, undesigned</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Figure editor header &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.21</span> (Assemble only) <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.11</span> (caption mentions, frame doesn't draw) &nbsp;·&nbsp; undesigned addition</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Placement is right — a full-screen auto-saving editor needs undo in the header. What's missing is the spec: sizes, disabled states, ordering against ✎, and the toast contract. 1.21's toast also lacks the Redo action that DS §3 requires.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix (backport to 1.11):</b> header order <b>‹ · [dot + title + context] · ↶ · ↷ · ✎</b>; ↶/↷ are 44×44 IconButtons (plain variant, 20px glyph), accent <code style="font:600 12px Inconsolata">#2f5d8f</code> when enabled, ~40% ink-faint + <code style="font:600 12px Inconsolata">aria-disabled</code> when the stack is empty; a new edit clears redo (PLAN M1.9). Toast: <b>"Undone — &lt;change summary&gt;"</b> + <b>[Redo]</b> action; keep the shipped warning-tone "Undone — others had built on this change" for the superseded case. ⌘Z/⇧⌘Z at <code style="font:600 12px Inconsolata">lg</code>. Mock in §2-A.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F7 — Library affordance: wrong surface on placement cards</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Assemble placement cards + figure editor &nbsp;·&nbsp; precedent: <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">2.1</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">2.2</span> ↟ save; PLAN §4.4 puts save on the timeline &nbsp;·&nbsp; undesigned addition</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      On placement cards the button is clutter and a mis-tap hazard: cards already carry scope dot, name, badge, count chip and (editing) the ⠿ drag handle at the same trailing edge. "Save to my library" is a considered decision about <i>reuse</i>, which is exactly what the figure editor is for — and the bundle already gives the Library tab the ↟ pattern for the browse case.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> remove it from placement cards. In the figure editor, a chip in the header meta row (not the title bar): <b>"↟ Save to my library"</b> (amber outline) ⇄ <b>"✓ In your library"</b> (amber tint, <code style="font:600 12px Inconsolata">#6b4a16</code> ink). 32px tall, ≥44px hit with padding. Saved state is idempotent, not a toggle — tapping again toasts "Already in your library"; removal stays a deliberate Library-tab action. Toasts "Saved to your library" / "Already in your library" are already locked in PLAN §4.2. Mock in §2-A/B.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F8 — "Used in N choreos": right instinct, wrong trigger</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Figure editor &nbsp;·&nbsp; precedent: <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">2.3</span> "used in N routines" on library cards &nbsp;·&nbsp; undesigned addition</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      As shipped it warns that "editing a shared figure changes every choreography using it" — but under the reconciled model that is true in exactly <b>one</b> context: editing a <b>personal-library</b> figure in place (Library tab ✎, US-034). Editing from inside a choreo either edits a choreo-owned figure (this choreo only) or copies-on-write (changes nothing else). Showing the warning in the wrong context re-teaches the fear the frozen-copy model was chosen to remove.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix — three editor contexts:</b> (1) personal-library figure, in-place: persistent banner under the header — "↟ In your library · used in 3 choreos — edits update all of them" (amber tint, ≥44px; count from the D1 projection; singular "1 choreo"). (2) choreo-owned figure: <b>nothing</b> — the default stays quiet. (3) global / outside figure: no warning; the header context line reads "global figure — editing copies it into this choreo", and the COW toast (F5) confirms on first edit. Mock in §2-B.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F9 — DESIGN-SYSTEM.md's attribute-kind table is stale vs. the registry</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">DS §2 &nbsp;·&nbsp; PLAN §3 &nbsp;·&nbsp; bundle stale (docs side)</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      DS §2 documents five kinds and still models "step / footwork" as one amber kind ("Fw") — but the registry split <b>direction</b> (<code style="font:600 12px Inconsolata">#2f5d8f</code>) from <b>footwork</b> (<code style="font:600 12px Inconsolata">#a9742c</code>) in the 2026-06-28 notation work, and the UI ships <b>footPosition</b> (<code style="font:600 12px Inconsolata">#2c8a85</code>, the "Feet" column) and <b>bodyActions</b> besides. Any column the token table doesn't cover gets bespoke hex styling by default — this is how the F2 drift happens for every new kind.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> regenerate DS §2 from the merged ATTRIBUTE_REGISTRY — rows for direction / footwork / footPosition / rise / position / bodyActions / sway / turn with tint/ink/border tokens, header vocabulary matched to the UI (Step · Rise · Pos · Feet · Turn), and the derivation rule for user-defined kind colors.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F10 — Parity evidence gap: only one shipped screen was attached</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Process &nbsp;·&nbsp; screenshots/ + uploads/</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Of the ~10 surfaces in scope, only the reading view has current shipped evidence (three identical captures). PLAN §14 declares full parity as of 2026-06-29 — that claim is unaudited. Focus visibility and reduced-motion also cannot be judged from stills.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> capture the matrix — choreo list, editing, edit grid, attribute editor, info sheet, thread, library ×2, journal ×3, link picker, share, profile, overlays, toasts — including the bundle's own empty / few / many states, plus one keyboard-focus and one <code style="font:600 12px Inconsolata">prefers-reduced-motion</code> pass. I've limited screen-level parity findings to what the evidence supports.</div>
+  </div>
+
+  <!-- ============ MINOR ============ -->
+  <div data-sev="minor" style="break-inside:avoid;border-top:2px solid #5b6b8a;padding:10px 0 2px;margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#5b6b8a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">MINOR</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F11 — DS prescribes a switch for the Leader/Follower view</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      DS §3 maps the role flip to <code style="font:600 12px Inconsolata">Toggle</code> (<code style="font:600 12px Inconsolata">role="switch"</code>), but the designed control (1.6/1.11) is a two-segment labeled choice. A switch reads as on/off — it would make one role "off". The shipped segmented look is right; the doc is wrong. <b>Fix:</b> DS → segmented pair (<code style="font:600 12px Inconsolata">aria-pressed</code> Chip pattern or Tabs), 44px tall.
+    </div>
+  </div>
+
+  <div data-sev="minor" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#5b6b8a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">MINOR</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F12 — "routines" vs "choreos"</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      The tab says <b>Choreo</b>; cards, quota and library copy say <b>routines</b> ("used in 2 routines", "3 routines on the free plan"); the new indicator says <b>choreos</b>. <b>Fix:</b> one user-facing noun — recommend "choreos" (matches the tab and the product voice); sweep bundle 2.3 / 1.18, DS §3 toast, and app strings. Keep "routine" for PLAN-internal prose only.
+    </div>
+  </div>
+
+  <div data-sev="minor" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#5b6b8a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">MINOR</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F13 — Header action drift in reading</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      Frame 1.6: quiet ✎ and ↗ glyphs. Shipped: filled circular buttons and a share-nodes icon. Either is defensible; pick one — recommend DS <code style="font:600 12px Inconsolata">IconButton</code> plain at 44px to match the bundle's quiet header, and update the losing side (covers F17's share-glyph mismatch too).
+    </div>
+  </div>
+
+  <div data-sev="minor" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#5b6b8a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">MINOR</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F14 — Bundle bug: undefined var(--note-font) in 1.17</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      1.17's caption sets <code style="font:600 12px Inconsolata">font:500 13px var(--note-font)</code>; the variable is defined only in the Builder prototype, so the line silently falls back to the default font. <b>Fix:</b> replace with Caveat; grep the v4 file for other Builder leftovers.
+    </div>
+  </div>
+
+  <!-- ============ NIT ============ -->
+  <div data-sev="nit" style="break-inside:avoid;border-top:2px solid #bcb6aa;padding:10px 0 2px;margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#bcb6aa;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">NIT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">F15 / F16 — small polish</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      <b>F15:</b> shipped column headers are underlined — at 8px they read as desktop hyperlinks; when resized per F1, drop the underline (the header tap itself is the info affordance per 1.13). &nbsp;<b>F16:</b> bundle hint text below contrast ("tap a cell to add / edit" <code style="font:600 12px Inconsolata">#a9a299</code>, various <code style="font:600 12px Inconsolata">#b0aaa0</code> lines) — map to <code style="font:600 12px Inconsolata">--bf-ink-muted</code> when backporting.
+    </div>
+  </div>
+
+  <!-- ===================== SECTION 1B: USER TESTING ===================== -->
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:26px 0 2px;break-after:avoid">1b · User-testing feedback — triage</h2>
+  <div style="font:400 13px/1.5 Georgia,serif;color:#6b665e;margin:0 0 8px">Four observations from testing. Two corroborate findings above; two are new (U2, U3).</div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:2px solid #a9742c;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#8a857b;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">CORROBORATES F1+F2</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U1 — "Didn't see the add-comment parts in the choreo overview"</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      Expected: an 8px ghost at ~1.9:1 contrast is functionally invisible. The F1/F2 fix (full-width 44px row, <code style="font:600 12px Inconsolata">--bf-accent-ink</code>, 12px) is validated — ship it first and retest before adding anything louder. If it still misses, the fallback is a leading ＋ icon in a 20px accent-tint circle on the row, not more color.
+    </div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">NEW · SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U2 — Attribute explanation: sheet → full page</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Frame <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.13</span> redesign · bundle change</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Users want the kind-explainer (tap a column header / chip) as a <b>full page you can go back from</b>, not a bottom sheet — same open mechanics, more room to read.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> rework 1.13 as a full-screen sub-page: header <b>‹ · [kind dot + name]</b> (44px back target), then the explainer content — what the kind encodes, the value vocabulary with tinted chips at readable size, and an example row. It gets its own route so hardware/gesture back works, and state (scroll position in the grid) is preserved on return. Tapping a <i>specific</i> chip deep-links to that value's entry. Keep bottom sheets for actions (link picker, attribute editor); explanation is reading material and earns a page.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#a9742c;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">NEW · SIGNIFICANT</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U3 — Greyed half-beat timings read as "disabled"</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.11</span> count column · bundle + impl</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Non-full-beat counts ("&amp;", "a") are rendered in faint grey to de-emphasize them — but grey is the UI's disabled vocabulary, so users read the "&amp;" steps as inactive or somehow broken. Quick–quick–&amp; timing is core content, not chrome.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> differentiate by <i>weight and size</i>, never by fading: full beats <b>bold</b> at the base size, sub-beats regular at one step smaller, both in full <code style="font:600 12px Inconsolata">--bf-ink</code>; optionally set sub-beat rows on a subtle accent-tint band to group them under their beat. Reserve grey strictly for disabled. Backport to the count column spec in 1.6/1.11 and DS §2.</div>
+  </div>
+
+  <div data-sev="significant" style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#8a857b;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">EXTENDS F7</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U4 — "Unclear where a saved figure lands"</span>
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:4px 0 6px">
+      "Saved to your library" confirms the action but not the destination — users don't yet have a mental model of the Library tab › <b>Mine</b> shelf. <b>Fix, three parts:</b> (1) the toast gains a destination + action: <b>"Saved to Library › Mine&nbsp;&nbsp;[View]"</b> — View jumps to the Library tab, Mine filter, new figure highlighted for ~2s; (2) the ✓ chip label becomes <b>"✓ In My Library"</b> matching the tab's shelf name exactly (one vocabulary, F12 spirit); (3) first save only: the Library tab icon pulses once (respecting <code style="font:600 12px Inconsolata">--bf-motion-*</code>). Backport the toast to 1.11/2.1 and PLAN §4.2.
+    </div>
+  </div>
+
+  <!-- ===================== SECTION 2: UNDESIGNED PIECES ===================== -->
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:26px 0 2px;break-after:avoid">2 · The four undesigned pieces — proposed design, ready to backport</h2>
+  <div style="font:400 13px/1.5 Georgia,serif;color:#6b665e;margin:0 0 10px">Drawn at device scale (44px targets) in the bundle's visual language. Specs referenced from F5–F8.</div>
+
+  <div data-mock="1" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <!-- MOCK A: editor header, global context, not saved -->
+    <div style="border:1.5px solid #cfcabf;border-radius:12px;overflow:hidden;background:#fff;break-inside:avoid">
+      <div style="font:700 10px Inconsolata,monospace;color:#8a857b;letter-spacing:.5px;padding:8px 12px;background:#f7f5f0;border-bottom:1px solid #ece8e0">A · FIGURE EDITOR HEADER — global figure · not saved &nbsp;(F6 + F7)</div>
+      <div style="padding:12px">
+        <div style="display:flex;align-items:center;gap:2px;border-bottom:1.5px solid #2b2b2b;padding-bottom:8px">
+          <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:700 20px Inconsolata,monospace;color:#23344a">‹</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#2f5d8f"></span><span style="font:700 16px Inconsolata,monospace;color:#23344a">Natural Turn</span></div>
+            <div style="font:500 11px Inconsolata,monospace;color:#6f6a61;margin-top:2px">1st Long Side · global figure — editing copies it into this choreo</div>
+          </div>
+          <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:700 19px Inconsolata,monospace;color:#2f5d8f">↶</span>
+          <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:700 19px Inconsolata,monospace;color:#c9c3b8">↷</span>
+          <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="font:700 15px Inconsolata,monospace;background:#2f5d8f;color:#fff;border-radius:8px;padding:4px 8px">✎</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:10px">
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 11px Inconsolata,monospace;color:#3e4a63;background:#e8eef6;border:1.5px solid #b9c6da;border-radius:8px;padding:6px 10px">◍ Library</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 11px Inconsolata,monospace;color:#a9742c;border:1.5px solid #a9742c;border-radius:8px;padding:6px 11px">↟ Save to my library</span>
+        </div>
+        <div style="font:500 13px Caveat,cursive;color:#8a857b;margin-top:8px">↶ 44×44, accent when enabled · ↷ ink-faint 40% + aria-disabled when empty · save chip 32px visual, ≥44px hit · no library button in the title bar</div>
+      </div>
+    </div>
+
+    <!-- MOCK B: personal-library context, saved + banner -->
+    <div style="border:1.5px solid #cfcabf;border-radius:12px;overflow:hidden;background:#fff;break-inside:avoid">
+      <div style="font:700 10px Inconsolata,monospace;color:#8a857b;letter-spacing:.5px;padding:8px 12px;background:#f7f5f0;border-bottom:1px solid #ece8e0">B · SAVED STATE + IN-PLACE EDIT BANNER &nbsp;(F7 + F8)</div>
+      <div style="padding:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="display:inline-flex;align-items:center;gap:5px;font:700 11px Inconsolata,monospace;color:#6b4a16;background:#f3e6d2;border:1.5px solid #d8c4a0;border-radius:8px;padding:6px 11px">✓ In your library</span>
+          <span style="font:500 12px Caveat,cursive;color:#a98a5c">tap → "Already in your library" · never un-saves</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;background:#faf6ef;border:1.5px solid #ecdcc2;border-radius:10px;padding:11px 13px;margin-top:10px;min-height:44px">
+          <span style="font:700 14px Inconsolata,monospace;color:#a9742c">↟</span>
+          <span style="font:600 12px/1.45 Inconsolata,monospace;color:#6b4a16">In your library · used in <b>3 choreos</b> — edits update all of them</span>
+        </div>
+        <div style="font:500 13px Caveat,cursive;color:#8a857b;margin-top:8px">banner ONLY when editing a personal-library figure in place (Library tab ✎) — choreo-owned figures show nothing; global figures rely on the COW toast instead</div>
+      </div>
+    </div>
+
+    <!-- MOCK C: toasts -->
+    <div style="border:1.5px solid #cfcabf;border-radius:12px;overflow:hidden;background:#fff;break-inside:avoid">
+      <div style="font:700 10px Inconsolata,monospace;color:#8a857b;letter-spacing:.5px;padding:8px 12px;background:#f7f5f0;border-bottom:1px solid #ece8e0">C · CANONICAL TOASTS &nbsp;(F5 + F6)</div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px;background:#f4f1ea">
+        <div style="align-self:center;background:#1c1c1e;color:#fff;border-radius:11px;padding:11px 16px;box-shadow:0 6px 18px rgba(0,0,0,.25)">
+          <div style="font:600 12px Inconsolata,monospace">✓ Copied into this choreo</div>
+          <div style="font:500 11px Inconsolata,monospace;color:#b8b3a9;margin-top:2px">The library figure is untouched.</div>
+        </div>
+        <div style="align-self:center;display:flex;align-items:center;gap:12px;background:#1c1c1e;color:#fff;border-radius:11px;padding:11px 16px;box-shadow:0 6px 18px rgba(0,0,0,.25)">
+          <span style="font:600 12px Inconsolata,monospace">↶ Undone — Natural Turn footwork</span>
+          <span style="font:700 12px Inconsolata,monospace;color:#8fb4e3;padding:6px 4px">Redo</span>
+        </div>
+        <div style="font:500 13px Caveat,cursive;color:#8a857b;text-align:center">4s · polite live region · above the tab bar · no Undo on the copy toast (cross-doc COW undo is out of scope)</div>
+      </div>
+    </div>
+
+    <!-- MOCK D: placement card unchanged -->
+    <div style="border:1.5px solid #cfcabf;border-radius:12px;overflow:hidden;background:#fff;break-inside:avoid">
+      <div style="font:700 10px Inconsolata,monospace;color:#8a857b;letter-spacing:.5px;padding:8px 12px;background:#f7f5f0;border-bottom:1px solid #ece8e0">D · PLACEMENT CARD — stays as frame 1.7 &nbsp;(F7)</div>
+      <div style="padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #cdddee;border-radius:12px;padding:13px 14px">
+          <span style="width:10px;height:10px;border-radius:50%;background:#2f5d8f;flex:0 0 auto"></span>
+          <span style="flex:1;font:700 14px Inconsolata,monospace;color:#23344a">Natural Turn</span>
+          <span style="font:600 11px Inconsolata,monospace;background:#eef4fb;border-radius:7px;padding:3px 9px;color:#2f5d8f">1 2 3</span>
+          <span style="font:700 15px Inconsolata,monospace;color:#bcb6aa">⠿</span>
+        </div>
+        <div style="font:500 13px Caveat,cursive;color:#8a857b;margin-top:10px">no per-card library button — it competed with the drag handle and duplicated a decision the editor owns. Library entry points: figure editor chip (A) + Library tab ↟ save (2.1)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION 3: BUNDLE EDITS ===================== -->
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:26px 0 6px;break-after:avoid">3 · (a) Edits the design bundle needs to be canonical again</h2>
+  <ol style="font:400 14px/1.6 Georgia,serif;color:#3a352d;margin:0;padding-left:22px">
+    <li><b>1.11</b> — add ↶ ↷ to the header (states per F6); extend the pin list.</li>
+    <li><b>1.11</b> — add the library chip pair to a header meta row ("↟ Save to my library" ⇄ "✓ In your library"), with idempotent behavior + the two PLAN §4.2 toasts (F7).</li>
+    <li><b>New frame 1.22</b> — "Figure editor · personal-library context": the used-in-N banner + in-place ripple semantics; cross-link 2.3 (F8).</li>
+    <li><b>1.12 / rules band</b> — mark <b>"Copied into this choreo"</b> as the single canonical COW string; add the optional second line; note that no Undo action rides this toast (F5).</li>
+    <li><b>1.21</b> — undo toast gains the <b>[Redo]</b> action (F6).</li>
+    <li><b>1.6</b> — author-initial identity chips on inline comments (F4); keep the whole-figure block below the grid and add the optional "N ✎" title chip (F3); spec "+ add comment" as a full-width 44px row (F1).</li>
+    <li><b>Bundle-wide annotation</b> — scale-mapping note: wireframe px are <i>roles</i>, not specs (8px → <code style="font:600 12px Inconsolata">--bf-text-2xs</code>, 9–10px → -xs, 11–12px → -sm, 13px Caveat → <code style="font:600 12px Inconsolata">--bf-text-note</code>; every tap target → <code style="font:600 12px Inconsolata">--bf-touch-target</code>) (F1).</li>
+    <li><b>1.6 / 1.11</b> — define the &gt;5-column overflow: horizontal pan, sticky count column, edge fade (F1).</li>
+    <li><b>Chip spec note</b> — kind chips are tint bg + border + ink text; custom kinds derive tint/ink from their stored color (F2).</li>
+    <li><b>1.17</b> — fix <code style="font:600 12px Inconsolata">var(--note-font)</code> → Caveat; sweep other Builder leftovers (F14).</li>
+    <li><b>Copy sweep</b> — one noun ("choreos"): 2.3 "used in", 1.18 quota copy, DS §3 toast (F12).</li>
+    <li><b>DESIGN-SYSTEM.md</b> — regenerate the §2 kind table from the registry (F9); replace "Copied as your variant" (F5); fix the role-view Toggle guidance to a segmented pair (F11); note IconButton-plain for header actions (F13).</li>
+  </ol>
+
+  <!-- ===================== SECTION 4: TOP 3 ===================== -->
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:26px 0 6px;break-after:avoid">4 · (b) Top 3 changes for the daily "notate after practice" flow</h2>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:12px;break-inside:avoid">
+      <span style="flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#23344a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inconsolata,monospace">1</span>
+      <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d"><b>Make the reading grid legible at arm's length</b> (F1 + F2 + F3): 44px rows, 12px tinted chips, steps before notes, sticky count column when columns overflow. This is the surface dancers check between heats — right now it's an 8px squint test with sweaty hands.</div>
+    </div>
+    <div style="display:flex;gap:12px;break-inside:avoid">
+      <span style="flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#23344a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inconsolata,monospace">2</span>
+      <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d"><b>One-thumb capture:</b> full-width 44px "+ add comment" rows, plus a sticky "＋ note" action on the reading view that pre-anchors to the figure currently in view (then hands off to the existing thread / link flow). Between rounds you have ~60 seconds and one thumb; today capture costs a precision tap on an 8px ghost.</div>
+    </div>
+    <div style="display:flex;gap:12px;break-inside:avoid">
+      <span style="flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#23344a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inconsolata,monospace">3</span>
+      <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d"><b>Make editing feel safe</b> (F5 + F6 + F8): visible undo/redo, "Copied into this choreo", and the ripple banner only where ripples are real. Confidence that a quick fix can't wreck the shared routine is what gets notation done <i>at practice</i> instead of at home.</div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION 5: USER-TESTING FEEDBACK ===================== -->
+  <h2 style="font:700 19px Inconsolata,monospace;color:#1c1c1e;margin:26px 0 2px;break-after:avoid">5 · User-testing feedback — diagnosis &amp; fixes</h2>
+  <div style="font:400 13px/1.5 Georgia,serif;color:#6b665e;margin:0 0 8px">Four observations from testing, each mapped to a root cause and a backportable fix.</div>
+
+  <div style="break-inside:avoid;border-top:2px solid #4a7c4a;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#4a7c4a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">USER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U1 — "I didn't see where to add a comment" (reading view)</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Assemble · reading &nbsp;·&nbsp; frame <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> &nbsp;·&nbsp; confirms F1/F2's ghost-row finding empirically</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Predictable: the "+ add comment" row is an 8px ghost at ~1.9:1 contrast (F2) that only trails <i>some</i> figures, and it competes with the visually louder step grid. Raising size/contrast alone won't fully fix it — a per-figure inline row also can't express "comment on step 2".
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix (layered):</b> (1) restyle the row per F1/F2 — full-width 44px, ✎ glyph + "Add note" in <code style="font:600 12px Inconsolata">--bf-accent-ink</code>, hairline top border so it reads as part of the figure. (2) Long-press any step row → "Add note on step N" (matches the edit grid's cell-tap mental model; spec in 1.13's interactions). (3) The sticky "＋ note" action already proposed in §4-2 covers the "just capture something" case. Test again with (1)+(3) before adding chrome.</div>
+  </div>
+
+  <div style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#4a7c4a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">USER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U2 — Attribute explanations: sheet → full page</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Explanation surface &nbsp;·&nbsp; frame <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.13</span> &nbsp;·&nbsp; bundle change requested by users</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      Users want the same triggers (tap a column header or value chip) but a <b>full page they can go back from</b>, not a bottom sheet. Reasonable: the content is educational reading (definitions, value tables, examples), not a quick confirm — sheets suit transactions, pages suit reading. A page also gives room for the per-value list that 1.13 currently truncates.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> replace 1.13 with an <b>Attribute explainer page</b>: pushed navigation (‹ back returns to the exact scroll position in reading), header = kind chip + name ("Rise &amp; fall"), body = one-line definition, value table (each value chip at full size + meaning), and "in this choreo" examples linking to their steps. Tapping a <i>value chip</i> opens the page scrolled to that value, highlighted. Keep it one page per kind with prev/next kind arrows in the footer (Step ‹ › Rise…) so curious readers can browse. Deep-linkable route (<code style="font:600 12px Inconsolata">/choreo/:id/kinds/:kind</code>) so back/forward and PWA history behave. Bundle: redraw 1.13 as a full frame, update the ⓘ interaction note in 1.6.</div>
+  </div>
+
+  <div style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#4a7c4a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">USER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U3 — Dimmed off-beat timings read as "disabled"</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Reading + edit grids &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.6</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">1.11</span> &nbsp;·&nbsp; bundle + impl share the pattern</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      The bundle renders <b>&amp;</b> / <b>a</b> sub-beat rows "dimmed between the counts" (grey ink on grey fill) — the same visual code the whole system uses for disabled/faint states, so users read them as inactive rows rather than <i>faster</i> beats. In a Weave ("4 &amp; 5 &amp; 6 a") half the figure looks switched off. Dimming also collides with F2's contrast floor.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> encode "sub-beat" by <b>structure, not opacity</b> — full-contrast ink for the count label and attributes; differentiate with (a) a narrower/indented count cell nested under its parent beat (the "4" cell visually brackets the "&amp;"), (b) a smaller count-label size one type step down, and (c) the step-accent tint at half strength as row fill — never grey. Reserve grey fill + faint ink exclusively for genuinely empty/disabled cells. Backport to 1.6, 1.11 and the "off-beat timings" caption; add the rule to DS §2 ("dimming = disabled, never = subdivision").</div>
+  </div>
+
+  <div style="break-inside:avoid;border-top:1px solid #e5e0d6;padding:10px 0 2px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font:700 10px Inconsolata,monospace;background:#4a7c4a;color:#fff;border-radius:5px;padding:2px 8px;letter-spacing:.5px">USER</span>
+      <span style="font:700 15px Inconsolata,monospace;color:#1c1c1e">U4 — "Where did my saved figure go?"</span>
+    </div>
+    <div style="font:600 11px Inconsolata,monospace;color:#8a857b;margin:4px 0">Save-to-library flow &nbsp;·&nbsp; frames <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">2.1</span> <span style="background:#eef4fb;color:#2f5d8f;border-radius:4px;padding:0 5px">2.3</span> &nbsp;·&nbsp; extends F7</div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#3a352d;margin:2px 0 6px">
+      The save action gives a toast ("Saved to your library") but no <i>place</i>: "library" is ambiguous between the global catalog the user just browsed and their personal shelf, and nothing on screen changes. Classic invisible-destination problem — the F7 chip flip helps state, not location.
+    </div>
+    <div style="font:400 14px/1.55 Georgia,serif;color:#1c1c1e;background:#f7f5f0;border-radius:8px;padding:8px 11px"><b>Fix:</b> (1) toast names the destination and takes you there: <b>"Saved to My figures · [View]"</b> — View opens the Library tab, "My figures" filter active, the new card highlighted for ~2s. (2) Name the shelf <b>"My figures"</b> consistently (tab segment in 2.1, chip copy becomes "↟ Save to My figures" / "✓ In My figures", banner in F8 follows) — "library" stays the tab name only. (3) One-time badge dot on the Library tab icon after a first-ever save. Bundle: update 2.1's segment labels, F7's chip copy in the new 1.11 meta row, and the PLAN §4.2 toast strings.</div>
+  </div>
+
+  <div style="margin-top:22px;border-top:1px solid #e5e0d6;padding-top:8px;font:500 12px/1.5 Inconsolata,monospace;color:#8a857b">
+    Not restated at length: the v4 bundle's information architecture, state coverage (empty/few/many), the frozen-copy model's screen mapping, and the token/primitive layer are sound — the findings above are the gap between that intent and what shipped or got added ad hoc. Tweaks panel: filter by severity floor, hide mockups (for a text-only print).
+  </div>
+
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;severityFloor&quot;: {&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;All findings&quot;,&quot;Significant +&quot;,&quot;Blockers only&quot;],&quot;default&quot;:&quot;All findings&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Filter&quot;},
+  &quot;showMockups&quot;: {&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Filter&quot;}
+}">
+class Component extends DCLogic {
+  componentDidMount(){ this.sync(); }
+  componentDidUpdate(){ this.sync(); }
+  sync(){
+    const f = this.props.severityFloor || 'All findings';
+    const map = { 'All findings':'all', 'Significant +':'sig', 'Blockers only':'blk' };
+    document.body.setAttribute('data-floor', map[f] || 'all');
+    document.body.setAttribute('data-mocks', this.props.showMockups === false ? 'off' : 'on');
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

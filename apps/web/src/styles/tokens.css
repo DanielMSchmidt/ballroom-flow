@@ -1,0 +1,276 @@
+/**
+ * Ballroom Flow — design tokens (CSS-variable layer)
+ * =================================================================
+ * The single source of truth for color / type / spacing / radius /
+ * shadow / z-index / motion. Tailwind's `@theme` (theme.css) maps a
+ * subset of these into utility classes; components reference the
+ * `--bf-*` variables directly or via the Tailwind tokens.
+ *
+ * Naming: `--bf-<group>-<role>`. Never hardcode a hex/px in a
+ * component that duplicates a token (DESIGN-PRINCIPLES #22).
+ *
+ * Values trace to docs/PLAN.md §3 (the five attribute-kind colors)
+ * and docs/design/Ballroom Builder.dc.html (the studio-paper visual
+ * language). Contrast pairings are chosen to meet WCAG AA (#6).
+ */
+
+:root {
+  /* ---- Surfaces: studio-paper canvas + charcoal backdrop ---- */
+  --bf-backdrop: #e9e6df; /* studio-paper page behind the app frame */
+  --bf-backdrop-charcoal: #23211d; /* charcoal alt backdrop */
+  --bf-surface: #ffffff; /* primary card/sheet surface (the "paper") */
+  --bf-surface-raised: #fcfbf8; /* nav bar / subtle raised paper */
+  --bf-surface-sunken: #f7f5f0; /* inputs, wells, info rows */
+  --bf-surface-muted: #faf9f6; /* read-only step rows */
+  --bf-surface-inverse: #1c1c1e; /* charcoal — primary buttons, toasts */
+
+  /* ---- Borders / hairlines ---- */
+  --bf-border: #e1dcd2; /* default card border */
+  --bf-border-strong: #d6d0c6; /* inputs, dividers that need weight */
+  --bf-border-subtle: #ece8e0; /* header hairlines */
+  --bf-hairline: #e8e3da; /* 1px rule filling a section-label row (reading view) */
+
+  /* ---- Ink (text) ---- */
+  --bf-ink: #1c1c1e; /* primary text on paper (AA on #fff & paper) */
+  --bf-ink-secondary: #5a554c; /* secondary text */
+  --bf-ink-label: #6f6a61; /* eyebrow/section labels (v2: darkened for AA at 9px) */
+  --bf-ink-muted: #9a958c; /* muted labels / metadata (AA large only) */
+  --bf-ink-faint: #8a857b; /* faint hints (v2: darkened from #c0bab0 for legibility) */
+  --bf-ink-inverse: #ffffff; /* text on charcoal surfaces */
+  --bf-offbeat-ink: var(--bf-accent); /* off-beat count tokens (&,a,e,i) — v2: accent, sized smaller (#5) */
+
+  /* ---- Brand / interactive accent (studio blue) ---- */
+  --bf-accent: #2f5d8f; /* default UI accent (links, focus, selected) */
+  --bf-accent-ink: #1f3f63; /* darker accent text for AA on tints */
+  --bf-accent-tint: #eef4fb; /* accent-tinted surface (count chip bg) */
+  --bf-accent-border: #cdddee; /* accent-tinted border */
+
+  /* =============================================================
+   * The five attribute-kind colors (PLAN §3). ALWAYS paired with a
+   * two-letter code / label in the UI — color is never the only
+   * signal (#5). Each kind gets: base (the dot/border), -ink (AA
+   * text on its tint), -tint (chip background), -border.
+   * ============================================================= */
+
+  /* footwork (foot part) — amber */
+  --bf-kind-footwork: #a9742c;
+  --bf-kind-footwork-ink: #6b4a16;
+  --bf-kind-footwork-tint: #f3e6d2;
+  --bf-kind-footwork-border: #a9742c;
+
+  /* footPosition (feet relationship, 1st–5th) — teal */
+  --bf-kind-footPosition: #2c8a85;
+  --bf-kind-footPosition-ink: #186b66;
+  --bf-kind-footPosition-tint: #d6f0ee;
+  --bf-kind-footPosition-border: #2c8a85;
+
+  /* direction (step headline) — blue */
+  --bf-kind-direction: #2f5d8f;
+  --bf-kind-direction-ink: #1d3a5a;
+  --bf-kind-direction-tint: #e1ebf5;
+  --bf-kind-direction-border: #2f5d8f;
+
+  /* rise & fall — green */
+  --bf-kind-rise: #1f8a5b;
+  --bf-kind-rise-ink: #0f5d3c;
+  --bf-kind-rise-tint: #d6f0e3;
+  --bf-kind-rise-border: #1f8a5b;
+
+  /* position — violet */
+  --bf-kind-position: #8a5cab;
+  --bf-kind-position-ink: #5a3a73;
+  --bf-kind-position-tint: #f3eaf8;
+  --bf-kind-position-border: #8a5cab;
+
+  /* bodyActions (Body) — light violet (distinct from position) */
+  --bf-kind-bodyActions: #b07cc6;
+  --bf-kind-bodyActions-ink: #7a5296;
+  --bf-kind-bodyActions-tint: #f4ebf9;
+  --bf-kind-bodyActions-border: #b07cc6;
+
+  /* sway — terracotta */
+  --bf-kind-sway: #c0563f;
+  --bf-kind-sway-ink: #8f3825;
+  --bf-kind-sway-tint: #fbe3dc;
+  --bf-kind-sway-border: #c0563f;
+
+  /* turn — slate */
+  --bf-kind-turn: #5b6b8a;
+  --bf-kind-turn-ink: #3e4a63;
+  --bf-kind-turn-tint: #e3e8f2;
+  --bf-kind-turn-border: #5b6b8a;
+
+  /* =============================================================
+   * Figure scopes (DESIGN-PRINCIPLES #11). Three scopes, each a
+   * consistent + DISTINCT treatment, ALWAYS paired with a word +
+   * icon (the ScopeBadge primitive enforces this).
+   *   global   — app-owned library (neutral/slate)
+   *   variant  — your variant, carries base lineage (violet)
+   *   custom   — your own from-scratch figure (amber)
+   * ============================================================= */
+  --bf-scope-global: #5b6b8a;
+  --bf-scope-global-ink: #3e4a63;
+  --bf-scope-global-tint: #eef0f4;
+  --bf-scope-global-border: #c3cad8;
+
+  --bf-scope-variant: #8a5cab;
+  --bf-scope-variant-ink: #5a3a73;
+  --bf-scope-variant-tint: #f3eaf8;
+  --bf-scope-variant-border: #d8c4e6;
+
+  --bf-scope-custom: #a9742c;
+  --bf-scope-custom-ink: #6b4a16;
+  --bf-scope-custom-tint: #f3e6d2;
+  --bf-scope-custom-border: #e3cda6;
+
+  /* =============================================================
+   * Editing-lens "section" green family (Assemble EDITING, frames
+   * 1.7–1.9). Distinct from the rise-kind green: this is the
+   * structural/organisational green of section headers + the
+   * add-figure / add-section affordances + the inline name panel.
+   * ============================================================= */
+  --bf-section-ink: #2f4f2f; /* section title + solid add-section button bg */
+  --bf-section-label: #3f6b3f; /* "NAME THIS SECTION" eyebrow + chevron */
+  --bf-section-meta: #5b8a5b; /* "6 bars" / "3 figs" meta + add-section dash */
+  --bf-section-action: #4a7c4a; /* dashed "＋ add figure / section" label */
+  --bf-section-caption: #7a9a7a; /* add-section caption (Caveat) */
+  --bf-section-tint: #eaf2ea; /* section header + name-panel surface */
+  --bf-section-border: #b9d2b9; /* name-panel input + cancel border */
+  --bf-section-dash: #9fc09f; /* add-figure dashed border + empty-state glyph */
+
+  /* =============================================================
+   * Semantic status roles (always paired with icon/label — #5, #8).
+   * ============================================================= */
+  --bf-success: #1f8a5b;
+  --bf-success-ink: #0f5d3c;
+  --bf-success-tint: #d6f0e3;
+
+  --bf-warning: #937400;
+  --bf-warning-ink: #6e5700;
+  --bf-warning-tint: #fff6d6;
+  --bf-warning-border: #e7c64a;
+
+  --bf-danger: #c0563f;
+  --bf-danger-ink: #8f3825;
+  --bf-danger-tint: #fbe3dc;
+
+  --bf-info: #2f5d8f;
+  --bf-info-ink: #1f3f63;
+  --bf-info-tint: #ecf2fb;
+
+  /* offline / stale data state — desaturated slate so it reads as
+     "not live" without alarming (DESIGN-PRINCIPLES #20) */
+  --bf-offline: #8a857c;
+  --bf-offline-ink: #5a554c;
+  --bf-offline-tint: #f0eee9;
+
+  /* =============================================================
+   * Identity / author colors (member note colors, avatars).
+   * Pairs with name + initial (#5). Six-swatch palette from the
+   * prototype profile picker.
+   * ============================================================= */
+  --bf-identity-1: #3b7dd8; /* blue */
+  --bf-identity-2: #1f8a5b; /* green */
+  --bf-identity-3: #c0563f; /* terracotta */
+  --bf-identity-4: #8a5cab; /* violet */
+  --bf-identity-5: #d99a2b; /* gold */
+  --bf-identity-6: #4a9d9a; /* teal */
+
+  /* =============================================================
+   * Typography. Mono UI face (Inconsolata) + handwritten note face
+   * (Caveat) for human annotations (#23).
+   * ============================================================= */
+  --bf-font-ui: "Inconsolata", ui-monospace, "SF Mono", Menlo, monospace;
+  --bf-font-note: "Caveat", "Inconsolata", cursive;
+
+  /* Type scale (rem so it honors 200% zoom / dynamic type — #10).
+     Base 16px. Steps are intentionally compact for the mono UI. */
+  --bf-text-2xs: 0.625rem; /* 10px — metadata, eyebrow labels */
+  --bf-text-xs: 0.6875rem; /* 11px — chip/label text */
+  --bf-text-sm: 0.8125rem; /* 13px — body in dense rows */
+  --bf-text-base: 0.875rem; /* 14px — default body */
+  --bf-text-md: 1rem; /* 16px — emphasised body */
+  --bf-text-lg: 1.1875rem; /* 19px — screen titles */
+  --bf-text-xl: 1.5rem; /* 24px — hero */
+  --bf-text-note: 0.9375rem; /* 15px — handwritten note default */
+
+  --bf-leading-tight: 1.15;
+  --bf-leading-normal: 1.4;
+  --bf-leading-relaxed: 1.5;
+
+  --bf-weight-regular: 400;
+  --bf-weight-medium: 500;
+  --bf-weight-semibold: 600;
+  --bf-weight-bold: 700;
+
+  /* =============================================================
+   * Spacing scale (rem). 4px base grid.
+   * ============================================================= */
+  --bf-space-0: 0;
+  --bf-space-1: 0.25rem; /* 4 */
+  --bf-space-2: 0.5rem; /* 8 */
+  --bf-space-3: 0.75rem; /* 12 */
+  --bf-space-4: 1rem; /* 16 */
+  --bf-space-5: 1.25rem; /* 20 */
+  --bf-space-6: 1.5rem; /* 24 */
+  --bf-space-8: 2rem; /* 32 */
+  --bf-space-10: 2.5rem; /* 40 */
+  --bf-space-12: 3rem; /* 48 */
+
+  /* Minimum touch target — every interactive control honors this
+     (DESIGN-PRINCIPLES #3). */
+  --bf-touch-target: 2.75rem; /* 44px */
+
+  /* =============================================================
+   * Radii.
+   * ============================================================= */
+  --bf-radius-sm: 0.375rem; /* 6 — chips, slot pills */
+  --bf-radius-md: 0.625rem; /* 10 — inputs, small cards */
+  --bf-radius-lg: 0.875rem; /* 14 — cards, list rows */
+  --bf-radius-xl: 1.375rem; /* 22 — bottom sheets */
+  --bf-radius-pill: 999px;
+  --bf-radius-round: 50%;
+
+  /* =============================================================
+   * Shadows.
+   * ============================================================= */
+  --bf-shadow-xs: 0 1px 2px rgba(20, 40, 70, 0.05);
+  --bf-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --bf-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.12);
+  --bf-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.18);
+  --bf-shadow-toast: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+  /* =============================================================
+   * Z-index scale.
+   * ============================================================= */
+  --bf-z-base: 0;
+  --bf-z-nav: 10; /* app-shell bottom nav */
+  --bf-z-overlay: 20; /* sheet/modal scrim */
+  --bf-z-sheet: 21; /* sheet/modal panel */
+  --bf-z-toast: 30; /* toast region — above everything */
+
+  /* =============================================================
+   * Motion. Durations + easings. The `*-motion` variables collapse
+   * to 0 under prefers-reduced-motion (#9), so any transition that
+   * references them is automatically gated.
+   * ============================================================= */
+  --bf-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --bf-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --bf-duration-fast: 120ms;
+  --bf-duration-base: 200ms;
+  --bf-duration-slow: 320ms;
+
+  /* Motion-gated durations: use these in transitions/animations so
+     reduced-motion users get an instant, non-animated result. */
+  --bf-motion-fast: var(--bf-duration-fast);
+  --bf-motion-base: var(--bf-duration-base);
+  --bf-motion-slow: var(--bf-duration-slow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bf-motion-fast: 0ms;
+    --bf-motion-base: 0ms;
+    --bf-motion-slow: 0ms;
+  }
+}

@@ -1,12 +1,16 @@
 name: CI
 
 # Pushes to development/main are gated by the deploy workflow (which runs the
-# same checks before deploying). CI covers pull requests.
+# same checks before deploying). CI covers pull requests with the layered
+# "PR fast gate" from PLAN.md §10.3:
+#   typecheck + lint → unit/property → contract+drift → worker/DO/D1 (incl.
+#   EXPLAIN) → component + axe → E2E smoke.
+# The full Playwright matrix + Lighthouse-CI run nightly (nightly.yml), not here.
 on:
   pull_request:
 
 jobs:
-  verify:
+  fast-gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +20,41 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm -r typecheck
-      # Build the SPA first so the Worker's static-assets dir (apps/web/dist)
-      # exists for the worker test harness.
-      - run: pnpm -r build
-      - run: pnpm -r test
+
+      # 1. Lint + typecheck. Typecheck IS the contract drift gate: the shared
+      #    `typeof app` / doc-shape types fail `tsc` if the contract drifts.
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck (+ contract drift)
+        run: pnpm -r typecheck
+
+      # 2. Unit / property (pure domain, in-memory Automerge + fast-check).
+      #    Runs via `coverage` so the armed thresholds (vitest.config.ts) gate the
+      #    PR — coverage can't silently regress.
+      - name: Unit / property + coverage (domain)
+        run: pnpm --filter @ballroom/domain coverage
+
+      # Build the SPA so the Worker's static-assets dir (apps/web/dist) and the
+      # E2E preview server have something to serve.
+      - name: Build
+        run: pnpm -r build
+
+      # 3. Worker / DO / D1 in real workerd (incl. the EXPLAIN QUERY PLAN gate
+      #    once the test engineer wires expectIndexedQuery into a D1 test). Runs
+      #    via `coverage` so the armed thresholds (vitest.config.ts) gate the PR.
+      - name: Worker / DO / D1 + coverage (workerd)
+        run: pnpm --filter worker coverage
+
+      # 4. Component + axe (jsdom + Testing Library + vitest-axe).
+      - name: Component + a11y (web)
+        run: pnpm --filter web test
+
+      # 5. E2E smoke — one fast Playwright pass against a REAL worker (wrangler
+      #    dev, booted by the webServer in apps/web/e2e/serve.sh). The @smoke
+      #    authoring journey gates here; chromium only on PRs for speed, the full
+      #    3-device matrix runs nightly. No --pass-with-no-tests: a real journey
+      #    failure FAILS the PR gate (#191).
+      - name: Install Playwright (chromium)
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: E2E smoke (chromium)
+        run: pnpm --filter web exec playwright test --project=chromium-desktop --grep @smoke
