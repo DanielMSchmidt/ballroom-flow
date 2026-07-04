@@ -169,3 +169,38 @@ describe("US-004a continuous routine numbering", () => {
     expect(brk).toMatchObject({ kind: "break", span: "beat 1", bars: 1 });
   });
 });
+
+describe("slowQuickTokens — slow/quick timing lens (Tango/Foxtrot/Quickstep)", () => {
+  it("reads a Feather (SQQ) back as S Q Q from its counts", async () => {
+    const { slowQuickTokens, parseWdsfTiming } = await importDomain();
+    // parseWdsfTiming("SQQ") → [1, 3, 4]; the figure spans one 4/4 bar → end 5.
+    const counts = parseWdsfTiming("SQQ");
+    expect(slowQuickTokens(counts, 5)).toEqual(["S", "Q", "Q"]);
+  });
+
+  it("reads QQS back as Q Q S", async () => {
+    const { slowQuickTokens, parseWdsfTiming } = await importDomain();
+    const counts = parseWdsfTiming("QQS"); // [1, 2, 3], end 5 (1 bar)
+    expect(slowQuickTokens(counts, 5)).toEqual(["Q", "Q", "S"]);
+  });
+
+  it("keeps a syncopated off-beat step as '&' (Q&Q reads Q & Q)", async () => {
+    const { slowQuickTokens, parseWdsfTiming } = await importDomain();
+    const counts = parseWdsfTiming("Q&Q"); // [1, 1.5, 2], end 3
+    expect(slowQuickTokens(counts, 3)).toEqual(["Q", "&", "Q"]);
+  });
+
+  it("maps a two-beat hold to a Slow and a one-beat step to a Quick", async () => {
+    const { slowQuickTokens } = await importDomain();
+    // Steps at 1 and 3, figure ends at 5 → two 2-beat holds → S S.
+    expect(slowQuickTokens([1, 3], 5)).toEqual(["S", "S"]);
+    // Four consecutive whole beats filling one bar → all Quicks.
+    expect(slowQuickTokens([1, 2, 3, 4], 5)).toEqual(["Q", "Q", "Q", "Q"]);
+  });
+
+  it("carries the e/a sub-beat symbols through unchanged", async () => {
+    const { slowQuickTokens } = await importDomain();
+    // 1 (whole, dur 1 → Q), 1.25 ('e'), 1.75 ('a'), 2 (whole, dur to end 3 → Q).
+    expect(slowQuickTokens([1, 1.25, 1.75, 2], 3)).toEqual(["Q", "e", "a", "Q"]);
+  });
+});

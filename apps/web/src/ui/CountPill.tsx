@@ -6,11 +6,13 @@ export interface CountPillProps {
   className?: string;
 }
 
-/** On-beat counts are the bare numerals 1–8; everything else (`&`, `a`, `e`,
- *  `i`, …) is an off-beat sub-beat token rendered dimmed (#5). The float→label
- *  conversion lives in packages/domain — this is the presentational seam only. */
+/** On-beat tokens are the bare numerals 1–8 and the whole-beat slow/quick
+ *  syllables `S`/`Q` (the Tango/Foxtrot/Quickstep rhythm lens); everything else
+ *  (`&`, `a`, `e`, `i`, …) is an off-beat sub-beat token rendered dimmed (#5).
+ *  The float→label conversion lives in packages/domain — this is the
+ *  presentational seam only. */
 function isOffBeat(token: string): boolean {
-  return !/^[1-8]$/.test(token);
+  return !/^([1-8]|[SQ])$/.test(token);
 }
 
 /**

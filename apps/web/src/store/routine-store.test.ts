@@ -378,6 +378,83 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.close();
   });
 
+  it("flows a later catalog attribute-fill DOWN into a referencing placement (no re-entry, §5.2)", async () => {
+    // The scenario the owner asked us to double-check: you write a choreo NOW
+    // using standard (catalog) figures whose attributes are still sparse; LATER
+    // those catalog figures are filled in with precise attributes. Because a
+    // placement holds a LIVE reference to the global figure — never a copy — the
+    // richer attributes flow down into the routine on the next read. You never
+    // re-enter the choreo. This exercises that end-to-end through the store's
+    // real read path (the pure-domain overlay is covered in fork.test.ts).
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", opts);
+    const ref = globalFigureRef("waltz", "natural-turn");
+    const routineFull = buildRoutineDoc({
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "",
+      sections: [
+        {
+          id: "s1",
+          name: "Intro",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: ref, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.load(routineFull);
+    // First read opens the referenced (global) figure's connection.
+    store.readPlacements();
+
+    // The catalog figure starts SPARSE — a single charted step, no footwork yet.
+    let base = buildFigureDoc(
+      aFigure({
+        id: ref,
+        scope: "global",
+        attributes: [
+          { id: "s1", kind: "direction", count: 1, role: null, value: "forward", deletedAt: null },
+        ],
+      }) as FigureDoc,
+    ) as A.Doc<FigureDoc>;
+    sockets.get(ref)?.load(base);
+    let rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
+    expect(rp?.figure?.attributes.filter((a) => a.deletedAt == null)).toHaveLength(1);
+
+    // LATER: the official data lands — the global doc gains precise footwork +
+    // a second step (a base edit on the same doc lineage → a clean merge).
+    base = A.change(base, (d) => {
+      d.attributes.push({
+        id: "s2",
+        kind: "footwork",
+        count: 1,
+        role: null,
+        value: "HT",
+        deletedAt: null,
+      });
+      d.attributes.push({
+        id: "s3",
+        kind: "direction",
+        count: 2,
+        role: null,
+        value: "side",
+        deletedAt: null,
+      });
+    });
+    sockets.get(ref)?.load(base);
+
+    rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
+    const live = rp?.figure?.attributes.filter((a) => a.deletedAt == null) ?? [];
+    // The precise catalog attributes flowed DOWN into the placement automatically.
+    expect(live).toHaveLength(3);
+    expect(live.find((a) => a.id === "s2")?.value).toBe("HT");
+    expect(live.find((a) => a.id === "s3")?.value).toBe("side");
+    store.close();
+  });
+
   it("readPlacements is referentially stable + marks a live figure fromLiveDoc (A/E)", async () => {
     // Identity caching (A): while nothing changes, readPlacements returns the SAME
     // array and the SAME figure object across reads (so an unrelated sync frame

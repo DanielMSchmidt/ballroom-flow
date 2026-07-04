@@ -2,8 +2,9 @@
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
 import type { Attribute, FigureDoc, Placement, RoutineDoc } from "@ballroom/domain";
+import { libraryFiguresForDance } from "@ballroom/domain";
 import type { ComponentType } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement, RoutineStore } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
 import { axeCheck, renderUi, screen, userEvent, within } from "../test-support/render";
@@ -162,6 +163,118 @@ describe("Reading view (read-only routine timeline)", () => {
   });
 });
 
+describe("Section header bar count (edit view)", () => {
+  it("counts a placed-but-un-notated figure's AUTHORED bars, not 0", async () => {
+    // Intent (bugfix): a section of figures placed from the catalog but not yet
+    //   notated must report their authored `bars`, not "0 bars" — the old code
+    //   summed only the phrase span of existing steps and skipped empty figures.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p1 = placement("p1", "feather");
+    const p2 = placement("p2", "threestep");
+    // Two figures with an authored length but NO notated attributes yet.
+    const emptyFig = (id: string, name: string, bars: number): FigureDoc => ({
+      ...figure(id, name),
+      bars,
+      attributes: [],
+    });
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1, p2] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [
+          { placement: p1, figure: emptyFig("feather", "Feather", 2), status: "live" },
+          { placement: p2, figure: emptyFig("threestep", "Three Step", 1), status: "live" },
+        ])}
+      />,
+    );
+    // 2 + 1 authored bars = "3 bars" in the section header — never 0.
+    expect(screen.getByText("3 bars")).toBeInTheDocument();
+    expect(screen.queryByText("0 bars")).toBeNull();
+  });
+});
+
+describe("Timing lens — counts ⇄ slow/quick (Tango/Foxtrot/Quickstep)", () => {
+  // The lens persists to localStorage (bb_timing); isolate each case.
+  beforeEach(() => {
+    try {
+      window.localStorage.clear();
+    } catch {
+      // no-op — jsdom always has localStorage, but stay defensive.
+    }
+  });
+  const feather = (): FigureDoc => ({
+    ...figure("feather", "Feather"),
+    bars: 1,
+    // SQQ timing → counts 1, 3, 4 (a Slow then two Quicks).
+    attributes: [
+      { id: "s1", kind: "direction", count: 1, role: null, value: "forward", deletedAt: null },
+      { id: "s2", kind: "direction", count: 3, role: null, value: "forward", deletedAt: null },
+      { id: "s3", kind: "direction", count: 4, role: null, value: "forward", deletedAt: null },
+    ],
+  });
+  const readingRoutine = (dance: RoutineDoc["dance"]): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance,
+    ownerId: "u",
+    sections: [
+      { id: "s1", name: "Intro", deletedAt: null, placements: [placement("p1", "feather")] },
+    ],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("offers the S/Q toggle in the reading view for a Foxtrot and switches counts to slows/quicks", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(readingRoutine("foxtrot"), [
+          { placement: placement("p1", "feather"), figure: feather(), status: "live" },
+        ])}
+      />,
+    );
+    // Counts mode by default: the SQQ figure reads its beat numbers (1 3 4).
+    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
+    // Flip to slow/quick.
+    await userEvent.click(screen.getByRole("radio", { name: /slows & quicks/i }));
+    expect(screen.getAllByText("S").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Q").length).toBeGreaterThan(0);
+  });
+
+  it("does NOT offer the S/Q toggle for a Waltz (counts-only dance)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(readingRoutine("waltz"), [
+          {
+            placement: placement("p1", "feather"),
+            figure: { ...feather(), dance: "waltz" },
+            status: "live",
+          },
+        ])}
+      />,
+    );
+    expect(screen.queryByRole("radio", { name: /slows & quicks/i })).toBeNull();
+  });
+});
+
 describe("US-018 Open & view a routine", () => {
   it("shows sections in order with placement cards (name, badges, summary, chips)", async () => {
     // Intent: opening a routine renders sections → placement cards from the synced docs.
@@ -204,7 +317,9 @@ describe("US-018 Open & view a routine", () => {
     expect(headings.indexOf("Intro")).toBeLessThan(headings.indexOf("Body")); // in order
     expect(screen.getByText("Feather")).toBeInTheDocument();
     expect(screen.getByText("Three Step")).toBeInTheDocument();
-    expect(screen.getAllByText(/attribute/i).length).toBeGreaterThan(0); // attribute summary
+    // The placement card shows the figure's attributes as chips (US-018): the
+    // fixture's rise value renders as a "rise" chip on both cards.
+    expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
     expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
     expect(await axeCheck(container)).toHaveNoViolations(); // a11y smoke (DESIGN-PRINCIPLES)
   });
@@ -347,7 +462,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     // AC-3 card content
     expect(screen.getByText("Feather")).toBeInTheDocument();
     expect(screen.getAllByText(/library|custom|variant/i).length).toBeGreaterThan(0); // scope badge
-    expect(screen.getAllByText(/attribute/i).length).toBeGreaterThan(0); // attribute summary
+    expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
     expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
 
     // Add a figure → the picker sheet; create a custom one (no figureType).
@@ -552,6 +667,53 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
     expect(screen.queryByRole("button", { name: /add glue step to my library/i })).toBeNull();
     expect(screen.queryByText(/in your library/i)).toBeNull();
+  });
+
+  it("does NOT offer 'add to my library' for an account figure still matching the global pool", async () => {
+    // The requirement: only figures NOT (still) part of the global pool get the
+    // bookmark affordance. An account figure whose (dance, figureType, name) +
+    // attributes still equal its catalog origin is effectively the pool figure —
+    // no button (matches the "custom" badge divergence rule, §2.5.1 #19).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const origin = libraryFiguresForDance("foxtrot")[0];
+    if (!origin) throw new Error("expected a foxtrot catalog figure to clone");
+    // An account figure that is a byte-for-byte clone of a catalog figure.
+    const undivergedAccount: FigureDoc = {
+      id: "pool-clone",
+      scope: "account",
+      ownerId: "u",
+      figureType: origin.figureType,
+      dance: origin.dance,
+      name: origin.name,
+      source: "library",
+      attributes: (origin.attributes ?? []).map((a) => ({ ...a })),
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    const p1 = placement("p1", "pool-clone");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: undivergedAccount, status: "live" }])}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /to my library/i })).toBeNull();
+    // The figure still renders (with its catalog attributes) — only the bookmark
+    // affordance is withheld.
+    expect(screen.getByText(origin.name)).toBeInTheDocument();
   });
 });
 

@@ -26,6 +26,8 @@ import {
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
+  resolveFigureBars,
+  slowQuickTokens,
 } from "@ballroom/domain";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
@@ -58,6 +60,7 @@ import {
   useStoredHiddenColumns,
   visibleColumns,
 } from "./reading-filter";
+import type { TimingView } from "./reading-timing";
 import { filterByRoleView, type RoleView } from "./role-view";
 
 export function RoutineReadingView({
@@ -69,6 +72,7 @@ export function RoutineReadingView({
   memberNames,
   customKinds = [],
   roleView,
+  timingView = "counts",
   onOpenFigure,
   onOpenThread,
 }: {
@@ -93,6 +97,9 @@ export function RoutineReadingView({
   /** The active Leader/Follower lens (controlled — persisted by the caller,
    *  who renders the compact L·F toggle in the screen header — design 1.23). */
   roleView: RoleView;
+  /** How step timings read: numeric counts (default) or slow/quick syllables
+   *  (Tango/Foxtrot/Quickstep). Controlled + persisted by the caller. */
+  timingView?: TimingView;
   /** Tap a figure name → Figure detail (existing open-figure flow). */
   onOpenFigure?: (figureId: string) => void;
   /** Tap a comment / "+ add comment" → open the annotation thread for that
@@ -116,8 +123,15 @@ export function RoutineReadingView({
   // reconcile), so an added note re-uses every beat-token array and the
   // memoized FigureReadouts below can bail out.
   const numberByPlacement = useMemo(
-    () => numberRoutineBeats_forRoutine(routine.sections, resolvedByPlacement, roleView, dance),
-    [routine.sections, resolvedByPlacement, roleView, dance],
+    () =>
+      numberRoutineBeats_forRoutine(
+        routine.sections,
+        resolvedByPlacement,
+        roleView,
+        dance,
+        timingView,
+      ),
+    [routine.sections, resolvedByPlacement, roleView, dance, timingView],
   );
   // Per-figure annotation slices with STABLE identities: only the slice of the
   // figure whose notes changed gets a new array — every other FigureReadout
@@ -314,22 +328,43 @@ function numberRoutineBeats_forRoutine(
   resolved: Map<string, ResolvedPlacement>,
   roleView: RoleView,
   dance: DanceId,
+  timingView: TimingView = "counts",
 ): Map<string, NumberedBeatEntry | undefined> {
   const beatsPerBar = DANCES[dance].beatsPerBar;
   const ids: string[] = [];
   const entries: RoutineBeatEntry[] = [];
+  // For the slow/quick lens, each figure's tokens come from its OWN step
+  // durations (bounded by its authored length), not the continuous counter —
+  // so we remember each figure entry's end count (bars × beatsPerBar + 1).
+  const figureEndByIndex = new Map<number, number>();
   for (const section of sections) {
     for (const pl of section.placements) {
+      const index = ids.length;
       ids.push(pl.id);
       if (pl.source === "break") {
         entries.push({ kind: "break", beats: pl.beats ?? beatsPerBar });
       } else {
         const fig = resolved.get(pl.id)?.figure ?? null;
         entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView) : [] });
+        if (fig) figureEndByIndex.set(index, resolveFigureBars(fig) * beatsPerBar + 1);
       }
     }
   }
   const numbered = numberRoutineBeats(entries, dance);
+  if (timingView === "slowquick") {
+    // Replace each figure's numeric tokens with slow/quick syllables. Breaks
+    // keep their continuous beat span (a break has no rhythm to notate).
+    for (let i = 0; i < numbered.length; i++) {
+      const entry = numbered[i];
+      const source = entries[i];
+      if (entry?.kind === "figure" && source?.kind === "figure") {
+        entry.tokens = slowQuickTokens(
+          source.counts,
+          figureEndByIndex.get(i) ?? source.counts.length + 1,
+        );
+      }
+    }
+  }
   return new Map(ids.map((id, i) => [id, numbered[i]]));
 }
 
