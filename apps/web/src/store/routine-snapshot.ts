@@ -19,7 +19,7 @@ import {
   type RegistryKind,
   type RoutineDoc,
   resolveFigure as resolveVariantOverlay,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { apiGet } from "../lib/rpc";
 import type { TokenProvider } from "./doc-connection";
 import { reconcile } from "./reconcile";

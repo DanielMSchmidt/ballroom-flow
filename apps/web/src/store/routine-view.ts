@@ -16,7 +16,13 @@
 // hydrates, then from the live store (which itself falls back to the snapshot for
 // not-yet-opened figures). In read-only mode mutators + openFigure are no-ops
 // (the UI never calls them for a viewer) and nothing live is ever opened.
-import type { Alignment, Anchor, AnnotationKind, Attribute, RegistryKind } from "@ballroom/domain";
+import type {
+  Alignment,
+  Anchor,
+  AnnotationKind,
+  Attribute,
+  RegistryKind,
+} from "@weavesteps/domain";
 import type { SyncState } from "./doc-connection";
 import {
   openRoutine as defaultOpenRoutine,

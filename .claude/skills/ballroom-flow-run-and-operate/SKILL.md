@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-run-and-operate
-description: Load when running Ballroom Flow locally (pnpm dev), deploying to staging/production, managing wrangler environments, secrets, or D1 migrations, running the screenshot bot pipeline, or performing ops actions (secrets rotation, admin/quota grants, template re-seeding). For the seed-data generators this covers only how to run them - their semantics and the charting workflow live in ballroom-flow-figure-data-pipeline.
+description: Load when running Weave Steps locally (pnpm dev), deploying to staging/production, managing wrangler environments, secrets, or D1 migrations, running the screenshot bot pipeline, or performing ops actions (secrets rotation, admin/quota grants, template re-seeding). For the seed-data generators this covers only how to run them - their semantics and the charting workflow live in ballroom-flow-figure-data-pipeline.
 ---
 
-# Ballroom Flow — run and operate
+# Weave Steps — run and operate
 
 Runbook for the app's runtime and operations surface: local dev, the four wrangler
 environments, the deploy pipeline, D1 migrations, generated artifacts, the screenshot
@@ -67,10 +67,10 @@ Named environments do **not inherit bindings** — DB and `DOC_DO` are redeclare
 
 | Env | Worker name | Assets dir | D1 | Special vars | Purpose |
 |---|---|---|---|---|---|
-| *(default)* | `ballroom-flow` | `../web/dist` | `ballroom-flow-dev`, id `00000000-…` (Miniflare local file; id ignored) | — | `wrangler dev` + the vitest-pool-workers tests |
-| `e2e` | `ballroom-flow-e2e` | **`../web/dist-e2e`** | `ballroom-flow-e2e`, id zeros (local only) | `E2E_TEST_ROUTES = "1"` (mounts `/api/test/*`); a **committed throwaway test `CLERK_JWT_KEY` PEM** mirroring `src/test-support/test-keys.ts` | Playwright's one-origin server via `apps/web/e2e/serve.sh`. **Local `wrangler dev --env e2e` only — NEVER deployed.** |
-| `staging` | `ballroom-flow-staging` | `../web/dist` | `ballroom-flow-staging`, id `ad9ea4d2-3687-411d-a664-a938dc91b541` | — | Deployed from `development`; live at `ballroom-flow-staging.danielmschmidt.workers.dev` |
-| `production` | `ballroom-flow-production` | `../web/dist` | `ballroom-flow-production`, id `55ba153e-a24e-4cf6-8579-213b236abae5` | — | Deployed from `main` |
+| *(default)* | `weave-steps` | `../web/dist` | `weave-steps-dev`, id `00000000-…` (Miniflare local file; id ignored) | — | `wrangler dev` + the vitest-pool-workers tests |
+| `e2e` | `weave-steps-e2e` | **`../web/dist-e2e`** | `weave-steps-e2e`, id zeros (local only) | `E2E_TEST_ROUTES = "1"` (mounts `/api/test/*`); a **committed throwaway test `CLERK_JWT_KEY` PEM** mirroring `src/test-support/test-keys.ts` | Playwright's one-origin server via `apps/web/e2e/serve.sh`. **Local `wrangler dev --env e2e` only — NEVER deployed.** |
+| `staging` | `weave-steps-staging` | `../web/dist` | `weave-steps-staging`, id `ad9ea4d2-3687-411d-a664-a938dc91b541` | — | Deployed from `development`; live at `weave-steps-staging.danielmschmidt.workers.dev` |
+| `production` | `weave-steps-production` | `../web/dist` | `weave-steps-production`, id `55ba153e-a24e-4cf6-8579-213b236abae5` | — | Deployed from `main` |
 
 The committed e2e PEM is a *public* key for a throwaway test keypair — it lets locally
 minted test JWTs verify networklessly. It grants nothing outside the local e2e env.
@@ -196,7 +196,7 @@ Counts are as of 2026-07-02. Workflow:
 node scripts/gen-library.mjs
 node scripts/gen-figure-charts.mjs
 git diff --stat        # 2. Only the intended generated file(s) changed
-pnpm --filter @ballroom/domain test   # 3. library-data / figure-steps tests still pass
+pnpm --filter @weavesteps/domain test   # 3. library-data / figure-steps tests still pass
 ```
 
 If `git diff` shows changes after running a generator on an *untouched* seed, something

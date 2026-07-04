@@ -22,7 +22,12 @@
 // navigation is handled by the contained <button> (tab→button; arrows between
 // cells is a grid-level responsibility not yet implemented for this MVP lane).
 
-import { type Attribute, mergeRegistry, normalizeValue, type RegistryKind } from "@ballroom/domain";
+import {
+  type Attribute,
+  mergeRegistry,
+  normalizeValue,
+  type RegistryKind,
+} from "@weavesteps/domain";
 import { useMemo, useState } from "react";
 import { localizedRegistry, useLocale, useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";

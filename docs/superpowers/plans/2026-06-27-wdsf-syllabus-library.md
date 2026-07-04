@@ -80,7 +80,7 @@ describe("parseWdsfTiming", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain test -- wdsf-timing`
+Run: `pnpm --filter @weavesteps/domain test -- wdsf-timing`
 Expected: FAIL — "Cannot find module './wdsf-timing'" / `parseWdsfTiming is not a function`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -128,7 +128,7 @@ export function parseWdsfTiming(timing: string): number[] {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/domain test -- wdsf-timing`
+Run: `pnpm --filter @weavesteps/domain test -- wdsf-timing`
 Expected: PASS (all cases).
 
 - [ ] **Step 5: Commit**
@@ -204,7 +204,7 @@ describe("buildWdsfAttributes", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain test -- wdsf-timing`
+Run: `pnpm --filter @weavesteps/domain test -- wdsf-timing`
 Expected: FAIL — `buildWdsfAttributes is not a function`.
 
 - [ ] **Step 3: Write minimal implementation (append to wdsf-timing.ts)**
@@ -250,7 +250,7 @@ export { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/domain test -- wdsf-timing`
+Run: `pnpm --filter @weavesteps/domain test -- wdsf-timing`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -306,7 +306,7 @@ Update the existing count assertion (currently `expect(LIBRARY_FIGURES.length).t
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain test -- library`
+Run: `pnpm --filter @weavesteps/domain test -- library`
 Expected: FAIL — `natural.attributes` is undefined (catalog not yet enriched).
 
 - [ ] **Step 3: Enrich the `LibraryFigure` type + compute attributes in `library.ts`**
@@ -440,7 +440,7 @@ Expected: prints `wrote 247 figures to packages/domain/src/library-data.ts` (122
 
 - [ ] **Step 6: Run tests + typecheck to verify they pass**
 
-Run: `pnpm --filter @ballroom/domain test -- library` then `pnpm -w typecheck`
+Run: `pnpm --filter @weavesteps/domain test -- library` then `pnpm -w typecheck`
 Expected: PASS; typecheck clean (the generated `start`/`finish` fields are consumed by `library.ts`).
 
 - [ ] **Step 7: Commit**
@@ -492,7 +492,7 @@ describe("zCreateFigure", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/contract test`
+Run: `pnpm --filter @weavesteps/contract test`
 Expected: FAIL — `attributes` is stripped/undefined (not in the schema).
 
 - [ ] **Step 3: Write minimal implementation**
@@ -520,7 +520,7 @@ export const zCreateFigure = z.object({
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/contract test`
+Run: `pnpm --filter @weavesteps/contract test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -539,7 +539,7 @@ git commit -m "feat(contract): zCreateFigure accepts an optional attributes time
 - Modify: `apps/web/src/store/routine-store.test.ts`
 
 **Interfaces:**
-- Consumes: `LIBRARY_FIGURES`, `Attribute` from `@ballroom/domain`.
+- Consumes: `LIBRARY_FIGURES`, `Attribute` from `@weavesteps/domain`.
 - Produces: `CreateFigureFn` payload gains `attributes: Attribute[]`; `addPlacement` looks the picked figure up in the catalog and forwards its attributes (empty for custom / ISTD figures).
 
 - [ ] **Step 1: Write the failing test (add to routine-store.test.ts)**
@@ -585,14 +585,14 @@ it("forwards an empty attributes list for a custom (non-catalog) figure", async 
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- routine-store`
+Run: `pnpm --filter @weavesteps/web test -- routine-store`
 Expected: FAIL — `seen[0].attributes` is undefined (not forwarded yet).
 
 - [ ] **Step 3: Extend `CreateFigureFn` and `addPlacement`**
 
 In `apps/web/src/store/routine.ts`:
 
-Add to imports: `import { LIBRARY_FIGURES, type Attribute } from "@ballroom/domain";`
+Add to imports: `import { LIBRARY_FIGURES, type Attribute } from "@weavesteps/domain";`
 
 Extend the `CreateFigureFn` payload type:
 
@@ -624,7 +624,7 @@ createFigure({ figureRef, name, dance, figureType, attributes }).then(() => {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/web test -- routine-store`
+Run: `pnpm --filter @weavesteps/web test -- routine-store`
 Expected: PASS. Also re-run the existing `#187` test to confirm no regression.
 
 - [ ] **Step 5: Commit**
@@ -643,7 +643,7 @@ git commit -m "feat(web): pre-seed a picked library figure's step timeline"
 - Modify: `apps/worker/src/routes/figures.test.ts`
 
 **Interfaces:**
-- Consumes: `zCreateFigure` (now with `attributes`, Task 4); `parseAttributeWrite` from `@ballroom/domain`.
+- Consumes: `zCreateFigure` (now with `attributes`, Task 4); `parseAttributeWrite` from `@weavesteps/domain`.
 - Produces: `/api/figures` validates each attribute (strict, per dance), seeds them into the figure DO, and returns 400 on an invalid attribute.
 
 - [ ] **Step 1: Write the failing test (add to figures.test.ts)**
@@ -685,7 +685,7 @@ it("rejects an attribute off the timing grid", async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/worker test -- figures`
+Run: `pnpm --filter @weavesteps/worker test -- figures`
 Expected: FAIL — attributes are not seeded (seedDoc still sends `attributes: []`); the bad-grid case returns 201, not 400.
 
 - [ ] **Step 3: Validate + forward in the route**
@@ -695,7 +695,7 @@ In `apps/worker/src/index.ts`:
 Add `parseAttributeWrite` to the domain import:
 
 ```ts
-import { can, newId, parseAttributeWrite } from "@ballroom/domain";
+import { can, newId, parseAttributeWrite } from "@weavesteps/domain";
 ```
 
 In the `/api/figures` handler, after `const { figureRef, name, dance, figureType } = parsed.data;` add validation, then seed the real attributes:
@@ -728,7 +728,7 @@ await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(figureRef)).seedDoc({
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/worker test -- figures`
+Run: `pnpm --filter @weavesteps/worker test -- figures`
 Expected: PASS (seed + reject cases). Re-run the existing `#187`/`#205` figure tests to confirm no regression.
 
 - [ ] **Step 5: Commit**
@@ -751,7 +751,7 @@ Expected: all green. (If `pnpm -w` script names differ, use the per-package scri
 
 - [ ] **Step 2: Sanity-check the catalog size**
 
-Run: `node -e "import('@ballroom/domain').then(m=>console.log(m.LIBRARY_FIGURES.length, m.LIBRARY_FIGURES.filter(f=>f.attributes).length))"` (or a small Vitest assertion if ESM resolution needs the build).
+Run: `node -e "import('@weavesteps/domain').then(m=>console.log(m.LIBRARY_FIGURES.length, m.LIBRARY_FIGURES.filter(f=>f.attributes).length))"` (or a small Vitest assertion if ESM resolution needs the build).
 Expected: `247 125` (247 total, 125 carrying attributes).
 
 - [ ] **Step 3: Push the branch**

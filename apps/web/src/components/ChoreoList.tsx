@@ -10,8 +10,8 @@
 // this screen mirrors the cap so a capped user sees the upsell without a round-trip.
 // Sample/template empty state + fork are US-045/US-037. Header search is US-046.
 
-import type { RoutineListItem, SearchResult } from "@ballroom/contract";
-import { DANCE_IDS, type DanceId } from "@ballroom/domain";
+import type { RoutineListItem, SearchResult } from "@weavesteps/contract";
+import { DANCE_IDS, type DanceId } from "@weavesteps/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { danceName, getLocale, pickMessages, useLocale, useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";

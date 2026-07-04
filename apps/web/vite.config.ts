@@ -23,8 +23,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {
-        name: "Ballroom Flow",
-        short_name: "Ballroom",
+        name: "Weave Steps",
+        short_name: "Weave Steps",
         theme_color: "#2f5d8f",
         background_color: "#e9e6df",
         display: "standalone",

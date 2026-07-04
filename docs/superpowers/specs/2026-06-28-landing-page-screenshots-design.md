@@ -6,7 +6,7 @@
 
 ## 1. Problem & Goals
 
-A not-authenticated user who opens Ballroom Flow today sees the full app shell
+A not-authenticated user who opens Weave Steps today sees the full app shell
 with a small "Sign in to build choreography" card (`apps/web/src/App.tsx`,
 `AppHome`, `!isSignedIn` branch). There is no explanation of what the product is
 and no sense of what it looks like in use.

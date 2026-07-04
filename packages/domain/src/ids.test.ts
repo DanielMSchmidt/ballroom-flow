@@ -6,7 +6,7 @@ import { importDomain } from "./__fixtures__";
 // PLAN §2.1, §10.2 invariant: "all ids are client-generated ULIDs".
 //
 // These prove the id primitive every document shape depends on. Product module
-// `@ballroom/domain` does not export `newId`/`ids` yet (M1 §9 1.1), so the body
+// `@weavesteps/domain` does not export `newId`/`ids` yet (M1 §9 1.1), so the body
 // dynamic-imports it; until then the suite is skipped (GREEN).
 //
 // RED→GREEN: implement `ids.ts` exporting `newId(): string` (a ULID) so each

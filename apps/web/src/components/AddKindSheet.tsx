@@ -1,5 +1,5 @@
-import type { RegistryKind } from "@ballroom/domain";
-import { isReservedKind, slugifyKind } from "@ballroom/domain";
+import type { RegistryKind } from "@weavesteps/domain";
+import { isReservedKind, slugifyKind } from "@weavesteps/domain";
 import { useCallback, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";

@@ -1,4 +1,4 @@
-import type { Attribute } from "@ballroom/domain";
+import type { Attribute } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
 import { durationLabel, resizeStepDuration, stepDuration } from "./timeline-ops";
 

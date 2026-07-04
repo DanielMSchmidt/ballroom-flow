@@ -1,6 +1,6 @@
 # Tooling & Test-Harness Assessment
 
-DevOps assessment of the Ballroom Flow dev tooling against [PLAN.md](PLAN.md)
+DevOps assessment of the Weave Steps dev tooling against [PLAN.md](PLAN.md)
 §10.3 ("Tooling, CI, fixtures"). Scope: the test **harness** (frameworks,
 configs, CI, hooks, DX) — **not** test cases or test-helper abstractions
 (factories, `seedDb`, `authedContext`, `makeTestJWT`, convergence helpers),

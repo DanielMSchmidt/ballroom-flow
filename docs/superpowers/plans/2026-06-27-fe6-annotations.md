@@ -13,7 +13,7 @@
 - TypeScript strict; **no `any`** without written justification (`noExplicitAny: error`).
 - Soft-delete only: deletable entities flip a `deletedAt` tombstone, never a hard removal — concurrent edits must still merge.
 - All content lives in Automerge docs; **D1 is a pure index** (no CRDT content in D1).
-- All ids are client-generated ULIDs (`newId()` from `@ballroom/domain`).
+- All ids are client-generated ULIDs (`newId()` from `@weavesteps/domain`).
 - Components never import `@automerge/automerge` or the RPC client directly — they go through `store/` (enforced by `routine-store.test.ts`).
 - Technique/family matching is identity-based and pure (`matchesFigureType`); the co-membership gate is the worker's concern, never the domain's.
 - Index every D1 query; an `EXPLAIN QUERY PLAN` assertion must show **no SCAN** for the family-note lookup.
@@ -110,7 +110,7 @@ describe("routine annotation mutators", () => {
 });
 ```
 
-- [ ] **Step 2: Run → FAIL.** `pnpm --filter @ballroom/domain test doc-routine` — expect "addAnnotation is not a function".
+- [ ] **Step 2: Run → FAIL.** `pnpm --filter @weavesteps/domain test doc-routine` — expect "addAnnotation is not a function".
 
 - [ ] **Step 3: Implement** in `doc-routine.ts`:
 
@@ -154,7 +154,7 @@ export function softDeleteReply(doc: A.Doc<RoutineDoc>, annotationId: string, re
 
 Add imports `AnnotationKind, Anchor` to the existing type import. **Note:** `readRoutine` already drops tombstoned annotations but NOT tombstoned replies — extend its annotation map to `replies: filterDeleted(a.replies, opts)`.
 
-- [ ] **Step 4: Run → PASS.** `pnpm --filter @ballroom/domain test doc-routine`
+- [ ] **Step 4: Run → PASS.** `pnpm --filter @weavesteps/domain test doc-routine`
 - [ ] **Step 5: Re-export** in `index.ts` (add the four names to the `doc-routine` export line). Run `pnpm -r typecheck`.
 - [ ] **Step 6: Commit** — `git commit -am "feat(domain): routine annotation mutators (US-039)"`
 
@@ -208,7 +208,7 @@ it("a this-dance note matches only that dance", () => {
 });
 ```
 
-- [ ] **Step 2: Run → FAIL.** `pnpm --filter @ballroom/domain test doc-account`
+- [ ] **Step 2: Run → FAIL.** `pnpm --filter @weavesteps/domain test doc-account`
 - [ ] **Step 3: Implement** `doc-account.ts`. `addFamilyNote` pushes an `Annotation` whose single anchor is `{ type: "figureType", figureType, danceScope }`. `resolveFamilyNotesFor` iterates figures × annotations, calling `matchesFigureType(anchor, figure)` for each `figureType` anchor; build the `figureRef → Annotation[]` map. Add `AccountDoc` to `doc-types.ts`.
 - [ ] **Step 4: Run → PASS.** Re-export in `index.ts`; `pnpm -r typecheck`.
 - [ ] **Step 5: Commit** — `git commit -am "feat(domain): account doc + family-note resolution (US-040)"`

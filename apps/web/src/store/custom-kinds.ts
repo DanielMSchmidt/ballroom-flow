@@ -2,9 +2,10 @@
 //
 // Mirrors the family-notes.ts pattern: thin wrappers around apiGet/apiPost that
 // components never call directly (they go through the routine store seam).
-import { zAccountCustomKinds } from "@ballroom/contract";
-import type { RegistryKind } from "@ballroom/domain";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { zAccountCustomKinds } from "@weavesteps/contract";
+import type { RegistryKind } from "@weavesteps/domain";
 import { useAppAuth } from "../auth/app-auth";
 import { apiGet, apiPost } from "../lib/rpc";
 

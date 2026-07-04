@@ -1,5 +1,5 @@
 // US-046 — search REST helper.
-import { zSearchResults } from "@ballroom/contract";
+import { zSearchResults } from "@weavesteps/contract";
 import { describe, expect, it, vi } from "vitest";
 
 import { search } from "./search";

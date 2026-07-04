@@ -18,7 +18,7 @@ import {
   SYNC_FRAME_CHANGE,
   SYNC_FRAME_SNAPSHOT,
   SYNC_RESYNC_CLOSE_CODE,
-} from "@ballroom/contract";
+} from "@weavesteps/contract";
 import {
   type Anchor,
   type AnnotationKind,
@@ -40,7 +40,7 @@ import {
   readFigure,
   readRoutine,
   softDeleteAnnotation,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
 import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
 import { resolveEffectiveRole } from "./db/membership";
@@ -83,7 +83,7 @@ function headsEqual(a: string[], b: string[]): boolean {
  * envelope). `tag` is SYNC_FRAME_SNAPSHOT (whole-doc `A.save` blob) or
  * SYNC_FRAME_CHANGE (one incremental change); the client strips byte 0 and
  * routes on it. Only server→client frames are tagged — client→server changes
- * stay raw (see @ballroom/contract's SYNC_FRAME_* doc for the asymmetry).
+ * stay raw (see @weavesteps/contract's SYNC_FRAME_* doc for the asymmetry).
  */
 function frame(tag: number, payload: Uint8Array): Uint8Array {
   const out = new Uint8Array(payload.byteLength + 1);
@@ -527,7 +527,7 @@ export class DocDO extends DurableObject<Env> {
   /**
    * A change arrived from a connected client. Client→server binary frames are
    * RAW Automerge change bytes — NOT tagged (only server→client frames carry the
-   * D10 1-byte envelope; see @ballroom/contract SYNC_FRAME_* for the asymmetry).
+   * D10 1-byte envelope; see @weavesteps/contract SYNC_FRAME_* for the asymmetry).
    * We apply (idempotently) and relay to the OTHER clients so all connections
    * converge. A reconnecting client's resend of its unacked changes (#161) also
    * arrives here as raw frames; the idempotence guard makes re-delivery a no-op.

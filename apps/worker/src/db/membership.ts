@@ -2,9 +2,9 @@
 //
 // The reads the permission boundary needs: a user's ACTIVE role on ONE document,
 // and the document's owner (for owner elevation). The pure role → capability
-// mapping lives in @ballroom/domain (capabilitiesFor/can); this module only does
+// mapping lives in @weavesteps/domain (capabilitiesFor/can); this module only does
 // the I/O.
-import type { EffectiveRole, MembershipRole } from "@ballroom/domain";
+import type { EffectiveRole, MembershipRole } from "@weavesteps/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { isAdmin } from "./admin";

@@ -25,7 +25,7 @@ import {
   type Placement,
   type RegistryKind,
   type Section,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { pickMessages, useMessages } from "../i18n";
 import { assembleMessages } from "../i18n/messages/assemble";
@@ -2053,11 +2053,11 @@ function ThreadSheetContents({
 }: {
   routineId: string;
   anchor: { figureRef: string; count?: number };
-  annotations: import("@ballroom/domain").Annotation[];
+  annotations: import("@weavesteps/domain").Annotation[];
   placements: ResolvedPlacement[];
   role: MembershipRole;
   currentUserId?: string;
-  onCreate: (input: { kind: import("@ballroom/domain").AnnotationKind; text: string }) => void;
+  onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
 }) {

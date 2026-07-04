@@ -1,7 +1,7 @@
 # Adversarial Critique — Data Model & Sync Correctness
 
 **Reviewer angle:** local-first / CRDT / distributed-data correctness.
-**Target:** `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` (+ `research/platform.md`).
+**Target:** `docs/superpowers/specs/2026-06-24-weave-steps-design.md` (+ `research/platform.md`).
 **Date:** 2026-06-24.
 
 The spec is unusually careful and self-aware — it *names* the central tension (§5.3) and lists 34 open questions. That honesty is good, but it also means several of the hardest correctness problems are filed under "open question" and treated as deferrable when they are actually **architectural prerequisites**: you cannot build §5.3/§6 correctly without resolving them first. The critique below is harshest exactly where the spec is most confident ("merges are trivial," "rejected on reconnect," "additive later").

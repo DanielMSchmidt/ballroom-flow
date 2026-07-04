@@ -2,9 +2,9 @@
 //
 // Mirrors the family-notes.ts pattern: thin wrappers around apiGet/apiPost that
 // components never call directly (they go through the store seam).
-import type { SearchResults } from "@ballroom/contract";
-import { zSearchResults } from "@ballroom/contract";
-import type { DanceId } from "@ballroom/domain";
+import type { SearchResults } from "@weavesteps/contract";
+import { zSearchResults } from "@weavesteps/contract";
+import type { DanceId } from "@weavesteps/domain";
 import { apiGet } from "../lib/rpc";
 
 /** Search routines + figures by query and optional dance filter (US-046). */

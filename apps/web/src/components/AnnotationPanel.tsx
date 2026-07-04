@@ -13,7 +13,7 @@
 // Styling: uses the `../ui` primitives (Button, Chip) so the panel matches the
 // rest of the app — 44px touch targets (#3), focus rings (#7), the shared
 // type/colour scale — and keeps the accessible names/roles the tests rely on.
-import type { Annotation, AnnotationKind, Role } from "@ballroom/domain";
+import type { Annotation, AnnotationKind, Role } from "@weavesteps/domain";
 import { useState } from "react";
 import { getLocale, pickMessages, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

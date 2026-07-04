@@ -8,8 +8,8 @@ const en = {
   signInInvitedTitle: "You’ve been invited to a choreo",
   signInTitle: "Sign in to build choreography",
   signInInvitedBody:
-    "Sign in to open the shared choreography — Ballroom Flow keeps it in sync across your devices.",
-  signInBody: "Ballroom Flow keeps your choreos in sync across your devices.",
+    "Sign in to open the shared choreography — Weave Steps keeps it in sync across your devices.",
+  signInBody: "Weave Steps keeps your choreos in sync across your devices.",
   // InviteRedeem — /invite/:token.
   redeemErrorTitle: "This invite can’t be opened",
   redeemErrorBody: "The link may be invalid, expired, or already used. Ask for a fresh invite.",
@@ -65,8 +65,8 @@ const de: typeof en = {
   signInInvitedTitle: "Du wurdest zu einer Choreo eingeladen",
   signInTitle: "Melde dich an, um Choreografien zu erstellen",
   signInInvitedBody:
-    "Melde dich an, um die geteilte Choreografie zu öffnen — Ballroom Flow hält sie auf allen deinen Geräten synchron.",
-  signInBody: "Ballroom Flow hält deine Choreos auf allen deinen Geräten synchron.",
+    "Melde dich an, um die geteilte Choreografie zu öffnen — Weave Steps hält sie auf allen deinen Geräten synchron.",
+  signInBody: "Weave Steps hält deine Choreos auf allen deinen Geräten synchron.",
   // InviteRedeem.
   redeemErrorTitle: "Diese Einladung kann nicht geöffnet werden",
   redeemErrorBody:

@@ -2,8 +2,8 @@
 // global-figure read/write boundary (resolveEffectiveRole), and the admin-gated
 // seed route.
 import { env, SELF } from "cloudflare:test";
-import type { LibraryFigure } from "@ballroom/domain";
-import { globalFigureRef } from "@ballroom/domain";
+import type { LibraryFigure } from "@weavesteps/domain";
+import { globalFigureRef } from "@weavesteps/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { resolveEffectiveRole } from "./db/membership";
 import type { DocNamespace } from "./test-support/doc-do-api";

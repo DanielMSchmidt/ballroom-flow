@@ -28,7 +28,7 @@ import {
   type RoutineDoc,
   resolveFigureBars,
   slowQuickTokens,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";

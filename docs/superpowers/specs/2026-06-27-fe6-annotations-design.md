@@ -7,7 +7,7 @@
 
 ## Goal
 
-Turn Ballroom Flow from a live co-editor into the collaborative *teaching* tool it was
+Turn Weave Steps from a live co-editor into the collaborative *teaching* tool it was
 designed to be: partners and coaches annotate points and figures, thread replies, keep a
 shared lessons/practice journal, and — the headline — write a **figure-family note once**
 that surfaces on every matching figure across their routines, visible to co-members.

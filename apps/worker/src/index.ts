@@ -4,7 +4,7 @@ import {
   zIssueInvite,
   zRegistryKind,
   zSaveToLibrary,
-} from "@ballroom/contract";
+} from "@weavesteps/contract";
 import {
   CURRENT_SCHEMA_VERSION,
   can,
@@ -14,7 +14,7 @@ import {
   LIBRARY_FIGURES,
   newId,
   parseAttributeWrite,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";

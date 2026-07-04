@@ -1,4 +1,4 @@
-# Scope / YAGNI / Sequencing Critique — Ballroom Flow
+# Scope / YAGNI / Sequencing Critique — Weave Steps
 
 **Reviewer stance:** adversarial, focused on scope right-sizing, YAGNI, build-vs-buy, and sequencing for a 2–3 person hobby project where *quality and maintainability beat feature count*. The spec is well-written and unusually disciplined about deferring features — but it is disciplined about the wrong axis. It cuts *product features* hard while leaving the *infrastructure* maximalist. The result is a spec that reads lean but builds heavy.
 

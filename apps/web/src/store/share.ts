@@ -1,8 +1,9 @@
 // store/ seam (US-024 Share screen). Components touch ONLY the store + ui — never
 // lib/rpc directly (§3). Wraps the worker Share REST surface: the member roster,
 // remove-member (soft-delete), and issue-invite (reuses the US-023 endpoint).
-import type { IssueInvite } from "@ballroom/contract";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { IssueInvite } from "@weavesteps/contract";
 import { useAppAuth } from "../auth/app-auth";
 import { apiDelete, apiGet, apiPost } from "../lib/rpc";
 

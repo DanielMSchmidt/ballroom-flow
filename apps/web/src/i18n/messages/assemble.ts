@@ -3,7 +3,7 @@
 // plus its pure timeline-ops helpers. Figure names from the domain library are
 // canonical syllabus names and are NEVER translated; alignment qualifiers/
 // directions are localized for DISPLAY only — the stored values stay English.
-import type { Alignment } from "@ballroom/domain";
+import type { Alignment } from "@weavesteps/domain";
 
 const en = {
   // Header / editing toolbar

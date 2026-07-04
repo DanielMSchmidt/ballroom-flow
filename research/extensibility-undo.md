@@ -1,7 +1,7 @@
 # Extensibility Review — Undo / Op-Log System
 
 **Reviewer angle:** Forward-extensibility and correctness of the per-routine `EditOp` log as the app grows (new op kinds, more editors, the deferred offline/CRDT increment).
-**Target:** `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` — §2.1 (EditOp), §5.4 (concurrent editing & undo), §9 (testing). Prior notes: `research/critique-sync.md`, `research/critique-testing.md`.
+**Target:** `docs/superpowers/specs/2026-06-24-weave-steps-design.md` — §2.1 (EditOp), §5.4 (concurrent editing & undo), §9 (testing). Prior notes: `research/critique-sync.md`, `research/critique-testing.md`.
 **Date:** 2026-06-24.
 
 The op-log is the right idea, and the online-only/server-authoritative move makes it tractable. But the spec describes it as a *feature* ("undo my last change") rather than as a *log discipline*. The gap between those two framings is exactly where it will rot as op kinds multiply and as the second editor's cursor lands inside the first editor's subtree. The spec's three load-bearing rules — "inverse reverses forward," "refuse undo if superseded," "per-user undo is well-defined because each undo targets that user's latest op" — are each true for the easy ops (set a slot) and each quietly false for the structural ops (delete-with-cascade, reorder, save-a-copy) and for causally-entangled cross-user ops. Those are the ops the spec hasn't drawn yet, and they're most of the future.

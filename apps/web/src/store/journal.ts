@@ -5,9 +5,9 @@
 // DO alarm) and account-scoped figureType notes (figure_type_note_index). The
 // worker owns visibility (the user + co-members on shared routines). Components
 // reach this ONLY through the store — never lib/rpc directly (the §3 boundary).
-import type { JournalEntry as ContractJournalEntry } from "@ballroom/contract";
-import type { Anchor, AnnotationKind } from "@ballroom/domain";
-import { LIBRARY_FIGURES } from "@ballroom/domain";
+import type { JournalEntry as ContractJournalEntry } from "@weavesteps/contract";
+import type { Anchor, AnnotationKind } from "@weavesteps/domain";
+import { LIBRARY_FIGURES } from "@weavesteps/domain";
 import { getLocale, pickMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import { apiGet } from "../lib/rpc";

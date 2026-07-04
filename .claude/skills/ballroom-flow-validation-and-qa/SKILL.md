@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-validation-and-qa
-description: Load when writing or modifying ANY test in ballroom-flow, deciding which test layer(s) a change needs, judging whether a feature is "done", touching fixtures/harness helpers, or reasoning about coverage thresholds and TEST-MAP.md. Keywords - vitest, Playwright, @smoke, TDD, unskip, DO id, applyD1Migrations, expectIndexedQuery, convergence test, coverage ratchet.
+description: Load when writing or modifying ANY test in weave-steps, deciding which test layer(s) a change needs, judging whether a feature is "done", touching fixtures/harness helpers, or reasoning about coverage thresholds and TEST-MAP.md. Keywords - vitest, Playwright, @smoke, TDD, unskip, DO id, applyD1Migrations, expectIndexedQuery, convergence test, coverage ratchet.
 ---
 
-# Ballroom Flow — validation & QA runbook
+# Weave Steps — validation & QA runbook
 
 How to prove a change is correct in this repo: what "done" means, which test layer owns what,
 the harness conventions that break the suite if ignored, per-layer recipes, and coverage rules.
@@ -46,10 +46,10 @@ if it belongs in the PR gate, and passes.
 
 | Layer | Runner | What it proves | Files | Run |
 |---|---|---|---|---|
-| Domain unit/property | vitest, Node, in-memory Automerge + fast-check | Doc schemas, fork/variant resolution (`resolveFigure` per-beat ownership), CRDT convergence/commutativity/idempotence, per-user undo, registry/Zod, timing, migration ladder | `packages/domain/src/*.test.ts` | `pnpm --filter @ballroom/domain test` |
+| Domain unit/property | vitest, Node, in-memory Automerge + fast-check | Doc schemas, fork/variant resolution (`resolveFigure` per-beat ownership), CRDT convergence/commutativity/idempotence, per-user undo, registry/Zod, timing, migration ladder | `packages/domain/src/*.test.ts` | `pnpm --filter @weavesteps/domain test` |
 | Worker / DO / D1 | `@cloudflare/vitest-pool-workers` in **real workerd** | Per-doc Durable Object sync + SQLite persistence, permission boundary at the connection, quota, invites, alarm compaction/projection, every D1 query indexed | `apps/worker/src/**/*.test.ts` | `pnpm --filter worker test` |
 | Component + a11y | vitest + jsdom + Testing Library + vitest-axe | Screens render registry-driven UI, role gating, toasts, axe/WCAG assertions | `apps/web/src/**/*.test.tsx` | `pnpm --filter web test` |
-| Contract | vitest (types + Zod) | Shared API shapes; drift fails `tsc` | `packages/contract/src/*.test.ts` | `pnpm --filter @ballroom/contract test` |
+| Contract | vitest (types + Zod) | Shared API shapes; drift fails `tsc` | `packages/contract/src/*.test.ts` | `pnpm --filter @weavesteps/contract test` |
 | E2E journeys | Playwright, 3 projects (`chromium-desktop`, `mobile-chrome`, `mobile-safari`) | Real browsers against real workerd: authoring, two-client convergence, fork independence, permissions/quota/invite, undo, PWA/a11y | `apps/web/e2e/*.spec.ts` | `pnpm test:e2e` (all) / `pnpm test:e2e:smoke` |
 
 Push correctness **down** the pyramid (PLAN.md §10.1): CRDT/fork/undo logic is proven exhaustively

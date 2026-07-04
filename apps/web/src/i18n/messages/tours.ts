@@ -11,7 +11,7 @@ const en = {
   },
   choreos: {
     welcome: {
-      title: "Welcome to Ballroom Flow",
+      title: "Welcome to Weave Steps",
       description:
         "This is your choreo list — every routine you build or join lives here. Here's a quick look around; skip any time.",
     },
@@ -108,7 +108,7 @@ const de: typeof en = {
   },
   choreos: {
     welcome: {
-      title: "Willkommen bei Ballroom Flow",
+      title: "Willkommen bei Weave Steps",
       description:
         "Das ist deine Choreo-Liste — jede Choreografie, die du baust oder der du beitrittst, findest du hier. Hier ein kurzer Rundgang; überspringen geht jederzeit.",
     },

@@ -7,7 +7,7 @@
 // TYPE tag — a SYNC_FRAME_SNAPSHOT (the whole doc, `A.load`ed + `A.merge`d on
 // (re)connect) or a SYNC_FRAME_CHANGE (one incremental change to apply). Local
 // edits are sent as RAW change bytes (client→server frames are untagged — see
-// @ballroom/contract SYNC_FRAME_* for the asymmetry). On (re)connect, after
+// @weavesteps/contract SYNC_FRAME_* for the asymmetry). On (re)connect, after
 // merging the catch-up snapshot, the client RESENDS the local changes the server
 // is missing (#161), so an edit made into a dying socket is never silently lost.
 // Malformed frames are dropped (the wire is untrusted until US-021).
@@ -15,7 +15,7 @@
 // The WebSocket factory is injectable so the seam is testable without a live
 // server (jsdom has no WS server); production passes the global `WebSocket`.
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP, SYNC_FRAME_CHANGE, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_CHANGE, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import { reconcile } from "./reconcile";
 
 /** Minimal structural view of a WebSocket (so tests can inject a fake). */

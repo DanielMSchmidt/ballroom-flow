@@ -8,7 +8,7 @@
 // the PROFILE COLOUR picker — the six canonical IDENTITY_COLORS slots — that
 // tints every note & reply of yours across shared routines (DP #5). Leader /
 // Follower is deliberately *not* here: it's a per-figure timeline toggle.
-import type { RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@weavesteps/domain";
 import { useEffect, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { type Locale, setLocale, useLocale, useMessages } from "../i18n";

@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Test-only types for the Ballroom Flow document graph.
+// Test-only types for the Weave Steps document graph.
 //
 // The document-graph shapes now RE-EXPORT the real product types from
-// `@ballroom/domain` (doc-types.ts / dances.ts), so the fixtures and the product
+// `@weavesteps/domain` (doc-types.ts / dances.ts), so the fixtures and the product
 // can no longer drift: a change to a product type flows straight into the
 // factories/sample/tests. (Originally these were hand-mirrored structural copies
 // because the product modules didn't exist yet — that's the M1-domain-close

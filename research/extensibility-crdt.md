@@ -1,7 +1,7 @@
 # Extensibility Review — v1 (online-only) → v2 (offline-first / CRDT)
 
 **Reviewer angle:** one axis only — does the v2 spec keep the CRDT/offline door genuinely open, or quietly paint into a corner?
-**Target:** `docs/superpowers/specs/2026-06-24-ballroom-flow-design.md` (§2 entities/IDs, §5.4 concurrency/LWW/op-log, §7 architecture, §10 out-of-scope).
+**Target:** `docs/superpowers/specs/2026-06-24-weave-steps-design.md` (§2 entities/IDs, §5.4 concurrency/LWW/op-log, §7 architecture, §10 out-of-scope).
 **Context:** `research/platform.md` §2 (TinyBase MergeableStore, Yjs, fractional indexing, DOs); `research/critique-sync.md` (the prior LWW-per-cell / migration / move-across-parent critique).
 **Date:** 2026-06-24.
 

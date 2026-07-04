@@ -4,8 +4,8 @@
 // Create EAGER-projects the registry row (+ the owner membership row) so the
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
 
-import type { RoutineListItem } from "@ballroom/contract";
-import type { DanceId } from "@ballroom/domain";
+import type { RoutineListItem } from "@weavesteps/contract";
+import type { DanceId } from "@weavesteps/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";

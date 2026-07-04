@@ -34,13 +34,13 @@ run_check() {
 echo "suite-health: lint + typecheck + tests (per workspace)"
 echo "------------------------------------------------------"
 run_check "lint (biome, repo)"        pnpm lint
-run_check "typecheck @ballroom/domain"   pnpm --filter @ballroom/domain typecheck
-run_check "typecheck @ballroom/contract" pnpm --filter @ballroom/contract typecheck
+run_check "typecheck @weavesteps/domain"   pnpm --filter @weavesteps/domain typecheck
+run_check "typecheck @weavesteps/contract" pnpm --filter @weavesteps/contract typecheck
 run_check "typecheck worker"          pnpm --filter worker typecheck
 run_check "typecheck web"             pnpm --filter web typecheck
 if [ "${SKIP_TESTS:-0}" != "1" ]; then
-  run_check "test @ballroom/domain"   pnpm --filter @ballroom/domain test
-  run_check "test @ballroom/contract" pnpm --filter @ballroom/contract test
+  run_check "test @weavesteps/domain"   pnpm --filter @weavesteps/domain test
+  run_check "test @weavesteps/contract" pnpm --filter @weavesteps/contract test
   run_check "test worker (workerd)"   pnpm --filter worker test
   run_check "test web (jsdom)"        pnpm --filter web test
 fi

@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-diagnostics-and-tooling
-description: Load when you need to MEASURE instead of eyeball in ballroom-flow — check a D1 query plan (SCAN vs SEARCH), read coverage thresholds, run/interpret axe a11y sweeps, open Playwright traces, reproduce a flake deterministically (--repeat-each), inspect Durable Object internals (compaction, persistence, alarms), assert CRDT convergence correctly, check bundle size, verify generated-file drift, or decode noisy-but-harmless test/build output.
+description: Load when you need to MEASURE instead of eyeball in weave-steps — check a D1 query plan (SCAN vs SEARCH), read coverage thresholds, run/interpret axe a11y sweeps, open Playwright traces, reproduce a flake deterministically (--repeat-each), inspect Durable Object internals (compaction, persistence, alarms), assert CRDT convergence correctly, check bundle size, verify generated-file drift, or decode noisy-but-harmless test/build output.
 ---
 
-# Ballroom Flow — diagnostics & measurement toolbox
+# Weave Steps — diagnostics & measurement toolbox
 
 Every claim below was verified against the repo on 2026-07-02 (HEAD `70eed7e`, branch
 `development`). This skill is the instrument catalog: what each measurement tool is, how to
@@ -67,7 +67,7 @@ printing `PASS|FAIL  <check>  <seconds>` per line. Full run ~90s warm; verified 
 
 ```
 PASS  lint (biome, repo)              1s
-PASS  typecheck @ballroom/domain      3s
+PASS  typecheck @weavesteps/domain      3s
 ...
 PASS  test worker (workerd)          47s
 PASS  test web (jsdom)               26s
@@ -130,7 +130,7 @@ on stderr is harmless (Node 22).
 
 ```bash
 pnpm coverage                              # all workspaces (~65s)
-pnpm --filter @ballroom/domain coverage    # one workspace
+pnpm --filter @weavesteps/domain coverage    # one workspace
 pnpm --filter worker coverage
 ```
 

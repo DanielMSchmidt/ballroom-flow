@@ -1,4 +1,4 @@
-# Platform & Architecture Research — Ballroom Flow
+# Platform & Architecture Research — Weave Steps
 
 **App:** Collaborative, offline-first, mobile-first PWA — a ballroom dance choreography builder.
 **Data shape:** Ordered lists of figures/steps + attribute tags + threaded comments + per-user journals with media (voice/photo/video).

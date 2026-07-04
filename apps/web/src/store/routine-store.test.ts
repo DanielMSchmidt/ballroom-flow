@@ -1,9 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
-import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@ballroom/domain";
-import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@ballroom/domain";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
+import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@weavesteps/domain";
+import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
 import { type OpenOptions, openRoutine } from "./routine";
 

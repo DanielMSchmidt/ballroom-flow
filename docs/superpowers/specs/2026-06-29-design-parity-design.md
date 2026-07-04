@@ -9,7 +9,7 @@
 
 ## 1. Goal & success criteria
 
-Make the Ballroom Flow PWA **look and behave like the canonical design** (wireframes + prototype), extend the
+Make the Weave Steps PWA **look and behave like the canonical design** (wireframes + prototype), extend the
 backend only where parity requires it, and ensure **every user workflow is tested and every user-error / edge
 case is accounted for**.
 
@@ -51,7 +51,7 @@ real-worker E2E tests. So this is a **parity / polish / coverage** effort, not g
 
 **The real gaps (design ↔ app), confirmed by screenshot diff:**
 
-- **App shell:** persistent "Ballroom Flow / Signed in" header on inner screens; design uses no app-name header
+- **App shell:** persistent "Weave Steps / Signed in" header on inner screens; design uses no app-name header
   inner — tabs are the nav, each screen has its own compact header. Tabs are `useState` (not URL-routed).
 - **Assemble READING (frame 1.6):** biggest gap. App shows a busy text-button header (Undo/Redo/Make a copy/
   List view/Share), **always-on abbreviated columns** (Ri/Bo/Fw/Sw/Tn) with tall white step-cards, plain
