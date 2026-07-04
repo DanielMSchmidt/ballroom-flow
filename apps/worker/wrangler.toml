@@ -3,12 +3,25 @@ main = "src/index.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
 
+# US-049 (M8): Smart Placement — the worker's hot path is D1 + DO round-trips,
+# so let Cloudflare place it near the data instead of the client. Inherited by
+# named environments (placement is not a binding), declared once here.
+[placement]
+mode = "smart"
+
+# US-049 (M8): product metrics (Analytics Engine). writeMetric() no-ops when the
+# binding is absent, so local dev without AE still runs. Bindings are NOT
+# inherited by named environments — redeclared per env below.
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_dev"
+
 # Serve the built SPA from the same Worker. API routes run worker-first;
 # everything else falls back to index.html (client-side routing).
 [assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # --- Default config: local `wrangler dev` + the vitest-pool-workers tests.
 # Miniflare uses a local SQLite file and ignores database_id.
@@ -18,6 +31,61 @@ database_name = "ballroom-flow-dev"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
+# Per-document Automerge host (US-014, PLAN §6/D23): one SQLite-backed DO per
+# routine/figure document. The DocDO class is exported from src/index.ts.
+[[durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
+# DO class migration — `new_sqlite_classes` because DocDO uses ctx.storage.sql
+# (SQLite-backed). Top-level migrations apply to all environments.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DocDO"]
+
+# --- E2E (#191): local-only environment Playwright runs against. Serves the
+# E2E-built SPA (VITE_E2E=1) + the API + WS at one origin, with the FIXED test
+# CLERK_JWT_KEY so our minted test JWTs verify networklessly (the same boundary
+# the worker unit tests exercise), and E2E_TEST_ROUTES=1 to mount /api/test/*.
+# NEVER deployed — `wrangler dev --env e2e` only. The PEM mirrors
+# src/test-support/test-keys.ts (a committed throwaway test key).
+#
+# Serves from `dist-e2e`, the E2E-only build dir (see apps/web/e2e/serve.sh), NOT
+# the deployable `dist` the staging/production envs ship. The E2E bundle carries
+# the VITE_E2E=1 auth bypass, so keeping it out of `dist` is what stops it from
+# ever reaching a real deploy.
+[env.e2e]
+name = "ballroom-flow-e2e"
+
+[env.e2e.assets]
+directory = "../web/dist-e2e"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/docs/*"]
+
+[env.e2e.vars]
+E2E_TEST_ROUTES = "1"
+CLERK_JWT_KEY = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuotPIYxUw/M786JWuF21
+uTXQU/Ms1W2/xPbhQMomHib+DyPGr34H9K76tUwdzGvOQ+MKYRicvHH+7b6CNXZo
+Jq40ezCeC7HE0ezWay0SjN9IW2G897b+9tx0LoJu5ELj4I7cyO7F6mP8SzYylgQh
+SqL3ZYINQ1oAcxmvRqSki0YNqUGqdjlMVoVI1WyB9zPD6mr13DGaZI6osyt3MbC2
+KA52WIUJMyi4ZqYEHlY8nQclD4TgQIKACqRA1UZdsuoEv3Aoa4oVT8hnzRqWvFJF
+bSVofsrtGOIODLaticiTzdzsc+Q6obpYrayT8FfePj9f++Mc6dcomhCgurn8126N
+dQIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[[env.e2e.d1_databases]]
+binding = "DB"
+database_name = "ballroom-flow-e2e"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[env.e2e.durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
 # --- Staging (deployed from the `development` branch).
 [env.staging]
 name = "ballroom-flow-staging"
@@ -25,7 +93,7 @@ name = "ballroom-flow-staging"
 [env.staging.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # Bindings are NOT inherited by named environments — redeclare per env.
 # Replace database_id after `wrangler d1 create ballroom-flow-staging`.
@@ -35,6 +103,14 @@ database_name = "ballroom-flow-staging"
 database_id = "ad9ea4d2-3687-411d-a664-a938dc91b541"
 migrations_dir = "migrations"
 
+[[env.staging.durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_staging"
+
 # --- Production (deployed from the `main` branch).
 [env.production]
 name = "ballroom-flow-production"
@@ -42,7 +118,7 @@ name = "ballroom-flow-production"
 [env.production.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/docs/*"]
 
 # Replace database_id after `wrangler d1 create ballroom-flow-production`.
 [[env.production.d1_databases]]
@@ -50,3 +126,11 @@ binding = "DB"
 database_name = "ballroom-flow-production"
 database_id = "55ba153e-a24e-4cf6-8579-213b236abae5"
 migrations_dir = "migrations"
+
+[[env.production.durable_objects.bindings]]
+name = "DOC_DO"
+class_name = "DocDO"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "ballroom_flow_production"

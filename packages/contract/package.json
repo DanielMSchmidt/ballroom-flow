@@ -9,10 +9,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@ballroom/domain": "workspace:*",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.6"
   }
 }

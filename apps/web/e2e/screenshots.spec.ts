@@ -1,0 +1,122 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { expect, test } from "@playwright/test";
+import { seedAuth } from "./support/auth";
+import { resetDb, seedDb } from "./support/fixtures";
+
+// ─────────────────────────────────────────────────────────────────────────
+// @screenshots — NOT in @smoke. Drives the REAL app (via the #191 harness) to
+// build the cited Bronze International Waltz amalgamation and capture the
+// landing-page photos. Output PNGs are the committed marketing assets.
+// Source routine: dancecentral.info International Waltz choreography.
+// ─────────────────────────────────────────────────────────────────────────
+
+const OUT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../src/marketing/screenshots",
+);
+const shot = (name: string) => path.join(OUT, name);
+
+// Long Side then Short Side of the floor (the app's section model).
+const LONG_SIDE = [
+  "Natural Spin Turn",
+  "Reverse Turn",
+  "Double Reverse Spin",
+  "Whisk",
+  "Chassé from PP",
+  "Hesitation Change",
+];
+const SHORT_SIDE = ["Reverse Turn", "Basic Weave", "Chassé from PP"];
+
+test.describe("@screenshots landing imagery", () => {
+  test("build a Waltz routine and capture the marketing screenshots", async ({ page }) => {
+    // This test creates 2 sections + 9 figures — give it plenty of time.
+    test.setTimeout(180_000);
+
+    const user = "user_demo";
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: user, displayName: "Ava Lindqvist", identityColor: "#b8336a" }],
+    });
+    await seedAuth(page, user);
+    await page.goto("/");
+
+    // 1. Create-routine modal (Waltz).
+    await page.getByRole("button", { name: /new choreo/i }).click();
+    await page.getByLabel("Choreo name").fill("Bronze Waltz");
+    // Waltz is the pre-selected chip in the New-choreo sheet.
+    await expect(page.getByRole("dialog", { name: "New choreography" })).toBeVisible();
+    await page.screenshot({ path: shot("create.png") });
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /create choreo/i })
+      .click();
+
+    // Editor ready.
+    await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 2. Two sections + their figures.
+    //    Use .last() on "Add figure" so we always target the most recently added
+    //    section (when Short Side exists, both sections have an "Add figure" button).
+    for (const [section, figures] of [
+      ["Long Side", LONG_SIDE],
+      ["Short Side", SHORT_SIDE],
+    ] as const) {
+      await page.getByRole("button", { name: "Add section" }).click();
+      await page.getByLabel("Section name").fill(section);
+      await page.getByLabel("Section name").press("Enter");
+      await expect(page.getByRole("heading", { name: section })).toBeVisible({ timeout: 15_000 });
+      for (const figure of figures) {
+        await page.getByRole("button", { name: "Add figure" }).last().click();
+        await page.getByLabel("Figure name").fill(figure);
+        await page.getByLabel("Figure name").press("Enter");
+        await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
+      }
+    }
+    // Scroll to top and wait for section-added toasts to clear before screenshots.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.getByText("Added Long Side")).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Added Short Side")).not.toBeVisible({ timeout: 10_000 });
+
+    // Hero: ASSEMBLE editor overview — "Your whole routine, figure by figure."
+    // Captured at default viewport (punchy top-of-routine shot, not fullPage).
+    await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible();
+    await expect(page.getByText("Natural Spin Turn").first()).toBeVisible();
+    await page.screenshot({ path: shot("hero.png") });
+
+    // Full-page assemble view showing both Long + Short sections.
+    await page.screenshot({ path: shot("sections.png"), fullPage: true });
+
+    // 3. Notate the Natural Spin Turn across technique dimensions.
+    //    "Edit steps: …" matches the aria-label on PlacementCard (canEdit → "Edit").
+    await page
+      .getByRole("button", { name: /edit steps: Natural Spin Turn/i })
+      .first()
+      .click();
+    // The full-screen bars-driven grid opens (frame 1.11): every timing × every
+    // attribute column. The Natural Spin Turn is a charted catalog figure, so
+    // count 1's recap already reads its leader headline — a good hero shot of the
+    // notation surface without opening a cell overlay.
+    await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
+    await page.screenshot({ path: shot("notate.png") });
+
+    // 4. Lanes cross-step grid — the "Lanes" button lives INSIDE the notation
+    //    sheet (Assemble.tsx), so click it while the sheet is still open.
+    //    Element-level screenshot crops tightly to the grid so the beats + chips
+    //    dominate the frame rather than being buried under annotation chrome.
+    await page.getByRole("button", { name: "Lanes" }).click();
+    await expect(page.getByRole("grid")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("grid").screenshot({ path: shot("lanes.png") });
+
+    // Close the notation sheet before navigating to reading view.
+    await page.keyboard.press("Escape");
+
+    // 5. Reading view (read-only share surface).
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: shot("reading.png"), fullPage: true });
+  });
+});
