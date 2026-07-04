@@ -101,6 +101,7 @@ export {
   numberRoutineBeats,
   offBeatSymbol,
   type RoutineBeatEntry,
+  slowQuickTokens,
 } from "./timing";
 export { redoLastChange, undoLastChange, wasSupersededByOthers } from "./undo";
 export {

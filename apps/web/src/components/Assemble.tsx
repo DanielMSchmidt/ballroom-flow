@@ -14,7 +14,6 @@
 
 import {
   type Alignment,
-  type Attribute,
   barsForFigure,
   can,
   countLabel,
@@ -41,6 +40,7 @@ import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
+  AttrChip,
   Button,
   Card,
   ChevronDownIcon,
@@ -69,7 +69,10 @@ import { FamilyNotes } from "./FamilyNotes";
 import { FigureTimeline } from "./FigureTimeline";
 import { Lanes } from "./Lanes";
 import { RoutineReadingView } from "./RoutineReadingView";
+import { cellValue, isOffBeatCount, usedColumns } from "./reading-columns";
 import { useStoredRoleView } from "./reading-columns-role";
+import { supportsSlowQuick, useStoredTimingView } from "./reading-timing";
+import { filterByRoleView, type RoleView } from "./role-view";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -303,6 +306,10 @@ export function Assemble({
   } | null>(null);
   // The Leader/Follower lens for the reading view — persisted across routines.
   const [roleView, setRoleView] = useStoredRoleView();
+  // The counts ⇄ slow/quick timing lens (persisted). Offered only for the dances
+  // that read in S/Q (Tango, Foxtrot, Quickstep) — see `slowQuickEligible` below,
+  // derived once `routine` is read.
+  const [timingView, setTimingView] = useStoredTimingView();
   // Stable handler identities for the memoized reading view (FigureReadout is
   // React.memo'd): an inline closure here would re-bust every row's props on
   // each background sync re-render. useState setters are stable, so [] is right.
@@ -402,6 +409,10 @@ export function Assemble({
   }
 
   const routine = store.readRoutine();
+  // The S/Q lens is only meaningful (and only shown) for Tango/Foxtrot/Quickstep;
+  // every other dance always reads in numeric counts even if `bb_timing` is stale.
+  const slowQuickEligible = supportsSlowQuick(routine.dance as DanceId);
+  const effectiveTimingView = slowQuickEligible ? timingView : "counts";
   const resolvedByPlacement = new Map<string, ResolvedPlacement>(
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp]),
   );
@@ -456,6 +467,23 @@ export function Assemble({
                   options={[
                     { value: "leader", label: "L", ariaLabel: roleT.leader },
                     { value: "follower", label: "F", ariaLabel: roleT.follower },
+                  ]}
+                />
+              </span>
+            )}
+            {/* Counts ⇄ Slow/Quick timing lens (Tango/Foxtrot/Quickstep only).
+                Sits beside the L·F lens; reading view only. Remembered per device
+                (bb_timing), across choreos. */}
+            {mode === "read" && slowQuickEligible && (
+              <span data-tour="timing-toggle">
+                <SegmentedToggle
+                  ariaLabel={roleT.timingLens}
+                  tone="muted"
+                  value={effectiveTimingView}
+                  onChange={setTimingView}
+                  options={[
+                    { value: "counts", label: "123", ariaLabel: roleT.countsLens },
+                    { value: "slowquick", label: "SQ", ariaLabel: roleT.slowQuickLens },
                   ]}
                 />
               </span>
@@ -588,6 +616,7 @@ export function Assemble({
               memberNames={memberNameMap}
               customKinds={store.customKinds()}
               roleView={roleView}
+              timingView={effectiveTimingView}
               onOpenFigure={openFigureFromReading}
               onOpenThread={openThreadFromReading}
             />
@@ -671,6 +700,8 @@ export function Assemble({
                               <PlacementCard
                                 placement={placement}
                                 figure={placementFigure}
+                                dance={routine.dance as DanceId}
+                                roleView={roleView}
                                 status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                                 canEdit={canEdit}
                                 isFirst={pIndex === 0}
@@ -690,7 +721,18 @@ export function Assemble({
                                   (bookmarkedFigureRefs?.has(placementFigure.id) ?? false)
                                 }
                                 onAddToLibrary={
-                                  canEdit && onAddToLibrary && placementFigure
+                                  // Only offer "add to my library" for a figure that is
+                                  // NOT (still) part of the global pool: a from-scratch
+                                  // custom, or a catalog figure placed then edited into a
+                                  // diverged variant. An account figure whose resolved
+                                  // content still matches the catalog is effectively the
+                                  // pool figure — no bookmark affordance (matches the
+                                  // "custom" badge predicate, §2.5.1 #19).
+                                  canEdit &&
+                                  onAddToLibrary &&
+                                  placementFigure &&
+                                  placementFigure.scope === "account" &&
+                                  !figureMatchesLibraryOrigin(placementFigure)
                                     ? () => void handleAddToLibrary(placementFigure.id)
                                     : undefined
                                 }
@@ -914,7 +956,12 @@ export function Assemble({
                 (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)
               }
               onAddToLibrary={
-                canEdit && onAddToLibrary && notatingFigure.scope === "account"
+                // Diverged/custom account figures only — not a pool figure that still
+                // matches the catalog (see the placement-card note above, §2.5.1 #19).
+                canEdit &&
+                onAddToLibrary &&
+                notatingFigure.scope === "account" &&
+                !figureMatchesLibraryOrigin(notatingFigure)
                   ? () => void handleAddToLibrary(notatingFigure.id)
                   : undefined
               }
@@ -1100,8 +1147,16 @@ function sectionMeta(
     }
     const fig = resolved.get(pl.id)?.figure;
     if (!fig) continue;
+    // Mirror the routine-card projection (worker doc-do.ts §2.7): a figure's bar
+    // span is its AUTHORED `bars` when set, else the phrase span of its steps
+    // (`barsForFigure`). The old code summed only `barsForFigure` and skipped any
+    // figure with no notated steps — so a section of freshly-placed figures (which
+    // carry an authored `bars` but empty `attributes` until notated) read "0 bars".
     const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
-    if (counts.length > 0) bars += barsForFigure(counts, dance);
+    bars +=
+      typeof fig.bars === "number" && fig.bars >= 1
+        ? Math.floor(fig.bars)
+        : barsForFigure(counts, dance);
   }
   return t.barCount(bars);
 }
@@ -1455,6 +1510,8 @@ function EmptyState({ canEdit, onAdd }: { canEdit: boolean; onAdd: (name: string
 function PlacementCard({
   placement,
   figure,
+  dance,
+  roleView,
   status = figure ? "live" : "loading",
   canEdit = false,
   isFirst = false,
@@ -1468,6 +1525,11 @@ function PlacementCard({
 }: {
   placement: Placement;
   figure: FigureDoc | null;
+  /** The routine's dance — drives which attribute columns apply (Tango omits rise). */
+  dance: DanceId;
+  /** The current L·F lens (shared with the header + reading view) — the attribute
+   *  summary shows this role's steps so it matches what the editor is working on. */
+  roleView: RoleView;
   status?: FigureLoadStatus;
   canEdit?: boolean;
   isFirst?: boolean;
@@ -1633,8 +1695,18 @@ function PlacementCard({
           </div>
         )}
       </div>
-      {/* A subtle attribute summary + entry/exit alignment chips (US-018/US-031). */}
-      <p className="text-2xs text-ink-faint">{attributeSummary(figure.attributes)}</p>
+      {/* The figure's technique at a glance (US-018) — the same per-step chips the
+          reading view shows, filtered to the current L·F lens. Tapping the strip
+          opens the full-screen figure detail (step editor / read-only view), so an
+          editor can jump straight from a placement to its notation. */}
+      <button
+        type="button"
+        aria-label={t.openDetail(label)}
+        onClick={onOpen}
+        className="w-full text-left"
+      >
+        <PlacementAttributes figure={figure} dance={dance} roleView={roleView} />
+      </button>
       <AlignmentChips placement={placement} figure={figure} />
     </div>
   );
@@ -1848,15 +1920,63 @@ function AlignmentEdge({
   );
 }
 
-/** A short human summary of the figure's (live) attributes. */
-function attributeSummary(attributes: Attribute[]): string {
-  // pickMessages per call: callers render inside components that already
-  // subscribe via useMessages, so a locale switch re-renders through them.
+/**
+ * A compact, read-only chip summary of a figure's steps for the edit-view
+ * placement card (US-018) — the same per-count chips the reading view shows,
+ * filtered to the current L·F lens so it matches the side the editor is working
+ * on. Each step is its count label + the value chips set on that count; the row
+ * wraps and shows the figure's technique at a glance without opening the editor.
+ * An empty figure (placed but not yet notated) falls back to the plain summary.
+ */
+function PlacementAttributes({
+  figure,
+  dance,
+  roleView,
+}: {
+  figure: FigureDoc;
+  dance: DanceId;
+  roleView: RoleView;
+}) {
   const t = pickMessages(assembleMessages);
-  const live = attributes.filter((a) => a.deletedAt == null);
-  if (live.length === 0) return t.noAttributes;
-  const kinds = [...new Set(live.map((a) => a.kind))];
-  return t.attributeSummary(live.length, kinds.join(", "));
+  const forRole = filterByRoleView(
+    figure.attributes.filter((a) => a.deletedAt == null),
+    roleView,
+  );
+  if (forRole.length === 0) {
+    return <p className="text-2xs text-ink-faint">{t.noAttributes}</p>;
+  }
+  const columns = usedColumns(forRole, dance);
+  const counts = [...new Set(forRole.map((a) => a.count))].sort((a, b) => a - b);
+  return (
+    <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+      {counts.map((count) => {
+        const here = forRole.filter((a) => a.count === count);
+        const dimmed = isOffBeatCount(count);
+        const chips = columns
+          .map((col) => {
+            const value = cellValue(here, col);
+            return value ? (
+              <AttrChip key={col.id} kind={col.kind} label={value} dimmed={dimmed} />
+            ) : null;
+          })
+          .filter(Boolean);
+        if (chips.length === 0) return null;
+        return (
+          <span key={count} className="inline-flex items-center gap-1">
+            <span
+              className={cx(
+                "flex-none font-bold text-accent tabular-nums",
+                dimmed ? "text-[10px]" : "text-[11px]",
+              )}
+            >
+              {countLabel(count)}
+            </span>
+            {chips}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 /**

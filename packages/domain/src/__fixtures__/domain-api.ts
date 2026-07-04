@@ -121,6 +121,8 @@ export interface DomainApi {
   barsForFigure(counts: number[], dance: DanceId): number;
   offBeatSymbol(count: number): string | null;
   numberRoutineBeats(entries: RoutineBeatEntry[], dance: DanceId): NumberedBeatEntry[];
+  slowQuickTokens(counts: number[], endCount: number): string[];
+  parseWdsfTiming(timing: string): number[];
 
   // US-005 doc-routine.ts / doc-figure.ts
   buildRoutineDoc(routine: RoutineDoc): DocHandle;

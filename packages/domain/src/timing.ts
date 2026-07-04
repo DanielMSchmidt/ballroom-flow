@@ -109,6 +109,35 @@ export function offBeatSymbol(count: number): string | null {
   return FRACTION_LABELS[String(snapped)] ?? `+${Number.parseFloat(fraction.toFixed(3))}`;
 }
 
+/**
+ * Render a figure's steps as SLOW / QUICK rhythm tokens — the S/Q notation
+ * dancers use for Tango, Foxtrot and Quickstep — instead of beat numbers, one
+ * token per sorted distinct `count` (aligned 1:1 with `counts`).
+ *
+ * A whole-beat step's token comes from its DURATION, the gap to the next step
+ * (or to `endCount` for the last step): **two beats = a Slow (`S`)**, **one beat
+ * = a Quick (`Q`)** — and any longer hold reads as a Slow. An OFF-beat step keeps
+ * its conventional sub-beat symbol (`&` = half a count, plus `e`/`a` and the
+ * `i`-subdivisions `ia`/`ai`) "as usual" — so a syncopation like Q&Q still reads
+ * `Q & Q`. This is the exact inverse of {@link parseWdsfTiming}'s S=2/Q=1/&=½
+ * duration model, kept in step with it.
+ *
+ * `endCount` is the figure's start-relative end — `bars × beatsPerBar + 1`, the
+ * boundary the last step runs to. Display-only; the float counts are untouched.
+ */
+export function slowQuickTokens(counts: number[], endCount: number): string[] {
+  return counts.map((count, i) => {
+    // An off-beat step keeps its sub-beat symbol (& / e / a / ia / ai).
+    const symbol = offBeatSymbol(count);
+    if (symbol !== null) return symbol;
+    const next = counts[i + 1] ?? endCount;
+    const duration = next - count;
+    // Two beats or more is a Slow; anything shorter (a whole beat, or a beat
+    // split by a following off-beat) is a Quick.
+    return duration >= 2 ? "S" : "Q";
+  });
+}
+
 /** One entry in a routine's ordered beat stream: a figure (its distinct sorted
  *  counts) or a break (its whole-beat duration). */
 export type RoutineBeatEntry =
