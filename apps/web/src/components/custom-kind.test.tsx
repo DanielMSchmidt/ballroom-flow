@@ -29,14 +29,47 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
     const onCreate = vi.fn();
     renderUi(<AddKindSheet open onCreate={onCreate} />);
-    await userEvent.type(screen.getByLabelText(/label/i), "Energy");
-    await userEvent.type(screen.getByLabelText(/values/i), "low, high");
+    await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
+    // Enum values are a chip list: a comma commits "low"; "high" is still in the
+    // add-field and gets flushed on submit — both land in the descriptor.
+    await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
     expect(onCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "energy",
         label: "Energy",
         values: ["low", "high"],
+        builtin: false,
+      }),
+    );
+  });
+
+  it("edits an existing custom kind: keeps the slug stable and saves changes", async () => {
+    // Intent: US-043 AC-1 (create/EDIT). Opening the sheet with `initial` pre-fills
+    // it; the slug is held stable so existing attributes keep resolving, and the
+    // value chips can be removed/added.
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const onCreate = vi.fn();
+    const initial = {
+      kind: "energy",
+      label: "Energy",
+      color: "#2f5d8f",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["low", "high"],
+      builtin: false,
+    };
+    renderUi(<AddKindSheet open initial={initial} onCreate={onCreate} />);
+    // Pre-filled label + existing value chips are present.
+    expect(screen.getByDisplayValue("Energy")).toBeInTheDocument();
+    // Remove "low", add "medium".
+    await userEvent.click(screen.getByRole("button", { name: /remove "low"/i }));
+    await userEvent.type(screen.getByLabelText(/add a value/i), "medium{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "energy", // slug unchanged even though we edited values
+        values: ["high", "medium"],
         builtin: false,
       }),
     );
@@ -50,8 +83,8 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     renderUi(<AddKindSheet open onCreate={onCreate} />);
     await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
     await userEvent.type(screen.getByLabelText(/description/i), "How much drive the step carries");
-    await userEvent.type(screen.getByLabelText(/^values/i), "low, high");
-    // A per-value definition input appears for each parsed enum value.
+    await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
+    // A per-value definition input appears for each committed enum value chip.
     await userEvent.type(screen.getByLabelText(/definition for "low"/i), "barely moving");
     await userEvent.click(screen.getByRole("switch", { name: /leader/i }));
     await userEvent.click(screen.getByRole("switch", { name: /required/i }));
@@ -72,7 +105,7 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     const onCreate = vi.fn();
     renderUi(<AddKindSheet open onCreate={onCreate} />);
     await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
-    await userEvent.type(screen.getByLabelText(/^values/i), "low, high");
+    await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
     const kind = onCreate.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(kind).not.toHaveProperty("description");

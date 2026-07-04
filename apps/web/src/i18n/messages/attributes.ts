@@ -44,14 +44,17 @@ const en = {
     turn: "amount & direction of turn",
   },
 
-  // AddKindSheet (frame 1.16) — the custom-type builder.
+  // AddKindSheet (frame 1.16) — the custom-type builder / editor.
   addKindTitle: "Add attribute kind",
+  editKindTitle: "Edit attribute kind",
   labelField: "Label",
   labelPlaceholder: "e.g. Energy",
   descriptionField: "Description",
   descriptionPlaceholder: "e.g. How much drive the step carries",
   descriptionHint: "One line shown in the attribute info sheet (optional)",
   colorField: "Color",
+  colorHint: "Every colour here stays readable on the timeline.",
+  colorOption: (n: number) => `Colour ${n}`,
   cardinalityField: "Cardinality",
   cardinalitySingle: "Single",
   cardinalityMulti: "Multi",
@@ -59,8 +62,10 @@ const en = {
   valueTypeEnum: "Enum (fixed list)",
   valueTypeText: "Text (free-form)",
   valuesField: "Values",
-  valuesPlaceholder: "e.g. low, medium, high",
-  valuesHint: "Comma-separated list (used for enum kinds)",
+  valuesPlaceholder: "Type a value, press Enter…",
+  valuesHint: "Add one at a time (Enter or comma); remove with ✕.",
+  addValueLabel: "Add a value",
+  removeValue: (v: string) => `Remove "${v}"`,
   errorLabelRequired: "Label is required",
   errorInvalidName: "Enter a valid name",
   errorReservedName: "That name is reserved",
@@ -71,6 +76,7 @@ const en = {
   differsByRole: "Differs by leader / follower",
   requiredToggle: "Required (a core slot for every step)",
   create: "Create",
+  saveChanges: "Save changes",
 
   // AddKindPicker (frame 1.15) + AttributeTypesManager (frame 1.17) badges.
   addAttributeTitle: "Add an attribute",
@@ -85,10 +91,11 @@ const en = {
   // AttributeTypesManager (frame 1.17)
   attributeTypes: "Attribute types",
   newType: "new type",
+  editKind: (label: string) => `Edit ${label}`,
   scopeThisChoreo: "this choreo",
   scopeStandard: "standard",
   typesExplainer:
-    "Standard types are shared by everyone · custom types are scoped to a choreo so partners see them.",
+    "Standard types are shared by everyone · custom types are yours to edit and are scoped to a choreo so partners see them.",
 };
 
 const de: typeof en = {
@@ -129,14 +136,17 @@ const de: typeof en = {
     turn: "Grad & Richtung der Drehung",
   },
 
-  // AddKindSheet (frame 1.16) — the custom-type builder.
+  // AddKindSheet (frame 1.16) — the custom-type builder / editor.
   addKindTitle: "Attributtyp hinzufügen",
+  editKindTitle: "Attributtyp bearbeiten",
   labelField: "Bezeichnung",
   labelPlaceholder: "z. B. Energie",
   descriptionField: "Beschreibung",
   descriptionPlaceholder: "z. B. Wie viel Schwung der Schritt trägt",
   descriptionHint: "Eine Zeile, die in der Attribut-Erklärung angezeigt wird (optional)",
   colorField: "Farbe",
+  colorHint: "Jede Farbe hier bleibt in der Timeline gut lesbar.",
+  colorOption: (n) => `Farbe ${n}`,
   cardinalityField: "Kardinalität",
   cardinalitySingle: "Einzeln",
   cardinalityMulti: "Mehrere",
@@ -144,8 +154,10 @@ const de: typeof en = {
   valueTypeEnum: "Auswahl (feste Liste)",
   valueTypeText: "Text (Freitext)",
   valuesField: "Werte",
-  valuesPlaceholder: "z. B. niedrig, mittel, hoch",
-  valuesHint: "Kommagetrennte Liste (für Auswahl-Typen)",
+  valuesPlaceholder: "Wert eingeben, Enter drücken…",
+  valuesHint: "Einzeln hinzufügen (Enter oder Komma); mit ✕ entfernen.",
+  addValueLabel: "Wert hinzufügen",
+  removeValue: (v) => `"${v}" entfernen`,
   errorLabelRequired: "Bezeichnung ist erforderlich",
   errorInvalidName: "Gib einen gültigen Namen ein",
   errorReservedName: "Dieser Name ist reserviert",
@@ -156,6 +168,7 @@ const de: typeof en = {
   differsByRole: "Unterscheidet sich nach Leader / Follower",
   requiredToggle: "Erforderlich (ein Kernfeld für jeden Schritt)",
   create: "Erstellen",
+  saveChanges: "Änderungen speichern",
 
   // AddKindPicker (frame 1.15) + AttributeTypesManager (frame 1.17) badges.
   addAttributeTitle: "Attribut hinzufügen",
@@ -170,10 +183,11 @@ const de: typeof en = {
   // AttributeTypesManager (frame 1.17)
   attributeTypes: "Attributtypen",
   newType: "neuer Typ",
+  editKind: (label) => `${label} bearbeiten`,
   scopeThisChoreo: "diese Choreo",
   scopeStandard: "Standard",
   typesExplainer:
-    "Standardtypen sind für alle gleich · eigene Typen gelten pro Choreo, damit Partner sie sehen.",
+    "Standardtypen sind für alle gleich · eigene Typen kannst du bearbeiten und gelten pro Choreo, damit Partner sie sehen.",
 };
 
 export const attributesMessages = { en, de };

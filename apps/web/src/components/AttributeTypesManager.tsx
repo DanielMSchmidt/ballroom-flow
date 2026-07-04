@@ -13,14 +13,15 @@ import type { RegistryKind } from "@ballroom/domain";
 import { useState } from "react";
 import { useLocalizedRegistry, useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
-import { Button, PlusIcon } from "../ui";
+import { Button, EditIcon, IconButton, PlusIcon } from "../ui";
 import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
 
 export interface AttributeTypesManagerProps {
   /** Custom (choreo-scoped) kinds the account can see; standard kinds are added. */
   customKinds?: RegistryKind[];
-  /** Persist a newly-built custom kind (the builder's onCreate). */
+  /** Persist a custom kind (the builder's onCreate). Also the edit save — the
+   *  underlying store/D1 write is an upsert keyed on the kind slug. */
   onCreateKind?: (kind: RegistryKind) => void;
 }
 
@@ -37,6 +38,9 @@ export function AttributeTypesManager({
 }: AttributeTypesManagerProps) {
   const t = useMessages(attributesMessages);
   const [building, setBuilding] = useState(false);
+  // The custom kind currently being edited (null = not editing). A custom kind
+  // is user-owned, so it gets an edit affordance; standard kinds are locked.
+  const [editing, setEditing] = useState<RegistryKind | null>(null);
   // Standard kinds first (locked), then the custom (choreo-scoped) ones.
   const standard = Object.values(useLocalizedRegistry());
   const rows: { kind: RegistryKind; custom: boolean }[] = [
@@ -110,6 +114,16 @@ export function AttributeTypesManager({
             >
               {custom ? t.scopeThisChoreo : t.scopeStandard}
             </span>
+            {/* Custom kinds are yours to edit; standard kinds are locked. */}
+            {custom && (
+              <IconButton
+                label={t.editKind(kind.label)}
+                className="-my-2 -mr-2"
+                onClick={() => setEditing(kind)}
+              >
+                <EditIcon size={15} />
+              </IconButton>
+            )}
           </li>
         ))}
       </ul>
@@ -118,13 +132,21 @@ export function AttributeTypesManager({
         {t.typesExplainer}
       </p>
 
-      {/* The custom-type builder (frame 1.16). */}
+      {/* The custom-type builder / editor (frame 1.16). One sheet serves both
+          modes; `key` forces a fresh mount (re-seeded initial state) when the
+          edit target changes, and `initial` switches it into edit mode. */}
       <AddKindSheet
-        open={building}
-        onClose={() => setBuilding(false)}
+        key={editing ? `edit-${editing.kind}` : "new"}
+        open={building || editing != null}
+        initial={editing ?? undefined}
+        onClose={() => {
+          setBuilding(false);
+          setEditing(null);
+        }}
         onCreate={(k) => {
           onCreateKind?.(k);
           setBuilding(false);
+          setEditing(null);
         }}
       />
     </section>

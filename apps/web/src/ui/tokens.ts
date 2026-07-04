@@ -61,3 +61,27 @@ export const IDENTITY_HEX = [
   "#d99a2b", // slot 5 — gold
   "#4a9d9a", // slot 6 — teal
 ] as const;
+
+/** Curated, contrast-safe swatches a user picks from for a custom attribute
+ *  kind's colour. A custom kind paints its single stored colour as chip TEXT +
+ *  BORDER over the light sunken well (`--bf-surface-sunken` = #f7f5f0) wherever
+ *  it renders — the reading timeline (AttrChip), the figure-editor grid, and the
+ *  type-filter chips — so a free colour picker can yield illegible light values
+ *  (yellow, pale green, the old #888888 default). Every hex here was WCAG-checked
+ *  to clear **AA (≥4.5:1)** as text on that surface, so *any* choice stays
+ *  readable in the timeline; the hues are spread around the wheel so kinds stay
+ *  tellable apart. Ordered by hue for a pleasant swatch row. */
+export const CUSTOM_KIND_SWATCHES = [
+  "#3a4a63", // slate
+  "#2f5d8f", // blue
+  "#4a4d9c", // indigo
+  "#6b4a9c", // violet
+  "#9c3d7a", // magenta
+  "#b03a5b", // rose
+  "#b0472f", // terracotta
+  "#8a6a1c", // gold
+  "#6b4a2c", // cocoa
+  "#5e6b1f", // olive
+  "#1f7a4d", // green
+  "#0f6b66", // teal
+] as const;

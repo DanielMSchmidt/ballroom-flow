@@ -153,7 +153,10 @@ test.describe("@smoke core authoring journey", () => {
     // avoid the required-asterisk suffix that breaks getByLabel exact regex.
     const kindDialog = page.getByRole("dialog", { name: /add attribute kind/i });
     await kindDialog.getByPlaceholder("e.g. Energy").fill("Energy");
-    await kindDialog.getByPlaceholder("e.g. low, medium, high").fill("low, high");
+    // Values are now a chip editor (add one at a time). A comma-joined string
+    // typed into the add-field is split + flushed into the value list on submit,
+    // so a single fill + Create still yields both values.
+    await kindDialog.getByPlaceholder(/type a value/i).fill("low, high");
     await kindDialog.getByRole("button", { name: "Create" }).click();
 
     // Energy becomes a new COLUMN in the bars-driven grid (allColumns adds custom

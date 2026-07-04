@@ -39,6 +39,7 @@ export { Toggle, type ToggleProps } from "./Toggle";
 export {
   ATTRIBUTE_KINDS,
   type AttributeKind,
+  CUSTOM_KIND_SWATCHES,
   FIGURE_SCOPES,
   type FigureScope,
   IDENTITY_COLORS,
