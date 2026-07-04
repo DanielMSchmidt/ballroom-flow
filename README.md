@@ -1,4 +1,4 @@
-# Ballroom Flow
+# Weave Steps
 
 A collaborative, **mobile-first PWA for building and annotating ballroom dance choreography**.
 

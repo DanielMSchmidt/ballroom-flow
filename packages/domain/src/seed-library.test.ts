@@ -23,7 +23,7 @@ interface SeedModule {
   }>;
   FIGURE_TYPE_CATALOG: Record<string, string[]>; // figureType → dances it exists in
 }
-const SEED_PKG = "@ballroom/domain";
+const SEED_PKG = "@weavesteps/domain";
 
 describe.skip("US-054 Full Standard syllabus library seed (ISTD)", () => {
   it("authors global FigureDocs tagged figureType + dance, app-owned, schema-valid", async () => {

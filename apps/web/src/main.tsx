@@ -27,7 +27,7 @@ if (!isE2E() && !publishableKey) {
   // no publishable key — it uses the injected test session; see lib/e2e-auth.ts.)
   root.render(
     <div style={{ font: "16px system-ui", padding: 24 }}>
-      <h1>Ballroom Flow</h1>
+      <h1>Weave Steps</h1>
       <p>
         Set <code>VITE_CLERK_PUBLISHABLE_KEY</code> in <code>apps/web/.env.local</code> to enable
         sign-in. See <code>PROVISIONING.md</code>.

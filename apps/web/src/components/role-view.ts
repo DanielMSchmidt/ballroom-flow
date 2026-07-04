@@ -1,7 +1,7 @@
 // Shared role-lens + value-display helpers used by both the figure timeline
 // (FigureTimeline) and the Lanes view, so the two surfaces stay consistent and
 // the logic isn't duplicated.
-import type { Attribute } from "@ballroom/domain";
+import type { Attribute } from "@weavesteps/domain";
 import { ATTRIBUTE_KINDS, type AttributeKind } from "../ui";
 
 /** The leader/follower view lens. */

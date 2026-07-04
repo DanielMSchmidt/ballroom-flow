@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "WDSF Standard Syllabus — figure seed data for Ballroom Flow",
+    "title": "WDSF Standard Syllabus — figure seed data for Weave Steps",
     "purpose": "Source data for an agent to generate the default global FigureDocs (application-scoped library) per docs/PLAN.md D30 / Q-LIBSEED. Each entry maps to one global FigureDoc (figureType x dance).",
     "source": "WDSF Syllabus (World DanceSport Federation), Standard division.",
     "sourcePdf": "https://bndsf.com/wp-content/uploads/2021/03/WDSF-Syllabus.pdf",

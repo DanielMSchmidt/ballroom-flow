@@ -15,7 +15,7 @@ import {
   type DanceId,
   type RegistryKind,
   type StandardRegistry,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { type Locale, useLocale } from "./locale";
 
 /** Display names for the five Standard dances, per locale. German competitive

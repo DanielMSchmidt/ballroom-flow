@@ -17,7 +17,7 @@ import {
   globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { createGlobalFigureRow } from "./db/figures";
 import type { Env } from "./index";
 

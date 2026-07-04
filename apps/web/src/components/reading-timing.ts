@@ -7,7 +7,7 @@
 // the Leader/Follower lens (`bb_role`). Falls back to "counts" when storage is
 // unavailable (SSR / private mode / tests).
 
-import type { DanceId } from "@ballroom/domain";
+import type { DanceId } from "@weavesteps/domain";
 import { useCallback, useState } from "react";
 
 /** The reading view's timing notation: numeric counts, or slow/quick syllables. */

@@ -1,6 +1,6 @@
 // Cascade access (2026-06-27): a routine→figure reference edge in D1, so a routine
 // co-member can read the figures that routine references. See migration 0006.
-import type { EffectiveRole } from "@ballroom/domain";
+import type { EffectiveRole } from "@weavesteps/domain";
 
 /** Record that routine `routineRef` references figure `figureRef` (idempotent). */
 export async function linkPlacement(

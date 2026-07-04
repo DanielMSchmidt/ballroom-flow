@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-proof-and-analysis
-description: Load when a claim about Ballroom Flow needs PROVING rather than trusting — convergence of a CRDT change, soundness of an undo inverse, safety of an authorization path, correctness of imported figure data, correctness of a data model under concurrency, or performance of a D1 query. Also load when reviewing a PR that touches sync, permissions, undo, ordering, or the figure catalog, or when adjudicating a design dispute.
+description: Load when a claim about Weave Steps needs PROVING rather than trusting — convergence of a CRDT change, soundness of an undo inverse, safety of an authorization path, correctness of imported figure data, correctness of a data model under concurrency, or performance of a D1 query. Also load when reviewing a PR that touches sync, permissions, undo, ordering, or the figure catalog, or when adjudicating a design dispute.
 ---
 
-# Ballroom Flow — proof & analysis methods
+# Weave Steps — proof & analysis methods
 
 Seven repeatable methods this project uses to turn "looks right" into "proven right".
 Each bit this repo got wrong was *plausible*; each fix was found by one of these
@@ -71,7 +71,7 @@ docs/spike/SPIKE-FINDINGS.md).
 4. Add the three fixed adversarial cases the property can't express: concurrent edit
    to a *moved* element, two concurrent moves of the *same* element, reorder + rename
    vs concurrent soft-delete.
-5. Run: `pnpm --filter @ballroom/domain exec vitest run src/convergence.test.ts`
+5. Run: `pnpm --filter @weavesteps/domain exec vitest run src/convergence.test.ts`
    (8 tests green as of 2026-07-02).
 
 **Worked example — the sortKey reorder proof (internal #63, commit 38dfba7, PR #107).**

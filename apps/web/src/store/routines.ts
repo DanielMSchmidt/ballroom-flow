@@ -1,8 +1,9 @@
 // store/ seam (US-025): the Choreo list read + the create mutation. Components
 // touch ONLY the store (this) + ui — never lib/rpc directly (§3/AC-4). Built on
 // the same react-query + lib/rpc pattern as store/me.ts.
-import type { CreateRoutine, RoutineList } from "@ballroom/contract";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CreateRoutine, RoutineList } from "@weavesteps/contract";
 import { useAppAuth } from "../auth/app-auth";
 import { ApiError, apiDelete, apiGet, apiPost } from "../lib/rpc";
 

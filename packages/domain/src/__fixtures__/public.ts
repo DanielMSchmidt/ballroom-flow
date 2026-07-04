@@ -1,5 +1,5 @@
 // Production-safe subpath surface for the shared SAMPLE fixture data
-// (@ballroom/domain/fixtures). The worker leans on this to seed the app-owned
+// (@weavesteps/domain/fixtures). The worker leans on this to seed the app-owned
 // READ-ONLY sample routine (US-045, apps/worker/src/sample.ts).
 //
 // This file deliberately re-exports ONLY the sample *data* (frozen routines +

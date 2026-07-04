@@ -1,5 +1,5 @@
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@ballroom/contract";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DocConnection, type SocketLike } from "./doc-connection";
 

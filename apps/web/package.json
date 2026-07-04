@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@automerge/automerge": "^3.2.6",
-    "@ballroom/contract": "workspace:*",
-    "@ballroom/domain": "workspace:*",
+    "@weavesteps/contract": "workspace:*",
+    "@weavesteps/domain": "workspace:*",
     "@clerk/clerk-react": "^5.61.3",
     "@fontsource/caveat": "^5.2.8",
     "@fontsource/inconsolata": "^5.2.8",

@@ -32,7 +32,7 @@ jobs:
       #    Runs via `coverage` so the armed thresholds (vitest.config.ts) gate the
       #    PR — coverage can't silently regress.
       - name: Unit / property + coverage (domain)
-        run: pnpm --filter @ballroom/domain coverage
+        run: pnpm --filter @weavesteps/domain coverage
 
       # Build the SPA so the Worker's static-assets dir (apps/web/dist) and the
       # E2E preview server have something to serve.

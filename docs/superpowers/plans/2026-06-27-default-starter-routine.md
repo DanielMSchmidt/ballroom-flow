@@ -16,13 +16,13 @@
 - The starter counts as the user's first owned routine (no quota special-casing); onboarding runs no quota gate.
 - Seed at most once per user — gate on the genuine first `users`-row insert (re-onboarding must NOT re-seed). Seeding is best-effort: a failure is logged and swallowed so onboarding still returns 200.
 - Worktree workflow: run gates EXPLICITLY (`pnpm -w lint`, `pnpm -w typecheck`, and the package-scoped test). The lefthook pre-commit hook runs biome + typecheck here. Never `--no-verify`; never pipe `git commit` through grep.
-- Package filters: domain = `@ballroom/domain`, worker = `worker`.
+- Package filters: domain = `@weavesteps/domain`, worker = `worker`.
 
 ## Exact signatures this plan builds on (verbatim from the codebase)
 
-- `newId(): string` — from `@ballroom/domain` (ULID; the worker passes this as `mintId`).
+- `newId(): string` — from `@weavesteps/domain` (ULID; the worker passes this as `mintId`).
 - `RoutineDoc` / `FigureDoc` / `Section` / `Placement` / `Attribute` — `packages/domain/src/doc-types.ts`.
-- `LIBRARY_FIGURES: readonly LibraryFigure[]` — `@ballroom/domain`; `LibraryFigure = { dance, figureType, name, timing?, notes?, attributes? }`.
+- `LIBRARY_FIGURES: readonly LibraryFigure[]` — `@weavesteps/domain`; `LibraryFigure = { dance, figureType, name, timing?, notes?, attributes? }`.
 - `createOwnedRoutine(db: D1Database, r: { docRef; ownerId; title; dance; forkedFromRef? }): Promise<void>` — `apps/worker/src/db/routines.ts`.
 - `createFigureRows(db: D1Database, f: { figureRef; ownerId; name; dance; figureType }): Promise<void>` — `apps/worker/src/db/figures.ts`.
 - `linkPlacement(db: D1Database, routineRef: string, figureRef: string): Promise<void>` — `apps/worker/src/db/placement-edge.ts`.
@@ -110,7 +110,7 @@ describe("buildGoldenWaltzBasic", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain exec vitest run starter-routine`
+Run: `pnpm --filter @weavesteps/domain exec vitest run starter-routine`
 Expected: FAIL — "Cannot find module './starter-routine'".
 
 - [ ] **Step 3: Write minimal implementation**
@@ -207,7 +207,7 @@ export { buildGoldenWaltzBasic } from "./starter-routine";
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/domain exec vitest run starter-routine` then `pnpm -w typecheck`
+Run: `pnpm --filter @weavesteps/domain exec vitest run starter-routine` then `pnpm -w typecheck`
 Expected: 3 tests PASS; typecheck clean.
 
 - [ ] **Step 6: Commit**
@@ -226,7 +226,7 @@ git commit -m "feat(domain): build the Golden Waltz Basic starter routine from t
 - Create: `apps/worker/src/starter.test.ts`
 
 **Interfaces:**
-- Consumes: `buildGoldenWaltzBasic`, `newId` from `@ballroom/domain`; `createOwnedRoutine` (`./db/routines`); `createFigureRows` (`./db/figures`); `linkPlacement` (`./db/placement-edge`); `Env` (`./index`).
+- Consumes: `buildGoldenWaltzBasic`, `newId` from `@weavesteps/domain`; `createOwnedRoutine` (`./db/routines`); `createFigureRows` (`./db/figures`); `linkPlacement` (`./db/placement-edge`); `Env` (`./index`).
 - Produces: `seedStarterRoutine(env: Env, userId: string): Promise<string>` — seeds the starter, returns the new routine's id.
 
 - [ ] **Step 1: Write the failing test**
@@ -313,7 +313,7 @@ Expected: FAIL — "Cannot find module './starter'".
 // /api/routines routes use. Figures are projected + DO-seeded FIRST (so the
 // routine's references + cascade edges resolve), then the routine. `seedDoc` is
 // no-clobber, so a re-run on the same ids is safe.
-import { buildGoldenWaltzBasic, newId } from "@ballroom/domain";
+import { buildGoldenWaltzBasic, newId } from "@weavesteps/domain";
 import { createFigureRows } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
 import { createOwnedRoutine } from "./db/routines";

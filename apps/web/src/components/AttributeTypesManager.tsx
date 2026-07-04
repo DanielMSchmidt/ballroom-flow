@@ -9,7 +9,7 @@
 // colour dot, cardinality, an "L/F" badge for a role-aware kind (`roleAware`),
 // a "required" marker for a core slot (`required`), and the scope label. A
 // custom kind that carries `roleAware`/`required` gets the same affordances.
-import type { RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useLocalizedRegistry, useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";

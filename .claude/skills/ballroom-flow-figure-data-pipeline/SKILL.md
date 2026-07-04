@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-figure-data-pipeline
-description: Load when touching Ballroom Flow figure/seed data — adding or correcting a figure chart, editing docs/seed/*.json, regenerating the bundled figure library (library-data.ts / figure-charts.generated.ts), debugging why a library figure shows a scaffold instead of real footwork, or judging whether technique content is trustworthy.
+description: Load when touching Weave Steps figure/seed data — adding or correcting a figure chart, editing docs/seed/*.json, regenerating the bundled figure library (library-data.ts / figure-charts.generated.ts), debugging why a library figure shows a scaffold instead of real footwork, or judging whether technique content is trustworthy.
 ---
 
-# Ballroom Flow — the figure data pipeline
+# Weave Steps — the figure data pipeline
 
 The app ships a client-bundled catalog of International Standard ballroom figures.
 Every cell of that data (footwork, sway, turn amounts, alignments) was researched
@@ -200,7 +200,7 @@ sourced timing added to `docs/seed/wdsf-standard-figures.json` first.
    never emit an invalid attribute).
 7. **Run it all:**
    ```bash
-   pnpm --filter @ballroom/domain test && pnpm lint && pnpm typecheck
+   pnpm --filter @weavesteps/domain test && pnpm lint && pnpm typecheck
    ```
 8. **Process:** this is product data — normal change control applies (TDD where a
    behavior changes, PR into `development`, PLAN.md untouched unless the model

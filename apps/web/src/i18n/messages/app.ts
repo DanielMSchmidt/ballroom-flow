@@ -12,7 +12,7 @@ const en = {
   libraryTabMine: "My figures",
   comingSoon: "Coming soon",
   comingSoonBody: "This screen lands in a later milestone.",
-  loadingApp: "Loading Ballroom Flow",
+  loadingApp: "Loading Weave Steps",
   signIn: "Sign in",
   signedIn: "Signed in",
 };
@@ -30,7 +30,7 @@ const de: typeof en = {
   libraryTabMine: "Meine Figuren",
   comingSoon: "Bald verfügbar",
   comingSoonBody: "Diese Ansicht kommt in einem späteren Meilenstein.",
-  loadingApp: "Ballroom Flow wird geladen",
+  loadingApp: "Weave Steps wird geladen",
   signIn: "Anmelden",
   signedIn: "Angemeldet",
 };

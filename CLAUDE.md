@@ -1,10 +1,10 @@
-# CLAUDE.md — working guide for Ballroom Flow
+# CLAUDE.md — working guide for Weave Steps
 
 This file orients any contributor (human or agent) and routes you to the right document
 for your task. **It does not duplicate those docs — it points to them.** Read the ones
 relevant to your task before writing code.
 
-Ballroom Flow is a collaborative, mobile-first **PWA for building and annotating ballroom
+Weave Steps is a collaborative, mobile-first **PWA for building and annotating ballroom
 choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 [`README.md`](README.md) for the goal in one screen.
 
@@ -118,7 +118,7 @@ pnpm coverage         # coverage — thresholds ARMED: domain ≥90, worker ≥8
 
 ## 6. Status & how to proceed
 
-- **Done:** M1 domain core; M2 DO sync (per-doc DO, hibernatable WS, alarm compaction, D1 index); M3 auth + permissions + quota + create/build loop — US-001…030 (the relevant ones), plus the Clerk auth chain end-to-end (verify → fail-closed DO boundary → figure-doc projection → WS-token plumbing). **Staging is live and sign-in works** (`ballroom-flow-staging.danielmschmidt.workers.dev`).
+- **Done:** M1 domain core; M2 DO sync (per-doc DO, hibernatable WS, alarm compaction, D1 index); M3 auth + permissions + quota + create/build loop — US-001…030 (the relevant ones), plus the Clerk auth chain end-to-end (verify → fail-closed DO boundary → figure-doc projection → WS-token plumbing). **Staging is live and sign-in works** (`weave-steps-staging.danielmschmidt.workers.dev`).
 - **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey (`apps/web/e2e/*.spec.ts`). `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
 - **Now (2026-07-02):** the **v5 migration milestone** — `PLAN.md` §9 — converts the figure layer to the live-figure/overlay-variant model (PLAN v5.0, §5.2) and lands the review hardening (undo soundness, figures-route authorization, non-destructive projections, post-connect role enforcement, bounded catch-up).
 - **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves.

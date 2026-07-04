@@ -1,4 +1,4 @@
-# Ballroom Flow — Design System
+# Weave Steps — Design System
 
 **Status:** v1 (base foundation), 2026-06-25.
 **Scope:** the token-driven styling layer + accessible primitive components + an `AppShell` + a live gallery. This is the **base** the product screens are built on; it deliberately contains **no product screens or domain/CRDT logic**.

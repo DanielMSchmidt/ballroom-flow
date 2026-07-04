@@ -1,6 +1,6 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` is the per-document
 // MEMBERSHIP role prop, not an ARIA role.
-import type { Attribute } from "@ballroom/domain";
+import type { Attribute } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";

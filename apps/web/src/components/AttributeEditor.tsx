@@ -18,7 +18,7 @@ import {
   normalizeValue,
   type RegistryKind,
   type StandardRegistry,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { useLocalizedRegistry, useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";

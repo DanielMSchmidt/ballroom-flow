@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-research-frontier
-description: Load when scoping work BEYOND the current milestone in ballroom-flow — offline editing, attribute-predicate anchors, DO fan-out at scale, the candidate-novel CRDT patterns, Latin/media/billing increments — or when someone proposes claiming anything externally (blog post, paper, benchmark, "we invented X"). Maps each frontier item to its asset in this repo, its first three concrete steps, and the falsifiable bar before any external claim.
+description: Load when scoping work BEYOND the current milestone in weave-steps — offline editing, attribute-predicate anchors, DO fan-out at scale, the candidate-novel CRDT patterns, Latin/media/billing increments — or when someone proposes claiming anything externally (blog post, paper, benchmark, "we invented X"). Maps each frontier item to its asset in this repo, its first three concrete steps, and the falsifiable bar before any external claim.
 ---
 
-# Ballroom Flow — the research frontier
+# Weave Steps — the research frontier
 
 This skill is the map of **what comes after the v5 migration milestone**: the open problems where this project could genuinely advance the state of the art, the smaller product increments whose seams already exist, and the discipline required before claiming anything externally. Every item below is **open / candidate / v1.1 — none of it is shipped**, and nothing here may be started ahead of the active milestone without an explicit owner decision recorded in `docs/PLAN.md`.
 

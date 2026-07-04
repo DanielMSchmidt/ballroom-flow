@@ -162,7 +162,7 @@ web 52 skipped (9 files); typecheck + lint clean; `playwright test --list` → 5
 tests across 3 projects.
 
 **Current (`development` HEAD, 2026-07-03):** the suite executes for real —
-- `pnpm --filter @ballroom/domain test` → **245 passed, 3 skipped** (only US-054 ISTD seed — blocked on the external technique books, PLAN §9).
+- `pnpm --filter @weavesteps/domain test` → **245 passed, 3 skipped** (only US-054 ISTD seed — blocked on the external technique books, PLAN §9).
 - `pnpm --filter web test` → **382 passed, 0 skipped**.
 - `pnpm --filter worker test` → **191 passed, 0 skipped** (US-049 ops + US-053 `/api/profile` unskipped and green 2026-07-03); worker `coverage` meets its armed thresholds (lines 89.7 / branches 71.1 / fns 88.2 / stmts 85.9).
 - `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (294 files).

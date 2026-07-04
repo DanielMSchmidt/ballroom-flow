@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-build-and-env
-description: Load when setting up the Ballroom Flow environment from scratch, when pnpm install / build / typecheck / lint / test / coverage fails or behaves differently than the docs claim, when a Playwright browser download fails in a sandbox, or when you need to know which secrets exist and what runs with zero secrets. Covers toolchain pins, the verified command table, the pnpm 11 allowBuilds trap, CI parity, and known doc-vs-reality discrepancies.
+description: Load when setting up the Weave Steps environment from scratch, when pnpm install / build / typecheck / lint / test / coverage fails or behaves differently than the docs claim, when a Playwright browser download fails in a sandbox, or when you need to know which secrets exist and what runs with zero secrets. Covers toolchain pins, the verified command table, the pnpm 11 allowBuilds trap, CI parity, and known doc-vs-reality discrepancies.
 ---
 
-# Ballroom Flow — build & environment runbook
+# Weave Steps — build & environment runbook
 
 Every command, number, and path in this file was **executed and observed on 2026-07-02**
 (repo HEAD `70eed7e` on `development`) in a fresh sandbox. Where `docs/DEVELOPMENT.md`
@@ -82,7 +82,7 @@ order-of-magnitude, not SLA.
 
 **Coverage thresholds are ARMED at the measured floors** (domain 90 lines, worker 88
 lines, web none) — docs claiming they're "commented out" are stale;
-`pnpm --filter @ballroom/domain coverage` and `pnpm --filter worker coverage` fail
+`pnpm --filter @weavesteps/domain coverage` and `pnpm --filter worker coverage` fail
 below them. CLAUDE.md's "domain ≥95%, worker ≥90%" figures are NOT stale numbers:
 they are the **PLAN §10.3 ratchet TARGETS** — ratchet the config floors *up* toward
 them as coverage rises, never down. The full per-metric table, measured actuals, and
@@ -175,7 +175,7 @@ Reproduce any CI failure locally with the matching command:
 | `pnpm install --frozen-lockfile` | same (lockfile drift fails here) |
 | Lint | `pnpm lint` |
 | Typecheck (+ contract drift) | `pnpm -r typecheck` |
-| Unit/property + coverage (domain) | `pnpm --filter @ballroom/domain coverage` |
+| Unit/property + coverage (domain) | `pnpm --filter @weavesteps/domain coverage` |
 | Build | `pnpm -r build` |
 | Worker/DO/D1 + coverage (workerd) | `pnpm --filter worker coverage` |
 | Component + a11y (web) | `pnpm --filter web test` |

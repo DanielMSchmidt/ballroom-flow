@@ -1,7 +1,7 @@
 // Pure timeline operations for the figure editor (FigureTimeline). Kept separate
 // from the React component so the musical maths (durations, snap-grid resize) is
 // unit-testable in isolation.
-import type { Attribute } from "@ballroom/domain";
+import type { Attribute } from "@weavesteps/domain";
 import { pickMessages } from "../i18n/messages";
 import { assembleMessages } from "../i18n/messages/assemble";
 

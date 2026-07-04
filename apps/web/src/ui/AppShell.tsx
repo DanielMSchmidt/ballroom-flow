@@ -41,7 +41,7 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
           "lg:flex lg:w-56 lg:flex-col lg:gap-1",
         )}
       >
-        <span className="mb-3 px-3 text-lg font-bold tracking-tight text-ink">Ballroom Flow</span>
+        <span className="mb-3 px-3 text-lg font-bold tracking-tight text-ink">Weave Steps</span>
         {nav.map((item) => {
           const active = item.value === current;
           return (

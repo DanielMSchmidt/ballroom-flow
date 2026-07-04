@@ -6,7 +6,7 @@
 // the editor saves via createAnnotation. The "An attribute" row is the deferred
 // v1.1 predicate anchor — visibly disabled. Data arrives via injected loaders
 // (the store seam); the component holds no I/O of its own.
-import { type Anchor, countLabel, DANCE_IDS, type DanceId } from "@ballroom/domain";
+import { type Anchor, countLabel, DANCE_IDS, type DanceId } from "@weavesteps/domain";
 import { useEffect, useState } from "react";
 import { danceName, type Locale, useLocale, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

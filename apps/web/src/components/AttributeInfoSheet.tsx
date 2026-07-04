@@ -9,7 +9,7 @@
 //
 // Read-only reference, NOT an editor — but a value chip is tappable to jump to
 // "every step that uses it" (onSelectValue), matching the frame's footer hint.
-import type { RegistryKind } from "@ballroom/domain";
+import type { RegistryKind } from "@weavesteps/domain";
 import { useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
 import { cx, FullScreen } from "../ui";

@@ -43,7 +43,7 @@ import {
   undoLastChange,
   variantAttributesForEdit,
   wasSupersededByOthers,
-} from "@ballroom/domain";
+} from "@weavesteps/domain";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
 import {
   connectUrl,

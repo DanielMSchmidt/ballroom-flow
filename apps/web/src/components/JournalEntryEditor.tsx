@@ -6,7 +6,7 @@
 // links: a routine-scoped link (point/figure) saves via createRoutineEntry on
 // that routine's editable store (createAnnotation); an account figureType link
 // saves via createFamilyEntry (createFamilyNote). Both are injected (store seam).
-import type { AnnotationKind } from "@ballroom/domain";
+import type { AnnotationKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

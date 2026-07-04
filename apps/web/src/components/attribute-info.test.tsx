@@ -5,7 +5,7 @@
 // kind. Colour dot + title + description + a VALUES glossary (chip + definition)
 // + a "Used in N steps" footer. Registry-derived, so it also works for a custom
 // kind (no prose definitions, but the values still render).
-import { ATTRIBUTE_REGISTRY, type Attribute, type RegistryKind } from "@ballroom/domain";
+import { ATTRIBUTE_REGISTRY, type Attribute, type RegistryKind } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";

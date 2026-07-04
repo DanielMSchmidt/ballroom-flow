@@ -21,7 +21,7 @@
 // D10 wire (2026-07-02): server→client BINARY frames carry a 1-byte TYPE tag —
 // SNAPSHOT (whole doc, A.load+merge on connect) or CHANGE (one incremental
 // change). Client→server frames stay RAW change bytes (untagged). These byte
-// constants MIRROR @ballroom/contract's SYNC_FRAME_* (kept inline so this plain
+// constants MIRROR @weavesteps/contract's SYNC_FRAME_* (kept inline so this plain
 // node script needs no TS/workspace resolution).
 import * as A from "@automerge/automerge";
 

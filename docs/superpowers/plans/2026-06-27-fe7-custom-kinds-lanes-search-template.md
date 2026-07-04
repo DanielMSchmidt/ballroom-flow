@@ -16,12 +16,12 @@
 - TS strict, **no `any`** (Biome `noExplicitAny` is an error). Run `pnpm lint && pnpm typecheck` before every commit.
 - Dependency direction: `contract → domain`; `web → contract, domain`; `worker → contract, domain`. Never import `web`/`worker` from `domain`/`contract`.
 - Skipped/scaffold tests must never top-level-import a not-yet-built product export — use the existing `importComponent(...)` / dynamic `await import(...)` pattern.
-- IDs are client-minted ULIDs (`newId()` from `@ballroom/domain`). **Soft-delete only** (`deletedAt`), never hard removal.
+- IDs are client-minted ULIDs (`newId()` from `@weavesteps/domain`). **Soft-delete only** (`deletedAt`), never hard removal.
 - DO tests: `isolatedStorage: false`; every test uses a unique DO id (`do-id.ts` helper).
 - Builtin attribute-kind slugs are reserved — a custom kind colliding with a builtin is ignored (`mergeRegistry` already enforces this).
 - Worktree workflow: run gates explicitly (`pnpm lint && pnpm typecheck && pnpm test`, then `pnpm test:e2e:smoke`); push with an explicit refspec; never `--no-verify`. Branch base is `development`.
 - `@smoke` E2E runs chromium-desktop only on PR (mobile is nightly). E2E disables animations via the `.bf-e2e` class; the test reset must clear seeded tables.
-- Run a single workspace's tests with a filter, e.g. `pnpm --filter @ballroom/domain test`, `pnpm --filter @ballroom/web test`, `pnpm --filter @ballroom/worker test`.
+- Run a single workspace's tests with a filter, e.g. `pnpm --filter @weavesteps/domain test`, `pnpm --filter @weavesteps/web test`, `pnpm --filter @weavesteps/worker test`.
 
 ---
 
@@ -96,7 +96,7 @@ describe("US-043 customKinds on the routine doc", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain test -- doc-routine`
+Run: `pnpm --filter @weavesteps/domain test -- doc-routine`
 Expected: FAIL — `customKinds` missing from the type / not read back.
 
 - [ ] **Step 3: Implement**
@@ -135,7 +135,7 @@ In `schemas.ts`, add `customKinds: z.array(zRegistryKind).optional()` to the acc
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/domain test -- doc-routine`
+Run: `pnpm --filter @weavesteps/domain test -- doc-routine`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -188,7 +188,7 @@ describe("US-043 custom kind slug helpers", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/domain test -- vocabulary`
+Run: `pnpm --filter @weavesteps/domain test -- vocabulary`
 Expected: FAIL — `slugifyKind`/`isReservedKind` not exported.
 
 - [ ] **Step 3: Implement** (append to `vocabulary.ts`)
@@ -212,7 +212,7 @@ Re-export both from `index.ts`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/domain test -- vocabulary`
+Run: `pnpm --filter @weavesteps/domain test -- vocabulary`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -262,7 +262,7 @@ it("US-045 shapes the template list", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/contract test`
+Run: `pnpm --filter @weavesteps/contract test`
 Expected: FAIL — schemas not exported.
 
 - [ ] **Step 3: Implement** (append to `contract/src/index.ts`)
@@ -300,7 +300,7 @@ export type TemplateList = z.infer<typeof zTemplateList>;
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/contract test`
+Run: `pnpm --filter @weavesteps/contract test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -363,7 +363,7 @@ expect(body.results.some((r) => r.title === "My Foxtrot")).toBe(true);
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/worker test -- search`
+Run: `pnpm --filter @weavesteps/worker test -- search`
 Expected: FAIL — route 404 / migration not applied.
 
 - [ ] **Step 4: Implement `searchReachable`** in `apps/worker/src/db/routines.ts`:
@@ -413,12 +413,12 @@ Add `searchReachable` to the imports from `./db/routines` in `index.ts`.
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/worker test -- search`
+Run: `pnpm --filter @weavesteps/worker test -- search`
 Expected: PASS (both AC-1 and AC-2).
 
 - [ ] **Step 6: Run the EXPLAIN ops gate** to confirm no regression:
 
-Run: `pnpm --filter @ballroom/worker test -- ops`
+Run: `pnpm --filter @weavesteps/worker test -- ops`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
@@ -472,7 +472,7 @@ describe("US-045 templates", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/worker test -- templates`
+Run: `pnpm --filter @weavesteps/worker test -- templates`
 Expected: FAIL — route 404.
 
 - [ ] **Step 3: Implement the seed** — `apps/worker/src/sample.ts` (mirror `starter.ts`):
@@ -483,7 +483,7 @@ Expected: FAIL — route 404.
 // source). Projects the shared SAMPLE_ROUTINE fixture + its figures with
 // ownerId "app"; idempotent (seedDoc is no-clobber). Distinct from the
 // onboarding gift (starter.ts), which FORKS this template into an owned copy.
-import { SAMPLE_FIGURE_LIBRARY, SAMPLE_ROUTINE } from "@ballroom/domain/fixtures";
+import { SAMPLE_FIGURE_LIBRARY, SAMPLE_ROUTINE } from "@weavesteps/domain/fixtures";
 import { createFigureRows } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
 import { createOwnedRoutine } from "./db/routines";
@@ -515,7 +515,7 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
 }
 ```
 
-Confirm the fixtures subpath export exists. If `@ballroom/domain/fixtures` is not exported by the domain `package.json`, import the fixture from the existing path used elsewhere (grep `SAMPLE_ROUTINE` imports in the worker tests) or add the subpath export. Also confirm `createOwnedRoutine` accepts `templateOf`; if not, extend it + the `document_registry` insert to set `templateOf` is NOT a column — `templateOf` lives in the DO doc, the registry has no `templateOf` column. **Decision:** the registry has no `templateOf`; instead flag templates by `ownerId = 'app'`. So `listTemplates` filters `ownerId = 'app' AND type = 'routine'`. Update `seedSampleRoutine` to drop the `templateOf` arg to `createOwnedRoutine` (it stays only on the DO doc).
+Confirm the fixtures subpath export exists. If `@weavesteps/domain/fixtures` is not exported by the domain `package.json`, import the fixture from the existing path used elsewhere (grep `SAMPLE_ROUTINE` imports in the worker tests) or add the subpath export. Also confirm `createOwnedRoutine` accepts `templateOf`; if not, extend it + the `document_registry` insert to set `templateOf` is NOT a column — `templateOf` lives in the DO doc, the registry has no `templateOf` column. **Decision:** the registry has no `templateOf`; instead flag templates by `ownerId = 'app'`. So `listTemplates` filters `ownerId = 'app' AND type = 'routine'`. Update `seedSampleRoutine` to drop the `templateOf` arg to `createOwnedRoutine` (it stays only on the DO doc).
 
 `listTemplates` in `db/routines.ts`:
 
@@ -550,7 +550,7 @@ app.get("/api/templates", async (c) => {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/worker test -- templates`
+Run: `pnpm --filter @weavesteps/worker test -- templates`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -590,7 +590,7 @@ it("forks the app-owned sample into an owned routine (quota-checked)", async () 
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/worker test -- templates`
+Run: `pnpm --filter @weavesteps/worker test -- templates`
 Expected: FAIL — fork returns 403 (no membership on the app-owned template).
 
 - [ ] **Step 3: Implement** — in the fork route (`index.ts:171-188`), allow an app-owned template to be forked by any authenticated user. Replace the membership gate:
@@ -607,7 +607,7 @@ Use the existing owner lookup (`db/membership.ts` documents `document_registry.o
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/worker test -- templates`
+Run: `pnpm --filter @weavesteps/worker test -- templates`
 Expected: PASS.
 
 - [ ] **Step 5: Converge onboarding** — modify `starter.ts` `seedStarterRoutine` to fork the sample template instead of building its own. Keep the signature `seedStarterRoutine(env, userId): Promise<string>` and the best-effort try/catch in the onboarding route. Replace the body to: ensure the sample is seeded, then run the same snapshot-clone-into-owned-doc logic the fork route uses (extract that into a shared `forkRoutineFor(env, { originRef, userId }): Promise<string>` helper in a new `apps/worker/src/fork.ts`, and call it from BOTH the fork route and `seedStarterRoutine`). The onboarding gift must NOT be quota-gated (it's a gift) — `forkRoutineFor` takes a `skipQuota?: boolean`.
@@ -618,7 +618,7 @@ Update `starter.test.ts` expectations: the gifted routine is now a fork of the s
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/worker test -- starter templates`
+Run: `pnpm --filter @weavesteps/worker test -- starter templates`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
@@ -663,18 +663,18 @@ it("US-043 ignores a custom kind colliding with a builtin", async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- routine-store`
+Run: `pnpm --filter @weavesteps/web test -- routine-store`
 Expected: FAIL — `createCustomKind` undefined.
 
 - [ ] **Step 3: Implement** — in `store/routine.ts`:
   - Add `createCustomKind` to the `RoutineStore` interface + the returned object.
   - On call: `if (isReservedKind(descriptor.kind)) return;` then `A.change` the routine doc to push the descriptor into `doc.customKinds` (init `[]` if absent), de-duped by slug; and write the same descriptor to the account doc (`A.change` on the account handle — reuse the existing account-doc connection used for annotations; if the routine store doesn't already hold an account handle, thread it through `OpenOptions` like the annotation author id is).
   - `customKinds()` returns `dedupeBySlug([...accountKinds, ...routineKinds]).filter((k) => !isReservedKind(k.kind))`.
-  - Import `isReservedKind`, `type RegistryKind` from `@ballroom/domain`.
+  - Import `isReservedKind`, `type RegistryKind` from `@weavesteps/domain`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/web test -- routine-store`
+Run: `pnpm --filter @weavesteps/web test -- routine-store`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -713,14 +713,14 @@ it("US-046 queries /api/search and returns results", async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- store/search`
+Run: `pnpm --filter @weavesteps/web test -- store/search`
 Expected: FAIL — module missing.
 
 - [ ] **Step 3: Implement** `store/search.ts` + `store/templates.ts` using the existing `apiGet`/`apiPost` helpers (grep `store/routines.ts` for their import + signature). Encode `q` with `encodeURIComponent`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/web test -- store/search`
+Run: `pnpm --filter @weavesteps/web test -- store/search`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -758,13 +758,13 @@ it("makes the new kind appear in the attribute editor after creation", async () 
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- custom-kind`
+Run: `pnpm --filter @weavesteps/web test -- custom-kind`
 Expected: FAIL — `customKinds` ignored; no Energy heading.
 
 - [ ] **Step 3: Implement**
   - `role-view.ts`:
     ```ts
-    import type { Attribute } from "@ballroom/domain";
+    import type { Attribute } from "@weavesteps/domain";
     /** Visible in a lens when both-role (role=null, always) or the selected role. */
     export const filterByRoleView = (attrs: Attribute[], view: "leader" | "follower"): Attribute[] =>
       attrs.filter((a) => a.role == null || a.role === view);
@@ -772,7 +772,7 @@ Expected: FAIL — `customKinds` ignored; no Energy heading.
   - `FigureTimeline.tsx`: replace the local `visibleInView` usage with `filterByRoleView` (import it; drop the inline helper).
   - `AttributeEditor.tsx`: add `customKinds?: RegistryKind[]` to props; change `kindsFor(dance)` to operate on the merged registry:
     ```ts
-    import { ATTRIBUTE_REGISTRY, mergeRegistry, type RegistryKind, ... } from "@ballroom/domain";
+    import { ATTRIBUTE_REGISTRY, mergeRegistry, type RegistryKind, ... } from "@weavesteps/domain";
     function kindsFor(dance: DanceId | undefined, customKinds: RegistryKind[]) {
       const reg = mergeRegistry(ATTRIBUTE_REGISTRY, customKinds);
       return Object.values(reg).filter((k) => !k.appliesToDances || dance === undefined || k.appliesToDances.includes(dance));
@@ -782,7 +782,7 @@ Expected: FAIL — `customKinds` ignored; no Energy heading.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `pnpm --filter @ballroom/web test -- custom-kind attribute-editor`
+Run: `pnpm --filter @weavesteps/web test -- custom-kind attribute-editor`
 Expected: PASS (custom-kind US-043 + the existing US-028/029/030 stay green).
 
 - [ ] **Step 5: Commit**
@@ -821,16 +821,16 @@ it("creates a user-defined kind (label, color, cardinality, valueType, values)",
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- custom-kind`
+Run: `pnpm --filter @weavesteps/web test -- custom-kind`
 Expected: FAIL — module missing.
 
-- [ ] **Step 3: Implement** `AddKindSheet.tsx` using the `ui` primitives (`Sheet`, `Input`, `Select`, `Button`) and `slugifyKind`/`isReservedKind` from `@ballroom/domain`:
+- [ ] **Step 3: Implement** `AddKindSheet.tsx` using the `ui` primitives (`Sheet`, `Input`, `Select`, `Button`) and `slugifyKind`/`isReservedKind` from `@weavesteps/domain`:
   - Fields: label (Input), color (Input type color or a token Select), cardinality (Select single/multi), valueType (Select enum/text), values (Input — comma-separated, split+trim+filter).
   - On submit: build `{ kind: slugifyKind(label), label, color, cardinality, valueType, values, builtin: false }`; block if `!label.trim()` or `isReservedKind(slug)` (show an inline error "That name is reserved"); call `onCreate`, then `onClose`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/web test -- custom-kind`
+Run: `pnpm --filter @weavesteps/web test -- custom-kind`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -882,7 +882,7 @@ it("honors the role-view toggle in the lane", async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- attribute-editor`
+Run: `pnpm --filter @weavesteps/web test -- attribute-editor`
 Expected: FAIL — `Lanes` missing.
 
 - [ ] **Step 3: Implement** `Lanes.tsx`:
@@ -894,7 +894,7 @@ Expected: FAIL — `Lanes` missing.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/web test -- attribute-editor`
+Run: `pnpm --filter @weavesteps/web test -- attribute-editor`
 Expected: PASS (US-044 + the existing US-028/029/030 stay green).
 
 - [ ] **Step 5: Commit**
@@ -947,7 +947,7 @@ it("US-046 calls onSearch as the user types in the header", async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @ballroom/web test -- choreo-list`
+Run: `pnpm --filter @weavesteps/web test -- choreo-list`
 Expected: FAIL — props/affordances missing.
 
 - [ ] **Step 3: Implement** in `ChoreoList.tsx`:
@@ -957,7 +957,7 @@ Expected: FAIL — props/affordances missing.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @ballroom/web test -- choreo-list`
+Run: `pnpm --filter @weavesteps/web test -- choreo-list`
 Expected: PASS.
 
 - [ ] **Step 5: Wire the screen** — in the ChoreoList screen wrapper (grep for where `<ChoreoList` is rendered with store data; likely `App.tsx` or a `ChoreoListScreen`), wire `onSearch` → `store/search.search`, `templates`/`sample` → `store/templates.listTemplates` (the sample is the template whose `docRef === SAMPLE_ROUTINE.id`), `onStartFromTemplate` → `forkTemplate` then navigate to the new `docRef`. Typecheck only (screen wiring is covered by E2E).

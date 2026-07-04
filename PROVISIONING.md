@@ -10,7 +10,7 @@ of the pure domain core (Milestone 1).
 
 | Item | State |
 |---|---|
-| D1 `ballroom-flow-staging` + `ballroom-flow-production` | ✅ created; `database_id`s wired into `wrangler.toml` |
+| D1 `weave-steps-staging` + `weave-steps-production` | ✅ created; `database_id`s wired into `wrangler.toml` |
 | Staging + production Workers | ✅ smoke-deployed and verified healthy (`/api/health` → `{ok:true}`, SPA + fallback OK) |
 | GitHub Environments `staging` + `production` | ✅ created |
 | `CLOUDFLARE_ACCOUNT_ID` (both GH environments) | ✅ set |
@@ -70,7 +70,7 @@ and update the prod GH variable then. You can always deploy manually with
 ```
 cd apps/worker
 wrangler login
-wrangler d1 create ballroom-flow
+wrangler d1 create weave-steps
 ```
 Copy the returned `database_id` into `apps/worker/wrangler.toml` (replacing the
 all-zeros placeholder). Repeat / bind per environment as needed. Migrations are
@@ -88,8 +88,8 @@ remote DB, then `wrangler deploy`s to the matching environment.
 1. **Create the two D1 databases** (needs `wrangler login` or a token):
    ```
    cd apps/worker
-   wrangler d1 create ballroom-flow-staging
-   wrangler d1 create ballroom-flow-production
+   wrangler d1 create weave-steps-staging
+   wrangler d1 create weave-steps-production
    ```
    Paste each returned `database_id` into `wrangler.toml` (replacing the
    `REPLACE_WITH_*_D1_ID` placeholders).

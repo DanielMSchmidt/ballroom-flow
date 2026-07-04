@@ -1,5 +1,5 @@
 import { env, runInDurableObject } from "cloudflare:test";
-import { capabilitiesFor } from "@ballroom/domain";
+import { capabilitiesFor } from "@weavesteps/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { resolveEffectiveRole } from "./db/membership";
 import { authedContext } from "./test-support/authed-context";
@@ -19,7 +19,7 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 // D1 role lookup), NEVER post-hoc CRDT-cell rejection.
 //
 // US-020 (below) is implemented: the membership table + the pure capability
-// model (@ballroom/domain) + the DO's transitional membership gate (an
+// model (@weavesteps/domain) + the DO's transitional membership gate (an
 // authenticated non-member is rejected per-doc). The US-021 block stays skipped
 // — it makes the boundary fail-closed (token REQUIRED) + refuses a viewer's
 // writes on the socket. CLERK_JWT_KEY is the static test PEM (vitest.config.ts).

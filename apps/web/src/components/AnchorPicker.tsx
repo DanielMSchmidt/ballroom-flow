@@ -10,7 +10,7 @@
 // Styling: the three anchor choices are `Chip` toggles (the app's "pick one"
 // pattern — 44px target, focus ring, aria-pressed); the dance scope stays a
 // native radio group (the family identity the tests assert on).
-import type { Anchor, DanceId } from "@ballroom/domain";
+import type { Anchor, DanceId } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";

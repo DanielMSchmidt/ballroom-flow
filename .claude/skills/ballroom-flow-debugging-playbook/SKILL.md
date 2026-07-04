@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-debugging-playbook
-description: Load when something in Ballroom Flow is broken, flaky, or weird — a failing or flaky test, UI flicker/reset, "Unknown figure" or stuck loading, edits lost on reload, divergent CRDT replicas, wrong/vanishing routine cards, permission or quota/invite anomalies, worker-test state leaks, or noisy CI logs — and you need triage BEFORE touching code. Maps symptoms to discriminating experiments and known fix patterns.
+description: Load when something in Weave Steps is broken, flaky, or weird — a failing or flaky test, UI flicker/reset, "Unknown figure" or stuck loading, edits lost on reload, divergent CRDT replicas, wrong/vanishing routine cards, permission or quota/invite anomalies, worker-test state leaks, or noisy CI logs — and you need triage BEFORE touching code. Maps symptoms to discriminating experiments and known fix patterns.
 ---
 
-# Ballroom Flow debugging playbook
+# Weave Steps debugging playbook
 
 Symptom-first triage for this repo: a collaborative choreography PWA where each document
 is an Automerge CRDT (a data structure that merges concurrent edits deterministically)

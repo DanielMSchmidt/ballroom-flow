@@ -13,7 +13,7 @@
 
 /** The 5 Standard travelling dances of v1 (no Latin/spot), as a runtime tuple —
  *  the single source for both the {@link DanceId} type and value-level checks
- *  (e.g. a Zod enum in @ballroom/contract, US-025/#79). */
+ *  (e.g. a Zod enum in @weavesteps/contract, US-025/#79). */
 export const DANCE_IDS = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"] as const;
 
 /** The 5 Standard travelling dances of v1 (no Latin/spot). */

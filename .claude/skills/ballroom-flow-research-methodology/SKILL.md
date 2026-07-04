@@ -1,9 +1,9 @@
 ---
 name: ballroom-flow-research-methodology
-description: Load when turning a hunch into an accepted change in ballroom-flow — proposing an architecture or model change, adjudicating a design dispute, root-causing a flake or bug before "fixing" it, or deciding whether an investigation's conclusion is trustworthy enough to lock. Covers the evidence bar, adversarial refutation, named-scenario adjudication, the idea→locked-decision pipeline, and the banned anti-patterns.
+description: Load when turning a hunch into an accepted change in weave-steps — proposing an architecture or model change, adjudicating a design dispute, root-causing a flake or bug before "fixing" it, or deciding whether an investigation's conclusion is trustworthy enough to lock. Covers the evidence bar, adversarial refutation, named-scenario adjudication, the idea→locked-decision pipeline, and the banned anti-patterns.
 ---
 
-# Ballroom Flow — research methodology (how ideas become locked decisions)
+# Weave Steps — research methodology (how ideas become locked decisions)
 
 This repo has a specific, history-tested discipline for how a hunch becomes an accepted
 change. It was forged in 8 days / 131 PRs (2026-06-24 → 2026-07-02) that included three

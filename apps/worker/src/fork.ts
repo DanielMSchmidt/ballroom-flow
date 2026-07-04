@@ -2,7 +2,7 @@
 // Shared fork-routine helper (US-037/US-045/US-055). Extracted from the
 // POST /api/routines/:id/fork route so the onboarding gift (starter.ts) can
 // reuse the exact same snapshot-clone logic without duplicating it.
-import { copyFigureForFork, type FigureDoc, newId } from "@ballroom/domain";
+import { copyFigureForFork, type FigureDoc, newId } from "@weavesteps/domain";
 import { routineCapFor } from "./db/admin";
 import { createFigureRows, findSavedLibraryFigure, getRegistryTypes } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";

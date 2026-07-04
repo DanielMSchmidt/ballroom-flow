@@ -5,7 +5,7 @@ import { renderUi, screen } from "./test-support/render";
 // ─────────────────────────────────────────────────────────────────────────
 // T1 — App shell & navigation parity
 //
-// The signed-in shell must NOT render a persistent "Ballroom Flow" heading
+// The signed-in shell must NOT render a persistent "Weave Steps" heading
 // above the tab content. The design places the app name only in the desktop
 // side-rail (as a <span>), not as an <h1> visible on mobile inner tabs.
 //
@@ -52,11 +52,11 @@ vi.mock("./components/Landing", () => ({
 }));
 
 describe("T1 — App shell: no persistent app-name header on inner tabs", () => {
-  it("does not render a Ballroom Flow heading in the signed-in shell", () => {
-    // Intent: the persistent "Ballroom Flow / Signed in" bar must be absent.
+  it("does not render a Weave Steps heading in the signed-in shell", () => {
+    // Intent: the persistent "Weave Steps / Signed in" bar must be absent.
     // The side-rail uses a <span> (not a heading role), so no heading should be
     // found anywhere once the App.tsx header <h1> is removed.
-    // RED: fails while App.tsx still renders <h1>Ballroom Flow</h1>.
+    // RED: fails while App.tsx still renders <h1>Weave Steps</h1>.
     // GREEN: passes once the persistent header is removed.
     renderUi(<App />);
     const headings = screen.queryAllByRole("heading", { name: /ballroom flow/i });

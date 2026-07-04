@@ -1,6 +1,6 @@
 // US-043 — account-wide custom attribute kinds (server-mediated D1, like family
 // notes). PK (userId, kind) makes upsert + per-user list cheap and indexed.
-import type { RegistryKindDto } from "@ballroom/contract";
+import type { RegistryKindDto } from "@weavesteps/contract";
 
 /** Upsert a custom kind for the given user. `now` is a unix-ms timestamp supplied
  *  by the caller (worker route code may use `Date.now()`; domain code may not). */

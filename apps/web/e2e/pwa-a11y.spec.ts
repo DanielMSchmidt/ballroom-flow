@@ -35,7 +35,7 @@ test.describe("@smoke PWA install + offline app shell", () => {
       if (!href) throw new Error("no manifest link");
       return (await fetch(href)).json();
     })) as { name?: string; icons?: unknown[] };
-    expect(manifest.name).toBe("Ballroom Flow");
+    expect(manifest.name).toBe("Weave Steps");
     expect((manifest.icons ?? []).length).toBeGreaterThanOrEqual(2);
     await serviceWorkerControls(page);
   });

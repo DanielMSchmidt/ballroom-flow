@@ -8,7 +8,7 @@
 // the server boundary stays the real gate.
 //
 // US-045/US-046: on mount, fetch templates + wire header search + fork.
-import type { RoutineListItem, SearchResult } from "@ballroom/contract";
+import type { RoutineListItem, SearchResult } from "@weavesteps/contract";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { useMessages } from "../i18n";
