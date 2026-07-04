@@ -56,8 +56,8 @@ describe("AddKindPicker (frame 1.15)", () => {
     renderUi(<AddKindPicker open onCreate={onCreate} />);
     await userEvent.click(screen.getByRole("button", { name: /new attribute type/i }));
     // The builder's Label field is now present.
-    await userEvent.type(screen.getByLabelText(/label/i), "Energy");
-    await userEvent.type(screen.getByLabelText(/values/i), "low, high");
+    await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
+    await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: "energy" }));
   });
