@@ -1924,9 +1924,10 @@ function AlignmentEdge({
  * A compact, read-only chip summary of a figure's steps for the edit-view
  * placement card (US-018) — the same per-count chips the reading view shows,
  * filtered to the current L·F lens so it matches the side the editor is working
- * on. Each step is its count label + the value chips set on that count; the row
- * wraps and shows the figure's technique at a glance without opening the editor.
- * An empty figure (placed but not yet notated) falls back to the plain summary.
+ * on. Each beat/count sits on its OWN row (a small count-label gutter + that
+ * count's value chips), so a multi-step figure reads as a tidy stacked list
+ * rather than one crowded wrapping strip. An empty figure (placed but not yet
+ * notated) falls back to the plain summary.
  */
 function PlacementAttributes({
   figure,
@@ -1948,7 +1949,7 @@ function PlacementAttributes({
   const columns = usedColumns(forRole, dance);
   const counts = [...new Set(forRole.map((a) => a.count))].sort((a, b) => a - b);
   return (
-    <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+    <div className="flex flex-col gap-[3px]">
       {counts.map((count) => {
         const here = forRole.filter((a) => a.count === count);
         const dimmed = isOffBeatCount(count);
@@ -1962,17 +1963,19 @@ function PlacementAttributes({
           .filter(Boolean);
         if (chips.length === 0) return null;
         return (
-          <span key={count} className="inline-flex items-center gap-1">
+          // One row per beat/count: a fixed count-label gutter on the left, the
+          // beat's chips wrapping to its right (frame 1.6 count-gutter layout).
+          <div key={count} className="flex items-start gap-2">
             <span
               className={cx(
-                "flex-none font-bold text-accent tabular-nums",
+                "w-[18px] flex-none pt-[3px] text-right font-bold text-accent tabular-nums",
                 dimmed ? "text-[10px]" : "text-[11px]",
               )}
             >
               {countLabel(count)}
             </span>
-            {chips}
-          </span>
+            <div className="flex flex-wrap gap-1">{chips}</div>
+          </div>
         );
       })}
     </div>
