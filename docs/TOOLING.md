@@ -66,8 +66,10 @@ New dev dependencies:
   Migrations dir is empty until **M2**.
 - **Lighthouse-CI** — stubbed in `nightly.yml`; budgets authored in **M9**
   (PLAN.md §7 perf NFRs).
-- **Sentry (`@sentry/cloudflare`) + Analytics Engine** — observability wiring is
-  **M8** (PLAN.md §7 Ops, §9 M8). Not part of the test harness.
+- **Sentry + Analytics Engine** — shipped in **M8** as dependency-free envelope
+  reporters (no Sentry SDK): worker `apps/worker/src/ops.ts` (+ auth
+  verification-failure reporting, 2026-07-05) and web `apps/web/src/lib/ops.ts`
+  (`VITE_SENTRY_DSN`). See PLAN.md §7 Ops, §9 M8. Not part of the test harness.
 - **Real-browser component testing** — the component layer uses jsdom (fast,
   deterministic) for Testing Library + axe; true cross-browser + PWA
   install/offline coverage is the Playwright E2E layer (M9).

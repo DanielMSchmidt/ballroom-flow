@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppAuthProvider } from "./auth/app-auth";
 import { isE2E } from "./lib/e2e-auth";
+import { initErrorReporting } from "./lib/ops";
 import { initStaleBundleReload } from "./lib/stale-bundle";
 // driver.js base styles for the first-visit UI tours; themed to the --bf-*
 // tokens by the `.bf-tour` overrides in styles/index.css. CSS stays imported
@@ -12,6 +13,11 @@ import "driver.js/dist/driver.css";
 import "./styles/index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+// US-049 (web half): last-resort client error reporting — uncaught exceptions
+// and unhandled rejections go to Sentry (no-op without VITE_SENTRY_DSN). Wired
+// before anything renders so even a boot crash reports.
+initErrorReporting();
 
 // Stale-bundle reload nudge: when this (deployed) tab becomes visible after a
 // newer deploy, reload it onto the current bundle — the mechanism the sync-wire

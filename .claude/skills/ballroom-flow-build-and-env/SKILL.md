@@ -105,7 +105,8 @@ Secrets matter only for real sign-in in dev, deployed environments, and deploys:
 | `CLERK_SECRET_KEY` | `apps/worker/.dev.vars` (local); `wrangler secret put CLERK_SECRET_KEY --env staging\|production` | Worker auth positive path / deployed API |
 | `CLERK_JWT_KEY` (PEM, optional) | `.dev.vars` / wrangler secret; a **committed throwaway test key** lives in `apps/worker/wrangler.toml` `[env.e2e.vars]` | Networkless JWT verify; E2E |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub Environments `staging` / `production` | `deploy.yml` only (it skips deploy with a notice if unset) |
-| `VITE_SENTRY_DSN` / `SENTRY_DSN` | future (M8) | **not wired yet** |
+| `SENTRY_DSN` | wrangler secret per env (worker reporter `apps/worker/src/ops.ts`) | Worker error reporting (US-049); silent no-op unset |
+| `VITE_SENTRY_DSN` | GitHub env **variable**, baked by `deploy.yml` (web reporter `apps/web/src/lib/ops.ts`, added 2026-07-05) | Client error reporting (US-049 web half); silent no-op unset |
 
 **There is no `.env.example` or `.dev.vars.example`.** Write `apps/web/.env.local`
 and `apps/worker/.dev.vars` by hand following `PROVISIONING.md`. Dev-server and
