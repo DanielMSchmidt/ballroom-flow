@@ -99,6 +99,19 @@ describe("AppShell tab bar", () => {
     expect(screen.getByText("Weave Steps")).toBeInTheDocument();
   });
 
+  it("shows the brand mark beside the side-rail wordmark, decoratively", () => {
+    // The woven-W brand mark sits inside the side-rail wordmark span. It is
+    // decorative (aria-hidden) — the accessible brand name stays the text.
+    renderUi(
+      <AppShell nav={NAV} current="choreo" onNavigate={() => {}}>
+        content
+      </AppShell>,
+    );
+    const mark = screen.getByTestId("brand-mark");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Weave Steps")).toContainElement(mark);
+  });
+
   it("has no axe violations", async () => {
     const { container } = renderUi(
       <AppShell nav={NAV} current="choreo" onNavigate={() => {}}>

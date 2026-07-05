@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <title>Weave Steps</title>
+  <!-- Weave Steps brand mark ("woven W") on the studio-blue tile.
+       Geometry mirrors ui/icons.tsx BrandMark and scripts/gen-pwa-icons.mjs. -->
+  <rect width="24" height="24" rx="4.3" fill="#2f5d8f"/>
+  <g fill="none" stroke="#e9e6df" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(12 12) scale(0.78) translate(-12 -12)">
+    <path d="M8.6 6 L10.39 9.58 M13.61 16.02 L14.6 18 L20.6 6"/>
+    <path d="M3.4 6 L9.4 18 L15.4 6"/>
+  </g>
+</svg>
