@@ -163,6 +163,37 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
     await closeUsers(solo);
   });
 
+  test("the installed app OPENS offline to the last-known choreo list, not a spinner", async ({
+    browser,
+  }) => {
+    // Intent (§11.2 — offline app open): launching the installed PWA in
+    //   airplane mode must land on the normal choreo list served from the
+    //   on-device cache (the reported bug: an endless boot spinner). A user
+    //   with zero choreos gets the normal empty view the same way.
+    const [solo] = await openTwoUsers(browser, COACH, STUDENT);
+    await resetDb(solo.page);
+    await seedDb(solo.page, {
+      users: [{ id: COACH, displayName: "Coach", identityColor: "#111111" }],
+    });
+    await seedAuth(solo.page, COACH);
+    await createRoutineAsCoach(solo.page, "Cached Waltz");
+    // Land on the list once ONLINE (writes the offline cache + primes the SW).
+    await solo.page.goto("/");
+    await expect(solo.page.getByText("Cached Waltz")).toBeVisible({ timeout: 15_000 });
+    await serviceWorkerControls(solo.page);
+
+    // The offline LAUNCH: reload with no network → the list renders from cache.
+    await solo.context.setOffline(true);
+    await solo.page.reload();
+    await expect(solo.page.getByText("Cached Waltz")).toBeVisible({ timeout: 15_000 });
+    await expect(solo.page.getByTestId("offline-banner")).toBeVisible();
+    // Creation stays gated; opening the cached choreo still works (§11.2 reads).
+    await expect(solo.page.getByRole("button", { name: /new choreo/i })).toBeDisabled();
+
+    await solo.context.setOffline(false);
+    await closeUsers(solo);
+  });
+
   test("access revoked while offline → the unsyncable edits are surfaced, never dropped", async ({
     browser,
   }) => {
@@ -193,10 +224,8 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
     await student.context.setOffline(false);
     await expect(student.page.getByTestId("unsynced-changes")).toBeVisible({ timeout: 30_000 });
     // …and the locally-persisted content stays READABLE (not blanked away).
-    // The screen re-lands on the reading lens after the access flip; switch to
-    // the list lens (always available — it needs no edit rights) and find the
-    // doomed section still on screen.
-    await student.page.getByRole("button", { name: /list view/i }).click();
+    // The screen stays on the edit lens it was on — the store survives the
+    // access flip (no remount), so the section list is still right there.
     await expect(student.page.locator("[data-testid='section-list']")).toContainText("Doomed Edit");
 
     await closeUsers(coach, student);

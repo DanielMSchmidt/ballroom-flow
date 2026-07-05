@@ -26,7 +26,15 @@ import {
   type RegistryKind,
   type Section,
 } from "@weavesteps/domain";
-import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { pickMessages, useMessages } from "../i18n";
 import { assembleMessages } from "../i18n/messages/assemble";
 import { timelineMessages } from "../i18n/messages/timeline";
@@ -177,21 +185,31 @@ function useRoutineStore(
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
 
+  // The token provider is consumed LAZILY (a fresh token per call), so its
+  // IDENTITY must never restart the store: callers pass inline arrows
+  // (`getToken={() => getToken()}`), and with it in the effect deps every
+  // parent re-render tore the store down and reopened it. Under an offline
+  // retry storm (queries failing/refetching re-render ChoreoFlow constantly)
+  // that left a perpetually half-hydrated newborn store on screen — the
+  // "content vanished while offline" class. A ref keeps calls current while
+  // the store's lifetime tracks only the real inputs (routine, role, enabled).
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+
   useEffect(() => {
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
+    const latestToken: TokenProvider = async () => (await getTokenRef.current?.()) ?? null;
     const doOpen = async () => {
       // Fetch account-wide custom kinds for cross-routine reuse (US-043 AC-2).
       // Best-effort: a failure must never block the routine open.
       let accountKinds: RegistryKind[] = [];
-      if (getToken) {
-        try {
-          const token = await getToken();
-          accountKinds = await listAccountKinds(token);
-        } catch {
-          // Non-blocking; reload-persistence works via the routine-embedded copy.
-        }
+      try {
+        const token = await latestToken();
+        accountKinds = await listAccountKinds(token);
+      } catch {
+        // Non-blocking; reload-persistence works via the routine-embedded copy.
       }
       if (cancelled) return;
       // Read/edit split: open in read-only snapshot mode (one REST read, zero
@@ -200,7 +218,7 @@ function useRoutineStore(
       // opens a socket. A viewer never triggers the upgrade (the UI gates edits).
       const opened = openRoutineView(routineId, {
         editable,
-        getToken,
+        getToken: latestToken,
         currentUserId,
         accountKinds,
         onCopyOnWrite,
@@ -221,7 +239,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, editable, getToken, currentUserId, onCopyOnWrite]);
+  }, [routineId, injected, enabled, editable, currentUserId, onCopyOnWrite]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
