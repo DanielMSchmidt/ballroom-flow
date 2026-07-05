@@ -32,9 +32,14 @@ jobs:
       - run: pnpm lint
       - run: pnpm -r typecheck
       # The publishable key (public) is baked into the SPA at build time.
+      # VITE_BUILD_ID (the commit SHA) is the stale-bundle handshake: the SPA
+      # compares it against /api/health's buildId (injected into the worker at
+      # deploy below — the SAME sha, since worker + assets ship as one deploy)
+      # and reloads a tab left running an older bundle.
       - run: pnpm -r build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_BUILD_ID: ${{ github.sha }}
       - run: pnpm -r test
 
       # E2E smoke — the same @smoke Playwright gate CI runs on PRs, mirrored here
@@ -66,7 +71,9 @@ jobs:
         working-directory: apps/worker
         run: pnpm exec wrangler d1 migrations apply DB --env ${{ steps.target.outputs.name }} --remote
 
+      # --var BUILD_ID: the worker half of the stale-bundle handshake (see the
+      # build step above); /api/health surfaces it as `buildId`.
       - name: Deploy Worker + assets
         if: env.CLOUDFLARE_API_TOKEN != ''
         working-directory: apps/worker
-        run: pnpm exec wrangler deploy --env ${{ steps.target.outputs.name }}
+        run: pnpm exec wrangler deploy --env ${{ steps.target.outputs.name }} --var BUILD_ID:${{ github.sha }}

@@ -168,20 +168,33 @@ export const SYNC_CAUGHT_UP = "ballroom:sync:caught-up";
  * the resend-on-reconnect path (which forward raw `A.getChanges` bytes) untouched,
  * and the two directions never share a decoder, so there is no ambiguity.
  *
- * DEPLOYMENT-COMPAT WINDOW (accepted, not versioned): this is a HARD protocol
- * cutover. A browser running the OLD client bundle against a NEW worker sees
- * tagged frames and drops them (an old client `A.applyChanges`-es `[tag,…]` →
- * "Invalid magic bytes"); a NEW client against an OLD worker sees raw change
- * frames whose first byte (Automerge magic `0x85`) is an unknown tag and drops
- * them. Either way the affected tab fails to hydrate until it RELOADS onto the
- * matching bundle (Cloudflare deploys worker + web assets together, and the DO
- * restarts with new code, so the mismatch only spans open tabs during a rollout).
- * Auto-reconnect can't bridge it — a reload can. Acceptable at this stage; revisit
- * with a WS-subprotocol version (`ballroom.sync.v2`) if a zero-downtime rollout is
- * ever required.
+ * DEPLOYMENT-COMPAT WINDOW: a protocol change here is a HARD cutover on the
+ * wire — e.g. when the 1-byte tag landed, an OLD client against a NEW worker
+ * dropped tagged frames ("Invalid magic bytes") and a NEW client against an OLD
+ * worker dropped raw ones; the affected tab fails to hydrate until it RELOADS
+ * onto the matching bundle (Cloudflare deploys worker + web assets together, and
+ * the DO restarts with new code, so the mismatch only spans open tabs during a
+ * rollout — and the stale-bundle reload nudge, `apps/web/src/lib/stale-bundle.ts`,
+ * reloads those tabs when they next become visible). What makes the NEXT cutover
+ * manageable is that the version is now NEGOTIATED, not guessed: the client
+ * offers {@link SYNC_SUBPROTOCOL_V1} in its WS subprotocol list and the worker
+ * echoes it (see below), so a `ballroom.sync.v2` server can detect a v1 client —
+ * and vice versa — at the handshake instead of from malformed frames.
  */
 export const SYNC_FRAME_SNAPSHOT = 0x01;
 export const SYNC_FRAME_CHANGE = 0x02;
+
+/**
+ * The sync-wire VERSION subprotocol. The client offers it (alongside the
+ * `ballroom.auth` token carrier) when opening `/api/docs/:id/connect`; the
+ * worker selects+echoes it when offered, falling back to echoing
+ * `ballroom.auth` for a pre-v1 client that doesn't offer it. It changes
+ * nothing about today's wire — its whole job is to make the sync protocol
+ * version DETECTABLE at the handshake, so a future `ballroom.sync.v2` can be
+ * negotiated (or at least diagnosed) instead of hard-cut. Bump the suffix in
+ * lockstep with any incompatible change to the frame envelope above.
+ */
+export const SYNC_SUBPROTOCOL_V1 = "ballroom.sync.v1";
 
 /**
  * WS close code the DO uses when a broadcast `send` to a socket FAILS (D10

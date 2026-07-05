@@ -108,7 +108,9 @@ describe("#189 store attaches the auth token to the connect", () => {
     await Promise.resolve();
     expect(getToken).toHaveBeenCalled();
     const routineOpen = captured.find((c) => c.id === "rt_sample");
-    expect(routineOpen?.protocols).toEqual(["ballroom.auth", "tok_123"]);
+    // The auth carrier + token, plus the sync-wire version offer (the worker
+    // echoes ballroom.sync.v1 back, making the negotiated protocol detectable).
+    expect(routineOpen?.protocols).toEqual(["ballroom.auth", "tok_123", "ballroom.sync.v1"]);
   });
 
   it("opens WITHOUT a subprotocol when no getToken is wired (tests / open boundary)", async () => {
