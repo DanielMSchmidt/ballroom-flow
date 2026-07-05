@@ -2,7 +2,7 @@
 //
 // A `DocConnection` holds an in-memory Automerge doc for ONE document and keeps
 // it in sync with that document's Durable Object over the WebSocket the worker
-// exposes at `/docs/:id/connect` (US-017 Phase 1). It speaks the D10 sync wire
+// exposes at `/api/docs/:id/connect` (US-017 Phase 1). It speaks the D10 sync wire
 // (US-015 + 2026-07-02 hardening): server→client BINARY frames carry a 1-byte
 // TYPE tag — a SYNC_FRAME_SNAPSHOT (the whole doc, `A.load`ed + `A.merge`d on
 // (re)connect) or a SYNC_FRAME_CHANGE (one incremental change to apply). Local
@@ -15,7 +15,12 @@
 // The WebSocket factory is injectable so the seam is testable without a live
 // server (jsdom has no WS server); production passes the global `WebSocket`.
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP, SYNC_FRAME_CHANGE, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
+import {
+  SYNC_CAUGHT_UP,
+  SYNC_FRAME_CHANGE,
+  SYNC_FRAME_SNAPSHOT,
+  SYNC_SUBPROTOCOL_V1,
+} from "@weavesteps/contract";
 import { reconcile } from "./reconcile";
 
 /** Minimal structural view of a WebSocket (so tests can inject a fake). */
@@ -37,10 +42,12 @@ export type TokenProvider = () => Promise<string | null>;
 /** The WS subprotocol that carries the bearer token (the worker route reads it). */
 export const AUTH_SUBPROTOCOL = "ballroom.auth";
 
-/** Where the worker serves the per-document sync socket. */
+/** Where the worker serves the per-document sync socket — under `/api/` like
+ *  every other worker endpoint (the SPA and worker share one origin; the root
+ *  `/docs/*` namespace stays free for future non-app pages). */
 export function connectUrl(base: string, docId: string): string {
   const wsBase = base.replace(/^http/, "ws").replace(/\/$/, "");
-  return `${wsBase}/docs/${encodeURIComponent(docId)}/connect`;
+  return `${wsBase}/api/docs/${encodeURIComponent(docId)}/connect`;
 }
 
 /**
@@ -167,7 +174,11 @@ export class DocConnection<T> {
     if (this.getToken) {
       void this.getToken().then((token) => {
         if (this.disposed) return; // disposed before the token resolved
-        const protocols = token ? [AUTH_SUBPROTOCOL, token] : undefined;
+        // Offer the auth carrier + token, plus the sync-wire version — the
+        // worker echoes SYNC_SUBPROTOCOL_V1 back (readable as `ws.protocol`),
+        // so both peers can detect the negotiated protocol version instead of
+        // diagnosing a future mismatch from malformed frames.
+        const protocols = token ? [AUTH_SUBPROTOCOL, token, SYNC_SUBPROTOCOL_V1] : undefined;
         this.attach(this.openSocket(this.url, protocols));
       });
     } else {

@@ -21,7 +21,7 @@ dataset = "weave_steps_dev"
 [assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/docs/*"]
+run_worker_first = ["/api/*"]
 
 # --- Default config: local `wrangler dev` + the vitest-pool-workers tests.
 # Miniflare uses a local SQLite file and ignores database_id.
@@ -60,7 +60,7 @@ name = "weave-steps-e2e"
 [env.e2e.assets]
 directory = "../web/dist-e2e"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/docs/*"]
+run_worker_first = ["/api/*"]
 
 [env.e2e.vars]
 E2E_TEST_ROUTES = "1"
@@ -101,7 +101,7 @@ custom_domain = true
 [env.staging.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/docs/*"]
+run_worker_first = ["/api/*"]
 
 # Bindings are NOT inherited by named environments — redeclare per env.
 # database_id binds the D1 instance (name is only a label); this id is the
@@ -135,7 +135,7 @@ custom_domain = true
 [env.production.assets]
 directory = "../web/dist"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/docs/*"]
+run_worker_first = ["/api/*"]
 
 # database_id binds the D1 instance (name is only a label); this id is the
 # existing production index.

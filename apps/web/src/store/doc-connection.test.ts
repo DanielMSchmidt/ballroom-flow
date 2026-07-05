@@ -249,3 +249,17 @@ describe("DocConnection snapshot catch-up + reconnect resend", () => {
     conn.close();
   });
 });
+
+describe("connectUrl", () => {
+  it("targets the /api/docs/:id/connect worker route (ws scheme, id encoded)", async () => {
+    const { connectUrl } = await import("./doc-connection");
+    // Under `/api/` like every other worker endpoint — the SPA and worker share
+    // one origin, and the root `/docs/*` namespace stays free for future pages.
+    expect(connectUrl("https://weavesteps.com", "rt_01")).toBe(
+      "wss://weavesteps.com/api/docs/rt_01/connect",
+    );
+    expect(connectUrl("http://localhost:8787/", "a/b")).toBe(
+      "ws://localhost:8787/api/docs/a%2Fb/connect",
+    );
+  });
+});

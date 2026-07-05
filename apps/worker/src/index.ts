@@ -1,4 +1,5 @@
 import {
+  SYNC_SUBPROTOCOL_V1,
   zCreateFigure,
   zCreateRoutine,
   zIssueInvite,
@@ -80,6 +81,12 @@ export type Env = {
   // Analytics Engine dataset bound in wrangler.toml.
   SENTRY_DSN?: string;
   ANALYTICS?: AnalyticsEngineDataset;
+  // The deploy's build id (the git SHA, injected by deploy.yml via
+  // `wrangler deploy --var`). /api/health exposes it so a running tab can tell
+  // its bundle is stale and reload (apps/web/src/lib/stale-bundle.ts) — the
+  // mechanism that closes the open-tab version-skew window after a rollout.
+  // Unset in dev/test → health reports null and clients never force a reload.
+  BUILD_ID?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -109,7 +116,10 @@ app.use("/api/*", async (c, next) => {
   });
 });
 
-app.get("/api/health", (c) => c.json({ ok: true }));
+// buildId is the stale-bundle handshake (always present, null when not a real
+// deploy): the SPA compares it against its own baked-in VITE_BUILD_ID and
+// reloads onto the new bundle on mismatch — see apps/web/src/lib/stale-bundle.ts.
+app.get("/api/health", (c) => c.json({ ok: true, buildId: c.env.BUILD_ID ?? null }));
 
 // E2E-only test fixtures (#191). Guarded so these routes exist ONLY when the
 // E2E wrangler run sets E2E_TEST_ROUTES=1 — in dev/staging/prod the flag is
@@ -950,22 +960,32 @@ app.get("/api/search", async (c) => {
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a
-// `GET /docs/:id/connect` upgrade to that document's DO (one DO per document,
-// keyed by `:id` via idFromName) and forwards the upgrade so the DO's
+// `GET /api/docs/:id/connect` upgrade to that document's DO (one DO per
+// document, keyed by `:id` via idFromName) and forwards the upgrade so the DO's
 // Hibernatable-WS sync (US-015) takes over. We pass the doc name to the DO via
 // the `x-doc-name` header because the DO can't recover its idFromName key from
 // `ctx.id` (US-016).
 //
+// Lives under `/api/` like every other worker endpoint (moved from the bare
+// `/docs/:id/connect` right after launch, while a breaking route change was
+// still cheap): the worker+SPA share one origin with `run_worker_first =
+// ["/api/*"]`, so a route OUTSIDE `/api/` would permanently reserve a root URL
+// namespace (`/docs/*` — exactly where a docs/help site would want to live)
+// and couldn't be reclaimed later without stranding old tabs' reconnects.
+//
 // AUTH (#189): a browser WS handshake can't set an Authorization header, so the
 // client offers the Clerk token as a `Sec-WebSocket-Protocol` subprotocol
-// (`ballroom.auth, <token>`). This route extracts the token and forwards it to
-// the DO as `Authorization: Bearer …` (worker→DO fetch CAN set headers). The DO's
-// US-021 fail-closed boundary then authenticates it UNCHANGED — this route only
-// delivers the token, it does not re-authorize. On a 101 we echo the selected
-// subprotocol (browsers fail the handshake unless the server selects one offered).
+// (`ballroom.auth, <token>[, ballroom.sync.v1]`). This route extracts the token
+// and forwards it to the DO as `Authorization: Bearer …` (worker→DO fetch CAN
+// set headers). The DO's US-021 fail-closed boundary then authenticates it
+// UNCHANGED — this route only delivers the token, it does not re-authorize. On
+// a 101 we echo ONE selected subprotocol (browsers fail the handshake unless
+// the server selects one offered): the sync-version subprotocol when the client
+// offered it — making the negotiated wire version visible to both peers
+// (`ws.protocol` client-side) — else the auth carrier, for pre-v1 clients.
 const AUTH_SUBPROTOCOL = "ballroom.auth";
 
-app.get("/docs/:id/connect", async (c) => {
+app.get("/api/docs/:id/connect", async (c) => {
   if (c.req.header("Upgrade") !== "websocket") {
     return c.text("expected websocket upgrade", 426);
   }
@@ -981,16 +1001,25 @@ app.get("/docs/:id/connect", async (c) => {
     .map((p) => p.trim())
     .filter(Boolean);
   const hasAuthProto = offered.includes(AUTH_SUBPROTOCOL);
-  const token = hasAuthProto ? offered.find((p) => p !== AUTH_SUBPROTOCOL) : undefined;
+  // The token is the one offered entry that is NOT a known protocol name —
+  // every future `ballroom.*` protocol constant must be excluded here too, or
+  // it gets forwarded as the bearer token and auth fail-closes.
+  const token = hasAuthProto
+    ? offered.find((p) => p !== AUTH_SUBPROTOCOL && p !== SYNC_SUBPROTOCOL_V1)
+    : undefined;
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
 
-  // Echo the auth subprotocol on a successful upgrade so the browser completes
-  // the handshake (it requires the server to select one of the offered protocols).
+  // Echo ONE selected subprotocol on a successful upgrade so the browser
+  // completes the handshake (it requires the server to select one of the
+  // offered protocols). Prefer the sync-version subprotocol when offered — the
+  // client reads the negotiated wire version back from `ws.protocol` — and fall
+  // back to the auth carrier for a pre-v1 client.
   if (res.status === 101 && hasAuthProto) {
+    const selected = offered.includes(SYNC_SUBPROTOCOL_V1) ? SYNC_SUBPROTOCOL_V1 : AUTH_SUBPROTOCOL;
     const out = new Response(null, { status: 101, webSocket: res.webSocket });
-    out.headers.set("Sec-WebSocket-Protocol", AUTH_SUBPROTOCOL);
+    out.headers.set("Sec-WebSocket-Protocol", selected);
     return out;
   }
   return res;

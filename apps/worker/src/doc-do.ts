@@ -135,6 +135,15 @@ const MIGRATION_ACTOR = `${"0".repeat(31)}1`;
 /** The Automerge change message stamped on every migration change (PLAN §7). */
 const MIGRATION_MESSAGE = "ballroom:migrate";
 
+/**
+ * The generation of this DO's SQLite persistence layout (the changes/snapshot/
+ * doc_meta scheme). NOT the document's `schemaVersion` (that versions the doc's
+ * CONTENT and is migrated by the domain ladder) — this versions how the bytes
+ * are STORED. Bump it only together with the storage-migration code that reads
+ * the old generation and writes the new one.
+ */
+const STORAGE_VERSION = 1;
+
 export class DocDO extends DurableObject<Env> {
   /** In-memory Automerge doc; `null` until first load/cold-load from SQLite. */
   private doc: A.Doc<RoutineDoc> | null = null;
@@ -156,6 +165,20 @@ export class DocDO extends DurableObject<Env> {
     // to the D1 document_registry. Single row keyed at id=0.
     sql.exec(
       "CREATE TABLE IF NOT EXISTS doc_meta (id INTEGER PRIMARY KEY CHECK (id = 0), doName TEXT, docRef TEXT, type TEXT, ownerId TEXT, title TEXT, dance TEXT, figureType TEXT)",
+    );
+    // Storage-format generation marker. The tables above are otherwise
+    // unversioned: if the persistence scheme ever changes (e.g. adopting
+    // automerge-repo's storage, the D6 escape hatch), a migrator must be able
+    // to read which generation THIS document's storage is in — across every
+    // per-doc DO — without shape-sniffing tables. Stamped once (INSERT OR
+    // IGNORE): a pre-marker DO picks it up on its next wake, and a future
+    // format change bumps STORAGE_VERSION only from its migration code path.
+    sql.exec(
+      "CREATE TABLE IF NOT EXISTS storage_meta (id INTEGER PRIMARY KEY CHECK (id = 0), storageVersion INTEGER NOT NULL)",
+    );
+    sql.exec(
+      "INSERT OR IGNORE INTO storage_meta (id, storageVersion) VALUES (0, ?)",
+      STORAGE_VERSION,
     );
   }
 
@@ -777,6 +800,16 @@ export class DocDO extends DurableObject<Env> {
    */
   async debugChangeRowCount(): Promise<number> {
     return this.ctx.storage.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM changes").one().n;
+  }
+
+  /**
+   * Test-only: the persisted storage-format generation (see STORAGE_VERSION).
+   * Pins that every DO stamps its storage generation on construction.
+   */
+  async debugStorageVersion(): Promise<number> {
+    return this.ctx.storage.sql
+      .exec<{ storageVersion: number }>("SELECT storageVersion FROM storage_meta WHERE id = 0")
+      .one().storageVersion;
   }
 
   /**
