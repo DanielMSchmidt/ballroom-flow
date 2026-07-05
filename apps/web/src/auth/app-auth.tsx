@@ -15,10 +15,11 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/clerk-react";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { useMessages } from "../i18n";
 import { appMessages } from "../i18n/messages/app";
 import { completeE2ESignIn, E2E_SESSION_KEY, isE2E, readE2ESession } from "../lib/e2e-auth";
+import { useOnline } from "../lib/use-online";
 import { Button } from "../ui";
 
 export interface AppAuth {
@@ -64,21 +65,69 @@ export function NullAuthProvider({ children }: { children: ReactNode }): React.J
   );
 }
 
+/**
+ * localStorage key remembering WHO was last signed in on this device — the
+ * §11.2 offline fail-open below renders the app for that identity when live
+ * Clerk cannot initialize (no network). Written on every resolved signed-in
+ * load; CLEARED on a resolved signed-out load and on sign-out, so a signed-out
+ * device never re-opens offline as signed-in.
+ */
+export const LAST_SIGNED_IN_KEY = "bf_last_signed_in";
+
+function readCachedIdentity(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_SIGNED_IN_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /** Bridge live Clerk auth into the context (prod/dev). Rendered inside ClerkProvider. */
 function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Element {
-  const { getToken, isLoaded, isSignedIn, signOut } = useAuth();
-  return (
-    <AppAuthContext.Provider
-      value={{
+  const { getToken, isLoaded, isSignedIn, userId, signOut } = useAuth();
+  const online = useOnline();
+
+  // Remember (or forget) the signed-in identity whenever Clerk RESOLVES.
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      if (isSignedIn && userId) window.localStorage.setItem(LAST_SIGNED_IN_KEY, userId);
+      else window.localStorage.removeItem(LAST_SIGNED_IN_KEY);
+    } catch {
+      // Best-effort — a blocked storage only costs the offline fail-open.
+    }
+  }, [isLoaded, isSignedIn, userId]);
+
+  // §11.2 offline app open: with NO network, Clerk's SDK cannot initialize and
+  // `isLoaded` would hold the whole app on the boot spinner forever. FAIL OPEN
+  // to the last-known identity cached on this device: the shell renders,
+  // locally persisted data serves, and getToken() resolves null — every server
+  // boundary still enforces auth (offline they're unreachable anyway). The
+  // moment Clerk DOES load (connectivity returned), its verdict wins.
+  const offlineFallback = !isLoaded && !online;
+  const value: AppAuth = offlineFallback
+    ? {
+        getToken: async () => null,
+        isLoaded: true,
+        isSignedIn: readCachedIdentity() != null,
+        // Offline sign-out can't reach Clerk: drop the cached identity so this
+        // device stops opening signed-in, and reload to the signed-out shell.
+        signOut: async () => {
+          try {
+            window.localStorage.removeItem(LAST_SIGNED_IN_KEY);
+          } catch {
+            // best-effort
+          }
+          window.location.assign("/");
+        },
+      }
+    : {
         getToken: () => getToken(),
         isLoaded,
         isSignedIn: Boolean(isSignedIn),
         signOut: () => signOut(),
-      }}
-    >
-      {children}
-    </AppAuthContext.Provider>
-  );
+      };
+  return <AppAuthContext.Provider value={value}>{children}</AppAuthContext.Provider>;
 }
 
 /** E2E bridge: signed-in from the injected session; getToken returns the test JWT. */

@@ -3,6 +3,37 @@ import { useEffect, useState } from "react";
 import { defaultDocStorage } from "./doc-storage";
 
 /**
+ * Run `fetcher`, caching its last-good result on-device (localStorage) — and
+ * serve that cache when the fetch fails WHILE OFFLINE (§11.2 offline app open:
+ * launching the installed PWA in airplane mode lands on the normal choreo
+ * list, not a spinner/error). An ONLINE failure always rethrows — the cache
+ * never masks a real server error. Best-effort storage: quota/serialization
+ * problems degrade to plain fetch behavior.
+ */
+export async function withOfflineCache<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  try {
+    const value = await fetcher();
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Best-effort — a full/blocked storage must not break the read.
+    }
+    return value;
+  } catch (err) {
+    const offline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (offline) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (raw != null) return JSON.parse(raw) as T;
+      } catch {
+        // Corrupt/unreadable cache — fall through to the real error.
+      }
+    }
+    throw err;
+  }
+}
+
+/**
  * How many §11.2 pending (not-yet-delivered) local changes this DEVICE holds
  * for `docRef`, read from the local persistence layer — usable by screens that
  * do NOT own a live store (e.g. ChoreoFlow's access-denied branch, which must

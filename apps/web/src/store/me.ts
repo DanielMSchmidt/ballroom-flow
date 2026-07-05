@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "../auth/app-auth";
 import { apiGet, apiPost } from "../lib/rpc";
+import { withOfflineCache } from "./offline";
 
 export type Me = {
   sub: string;
@@ -12,12 +13,17 @@ export type Me = {
   routineCap?: number;
 };
 
-/** store/ seam: the current user's verified identity from the Worker. */
+/** store/ seam: the current user's verified identity from the Worker. Offline,
+ *  the last-good response serves from the on-device cache (§11.2 offline app
+ *  open) — keeps `currentUserId` (annotation authorship, undo attribution)
+ *  stable when the installed app launches with no network. */
 export function useMe() {
   const { getToken } = useAppAuth();
   return useQuery({
     queryKey: ["me"],
-    queryFn: async () => apiGet<Me>("/api/me", await getToken()),
+    networkMode: "always",
+    queryFn: async () =>
+      withOfflineCache<Me>("bf_me", async () => apiGet<Me>("/api/me", await getToken())),
   });
 }
 

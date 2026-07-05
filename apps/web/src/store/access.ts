@@ -37,6 +37,11 @@ export function useDocAccess(docRef: string, opts: { enabled?: boolean } = {}): 
   const q = useQuery({
     queryKey: ["access", docRef],
     enabled,
+    // §11.2 offline app open: run the attempt even when react-query believes
+    // the browser is offline — the failure resolves to "unknown" below, which
+    // is what lets an offline launch reach the locally persisted doc instead
+    // of pausing on "checking" forever.
+    networkMode: "always",
     queryFn: async (): Promise<DocAccess> => {
       try {
         const { role } = await apiGet<AccessResponse>(
