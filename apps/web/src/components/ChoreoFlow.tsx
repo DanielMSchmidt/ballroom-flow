@@ -17,6 +17,7 @@ import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
 import { useBookmarkFigure, useMineFigures } from "../store/figures";
 import { useMe } from "../store/me";
+import { usePendingLocalChanges } from "../store/offline";
 import {
   isQuotaError,
   useCreateRoutine,
@@ -58,6 +59,12 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // opening the heavy WS store, so a non-member sees the calm access-denied state
   // rather than a connectivity-looking offline flash (DP #20).
   const access = useDocAccess(openRoutineId ?? "", { enabled: Boolean(openRoutineId) });
+  // Offline editing (§11.2, Q-NEW-2): pending local changes this DEVICE holds
+  // for the open routine. A denial must NOT unmount the screen over them — the
+  // Assemble store surfaces them as the explicit unsyncable alert instead of
+  // this component silently swapping to AccessDenied. Re-probed when the access
+  // verdict changes (revocation lands exactly then).
+  const pendingLocal = usePendingLocalChanges(openRoutineId ?? "", access.state);
 
   // The viewer's library bookmarks (⟳v5, §4.2/§5.2): fetched only when a routine
   // is open, and reduced to a figureRef set so Assemble can O(1)-test "is this
@@ -191,7 +198,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   if (openRoutineId) {
     return (
       <div className="flex flex-col gap-3">
-        {access.state === "denied" ? (
+        {access.state === "denied" && pendingLocal === 0 ? (
           <AccessDenied
             action={
               <Button variant="secondary" size="sm" onClick={() => navigate("/")}>

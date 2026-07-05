@@ -137,7 +137,7 @@
 
 <div class="anno note blue" style="position:absolute;left:2470px;top:26px;width:300px"><b>Scale mapping — px are roles, not specs.</b> These frames are 320px lo-fi: 8px → text-2xs (12px) · 9–10px → xs · 11–12px → sm · 13px Caveat → note. Every tap target ≥ 44px (--bf-touch-target) — the whole cell / row is the hit area, never just the glyph. Chips = kind tint bg + kind border + dark ink (AA); solid colour + white text is banned.</div>
 <div class="anno note" style="position:absolute;left:2470px;top:340px;width:300px;transform:rotate(1deg)"><b>Grid rules.</b> Sub-beats (&amp; · e · a) are nested — smaller count label, tinted row — never dimmed: <b>grey means empty / disabled only</b>. More than 5 columns? The grid pans horizontally; the count column stays sticky, the right edge fades. Type never shrinks below 2xs.</div>
-<div class="anno note tan" style="position:absolute;left:2470px;top:580px;width:300px;transform:rotate(-1deg)"><b>v5 changelog (review pass).</b> AA chips &amp; labels · 44px targets · ✎ Add note rows + sticky note button (1.6) · sub-beats nested, not dimmed · 1.13 is a full page · undo/redo + ↟ save chip in 1.11 · new 1.22 ripple banner · "Saved to My figures · View" toast (2.1) · one noun: choreos · Caveat fix in 1.17.</div>
+<div class="anno note tan" style="position:absolute;left:2470px;top:580px;width:300px;transform:rotate(-1deg)"><b>v5 changelog (review pass).</b> AA chips &amp; labels · 44px targets · ✎ Add note rows + sticky note button (1.6) · sub-beats nested, not dimmed · 1.13 is a full page · undo/redo + ↟ save chip in 1.11 · new 1.22 ripple banner · "Saved to My figures · View" toast (2.1) · one noun: choreos · Caveat fix in 1.17 · new 1.24 offline-editing states (pending chip + unsyncable alert, PLAN §11.2).</div>
 
 <!-- ===================== SECTION 0 · NAVIGATION MAP ===================== -->
 <div class="sect" style="position:absolute;left:80px;top:430px">0 · Navigation — four tabs &amp; where every screen connects</div>
@@ -1307,6 +1307,35 @@
     <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Three contexts: choreo-owned → quiet · global → subtitle "edits copy in" + toast (1.12) · <b>My figures → this banner</b>. Warn only where ripples are real.</span></div>
   </div>
 </div>
+<!-- 1.24 Offline editing — pending + unsyncable states (PLAN §11.2) -->
+<div style="position:absolute;left:2080px;top:9620px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.24 · Offline editing <span class="sub" style="display:inline">— pending &amp; unsyncable states (§11.2)</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div style="display:flex;align-items:center;gap:7px;margin:8px 12px 0;background:#eceef1;border:1.5px solid #c6ccd4;border-radius:9px;padding:8px 11px;min-height:34px"><span style="font:700 11px Inconsolata;color:#5a6472">⚠︎</span><span style="flex:1;font:600 9px Inconsolata;color:#454e5b">You're offline — showing your last synced data.</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">reading</div></div><span style="font:700 14px Inconsolata;color:#2f5d8f">✎</span><span style="font:700 13px Inconsolata;color:#2f5d8f">↗</span></div>
+    <div style="display:flex;align-items:center;gap:7px;margin:8px 12px 0;background:#eceef1;border:1.5px solid #c6ccd4;border-radius:9px;padding:8px 11px;min-height:34px"><span style="font:700 11px Inconsolata;color:#5a6472">⌁</span><span style="flex:1;font:600 9px Inconsolata;color:#454e5b"><b>2 changes</b> saved on this device — they'll sync when you're back online</span><span class="pin">1</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:7px"><span style="font:700 9px Inconsolata;color:#6f6a61;letter-spacing:.5px">1ST LONG SIDE</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Natural Turn</span><span class="cnt">1 2 3</span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Whisk</span><span class="cnt">1 2 3</span></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:2px"><span style="font:700 9px Inconsolata;color:#6f6a61;letter-spacing:.5px">CODA · added offline</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="font:500 12px Caveat,cursive;color:#8a857b;text-align:center;margin-top:4px">editing keeps working — same screens as 1.6–1.11</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:14px;background:#fbe3dc;border:1.5px solid #c0563f;border-radius:10px;padding:10px 12px;min-height:44px"><span style="font:700 13px Inconsolata;color:#8f3825">!</span><span style="flex:1;font:600 10px/1.45 Inconsolata;color:#8f3825"><b>2 offline changes couldn't be saved</b> — your access to this choreo was removed. They stay readable here but won't sync.</span><span class="pin">2</span></div>
+        <div style="font:500 13px Caveat,cursive;color:#6b665e;margin-top:2px">the alert replaces the slate chip only when the server has <i>terminally</i> rejected the reconnect (access revoked / doc gone) — never for a mere network gap</div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>pending chip</b> (slate = offline family, never danger) — appears only with ≥1 undelivered change; count updates live; disappears once synced</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>unsyncable alert</b> (danger, role=alert) — the Q-NEW-2 truth-telling: shown when reconnect is terminally rejected with pending changes; content stays readable, read-only</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>creation stays online-only: ＋ New choreo / new attribute kinds show the normal offline empty-state; only edits inside an already-opened choreo work offline</span></div>
+  </div>
+</div>
+
 <!-- ===================== SECTION 1d · COLUMN FILTER EXPLORATION ===================== -->
 <div class="sect" id="sect-1d" style="position:absolute;left:80px;top:10460px">1d · Reading view — "too crowded": column-filter directions A · B · C + tour — <span style="color:#1f8a5b">✓ decided: A (type chips) · role → header</span></div>
 
