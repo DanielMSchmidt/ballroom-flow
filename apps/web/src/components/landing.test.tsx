@@ -28,6 +28,13 @@ describe("Landing", () => {
     }
   });
 
+  it("shows the brand mark in the header, decoratively", async () => {
+    const { Landing } = await import("./Landing");
+    renderUi(<Landing />);
+    const mark = screen.getByTestId("brand-mark");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("has no axe violations", async () => {
     const { Landing } = await import("./Landing");
     const { container } = renderUi(<Landing />);

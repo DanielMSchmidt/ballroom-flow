@@ -27,6 +27,20 @@ function base({ size = 18, ...rest }: IconProps): SVGProps<SVGSVGElement> {
   };
 }
 
+/**
+ * BrandMark — the Weave Steps logo: two dancers' paths interlocking into a
+ * "woven W", the break in the right strand showing one path passing over the
+ * other. Decorative like every icon here; pair it with the wordmark text.
+ * Geometry is the single source for the mark — favicon.svg and
+ * scripts/gen-pwa-icons.mjs mirror these exact segments.
+ */
+export const BrandMark = (p: IconProps) => (
+  <svg {...base({ strokeWidth: 2.4, ...p })} data-testid="brand-mark">
+    <path d="M8.6 6 L10.39 9.58 M13.61 16.02 L14.6 18 L20.6 6" />
+    <path d="M3.4 6 L9.4 18 L15.4 6" />
+  </svg>
+);
+
 export const PlusIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 5v14M5 12h14" />

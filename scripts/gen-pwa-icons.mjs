@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Generate the PWA manifest icons (US-050) — deterministic, dependency-free.
 // =================================================================
-// Draws the app mark — four vertical "choreo" bars (the Choreo tab glyph) on
-// the brand blue — straight into RGBA pixels and encodes minimal PNGs with
-// node:zlib (no sharp/imagemagick in the toolchain, and a binary asset needs a
+// Draws the app mark — the "woven W" brand mark (two dancers' paths
+// interlocking into a W; see apps/web/src/ui/icons.tsx BrandMark and
+// apps/web/public/favicon.svg, which share this exact geometry) on the brand
+// blue — straight into RGBA pixels and encodes minimal PNGs with node:zlib
+// (no sharp/imagemagick in the toolchain, and a binary asset needs a
 // regenerable source — same rule as the seed generators: regenerate, don't
 // hand-edit). Rerun with `node scripts/gen-pwa-icons.mjs`; output is stable
 // for a given (size, palette) so CI can diff-check it.
@@ -25,6 +27,29 @@ const outDir = join(here, "..", "apps", "web", "public");
 // Brand palette (styles/tokens.css / the manifest theme_color).
 const BG = [0x2f, 0x5d, 0x8f, 0xff]; // --bf-accent-ish deep blue
 const FG = [0xe9, 0xe6, 0xdf, 0xff]; // warm paper (the app background)
+
+// The mark in its 24-unit viewBox (identical to BrandMark / favicon.svg):
+// left strand drawn whole, right strand broken around the crossing at (12,12)
+// so the left path reads as passing over — the "weave".
+const SEGMENTS = [
+  [3.4, 6, 9.4, 18],
+  [9.4, 18, 15.4, 6],
+  [8.6, 6, 10.39, 9.58],
+  [13.61, 16.02, 14.6, 18],
+  [14.6, 18, 20.6, 6],
+];
+const STROKE = 2.4; // stroke-width in viewBox units (round caps)
+const VIEW = 24;
+
+/** Distance from point (px,py) to segment (x1,y1)-(x2,y2). */
+function segDist(px, py, [x1, y1, x2, y2]) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+  const ex = px - (x1 + t * dx);
+  const ey = py - (y1 + t * dy);
+  return Math.sqrt(ex * ex + ey * ey);
+}
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -66,7 +91,7 @@ function encodePng(size, pixels) {
 }
 
 /** Paint the mark: BG fill (rounded corners unless maskable/full-bleed), then
- *  four FG bars of staggered heights — the "choreo" glyph. */
+ *  the woven-W strokes as anti-aliased round-capped capsules. */
 function drawIcon(size, { maskable = false } = {}) {
   const px = Buffer.alloc(size * size * 4);
   const radius = maskable ? 0 : Math.round(size * 0.18);
@@ -82,26 +107,29 @@ function drawIcon(size, { maskable = false } = {}) {
     const dy = y - cy;
     return dx * dx + dy * dy <= radius * radius;
   };
+  // Mark scale: the W spans ~18×16 of its 24-unit box. 0.78 fills the tile
+  // like the favicon; the maskable safe zone (~80% circle) needs the mark's
+  // half-diagonal (~12 units) inside 0.4·size, so it gets a smaller factor.
+  const scale = (size * (maskable ? 0.62 : 0.78)) / VIEW;
+  const half = size / 2;
+  const r = (STROKE / 2) * scale; // stroke radius in pixels
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      if (insideRounded(x, y)) set(x, y, BG);
+      if (!insideRounded(x, y)) continue;
+      set(x, y, BG);
+      // pixel center → viewBox units (mark centered on the icon)
+      const ux = (x + 0.5 - half) / scale + VIEW / 2;
+      const uy = (y + 0.5 - half) / scale + VIEW / 2;
+      let d = Infinity;
+      for (const s of SEGMENTS) d = Math.min(d, segDist(ux, uy, s));
+      // coverage: 1px-wide anti-aliased edge around the capsule boundary
+      const a = Math.max(0, Math.min(1, r - d * scale + 0.5));
+      if (a === 0) continue;
+      const c = [0, 0, 0, 0xff];
+      for (let i = 0; i < 3; i++) c[i] = Math.round(BG[i] + (FG[i] - BG[i]) * a);
+      set(x, y, c);
     }
   }
-  // Four bars centered in the (maskable-safe) inner 60% box, staggered like a
-  // rise-and-fall phrase: heights 0.55, 0.85, 0.7, 1.0 of the box.
-  const box = maskable ? size * 0.52 : size * 0.6; // maskable safe zone ≈ 80% circle
-  const barW = Math.round(box * 0.14);
-  const gap = Math.round(box * 0.12);
-  const heights = [0.55, 0.85, 0.7, 1.0].map((h) => Math.round(box * h));
-  const totalW = barW * 4 + gap * 3;
-  const left = Math.round((size - totalW) / 2);
-  const baseline = Math.round(size / 2 + box / 2);
-  heights.forEach((h, i) => {
-    const x0 = left + i * (barW + gap);
-    for (let y = baseline - h; y < baseline; y++) {
-      for (let x = x0; x < x0 + barW; x++) set(x, y, FG);
-    }
-  });
   return encodePng(size, px);
 }
 
