@@ -31,6 +31,7 @@ import { pickMessages, useMessages } from "../i18n";
 import { assembleMessages } from "../i18n/messages/assemble";
 import { timelineMessages } from "../i18n/messages/timeline";
 import { buildMemberColorMap, type ColorableMember } from "../lib/identity-colors";
+import { useOnline } from "../lib/use-online";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
@@ -263,6 +264,9 @@ export function Assemble({
   // annotations). Drives the read/edit split: editable opens ONE live routine WS
   // for live convergence; a pure viewer stays on the zero-socket snapshot.
   const editable = can(role, "canEdit") || can(role, "canAnnotate");
+  // §11.2 creation gate: fork ("make a copy") and new attribute kinds are
+  // SERVER actions — disabled while offline (design 1.24); doc edits stay on.
+  const online = useOnline();
   const store = useRoutineStore(
     routineId,
     injected,
@@ -606,6 +610,7 @@ export function Assemble({
                 className="ml-auto"
                 loading={forking}
                 onClick={onFork}
+                disabled={!online}
               >
                 {t.makeACopy}
               </Button>
@@ -649,7 +654,13 @@ export function Assemble({
                 <p className="flex-1 text-xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
                   {t.readOnlyBanner}
                 </p>
-                <Button variant="primary" size="sm" loading={forking} onClick={onFork}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={forking}
+                  onClick={onFork}
+                  disabled={!online}
+                >
                   {t.makeItMine}
                 </Button>
               </div>
@@ -1066,7 +1077,14 @@ export function Assemble({
             <div className="flex flex-col gap-3 border-t border-line pt-3">
               <div className="flex items-center gap-2">
                 {canEdit && (
-                  <Button variant="secondary" size="sm" onClick={() => setAddKindOpen(true)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAddKindOpen(true)}
+                    // §11.2: creating an attribute KIND is a hybrid CRDT + account
+                    // REST flow — creation stays live-gated (design 1.24).
+                    disabled={!online}
+                  >
                     {t.addKind}
                   </Button>
                 )}

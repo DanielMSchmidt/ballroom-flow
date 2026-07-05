@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
 import { renderUi, screen, userEvent, within } from "../test-support/render";
 
@@ -223,5 +223,66 @@ describe("T2 New-choreo sheet (frame 1.5)", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: /cancel/i }));
     expect(onCreate).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog", { name: /new choreography/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Offline creation gate (PLAN §11.2, design 1.24)", () => {
+  /** Force `navigator.onLine` for the render (restored per test by vitest). */
+  const goOffline = (): void => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
+  };
+  afterEach(() => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
+  });
+
+  it("disables the New-choreo action, empty-state CTA, and template start while offline", async () => {
+    // Intent (§11.2 scope boundary): creating a choreo is a SERVER action —
+    //   offline it is a visibly disabled affordance, never a silent failure.
+    goOffline();
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList
+        ownedCount={0}
+        plan="free"
+        templates={[{ docRef: "tpl1", title: "Sample Waltz", dance: "waltz", role: "viewer" }]}
+        onStartFromTemplate={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /new choreo/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^create choreo$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /start from template/i })).toBeDisabled();
+  });
+
+  it("disables the fork action in the ⋯ sheet while offline (open stays available)", async () => {
+    goOffline();
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList
+        ownedCount={1}
+        plan="free"
+        routines={[
+          { docRef: "rt1", title: "Gold Waltz", dance: "waltz", role: "owner", updatedAt: 1 },
+        ]}
+        onFork={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /more options/i }));
+    expect(screen.getByRole("button", { name: /fork/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^open/i })).toBeEnabled();
+  });
+
+  it("disables the new-choreo sheet's submit if connectivity drops with the sheet open", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
+    await userEvent.type(screen.getByLabelText(/choreo name/i), "Doomed Create");
+    goOffline();
+    // The poll notices the flip (no browser event fires in emulated offline).
+    const dialog = screen.getByRole("dialog");
+    await vi.waitFor(
+      () => expect(within(dialog).getByRole("button", { name: /create choreo/i })).toBeDisabled(),
+      { timeout: 4000 },
+    );
   });
 });

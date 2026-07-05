@@ -15,6 +15,7 @@ import { DANCE_IDS, type DanceId } from "@weavesteps/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { danceName, getLocale, pickMessages, useLocale, useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
+import { useOnline } from "../lib/use-online";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
@@ -151,6 +152,10 @@ export function ChoreoList({
 }: ChoreoListProps) {
   const t = useMessages(choreoMessages);
   const locale = useLocale();
+  // §11.2 creation gate: creating/forking a choreo is a SERVER action (quota +
+  // registry + DO seeding) — while offline those affordances DISABLE (design
+  // 1.24) instead of silently failing. Editing an open choreo stays offline-able.
+  const online = useOnline();
   // First-visit tour: orient the user on the choreo list + the tab bar.
   useFirstVisitTour("choreos");
   const [upsellOpen, setUpsellOpen] = useState(false);
@@ -211,6 +216,7 @@ export function ChoreoList({
               label={t.newChoreo}
               data-tour="new-choreo"
               onClick={onNew}
+              disabled={!online}
               style={{
                 background: "var(--bf-accent)",
                 color: "var(--bf-ink-inverse)",
@@ -270,7 +276,12 @@ export function ChoreoList({
             title={t.emptyTitle}
             description={t.emptyDescription}
             actions={
-              <Button variant="primary" leadingIcon={<PlusIcon size={16} />} onClick={onNew}>
+              <Button
+                variant="primary"
+                leadingIcon={<PlusIcon size={16} />}
+                onClick={onNew}
+                disabled={!online}
+              >
                 {t.emptyCreate}
               </Button>
             }
@@ -296,6 +307,7 @@ export function ChoreoList({
             <Button
               variant="secondary"
               onClick={() => onStartFromTemplate?.(templateTarget.docRef)}
+              disabled={!online}
             >
               {t.startFromTemplate}
             </Button>
@@ -393,7 +405,9 @@ export function ChoreoList({
               type="submit"
               variant="primary"
               loading={creating}
-              disabled={!title.trim()}
+              // Also gate on connectivity: it can drop while the sheet is open,
+              // and a submit then would be the silent-failure path (§11.2).
+              disabled={!title.trim() || !online}
               className="flex-1"
             >
               {t.createChoreoCta}
@@ -437,7 +451,8 @@ export function ChoreoList({
               if (menuFor) onFork?.(menuFor.docRef);
               closeMenu();
             }}
-            className="flex w-full items-center gap-3 rounded-lg border p-3 text-left"
+            disabled={!online}
+            className="flex w-full items-center gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background: "var(--bf-scope-custom-tint)",
               borderColor: "var(--bf-scope-custom-border)",

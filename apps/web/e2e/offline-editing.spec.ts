@@ -138,6 +138,31 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
     await closeUsers(coach, student);
   });
 
+  test("creation is live-gated: the new-choreo affordance disables offline, re-enables online", async ({
+    browser,
+  }) => {
+    // Intent (§11.2 scope boundary): creating a choreo is a SERVER action
+    //   (quota check + D1 registry row + DO seeding) — offline it must be a
+    //   visibly disabled affordance, never a queued half-action or a silent
+    //   failure (the bug: the + stayed enabled offline and the create vanished).
+    const [solo] = await openTwoUsers(browser, COACH, STUDENT);
+    await resetDb(solo.page);
+    await seedDb(solo.page, {
+      users: [{ id: COACH, displayName: "Coach", identityColor: "#111111" }],
+    });
+    await seedAuth(solo.page, COACH);
+    await solo.page.goto("/");
+    const newChoreo = solo.page.getByRole("button", { name: /new choreo/i });
+    await expect(newChoreo).toBeEnabled();
+
+    await solo.context.setOffline(true);
+    await expect(newChoreo).toBeDisabled(); // the useOnline poll notices within ~2s
+
+    await solo.context.setOffline(false);
+    await expect(newChoreo).toBeEnabled();
+    await closeUsers(solo);
+  });
+
   test("access revoked while offline → the unsyncable edits are surfaced, never dropped", async ({
     browser,
   }) => {
