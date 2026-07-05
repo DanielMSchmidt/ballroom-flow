@@ -127,6 +127,13 @@ pnpm coverage         # coverage — thresholds ARMED: domain ≥90, worker ≥8
 
 ## 7. Git flow & releases (read before branching)
 
+> **⚠ State of the world (2026-07-05):** `development` was merged into `main` (PR #161) and the
+> branch **deleted from the remote** — the flow below currently has no integration branch.
+> Until `development` is recreated (or this section is rewritten to a new flow), **branch off
+> `main`** and open PRs into `main`; note the deploy workflow still maps `development`→staging
+> and `main`→production, so staging deploys don't trigger while the branch is absent — and
+> **merging a PR into `main` is a production deploy**. Don't merge red.
+
 We use a **git-flow style** with a long-lived integration branch:
 
 - **`development`** is the **active branch** — all feature work, fixes, and docs land here.
