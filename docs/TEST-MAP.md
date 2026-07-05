@@ -94,6 +94,8 @@ imports through small shims that defer module resolution to runtime:
 | US-047 | _retired — JSON export superseded by forking_ | — | — |
 | US-048 | _retired — JSON import superseded by forking_ | — | — |
 | US-049 | Ops: Sentry + AE + EXPLAIN gate + Smart Placement | worker | `apps/worker/src/ops.test.ts` |
+| US-049 | Ops: auth-verification-failure reporting + health provisioning flags (2026-07-05 incident) | worker | `apps/worker/src/auth/failure-reporting.test.ts`, `apps/worker/src/index.test.ts` (health) |
+| US-049 | Ops: web-half error reporting (client Sentry envelope + API-failure classes) | unit (jsdom) | `apps/web/src/lib/ops.test.ts`, `apps/web/src/lib/rpc.test.ts` |
 | US-050 | PWA install + offline app shell | E2E | `apps/web/e2e/pwa-a11y.spec.ts` |
 | US-051 | Accessibility WCAG AA | component (axe) + E2E | `apps/web/src/components/a11y.test.tsx`, `apps/web/e2e/pwa-a11y.spec.ts` |
 | US-052 | Cross-browser E2E | E2E (3 projects) | the whole `apps/web/e2e/` matrix (chromium-desktop / mobile-chrome / mobile-safari) |

@@ -119,7 +119,20 @@ app.use("/api/*", async (c, next) => {
 // buildId is the stale-bundle handshake (always present, null when not a real
 // deploy): the SPA compares it against its own baked-in VITE_BUILD_ID and
 // reloads onto the new bundle on mismatch — see apps/web/src/lib/stale-bundle.ts.
-app.get("/api/health", (c) => c.json({ ok: true, buildId: c.env.BUILD_ID ?? null }));
+//
+// clerkConfigured / sentryConfigured are provisioning diagnostics (US-049,
+// 2026-07-05 incident): a deployed env with missing or mismatched secrets fails
+// closed AND silently — every API call 401s and nothing reports. These booleans
+// only say whether the secrets are SET (never their values), so a provisioning
+// gap is one `curl /api/health` away instead of a production mystery.
+app.get("/api/health", (c) =>
+  c.json({
+    ok: true,
+    buildId: c.env.BUILD_ID ?? null,
+    clerkConfigured: Boolean(c.env.CLERK_SECRET_KEY || c.env.CLERK_JWT_KEY),
+    sentryConfigured: Boolean(c.env.SENTRY_DSN),
+  }),
+);
 
 // E2E-only test fixtures (#191). Guarded so these routes exist ONLY when the
 // E2E wrangler run sets E2E_TEST_ROUTES=1 — in dev/staging/prod the flag is

@@ -6,6 +6,20 @@ gated on env vars and tested only on its negative path). To run the app for
 real and to deploy, complete the steps below. None of these block development
 of the pure domain core (Milestone 1).
 
+> **⚠ THE ONE INVARIANT THAT BROKE PRODUCTION (2026-07-05):** per environment, the
+> SPA's baked `VITE_CLERK_PUBLISHABLE_KEY` (a **GitHub environment variable**, read at
+> build time by `deploy.yml`) and the worker's `CLERK_SECRET_KEY`/`CLERK_JWT_KEY`
+> (**Wrangler secrets**) MUST belong to the **same Clerk instance**. They are set in two
+> different consoles, so they can drift independently — and when they do, sign-in still
+> *works* (against the SPA's instance) but the worker rejects every session token:
+> **every API call 401s and nobody can create/list/open anything**, with no unhandled
+> error anywhere. Incident: production's worker secrets were rotated to the new
+> `clerk.weavesteps.com` production instance while the `production` GitHub environment
+> still baked the shared `pk_test` dev-instance key. Diagnosis aids now in place:
+> `GET /api/health` reports `clerkConfigured`/`sentryConfigured`, and the worker sends
+> an `AuthVerificationError` (reason `token-invalid-signature`) to Sentry when a
+> mismatched token is seen (needs `SENTRY_DSN` set).
+
 ## Status (updated 2026-06-25)
 
 | Item | State |
@@ -15,11 +29,12 @@ of the pure domain core (Milestone 1).
 | GitHub Environments `staging` + `production` | ✅ created |
 | `CLOUDFLARE_ACCOUNT_ID` (both GH environments) | ✅ set |
 | `CLOUDFLARE_API_TOKEN` (both GH environments) | ✅ set — CI deploy is live |
-| `VITE_CLERK_PUBLISHABLE_KEY` (GH Actions **variable**, both envs) | ✅ set (`pk_test`, shared Clerk dev instance) |
+| `VITE_CLERK_PUBLISHABLE_KEY` (GH Actions **variable**, both envs) | ⚠ **stale for production (the 2026-07-05 outage)** — still the shared `pk_test` dev-instance key in BOTH GitHub environments, while production's worker secrets moved to the `clerk.weavesteps.com` production instance. Set the `production` environment's variable to that instance's `pk_live_…` key and re-run the production deploy (the key is public — it ships in every page). |
 | Local dev keys (`apps/web/.env.local`, `apps/worker/.dev.vars`) | ✅ present (`pk_test` / `sk_test`) |
 | `CLERK_SECRET_KEY` (Wrangler secret) — **staging** | ✅ set (`wrangler secret put … --env staging`) |
 | **`CLERK_SECRET_KEY` (Wrangler secret) — production** | ⬜ **TODO — you** — pending a Clerk **production** instance (`sk_live`); see §1 |
-| `SENTRY_DSN` (Wrangler secret, staging + production) | ⬜ **optional — you** — US-049 error reporting is wired (`apps/worker/src/ops.ts`, no SDK); without the secret it's a silent no-op. `wrangler secret put SENTRY_DSN --env staging\|production` with the project DSN from sentry.io |
+| `SENTRY_DSN` (Wrangler secret, staging + production) | ⬜ **optional — you** — US-049 error reporting is wired (`apps/worker/src/ops.ts`, no SDK); without the secret it's a silent no-op. `wrangler secret put SENTRY_DSN --env staging\|production` with the project DSN from sentry.io. Verify with `GET /api/health` → `sentryConfigured: true` |
+| `VITE_SENTRY_DSN` (GH Actions **variable**, per env) | ⬜ **optional — you** — the WEB half of US-049 (`apps/web/src/lib/ops.ts`, added 2026-07-05): client-side errors (uncaught exceptions, 5xx, authed-401s, network failures) report to Sentry. Without the variable the reporter is a silent no-op — which is why the 2026-07-05 auth outage produced zero Sentry events |
 | Analytics Engine dataset | ✅ nothing to provision — the `ANALYTICS` binding in `wrangler.toml` auto-creates the dataset on first write (Workers Paid) |
 | `production` required-reviewer rule | ⬜ optional |
 
@@ -112,11 +127,23 @@ remote DB, then `wrangler deploy`s to the matching environment.
 4. Set `CLERK_SECRET_KEY` as a Wrangler secret per env (see §1) so deployed
    Workers can verify tokens.
 
-## 4. Sentry (error monitoring — wired in Milestone 8)
+## 4. Sentry (error monitoring)
 
-Create a Sentry project; set the DSN for the web SDK (`VITE_SENTRY_DSN`) and the
-Worker (`SENTRY_DSN` secret). Until then, Cloudflare **Tail Workers** is the
-zero-setup fallback for server logs.
+Create a Sentry project, then wire both halves (each is a dependency-free
+envelope reporter — no Sentry SDK; see `apps/worker/src/ops.ts` and
+`apps/web/src/lib/ops.ts`):
+
+- **Worker**: `wrangler secret put SENTRY_DSN --env staging|production`. Reports
+  unhandled route errors (`app.onError`) and — since 2026-07-05 — Clerk token
+  **verification failures of config class** (wrong-instance signature, missing/
+  invalid keys, JWKS trouble; benign classes like `token-expired` stay quiet).
+- **Web**: set the `VITE_SENTRY_DSN` **GitHub environment variable** (per env);
+  `deploy.yml` bakes it into the SPA. Reports uncaught exceptions, unhandled
+  rejections, API 5xx, 401s that carried a session token (the config-mismatch
+  signature), and network failures — deduped per class per session.
+
+Without either value the respective half is a silent no-op. Cloudflare
+**Tail Workers** remains the zero-setup fallback for server logs.
 
 ## Local development
 

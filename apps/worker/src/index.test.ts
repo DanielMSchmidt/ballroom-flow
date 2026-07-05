@@ -17,7 +17,18 @@ it("health endpoint responds with the deploy build id (null when unset)", async 
   // own VITE_BUILD_ID and reloads onto the new bundle on mismatch. The test
   // env sets no BUILD_ID var, so it must be explicitly null (never absent —
   // the key's presence IS the contract).
-  expect(await res.json()).toEqual({ ok: true, buildId: null });
+  //
+  // clerkConfigured / sentryConfigured are provisioning diagnostics (US-049,
+  // 2026-07-05 incident): a deployed env with missing secrets fails closed and
+  // silently — these booleans make that checkable with one curl, without
+  // exposing any secret material. The test env binds CLERK_JWT_KEY (the fixed
+  // test PEM) and no SENTRY_DSN.
+  expect(await res.json()).toEqual({
+    ok: true,
+    buildId: null,
+    clerkConfigured: true,
+    sentryConfigured: false,
+  });
 });
 
 // US-017 Phase 1 / US-021 — the public WS connect route forwards an authorized
