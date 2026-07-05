@@ -916,3 +916,23 @@ describe("v5 milestone step 1 — migration ladder wired into the DO load path",
     );
   });
 });
+
+describe("storage-format version marker", () => {
+  // The DO's SQLite layout (changes/snapshot/doc_meta) is otherwise unversioned:
+  // if the persistence scheme ever changes (e.g. adopting automerge-repo storage,
+  // the D6 escape hatch), a migrator must be able to tell which generation a
+  // DO's storage is in WITHOUT shape-sniffing tables across every document.
+  // storage_meta stamps generation 1 at construction — for brand-new DOs and,
+  // idempotently, for every pre-marker DO the moment it next wakes up.
+  it("stamps storage_meta with the current storage version on construction", async () => {
+    const { stub } = freshDoc("routine");
+    expect(await stub.debugStorageVersion()).toBe(1);
+  });
+
+  it("keeps the marker stable across edits and reloads (idempotent stamp)", async () => {
+    const { stub } = freshDoc("routine");
+    await stub.applyChange({ op: "addSection", name: "A" });
+    await stub.reloadForTest(); // simulated eviction → constructor re-runs
+    expect(await stub.debugStorageVersion()).toBe(1);
+  });
+});

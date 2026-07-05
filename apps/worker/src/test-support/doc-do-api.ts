@@ -38,6 +38,8 @@ export interface DocStub {
   reloadForTest(): Promise<void>;
   /** Test hook: number of rows in the SQLite change log (incremental-persist assertions). */
   debugChangeRowCount(): Promise<number>;
+  /** Test hook: the persisted storage-format generation (storage_meta stamp). */
+  debugStorageVersion(): Promise<number>;
   /** Test hook: run the alarm body synchronously. */
   runAlarmForTest(): Promise<void>;
   /** Test hook: bytes currently persisted (for compaction assertions). */

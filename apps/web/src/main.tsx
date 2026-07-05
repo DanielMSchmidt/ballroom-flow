@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppAuthProvider } from "./auth/app-auth";
 import { isE2E } from "./lib/e2e-auth";
+import { initStaleBundleReload } from "./lib/stale-bundle";
 // driver.js base styles for the first-visit UI tours; themed to the --bf-*
 // tokens by the `.bf-tour` overrides in styles/index.css. CSS stays imported
 // only at the app root (components are CSS-import-free — DESIGN-SYSTEM §7).
@@ -11,6 +12,11 @@ import "driver.js/dist/driver.css";
 import "./styles/index.css";
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+// Stale-bundle reload nudge: when this (deployed) tab becomes visible after a
+// newer deploy, reload it onto the current bundle — the mechanism the sync-wire
+// and REST compat stories rely on. No-op in dev/test/E2E (no VITE_BUILD_ID).
+initStaleBundleReload();
 
 // Deterministic E2E (#191): disable animations so journeys never race a sheet/
 // modal enter-animation (see the `.bf-e2e` rule in styles/index.css). Folds to
