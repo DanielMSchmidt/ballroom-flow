@@ -257,6 +257,12 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             justCreatedRef.current = res.docRef;
             navigate(`/routines/${res.docRef}`);
           },
+          // Never silent (§11.2): the offline gate disables the affordance, but
+          // a race (connectivity drops mid-flight) must still surface. A 402
+          // already drives the quota upsell via `quotaBlocked`.
+          onError: (err) => {
+            if (!isQuotaError(err)) toast.show(t.toastCreateFailed, { tone: "danger" });
+          },
         })
       }
       onOpen={(docRef) => navigate(`/routines/${docRef}`)}

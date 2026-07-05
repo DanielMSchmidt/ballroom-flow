@@ -1394,6 +1394,24 @@ describe("Offline editing states (PLAN §11.2, design 1.24)", () => {
     expect(screen.queryByRole("button", { name: "Add section" })).toBeNull();
   });
 
+  it("disables the fork affordance while offline (creation is a server action, §11.2)", async () => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
+    try {
+      const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+      renderUi(
+        <Assemble
+          routineId="rt_sample"
+          role="editor"
+          onFork={() => {}}
+          store={fakeStore(offlineRoutine(), [], { syncState: () => "local" })}
+        />,
+      );
+      expect(screen.getByRole("button", { name: /make a copy/i })).toBeDisabled();
+    } finally {
+      Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
+    }
+  });
+
   it("keeps the calm full-screen offline state when closed with NOTHING pending", async () => {
     // Terminal close with no local edits at stake — the pre-§11.2 behavior.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
