@@ -1304,3 +1304,110 @@ describe("D7 Undo/redo glyphs (design 1.21)", () => {
     expect(redoBtn.textContent).toContain("↷");
   });
 });
+
+describe("Offline editing states (PLAN §11.2, design 1.24)", () => {
+  const offlineRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Offline Waltz",
+    dance: "waltz",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("keeps editing ENABLED while hydrated from local persistence ('local')", async () => {
+    // Intent (§11.2): the edit gate is live ∨ local — a doc hydrated from
+    //   IndexedDB while disconnected stays editable; edits persist + replay.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore({ ...offlineRoutine(), sections: [] }, [], {
+          syncState: () => "local",
+        })}
+      />,
+    );
+    // The editor affordances render: the empty-state add-section CTA and the
+    // per-user Undo — both gated on canEdit, which must hold in "local".
+    expect(screen.getByRole("button", { name: "Add section" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+  });
+
+  it("shows the pending chip (slate, role=status) with the live §11.2 count", async () => {
+    // Intent (§11.2 truth-telling / design 1.24 pin 1): ≥1 undelivered change
+    //   while unsynced → the visible "will sync" chip with the count.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "local",
+          pendingSyncCount: () => 2,
+        })}
+      />,
+    );
+    const chip = screen.getByTestId("pending-sync");
+    expect(chip).toHaveAttribute("role", "status");
+    expect(chip.textContent).toMatch(/2 changes saved on this device/i);
+  });
+
+  it("hides the pending chip once everything synced (live, 0 pending)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "live",
+          pendingSyncCount: () => 0,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("pending-sync")).toBeNull();
+  });
+
+  it("surfaces terminally-rejected offline edits as an ALERT and keeps content readable", async () => {
+    // Intent (§11.2 forbidden outcome, Q-NEW-2 / design 1.24 pin 2): reconnect
+    //   terminally rejected (access revoked) with pending edits → an unmissable
+    //   role=alert notice; the local content stays on screen (read-only), it is
+    //   NOT blanked away behind the full-screen offline state.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "closed",
+          pendingSyncCount: () => 2,
+        })}
+      />,
+    );
+    const alert = screen.getByTestId("unsynced-changes");
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(alert.textContent).toMatch(/couldn't be saved/i);
+    // Content readable; editing disabled (closed is not an editable state).
+    expect(screen.getByText("Offline Waltz")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add section" })).toBeNull();
+  });
+
+  it("keeps the calm full-screen offline state when closed with NOTHING pending", async () => {
+    // Terminal close with no local edits at stake — the pre-§11.2 behavior.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "closed",
+          pendingSyncCount: () => 0,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("unsynced-changes")).toBeNull();
+    expect(screen.queryByText("Offline Waltz")).toBeNull(); // replaced by OfflineState
+  });
+});

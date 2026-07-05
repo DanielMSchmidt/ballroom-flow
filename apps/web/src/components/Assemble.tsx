@@ -274,10 +274,13 @@ export function Assemble({
   );
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
-  // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
-  // editing an as-yet-unsynced (empty A.init) doc would push onto a missing
-  // `sections` list and be lost on merge, so we wait for the seed to land.
-  const canEdit = can(role, "canEdit") && store?.syncState() === "live";
+  // Also require the doc to be HYDRATED: "live" (the DO's catch-up has arrived) or
+  // "local" (§11.2 — hydrated from local persistence while disconnected; edits
+  // persist on-device and replay on reconnect). Editing an as-yet-unhydrated
+  // (empty A.init) doc would push onto a missing `sections` list and be lost on
+  // merge, so we wait for real content from either source.
+  const syncStateNow = store?.syncState();
+  const canEdit = can(role, "canEdit") && (syncStateNow === "live" || syncStateNow === "local");
   // Sharing (invite/remove) is an editor/owner capability — gated on the SHARED
   // table (principle #26); the worker still enforces it server-side (US-024).
   const canShare = can(role, "canInvite");
@@ -398,7 +401,14 @@ export function Assemble({
     if (notating && store) store.openFigure(notating);
   }, [notating, store]);
 
-  const offline = offlineProp || store?.syncState() === "closed";
+  // Offline editing (§11.2): changes not yet handed to the server. While merely
+  // disconnected ("local") they show as the slate pending chip; when the
+  // connection is TERMINALLY rejected ("closed" — access revoked / doc gone)
+  // with pending changes, the content stays readable with the danger alert
+  // (the Q-NEW-2 rule: rejected offline edits are surfaced, never dropped).
+  const pendingSync = store?.pendingSyncCount?.() ?? 0;
+  const terminallyClosed = store?.syncState() === "closed";
+  const offline = offlineProp || (terminallyClosed && pendingSync === 0);
   if (offline) return <OfflineState />;
   if (!store) {
     return (
@@ -512,6 +522,43 @@ export function Assemble({
       />
 
       <div className="flex flex-col gap-3 p-4">
+        {/* §11.2 unsyncable alert (design 1.24 pin 2): the reconnect was
+            TERMINALLY rejected while offline edits were pending — say so
+            unmissably and keep the local content readable (read-only). */}
+        {terminallyClosed && pendingSync > 0 && (
+          <div
+            role="alert"
+            data-testid="unsynced-changes"
+            className="flex items-center gap-2 rounded-md border px-3 py-2 text-2xs font-semibold"
+            style={{
+              background: "var(--bf-danger-tint)",
+              borderColor: "var(--bf-danger-border)",
+              color: "var(--bf-danger-ink)",
+            }}
+          >
+            <span aria-hidden="true">!</span>
+            {t.unsyncedChanges(pendingSync)}
+          </div>
+        )}
+        {/* §11.2 pending chip (design 1.24 pin 1): offline edits saved on this
+            device, visible until they sync — slate (offline family), never
+            danger. Purely count-driven: any undelivered change shows it, and the
+            caught-up reset clears it (incl. through the reconnect replay). */}
+        {!terminallyClosed && pendingSync > 0 && (
+          <div
+            role="status"
+            data-testid="pending-sync"
+            className="flex items-center gap-2 rounded-md border px-3 py-2 text-2xs font-semibold"
+            style={{
+              background: "var(--bf-offline-tint)",
+              borderColor: "var(--bf-offline)",
+              color: "var(--bf-offline-ink)",
+            }}
+          >
+            <span aria-hidden="true">⌁</span>
+            {t.offlinePending(pendingSync)}
+          </div>
+        )}
         {/* Editing-only toolbar: undo/redo (editor) + make-a-copy (any member). */}
         {mode === "edit" && (onFork || canEdit || syncing) && (
           <div className="flex items-center gap-2">

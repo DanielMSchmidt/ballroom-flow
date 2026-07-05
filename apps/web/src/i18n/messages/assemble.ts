@@ -17,6 +17,11 @@ const en = {
   listView: "List view",
   share: "Share",
   syncing: "Syncing…",
+  // Offline editing (PLAN §11.2) — the pending chip + the unsyncable alert
+  offlinePending: (n: number) =>
+    `${n} change${n === 1 ? "" : "s"} saved on this device — they'll sync when you're back online`,
+  unsyncedChanges: (n: number) =>
+    `${n} offline change${n === 1 ? "" : "s"} couldn't be saved — your access to this choreo was removed. They stay readable here but won't sync.`,
   undo: "Undo",
   redo: "Redo",
   undoneToast: "Undone",
@@ -156,6 +161,14 @@ const de: typeof en = {
   listView: "Listenansicht",
   share: "Teilen",
   syncing: "Synchronisiert …",
+  offlinePending: (n: number) =>
+    n === 1
+      ? "1 Änderung auf diesem Gerät gespeichert — sie wird synchronisiert, sobald du wieder online bist"
+      : `${n} Änderungen auf diesem Gerät gespeichert — sie werden synchronisiert, sobald du wieder online bist`,
+  unsyncedChanges: (n: number) =>
+    n === 1
+      ? "1 Offline-Änderung konnte nicht gespeichert werden — dein Zugriff auf diese Choreo wurde entfernt. Sie bleibt hier lesbar, wird aber nicht synchronisiert."
+      : `${n} Offline-Änderungen konnten nicht gespeichert werden — dein Zugriff auf diese Choreo wurde entfernt. Sie bleiben hier lesbar, werden aber nicht synchronisiert.`,
   undo: "Rückgängig",
   redo: "Wiederholen",
   undoneToast: "Rückgängig gemacht",

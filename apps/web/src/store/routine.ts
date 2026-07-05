@@ -53,6 +53,7 @@ import {
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
+import { type DocStorage, defaultDocStorage } from "./doc-storage";
 import { reconcile } from "./reconcile";
 
 /**
@@ -126,6 +127,14 @@ export interface RoutineReadModel {
   subscribe(fn: () => void): () => void;
   /** Lifecycle, for a "syncing…"/"loading…" indicator (US-018). */
   syncState(): SyncState;
+  /**
+   * Offline editing (PLAN §11.2): how many of this client's changes (routine +
+   * figure docs) have not been handed to a live socket yet — drives the
+   * truth-telling "N changes waiting to sync" indicator and the unsyncable-edits
+   * notice. Optional: absent on models with no local persistence (the read-only
+   * snapshot, injected test stores) — read as 0.
+   */
+  pendingSyncCount?(): number;
   /** Tear down (poll timer + listeners, or document connections). */
   close(): void;
 }
@@ -359,6 +368,13 @@ export interface OpenOptions {
   schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   /** Cancel a scheduled callback (default: global clearTimeout) — injected for tests. */
   cancel?: (handle: ReturnType<typeof setTimeout>) => void;
+  /**
+   * Offline editing (PLAN §11.2): local persistence for the routine + figure
+   * docs, keyed by docRef. Defaults to the app-wide IndexedDB store; `null`
+   * disables persistence (and with it the editable-offline "local" state) —
+   * jsdom tests get that automatically since IndexedDB is absent there.
+   */
+  storage?: DocStorage | null;
 }
 
 const defaultSocketFactory: SocketFactory = (url, protocols) =>
@@ -480,11 +496,15 @@ export async function openRoutine(
   // and MERGES into this empty doc, so the client ends up with the identical doc.
   // Seeding content here would create a divergent root; A.init keeps the merge a
   // clean superset of the server's state.
+  // Offline editing (§11.2): the shared local persistence, keyed per docRef.
+  // Explicit null disables; undefined picks the app-wide IndexedDB store.
+  const storage = opts.storage === undefined ? defaultDocStorage() : opts.storage;
+
   const routineConn = new DocConnection<RoutineDoc>(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
     openSocket,
-    { getToken, reconnect, schedule, cancel },
+    { getToken, reconnect, schedule, cancel, storage, storageKey: routineId },
   );
 
   // Figures the client just minted (addPlacement) but whose server-side create
@@ -569,7 +589,8 @@ export async function openRoutine(
         A.init<FigureDoc>(actor),
         connectUrl(baseUrl, figureRef),
         openSocket,
-        { getToken, reconnect, schedule, cancel }, // a FRESH token at each (re)open (#189)
+        // A FRESH token at each (re)open (#189); persisted per figureRef (§11.2).
+        { getToken, reconnect, schedule, cancel, storage, storageKey: figureRef },
       );
       const c = conn;
       conn.onAdvance(() => {
@@ -1086,6 +1107,13 @@ export async function openRoutine(
     // The routine connection drives the indicator; figure connections are
     // secondary. "live" once the routine DO's catch-up replay has arrived.
     syncState: () => routineConn.state(),
+
+    // §11.2: undelivered local changes across the routine + every figure doc.
+    pendingSyncCount: () => {
+      let n = routineConn.pendingSyncCount();
+      for (const conn of figureConns.values()) n += conn.pendingSyncCount();
+      return n;
+    },
 
     close: () => {
       for (const t of hydrationTimers.values()) cancel(t);

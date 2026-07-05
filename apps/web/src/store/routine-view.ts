@@ -123,27 +123,40 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
   if (editable) void ensureLive();
 
   /**
+   * A store is EDITABLE when hydrated: "live" (the DO's catch-up applied) or
+   * "local" (§11.2 — hydrated from local persistence while disconnected; edits
+   * persist and replay on reconnect). "closed"/"connecting" are not editable.
+   */
+  const editableState = (s: RoutineStore): boolean => {
+    const st = s.syncState();
+    return st === "live" || st === "local";
+  };
+
+  /**
    * Reads come from the live store ONCE it has hydrated, and STAY there (E):
    * we latch on the first hydration and never flip back to the snapshot on a
    * later transient reconnect (live briefly "connecting"). Flipping back would
    * swap the whole routine/figure identity out from under an open editor and
    * revert its content to the (staler) REST snapshot — a visible flicker and a
    * reset of an in-flight edit. Until the first hydration, reads use the snapshot.
+   * Hydration counts from EITHER source: the server catch-up ("live") or local
+   * persistence ("local", §11.2 — the snapshot fetch fails offline anyway).
    */
   let liveHydratedOnce = false;
   const readSource = (): RoutineStore | RoutineSnapshotModel => {
-    if (live && live.syncState() === "live") liveHydratedOnce = true;
+    if (live && editableState(live)) liveHydratedOnce = true;
     return liveHydratedOnce && live ? live : snapshot;
   };
 
-  /** Run `fn` once the live store is hydrated — so an edit never lands pre-replay. */
+  /** Run `fn` once the live store is hydrated (live OR local, §11.2) — so an
+   *  edit never lands on a pre-replay empty doc, but offline edits still apply. */
   const whenLive = (s: RoutineStore, fn: () => void): void => {
-    if (s.syncState() === "live") {
+    if (editableState(s)) {
       fn();
       return;
     }
     const unsub = s.subscribe(() => {
-      if (s.syncState() === "live") {
+      if (editableState(s)) {
         unsub();
         fn();
       }
@@ -169,6 +182,9 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     // meanwhile (readSource). Viewers track the snapshot's lifecycle.
     syncState: (): SyncState =>
       editable ? (live ? live.syncState() : "connecting") : snapshot.syncState(),
+    // §11.2: undelivered offline changes (routine + figures) — 0 until the live
+    // store exists (viewers never edit, so they never have pending changes).
+    pendingSyncCount: (): number => (live ? (live.pendingSyncCount?.() ?? 0) : 0),
     subscribe: (fn) => {
       listeners.add(fn);
       return () => listeners.delete(fn);
@@ -230,7 +246,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     undo: (): UndoResult => {
       const neutral: UndoResult = { undone: false, supersededByOthers: false };
       if (!editable) return neutral;
-      if (live && live.syncState() === "live") return live.undo();
+      if (live && editableState(live)) return live.undo();
       void ensureLive().then((s) => whenLive(s, () => s.undo()));
       return neutral;
     },
@@ -243,7 +259,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     undoFigure: (figureRef): UndoResult => {
       const neutral: UndoResult = { undone: false, supersededByOthers: false };
       if (!editable) return neutral;
-      if (live && live.syncState() === "live") return live.undoFigure(figureRef);
+      if (live && editableState(live)) return live.undoFigure(figureRef);
       void ensureLive().then((s) => whenLive(s, () => s.undoFigure(figureRef)));
       return neutral;
     },
