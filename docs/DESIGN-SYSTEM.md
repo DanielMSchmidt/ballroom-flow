@@ -107,6 +107,17 @@ Every interactive primitive: **≥44px hit area** (#3), **visible focus ring** (
 | `OfflineState` | `title`, `description`, `action` | honest "you're offline" **data** state (#20) |
 | `AppShell` | `nav` (NavItem[]), `current`, `onNavigate` | bottom nav (thumb zone) on mobile, left rail + centered column on desktop (#1,#2,#4) |
 | `icons.tsx` | `size` | decorative stroke icons, all `aria-hidden` (#8) |
+| `BrandMark` (in `icons.tsx`) | `size` | the Weave Steps logo — a "woven W": two dancers' paths interlocking, the break showing one passing over the other. Decorative; always paired with the "Weave Steps" wordmark text (Inconsolata bold, tight tracking) |
+
+### Brand mark
+
+The logo's geometry (a 24-unit viewBox, stroke 2.4, round caps) lives in **four places that
+must stay in sync** — change one, change all:
+
+1. `apps/web/src/ui/icons.tsx` → `BrandMark` (in-app: AppShell side rail, Landing header; `currentColor`, shown in `text-accent` studio blue)
+2. `apps/web/public/favicon.svg` (paper strokes on the studio-blue tile, `rx` 18%)
+3. `scripts/gen-pwa-icons.mjs` → `SEGMENTS` (regenerates the four PWA/touch PNGs; run `node scripts/gen-pwa-icons.mjs`)
+4. `docs/design/project/Weave Steps Logo.dc.html` (the design-bundle brand sheet — canonical design source)
 
 ### Standard toast messages (#16)
 Callers emit the required confirmations:

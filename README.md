@@ -1,3 +1,5 @@
+<img src="apps/web/public/favicon.svg" alt="Weave Steps logo — a woven W" width="72" />
+
 # Weave Steps
 
 A collaborative, **mobile-first PWA for building and annotating ballroom dance choreography**.
