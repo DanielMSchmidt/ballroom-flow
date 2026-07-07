@@ -103,6 +103,67 @@ describe("FigureTimeline — bars-driven beat-row grid", () => {
   });
 });
 
+describe("FigureTimeline — portion window (Builder v3 ③, §4.3/§4.4)", () => {
+  const part = { fromCount: 4, toCount: 6 };
+
+  it("windows the editor grid to the placed portion — only counts 4–6 are shown", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" counts={6} part={part} />);
+    // The placed window is counts 4–6; the un-placed 1–3 must NOT be editable here
+    // (the figure doc is still whole, but this placement dances only 4–6).
+    expect(screen.getByRole("button", { name: /^Add Step at count 4$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Add Step at count 6$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Add Step at count 1$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Add Step at count 3$/i })).toBeNull();
+  });
+
+  it("keeps out-of-window content when editing inside the window (merge-back, no tombstoning)", async () => {
+    const { FigureTimeline } = await load();
+    const onChange = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={6}
+        part={part}
+        attributes={[
+          attr("direction", "forward", 1), // outside the window — must survive the edit
+          { id: "d5", kind: "direction", count: 5, value: null, role: null, deletedAt: null },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 5$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
+    const next = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    // The edit at count 5 lands…
+    expect(next.find((a) => a.kind === "footwork" && a.count === 5)).toBeTruthy();
+    // …and the count-1 content OUTSIDE the window is preserved untouched (not cleared),
+    // so the variant owns only the edited beat and 1–3 keep resolving live from the base.
+    expect(next.find((a) => a.kind === "direction" && a.count === 1)).toBeTruthy();
+  });
+
+  it("hides the LENGTH stepper for a portioned placement (the window is fixed)", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={6}
+        part={part}
+        onCountsChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /increase length/i })).toBeNull();
+  });
+
+  it("labels the editor with the placed portion (4–6 of 6)", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" counts={6} part={part} />);
+    expect(screen.getByText(/4–6 of 6/)).toBeInTheDocument();
+  });
+});
+
 describe("FigureTimeline — the per-count recap (always visible)", () => {
   it("shows each count's direction headline + value chips without opening anything", async () => {
     const { FigureTimeline } = await load();

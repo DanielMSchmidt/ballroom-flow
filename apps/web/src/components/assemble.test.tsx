@@ -938,6 +938,73 @@ describe("§5.4 figure-editor undo — 'undo follows the surface being edited'",
   });
 });
 
+describe("Builder v3 ③ portion window — the editor windows to the placed slice (§4.3/§4.4)", () => {
+  // A 6-count Natural Turn placed as ONLY counts 4–6: the editor must show and
+  // edit just that slice — not the whole figure — the reported confusion ("I added
+  // 3 steps but the editor gives me all 6").
+  const portioned = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p: Placement = {
+      id: "p1",
+      figureRef: "nt",
+      part: { fromCount: 4, toCount: 6 },
+      deletedAt: null,
+    };
+    const fig: FigureDoc = {
+      id: "nt",
+      scope: "global",
+      ownerId: "app",
+      figureType: "natural-turn",
+      dance: "foxtrot",
+      name: "Natural Turn",
+      source: "library",
+      counts: 6,
+      attributes: [{ id: "b1", kind: "step", count: 1, value: "HT", role: null, deletedAt: null }],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p, figure: fig, status: "live" }],
+    };
+  };
+  const editor = () => within(screen.getByRole("dialog", { name: /steps · natural turn/i }));
+
+  it("shows only counts 4–6 (not the un-placed 1–3) and labels the portion", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = portioned();
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*natural turn/i }));
+    expect(editor().getByRole("button", { name: /^Add Step at count 4$/i })).toBeInTheDocument();
+    expect(editor().getByRole("button", { name: /^Add Step at count 6$/i })).toBeInTheDocument();
+    expect(editor().queryByRole("button", { name: /^Add Step at count 1$/i })).toBeNull();
+    expect(editor().queryByRole("button", { name: /^Add Step at count 3$/i })).toBeNull();
+    expect(editor().getByText(/4–6 of 6/)).toBeInTheDocument();
+  });
+
+  it("surfaces the inline 'making this figure yours…' pending state while the fork is in flight", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = portioned();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { isForking: () => true })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*natural turn/i }));
+    expect(editor().getByText(/making this figure yours/i)).toBeInTheDocument();
+  });
+});
+
 describe("US-027 Add a figure from the library picker", () => {
   const emptySectionRoutine = (): RoutineDoc => ({
     id: "rt_sample",

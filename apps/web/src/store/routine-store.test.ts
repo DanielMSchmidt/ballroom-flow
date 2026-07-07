@@ -1008,6 +1008,79 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 
+  it("exposes isForking while a variant spawn is in flight, cleared on completion (fork feedback)", async () => {
+    // Intent: the implicit fork is async (POST → onceLive → re-point); the editor
+    //   needs a reactive signal to show an inline "making this figure yours…"
+    //   pending state so the user isn't confused that their click "did nothing".
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string }) => {
+      created.push({ figureRef: m.figureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const notified = vi.fn();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+    store.subscribe(notified);
+
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "foxtrot",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
+        source: "library",
+        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
+      }) as FigureDoc,
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    expect(store.isForking?.("fg")).toBe(false);
+    notified.mockClear();
+
+    // The edit kicks off the fork — synchronously in flight, and it notified
+    // subscribers so the editor re-renders into its pending state.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+    expect(store.isForking?.("fg")).toBe(true);
+    expect(notified).toHaveBeenCalled();
+
+    const variantRef = created[0]?.figureRef as string;
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef));
+
+    // Cleared once the variant is live + the placement is re-pointed.
+    expect(store.isForking?.("fg")).toBe(false);
+  });
+
   it("copy-on-write fires for a placed CATALOG reference whose global DO is NOT seeded (US-035)", async () => {
     // Intent (the bug this guards): a catalog figure placed via the Add-figure sheet
     //   is a LIVE REFERENCE to a `global:<dance>:<figureType>` doc (⟳v5, §4.3) that

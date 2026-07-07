@@ -38,8 +38,10 @@ import {
   type GridSlot,
   mergeRegistry,
   offBeatSymbol,
+  type PlacementPart,
   type RegistryKind,
   resolveFigureCounts,
+  windowAttributes,
 } from "@weavesteps/domain";
 import { type ReactNode, useMemo, useState } from "react";
 import { getLocale, localizedRegistry, pickMessages, useLocale, useMessages } from "../i18n";
@@ -105,6 +107,12 @@ export interface FigureTimelineProps {
   /** Rename the LIVE figure doc (Builder v3 ⑤): the add-to-library naming flow
    *  writes the typed name onto the shared doc before bookmarking. */
   onRenameFigure?: (name: string) => void;
+  /** The placement's portion window (Builder v3 ③, §4.3): when set, the editor
+   *  windows its grid to counts [fromCount, toCount] — the placement dances only
+   *  that slice, so only those beats are shown and editable here. The figure doc
+   *  stays whole (edits merge back into the full timeline; §4.4). No `part` = the
+   *  whole figure. The window is FIXED — the LENGTH stepper is hidden. */
+  part?: PlacementPart | null;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -156,6 +164,7 @@ export function FigureTimeline({
   onAddToLibrary,
   figureName,
   onRenameFigure,
+  part,
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
@@ -237,8 +246,15 @@ export function FigureTimeline({
         beat: Math.floor(c),
         whole: Number.isInteger(c),
       }));
-    return [...slots, ...extras].sort((a, b) => a.count - b.count);
-  }, [resolvedCounts, gridDance, beatsPerBar, placedCounts]);
+    // Portion window (Builder v3 ③, §4.4): a placement that dances only counts
+    // [fromCount, toCount] edits only those rows — the figure doc stays whole, so
+    // the underlying `attrs` (and thus onChange's merge-back) is untouched; we
+    // just don't render the beats outside the window.
+    return windowAttributes(
+      [...slots, ...extras].sort((a, b) => a.count - b.count),
+      part,
+    );
+  }, [resolvedCounts, gridDance, beatsPerBar, placedCounts, part]);
 
   /** Replace one count's attributes within the full set + emit (COW on first
    *  edit of a non-owned global figure). */
@@ -294,7 +310,10 @@ export function FigureTimeline({
       {/* Header controls: the "− N bars +" length stepper (editor only) + the
           "Steps for" role lens (frame 1.11). The lens is a per-device VIEW. */}
       <div className="flex flex-wrap items-center gap-3">
-        {editable && onCountsChange && (
+        {/* A portioned placement (Builder v3 ③) hides the LENGTH stepper: the
+            window is FIXED, and figure length is the whole figure's concern —
+            instead we label the placed slice ("4–6 of 6"). */}
+        {editable && onCountsChange && !part && (
           <Stepper
             label={t.countsStepperLabel}
             hideLabel
@@ -304,6 +323,18 @@ export function FigureTimeline({
             value={resolvedCounts}
             onChange={(next) => onCountsChange(next)}
           />
+        )}
+        {part && (
+          <span
+            className="text-2xs font-bold uppercase tracking-wider text-ink-muted"
+            data-portion-label
+          >
+            {t.partLabel(
+              Math.max(1, Math.ceil(part.fromCount)),
+              Math.floor(part.toCount),
+              resolvedCounts,
+            )}
+          </span>
         )}
         <div className="flex items-center gap-2">
           <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">

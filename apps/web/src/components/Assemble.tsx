@@ -278,6 +278,12 @@ export function Assemble({
   const roleT = useMessages(timelineMessages);
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
   const [notating, setNotating] = useState<string | null>(null);
+  // The placement whose editor is open (Builder v3 ③): tracked ALONGSIDE the
+  // figure id so the editor windows to THIS placement's `part` — a figure placed
+  // in two different portions must open at the exact slice the user tapped, not
+  // whichever placement matches the shared figure id first. Stable across the
+  // COW re-point (the placement id never changes), so no need to update it there.
+  const [notatingPlacementId, setNotatingPlacementId] = useState<string | null>(null);
   // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
   // figure yours".
   const [copiedToast, setCopiedToast] = useState(false);
@@ -366,7 +372,12 @@ export function Assemble({
   // Stable handler identities for the memoized reading view (FigureReadout is
   // React.memo'd): an inline closure here would re-bust every row's props on
   // each background sync re-render. useState setters are stable, so [] is right.
-  const openFigureFromReading = useCallback((figureId: string) => setNotating(figureId), []);
+  const openFigureFromReading = useCallback((figureId: string) => {
+    // Opened by figure id from the reading view — no placement context, so the
+    // portion falls back to the first placement of that figure (below).
+    setNotating(figureId);
+    setNotatingPlacementId(null);
+  }, []);
   const openThreadFromReading = useCallback(
     (anchor: { figureRef: string; count?: number }) => setThreadAnchor(anchor),
     [],
@@ -483,13 +494,27 @@ export function Assemble({
   // (`fromLiveDoc`) or is still the read-only snapshot fallback. Match on the
   // placement's figureRef too, so the open sheet still resolves during the brief
   // window where the figure has no content yet (loading) and after a COW re-point.
+  const notatingPlacements = store.readPlacements();
   const notatingRP =
-    notating !== null
-      ? (store
-          .readPlacements()
-          .find((rp) => rp.figure?.id === notating || rp.placement.figureRef === notating) ?? null)
-      : null;
+    notating === null
+      ? null
+      : // Prefer the EXACT placement the user opened (Builder v3 ③) so the editor
+        // windows to its portion; fall back to a figure-id match for the reading-view
+        // open path and to keep resolving during the brief COW re-point window.
+        ((notatingPlacementId !== null
+          ? notatingPlacements.find((rp) => rp.placement.id === notatingPlacementId)
+          : undefined) ??
+        notatingPlacements.find(
+          (rp) => rp.figure?.id === notating || rp.placement.figureRef === notating,
+        ) ??
+        null);
   const notatingFigure = notatingRP?.figure ?? null;
+  // The placement's portion window (Builder v3 ③): windows the editor grid to the
+  // placed slice. Undefined for a whole-figure placement.
+  const notatingPart = notatingRP?.placement.part ?? null;
+  // The implicit fork (⟳v5, §5.2) is async — surface an inline "making this figure
+  // yours…" pending state so the first edit of a global figure doesn't look inert.
+  const figureForking = notating !== null && (store.isForking?.(notating) ?? false);
   // "Load on open, then live without flicker" (C/E): in editable mode the editor
   // waits for the figure's own live doc rather than rendering — then swapping out —
   // stale snapshot content. A viewer reads the snapshot directly, and an injected
@@ -807,7 +832,10 @@ export function Assemble({
                                   placement.figureRef && store.retryFigure(placement.figureRef)
                                 }
                                 onOpen={() => {
-                                  if (placementFigure) setNotating(placementFigure.id);
+                                  if (placementFigure) {
+                                    setNotating(placementFigure.id);
+                                    setNotatingPlacementId(placement.id);
+                                  }
                                 }}
                                 onDelete={() =>
                                   setPendingDeletePlacement({ sectionId: section.id, placement })
@@ -964,6 +992,7 @@ export function Assemble({
         open={notating !== null}
         onClose={() => {
           setNotating(null);
+          setNotatingPlacementId(null);
           setLanesOpen(false);
           setAddKindOpen(false);
           setCopiedToast(false);
@@ -1020,7 +1049,20 @@ export function Assemble({
           </div>
         )}
         {notatingFigure && notatingFigureReady && (
-          <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-4 p-4" aria-busy={figureForking}>
+            {/* Implicit-fork feedback (⟳v5, §5.2): editing a global figure spawns a
+                live variant asynchronously. Without a cue the first edit looks
+                inert ("my click did nothing"), so show an inline pending banner
+                until the variant lands (then the "made this figure yours" toast). */}
+            {figureForking && (
+              <div
+                className="flex items-center gap-2 rounded-md bg-surface-sunken px-3 py-2 text-ink-muted"
+                role="status"
+                aria-live="polite"
+              >
+                <Spinner /> <span className="text-2xs">{t.makingFigureYours}</span>
+              </div>
+            )}
             {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
                 chips above the timeline when either entry or exit alignment is set. */}
             {(notatingFigure.entryAlignment || notatingFigure.exitAlignment) && (
@@ -1047,6 +1089,7 @@ export function Assemble({
             <FigureTimeline
               role={canEdit ? role : "viewer"}
               dance={routine.dance}
+              part={notatingPart}
               attributes={notatingFigure.attributes}
               counts={notatingFigure.counts}
               legacyBars={notatingFigure.bars}
