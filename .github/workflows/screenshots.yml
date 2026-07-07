@@ -5,7 +5,10 @@ name: Screenshots
 # from the smoke critical path.
 on:
   pull_request:
-    branches: [development]
+    # `development` was deleted 2026-07-05 (merged via PR #161 — CLAUDE.md §7);
+    # PRs currently target `main`. Keep `development` listed for when the
+    # integration branch is recreated.
+    branches: [development, main]
     paths:
       - "apps/web/**"
       - "apps/worker/**"
