@@ -895,8 +895,12 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   await Promise.all(
     [...figureRefs].map(async (ref) => {
       // Cast: the DO RPC stub degrades the `FigureDoc | null` return type — we
-      // own getFigureSnapshot, so re-assert the real shape here.
-      const fig = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      // own getFigureSnapshot, so re-assert the real shape here. A single figure
+      // that fails to read must degrade to "missing" (the client renders it so),
+      // never abort the whole routine snapshot with a 500.
+      const fig = (await doc(ref)
+        .getFigureSnapshot()
+        .catch(() => null)) as FigureDoc | null;
       if (!fig?.figureType) return;
       figures[ref] = fig;
     }),
@@ -914,7 +918,9 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   const bases: Record<string, FigureDoc> = {};
   await Promise.all(
     [...baseRefs].map(async (ref) => {
-      const base = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      const base = (await doc(ref)
+        .getFigureSnapshot()
+        .catch(() => null)) as FigureDoc | null;
       if (!base?.figureType) return;
       bases[ref] = base;
     }),

@@ -80,6 +80,19 @@ describe("US-005 Routine + figure document schemas", () => {
     expect(readFigure(doc).attributes).toHaveLength(0);
   });
 
+  it("reads a figure doc with no `attributes` as an empty timeline (never throws)", async () => {
+    // Regression (Sentry WEAVESTEPS-FRONTEND-3/-4): a figure-typed DO whose
+    // content was never seeded as a FigureDoc materializes with
+    // `attributes === undefined`. readFigure must treat it as an empty timeline,
+    // not throw "Cannot read properties of undefined (reading 'filter')" and 500
+    // the whole snapshot fan-out.
+    const { buildFigureDoc, readFigure } = await importDomain();
+    const { attributes: _a, ...noAttrs } = FEATHER_FOXTROT;
+    const doc = buildFigureDoc(noAttrs as unknown as typeof FEATHER_FOXTROT);
+    expect(() => readFigure(doc)).not.toThrow();
+    expect(readFigure(doc).attributes).toEqual([]);
+  });
+
   // ── Extra edge cases (in the spirit of US-005, beyond the listed ACs) ──
 
   it("round-trips a figure's baseFigureRef provenance field", async () => {
