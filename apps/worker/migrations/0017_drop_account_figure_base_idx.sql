@@ -1,0 +1,29 @@
+-- Drop `account_figure_base_idx` (migration 0010) — it is now WRONG under the
+-- ⟳v5 live-figure/variant model and was silently breaking figure editing.
+--
+-- 0010 added `UNIQUE (ownerId, forkedFromRef) WHERE type='account-figure'` to make
+-- the OLD save-to-library-as-COPY path idempotent: "a user holds at most ONE
+-- account-figure copied from a given global figure." ⟳v5 replaced that copy model
+-- with a per-user BOOKMARK (`library_entry`, migration 0015 — a reference, never a
+-- copy), so the index no longer guards its original purpose.
+--
+-- Meanwhile ⟳v5 variant-on-edit (PLAN §5.2) creates an INDEPENDENT account-figure
+-- variant every time a user re-times a placed CATALOG figure — each stamped with
+-- `forkedFromRef = globalFigureRef(dance, figureType)` (the LIVE base link). So the
+-- SECOND edit of the same base by the same user (e.g. re-timing "Running Spin Turn"
+-- after having varied it once before) hit this unique index: `createFigureRows`'
+-- `INSERT ... ON CONFLICT DO NOTHING` was silently swallowed, the re-read by the
+-- fresh docRef found no row, and the route returned 409 `figure_ref_conflict`. The
+-- client's `spawnVariantForEdit` caught the 409 and dropped the edit AFTER firing
+-- the optimistic "Step placed" toast — the reported "toast shows but the step
+-- vanishes" bug. The invariant is now the opposite: a user may own MANY variants of
+-- the same base (one per re-timed placement), so the uniqueness must go.
+--
+-- Consequences (covered by tests): `createFigureRows` no longer returns
+-- `owner_conflict` for a base collision, so the fork path's reuse-the-existing-
+-- derivative fallback (fork.ts `copyOneAccountFigureForFork`) simply mints an
+-- independent copy — the correct behaviour. A genuine `docRef` PK collision (fresh
+-- ULID clash, vanishingly unlikely) still surfaces as `owner_conflict` and is
+-- retried with a new id there.
+
+DROP INDEX IF EXISTS account_figure_base_idx;

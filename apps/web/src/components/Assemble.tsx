@@ -47,7 +47,12 @@ import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import { useMe } from "../store/me";
-import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
+import type {
+  CopyOnWriteErrorReason,
+  FigureLoadStatus,
+  ResolvedPlacement,
+  RoutineStore,
+} from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
@@ -183,6 +188,7 @@ function useRoutineStore(
   getToken: TokenProvider | undefined,
   currentUserId: string | undefined,
   onCopyOnWrite?: (variantRef: string) => void,
+  onCopyOnWriteError?: (info: { figureRef: string; reason: CopyOnWriteErrorReason }) => void,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
@@ -224,6 +230,7 @@ function useRoutineStore(
         currentUserId,
         accountKinds,
         onCopyOnWrite,
+        onCopyOnWriteError,
         // Escalate a figure that hasn't hydrated within ~12s to a retryable error
         // (with a Retry affordance) so it's never a forever skeleton; reconnect +
         // the access preflight then settle it on live / error / missing.
@@ -241,7 +248,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, editable, currentUserId, onCopyOnWrite]);
+  }, [routineId, injected, enabled, editable, currentUserId, onCopyOnWrite, onCopyOnWriteError]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -265,6 +272,7 @@ export function Assemble({
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   const t = useMessages(assembleMessages);
+  const toast = useToast();
   // The header's L·F role lens shares the reading/timeline "Steps for" copy
   // (Leader/Follower stay untranslated by glossary convention).
   const roleT = useMessages(timelineMessages);
@@ -280,6 +288,23 @@ export function Assemble({
     setCopiedToast(true);
     setNotating(variantRef);
   }, []);
+  // The variant spawn FAILED — the optimistic "Step placed" toast already fired, so
+  // tell the user their change didn't save instead of leaving a silent vanish. The
+  // store reports `unexpected` failures to Sentry; here we only word the toast.
+  const onCopyOnWriteError = useCallback(
+    ({ reason }: { figureRef: string; reason: CopyOnWriteErrorReason }) => {
+      const msg =
+        reason === "quota"
+          ? t.editSaveQuota
+          : reason === "denied"
+            ? t.editSaveDenied
+            : t.editSaveFailed;
+      toast.show(msg, {
+        tone: reason === "unexpected" || reason === "offline" ? "danger" : "warning",
+      });
+    },
+    [t, toast],
+  );
   // Editable = can write to the routine doc (editor/owner edits, or commenter
   // annotations). Drives the read/edit split: editable opens ONE live routine WS
   // for live convergence; a pure viewer stays on the zero-socket snapshot.
@@ -295,6 +320,7 @@ export function Assemble({
     getToken,
     currentUserId,
     onCopyOnWrite,
+    onCopyOnWriteError,
   );
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
@@ -359,7 +385,6 @@ export function Assemble({
     sectionId: string;
     placement: Placement;
   } | null>(null);
-  const toast = useToast();
 
   // "Add to my library" (⟳v5, PLAN §4.2/§5.2): bookmark a placed/notated ACCOUNT
   // figure. Wraps the caller's mutation with the same toast contract as the

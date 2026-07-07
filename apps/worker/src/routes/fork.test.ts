@@ -416,13 +416,15 @@ describe("v5 fork: account figures are copied for the forker", () => {
     expect(copy?.baseFigureRef).toBe(baseRef); // still a variant of the SAME base
   });
 
-  it("reuses the forker's own existing derivative of a base instead of failing when a fresh copy would collide (account_figure_base_idx, migration 0010)", async () => {
+  it("mints an INDEPENDENT copy when the forker already owns a derivative of the same base (many variants per base — migration 0017)", async () => {
     // The forker ALREADY owns a variant of `baseRef` (from unrelated prior
     // activity — e.g. a variant-spawn in a different routine). The origin
     // places a DIFFERENT figure that is ALSO a variant of the SAME base, owned
-    // by someone else. A fresh copy for the forker would collide with D1's
-    // "at most one account-figure per (owner, base)" constraint — the fork
-    // must not 500; it reuses the forker's pre-existing derivative instead.
+    // by someone else. Pre-#0017 a fresh copy collided with the (owner, base)
+    // unique index and the fork REUSED the pre-existing derivative. That index
+    // was wrong (it silently broke variant-on-edit — see migration 0017), so a
+    // user may now own MANY derivatives of the same base: the fork mints a fresh
+    // INDEPENDENT copy, and the pre-existing variant is left untouched.
     const forkerId = "u_v5_owner_f";
     const baseRef = uniqueDocName("fig_base_v5f");
     const myExistingVariantRef = uniqueDocName("fig_mine_v5f");
@@ -481,7 +483,7 @@ describe("v5 fork: account figures are copied for the forker", () => {
       method: "POST",
       headers: kpCtx.authHeaders(),
     });
-    expect(forkRes.status).toBe(201); // no 500 — the D1 conflict was handled
+    expect(forkRes.status).toBe(201); // no 409/500 — a second derivative is allowed now
     const fork = (await forkRes.json()) as { docRef: string };
 
     const forkSnap = (await docs
@@ -489,7 +491,26 @@ describe("v5 fork: account figures are copied for the forker", () => {
       .getSnapshot()) as unknown as RoutineSnapshotForTest;
     const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef as string;
     expect(copyRef).not.toBe(figureRef); // re-pointed away from the shared origin figure
-    expect(copyRef).toBe(myExistingVariantRef); // reused the forker's OWN existing derivative
+    expect(copyRef).not.toBe(myExistingVariantRef); // a FRESH independent copy, not a reuse
+
+    // Both derivatives of the same base now coexist, both owned by the forker —
+    // the (owner, base) uniqueness that used to forbid this is gone.
+    const copyRow = await env.DB.prepare(
+      "SELECT ownerId, type, forkedFromRef FROM document_registry WHERE docRef = ?",
+    )
+      .bind(copyRef)
+      .first<{ ownerId: string; type: string; forkedFromRef: string | null }>();
+    expect(copyRow).toMatchObject({
+      ownerId: forkerId,
+      type: "account-figure",
+      forkedFromRef: baseRef,
+    });
+    const derivatives = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND forkedFromRef = ? AND deletedAt IS NULL",
+    )
+      .bind(forkerId, baseRef)
+      .first<{ n: number }>();
+    expect(derivatives?.n).toBe(2); // the pre-existing variant + the fresh fork copy
   });
 
   it("leaves a GLOBAL figure reference untouched (placement keeps pointing at the catalog doc)", async () => {

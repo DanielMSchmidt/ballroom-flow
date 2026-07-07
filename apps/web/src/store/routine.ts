@@ -44,6 +44,7 @@ import {
   variantAttributesForEdit,
   wasSupersededByOthers,
 } from "@weavesteps/domain";
+import { reportError } from "../lib/ops";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
 import {
   connectUrl,
@@ -304,6 +305,33 @@ export type CreateFigureFn = (figure: {
   baseFigureRef?: string;
 }) => Promise<void>;
 
+/**
+ * Why a copy-on-write variant spawn failed (drives the screen's toast wording and
+ * whether the store reports the failure to Sentry):
+ *  • `quota`      — the account hit its figure limit (402); a product refusal.
+ *  • `denied`     — signed-out / not permitted on this routine (401/403); a refusal.
+ *  • `offline`    — the create POST couldn't reach the worker while offline; retry.
+ *  • `unexpected` — anything else (409 conflict, 400 invalid, 5xx, an online network
+ *                   throw): NOT something the user did, so it's a bug — reported.
+ */
+export type CopyOnWriteErrorReason = "quota" | "denied" | "offline" | "unexpected";
+
+/**
+ * Classify a variant-spawn failure. A CoW spawn should essentially always succeed
+ * for a signed-in editor with quota headroom, so most failures are `unexpected`
+ * (bug-shaped); only a few statuses map to product refusals the user can act on.
+ */
+function classifyCowError(err: unknown): CopyOnWriteErrorReason {
+  if (err instanceof ApiError) {
+    if (err.status === 402) return "quota";
+    if (err.status === 401 || err.status === 403) return "denied";
+    return "unexpected"; // 409 conflict, 400 invalid, 429, 5xx, …
+  }
+  // A non-ApiError is a thrown fetch: benign only when the browser is offline.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "offline";
+  return "unexpected";
+}
+
 /** Injectable wiring so the seam is testable without a live worker. */
 export interface OpenOptions {
   /** Base URL of the worker (default: same-origin). */
@@ -351,6 +379,16 @@ export interface OpenOptions {
   /** Called when an edit triggered copy-on-write (US-035), so the screen can
    *  toast "copied as your variant". Receives the new variant's id. */
   onCopyOnWrite?: (variantRef: string) => void;
+  /**
+   * Called when a copy-on-write variant spawn FAILED, so the edit could not be
+   * saved. The screen surfaces a retry/refusal toast instead of leaving a
+   * silent no-op behind the optimistic "Step placed" toast. `reason` lets the
+   * screen word it (a quota/permission refusal reads differently from a bug).
+   * An `"unexpected"` failure is ALSO reported to Sentry from the store — it is,
+   * by definition, something that shouldn't happen (the 409 conflict that used
+   * to silently drop edits was exactly this class).
+   */
+  onCopyOnWriteError?: (info: { figureRef: string; reason: CopyOnWriteErrorReason }) => void;
   /**
    * Auto-reconnect policy for every doc connection (routine + figures). A dropped
    * socket re-opens after this backoff so a blank figure self-heals without a
@@ -452,6 +490,7 @@ export async function openRoutine(
   const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
   const onCopyOnWrite = opts.onCopyOnWrite;
+  const onCopyOnWriteError = opts.onCopyOnWriteError;
   // Read/edit hybrid (#95): in lazy figure mode the timeline renders figures from
   // the snapshot (figureContent) with no per-figure socket; a figure connects only
   // on edit / openFigure. Eager (default) keeps the original connect-every-figure path.
@@ -1288,11 +1327,21 @@ export async function openRoutine(
         cowInFlight.delete(figureRef);
       })
       .catch((err) => {
-        // The variant POST failed (auth/network/quota): leave the placement on the
-        // base figure (no re-point, no toast) — the edit drops rather than corrupting
-        // state with a dangling variant reference.
-        console.warn("variant spawn failed; placement left on the base figure", err);
+        // The variant POST failed: leave the placement on the base figure (no
+        // re-point) — the edit drops rather than corrupting state with a dangling
+        // variant reference. But it must NOT drop SILENTLY: the optimistic "Step
+        // placed" toast already fired, so without this the user sees success then
+        // a vanished step (the reported bug). Tell the screen so it can surface a
+        // retry/refusal toast, and report the bug-shaped classes to Sentry — a CoW
+        // spawn should essentially never fail for a signed-in editor, so an
+        // `unexpected` failure (e.g. the 409 conflict this PR's migration fixes) is
+        // signal worth an event, not a swallowed console.warn.
         cowInFlight.delete(figureRef);
+        const reason = classifyCowError(err);
+        if (reason === "unexpected") {
+          reportError(err, { key: `cow-spawn:${figureRef}` });
+        }
+        onCopyOnWriteError?.({ figureRef, reason });
       });
   }
 

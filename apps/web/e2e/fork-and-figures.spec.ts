@@ -39,6 +39,23 @@ async function addSection(page: Page, name: string): Promise<void> {
   await page.getByLabel("Section name").press("Enter");
 }
 
+/** Place the CATALOG "Running Spin Turn" by name (a live global reference). */
+async function placeRunningSpinTurn(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Add figure" }).click();
+  await page.getByLabel("Figure name").fill("Running Spin Turn");
+  await page.getByLabel("Figure name").press("Enter");
+  await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+}
+
+/** Open the step editor and quick-add a sub-beat step at count 5&. */
+async function retimeFiveAnd(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+  await page.getByRole("button", { name: /^Add Step at count 5&$/i }).click();
+  await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
 test.describe("@smoke choreo fork is frozen / independent", () => {
   test("forking a routine yields an independent, owned copy; an origin edit does NOT appear in the fork (US-037)", async ({
     browser,
@@ -273,6 +290,50 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.goto(`/routines/${docRef}`);
     await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
     // Opening an existing routine lands in READ; switch to EDIT for the step editor.
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("re-timing the SAME catalog figure again (second routine) still persists — you can own many variants of one base (migration 0017)", async ({
+    page,
+  }) => {
+    // REGRESSION (the reported production bug): re-timing a placed catalog figure
+    //   spawns a variant stamped `forkedFromRef = global:waltz:running-spin-turn`.
+    //   Once you own ONE such variant, migration 0010's UNIQUE(ownerId,
+    //   forkedFromRef) made the SECOND variant's POST /api/figures 409 →
+    //   `spawnVariantForEdit` dropped the edit AFTER the optimistic "Step placed"
+    //   toast, so the step vanished on reload. The single-routine test above passes
+    //   on a fresh account (no prior derivative), which is exactly why CI missed
+    //   this. Here we re-time the SAME catalog figure a SECOND time (a second
+    //   routine) — the account now already owns a derivative — and it must persist.
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
+    });
+    await seedAuth(page, "user_editor");
+
+    // Routine 1 → the account's FIRST variant of Running Spin Turn.
+    await createRoutineAsCoach(page, "Re-time Waltz A");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
+    await retimeFiveAnd(page);
+
+    // Routine 2 → a SECOND variant of the SAME base. Pre-0017 this 409'd and the
+    // step silently vanished; now it must land on its own variant and persist.
+    const docRef2 = await createRoutineAsCoach(page, "Re-time Waltz B");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
+    await retimeFiveAnd(page);
+
+    // …and it PERSISTS across a reload of the second routine.
+    await page.reload();
+    await page.goto(`/routines/${docRef2}`);
+    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /list view/i }).click();
     await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
     await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
