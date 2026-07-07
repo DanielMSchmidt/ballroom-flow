@@ -963,7 +963,7 @@ export async function openRoutine(
     },
 
     setFigureAttributes: (figureRef, rawAttributes) => {
-      const figure = readFigureDoc(figureConn(figureRef));
+      const figure = figureOwnDoc(figureRef);
       // Dance gate (write path): drop any attribute whose kind does not apply to
       // this figure's dance — e.g. a `rise` value can never land on a Tango figure
       // (§3/§10.2). This mirrors the domain `parseAttributeWrite` rejection at the
@@ -1139,6 +1139,25 @@ export async function openRoutine(
   };
 
   /**
+   * The figure's OWN doc (its base content, pre-overlay) resolved via the same
+   * fallback chain as {@link resolveFigure} — but WITHOUT opening a connection for
+   * a catalog reference. A placed catalog figure (⟳v5, §4.3) has no seeded DO of
+   * its own — its content lives in the bundled catalog — so this resolves the
+   * catalog FIRST (mirroring `openFigure`'s early return: opening a doomed 403-ing
+   * connection to an unseeded global DO would churn reconnect/backoff for nothing).
+   * A real account figure / variant reads from its own live DO (opening is correct),
+   * falling back to the routine snapshot. Used by the write paths (`editFigure`,
+   * `setFigureAttributes`) so a catalog-reference edit is recognized as `global`
+   * scope and spawns a variant instead of a silently-rejected in-place write.
+   */
+  const figureOwnDoc = (figureRef: string): FigureDoc | null => {
+    const catalog = catalogFigureFor(figureRef);
+    if (catalog) return catalog;
+    const live = readFigureDoc(figureConn(figureRef));
+    return live ?? figureContent?.(figureRef) ?? null;
+  };
+
+  /**
    * Apply a partial edit (attributes and/or bars) to a figure doc (⟳v5, §5.2).
    *
    *  • A GLOBAL (catalog) figure spawns a live overlay VARIANT (`spawnVariant`):
@@ -1158,10 +1177,17 @@ export async function openRoutine(
     figureRef: string,
     patch: { attributes?: Attribute[]; counts?: number; name?: string },
   ): void {
-    const figure = readFigureDoc(figureConn(figureRef));
+    const figure = figureOwnDoc(figureRef);
 
     // ⟳v5 variant-on-edit of a GLOBAL figure (non-admin). The DO boundary rejects a
     // non-admin's direct write regardless; the client realizes the edit as a variant.
+    // `figureOwnDoc` (not a bare live read) is essential here: a PLACED CATALOG
+    // reference has no seeded DO of its own, so reading only its (unhydrated,
+    // 403-ing) live connection returns null → the global scope is missed → the edit
+    // wrongly falls through to the in-place write below, which the DO silently
+    // rejects (the "Step placed" toast fires, but nothing persists — the bug this
+    // guards against). Resolving via the bundled catalog detects `scope: "global"`
+    // so a catalog-reference edit spawns a variant like any other global edit.
     if (figure?.scope === "global") {
       spawnVariantForEdit(figureRef, figure, patch);
       return;

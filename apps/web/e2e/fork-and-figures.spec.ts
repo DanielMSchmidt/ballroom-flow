@@ -224,6 +224,61 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // The global figure's base data is not asserted here from a second UI context
     // (no in-app path to read a raw global figure); the COW unit tests prove it.
   });
+
+  test("re-timing a placed CATALOG figure (sub-beat quick-add) persists as your variant (US-035)", async ({
+    page,
+  }) => {
+    // Intent (the reported bug): a catalog figure placed via the Add-figure sheet is
+    //   a LIVE REFERENCE to a `global:` doc that is NOT seeded as its own DO — its
+    //   content comes from the bundled catalog (⟳v5, §4.3). Re-timing it by
+    //   quick-adding a sub-beat step (the "&" between 5 and 6 → count 5&) used to
+    //   fire the "Step placed" toast but DROP the edit: the store read the figure's
+    //   scope from the (unhydrated) live connection, missed the `global` scope, and
+    //   attempted an in-place write the DO silently rejects. It must instead spawn a
+    //   live variant that OWNS the re-timed beat, so the new step persists across a
+    //   reload (⟳v5, §4.4/§5.2). Unlike the seeded-global test above, NO figure DO is
+    //   seeded here — this is the real "add a catalog figure, then re-time it" path.
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
+    });
+    await seedAuth(page, "user_editor");
+
+    // Create a Waltz routine + section, then place the CATALOG "Running Spin Turn"
+    // by name (a live reference — no figure DO is seeded).
+    const docRef = await createRoutineAsCoach(page, "Re-time Waltz");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByLabel("Figure name").fill("Running Spin Turn");
+    await page.getByLabel("Figure name").press("Enter");
+    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+
+    // Open the figure's step editor and quick-add a step at the "&" between 5 and 6
+    // (count 5&): tapping an empty Step sub-beat cell quick-adds a presence step
+    // (Builder v3 ②) — the "Step placed" toast fires here.
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await page.getByRole("button", { name: /^Add Step at count 5&$/i }).click();
+
+    // The re-timed sub-beat now carries a step: the cell flips from "Add" to "Edit".
+    // This is the discriminating check — pre-fix the edit was dropped, so the cell
+    // stayed "Add Step at count 5&" (the presence never reached a persisted doc).
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // …and it PERSISTS across a reload: the step landed on the spawned variant's own
+    // DO (a real choreo-owned figure), not on the rejected global write.
+    await page.reload();
+    await page.goto(`/routines/${docRef}`);
+    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to EDIT for the step editor.
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 });
 
 test.describe("cross-dance figureType notes (US-040)", () => {
