@@ -29,6 +29,8 @@ export interface DocStub {
   getFigureSnapshot(): Promise<DocSnapshot | null>;
   /** Server-seed a never-before-used doc's initial content at create (#205); no-clobber. */
   seedDoc(content: Record<string, unknown>): Promise<void>;
+  /** D30 ⟳: reconcile an already-imported global figure doc to the bundled seed. */
+  reconcileSeed(seed: Record<string, unknown>): Promise<{ changed: boolean }>;
   /** Set the D1-projected metadata (title/dance/owner/figureType). */
   setMetadata(meta: Record<string, unknown>): Promise<void>;
   /** Test hook: the exact BINARY catch-up frames a connect would send — post-D10,

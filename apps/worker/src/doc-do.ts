@@ -226,7 +226,7 @@ export class DocDO extends DurableObject<Env> {
    * persisting an empty routine that would (a) trip seedDoc's no-clobber and
    * (b) push a bogus empty routine to the client.
    */
-  private loadPersisted(): A.Doc<RoutineDoc> | null {
+  private loadPersisted<T = RoutineDoc>(): A.Doc<T> | null {
     const sql = this.ctx.storage.sql;
     const snapRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
@@ -239,15 +239,16 @@ export class DocDO extends DurableObject<Env> {
     // Start from the compacted snapshot (if the alarm has run), then replay any
     // incremental changes recorded after it. Without a snapshot, replay all
     // changes from an empty doc (the US-014 path).
-    let doc =
-      snapRows[0] !== undefined
-        ? A.load<RoutineDoc>(new Uint8Array(snapRows[0].data))
-        : A.init<RoutineDoc>();
+    let doc = snapRows[0] !== undefined ? A.load<T>(new Uint8Array(snapRows[0].data)) : A.init<T>();
     if (changeRows.length > 0) {
       const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
       [doc] = A.applyChanges(doc, changes);
     }
-    return this.migrateOnLoad(doc);
+    // `migrateOnLoad` is doc-shape-agnostic (it only reads `schemaVersion` and runs
+    // the pure migrate ladder) but is typed to `A.Doc<RoutineDoc>` because it adopts
+    // `this.doc`. Bridge that one boundary here so a caller can request a typed view
+    // (e.g. `loadPersisted<FigureDoc>()`) cast-free at the call site.
+    return this.migrateOnLoad(doc as A.Doc<RoutineDoc>) as A.Doc<T>;
   }
 
   /**
@@ -351,13 +352,18 @@ export class DocDO extends DurableObject<Env> {
    * Single-writer by construction: only this doc's DO runs its reconcile.
    */
   async reconcileSeed(seed: SeedFigureContent): Promise<{ changed: boolean }> {
-    const before = this.getDoc() as unknown as A.Doc<FigureDoc>;
+    // Read WITHOUT materializing: `getDoc()` would fabricate an empty ROUTINE in an
+    // unseeded (or D1-vs-DO-diverged) figure DO and then persist that corruption.
+    // `loadPersisted` returns null when nothing is stored → nothing to reconcile;
+    // the seeder only reaches this method once the figure's D1 row exists, and the
+    // seedDoc path (not this one) is responsible for the initial import.
+    const before = this.loadPersisted<FigureDoc>();
+    if (!before) return { changed: false };
     const { doc: after, changed } = reconcileSeededFigure(before, seed);
     if (!changed) return { changed: false };
-    const changes = A.getChanges(
-      before as unknown as A.Doc<RoutineDoc>,
-      after as unknown as A.Doc<RoutineDoc>,
-    );
+    const changes = A.getChanges(before, after);
+    // `this.doc` is typed to RoutineDoc for the DO's routine-hosting majority; a
+    // figure DO holds a FigureDoc at runtime (the known dual-host seam).
     this.doc = after as unknown as A.Doc<RoutineDoc>;
     this.persist(changes);
     await this.maybeScheduleCompaction();
@@ -497,9 +503,9 @@ export class DocDO extends DurableObject<Env> {
    * caller renders it as missing.
    */
   async getFigureSnapshot(): Promise<FigureDoc | null> {
-    const doc = this.loadPersisted();
+    const doc = this.loadPersisted<FigureDoc>();
     if (!doc) return null;
-    return readFigure(doc as unknown as A.Doc<FigureDoc>);
+    return readFigure(doc);
   }
 
   // ── US-015: live WebSocket sync (custom Automerge change-sync, D13) ─────────

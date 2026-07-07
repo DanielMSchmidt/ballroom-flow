@@ -73,6 +73,30 @@ describe("seedGlobalFigures — additive, idempotent import (D30)", () => {
     expect(second.unchanged).toBe(1);
   });
 
+  it("reconcileSeed on an unseeded figure DO does NOT materialize a routine (regression)", async () => {
+    // Regression: reconcileSeed read via getDoc(), which auto-materializes AND
+    // persists an empty ROUTINE when nothing is seeded — corrupting an unseeded or
+    // D1-vs-DO-diverged figure DO. It now reads via loadPersisted() (no materialize)
+    // and no-ops, leaving the DO's SQLite storage untouched.
+    const ref = globalFigureRef("waltz", "gf_unseeded_reconcile_regression");
+    const stub = docs.get(docs.idFromName(ref));
+
+    // Nothing seeded → snapshot null and zero rows in the change log.
+    expect(await stub.getFigureSnapshot()).toBeNull();
+    expect(await stub.debugChangeRowCount()).toBe(0);
+
+    const { changed } = await stub.reconcileSeed({
+      name: "Never Seeded",
+      counts: 8,
+      attributes: [],
+    });
+    expect(changed).toBe(false);
+
+    // The bug persisted a bogus empty routine here; the fix persists nothing.
+    expect(await stub.debugChangeRowCount()).toBe(0);
+    expect(await stub.getFigureSnapshot()).toBeNull();
+  });
+
   it("re-seeding is AUTHORITATIVE for seeded content but preserves user-added attributes (D30 ⟳)", async () => {
     const { seedGlobalFigures } = await import("./seed-global-figures");
     const family = "gf_reconcile_family";
