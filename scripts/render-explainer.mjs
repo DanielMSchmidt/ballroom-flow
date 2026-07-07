@@ -14,7 +14,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { bundle } from "@remotion/bundler";
-import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
+import { ensureBrowser, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = path.join(ROOT, "apps/web");
@@ -45,6 +45,13 @@ async function main() {
   }
 
   await mkdir(OUT_DIR, { recursive: true });
+
+  // No preinstalled/overridden Chromium (e.g. CI) → let Remotion download and
+  // manage its own headless browser so the render still works.
+  if (!browserExecutable) {
+    console.log("[explainer] no local Chromium — ensuring Remotion's managed browser…");
+    await ensureBrowser();
+  }
 
   console.log("[explainer] bundling Remotion project…");
   const serveUrl = await bundle({ entryPoint: REMOTION_ENTRY, publicDir: PUBLIC_DIR });

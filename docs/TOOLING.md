@@ -119,12 +119,23 @@ clip filenames the recorder writes, and the on-screen copy — shared by the rec
 composition so they can't disagree (mirrors `screenshots.manifest.ts`). The final asset's
 metadata lives in `apps/web/src/marketing/video/explainer.manifest.ts`.
 
+**CI bot** (`.github/workflows/video.yml`, mirrors the screenshot bot): on PRs that touch the
+UI / worker / pipeline (path-filtered) — plus manual dispatch — CI runs `pnpm video:generate`,
+then decides whether the running app **meaningfully** changed the tour. Because the MP4 is
+non-deterministic (h264 encode + the recorded journey's timing/cursor jitter), a byte compare
+is useless, so `scripts/video-diff.mjs` **pixel-diffs the deterministic poster frame** and
+treats it as changed only when the differing fraction exceeds `VIDEO_DIFF_THRESHOLD` (default
+2%). On a real change it commits the refreshed `explainer.mp4` + poster back to the PR branch
+(`video-bot`, `[skip ci]` — both the message and a guard step stop the self-trigger loop) and
+upserts a sticky **before/after** comment; otherwise it discards the jittered render. Remotion
+downloads its own managed Chromium in CI.
+
 **Notes.** Remotion is a **build-only** dependency — the app embeds the rendered MP4 via a
 plain `<video>` (poster + controls, `preload="none"`), so nothing heavy ships in the client
 bundle. The render points Chromium at `REMOTION_BROWSER` (or the sandbox's preinstalled
-headless shell); the recorder points at `PW_CHROMIUM_PATH` / the preinstalled Chromium when
-the Playwright-managed build isn't present. `@video` is **not** in `@smoke` — regenerate on
-demand, commit the two assets.
+headless shell, else Remotion's managed download); the recorder points at `PW_CHROMIUM_PATH` /
+the preinstalled Chromium, falling back to Playwright's managed browser (CI). `@video` is
+**not** in `@smoke` — the bot regenerates it; humans can too with `pnpm video:generate`.
 
 ## Verification
 
