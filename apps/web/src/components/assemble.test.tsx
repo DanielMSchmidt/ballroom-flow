@@ -521,7 +521,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const spies = { addBreak: vi.fn(), setBreakBeats: vi.fn() };
+    const spies = { addPlacement: vi.fn(), setBreakBeats: vi.fn() };
     const brk: Placement = { id: "b1", source: "break", beats: 4, deletedAt: null };
     const routine: RoutineDoc = {
       id: "rt_sample",
@@ -541,9 +541,11 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     const card = screen.getByTestId("break-card");
     expect(card).toHaveTextContent(/4 beats/i);
 
-    // The "add break" affordance appends a break to the section.
+    // The "add break" affordance now MINTS a choreo-local Break FIGURE
+    // (Builder v3 ④): a Foxtrot bar's worth of empty counts, editable like any
+    // figure — legacy break placements above keep rendering as cards.
     await userEvent.click(screen.getAllByRole("button", { name: /add break/i })[0] as HTMLElement);
-    expect(spies.addBreak).toHaveBeenCalledWith("s1");
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Break", undefined, 4);
 
     // The −/＋ stepper changes the beat count.
     await userEvent.click(screen.getByRole("button", { name: /more beats/i }));

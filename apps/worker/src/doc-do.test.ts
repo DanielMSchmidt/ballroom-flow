@@ -936,3 +936,78 @@ describe("storage-format version marker", () => {
     expect(await stub.debugStorageVersion()).toBe(1);
   });
 });
+
+describe("legacy break → Break-figure migration (Builder v3 ④, alarm-driven)", () => {
+  it("rewrites {source:'break'} placements into minted Break figure docs on the alarm", async () => {
+    // Intent (owner decision 2026-07-07): a Break is a real choreo-local figure.
+    //   Legacy break placements are MIGRATED — the alarm mints a Break figure doc
+    //   per break (registry row + placement edge + DO seed, owned by the routine's
+    //   owner) FIRST, then rewrites the routine's placements under the migration
+    //   actor. Idempotent: a second alarm finds no breaks.
+    const { name, stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: name,
+      title: "Break Legacy",
+      dance: "waltz",
+      ownerId: "user_bl",
+      sections: [
+        {
+          id: "s1",
+          name: "Side",
+          placements: [
+            { id: "p1", figureRef: "fig_keep", sortKey: "a0", deletedAt: null },
+            { id: "p2", source: "break", beats: 4, sortKey: "a1", deletedAt: null },
+          ],
+          deletedAt: null,
+        },
+      ],
+      annotations: [],
+      schemaVersion: 5,
+      deletedAt: null,
+    });
+    await stub.setMetadata({ doName: name, ownerId: "user_bl" });
+
+    await stub.runAlarmForTest();
+
+    const doc = (await stub.getSnapshot()) as unknown as {
+      sections: Array<{
+        placements: Array<{ id: string; figureRef?: string; source?: string; beats?: number }>;
+      }>;
+    };
+    const p2 = doc.sections[0]?.placements.find((p) => p.id === "p2");
+    expect(p2?.source).toBeUndefined(); // no longer a special break entry
+    expect(p2?.beats).toBeUndefined();
+    expect(p2?.figureRef).toBeTruthy(); // re-pointed at the minted Break figure
+    const breakRef = p2?.figureRef as string;
+    expect(breakRef).not.toBe("fig_keep");
+
+    // The minted figure: registry row owned by the routine owner + placement edge.
+    const row = await env.DB.prepare(
+      "SELECT ownerId, type, title FROM document_registry WHERE docRef = ?",
+    )
+      .bind(breakRef)
+      .first<{ ownerId: string; type: string; title: string | null }>();
+    expect(row?.ownerId).toBe("user_bl");
+    expect(row?.type).toBe("account-figure");
+    const edge = await env.DB.prepare(
+      "SELECT 1 AS x FROM placement_edge WHERE routineRef = ? AND figureRef = ?",
+    )
+      .bind(name, breakRef)
+      .first();
+    expect(edge).toBeTruthy();
+
+    // The Break figure doc itself: a bar-spanning empty timeline (counts = beats).
+    const figStub = docs.get(docs.idFromName(breakRef));
+    const fig = (await figStub.getFigureSnapshot()) as unknown as {
+      name: string;
+      counts?: number;
+    };
+    expect(fig.name).toBe("Break");
+    expect(fig.counts).toBe(4);
+
+    // Idempotent: a second alarm changes nothing further.
+    await stub.runAlarmForTest();
+    const again = (await stub.getSnapshot()) as unknown as typeof doc;
+    expect(again.sections[0]?.placements.find((p) => p.id === "p2")?.figureRef).toBe(breakRef);
+  });
+});

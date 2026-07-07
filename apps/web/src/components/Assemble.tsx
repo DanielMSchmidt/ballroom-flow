@@ -846,7 +846,18 @@ export function Assemble({
                               className="flex-1"
                               label={t.addBreak}
                               tone="break"
-                              onClick={() => store.addBreak(section.id)}
+                              onClick={() =>
+                                // Builder v3 ④: a Break is a real (choreo-local)
+                                // figure — a bar's worth of empty counts, sized/
+                                // edited like any figure. Legacy break placements
+                                // keep the BreakCard until the DO migrates them.
+                                store.addPlacement(
+                                  section.id,
+                                  t.breakFigureName,
+                                  undefined,
+                                  DANCES[routine.dance as DanceId].beatsPerBar,
+                                )
+                              }
                             />
                           </div>
                         )}
