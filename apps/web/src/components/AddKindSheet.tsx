@@ -3,6 +3,7 @@ import { isReservedKind, slugifyKind } from "@weavesteps/domain";
 import { useCallback, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
+import { onSelectValue } from "../lib/select-value";
 import {
   Button,
   CheckIcon,
@@ -296,7 +297,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
           label={t.cardinalityField}
           options={cardinalityOptions}
           value={cardinality}
-          onChange={(e) => setCardinality(e.target.value as "single" | "multi")}
+          onChange={onSelectValue<"single" | "multi">(setCardinality)}
         />
         <Select
           label={t.valueTypeField}

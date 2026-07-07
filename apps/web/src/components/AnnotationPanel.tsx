@@ -17,6 +17,7 @@ import type { Annotation, AnnotationKind, Role } from "@weavesteps/domain";
 import { useState } from "react";
 import { getLocale, pickMessages, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import { onSelectValue } from "../lib/select-value";
 import { Button, Chip } from "../ui";
 
 /** A point or figure anchor the panel is composing against (Task 8 supplies it). */
@@ -272,7 +273,7 @@ export function AnnotationPanel({
           <select
             aria-label={t.kindSelect}
             value={kind}
-            onChange={(e) => setKind(e.target.value as AnnotationKind)}
+            onChange={onSelectValue<AnnotationKind>(setKind)}
             className="w-full appearance-none rounded-md border border-border-strong bg-surface-sunken px-3.5 text-sm text-ink min-h-[var(--bf-touch-target)] outline-none"
           >
             {KINDS.map((k) => (
