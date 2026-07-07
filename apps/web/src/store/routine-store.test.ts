@@ -276,6 +276,61 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(rp?.fromLiveDoc).toBe(true); // the editor's load-on-open gate releases
   });
 
+  it("editing a catalog reference opens ONLY the variant socket — never the catalog global DO", async () => {
+    // Connection frugality (companion to the COW-for-a-catalog-ref fix): editing a
+    // placed catalog figure spawns a variant, and ONE socket is sufficient — the
+    // variant's own DO. The catalog base needs no live connection (its content is
+    // bundled; admin edits arrive via poll/snapshot, §6.2). The write path must
+    // therefore resolve the figure's scope from the bundled catalog (`figureOwnDoc`),
+    // NOT a bare `figureConn(ref)` read — the latter would open a doomed connection
+    // to the unseeded global DO (immediate 403 + reconnect/backoff churn) on every
+    // edit. This guards against reintroducing that second, redundant connection.
+    const created: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string }) => {
+      created.push(m);
+    });
+    const onCopyOnWrite = vi.fn();
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      createFigure,
+      onCopyOnWrite,
+      currentUserId: "me",
+      eagerFigures: false,
+    });
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    store.addPlacement("s1", "Natural Turn", "natural-turn");
+    const ref = globalFigureRef("waltz", "natural-turn");
+    store.openFigure(ref);
+    // Re-time it: quick-add a sub-beat presence step (the "&" between 5 and 6).
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    store.setFigureAttributes(ref, [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ]);
+
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    const variantRef = created[0]?.figureRef as string;
+    // The catalog global DO was NEVER connected…
+    expect(sockets.has(ref)).toBe(false);
+    // …exactly the routine + the spawned variant have sockets (one figure socket).
+    expect([...sockets.keys()].sort()).toEqual(["rt_sample", variantRef].sort());
+    store.close();
+  });
+
   it("resolves a TYPED multi-word catalog name to its canonical global ref", async () => {
     const createFigure = vi.fn(async () => {});
     const { store } = await openWithSection(createFigure);
@@ -945,6 +1000,81 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(rp?.placement.figureRef).toBe(variantRef);
     // …and the shared base figure doc was NEVER written to (COW must not mutate it).
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
+  });
+
+  it("copy-on-write fires for a placed CATALOG reference whose global DO is NOT seeded (US-035)", async () => {
+    // Intent (the bug this guards): a catalog figure placed via the Add-figure sheet
+    //   is a LIVE REFERENCE to a `global:<dance>:<figureType>` doc (⟳v5, §4.3) that
+    //   has NO seeded DO of its own — its content comes from the BUNDLED catalog.
+    //   Editing it (e.g. quick-adding a sub-beat step to re-time the figure) must
+    //   still spawn a variant. The earlier scope read looked ONLY at the (unhydrated,
+    //   403-ing) live connection → it saw `null`, missed the `global` scope, and
+    //   fell through to an in-place write the DO silently rejects: the "Step placed"
+    //   toast fired but nothing persisted. `figureOwnDoc` resolves the bundled
+    //   catalog first, so the global scope is detected and a variant is spawned.
+    const ref = globalFigureRef("waltz", "running-spin-turn");
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string; attributes?: Attribute[] }> =
+      [];
+    const createFigure = vi.fn(async (m: (typeof created)[number]) => {
+      created.push(m);
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_cat", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // The routine references the CATALOG figure directly — no figure DO is seeded.
+    const routine = buildRoutineDoc({
+      id: "rt_cat",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: ref, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_cat")?.fireOpen();
+    sockets.get("rt_cat")?.load(routine);
+    sockets.get("rt_cat")?.fireCaughtUp();
+    store.readPlacements();
+    store.openFigure(ref); // opening a catalog reference is a no-op (bundled content)
+
+    // Re-time the figure: quick-add a presence step at the "&" between 5 and 6
+    // (count 5.5) — the FigureTimeline sends the RESOLVED (catalog) timeline plus
+    // the new presence attribute, exactly as its onCellTap quick-add does.
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    expect(resolved?.scope).toBe("global"); // the editor sees it as a catalog figure
+    const edited: Attribute[] = [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ];
+    store.setFigureAttributes(ref, edited);
+
+    // A variant is projected with the catalog ref as its LIVE base — NOT dropped.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    expect(created[0]?.baseFigureRef).toBe(ref);
+    // The variant OWNS the re-timed beat, carrying the new sub-beat presence (5.5).
+    expect(created[0]?.attributes?.some((a) => a.count === 5.5)).toBe(true);
+    // The placement re-points to the variant…
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(created[0]?.figureRef);
+    // …and NOTHING was ever written to the (unseeded) global DO connection: the old
+    // bug's silently-rejected in-place write must not happen.
+    expect(sockets.get(ref)?.sent.length ?? 0).toBe(0);
+    store.close();
   });
 
   it("⟳v5: a spawned variant does NOT copy the base's alignment (it resolves live)", async () => {
