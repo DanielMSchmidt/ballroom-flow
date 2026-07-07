@@ -13,7 +13,7 @@ import type { RegistryKind } from "@weavesteps/domain";
 import { useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
 import { cx, FullScreen } from "../ui";
-import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
+import { isAttributeKind, kindVar } from "../ui/tokens";
 import { glossFor } from "./attribute-info";
 
 export interface AttributeInfoSheetProps {
@@ -46,16 +46,12 @@ export interface AttributeInfoSheetProps {
   };
 }
 
-function isStandardKind(kind: string): kind is AttributeKind {
-  return (ATTRIBUTE_KINDS as readonly string[]).includes(kind);
-}
-
 /** The kind's accent colour — a token for a standard kind, the stored hex else. */
 function kindColor(kind: RegistryKind): string {
-  return isStandardKind(kind.kind) ? kindVar(kind.kind) : kind.color;
+  return isAttributeKind(kind.kind) ? kindVar(kind.kind) : kind.color;
 }
 function kindTint(kind: RegistryKind): string {
-  return isStandardKind(kind.kind) ? kindVar(kind.kind, "tint") : kind.color;
+  return isAttributeKind(kind.kind) ? kindVar(kind.kind, "tint") : kind.color;
 }
 
 export function AttributeInfoSheet({

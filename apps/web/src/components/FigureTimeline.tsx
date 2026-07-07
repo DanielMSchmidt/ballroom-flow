@@ -206,7 +206,7 @@ export function FigureTimeline({
   // Sorted distinct counts that actually carry a value (for out-of-grid rows).
   const placedCounts = useMemo(() => [...byCount.keys()].sort((a, b) => a - b), [byCount]);
 
-  const gridDance = (dance ?? "waltz") as DanceId;
+  const gridDance = dance ?? "waltz";
   const beatsPerBar = DANCES[gridDance].beatsPerBar;
   // The figure's authored length in COUNTS (Builder v3 ①): the explicit `counts`
   // prop, else a legacy `bars × beatsPerBar`, else the step default — but an

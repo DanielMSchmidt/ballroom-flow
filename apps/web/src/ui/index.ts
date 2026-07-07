@@ -44,5 +44,6 @@ export {
   type FigureScope,
   IDENTITY_COLORS,
   IDENTITY_HEX,
+  isAttributeKind,
   kindVar,
 } from "./tokens";

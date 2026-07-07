@@ -26,6 +26,13 @@ export const ATTRIBUTE_KINDS = [
 ] as const;
 export type AttributeKind = (typeof ATTRIBUTE_KINDS)[number];
 
+/** Runtime narrowing to a STANDARD attribute kind. User-defined kinds extend the
+ *  registry at runtime and are NOT in this list, so this is a real membership test —
+ *  use it instead of asserting `kind as AttributeKind` (CLAUDE.md §4). */
+export function isAttributeKind(kind: string): kind is AttributeKind {
+  return ATTRIBUTE_KINDS.some((k) => k === kind);
+}
+
 /** CSS-variable names for an attribute kind's color family. Use with
  *  `var(...)`, e.g. `style={{ color: kindVar(kind, "ink") }}`. For a
  *  user-defined kind whose color isn't in the standard set, pass the
