@@ -36,6 +36,7 @@ import {
   type FigureDoc,
   libraryFigureByRef,
   migrateDraft,
+  partBeatSpan,
   type RoutineDoc,
   readFigure,
   readRoutine,
@@ -1090,22 +1091,31 @@ export class DocDO extends DurableObject<Env> {
       const beatsPerBar = DANCES[(routine.dance ?? "waltz") as DanceId].beatsPerBar;
       const placementRefs: string[] = [];
       let breakBars = 0; // a break contributes bars but isn't a figure (US-004a)
+      let partBars = 0; // portioned placements span their WINDOW (Builder v3 ③)
       let figureCount = 0;
       for (const section of routine.sections) {
         for (const placement of section.placements) {
           if (placement.source === "break") {
             breakBars += Math.max(1, Math.round((placement.beats ?? beatsPerBar) / beatsPerBar));
           } else if (placement.figureRef) {
-            placementRefs.push(placement.figureRef);
+            if (placement.part) {
+              // A portion dances only its count window — its bar contribution is
+              // the window's whole-beat span, not the figure's full length.
+              partBars += Math.max(1, Math.ceil(partBeatSpan(placement.part) / beatsPerBar));
+            } else {
+              placementRefs.push(placement.figureRef);
+            }
             figureCount += 1;
           }
         }
       }
       const barsByRef = await this.resolveFigureBars([...new Set(placementRefs)]);
       // Sum PER PLACEMENT (a figure placed twice counts its bars twice), then add
-      // break beats — the section/routine bar-count includes break bars (US-004a).
+      // portion windows + break beats — the routine bar-count includes both.
       const bars =
-        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) + breakBars;
+        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) +
+        partBars +
+        breakBars;
       return { bars, figureCount };
     }
 

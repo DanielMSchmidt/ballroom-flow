@@ -128,3 +128,31 @@ export function figureCountSlots(counts: number, dance: DanceId): GridSlot[] {
   }
   return slots;
 }
+
+/** A placement's portion window (Builder v3 ③): dance just the counts
+ *  [fromCount, toCount] of the referenced figure. The figure doc stays whole
+ *  and LIVE — reads window the resolved timeline, so a catalog edit inside the
+ *  window flows in. Whole counts, 1-indexed relative to figure start. */
+export interface PlacementPart {
+  fromCount: number;
+  toCount: number;
+}
+
+/** The live attributes inside a portion window — the last beat's e/&/a
+ *  sub-beats ride with it. No part → the timeline passes through whole. */
+export function windowAttributes<T extends { count: number }>(
+  attributes: T[],
+  part?: PlacementPart | null,
+): T[] {
+  if (!part) return attributes;
+  const from = Math.max(1, Math.ceil(part.fromCount));
+  const toExclusive = Math.floor(part.toCount) + 1;
+  return attributes.filter((a) => a.count >= from && a.count < toExclusive);
+}
+
+/** The whole-beat span a portion window occupies (min 1) — a placement's beat
+ *  contribution is the WINDOW's span, whether or not every beat carries steps. */
+export function partBeatSpan(part: PlacementPart): number {
+  const from = Math.max(1, Math.ceil(part.fromCount));
+  return Math.max(1, Math.floor(part.toCount) - from + 1);
+}

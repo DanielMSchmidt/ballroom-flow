@@ -91,6 +91,15 @@ export interface Placement {
   source?: "break";
   /** A break's duration in whole beats (`source === "break"` only; min 1). */
   beats?: number;
+  /**
+   * Portion window (Builder v3 ③, 2026-07-07): dance only counts
+   * [fromCount, toCount] of the referenced figure. The figure doc stays whole
+   * and LIVE — reads window the resolved timeline (`windowAttributes`), a
+   * catalog edit inside the window flows in, and the placement's bar
+   * contribution is the window's whole-beat span (`partBeatSpan`). Absent →
+   * the whole figure.
+   */
+  part?: { fromCount: number; toCount: number } | null;
   perPlacementAlignment?: Alignment;
   /**
    * Fractional-index ordering key (#63, §5.3). Reads order placements by this;

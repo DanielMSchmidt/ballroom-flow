@@ -5,8 +5,10 @@ import {
   defaultFigureBars,
   figureCountSlots,
   figureGridSlots,
+  partBeatSpan,
   resolveFigureBars,
   resolveFigureCounts,
+  windowAttributes,
 } from "./figure-grid";
 
 const step = (count: number, kind = "footwork"): Attribute => ({
@@ -125,5 +127,25 @@ describe("counts-based figure length (Builder v3 ①)", () => {
     expect(four).toMatchObject({ bar: 2, whole: true });
     const fourAnd = slots.find((s) => s.count === 4.5);
     expect(fourAnd).toMatchObject({ bar: 2, whole: false, label: "4&" });
+  });
+});
+
+// Builder v3 ③ — portion window: a placement may carry part {fromCount,toCount};
+// reads window the live timeline, the bar span comes from the window itself.
+describe("portion window (Builder v3 ③)", () => {
+  it("windowAttributes keeps counts inside [from, to] including the last beat's sub-beats", () => {
+    const attrs = [1, 2, 2.5, 3, 3.5, 4].map((c) => step(c));
+    const windowed = windowAttributes(attrs, { fromCount: 2, toCount: 3 });
+    expect(windowed.map((a) => a.count)).toEqual([2, 2.5, 3, 3.5]);
+  });
+
+  it("windowAttributes passes through with no part", () => {
+    const attrs = [1, 2].map((c) => step(c));
+    expect(windowAttributes(attrs, null)).toEqual(attrs);
+  });
+
+  it("partBeatSpan is the whole-beat span of the window (min 1)", () => {
+    expect(partBeatSpan({ fromCount: 2, toCount: 4 })).toBe(3);
+    expect(partBeatSpan({ fromCount: 1, toCount: 1 })).toBe(1);
   });
 });

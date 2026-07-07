@@ -18,6 +18,7 @@
 // length (§2.5.2). Placements reference these docs live (§4.3); a non-admin edit spawns a
 // variant that resolves its untouched beats live from the base (§5.2).
 import {
+  CURRENT_SCHEMA_VERSION,
   defaultFigureCounts,
   globalFigureRef,
   LIBRARY_FIGURES,
@@ -108,7 +109,7 @@ export async function seedGlobalFigures(
         // undefined optionals, so an uncharted figure carries neither).
         ...(f.entryAlignment ? { entryAlignment: f.entryAlignment } : {}),
         ...(f.exitAlignment ? { exitAlignment: f.exitAlignment } : {}),
-        schemaVersion: 1,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
         deletedAt: null,
       });
       result.created += 1;

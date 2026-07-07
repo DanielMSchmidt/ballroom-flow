@@ -49,9 +49,11 @@ export {
   figureCountSlots,
   figureGridSlots,
   type GridSlot,
+  partBeatSpan,
   resolveFigureBars,
   resolveFigureCounts,
   SUB_BEATS,
+  windowAttributes,
 } from "./figure-grid";
 export { matchesFigureType } from "./figuretype";
 export {

@@ -176,8 +176,9 @@ export interface RoutineStore extends RoutineReadModel {
     sectionId: string,
     figureName: string,
     figureType?: string,
-    bars?: number,
+    counts?: number,
     beforePlacementId?: string | null,
+    part?: { fromCount: number; toCount: number } | null,
   ): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
@@ -811,7 +812,7 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg, countsArg, beforePlacementId) => {
+    addPlacement: (sectionId, figureName, figureTypeArg, countsArg, beforePlacementId, part) => {
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
       // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
@@ -839,6 +840,8 @@ export async function openRoutine(
             section.placements.push({
               id: newId(),
               figureRef,
+              // Portion window (Builder v3 ③) — only a catalog pick carries one.
+              ...(part ? { part: { fromCount: part.fromCount, toCount: part.toCount } } : {}),
               sortKey: insertSortKey(section.placements, beforePlacementId),
               deletedAt: null,
             });

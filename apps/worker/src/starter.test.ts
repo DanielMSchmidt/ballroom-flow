@@ -19,7 +19,17 @@ describe("seedStarterRoutine", () => {
     await applyMigrations();
   });
 
-  it("gifts the user a fork of the app-owned Golden Waltz template", async () => {
+  // Justified headroom (the b419e0a/ad22e16 convention, measured 2026-07-07):
+  // in the FULL suite this template-fork consistently takes ~4.8–5.1s — right at
+  // vitest's 5s default — on the shared single-runtime pool (isolatedStorage:
+  // false accumulates D1/DO state across every earlier file), while the same
+  // test runs in ~0.5s in isolation. That was true BEFORE the counts/presence
+  // work too (parent commit measured 4.97s), so the default budget was a coin
+  // flip, not a regression signal. Why the fork degrades with suite-wide state
+  // is a real (pre-existing) perf question — tracked for its own investigation.
+  it("gifts the user a fork of the app-owned Golden Waltz template", {
+    timeout: 15_000,
+  }, async () => {
     const routineId = await seedStarterRoutine(typedEnv, "u_starter2");
 
     // The routine is an owned registry row under the USER (not "app").
