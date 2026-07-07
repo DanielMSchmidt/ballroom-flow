@@ -997,6 +997,45 @@ describe("US-027 Add a figure from the library picker", () => {
   });
 });
 
+describe("Builder v3 ③ — a portioned placement shows ONLY its window", () => {
+  it("windows the placement card's timing + technique chips to [fromCount, toCount]", async () => {
+    // Intent: adding "the last 3 steps of a Natural Turn" must show only those
+    //   steps in the builder card — not the whole figure with a "steps 4–6" label
+    //   bolted on. The card's chips must match the reading view's windowing.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    // A charted figure with a distinctive direction on counts 1 and 5.
+    const fig: FigureDoc = {
+      ...figure("natural-turn", "Natural Turn"),
+      attributes: [
+        { id: "n1", kind: "direction", count: 1, value: "zzz1", role: null, deletedAt: null },
+        { id: "n5", kind: "direction", count: 5, value: "zzz5", role: null, deletedAt: null },
+      ],
+    };
+    // Place only counts 4–6 (the last 3).
+    const p: Placement = { ...placement("p1", "natural-turn"), part: { fromCount: 4, toCount: 6 } };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    // The in-window step (count 5) renders; the out-of-window step (count 1) does not.
+    expect(screen.getByText("zzz5")).toBeInTheDocument();
+    expect(screen.queryByText("zzz1")).toBeNull();
+  });
+});
+
 describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () => {
   /** A routine with one section holding one placement → a resolved Feather figure. */
   const oneFigureRoutine = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
