@@ -20,7 +20,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
-import { isAdmin, routineCapFor } from "./db/admin";
+import { routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
@@ -45,7 +45,7 @@ import { forkRoutineFor } from "./fork";
 import { reportError, writeMetric } from "./ops";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
-import { seedGlobalFigures } from "./seed-global-figures";
+import { ensureGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
@@ -76,6 +76,9 @@ export type Env = {
   // "1" ONLY in the E2E wrangler run (wrangler.toml [env.e2e]); mounts the
   // /api/test/* fixtures routes. Unset everywhere else → those routes 404.
   E2E_TEST_ROUTES?: string;
+  // "1" on deployed envs (wrangler.toml [env.*.vars]): arms the self-healing
+  // catalog reconcile on the /api/* seam (D30 ⟳). Unset in unit/E2E harnesses.
+  SELF_SEED?: string;
   // US-049 (M8) observability — both optional so dev/test run with neither:
   // errors→Sentry (a Wrangler secret; see ops.ts) and product metrics→the
   // Analytics Engine dataset bound in wrangler.toml.
@@ -102,6 +105,25 @@ app.onError((err, c) => {
   }
   console.error("unhandled route error", err);
   return c.json({ error: "internal" }, 500);
+});
+
+// D30 ⟳ (self-healing catalog): keep the global figure docs reconciled to the
+// bundled seed — fire-and-forget, hash-guarded (one PK SELECT per throttle
+// window per isolate), so a deploy with refined seed content reaches every
+// already-seeded doc within seconds of the first request, and a fresh
+// environment stands its catalog up on its own. Explicitly OPT-IN per deployed
+// environment (wrangler.toml `SELF_SEED="1"` on staging/production): the unit
+// harness and the E2E env carry no var, so nothing implicitly seeds the full
+// catalog under a test — the E2E /api/test/seed fixtures drive it explicitly.
+app.use("/api/*", async (c, next) => {
+  if (c.env.SELF_SEED === "1") {
+    try {
+      c.executionCtx.waitUntil(ensureGlobalFigures(c.env));
+    } catch {
+      // No execution context (some unit harnesses) — the next request retries.
+    }
+  }
+  await next();
 });
 
 // US-049 AC-1: one product metric per API request (method, route, status,
@@ -419,20 +441,6 @@ app.get("/api/figures/mine", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const figures = await listMineFigures(c.env.DB, user.sub);
   return c.json({ figures });
-});
-
-// POST /api/admin/seed-global-figures — import the bundled catalog into REAL
-// global figure docs (⟳v5, D30). ADMIN-ONLY (D31): a non-admin gets 403 before
-// any work. Additive + idempotent — it only creates docs that don't exist yet and
-// never overwrites one (the doc is the source of truth after import), so re-running
-// is safe and only fills gaps. Returns the created/skipped counts. This is the
-// ops action that stands up the catalog until the admin UI (§11) lands.
-app.post("/api/admin/seed-global-figures", async (c) => {
-  const user = await authenticate(c);
-  if (!user) return c.json({ error: "unauthenticated" }, 401);
-  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
-  const result = await seedGlobalFigures(c.env);
-  return c.json({ ok: true, ...result });
 });
 
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).

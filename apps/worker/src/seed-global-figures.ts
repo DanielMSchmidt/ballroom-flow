@@ -120,3 +120,99 @@ export async function seedGlobalFigures(
 
   return result;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Hash-guarded self-healing (D30 ⟳, owner decision 2026-07-07): the seeder runs
+// ITSELF whenever the bundled catalog and the environment disagree — no admin
+// endpoint, no deploy step to forget. A SHA-256 of the seed-relevant catalog
+// content is compared against the `app_meta` row the last successful run wrote;
+// on mismatch (new deploy content, fresh environment, or a wiped D1) the
+// reconcile runs. Invoked fire-and-forget from the /api/* seam with a short
+// in-isolate throttle so the steady state costs one PK SELECT per THROTTLE_MS
+// per isolate — and, following the ensureSample precedent, the authority is
+// ACTUAL D1 state, never a stale module boolean.
+// ─────────────────────────────────────────────────────────────────────────
+
+const SEED_HASH_KEY = "global_figure_seed_hash";
+const THROTTLE_MS = 30_000;
+
+/** Hash exactly the content the reconcile enforces, so a deploy that doesn't
+ *  touch the catalog is a guaranteed no-op. */
+async function seedContentHash(figures: readonly LibraryFigure[]): Promise<string> {
+  const payload = figures.map((f) => [
+    globalFigureRef(f.dance, f.figureType),
+    f.name,
+    f.entryAlignment ?? null,
+    f.exitAlignment ?? null,
+    f.attributes ?? [],
+  ]);
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Memoized hash of the DEFAULT bundle (constant per isolate) + the in-isolate
+// throttle/stampede state. Only timing state lives in the module — the seeded-or-
+// not decision always comes from D1.
+let bundleHash: Promise<string> | undefined;
+let lastCheckAt = 0;
+let inFlight: Promise<EnsureGlobalFiguresResult> | undefined;
+
+export interface EnsureGlobalFiguresResult {
+  /** Whether the seeder actually ran (the stored hash was absent or stale). */
+  ran: boolean;
+  result?: SeedGlobalFiguresResult;
+}
+
+/**
+ * Reconcile the global figure docs to the bundled catalog IF the environment's
+ * stored seed hash disagrees. Cheap when current (one indexed PK SELECT, at most
+ * every THROTTLE_MS per isolate); the hash is persisted only after a run with no
+ * per-figure errors, so a partial failure retries on the next check. Concurrent
+ * calls within an isolate share one run; cross-isolate overlap is safe (the
+ * reconcile is idempotent and each doc's DO serializes its own writes).
+ * `opts.figures` (tests) bypasses the memoized bundle hash and the throttle.
+ */
+export async function ensureGlobalFigures(
+  env: Env,
+  opts?: { figures?: readonly LibraryFigure[] },
+): Promise<EnsureGlobalFiguresResult> {
+  const now = Date.now();
+  if (!opts?.figures) {
+    if (inFlight) return inFlight;
+    if (now - lastCheckAt < THROTTLE_MS) return { ran: false };
+    lastCheckAt = now;
+  }
+  const run = (async (): Promise<EnsureGlobalFiguresResult> => {
+    try {
+      const figures = opts?.figures ?? LIBRARY_FIGURES;
+      if (!opts?.figures && !bundleHash) bundleHash = seedContentHash(LIBRARY_FIGURES);
+      const hash = opts?.figures ? await seedContentHash(figures) : await bundleHash;
+      if (!hash) return { ran: false }; // unreachable; satisfies the narrower type
+      const row = await env.DB.prepare("SELECT value FROM app_meta WHERE key = ?")
+        .bind(SEED_HASH_KEY)
+        .first<{ value: string }>();
+      if (row?.value === hash) return { ran: false };
+
+      const result = await seedGlobalFigures(env, opts);
+      if (result.skipped === 0) {
+        await env.DB.prepare(
+          "INSERT INTO app_meta (key, value, updatedAt) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt",
+        )
+          .bind(SEED_HASH_KEY, hash, Date.now())
+          .run();
+      }
+      return { ran: true, result };
+    } catch (err) {
+      console.error("global-figure ensure failed", err);
+      return { ran: false };
+    }
+  })();
+  if (!opts?.figures) {
+    inFlight = run;
+    run.finally(() => {
+      inFlight = undefined;
+    });
+  }
+  return run;
+}

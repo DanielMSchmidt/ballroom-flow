@@ -245,9 +245,12 @@ in plan v4.3 (8f49169) — don't re-derive them from memory.
 PLAN.md v5 (D30 ⟳v5; roadmap §9 step 3 ✅ as of 2026-07-02, PR #137): global catalog
 figures are **real, admin-owned Automerge docs** (one Durable Object each). The
 seeder exists — `seedGlobalFigures` in **`apps/worker/src/seed-global-figures.ts`**
-— exposed as the **admin-only** route `POST /api/admin/seed-global-figures`
-(`apps/worker/src/index.ts`; a non-admin gets 403) and reused by the E2E test-seed
-path (`routes/test-seed.ts`, `seedGlobalFigures: true`). Its D30 contract:
+— **self-healing since D30 ⟳2026-07-07**: `ensureGlobalFigures` (same module) runs
+fire-and-forget on the `/api/*` seam of deployed envs (opt-in via wrangler.toml
+`SELF_SEED="1"`; hash-guarded by an `app_meta` row, so the steady state is one PK
+SELECT per throttle window). The former admin seed route is removed. The E2E
+test-seed path (`routes/test-seed.ts`, `seedGlobalFigures: true`) drives it
+explicitly. Its D30 contract:
 
 - **Import + reconcile per figure** into a real global figure doc keyed by
   `globalFigureRef(dance, figureType)` = `global:<dance>:<figureType>`. **D30
