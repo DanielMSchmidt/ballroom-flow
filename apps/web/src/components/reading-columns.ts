@@ -15,8 +15,29 @@ import {
   type RegistryKind,
 } from "@weavesteps/domain";
 import { getLocale, type Locale, localizedRegistry } from "../i18n";
+import type { AttributeKind } from "../ui";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
+
+/** The kind ids that have a `--bf-kind-*` token color family for column headers /
+ *  chips. A deliberate SUBSET of the standard kinds (rotation/head aren't shown as
+ *  columns), so it's its own list rather than reusing ATTRIBUTE_KINDS. */
+export const STANDARD_COLUMN_KINDS: readonly AttributeKind[] = [
+  "direction",
+  "footwork",
+  "footPosition",
+  "rise",
+  "position",
+  "bodyActions",
+  "sway",
+  "turn",
+];
+
+/** Runtime narrowing to a token-colored column kind — lets `kindVar(col.kind)` be
+ *  called without asserting `col.kind` (which may be a custom kind) is standard. */
+export function isColumnKind(kind: string): kind is AttributeKind {
+  return STANDARD_COLUMN_KINDS.some((k) => k === kind);
+}
 
 export type { RoleView };
 

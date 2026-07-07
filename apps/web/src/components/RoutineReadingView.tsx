@@ -42,6 +42,7 @@ import {
   cellValue,
   columnUsage,
   infoKindsForColumn,
+  isColumnKind,
   isOffBeatCount,
   type ReadingColumn,
   usedColumns,
@@ -670,12 +671,11 @@ function columnChipFamily(
   col: ReadingColumn,
   customKinds: RegistryKind[],
 ): { tint: string; ink: string; border: string; dot?: string } {
-  if (STANDARD_COLUMN_KINDS.includes(col.kind)) {
-    const kind = col.kind as Parameters<typeof kindVar>[0];
+  if (isColumnKind(col.kind)) {
     return {
-      tint: kindVar(kind, "tint"),
-      ink: kindVar(kind, "ink"),
-      border: kindVar(kind, "border"),
+      tint: kindVar(col.kind, "tint"),
+      ink: kindVar(col.kind, "ink"),
+      border: kindVar(col.kind, "border"),
     };
   }
   const custom = customKinds.find((k) => k.kind === col.kind)?.color;
@@ -687,23 +687,9 @@ function columnChipFamily(
   };
 }
 
-/** The kind ids with a `--bf-kind-*` token family (headers + filter chips). */
-const STANDARD_COLUMN_KINDS = [
-  "direction",
-  "footwork",
-  "footPosition",
-  "rise",
-  "position",
-  "bodyActions",
-  "sway",
-  "turn",
-];
-
 /** A column's header/text color — the kind's base token, slate for unknowns. */
 function columnColor(col: ReadingColumn): string {
-  return STANDARD_COLUMN_KINDS.includes(col.kind)
-    ? kindVar(col.kind as Parameters<typeof kindVar>[0])
-    : "var(--bf-ink-secondary)";
+  return isColumnKind(col.kind) ? kindVar(col.kind) : "var(--bf-ink-secondary)";
 }
 
 /** One step row: the sunken notation strip (count cell + a chip-or-dot per
