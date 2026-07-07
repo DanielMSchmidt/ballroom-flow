@@ -69,7 +69,10 @@ async function main() {
   // keeps the poster near-identical run-to-run so the CI bot's poster pixel-diff
   // reflects real UI changes, not recording jitter. Update if the timeline
   // (apps/web/remotion/timeline.ts) reorders scenes materially.
-  const posterFrame = Math.min(Math.round(10.7 * composition.fps), composition.durationInFrames - 1);
+  const posterFrame = Math.min(
+    Math.round(10.7 * composition.fps),
+    composition.durationInFrames - 1,
+  );
   console.log(`[explainer] rendering poster (frame ${posterFrame})…`);
   await renderStill({
     composition,
