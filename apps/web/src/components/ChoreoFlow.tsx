@@ -33,13 +33,14 @@ import { ChoreoList } from "./ChoreoList";
 
 /** Resolve the viewer's editing role for an open routine from their list. */
 function roleForOpen(
-  routines: { docRef: string; role: string }[],
+  routines: { docRef: string; role: "owner" | MembershipRole }[],
   routineId: string,
 ): MembershipRole {
   const found = routines.find((r) => r.docRef === routineId);
   // owner → editor; a non-owner member keeps their role; not-yet-listed (fresh
   // create / deep link) opens optimistically as editor — the DO boundary gates.
-  if (found && found.role !== "owner") return found.role as MembershipRole;
+  // The `!== "owner"` check narrows `role` to MembershipRole (no assertion).
+  if (found && found.role !== "owner") return found.role;
   return "editor";
 }
 

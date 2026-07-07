@@ -54,6 +54,7 @@ import {
   cellValue,
   columnUsage,
   infoKindsForColumn,
+  isColumnKind,
   type ReadingColumn,
 } from "./reading-columns";
 import { displayValue, filterByRoleView, type RoleView } from "./role-view";
@@ -132,19 +133,7 @@ function columnKinds(col: ReadingColumn): string[] {
 
 /** A column's header/text color — the kind's base token, slate for custom. */
 function columnColor(col: ReadingColumn): string {
-  const standard = [
-    "direction",
-    "footwork",
-    "footPosition",
-    "rise",
-    "position",
-    "bodyActions",
-    "sway",
-    "turn",
-  ];
-  return standard.includes(col.kind)
-    ? kindVar(col.kind as Parameters<typeof kindVar>[0])
-    : "var(--bf-ink-secondary)";
+  return isColumnKind(col.kind) ? kindVar(col.kind) : "var(--bf-ink-secondary)";
 }
 
 export function FigureTimeline({
