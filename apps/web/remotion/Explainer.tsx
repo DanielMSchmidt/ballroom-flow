@@ -8,7 +8,17 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { type CardSegment, type SceneSegment, type Segment, sec, TIMELINE } from "./timeline";
+import {
+  type CaptionMark,
+  type CardSegment,
+  type ExplainerProps,
+  INTRO_CARD,
+  INTRO_FRAMES,
+  msToFrames,
+  OUTRO_CARD,
+  OUTRO_FRAMES,
+  TOUR_CLIP,
+} from "./timeline";
 
 // Palette mirrors the app's design tokens (styles/tokens.css): studio blue
 // accent on a charcoal "studio-paper" backdrop, paper-white app frame.
@@ -60,12 +70,12 @@ function BrandMark({ size, color }: { size: number; color: string }): React.JSX.
   );
 }
 
+/** A full-screen intro / outro text card. */
 function Card({ card }: { card: CardSegment }): React.JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const rise = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 24 });
   const y = interpolate(rise, [0, 1], [24, 0]);
-  const titleColor = card.variant === "intro" ? COLOR.onDark : COLOR.onDark;
 
   return (
     <AbsoluteFill
@@ -85,7 +95,7 @@ function Card({ card }: { card: CardSegment }): React.JSX.Element {
           textAlign: "center",
           transform: `translateY(${y}px)`,
           opacity: rise,
-          maxWidth: 900,
+          maxWidth: 940,
         }}
       >
         {card.variant === "intro" && <BrandMark size={64} color={COLOR.accent} />}
@@ -94,9 +104,9 @@ function Card({ card }: { card: CardSegment }): React.JSX.Element {
           style={{
             fontFamily: BODY,
             fontWeight: 800,
-            fontSize: card.variant === "intro" ? 64 : 54,
+            fontSize: card.variant === "intro" ? 62 : 56,
             lineHeight: 1.08,
-            color: titleColor,
+            color: COLOR.onDark,
             margin: 0,
             letterSpacing: -1,
           }}
@@ -141,73 +151,115 @@ function Card({ card }: { card: CardSegment }): React.JSX.Element {
   );
 }
 
-/** A recorded real-app snippet in a floating "app window", with a lower-third. */
-function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
+/** The recorded clip in a floating "app window" — bigger than the old tour so a
+ *  first-time viewer can actually read the controls. The window shows the top
+ *  ~70% of the recording (controls live up top); for the final SHARE step the
+ *  share dialog is taller than that, so we pan down to reveal the role picker +
+ *  "Create link" — stopping just above the localhost dev URL. */
+function AppWindow({
+  marks,
+  tourDurationMs,
+}: {
+  marks: CaptionMark[];
+  tourDurationMs: number;
+}): React.JSX.Element {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 20 });
-  const scale = interpolate(enter, [0, 1], [0.96, 1]);
-  // Lower-third slides in shortly after the clip, out just before it ends.
-  const capIn = spring({ frame: frame - 12, fps, config: { damping: 200 }, durationInFrames: 18 });
-  const capOut = interpolate(frame, [durationInFrames - 16, durationInFrames], [1, 0], {
+  const scale = interpolate(enter, [0, 1], [0.97, 1]);
+
+  // objectPosition Y (%). 0 = top of the recording. During the last ~2s of the
+  // tour — only when the closing step is SHARE — ease down to reveal the invite
+  // controls that otherwise sit below the visible crop.
+  const last = marks[marks.length - 1];
+  const tourFrames = msToFrames(tourDurationMs);
+  const panY =
+    last && /share/i.test(last.kicker)
+      ? interpolate(frame, [tourFrames - msToFrames(2400), tourFrames - msToFrames(500)], [0, 92], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        })
+      : 0;
+
+  return (
+    <div
+      style={{
+        width: 1180,
+        height: 576,
+        marginBottom: 88,
+        transform: `scale(${scale})`,
+        opacity: enter,
+        borderRadius: 18,
+        overflow: "hidden",
+        boxShadow: "0 40px 90px rgba(0,0,0,0.5)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        background: COLOR.paper,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Faux window chrome */}
+      <div
+        style={{
+          height: 34,
+          background: "#f2efe8",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          paddingLeft: 16,
+          flexShrink: 0,
+          borderBottom: "1px solid #e3ded3",
+        }}
+      >
+        {["#e06c5b", "#e3b341", "#5aa469"].map((c) => (
+          <span
+            key={c}
+            style={{ width: 12, height: 12, borderRadius: 6, background: c, display: "block" }}
+          />
+        ))}
+      </div>
+      <OffthreadVideo
+        src={staticFile(`clips/${TOUR_CLIP}`)}
+        // Real time — the recording already builds in generous pauses.
+        playbackRate={1}
+        muted
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: `50% ${panY}%`,
+        }}
+      />
+    </div>
+  );
+}
+
+/** The lower-third that shows whichever caption the playhead has reached. The
+ *  frame here is RELATIVE to the tour Sequence, so mark times (ms from the
+ *  recording start) map straight onto it. */
+function TourCaptions({ marks }: { marks: CaptionMark[] }): React.JSX.Element | null {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const nowMs = (frame / fps) * 1000;
+
+  // The active caption is the last mark the playhead has passed.
+  let mark: CaptionMark | null = null;
+  for (const m of marks) {
+    if (m.atMs <= nowMs) mark = m;
+    else break;
+  }
+  if (!mark) return null;
+
+  const startFrame = msToFrames(mark.atMs);
+  // Quick fade-in each time the caption changes so steps read as distinct.
+  const fade = interpolate(frame, [startFrame, startFrame + 8], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const capOpacity = Math.min(capIn, capOut);
 
   return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(160deg, ${COLOR.backdropSoft}, ${COLOR.backdrop})`,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          width: 1180,
-          height: 576,
-          marginBottom: 88,
-          transform: `scale(${scale})`,
-          opacity: enter,
-          borderRadius: 18,
-          overflow: "hidden",
-          boxShadow: "0 40px 90px rgba(0,0,0,0.5)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          background: COLOR.paper,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Faux window chrome */}
-        <div
-          style={{
-            height: 34,
-            background: "#f2efe8",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            paddingLeft: 16,
-            flexShrink: 0,
-            borderBottom: "1px solid #e3ded3",
-          }}
-        >
-          {["#e06c5b", "#e3b341", "#5aa469"].map((c) => (
-            <span
-              key={c}
-              style={{ width: 12, height: 12, borderRadius: 6, background: c, display: "block" }}
-            />
-          ))}
-        </div>
-        <OffthreadVideo
-          src={staticFile(`clips/${scene.clip}`)}
-          playbackRate={scene.playbackRate}
-          muted
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
-        />
-      </div>
-
-      {/* Scrim behind the lower-third for legibility over any clip. */}
+    <>
+      {/* Scrim behind the lower-third for legibility over any clip content. */}
       <div
         style={{
           position: "absolute",
@@ -218,8 +270,6 @@ function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
           background: `linear-gradient(to top, ${COLOR.backdrop} 32%, rgba(20,24,29,0))`,
         }}
       />
-
-      {/* Lower-third caption */}
       <div
         style={{
           position: "absolute",
@@ -229,51 +279,62 @@ function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
           display: "flex",
           flexDirection: "column",
           gap: 8,
-          transform: `translateY(${interpolate(capOpacity, [0, 1], [16, 0])}px)`,
-          opacity: capOpacity,
+          transform: `translateY(${interpolate(fade, [0, 1], [16, 0])}px)`,
+          opacity: fade,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ width: 30, height: 3, background: COLOR.accent, display: "block" }} />
-          <Kicker color={COLOR.accent}>{scene.kicker}</Kicker>
+          <Kicker color={COLOR.accent}>{mark.kicker}</Kicker>
         </div>
         <p
           style={{
             fontFamily: BODY,
             fontWeight: 600,
-            fontSize: 26,
+            fontSize: 27,
             color: COLOR.onDark,
             margin: 0,
             lineHeight: 1.3,
             maxWidth: 1000,
           }}
         >
-          {scene.caption}
+          {mark.caption}
         </p>
       </div>
+    </>
+  );
+}
+
+/** The recorded tour + its step-by-step captions. */
+function Tour({ marks, tourDurationMs }: ExplainerProps): React.JSX.Element {
+  return (
+    <AbsoluteFill
+      style={{
+        background: `linear-gradient(160deg, ${COLOR.backdropSoft}, ${COLOR.backdrop})`,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <AppWindow marks={marks} tourDurationMs={tourDurationMs} />
+      <TourCaptions marks={marks} />
     </AbsoluteFill>
   );
 }
 
-function segment(s: Segment): React.JSX.Element {
-  return s.type === "card" ? <Card card={s} /> : <Scene scene={s} />;
-}
-
-/** The full tour — cards + real-app snippets, sequenced back-to-back. */
-export function Explainer(): React.JSX.Element {
-  let from = 0;
+/** The full tour — intro card → one narrated real-app recording → outro card. */
+export function Explainer({ tourDurationMs, marks }: ExplainerProps): React.JSX.Element {
+  const tourFrames = msToFrames(tourDurationMs);
   return (
     <AbsoluteFill style={{ background: COLOR.backdrop }}>
-      {TIMELINE.map((s) => {
-        const durationInFrames = sec(s.seconds);
-        const el = (
-          <Sequence key={s.id} from={from} durationInFrames={durationInFrames} name={s.id}>
-            {segment(s)}
-          </Sequence>
-        );
-        from += durationInFrames;
-        return el;
-      })}
+      <Sequence from={0} durationInFrames={INTRO_FRAMES} name="intro">
+        <Card card={INTRO_CARD} />
+      </Sequence>
+      <Sequence from={INTRO_FRAMES} durationInFrames={tourFrames} name="tour">
+        <Tour marks={marks} tourDurationMs={tourDurationMs} />
+      </Sequence>
+      <Sequence from={INTRO_FRAMES + tourFrames} durationInFrames={OUTRO_FRAMES} name="outro">
+        <Card card={OUTRO_CARD} />
+      </Sequence>
     </AbsoluteFill>
   );
 }

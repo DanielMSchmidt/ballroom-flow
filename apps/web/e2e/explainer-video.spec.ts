@@ -1,38 +1,43 @@
 import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
-import { REC_HEIGHT, REC_WIDTH, SCENES } from "../remotion/timeline";
+import {
+  type CaptionMark,
+  REC_HEIGHT,
+  REC_WIDTH,
+  TOUR_CLIP,
+  TOUR_MARKS_FILE,
+  type TourManifest,
+} from "../remotion/timeline";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
 // @video — NOT in @smoke. The RECORDER behind the auto-generated explainer
-// video. Drives the REAL app (via the #191 real-worker harness) through the
-// authoring, commenting and journaling journeys and records ONE webm clip per
-// `scene` in remotion/timeline.ts. scripts/render-explainer.mjs then stitches
-// them with the intro/info/outro cards into the committed marketing MP4.
+// video. Drives the REAL app (via the #191 real-worker harness) through ONE
+// continuous authoring journey — create → name → section → catalogue figure →
+// custom figure → notate → annotation reference → note → reading view → share —
+// and records a SINGLE clip (remotion/public/clips/tour.webm).
 //
-// This is a recorder, not an assertion gate: the light waits below are
-// deliberate PACING for a readable screencast (the composition speeds each clip
-// up ~2×), not sync waits — real correctness lives in the smoke journeys these
-// mirror (authoring/annotations/journal .spec.ts).
+// For every captioned step it timestamps a CaptionMark (ms from the start of
+// the recording) into remotion/public/tour-marks.json. Remotion (Explainer.tsx)
+// plays the clip at real speed and shows each caption when the playhead reaches
+// its mark, so the tour reads like a slow, hand-held walkthrough.
+//
+// This is a recorder, not an assertion gate: the waits are deliberate PACING so
+// a first-timer can see the ring cursor land on each control before it acts.
+// Real correctness lives in the smoke journeys this mirrors (authoring /
+// annotations / library / permission-quota-invite .spec.ts).
 // ─────────────────────────────────────────────────────────────────────────
 
-const CLIPS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../remotion/public/clips",
-);
+const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../remotion/public");
+const CLIPS_DIR = path.join(PUBLIC_DIR, "clips");
+const MARKS_PATH = path.join(PUBLIC_DIR, TOUR_MARKS_FILE);
 const clip = (name: string) => path.join(CLIPS_DIR, name);
-const scene = (id: string) => {
-  const s = SCENES.find((x) => x.id === id);
-  if (!s) throw new Error(`unknown scene: ${id}`);
-  return s;
-};
 
 const USER = "user_tour";
-const DEMO_ROUTINE = "routine:tour-journal";
 
 // Manually-created contexts don't inherit the config's `use.baseURL`, so wire it
 // from the same E2E_PORT the webServer uses (default 4173, see playwright.config).
@@ -40,9 +45,7 @@ const BASE_URL = `http://localhost:${process.env.E2E_PORT ?? 4173}`;
 
 // We launch our OWN Chromium (not the project's `browser` fixture) so we can
 // point at a specific executable: sandboxes ship a preinstalled Chromium whose
-// build may differ from the one @playwright/test would auto-fetch. Honour an
-// explicit override, else the standard preinstalled symlink, else Playwright's
-// own managed browser (CI, where the versions match).
+// build may differ from the one @playwright/test would auto-fetch.
 function chromiumExecutable(): string | undefined {
   const override = process.env.PW_CHROMIUM_PATH;
   if (override) return override;
@@ -107,8 +110,42 @@ const CURSOR_INIT = `(() => {
   document.addEventListener("DOMContentLoaded", install);
 })()`;
 
-/** A recorded page in its own video context (one webm per scene). */
-async function recordScene(browser: Browser, flow: (page: Page) => Promise<void>): Promise<Page> {
+/** A captioned step: narrate (caption appears), pause so it's read, act, settle.
+ *  The mark is stamped when the caption appears, so it lines up with the clip. */
+type Step = (
+  kicker: string,
+  caption: string,
+  fn: () => Promise<void>,
+  opts?: { read?: number; settle?: number },
+) => Promise<void>;
+
+const pause = (page: Page, ms: number) => page.waitForTimeout(ms);
+
+test.describe("@video explainer recorder", () => {
+  test("record the guided authoring tour", async () => {
+    test.setTimeout(300_000);
+    const browser = await chromium.launch({ executablePath: chromiumExecutable() });
+    try {
+      await recordTour(browser);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+async function recordTour(browser: Browser): Promise<void> {
+  // Fresh D1 + the single demo user. The tour builds its routine live — nothing
+  // is pre-seeded, so what you watch is exactly what a new user would do.
+  const bootstrap = await browser.newContext({ baseURL: BASE_URL });
+  const boot = await bootstrap.newPage();
+  await resetDb(boot);
+  await seedDb(boot, {
+    users: [{ id: USER, displayName: "Ava Lindqvist", identityColor: "#2f5d8f" }],
+  });
+  await bootstrap.close();
+
+  await mkdir(CLIPS_DIR, { recursive: true });
+
   const context = await browser.newContext({
     baseURL: BASE_URL,
     viewport: { width: REC_WIDTH, height: REC_HEIGHT },
@@ -116,203 +153,224 @@ async function recordScene(browser: Browser, flow: (page: Page) => Promise<void>
   });
   await context.addInitScript(CURSOR_INIT);
   const page = await context.newPage();
+
+  // Recording starts at page creation; stamp t0 here so mark times line up.
+  const startedAt = Date.now();
+  const marks: CaptionMark[] = [];
+  const step: Step = async (kicker, caption, fn, opts = {}) => {
+    const { read = 1300, settle = 900 } = opts;
+    marks.push({ atMs: Date.now() - startedAt, kicker, caption });
+    await pause(page, read); // viewer reads the caption before anything moves
+    await fn();
+    await pause(page, settle); // the result settles on screen
+  };
+
   await seedAuth(page, USER);
-  await flow(page);
+  await tourFlow(page, step);
+
+  const durationMs = Date.now() - startedAt;
   await context.close(); // finalizes the webm
-  return page;
-}
 
-/** Deliberate on-screen pacing for the screencast (see header). Held longer
- * than a real user would pause so the ring cursor's glide + click ripple read
- * clearly, and a first-timer can see the result of each action settle. */
-const beat = (page: Page, ms = 950) => page.waitForTimeout(ms);
-
-async function saveClip(page: Page, file: string): Promise<void> {
   const video = page.video();
   if (!video) throw new Error("no video recorded — recordVideo not enabled?");
-  await video.saveAs(clip(file));
+  await video.saveAs(clip(TOUR_CLIP));
+
+  const manifest: TourManifest = { clip: TOUR_CLIP, durationMs, marks };
+  await writeFile(MARKS_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  expect(existsSync(clip(TOUR_CLIP)), `missing clip ${TOUR_CLIP}`).toBe(true);
+  expect(marks.length, "no caption marks recorded").toBeGreaterThan(5);
+
+  // Drop the auto-named temp webms Playwright wrote alongside the saved clip
+  // (saveAs COPIES; the originals have hashed names we don't reference).
+  for (const f of await readdir(CLIPS_DIR)) {
+    if (f.endsWith(".webm") && f !== TOUR_CLIP) await rm(clip(f), { force: true });
+  }
 }
 
-test.describe("@video explainer recorder", () => {
-  test("record the authoring, commenting and journaling clips", async () => {
-    test.setTimeout(240_000);
+// The guided journey. Each `step(...)` is one narrated moment in the clip; the
+// selectors mirror the real smoke journeys (authoring / library / annotations /
+// permission-quota-invite .spec.ts), so this stays honest to the shipped UI.
+async function tourFlow(page: Page, step: Step): Promise<void> {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: /new choreo/i })).toBeVisible({ timeout: 15_000 });
+  await pause(page, 800);
 
-    const browser = await chromium.launch({ executablePath: chromiumExecutable() });
-    try {
-      await recordAll(browser);
-    } finally {
-      await browser.close();
-    }
-  });
-});
+  // 1 — create
+  await step(
+    "1 · CREATE A CHOREO",
+    "Everything starts here — tap “New choreo” to begin.",
+    async () => {
+      await page.getByRole("button", { name: /new choreo/i }).click();
+      await expect(page.getByLabel("Choreo name")).toBeVisible({ timeout: 15_000 });
+    },
+  );
 
-async function recordAll(browser: Browser): Promise<void> {
-  // Fresh D1 + the demo user, plus a small pre-built journal for the closing
-  // scene (deterministic + fast — no waiting on the async DO alarm projection).
-  const bootstrap = await browser.newContext({ baseURL: BASE_URL });
-  const boot = await bootstrap.newPage();
-  await resetDb(boot);
-  await seedDb(boot, {
-    users: [{ id: USER, displayName: "Ava Lindqvist", identityColor: "#2f5d8f" }],
-    docs: [
-      {
-        docRef: DEMO_ROUTINE,
-        type: "routine",
-        ownerId: USER,
-        title: "Gold Waltz — comp routine",
-        dance: "waltz",
-      },
-    ],
-    journalEntries: [
-      {
-        entryId: "je-tour-1",
-        routineRef: DEMO_ROUTINE,
-        authorId: USER,
-        kind: "lesson",
-        text: "Keep the head left through the whole Natural Turn.",
-        anchors: [{ type: "figure", label: "Natural Turn" }],
-        createdAt: Date.now() - 86_400_000,
-      },
-      {
-        entryId: "je-tour-2",
-        routineRef: DEMO_ROUTINE,
-        authorId: USER,
-        kind: "practice",
-        text: "Ran the Long Side five times — sway is landing now.",
-        anchors: [{ type: "figure", label: "Whisk" }],
-        createdAt: Date.now() - 3_600_000,
-      },
-      {
-        entryId: "je-tour-3",
-        routineRef: DEMO_ROUTINE,
-        authorId: USER,
-        kind: "lesson",
-        text: "Rise later on the Chassé from PP.",
-        anchors: [{ type: "figure", label: "Chassé from PP" }],
-        createdAt: Date.now() - 600_000,
-      },
-    ],
-  });
-  await bootstrap.close();
+  // 2 — name + dance
+  await step(
+    "2 · NAME IT & PICK A DANCE",
+    "Give it a name, choose the dance, then create it.",
+    async () => {
+      await page.getByLabel("Choreo name").fill("Bronze Foxtrot");
+      await pause(page, 500);
+      await page.getByRole("button", { name: "Foxtrot" }).click();
+      await pause(page, 500);
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: /create choreo/i })
+        .click();
+      await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
+        timeout: 15_000,
+      });
+    },
+    { settle: 1300 },
+  );
 
-  await mkdir(CLIPS_DIR, { recursive: true });
+  // 3 — add a section
+  await step(
+    "3 · ADD A SECTION",
+    "Sections group your figures. Add one and give it a name.",
+    async () => {
+      await page.getByRole("button", { name: "Add section" }).click();
+      await page.getByLabel("Section name").fill("Long Side");
+      await pause(page, 400);
+      await page.getByLabel("Section name").press("Enter");
+      await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible({
+        timeout: 15_000,
+      });
+    },
+  );
 
-  // ── Scene 1: AUTHOR — build a routine + open the notation grid. ──────────
-  const authorPage = await recordScene(browser, async (page) => {
-    await page.goto("/");
-    await beat(page);
-    await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Choreo name").fill("Bronze Waltz");
-    await beat(page);
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: /create choreo/i })
-      .click();
+  // 4 — add a figure from the catalogue
+  await step(
+    "4 · ADD FROM THE CATALOGUE",
+    "Open the picker and choose a figure from the built-in catalogue.",
+    async () => {
+      await page.getByRole("button", { name: "Add figure" }).first().click();
+      await pause(page, 700);
+      await page.getByRole("button", { name: /feather step/i }).click();
+      await pause(page, 600);
+      await page.getByRole("button", { name: /add to choreo/i }).click();
+      await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+    },
+    { read: 1400, settle: 1300 },
+  );
 
-    await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
-      timeout: 15_000,
-    });
-    await beat(page);
-    await page.getByRole("button", { name: "Add section" }).click();
-    await page.getByLabel("Section name").fill("Long Side");
-    await page.getByLabel("Section name").press("Enter");
-    await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible({
-      timeout: 15_000,
-    });
-    for (const figure of ["Natural Spin Turn", "Reverse Turn", "Whisk", "Chassé from PP"]) {
-      await page.getByRole("button", { name: "Add figure" }).last().click();
-      await page.getByLabel("Figure name").fill(figure);
+  // 5 — add your own custom figure
+  await step(
+    "5 · OR ADD YOUR OWN",
+    "Not in the catalogue? Type your own figure name and add it.",
+    async () => {
+      await page.getByRole("button", { name: "Add figure" }).first().click();
+      await pause(page, 600);
+      await page.getByLabel("Figure name").fill("My Variation");
+      await pause(page, 400);
       await page.getByLabel("Figure name").press("Enter");
-      await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
-      await beat(page, 750);
-    }
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await beat(page);
-    // Open the notation grid — the visual centrepiece of authoring.
-    await page
-      .getByRole("button", { name: /edit steps: Natural Spin Turn/i })
-      .first()
-      .click();
-    await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({
-      timeout: 15_000,
-    });
-    await beat(page, 2000);
+      await expect(page.getByText("My Variation")).toBeVisible({ timeout: 15_000 });
+    },
+    { read: 1400, settle: 1300 },
+  );
+
+  // 6 — open a figure and notate a step
+  await step(
+    "6 · NOTATE THE STEPS",
+    "Open a figure to note each step — its direction, footwork and more.",
+    async () => {
+      await page.getByRole("button", { name: /edit steps: My Variation/i }).click();
+      await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({
+        timeout: 15_000,
+      });
+      await pause(page, 800);
+      await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+      await pause(page, 600);
+      await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
+      await pause(page, 600);
+      await page.getByRole("button", { name: /^Forward$/ }).click();
+      await pause(page, 500);
+      await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
+      await pause(page, 500);
+      await page.getByRole("button", { name: /^Done$/ }).click();
+      await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
+    },
+    { read: 1600, settle: 1300 },
+  );
+
+  // 7 — the annotation reference
+  await step(
+    "7 · WHAT DO THEY MEAN?",
+    "Unsure what a column means? Tap its header for a plain-language guide.",
+    async () => {
+      await page
+        .getByRole("button", { name: /^About / })
+        .first()
+        .click();
+      await expect(page.getByText(/attribute explainer/i)).toBeVisible({ timeout: 15_000 });
+      await pause(page, 2400); // hold so the viewer can read the explainer
+      await page.getByRole("button", { name: /back to your spot/i }).click();
+      await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({
+        timeout: 15_000,
+      });
+    },
+    { read: 1500, settle: 800 },
+  );
+
+  // 8 — leave a note on the figure
+  await step(
+    "8 · LEAVE A NOTE",
+    "Add a lesson or reminder — it stays pinned to this exact figure.",
+    async () => {
+      const panel = page.getByRole("region", { name: /^annotations$/i });
+      await expect(panel).toBeVisible({ timeout: 15_000 });
+      await panel.getByLabel("Kind").selectOption("lesson");
+      await pause(page, 400);
+      await panel.getByRole("textbox", { name: /^note$/i }).fill("Rise later on this step.");
+      await pause(page, 500);
+      await panel.getByRole("button", { name: /add note/i }).click();
+      await expect(panel.getByText("Rise later on this step.")).toBeVisible({ timeout: 15_000 });
+    },
+    { read: 1500, settle: 1300 },
+  );
+
+  // Close the full-screen step editor → back to the builder.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /reading view/i })).toBeVisible({
+    timeout: 15_000,
   });
-  await saveClip(authorPage, scene("author").clip);
+  await pause(page, 500);
 
-  // ── Scene 2: ANNOTATE — leave a lesson + reply on a figure. ─────────────
-  const annotatePage = await recordScene(browser, async (page) => {
-    await page.goto("/");
-    await beat(page);
-    await page.getByRole("button", { name: /new choreo/i }).click();
-    await page.getByLabel("Choreo name").fill("Foxtrot — lesson notes");
-    await page.getByRole("button", { name: "Foxtrot" }).click();
-    await beat(page);
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: /create choreo/i })
-      .click();
+  // 9 — see the whole routine (reading view)
+  await step(
+    "9 · SEE THE WHOLE ROUTINE",
+    "Switch to the reading view to see the whole choreography laid out.",
+    async () => {
+      await page.getByRole("button", { name: /reading view/i }).click();
+      await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
+    },
+    { read: 1400, settle: 2000 },
+  );
 
-    await expect(page.getByRole("button", { name: "Add section" })).toBeVisible({
-      timeout: 15_000,
-    });
-    await page.getByRole("button", { name: "Add section" }).click();
-    await page.getByLabel("Section name").fill("Intro");
-    await page.getByLabel("Section name").press("Enter");
-    await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Feather Step");
-    await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    await beat(page);
+  // Back to the editing view so Share sits in a known place.
+  await page.getByRole("button", { name: /list view/i }).click();
+  await pause(page, 500);
 
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    const panel = page.getByRole("region", { name: /^annotations$/i });
-    await expect(panel).toBeVisible({ timeout: 15_000 });
-    await beat(page);
-    await panel.getByLabel("Kind").selectOption("lesson");
-    await panel.getByRole("textbox", { name: /^note$/i }).fill("Keep the head left.");
-    await beat(page, 700);
-    await panel.getByRole("button", { name: /add note/i }).click();
-    await expect(panel.getByText("Keep the head left.")).toBeVisible({ timeout: 15_000 });
-    await beat(page);
-    await panel.getByRole("textbox", { name: /reply/i }).fill("On every Feather.");
-    await beat(page, 700);
-    await panel.getByRole("button", { name: /post reply/i }).click();
-    await expect(panel.getByText("On every Feather.")).toBeVisible({ timeout: 15_000 });
-    await beat(page, 1900);
-  });
-  await saveClip(annotatePage, scene("annotate").clip);
-
-  // ── Scene 3: JOURNAL — the pre-seeded cross-routine journal + a filter. ──
-  const journalPage = await recordScene(browser, async (page) => {
-    await page.goto("/");
-    await beat(page);
-    const rail = page.getByRole("navigation", { name: /primary navigation/i });
-    await rail.getByRole("button", { name: "Journal" }).click();
-    const entries = page.getByRole("list", { name: /journal entries/i });
-    // Assert on the seeded entry's UNIQUE tail — the annotate scene's own
-    // lesson may also have projected into the journal by now (both start
-    // "Keep the head left"), which would trip strict-mode matching.
-    await expect(entries.getByText(/through the whole Natural Turn/)).toBeVisible({
-      timeout: 15_000,
-    });
-    await beat(page, 1900);
-    // Filter to lessons — a designed interaction, and it keeps the shot lively.
-    await page.getByRole("button", { name: /^lessons$/i }).click();
-    await beat(page, 2200);
-  });
-  await saveClip(journalPage, scene("journal").clip);
-
-  // Every scene produced a clip.
-  for (const s of SCENES) {
-    expect(existsSync(clip(s.clip)), `missing clip ${s.clip}`).toBe(true);
-  }
-
-  // Drop the auto-named temp webms Playwright wrote alongside the saved clips
-  // (saveAs COPIES; the originals have hashed names we don't reference).
-  const { readdir } = await import("node:fs/promises");
-  const keep = new Set(SCENES.map((s) => s.clip));
-  for (const f of await readdir(CLIPS_DIR)) {
-    if (f.endsWith(".webm") && !keep.has(f)) await rm(clip(f), { force: true });
-  }
+  // 10 — share it
+  await step(
+    "10 · SHARE IT",
+    "Invite a partner or coach — pick their role and send them a link.",
+    async () => {
+      await page.getByRole("button", { name: "Share" }).click();
+      const shareSheet = page.getByRole("dialog", { name: /share this choreo/i });
+      await expect(shareSheet).toBeVisible({ timeout: 15_000 });
+      await pause(page, 800);
+      await shareSheet.getByRole("button", { name: /\+ invite someone/i }).click();
+      await pause(page, 600);
+      await shareSheet.getByLabel("Role").selectOption("commenter");
+      await pause(page, 600);
+      await shareSheet.getByRole("button", { name: "Create link" }).click();
+      await expect(shareSheet.locator("code", { hasText: "/invite/" })).toBeVisible({
+        timeout: 15_000,
+      });
+    },
+    { read: 1600, settle: 2600 },
+  );
 }

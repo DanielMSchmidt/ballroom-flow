@@ -1,14 +1,22 @@
 // ─────────────────────────────────────────────────────────────────────────
-// The explainer-video timeline — the SINGLE SOURCE OF TRUTH for the auto-
-// generated product tour. It drives three things so they can never drift:
-//   1. the Playwright @video journey (apps/web/e2e/explainer-video.spec.ts),
-//      which records ONE real-app clip per `scene` segment into `public/clips/`;
-//   2. the Remotion composition (Explainer.tsx), which stitches the clips with
-//      the intro / info / outro cards below;
-//   3. scripts/render-explainer.mjs, which reads FPS + total duration here.
+// The explainer-video timeline — shared constants + types for the auto-
+// generated product tour. The tour is a SINGLE continuous screen-recording of
+// one real authoring journey (create → build → notate → reference → overview →
+// note → share), narrated by lower-third captions that change step by step.
 //
-// Mirrors the marketing screenshots.manifest.ts pattern (stable keys shared by
-// the recorder + the renderer). Keep the copy short — it's on-screen video text.
+// Three pieces stay in sync through this file:
+//   1. the Playwright @video journey (apps/web/e2e/explainer-video.spec.ts)
+//      records ONE clip (`TOUR_CLIP`) and, for every captioned step, writes a
+//      timestamped mark into `TOUR_MARKS_FILE` (a CaptionMark);
+//   2. the Remotion composition (Explainer.tsx) plays that clip at real speed
+//      and shows the caption whose mark the playhead has reached, wrapped by
+//      the intro / outro cards below;
+//   3. scripts/render-explainer.mjs reads the marks file, passes it as Remotion
+//      inputProps, and sizes the composition to the recorded clip length.
+//
+// The step captions live WITH the actions in the recorder (they narrate a
+// specific click), so they aren't duplicated here — only the intro/outro card
+// copy and the layout constants are. Keep all on-screen copy short + plain.
 // ─────────────────────────────────────────────────────────────────────────
 
 export const FPS = 30;
@@ -26,12 +34,12 @@ export const REC_HEIGHT = 720;
 
 /** Seconds → whole frames at the composition FPS. */
 export const sec = (s: number): number => Math.round(s * FPS);
+/** Milliseconds → whole frames at the composition FPS. */
+export const msToFrames = (ms: number): number => Math.round((ms / 1000) * FPS);
 
-/** A full-screen text card between the real-app snippets. */
+/** A full-screen text card that bookends the recorded tour. */
 export interface CardSegment {
-  type: "card";
-  id: string;
-  variant: "intro" | "info" | "outro";
+  variant: "intro" | "outro";
   seconds: number;
   /** Small mono eyebrow above the title (e.g. "WEAVE STEPS"). */
   kicker?: string;
@@ -39,101 +47,51 @@ export interface CardSegment {
   subtitle?: string;
 }
 
-/** A recorded real-app snippet with an animated lower-third caption. */
-export interface SceneSegment {
-  type: "scene";
-  id: string;
-  /** Clip file written by the journey, under remotion/public/clips/. */
-  clip: string;
-  seconds: number;
-  /** Playback speed for the raw journey clip. 1.0 = real time (the recorder
-   * already bakes in generous pauses); >1 fast-forwards, <1 slows further. */
-  playbackRate: number;
-  /** Mono eyebrow in the lower-third. */
+/** One timed lower-third caption, keyed to a moment in the recorded clip. */
+export interface CaptionMark {
+  /** When this caption should appear, in ms from the start of the recording. */
+  atMs: number;
+  /** Mono eyebrow — the step label (e.g. "1 · CREATE"). */
   kicker: string;
+  /** The plain-language instruction shown while this step happens. */
   caption: string;
 }
 
-export type Segment = CardSegment | SceneSegment;
+/** What the recorder writes next to the clip; what the renderer reads back. */
+export interface TourManifest {
+  clip: string;
+  /** Recorded clip length (wall-clock ms) — sizes the tour Sequence. */
+  durationMs: number;
+  marks: CaptionMark[];
+}
 
-// The tour: hook → author → coach/comment → journal → call to action. Each
-// `scene` is a genuine journey through the running app (§ e2e harness).
-export const TIMELINE: Segment[] = [
-  {
-    type: "card",
-    id: "intro",
-    variant: "intro",
-    seconds: 4,
-    kicker: "WEAVE STEPS",
-    title: "Build ballroom choreography, step by step.",
-    subtitle: "A calm, mobile-first studio for couples and coaches. Let's take a slow tour.",
-  },
-  {
-    type: "scene",
-    id: "author",
-    clip: "author.webm",
-    // Real-time (1.0×) — the recorder already builds in generous pauses, so we
-    // play the clip at natural speed rather than fast-forwarding it. `seconds`
-    // matches the recorded clip length so there's no dead-air freeze at the end.
-    // (Clip durations measured from public/clips/*.webm; re-tune if the journey
-    // beats change.)
-    seconds: 9.3,
-    playbackRate: 1.0,
-    kicker: "1 · START A ROUTINE",
-    caption:
-      "Tap “New choreo”, give it a name, then add figures one at a time. Nothing is locked in — you can rename or remove anything.",
-  },
-  {
-    type: "card",
-    id: "coach-info",
-    variant: "info",
-    seconds: 3.6,
-    kicker: "COACH & COLLABORATE",
-    title: "Every step can hold a note.",
-    subtitle: "Corrections, drills and reminders — pinned exactly where they belong.",
-  },
-  {
-    type: "scene",
-    id: "annotate",
-    clip: "annotate.webm",
-    seconds: 8.4,
-    playbackRate: 1.0,
-    kicker: "2 · LEAVE A NOTE",
-    caption:
-      "Open a step, choose a note type and write it. Reply underneath to build a thread — just like chatting about the dance.",
-  },
-  {
-    type: "card",
-    id: "journal-info",
-    variant: "info",
-    seconds: 3.6,
-    kicker: "PRACTICE JOURNAL",
-    title: "Every note flows into your journal.",
-    subtitle: "Gathered across every routine, ready for your next practice.",
-  },
-  {
-    type: "scene",
-    id: "journal",
-    clip: "journal.webm",
-    seconds: 5.1,
-    playbackRate: 1.0,
-    kicker: "3 · REVIEW & PRACTISE",
-    caption:
-      "Open the Journal to see notes from all your routines together. Filter to just lessons when you want to focus.",
-  },
-  {
-    type: "card",
-    id: "outro",
-    variant: "outro",
-    seconds: 4,
-    kicker: "GET STARTED",
-    title: "Weave your next routine.",
-    subtitle: "Free to start · works on your phone",
-  },
-];
+/** Props the render script feeds the composition (from the marks file). A type
+ *  alias (not an interface) so Remotion accepts it as the composition's props —
+ *  interfaces aren't assignable to Remotion's `Record<string, unknown>` bound. */
+export type ExplainerProps = {
+  tourDurationMs: number;
+  marks: CaptionMark[];
+};
 
-/** Just the recorded snippets — the journey iterates this to know what to film. */
-export const SCENES: SceneSegment[] = TIMELINE.filter((s): s is SceneSegment => s.type === "scene");
+/** The single recorded clip + its sidecar marks file (under remotion/public/). */
+export const TOUR_CLIP = "tour.webm";
+export const TOUR_MARKS_FILE = "tour-marks.json";
 
-/** Total composition length in frames (sum of every segment's window). */
-export const TOTAL_FRAMES: number = TIMELINE.reduce((n, s) => n + sec(s.seconds), 0);
+export const INTRO_CARD: CardSegment = {
+  variant: "intro",
+  seconds: 4,
+  kicker: "WEAVE STEPS",
+  title: "Build ballroom choreography, step by step.",
+  subtitle: "New here? Follow along — we'll go slowly and show you exactly where to tap.",
+};
+
+export const OUTRO_CARD: CardSegment = {
+  variant: "outro",
+  seconds: 4.5,
+  kicker: "YOUR TURN",
+  title: "That's the whole loop.",
+  subtitle: "Free to start · works on your phone",
+};
+
+export const INTRO_FRAMES = sec(INTRO_CARD.seconds);
+export const OUTRO_FRAMES = sec(OUTRO_CARD.seconds);
