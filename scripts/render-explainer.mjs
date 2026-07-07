@@ -64,8 +64,12 @@ async function main() {
 
   const chromiumOptions = { gl: "swiftshader" };
 
-  // Poster: a frame from inside the first real-app snippet (window + caption on).
-  const posterFrame = Math.min(198, composition.durationInFrames - 1);
+  // Poster: a SETTLED frame in the author scene's static tail (the open step
+  // grid, ~10.7s in — window + caption on, no cursor motion). A settled frame
+  // keeps the poster near-identical run-to-run so the CI bot's poster pixel-diff
+  // reflects real UI changes, not recording jitter. Update if the timeline
+  // (apps/web/remotion/timeline.ts) reorders scenes materially.
+  const posterFrame = Math.min(Math.round(10.7 * composition.fps), composition.durationInFrames - 1);
   console.log(`[explainer] rendering poster (frame ${posterFrame})…`);
   await renderStill({
     composition,
