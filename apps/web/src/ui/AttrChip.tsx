@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "./tokens";
+import { isAttributeKind, kindVar } from "./tokens";
 
 export interface AttrChipProps {
   /** Attribute kind id — drives the tint/ink/border family via kindVar. An
@@ -12,10 +12,6 @@ export interface AttrChipProps {
   /** Off-beat / inactive rows — lowers opacity. */
   dimmed?: boolean;
   className?: string;
-}
-
-function isStandardKind(kind: string): kind is AttributeKind {
-  return (ATTRIBUTE_KINDS as readonly string[]).includes(kind);
 }
 
 // A turn label like "⅛R": a vulgar-fraction glyph directly followed by the
@@ -36,7 +32,7 @@ const FRACTION_THEN_DIRECTION = /^([¼-¾⅐-⅞])([LR])$/;
  * pairs color with its text label (#5).
  */
 export function AttrChip({ kind, label, color, dimmed, className }: AttrChipProps) {
-  const standard = isStandardKind(kind);
+  const standard = isAttributeKind(kind);
   const style = standard
     ? {
         background: kindVar(kind, "tint"),

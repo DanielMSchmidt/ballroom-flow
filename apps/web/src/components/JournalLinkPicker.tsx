@@ -6,7 +6,7 @@
 // the editor saves via createAnnotation. The "An attribute" row is the deferred
 // v1.1 predicate anchor — visibly disabled. Data arrives via injected loaders
 // (the store seam); the component holds no I/O of its own.
-import { type Anchor, countLabel, DANCE_IDS, type DanceId } from "@weavesteps/domain";
+import { type Anchor, countLabel, isDanceId } from "@weavesteps/domain";
 import { useEffect, useState } from "react";
 import { danceName, type Locale, useLocale, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -70,9 +70,7 @@ function titleCase(s: string): string {
 /** Display a dance value: the localized name for a known DanceId; anything else
  *  (user/legacy data) falls back to title case, untranslated by design. */
 function danceLabel(dance: string, locale: Locale): string {
-  return DANCE_IDS.includes(dance as DanceId)
-    ? danceName(dance as DanceId, locale)
-    : titleCase(dance);
+  return isDanceId(dance) ? danceName(dance, locale) : titleCase(dance);
 }
 
 export function JournalLinkPicker({
@@ -125,7 +123,7 @@ export function JournalLinkPicker({
       anchor: {
         type: "figureType",
         figureType: family.figureType,
-        danceScope: danceScope as DanceId | "all",
+        danceScope: isDanceId(danceScope) || danceScope === "all" ? danceScope : "all",
       },
       label: `${t.allOfType(titleCase(family.figureType))} · ${scopeLabel}`,
     });

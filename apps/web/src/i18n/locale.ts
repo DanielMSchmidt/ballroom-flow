@@ -15,11 +15,16 @@ import { useSyncExternalStore } from "react";
 export const LOCALES = ["en", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
 
+/** Runtime narrowing to a supported UI locale (CLAUDE.md §4 — guard, don't assert). */
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === "string" && LOCALES.some((l) => l === value);
+}
+
 const STORAGE_KEY = "bf.locale";
 
 /** Narrow an arbitrary string to a supported locale, or undefined. */
 function asLocale(value: string | null | undefined): Locale | undefined {
-  return LOCALES.includes(value as Locale) ? (value as Locale) : undefined;
+  return isLocale(value) ? value : undefined;
 }
 
 /** Browser-language default: any `de*` tag → German, everything else English. */

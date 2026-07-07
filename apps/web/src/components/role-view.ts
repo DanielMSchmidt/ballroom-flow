@@ -2,7 +2,7 @@
 // (FigureTimeline) and the Lanes view, so the two surfaces stay consistent and
 // the logic isn't duplicated.
 import type { Attribute } from "@weavesteps/domain";
-import { ATTRIBUTE_KINDS, type AttributeKind } from "../ui";
+import { type AttributeKind, isAttributeKind } from "../ui";
 
 /** The leader/follower view lens. */
 export type RoleView = "leader" | "follower";
@@ -19,7 +19,7 @@ export const roleLabel = (v: RoleView): string => v.charAt(0).toUpperCase() + v.
 
 /** Tint a value chip by its attribute kind when that kind has a token color. */
 export const chipTone = (kind: string): AttributeKind | "neutral" =>
-  (ATTRIBUTE_KINDS as readonly string[]).includes(kind) ? (kind as AttributeKind) : "neutral";
+  isAttributeKind(kind) ? kind : "neutral";
 
 /** A displayable label for an attribute value (string, or a joined set). */
 export const displayValue = (value: unknown): string =>

@@ -14,7 +14,7 @@ import { useState } from "react";
 import { useLocalizedRegistry, useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
 import { Button, EditIcon, IconButton, PlusIcon } from "../ui";
-import { ATTRIBUTE_KINDS, type AttributeKind, kindVar } from "../ui/tokens";
+import { isAttributeKind, kindVar } from "../ui/tokens";
 import { AddKindSheet } from "./AddKindSheet";
 
 export interface AttributeTypesManagerProps {
@@ -25,11 +25,8 @@ export interface AttributeTypesManagerProps {
   onCreateKind?: (kind: RegistryKind) => void;
 }
 
-function isStandardKind(kind: string): kind is AttributeKind {
-  return (ATTRIBUTE_KINDS as readonly string[]).includes(kind);
-}
 function dotColor(kind: RegistryKind): string {
-  return isStandardKind(kind.kind) ? kindVar(kind.kind) : kind.color;
+  return isAttributeKind(kind.kind) ? kindVar(kind.kind) : kind.color;
 }
 
 export function AttributeTypesManager({
