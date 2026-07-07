@@ -245,6 +245,16 @@ export function cellValue(here: Attribute[], column: ReadingColumn): string | nu
   return a && hasAttrValue(a.value) ? abbrevValue(column.kind, a.value) : null;
 }
 
+/** Whether `column` carries a PRESENCE-only attribute at this count's attributes
+ *  — the step is notated but has no value yet (Builder v3 ②: `value: null`). The
+ *  Step column looks at direction + footwork; every other column at its own kind.
+ *  Drives the reading view's kind-colored present dot (distinct from an empty
+ *  slot), so a step added without attributes still reads as "a step is here". */
+export function cellPresent(here: Attribute[], column: ReadingColumn): boolean {
+  const kinds = column.isStep ? ["direction", "footwork"] : [column.kind];
+  return here.some((a) => kinds.includes(a.kind) && !hasAttrValue(a.value));
+}
+
 /** Whether an attribute actually carries a value (vs a presence-only `null`/
  *  empty write — Builder v3 ②). */
 export function hasAttrValue(value: unknown): boolean {

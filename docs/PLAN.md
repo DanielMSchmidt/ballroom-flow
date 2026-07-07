@@ -152,7 +152,7 @@ The canonical, checkable rules for attributes. Items marked **⟳v5** were rewri
 20. Divergence compares attributes **by meaning** (`kind | count | role | value`), ignoring `id` and `deletedAt`, over the **resolved** timeline (#14). It is a content check, independent of the variant mechanism.
 
 **Presence attributes (Builder v3 ②, decided 2026-07-07)**
-21. **`value: null` is a legal attribute value** — "present, no value yet" (the grid's dashed ring; quick-add's tapCell writes one). A presence attribute is a **full citizen**: it counts toward the figure's timing span / default length (`defaultFigureCounts`) and **claims per-beat ownership** in variant resolution (#15) exactly like a valued edit. Closed-enum validation (#11) exempts `null`; reading surfaces render presence as *present* (ring), never as a value chip.
+21. **`value: null` is a legal attribute value** — "present, no value yet" (the grid's dashed ring; quick-add's tapCell writes one). A presence attribute is a **full citizen**: it counts toward the figure's timing span / default length (`defaultFigureCounts`) and **claims per-beat ownership** in variant resolution (#15) exactly like a valued edit. Closed-enum validation (#11) exempts `null`; both surfaces render presence as *present* — the edit grid's **dashed ring**, the reading view's **kind-colored present dot** (blue for the merged Step column, so a step notated without a value still reads as "a step is here") — never as a value chip, never as an empty slot.
 
 **Permissions / access**
 22. Editing attributes requires **`canEdit`** (editor or owner); commenters/viewers cannot.

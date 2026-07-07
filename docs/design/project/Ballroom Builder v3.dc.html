@@ -159,6 +159,7 @@
                             <sc-for list="{{ step.cells }}" as="cell" hint-placeholder-count="3">
                               <div style="flex:{{ cell.weight }};min-width:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center">
                                 <sc-if value="{{ cell.hasVal }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ cell.chips }}" as="c" hint-placeholder-count="1"><span onClick="{{ c.onTap }}" style="max-width:100%;font:700 10px/1.25 'Inconsolata';border-radius:6px;padding:4px 7px;color:{{ cell.ink }};text-align:center;white-space:normal;overflow-wrap:anywhere;cursor:pointer;background:{{ cell.tint }};border:1px solid {{ cell.bd }}">{{ c.label }}</span></sc-for></sc-if>
+                                <sc-if value="{{ cell.present }}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ cell.bd }}"></span></sc-if>
                                 <sc-if value="{{ cell.empty }}" hint-placeholder-val="{{ true }}"><span style="width:5px;height:5px;border-radius:50%;border:1.5px solid #ddd6ca"></span></sc-if>
                               </div>
                             </sc-for>
@@ -1702,7 +1703,7 @@ class Component extends DCLogic {
           const isSub=(stp.count==='&'||stp.count==='e'||stp.count==='a');
           let beatLabel;
           if (isSub) beatLabel = stp.count; else { beatLabel = String((_beat % _phraseLen)+1); _beat++; }
-          const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const ch=at.map(a=>{ const v=this.attrValForRole(a,vRole); const key=(c.key!=='step'&&!Array.isArray(v))?v:null; const fam=(c.key==='step')?'step':c.key; return { label:this.attrDisplay(a,vRole), onTap:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({infoKey:fam, infoValue:key}); } }; }); return { color:c.color, weight:(c.key==='step'?1.7:1), tint:this.lighten(c.color,.84), ink:this.darken(c.color,.32), bd:c.color, chips:ch, hasVal:ch.length>0, empty:ch.length===0 }; });
+          const cells = cols.map(c=>{ const at=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&this.attrIsSet(a)); const pr=stp.attrs.filter(a=>!a.removed&&a.type===c.key&&!this.attrIsSet(a)); const ch=at.map(a=>{ const v=this.attrValForRole(a,vRole); const key=(c.key!=='step'&&!Array.isArray(v))?v:null; const fam=(c.key==='step')?'step':c.key; return { label:this.attrDisplay(a,vRole), onTap:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({infoKey:fam, infoValue:key}); } }; }); return { color:c.color, weight:(c.key==='step'?1.7:1), tint:this.lighten(c.color,.84), ink:this.darken(c.color,.32), bd:c.color, chips:ch, hasVal:ch.length>0, present:ch.length===0&&pr.length>0, empty:ch.length===0&&pr.length===0 }; });
           return { n:num, count:stp.count, beat:beatLabel, isSub, notSub:!isSub, cells, margin:_margin(allC, openThread), onOpenThread:openThread };
         });
         return { id:f.id, isBreak:false, notBreak:true, name:f.name, timingSub:(f.steps.length? stepsM.map(s=>s.beat).join(' ') : 'empty') + (f.part?(' \u00b7 '+f.part.from+'\u2013'+f.part.to+' of '+f.part.total):''), ...scope(f), onOpen:()=>this.openFigure(f.id), steps: stepsM,

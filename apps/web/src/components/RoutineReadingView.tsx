@@ -39,6 +39,7 @@ import { AttrChip, cx, IDENTITY_COLORS, kindVar, SectionDivider, Skeleton } from
 import type { FigureScope } from "../ui/tokens";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
 import {
+  cellPresent,
   cellValue,
   columnUsage,
   infoKindsForColumn,
@@ -756,6 +757,8 @@ function StepRow({
                   >
                     <AttrChip kind={col.kind} label={value} />
                   </button>
+                ) : cellPresent(here, col) ? (
+                  <PresentSlot color={columnColor(col)} />
                 ) : (
                   <EmptySlot />
                 )}
@@ -870,6 +873,21 @@ function ScopeDot({ scope }: { scope: FigureScope }) {
       />
       <span className="bf-sr-only">{scope === "library" ? t.libraryFigure : t.customFigure}</span>
     </span>
+  );
+}
+
+/** A notated-but-valueless step marker — a filled dot in the column's kind color
+ *  (blue for the merged Step column). Distinguishes "a step is here, value not
+ *  set yet" (Builder v3 ② presence) from a truly empty slot, so a step added
+ *  without attributes still reads in the reading view. */
+function PresentSlot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-present-cell
+      className="h-[7px] w-[7px] rounded-full"
+      style={{ background: color }}
+    />
   );
 }
 
