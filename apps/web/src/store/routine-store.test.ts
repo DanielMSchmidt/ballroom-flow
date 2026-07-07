@@ -288,13 +288,15 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
   });
 
   it("a charted catalog pick renders its entry/exit alignment (from the live reference)", async () => {
-    // The Waltz Closed Change is charted with constant alignment (facing Diagonal
-    // Centre). The live reference renders it straight from the bundled catalog.
+    // The Waltz Natural Turn is charted (WDSF Technique Book) entering facing
+    // Diagonal Wall and ending facing Diagonal Centre. The live reference renders
+    // it straight from the bundled catalog. (The Closed Changes carry NO alignment
+    // — the book charts theirs as "depending on the previous figure".)
     const { store } = await openWithSection();
-    store.addPlacement("s1", "Closed Change on RF", "closed-change-on-rf");
-    const ref = globalFigureRef("waltz", "closed-change-on-rf");
+    store.addPlacement("s1", "Natural Turn", "natural-turn");
+    const ref = globalFigureRef("waltz", "natural-turn");
     const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
-    expect(rp?.figure?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+    expect(rp?.figure?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
     expect(rp?.figure?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
   });
 

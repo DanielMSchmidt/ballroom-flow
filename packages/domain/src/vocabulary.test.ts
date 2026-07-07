@@ -36,6 +36,16 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
       "flat",
       "heel turn",
       "heel pull",
+      "H flat",
+      "HB",
+      "BT",
+      "TB",
+      "THB",
+      "BHB",
+      "HBH",
+      "I/E of B",
+      "I/E of BH",
+      "O/E of T, BH",
       "BH",
       "HTH",
       "THT",
@@ -134,7 +144,7 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
 
   // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
 
-  it("ships all eight standard kinds, every one builtin", async () => {
+  it("ships all ten standard kinds, every one builtin", async () => {
     // Intent: the standard tier is complete and flagged builtin (so the merge
     // and the creation UI can distinguish standard from user-defined kinds).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
@@ -147,6 +157,8 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
       "bodyActions",
       "sway",
       "turn",
+      "head",
+      "rotation",
     ]) {
       expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
       expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);

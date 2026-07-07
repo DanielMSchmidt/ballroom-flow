@@ -36,6 +36,10 @@ export interface AuthoredFootwork {
   bodyActions?: string[];
   /** Foot position (`footPosition` vocab: first/second/…/fifth) — set when charted. */
   footPosition?: string;
+  /** WDSF Rotation column, verbatim (shoulders/hips, Light./Dyn./Lead.) — free text. */
+  rotation?: string;
+  /** WDSF head-position ("Extension") column, verbatim — free text. */
+  head?: string;
 }
 
 /**
@@ -47,8 +51,11 @@ export interface AuthoredFootwork {
  * to one of those, else left unset rather than written as an unknown.
  */
 export interface AuthoredStep {
-  leader: AuthoredFootwork;
-  follower: AuthoredFootwork;
+  /** Absent when this count is the other role's alone — the WDSF books chart
+   *  role-asymmetric figures (e.g. the Double Reverse Spin's follower "&" step). */
+  leader?: AuthoredFootwork;
+  /** Absent when this count is the leader's alone. */
+  follower?: AuthoredFootwork;
   /** Rise & fall for this count (`rise` vocab) — shared by the couple. */
   rise?: string;
   /** Dance position for this count (`position` vocab) — shared by the couple. */

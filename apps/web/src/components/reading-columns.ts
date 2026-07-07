@@ -28,6 +28,7 @@ const DIRECTION_ABBREV_EN = {
   side: "side",
   behind: "beh",
   close: "close",
+  in_front: "front",
   diagonal: "diag",
   in_place: "in pl",
   // Legacy split-diagonal values (normalize to `diagonal` on read).
@@ -40,6 +41,7 @@ const DIRECTION_ABBREV_DE: typeof DIRECTION_ABBREV_EN = {
   side: "seit",
   behind: "hint",
   close: "schl",
+  in_front: "vorkr",
   diagonal: "diag",
   in_place: "Platz",
   diag_forward: "diag",
@@ -91,6 +93,8 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
     sway: "Sway",
     turn: "Turn",
     bodyActions: "Body",
+    rotation: "Rot",
+    head: "Head",
   },
   de: {
     rise: "Heben",
@@ -99,6 +103,8 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
     sway: "Neig",
     turn: "Dreh",
     bodyActions: "Körper",
+    rotation: "Rot",
+    head: "Kopf",
   },
 };
 
@@ -107,7 +113,16 @@ const STEP_LABEL: Record<Locale, string> = { en: "Step", de: "Schritt" };
 
 /** Technique kinds that get a column, in the design's left-to-right order
  *  (Rise · Pos · Feet · Body · Sway · Turn). */
-const ORDERED_KINDS = ["rise", "position", "footPosition", "bodyActions", "sway", "turn"];
+const ORDERED_KINDS = [
+  "rise",
+  "position",
+  "footPosition",
+  "bodyActions",
+  "sway",
+  "turn",
+  "rotation",
+  "head",
+];
 
 /** Kinds that never get their own column (they feed the merged Step chip). */
 const STEP_KINDS = new Set(["direction", "footwork"]);
@@ -153,7 +168,16 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
  *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
  *  "Body" column alongside `position` is NOT done here — each kind is its own
  *  column so a cell maps 1:1 to a (count, kind) editor target. */
-const EDIT_ORDERED_KINDS = ["rise", "position", "footPosition", "bodyActions", "sway", "turn"];
+const EDIT_ORDERED_KINDS = [
+  "rise",
+  "position",
+  "footPosition",
+  "bodyActions",
+  "sway",
+  "turn",
+  "rotation",
+  "head",
+];
 
 /**
  * Every column the EDIT grid should show for a figure's dance (frame 1.11:

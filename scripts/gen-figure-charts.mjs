@@ -20,14 +20,17 @@ const role = (r) => {
   if (r.turn && r.turn !== "none") o.turn = r.turn;
   if (Array.isArray(r.bodyActions) && r.bodyActions.length) o.bodyActions = r.bodyActions;
   if (r.footPosition) o.footPosition = r.footPosition;
+  if (r.rotation) o.rotation = r.rotation;
+  if (r.head) o.head = r.head;
   return o;
 };
 const step = (s) => {
   const o = {};
   if (s.rise) o.rise = s.rise;
   if (s.position) o.position = s.position;
-  o.leader = role(s.leader);
-  o.follower = role(s.follower);
+  // A role may be absent on a count the other role dances alone (asymmetric charts).
+  if (s.leader) o.leader = role(s.leader);
+  if (s.follower) o.follower = role(s.follower);
   return o;
 };
 

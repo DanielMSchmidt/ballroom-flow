@@ -15,7 +15,7 @@ export interface LibraryFigureData {
   notes?: string[];
 }
 
-/** 204 canonical figures across the five Standard dances. */
+/** 265 canonical figures across the five Standard dances. */
 export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "waltz", figureType: "back-lock", name: "Back Lock" },
   {
@@ -28,6 +28,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: May be turned up to 3/8 to R",
       "NOTE-Foot Placement/Couple Position: may start LF bwd in Closed Position",
+      "NOTE - Rise and Fall: (1) on step 3 the foot lowering happens at the very end of the step, almost as the next step is taken.",
+      "NOTE - Quantity of Turn: may be turned up to 3/8 to R.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 7, p. 57.",
     ],
   },
   {
@@ -37,7 +40,13 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "12&3",
     start: "LF bwd in CBMP (Outside Partner Position)",
     finish: "RF diag, bwd (Closed Position)",
-    notes: ["NOTE - Foot Placement/Couple Position: may start LF bwd in Closed Position"],
+    notes: [
+      "NOTE - Foot Placement/Couple Position: may start LF bwd in Closed Position",
+      "NOTE - Rotation: (1) the Rotation for Leading at the end of step 1 is done to change the position from Outside Partner to Closed Position only, therefore dancers have to pay attention not to turn or change the position of the feet.",
+      "NOTE - Foot Placement/Couple Position: may start with LF bwd in Closed Position.",
+      "NOTE - General: the Forward Lock for the Man is not used in the Waltz due to the interpretation of the dance. The Forward Lock for the Man is described in the Quickstep charts, where this figure is more common.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 11, p. 67.",
+    ],
   },
   {
     dance: "waltz",
@@ -49,6 +58,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used.",
       "NOTE-Couple Position: may end in Promenade Position",
+      "NOTE - Couple Position: may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 9, p. 61.",
     ],
   },
   {
@@ -58,7 +69,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "12&3",
     start: "RF fwd and across in CBMP (Promenade Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 10, p. 65."],
   },
   {
     dance: "waltz",
@@ -67,7 +78,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF fwd (Closed Position)",
     finish: "LF closes to RF",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 2, p. 47."],
   },
   {
     dance: "waltz",
@@ -76,13 +87,25 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "RF fwd (Closed Position)",
     finish: "RF closes to LF (Closed Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 1, p. 45."],
   },
   { dance: "waltz", figureType: "closed-changes", name: "Closed Changes" },
   { dance: "waltz", figureType: "closed-impetus", name: "Closed Impetus" },
   { dance: "waltz", figureType: "closed-telemark", name: "Closed Telemark" },
   { dance: "waltz", figureType: "closed-wing", name: "Closed Wing" },
-  { dance: "waltz", figureType: "contra-check", name: "Contra Check" },
+  {
+    dance: "waltz",
+    figureType: "contra-check",
+    name: "Contra Check",
+    timing: "123",
+    start: "LF fwd in CBMP (R knee flexed)",
+    finish: "LF to side in PP",
+    notes: [
+      "NOTE - Type of Sway: during the sway the Man and the Lady will use a translation to L with the upper part of the body.",
+      "NOTE - General: step 3 can be replaced by a Natural Pivot, remaining in Closed Position and turning up to half turn to right.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 36, p. 129.",
+    ],
+  },
   {
     dance: "waltz",
     figureType: "cross-hesitation-from-pp",
@@ -90,18 +113,25 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "1 (23)",
     start: "RF fwd in CBMP (Promenade Position)",
     finish: "Weight on RF",
-    notes: ["NOTE - Quantity of Turn: may turn up to ¼ to L (Man)"],
+    notes: [
+      "NOTE - Quantity of Turn: may turn up to ¼ to L (Man)",
+      "NOTE - Quantity of Turn: may turn up to 1/4 to left (Man). Lady will make an additional 1/4 to left.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 27, p. 103.",
+    ],
   },
   {
     dance: "waltz",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "123 (12&3 Lady)",
+    timing: "QQ&Q",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "Weight on RF",
     notes: [
       "NOTE - Quantity of Turn: may turn between ¾ and 1 full turn to L",
       "NOTE- Timing: alternative timing of 123& may be used for the Lady",
+      "NOTE - Quantity of turn: may turn between 3/4 and 1 full turn to L.",
+      "NOTE - Timing: alternative timing of 1 2 3 & may be used.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 15, p. 77.",
     ],
   },
   {
@@ -111,19 +141,39 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF Fwd and slightly to side (Closed Position)",
     finish: "LF closes to RF w/o weight, weight on RF (Closed Position)",
-    notes: ["NOTE - Foot Placement/ Couple Position: may start LF Fwd in CBMP in Wing Position"],
+    notes: [
+      "NOTE - Foot Placement/ Couple Position: may start LF Fwd in CBMP in Wing Position",
+      "NOTE - Foot Placement/Couple Position: may start LF fwd in CBMP in Wing Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 21, p. 91.",
+    ],
+  },
+  {
+    dance: "waltz",
+    figureType: "fallaway-natural-turn",
+    name: "Fallaway Natural Turn",
+    timing: "123 123",
+    start: "RF fwd and across in CBMP",
+    finish: "LF to side and slightly fwd",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: may start RF fwd in CBMP Outside Partner. May end in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 29, p. 107.",
+    ],
   },
   {
     dance: "waltz",
     figureType: "fallaway-reverse-and-slip-pivot",
     name: "Fallaway Reverse and Slip Pivot",
-    timing: "123&",
+    timing: "Q&QQ",
     start: "LF fwd and slightly to side (Closed position)",
     finish: "RF bwd (Slip Pivot) weight on RF, LF held in position (Closed Position)",
     notes: [
       "NOTE- Foot Placement/Couple Position: May start with LF fwd in CBMP in Wing Position.",
       "NOTE- Quantity of Turn: may be danced with less or no turn (when danced into a corner).",
       "NOTE - Timing: alternative timings of 12&3 or 123& may be used",
+      "NOTE - Foot Placement/Couple Position: may start with LF fwd in CBMP in Wing Position.",
+      "NOTE - Quantity of Turn: may be danced with less or no turn on step 4 when used at a corner.",
+      "NOTE - Extension: the Extension creates a sort of a Spiral design especially on step 3.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 34, p. 125.",
     ],
   },
   { dance: "waltz", figureType: "fallaway-whisk", name: "Fallaway Whisk" },
@@ -136,6 +186,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF closes to RF w/o weight-weight on RF (Closed Position)",
     notes: [
       "NOTE - Foot Placement/Couple Position: may start LF bwd in CBMP in Outside Partner Position",
+      "NOTE - Foot Placement/Couple Position: may start with LF bwd in CBMP and Outside Partner Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 13, p. 71.",
     ],
   },
   {
@@ -148,6 +200,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: alternative timing using 2 bars of music may be used (123 123).",
       "NOTE - Couple Position: it may start in Promenade Position",
+      "NOTE - Timing: alternative Timing with an additional bar of music may be used (123 123).",
+      "NOTE - Couple position: may start in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 37, p. 131.",
     ],
   },
   {
@@ -159,6 +214,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF to side and slightly Bwd (Closed Position)",
     notes: [
       "NOTE - Foot Placement/ Couple Position: it may start LF Bwd in CBMP in Outside Partner Position",
+      "NOTE - Alignment-Direction: (1) the Impetus is normally danced at the corner, but can also be danced along the side of the room, therefore the alignment of step 2 for the Man will be Facing DC and for the Lady Backing DC.",
+      "NOTE - Foot Placement/Couple Position: may start LF back in CBMP Outside Partner.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 19, p. 87.",
     ],
   },
   {
@@ -170,9 +228,26 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF diag Fwd L side leading (Promenade Position)",
     notes: [
       "NOTE - Foot Placement/ Couple Position: it may start LF Bwd in CBMP in Outside Partner Position",
+      "NOTE - Type of Sway: an alternative use of sway on step 2 of the Impetus to PP is possible - to R (Cosmetic) for the Man and to L (Cosmetic) for the Lady.",
+      "NOTE - Foot Placement/Couple Position: may start LF back in CBMP Outside Partner.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 20, p. 89.",
     ],
   },
-  { dance: "waltz", figureType: "left-whisk", name: "Left Whisk" },
+  {
+    dance: "waltz",
+    figureType: "left-whisk",
+    name: "Left Whisk",
+    timing: "123",
+    start: "RF bwd and slightly to side",
+    finish: "RF crosses behind LF",
+    notes: [
+      "NOTE - Couple Position: May start in Promenade Position",
+      'NOTE - Foot Placement: On step 3 the alternative foot position may be "Weight on RF". The Foot Position will depend on the type of figure following the Left Whisk.',
+      "NOTE - General: Only step 3 may be used (timing 1) following figures like Outside Change, Reverse Turning Lock etc.",
+      "NOTE - Exit: To exit and connect to a suitable following figure the Man untwists to R (1 2 3) to end with feet parallel with weight on RF in Closed Position. The Lady dances 4 steps around the Man starting with RF to end in Closed Position with weight on LF. (Timing 1 2 &3 or 1 & 2 3). The following step for the Man will be RF fwd in Closed Position or RF bwd in CBMP Outside Partner. When the Left Whisk is danced on 1 the timing will change. The Man untwists (timing 2 3) or makes two steps (LF in place, RF to side) to end in Closed Position, while the lady dances 4 steps (timing 2 & 3 &) or 2 steps (timing 2 3 or & 23).",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 35, p. 127.",
+    ],
+  },
   {
     dance: "waltz",
     figureType: "natural-spin-turn",
@@ -183,6 +258,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Foot Placement/Couple Position: it may start RF fwd in CBMP in Outside Partner Position",
       "NOTE - Quantity of Turn: may be underturned to end backing DC against LOD or overturned to end",
+      "NOTE - Foot Placement: (1) during step 4, due to the Pivoting Action, the Lady has to swing her free leg (L) into the next position.",
+      "NOTE - Alignment-Direction: (1) in step 4 the final alignment is Backing LOD, but for better fluidity of movement it is necessary to stop the turn a bit earlier to reach this alignment at the beginning of the next step.",
+      "NOTE - Quantity of turn: may be underturned to end backing DC against LOD (3/8 to R on step 4, 1/4 to R between 5 and 6). May be overturned to end almost backing LOD (1/2 to R on step 4, just under 1/2 to R between 5 and 6).",
+      "NOTE - Type of Sway: (1) if the Natural Spin Turn is preceding a Turning Lock to Right the Sway will be exactly the opposite due to the overturned action (Man to R and Lady to L).",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 14, p. 73.",
     ],
   },
   {
@@ -195,6 +275,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 1-3 or 4-6 only may be used",
       "NOTE- Foot Placement/Couple Position: May start with RF fwd in CBMP in Outside Partner Position.",
+      "NOTE - General: steps 1-3 or 4-6 only may be used",
+      "NOTE - Foot Placement/Couple Position: may start with RF fwd in CBMP Outside Partner. If steps 4-6 only are used, step 4 may start LF bwd in CBMP Outside partner.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 3, p. 49.",
     ],
   },
   {
@@ -207,6 +290,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Couple Position/ Foot Placement: may end in Closed Position, the following step is taken RF",
       "NOTE- Quantity of Turn/ Couple Position: may overturn to end backing DC in Closed position.",
+      "NOTE - Couple Position/Foot Placement: may end in Closed Position, the following step is taken RF fwd (Man) in CBMP and Outside Partner Position.",
+      "NOTE - Quantity of Turn/Couple Position: may overturn to end backing DC (Man) in Closed Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 23, p. 95.",
     ],
   },
   {
@@ -215,6 +301,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     name: "Open Impetus and Cross Hesitation",
   },
   { dance: "waltz", figureType: "open-impetus-and-wing", name: "Open Impetus and Wing" },
+  {
+    dance: "waltz",
+    figureType: "open-natural-turn",
+    name: "Open Natural Turn",
+    timing: "123",
+    start: "RF fwd and across in CBMP",
+    finish: "RF bwd R side leading",
+    notes: [
+      "NOTE - Foot Placement and Couple Position: may start RF fwd in CBMP Outside Partner.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 12, p. 69.",
+    ],
+  },
   {
     dance: "waltz",
     figureType: "open-telemark-and-cross-hesitation",
@@ -230,6 +328,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF to side and slightly fwd (Closed Position)",
     notes: [
       "NOTE - Foot Placement/Couple Position: may end in Promenade position. It may start LF Bwd in",
+      "NOTE - Couple Position: may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 8, p. 59.",
     ],
   },
   {
@@ -241,6 +341,23 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF to side",
     notes: [
       "NOTE - Quantity of Turn: may be underturned (no Pivot on step3) in which case the exit is RF bwd",
+      "NOTE - Quantity of Turn: Outside Spin may be underturned (no Pivot on step 3). In that case the exit will be RF back into any suitable figure.",
+      "NOTE - Sway/Extension: Sway and extension on steps 2 and 3 are optional, and depend on the type of following figures.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 22, p. 93.",
+    ],
+  },
+  {
+    dance: "waltz",
+    figureType: "overturned-running-spin-turn",
+    name: "Overturned Running Spin Turn",
+    timing: "QQQQ&QQQQ&Q",
+    start: "RF fwd",
+    finish: "LF closes to RF w/o weight",
+    notes: [
+      "NOTE - Timing: alternative timing 1 2 & 3 may be used on steps 4 - 7.",
+      "NOTE - Foot Placement/Couple Position: may start with RF fwd in CBMP Outside Partner.",
+      "NOTE - General: from step 8 (instead of Wing), both partners can dance two steps fwd in PP (Timing 2 3).",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 32, p. 119.",
     ],
   },
   {
@@ -252,6 +369,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF to side and slightly bwd (Closed Position)",
     notes: [
       "NOTE- Foot Placement/Couple Position: May start with LF fwd in CBMP in Wing Position.",
+      "NOTE - Sway. If the dancers will apply the Sway is possible to create two particular interpretation of the Progressive Chasse. (Case 1) Step/Action 1-4 — Type of Sway (Man): To R (Releasing) e/o 1; To R (Cosmetic); Straight; Slightly to L (Cosmetic). Type of Sway (Lady): To L (Releasing) e/o 1; To L (Cosmetic); Straight; Slightly to R (Cosmetic). (Case 2) Step/Action 1-4 — Type of Sway (Man): To L (Cosmetic) e/o 1; Straight; Straight; To R (Cosmetic). Type of Sway (Lady): To R (Cosmetic) e/o 1; Straight; Straight; To L (Cosmetic).",
+      "NOTE - Rotation: (1) Man and Lady will continue to turn hips also on step 3.",
+      "NOTE - Foot Placement/Couple position: may start with LF fwd in CBMP in Wing Position.",
+      "NOTE - Quantity of Turn: may turn up to 1/2 to L.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 5, p. 53.",
     ],
   },
   {
@@ -274,7 +396,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "&",
     start: "RF diag, bwd outside Lady’s LF (Closed Position)",
     finish: "weight on RF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: during the turn Lady's RF must be kept parallel to the LF in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 28, p. 105.",
+    ],
   },
   {
     dance: "waltz",
@@ -286,6 +411,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 1-3 or 4-6 only may be used",
       "NOTE- Foot Placement/Couple Position: May start with LF fwd in CBMP in Wing Position.",
+      "NOTE - General: steps 1-3 or 4-6 only may be used",
+      "NOTE - Foot Placement/Couple Position: may start with LF Fwd in CBMP in Wing Position",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 4, p. 51.",
     ],
   },
   {
@@ -295,7 +423,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "1&23",
     start: "RF bwd with R side leading (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: ["NOTE - Couple Position: may end in Promenade Position"],
+    notes: [
+      "NOTE - Couple Position: may end in Promenade Position",
+      "NOTE - Couple Position: may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 24, p. 97.",
+    ],
   },
   {
     dance: "waltz",
@@ -307,6 +439,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Couple Position: may start and end in promenade Position.",
       "NOTE - Timing: alternative timing of 12&3 may be used.",
+      "NOTE - Couple Position: may start and end in Promenade Position.",
+      "NOTE - Timing: alternative timing of 1 2 &3 may be used.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 33, p. 123.",
     ],
   },
   {
@@ -328,6 +463,24 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: alternative timing of 123 112&3 may be used.",
       "NOTE-Foot Placement/ Couple Position: May start RF fwd in CBMP in Outside Partner Position",
+      "NOTE - Foot Placement/Alignment-Direction: for Lady in step 4 due of the particular Foot Placement the final Alignment is Backing LOD, but for better fluidity of movement it is necessary to stop the turn a bit earlier to reach this alignment at the beginning of the next step.",
+      "NOTE - Timing: alternative timing 1 2 & 3 may be used on steps 4 - 7.",
+      "NOTE - Foot Placement/Couple Position: may start with RF fwd in CBMP Outside Partner.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 31, p. 115.",
+    ],
+  },
+  {
+    dance: "waltz",
+    figureType: "running-weave-from-pp",
+    name: "Running Weave from PP",
+    timing: "Q&QQQQQ",
+    start: "RF fwd and across in CBMP",
+    finish: "RF crosses behind LF",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: may start RF fwd in CBMP Outside Partner.",
+      "NOTE - Timing: alternative timing 1 2 & 3 may be used on steps 1 - 4.",
+      "Note - General: steps 1 - 4 or 5 - 7 only may be used.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 30, p. 111.",
     ],
   },
   {
@@ -337,7 +490,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: ["NOTE -Foot Placement/ Couple Position: it may start LF Fwd in CBMP in Wing Position"],
+    notes: [
+      "NOTE -Foot Placement/ Couple Position: it may start LF Fwd in CBMP in Wing Position",
+      "NOTE - Foot Placement/Couple Position: may start LF fwd in CBMP in Wing Position.",
+      "NOTE - Type of Sway: (1) on step 1 it is possible to use Cosmetic Sway to R for the Man and to L for the Lady, maintaining the sway on the 1st part of step 2, changing it on the 2nd part of step 2 to Technical Sway to L for the Man and to R for the Lady. Step 3 as chart.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 16, p. 79.",
+    ],
   },
   {
     dance: "waltz",
@@ -346,7 +504,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF Fwd and slightly to side (Closed Position)",
     finish: "LF to side (Promenade Position)",
-    notes: ["NOTE -Foot Placement/ Couple Position: it may start LF fwd in CBMP in Wing Position"],
+    notes: [
+      "NOTE -Foot Placement/ Couple Position: it may start LF fwd in CBMP in Wing Position",
+      "NOTE - Foot Placement/Couple Position: may start LF fwd in CBMP in Wing Position.",
+      "NOTE - Type of Sway: (1) on step 1 it is possible to use Cosmetic Sway to R for the Man and to L for the Lady, maintaining the sway on the 1st part of step 2, changing it on the 2nd part of step 2 to Technical Sway to L for the Man and to R for the Lady. Step 3 as chart.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 17, p. 81.",
+    ],
   },
   { dance: "waltz", figureType: "turning-lock", name: "Turning Lock" },
   { dance: "waltz", figureType: "turning-lock-to-r", name: "Turning Lock to R" },
@@ -360,6 +523,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used.",
       "NOTE - Couple Position: may end in Promenade position",
+      "NOTE - Couple Position: the Weave from PP may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 18, p. 83.",
     ],
   },
   {
@@ -372,6 +537,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: may turn up to ¼ to L",
       "NOTE - Foot Placement/Couple Position: may start LF fwd in Wing Position",
+      "NOTE - Rotation: (1) Man and Lady will continue to turn their hips also on step 3.",
+      "NOTE - Rise and Fall: (1) on step 3 the foot lowering happens at the very end of the step, almost when the next step is taken.",
+      "NOTE - Quantity of Turn: may turn up to 1/4 to L.",
+      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 6, p. 55.",
     ],
   },
   {
@@ -381,7 +550,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "1 (23)",
     start: "RF fwd in CBMP (Outside Partner Position)",
     finish: "LF closes to RF w/o weight, weight on RF (Wing Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 25, p. 99."],
   },
   {
     dance: "waltz",
@@ -390,11 +559,175 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "1 (23)",
     start: "RF fwd and across in CBMP (Promenade Position)",
     finish: "LF closes to RF w/o weight, weight on RF (Wing Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 26, p. 101."],
   },
   { dance: "viennese_waltz", figureType: "backward-change-step", name: "Backward Change Step" },
-  { dance: "viennese_waltz", figureType: "contra-check", name: "Contra Check" },
+  {
+    dance: "viennese_waltz",
+    figureType: "chasse-change-step",
+    name: "Chasse Change Step",
+    timing: "123 123",
+    start: "RF fwd",
+    finish: "LF closes to RF",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 7, p. 61.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "check-from-reverse-to-natural-fleckerl",
+    name: "Check from Reverse to Natural Fleckerl",
+    timing: "123",
+    start: "LF fwd in CBMP, part weight",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "NOTE - Timing: extra Bars of music can be used during this figure.",
+      "NOTE - Type of Sway: (1) use of Cosmetic Sway to R (Man) and L (Lady) is possible on Step 3.",
+      "NOTE - Extension: when extra Bars of music are used, the Extension for the lady will be gradually back.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 24, p. 109.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "checked-natural-turn",
+    name: "Checked Natural Turn",
+    timing: "SS-Q",
+    start: "RF fwd",
+    finish: "RF bwd outside lady's LF",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 2-3 only may be used as a follow to Right Lunge.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 15, p. 85.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "checked-reverse-turn",
+    name: "Checked Reverse Turn",
+    timing: "SS-Q",
+    start: "LF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 17, p. 89.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "continuous-spin",
+    name: "Continuous Spin",
+    timing: "SQ",
+    start: "RF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be taken in CBMP in Outside Partner Position",
+      "NOTE - Rise and Fall: alternative use of Rise and Fall is possible in this figure. To achieve more progression it is necessary to delay slightly the moment of rise and the moment of producing it. In that case step 1 should be danced: MAN- Lower on 1 (Leg) then rise e/o 1 (Leg-Foot-Body); LADY- Lower on 1 (Leg) then rise e/o 1 (Leg-Body)",
+      "NOTE - Foot Action: if alternative Rise is used, the Foot Action for the lady will be: Step 1: BHB; Step 2: HB",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 8, p. 65.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "contra-check",
+    name: "Contra Check",
+    timing: "123",
+    start: "LF fwd in CBMP, part weight",
+    finish: "LF closes to RF",
+    notes: [
+      "NOTE - Timing: additional bars of music can be used in Contra Check.",
+      "NOTE - Extension: when additional bars of music are used, the amount of Extension produced by the lady will increase. The Extension will become Gradually Back",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 19, p. 95.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "double-leg-ronde",
+    name: "Double Leg Ronde",
+    timing: "QQQS-QQQSQ",
+    start: "LF fwd in CBMP, part weight",
+    finish:
+      "Turn on LF, RF held to side and slightly bwd w/o weight to end with low bwd Ronde Action",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4-6 (Man), 4-9 (Lady) only may be used.",
+      "NOTE - Rotation: (1) as step 9 of the Lady will be danced in Outside Partner Position, Rotation for Leading is necessary on step 6 of the Man. The moment of Rotation should correspond with Lady's step 8.",
+      "NOTE - Rise and Fall: (1) as during Man's step 6 the Lady will dance her steps 6-9, the Man's Rise at the end of step 6 should correspond with step 8 of the Lady.",
+      "Follower continues with three further steps the single-timing model folds: RF fwd in CBMP (timing 3); LF fwd (timing 1.2); RF fwd in CBMP (timing 3).",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 35, p. 141.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "double-reverse-spin-overspin",
+    name: "Double Reverse Spin Overspin",
+    timing: "QQ&QSQ",
+    start: "LF fwd",
+    finish: "RF bwd and slightly to side, outside lady's LF",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 31, p. 129.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "drag-hesitation",
+    name: "Drag Hesitation",
+    timing: "SS-Q",
+    start: "LF fwd",
+    finish: "LF closes to RF w/o weight",
+    notes: [
+      "NOTE - Timing: alternative Timing is possible in Drag Hesitation. Only one Bar of music will be used, one beat on each step.",
+      "NOTE - Rotation: (1) as the following step will be danced in Outside Partner Position, Rotation for Leading is necessary on step 3.",
+      "NOTE - Type of Sway: (1) when only 1 Bar of music is used in Drag Hesitation, the Sway used on step 2 will be: MAN: to R (Cosmetic); LADY: to L (Cosmetic)",
+      "NOTE - Extension: (1) when 1 Bar of music is used, the amount of Extension for the lady will be less due to the speed of execution.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 11, p. 73.",
+    ],
+  },
   { dance: "viennese_waltz", figureType: "forward-change-step", name: "Forward Change Step" },
+  {
+    dance: "viennese_waltz",
+    figureType: "hesitation-change",
+    name: "Hesitation Change",
+    timing: "123 123",
+    start: "RF fwd",
+    finish: "Position held",
+    notes: [
+      "NOTE - Timing: (1) an extra Bar of Music may be used during steps 4-6 of Hesitation Change. Timing used in these steps will therefore be: Step 4: 1, 2; Step 5: 3; Step 6: 1, 2, 3",
+      "NOTE - Type of Sway: (1) Cosmetic Sway to L (Man) and R (Lady) may be used on steps 5 and 6. (2) When an extra Bar of Music is used during steps 4-6, an alternative use of Sway is possible during steps 5 and 6: MAN Step 5- To L (Releasing), Step 6- To R (Cosmetic); LADY Step 5- To R (Releasing), Step 6- To L (Cosmetic)",
+      "NOTE - Extension: (1) when Cosmetic Sway to L (Man) and R (Lady) is used on step 6, the head position for the Lady will be Position 6. There will be no extension for the Man - head will be in Position 2.",
+      "NOTE - General: steps 4-6 only may be used. Steps 5-6 only may be used following Continuous Pivots (Timing 123)",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position. If steps 5-6 only are used step 5 may be taken bwd in CBMP in OP.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 10, p. 69.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "hover-reverse-turn",
+    name: "Hover Reverse Turn",
+    timing: "QQQSQ",
+    start: "LF fwd",
+    finish: "LF to side and slightly fwd",
+    notes: [
+      "NOTE - Rotation: (1) as the following step will be danced in Outside Partner Position, Rotation for Leading is necessary on step 5.",
+      "NOTE - Extension: (1) the Lady may choose to end with her head turned to R or L on step 4. In the case where she ends to R, the head will end in Position 6 while ending to L will result in head Position 1.",
+      "NOTE - General: steps 4 - 5 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 28, p. 121.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "left-whisk",
+    name: "Left Whisk",
+    timing: "SQS-",
+    start: "RF bwd and slightly to side",
+    finish: "RF crosses behind LF",
+    notes: [
+      "NOTE - General: to exit the Man untwists the feet ending with weight on LF, while the Lady transfers the weight to her RF. The Timing will depend on the figure that follows. Steps 2-3 only may be danced.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 20, p. 97.",
+    ],
+  },
   {
     dance: "viennese_waltz",
     figureType: "lf-backward-change-step-natural-to-reverse",
@@ -402,7 +735,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF bwd (Closed Position)",
     finish: "RF closes to LF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - General: a series of Backward Change Steps may be danced in Viennese Waltz, alternating between LF and RF Backward Change Step. In this case Foot Action Ball (B) should be used on each step, with the exception of the first and the last step of the sequence, where BH will be used.",
+      "The book charts this as one '(MAN or LADY)' chart; the follower rows shown here are the paired change step (book fig. 3), danced simultaneously.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 5, p. 59.",
+    ],
   },
   {
     dance: "viennese_waltz",
@@ -411,9 +748,69 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "LF fwd (Closed Position)",
     finish: "LF closes to RF",
-    notes: [],
+    notes: [
+      "NOTE - General: a series of Forward Change Steps may be danced in Viennese Waltz, alternating between LF and RF Forward Change Step. In this case Foot Action Ball (B) should be used on each step, with the exception of the first and the last step of the sequence, where HB (first step) and BH (last step) will be used.",
+      "The book charts this as one '(MAN or LADY)' chart; the follower rows shown here are the paired change step (book fig. 6), danced simultaneously.",
+      'Step 1 quantity of turn omitted: the book prints "1/8 to R between Prec. Step and 1", which contradicts its own alignments for this left-rotating change (suspected misprint; zoom-verified).',
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 4, p. 58.",
+    ],
   },
-  { dance: "viennese_waltz", figureType: "natural-fleckerl", name: "Natural Fleckerl" },
+  {
+    dance: "viennese_waltz",
+    figureType: "natural-back-check",
+    name: "Natural Back Check",
+    timing: "QQQSQ",
+    start: "RF fwd",
+    finish: "RF bwd and slightly to side, outside lady's LF",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in OP Position.",
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 - 5 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 16, p. 87.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "natural-fleckerl",
+    name: "Natural Fleckerl",
+    timing: "123 123",
+    start: "RF fwd between lady's feet",
+    finish: "Untwist on RF",
+    notes: [
+      "NOTE - Foot Action: due to a strong turn there should be a foot swivel on every step.",
+      "NOTE - Rise and Fall: due to a strong turn there will be no noticeable Rise and Fall in the Natural Fleckerl.",
+      "NOTE - General: steps 1-3 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 22, p. 101.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "natural-spin-turn",
+    name: "Natural Spin Turn",
+    timing: "QQQSS-Q",
+    start: "RF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "NOTE - Timing: alternatively only 2 bars of music can be used in Natural Spin Turn. One count will be used for each of the steps 4-6.",
+      "NOTE - Type of Sway: (1) when using 2 bars of music in the Natural Spin Turn, there will be no Sway on steps 5 and 6.",
+      "NOTE - Extension: (1) when using 2 bars of music in this figure, there will be no extension for the lady on step 5.",
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 - 6 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 12, p. 75.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "natural-spin-turn-reverse-pivot",
+    name: "Natural Spin Turn Reverse Pivot",
+    timing: "QQQQQS-Q",
+    start: "RF fwd",
+    finish: "RF bwd and slightly to side, outside lady's LF",
+    notes: [
+      "NOTE - General: during a Pivot the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 - 7 only may be used.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 14, p. 81.",
+    ],
+  },
   {
     dance: "viennese_waltz",
     figureType: "natural-turn",
@@ -421,9 +818,77 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123 123",
     start: "RF fwd (Closed Position)",
     finish: "LF closes to RF (Closed Position)",
-    notes: ["NOTE - General: steps 1-3 or 4-6 only may be used."],
+    notes: [
+      "NOTE - General: steps 1-3 or 4-6 only may be used.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position. If steps 4-6 only are used, step 4 may be taken LF bwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 1, p. 49.",
+    ],
   },
-  { dance: "viennese_waltz", figureType: "reverse-fleckerl", name: "Reverse Fleckerl" },
+  {
+    dance: "viennese_waltz",
+    figureType: "overturned-natural-spin-turn",
+    name: "Overturned Natural Spin Turn",
+    timing: "123 123",
+    start: "RF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 - 6 only may be used.",
+      "NOTE - Rise and Fall: (1) alternative Rise and Fall may be used on step 5 - Rise slightly e/o 5 (Leg-Body).",
+      "NOTE - Foot Action: (1) when alternative Rise & Fall is used the footwork for the Lady will change to BHB on step 5 and HB on step 6.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 25, p. 111.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "reverse-back-check",
+    name: "Reverse Back Check",
+    timing: "QQQSQ",
+    start: "LF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 -5 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 18, p. 91.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "reverse-fleckerl",
+    name: "Reverse Fleckerl",
+    timing: "123 123",
+    start: "LF fwd (small step)",
+    finish: "Untwist on LF",
+    notes: [
+      "NOTE - Foot Action: due to a strong turn there should be a foot Swivel on every step.",
+      "NOTE - Rise and Fall: due to a strong turn there will be no noticeable Rise and Fall in the Reverse Fleckerl.",
+      "NOTE - General: steps 1-3 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 23, p. 105.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "reverse-impetus-into-right-lunge",
+    name: "Reverse Impetus into Right Lunge",
+    timing: "SQS----",
+    start: "RF bwd and slightly to side",
+    finish: "RF to side and slightly fwd",
+    notes: [
+      "NOTE - Timing: (1) the number of beats used in the last step of the figure may vary.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 32, p. 133.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "reverse-pivots",
+    name: "Reverse Pivots",
+    timing: "SQ",
+    start: "LF fwd",
+    finish: "RF bwd and slightly to side outside lady's LF",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 9, p. 67.",
+    ],
+  },
   {
     dance: "viennese_waltz",
     figureType: "reverse-turn",
@@ -431,7 +896,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123 123",
     start: "LF fwd (Closed Position)",
     finish: "RF closes to LF (Closed Position)",
-    notes: ["NOTE - General: steps 1-3 or 4-6 only may be used."],
+    notes: [
+      "NOTE - General: steps 1-3 or 4-6 only may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 2, p. 53.",
+    ],
   },
   {
     dance: "viennese_waltz",
@@ -766,6 +1234,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - General: Steps 9-14 may be repeated.",
       "NOTE - Lead/Hold/Shaping: may be danced with double hold, releasing the hold on step 17",
       "NOTE - General Action: When the LF is kicked (jumping action of the standing leg) it is called KICK",
+      "NOTE - General: a series of Backward Change Steps may be danced in Viennese Waltz, alternating between RF and LF Backward Change Step. In this case Foot Action Ball (B) should be used on each step, with the exception of the first and the last step of the sequence, where BH will be used.",
+      "The book charts this as one '(MAN or LADY)' chart; the follower rows shown here are the paired change step (book fig. 4), danced simultaneously.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 6, p. 60.",
     ],
   },
   {
@@ -775,7 +1246,139 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "123",
     start: "RF fwd (Closed Position)",
     finish: "RF closes to LF",
-    notes: [],
+    notes: [
+      "NOTE - General: a series of Forward Change Steps may be danced in Viennese Waltz, alternating between RF and LF Forward Change Step. In this case Foot Action Ball (B) should be used on each step, with the exception of the first and the last step of the sequence, where HB (first step) and BH (last step) will be used.",
+      "The book charts this as one '(MAN or LADY)' chart; the follower rows shown here are the paired change step (book fig. 5), danced simultaneously.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 3, p. 57.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "ronde-twist-turn",
+    name: "Ronde Twist Turn",
+    timing: "QQQSQQQQ",
+    start: "LF fwd in CBMP, part weight",
+    finish: "Weight on RF",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4-8 only may be used.",
+      "Modelling note: the book charts the man's untwist as one row spanning beats 2-3 of the third bar ('Untwist on both feet | Weight on RF'); the two printed segments are shown as two counts to align with the lady's eight steps.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 34, p. 137.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "rudolph-fallaway",
+    name: "Rudolph Fallaway",
+    timing: "S-SQ",
+    start: "RF fwd in CBMP, part weight",
+    finish: "RF bwd and slightly to side, outside Lady's LF",
+    notes: [
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 33, p. 135.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "running-feather",
+    name: "Running Feather",
+    timing: "SQSQ",
+    start: "RF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 29, p. 125.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "running-feather-opening-to-promenade-position",
+    name: "Running Feather Opening to Promenade Position",
+    timing: "SQSQ",
+    start: "RF fwd",
+    finish: "LF bwd and slightly to side",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "NOTE - Type of Sway: (1) use of Cosmetic Sway to L (Man) and R (Lady) is possible on steps 2 and 3.",
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 30, p. 127.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "running-weave",
+    name: "Running Weave",
+    timing: "SQSQ",
+    start: "RF fwd",
+    finish: "LF bwd in CBMP",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 21, p. 99.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "swivel-to-promenade-link",
+    name: "Swivel to Promenade Link",
+    timing: "QQQS-SQ",
+    start: "RF fwd",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "NOTE - General: steps 4 - 6 only may be used.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position. If steps 4-6 only are used, step 4 may be taken LF bwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 37, p. 149.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "swivel-to-promenade-pivot",
+    name: "Swivel to Promenade Pivot",
+    timing: "QQQS-SQ",
+    start: "RF fwd",
+    finish: "LF fwd",
+    notes: [
+      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4 - 6 only may be used.",
+      "NOTE - Foot Placement/Couple Position: the first step (Man) may be taken RF fwd in CBMP in Outside Partner Position. If steps 4-6 only are used, step 4 may be taken LF bwd in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 36, p. 145.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "telemark",
+    name: "Telemark",
+    timing: "SS-Q",
+    start: "LF fwd",
+    finish: "LF to side and slightly fwd",
+    notes: [
+      "NOTE - Rotation: (1) as the following step will be danced in Outside Partner Position, Rotation for Leading is necessary on step 3.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 13, p. 79.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "throwaway-oversway",
+    name: "Throwaway Oversway",
+    timing: "SQSS--",
+    start: "LF fwd",
+    finish: "Slight Body turn",
+    notes: [
+      "NOTE - Timing: alternative Timing can be used in Throwaway Oversway. The division of counts will be: Step 1: 1  Step 2: 2  Step 3: 3  Step 4: 1, 2, 3",
+      "NOTE - Type of Sway: (1) use of Technical Sway is possible on step 3.",
+      "NOTE - Extension: (1) when alternative Timing is used, extension for the Lady will be Direct back.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 26, p. 115.",
+    ],
+  },
+  {
+    dance: "viennese_waltz",
+    figureType: "throwaway-oversway-taken-after-1-3-of-reverse-turn",
+    name: "Throwaway Oversway taken after 1-3 of Reverse Turn",
+    timing: "SQS-",
+    start: "RF bwd and slightly to side",
+    finish: "Slight Body turn",
+    notes: [
+      "NOTE - Type of Sway: (1) use of Technical Sway is possible on step 2.",
+      "NOTE - Timing: additional bar of music may be used.",
+      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 27, p. 119.",
+    ],
   },
   {
     dance: "quickstep",
@@ -787,6 +1390,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: Alternative timing SQQ may be used",
       "NOTE - Couple Position: Step 1may be taken bwd in Closed Position",
+      "NOTE - Timing: alternative Timing S QQ may be used.",
+      "NOTE - Quantity of Turn: may turn up to 3/8 to R",
+      "NOTE - Rotation: the two rotations for leading the Promenade Position on step 3 must be executed at the same time.",
+      "NOTE - Rise and Fall: on step 3 the foot must lower at the very end of the step, almost as the next step is taken.",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken (Man bwd, Lady fwd) in Closed Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 23, p. 97.",
     ],
   },
   {
@@ -799,6 +1408,24 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 2-4 only may be used",
       "NOTE - Couple Position: Step 1 may be LF bwd in Closed Position",
+      "NOTE - Rotation: (1) the Rotation for Leading at the end of step 1 is used to change the position from Outside Partner to Closed Position only; therefore dancers have to pay attention not to turn or change the position of the feet. (2) As the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: steps 2-4 only may be used.",
+      "NOTE - Couple Position: step 1 may be taken in Closed Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 12, p. 73.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "basic-movement-quarter-turn-and-progressive-chasse",
+    name: "Basic Movement - Quarter Turn and Progressive Chasse",
+    timing: "SQQSSQQS",
+    start: "RF fwd",
+    finish: "LF to side slightly fwd",
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: steps 1-4 or 5-8 only may be used.",
+      "NOTE - Foot Placement/ Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 1, p. 49.",
     ],
   },
   { dance: "quickstep", figureType: "change-of-direction", name: "Change of Direction" },
@@ -812,7 +1439,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF closes to RF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 6, p. 61.",
+    ],
   },
   {
     dance: "quickstep",
@@ -821,16 +1451,31 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SS",
     start: "LF fwd (Closed Position)",
     finish: "RF almost closes to LF slightly bwd without weight, weight on RF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 35, p. 123.",
+    ],
   },
   {
     dance: "quickstep",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "SSS",
+    timing: "SSQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "Weight on RF, LF closes to RF without weight (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Quantity of Turn: it may turn from 3/4 to 1 full turn to L.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 17, p. 85.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "drag-hesitation",
+    name: "Drag Hesitation",
+    timing: "SSS",
+    start: "LF fwd and slightly to side",
+    finish: "LF closes to RF w/o weight",
+    notes: ["Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 34, p. 121."],
   },
   {
     dance: "quickstep",
@@ -839,7 +1484,13 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ QQS",
     start: "RF fwd in CBMP (Outside Partner Position)",
     finish: "LF fwd and slightly leftwards (Closed Position)",
-    notes: ["NOTE- Quantity of turn: it may be danced without turn."],
+    notes: [
+      "NOTE- Quantity of turn: it may be danced without turn.",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - Type of Sway: from step 1 to step 3 sway is recovered (Man from L to Straight and Lady from R to Straight), thus the Cosmetic Sway on step 2 is the intermediate phase of the sway's recovery.",
+      "NOTE - Quantity of Turn: it may be danced without turn.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 36, p. 125.",
+    ],
   },
   { dance: "quickstep", figureType: "fishtail", name: "Fishtail" },
   {
@@ -852,6 +1503,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 2-4 only may be used.",
       "NOTE - Couple Position: Step 1 may be RF fwd in Closed Position",
+      "NOTE - Rotation: (1) the Rotation for Leading at the end of step 1 is used to change the position from Outside Partner to Closed Position only; therefore dancers have to pay attention not to turn or change the position of the feet. (2) As the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step",
+      "NOTE - General: steps 2-4 only may be used.",
+      "NOTE - Couple Position: step 1 may be taken in Closed Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 13, p. 75.",
     ],
   },
   {
@@ -861,9 +1516,33 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQQQS",
     start: "RF bwd and slightly to side (Closed Position)",
     finish: "LF fwd and slightly leftward (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 28, p. 107.",
+    ],
   },
-  { dance: "quickstep", figureType: "heel-pivot", name: "Heel Pivot (Quarter Turn to Left)" },
+  {
+    dance: "quickstep",
+    figureType: "heel-pivot",
+    name: "Heel Pivot (Quarter Turn to Left)",
+    timing: "SQQ",
+    start: "RF bwd and slightly to side",
+    finish: "RF closes to LF",
+    notes: ["Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 8, p. 65."],
+  },
+  {
+    dance: "quickstep",
+    figureType: "hesitation-change",
+    name: "Hesitation Change",
+    timing: "SSS",
+    start: "LF bwd and slightly to side",
+    finish: "LF closes to RF w/o weight",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "NOTE - General: Steps 1-2 only may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 16, p. 83.",
+    ],
+  },
   {
     dance: "quickstep",
     figureType: "hover-corte",
@@ -883,6 +1562,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Couple Position: Step 1 may be taken bwd in CBMP in Outside Partner Position",
       "NOTE - Timing: Alternative timing SQQ may be used",
+      "NOTE - Alignment-Direction: (1) the Closed Impetus is normally danced at a corner, but may also be danced along the side of the room. In that case the Alignment of step 2 for the Man will be Facing DC and Backing DC for the Lady. (2) If danced along the side of the room, the Alignment of step 3 for the Man will be Backing DC against LOD and for the Lady Facing DC against LOD.",
+      "NOTE - Timing: alternative Timing S QQ may be used.",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 18, p. 87.",
     ],
   },
   {
@@ -895,6 +1578,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Couple Position: Step 1 may be taken bwd in CBMP in Outside Partner Position",
       "NOTE - Timing: Alternative timing SQQ may be used",
+      "NOTE - Timing: alternative Timing S QQ may be used.",
+      "NOTE - Type of Sway: use of Cosmetic Sway to right (Man) and left (Lady) is possible on step 2.",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 19, p. 89.",
     ],
   },
   {
@@ -904,7 +1591,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "S",
     start: "LF bwd and slightly to side (Closed Position)",
     finish: "Weight on LF, RF held in position in Closed Position",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 10, p. 69."],
   },
   { dance: "quickstep", figureType: "natural-pivot-turn", name: "Natural Pivot Turn" },
   {
@@ -918,6 +1605,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position",
       "NOTE - Timing: Alternative timing SQQ SQQ may be used",
       "NOTE - Quantity of Turn: It may be underturned (ending backing DC against LOD) or overturned",
+      "NOTE - Alignment-Direction: on step 4 the final alignment is Backing LOD, but for better fluidity of movement the turn should be stopped earlier, to reach this alignment at the beginning of the next step.",
+      "NOTE - Timing: alternative timing of S QQ S QQ may be used.",
+      "NOTE - Type of Sway: if the Natural Spin turn is followed by a Turning Lock to Right, the Sway will be exactly the opposite due to the overturned action (Man to R and Lady to L).",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "NOTE - Quantity of Turn: Natural Spin Turn may be underturned, to end backingDC against LOD, or overturned, to end almost backing LOD.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 15, p. 79.",
     ],
   },
   {
@@ -927,7 +1620,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "RF fwd (Closed Position)",
     finish: "RF closes to LF (Closed Position)",
-    notes: ["NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position"],
+    notes: [
+      "NOTE - Couple Position: May start RF fwd in CBMP in Outside Partner Position",
+      "NOTE - Foot Placement/ Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 2, p. 53.",
+    ],
   },
   {
     dance: "quickstep",
@@ -941,12 +1638,68 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "quickstep",
+    figureType: "natural-turning-lock",
+    name: "Natural Turning Lock",
+    timing: "QQSS",
+    start: "RF bwd with R side leading",
+    finish: "LF diag fwd L side leading",
+    notes: [
+      "NOTE - Timing: alternative Timing may be used for Turning Lock to Right; A: QQQQ (B: 1-2-3-4, C: 1-2).",
+      "NOTE - Couple Position/Foot Placement: may end in Closed Position, the following step is taken RF fwd (Man) in CBMP and Outside Partner Position.",
+      "NOTE - Quantity of Turn/Couple Position: may overturn to end backing DC (Man) in Closed Position.",
+      "NOTE - General: it may end in Closed Position with Man facing DC (the following step will be taken in CBMP in Outside Partner Position) or it may overturn to end in Closed Position with Man backing DC ( the following step will be taken Bwd in Closed Position).",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 33, p. 119.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "open-natural-turn",
+    name: "Open Natural Turn",
+    timing: "SQQ",
+    start: "RF fwd and across in CBMP",
+    finish: "RF bwd R side leading",
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - Foot Placement/ Couple Position: the first step may be taken (Man fwd, Lady bwd) in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 14, p. 77.",
+    ],
+  },
+  {
+    dance: "quickstep",
     figureType: "open-reverse-turn-quick-open-reverse",
     name: "Open Reverse Turn (quick Open Reverse)",
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF bwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 24, p. 99."],
+  },
+  {
+    dance: "quickstep",
+    figureType: "outside-change",
+    name: "Outside Change",
+    timing: "SQQ",
+    start: "LF bwd in CBMP",
+    finish: "LF to side and slightly fwd",
+    notes: [
+      "NOTE - Couple Position: it may end in Promenade Position.",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 9, p. 67.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "outside-spin",
+    name: "Outside Spin",
+    timing: "SSS",
+    start: "LF bwd in CBMP (small step)",
+    finish: "LF to side",
+    notes: [
+      "NOTE - Foot Action: the normal Foot Action for a pivot is indicated as BHB. In the Outside Spin, due to the small Drive Action produced on Step 1, the Foot Action must be THT.",
+      "NOTE - Quantity of Turn: it may be underturned (no pivot on step 3). In that case the exit wil be RF bwd( Man ) LF fwd (Lady).",
+      "NOTE - Timing: alternative Timing S QQ may be used for the Outside Spin.",
+      "NOTE - Sway and Extension: sway and extension on steps 2 and 3 are optional and depend on the following figure.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 31, p. 115.",
+    ],
   },
   { dance: "quickstep", figureType: "progressive-chasse", name: "Progressive Chassé" },
   {
@@ -956,7 +1709,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "RF back and slightly to side (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Quantity of Turn: it may turn up to 3/8 to L.",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 5, p. 59.",
+    ],
   },
   {
     dance: "quickstep",
@@ -965,7 +1722,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF to side and slightly Bwd (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - Quantity of Turn: it may turn up to 1/2 to L.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 4, p. 57.",
+    ],
   },
   {
     dance: "quickstep",
@@ -974,7 +1735,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "RF fwd (Closed Position)",
     finish: "LF to side and slightly bwd (Closed Position)",
-    notes: ["NOTE - Couple Position: may start RF fwd in CBMP in Outside Partner Position"],
+    notes: [
+      "NOTE - Couple Position: may start RF fwd in CBMP in Outside Partner Position",
+      "NOTE - Foot Placement/ Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 7, p. 63.",
+    ],
   },
   { dance: "quickstep", figureType: "quick-open-reverse", name: "Quick Open Reverse" },
   {
@@ -984,7 +1749,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "S",
     start: "RF diag bwd (Closed Position)",
     finish: "Weight on RF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Position: during the turn the Lady's RF must be kept parallel to the LF in order to be ready for the next step.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 32, p. 117.",
+    ],
   },
   {
     dance: "quickstep",
@@ -993,7 +1761,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF closes to RF (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Extension: due to Technical Sway to R, the Lady may also turn the head to R, ending in position 6.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 3, p. 55.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1011,7 +1782,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "RF fwd in CBMP (Outside Partner position)",
     finish: "LF fwd L side leading (Closed Position)",
-    notes: ["NOTE- Couple Position: It may end in Promenade Position"],
+    notes: [
+      "NOTE- Couple Position: It may end in Promenade Position",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - Couple Position: it may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 38, p. 133.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1023,6 +1799,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: Alternative timing QQS may be used",
       "NOTE - Couple Position: It may end in PP",
+      "NOTE - Foot Action: if the timing changes to QQS, the Foot Action of the man on step 1 will be T.",
+      "NOTE - Timing: alternative Timing for Running Finish: A: QQS (B: 1-2-3.4, C: 1-2)",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: it may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 11, p. 71.",
     ],
   },
   {
@@ -1036,6 +1817,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - Foot Placement/Couple Position: May start RF fwd in CBMP in OP Position.",
       "NOTE-General: steps 1-4 or1-7 only may be used",
       "NOTE-Timing: alternative timing of SQQ SQQ may be used on steps 5-10",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "NOTE - Timing: alternative timing may be used on steps 5-7 (S Q Q)",
+      "NOTE - Couple Position: it may end in Promenade Position.",
+      "NOTE - General: steps 1-4 or 1-7 only maybe used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 37, p. 129.",
     ],
   },
   { dance: "quickstep", figureType: "running-right-turn", name: "Running Right Turn" },
@@ -1057,7 +1843,13 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQQQQQ",
     start: "RF bwd and slightly to side (Closed Position)",
     finish: "LF fwd and slightly leftward (Closed Position)",
-    notes: ["NOTE-General: due to the fast timing a slight jumping action may be used."],
+    notes: [
+      "NOTE-General: due to the fast timing a slight jumping action may be used.",
+      "NOTE - Quantity of Turn: it may turn 3/8 to L when started Backing LOD.",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: in the Six Quick Run, due to the fast Timing a little jump action can be used throughout.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 39, p. 135.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1066,7 +1858,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position.)",
-    notes: ["NOTE - Timing: Alternative timing SSS may be used"],
+    notes: [
+      "NOTE - Timing: Alternative timing SSS may be used",
+      "NOTE - Sway: (1) cosmetic Sway to right (Man) and left (Lady may be used on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to left (Man) and right (Lady) on second part of step 2. Step 3 as chart.",
+      "NOTE - Timing: alternative timing S S S may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 20, p. 91.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1075,7 +1872,25 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side (Promenade Position)",
-    notes: ["NOTE - Timing: Alternative timing SSS may be used"],
+    notes: [
+      "NOTE - Timing: Alternative timing SSS may be used",
+      "NOTE - Sway: Cosmetic Sway to right (Man) and left (Lady) may be used on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to left (Man) and right (Lady) on second part of step 2. Step 3 as chart.",
+      "NOTE - Timing: alternative timing S S S may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 21, p. 93.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "tipple-chasse-to-left",
+    name: "Tipple Chasse to Left",
+    timing: "SQQS",
+    start: "RF fwd in CBMP",
+    finish: "LF to side and slightly bwd",
+    notes: [
+      "NOTE - Couple Position: the first step may be taken in Closed Position. It may start in Promenade position.",
+      "NOTE - General: Steps 2-4 only may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 27, p. 105.",
+    ],
   },
   { dance: "quickstep", figureType: "tipple-chasse-to-r", name: "Tipple Chassé to R" },
   {
@@ -1088,6 +1903,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 2-4 only may be used",
       "NOTE - Foot Placement/Couple Position: Step 1 may be taken bwd in CBMP in Outside Partner",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "NOTE - General: Steps 2-4 only may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 26, p. 103.",
     ],
   },
   {
@@ -1100,6 +1918,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Foot Placement/Couple Position: Step 1 may be taken bwd in CBMP in Outside Partner",
       "NOTE - General: Steps 2 - 4 only may be used",
+      "NOTE - Foot Placement/Couple Position: the first step may be taken in CBMP in Outside Partner Position.",
+      "NOTE - General: Steps 2-4 only may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 25, p. 101.",
     ],
   },
   {
@@ -1125,10 +1946,15 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "quickstep",
     figureType: "v6",
     name: "V6",
-    timing: "SQQS SQQ",
+    timing: "SQQSQQS",
     start: "LF bwd (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: ["NOTE-General: it may start from step 2."],
+    notes: [
+      "NOTE-General: it may start from step 2.",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: steps 2-7 only may be danced.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 30, p. 111.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1149,7 +1975,14 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SSS",
     start: "LF fwd (Closed Position)",
     finish: "LF crossed behind (Promenade Position)",
-    notes: ["NOTE - Timing: Alternative timing SQQ may be used"],
+    notes: [
+      "NOTE - Timing: Alternative timing SQQ may be used",
+      "NOTE - Timing: alternative Timing S QQ may be used.",
+      "NOTE - Quantity of turn: may turn up to 1/4 to L.",
+      "NOTE - Rotation: the two rotations for leading the Promenade Position in step 3 must be executed at the same time.",
+      "NOTE - Rise and Fall: on step 3 the foot lowering happens at the very end of the step, almost when the next step is taken.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 22, p. 95.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1176,7 +2009,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SS SQQS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF diag bwd (Closed Position)",
-    notes: ["NOTE - General: Steps 1-2 only may be used"],
+    notes: [
+      "NOTE - General: Steps 1-2 only may be used",
+      "NOTE - Rotation: as the following figure will start in Outside Partner Position, Rotation for Leading is necessary at the end of the last step.",
+      "NOTE - General: steps 1-2 only may be used.",
+      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 29, p. 109.",
+    ],
   },
   {
     dance: "quickstep",
@@ -1190,7 +2028,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF bwd in CBMP (Outside Partner Position)",
     finish: "LF bwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken fwd (Man) and bwd (Lady) in Outside partner position the free foot on step 3 does not recover.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 38, p. 141.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1199,7 +2040,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF bwd (Outside Partner Position)",
     finish: "LF crossed behind RF (Promenade Position)",
-    notes: ["NOTE - Quantity of turn: It may turn up to 3/8 to R."],
+    notes: [
+      "NOTE - Quantity of turn: It may turn up to 3/8 to R.",
+      "NOTE - Rotation: (1) the two Rotations for Leading the Promenade Position on step 3 should be executed simultaneously. It may be turned up to 3/8 to R.",
+      "NOTE - Rise and Fall: (1) on step 3 the lowering of the Foot should happen at the very end of the step, almost when the next step is taken.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 13, p. 77.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1208,7 +2054,14 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQQQQQ",
     start: "LF fwd (Closed Position)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: ["NOTE - General: Steps 2-3 may be repeated (Extended Basic Weave)"],
+    notes: [
+      "NOTE - General: Steps 2-3 may be repeated (Extended Basic Weave)",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 6 does not recover.",
+      "NOTE - Rotation: (1) the Rotation for Lightness at the end of step 6 will join the possible Rotation for Lightness on the first step of the next figure.",
+      "NOTE - Rise and Fall: (1) although the Foot lowers at the end of step 5, Body and Leg will maintain the elevation.",
+      "NOTE - General: steps 2-3 may be repeated (Extended Basic Weave)",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 8, p. 63.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1223,10 +2076,16 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "change-of-direction",
     name: "Change of Direction",
-    timing: "SSS",
+    timing: "SSSS",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF fwd (Closed Position)",
-    notes: ["NOTE - Quantity of turn: It may turn ½ to L when danced into a corner."],
+    notes: [
+      "NOTE - Quantity of turn: It may turn ½ to L when danced into a corner.",
+      "NOTE - Foot Placement: (1) although Man will move diagonally forward on step 2, the Lady's step will be straight backward in order to achieve a better development of the turn.",
+      "NOTE - Quantity of Turn: it may turn 1/2 to L when danced into a corner.",
+      "NOTE - Rotation: (1) the Rotation for Lightness on step 4 depends on which type of figure follows the Change of Direction; therefore we can consider this rotation optional.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 10, p. 71.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1243,6 +2102,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Foot Placement/Couple position: Step 1 may be taken fwd in CBMP in Outside Partner",
+      "NOTE - Foot Placement / Couple Position: step 1 may be danced fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 36, p. 137.",
     ],
   },
   {
@@ -1252,7 +2113,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "RF fwd in CBMP (Promenade Position)",
     finish: "Weight on R foot (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 37, p. 139.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1266,16 +2129,22 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF fwd in CBMP (Closed Position)",
-    notes: [],
+    notes: [
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 35, p. 135.",
+    ],
   },
   {
     dance: "foxtrot",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "SQ (Q) (SQ&Q Lady)",
+    timing: "SQ&Q",
     start: "LF FWD and slightly to side (Closed Position)",
     finish: "LF closes to RF w/o weight, weight on R foot (Closed Pos)",
-    notes: ["NOTE - Timing: Alternative timing of SSQQ may be used."],
+    notes: [
+      "NOTE - Timing: Alternative timing of SSQQ may be used.",
+      "NOTE - Timing: alternative timing of S S Q Q may be used.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 15, p. 81.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1287,6 +2156,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: alternative timing S&QQ or SQQS may be used.",
       "NOTE - Quantity of turn: The figure may be danced without turn on step 4, when danced into a",
+      "NOTE - Quantity of Turn: The figure may be danced without turn on step 4, when danced into a corner.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 39, p. 143.",
     ],
   },
   {
@@ -1296,7 +2167,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "RF fwd in CBMP (Promenade Position)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 3 does not recover.",
+      "NOTE - Alignment and Direction: the Feather Ending can be danced in any other alignment which allows the couple to produce progression along the line of dance.",
+      "NOTE - Rise and Fall: (1) although the Foot lowers at the end of step 2, Body and Leg will maintain the elevation.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 4, p. 55.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1305,7 +2181,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "RF bwd and slightly to side (Closed Position)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 3 does not recover.",
+      "NOTE - Rotation: (1) the Rotation for Lightness at the end of step 3 will join the possible Rotation for Lightness on the first step of the next figure.",
+      "NOTE - Rise and Fall: (1) although the Foot lowers at the end of step 2, Body and Leg will maintain the elevation.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 3, p. 53.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1316,18 +2197,24 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Foot Placement/Couple position: Step 1 may be taken fwd in CBMP in Outside Partner",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 3 does not recover.",
+      "NOTE - Foot Placement / Couple Position: Step 1 may be taken fwd in CBMP (MAN) bwd in CBMP (Lady) in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 1, p. 49.",
     ],
   },
   {
     dance: "foxtrot",
     figureType: "heel-pull-finish",
     name: "Heel Pull Finish",
-    timing: "SSS",
+    timing: "QSQ",
     start: "LF bwd (Closed Position)",
     finish: "LF fwd (Closed Position)",
     notes: [
       "NOTE - General: Steps 1-2 only may be used (Timing QQS-Hesitation).",
       "NOTE - Timing: Alternative timing SSS or QQS may be used.",
+      "NOTE - Timing: alternative timings S S S or Q Q S may be used.",
+      "NOTE - General/Timing: steps 12 only may be used (timing Q Q S - Hesitation).",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 11, p. 73.",
     ],
   },
   {
@@ -1352,9 +2239,26 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Foot Placement/Couple position: It may start from Promenade Position. Step 1 may be",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 7 does not recover.",
+      "NOTE - Foot Placement / Couple Position: step 1 may be danced fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
+      "NOTE - Couple Position: it may start in Promenade Position.",
+      "NOTE - Rotation: the Rotation for Lightness at the end of step 3 will join the possible Rotation for Lightness on the first step of the next figure.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 25, p. 103.",
     ],
   },
-  { dance: "foxtrot", figureType: "hover-feather", name: "Hover Feather" },
+  {
+    dance: "foxtrot",
+    figureType: "hover-feather",
+    name: "Hover Feather",
+    timing: "QQ",
+    start: "LF diag fwd L side leading",
+    finish: "RF fwd in CBMP",
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 3 does not recover.",
+      "NOTE - Rise and Fall: (1) although the Foot lowers at the end of step 2, Body and Leg will maintain the elevation.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 5, p. 57.",
+    ],
+  },
   {
     dance: "foxtrot",
     figureType: "hover-telemark",
@@ -1362,7 +2266,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF diag fwd (Closed Position)",
     finish: "LF diag fwd (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Sway: (1) use of Cosmetic Sway to R (Man) and L (Lady) is possible on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to L (Man) and R (Lady) on the second part of step 2. Step 3 as chart.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 18, p. 87.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1371,16 +2278,22 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF diag fwd (Closed Position)",
     finish: "LF to side (Promenade Position)",
-    notes: [],
+    notes: [
+      "NOTE - Sway: (1) use of Cosmetic Sway to R (Man) and L (Lady) is possible on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to L (Man) and R (Lady) on the second part of step 2. Step 3 as chart.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 19, p. 89.",
+    ],
   },
   {
     dance: "foxtrot",
     figureType: "impetus",
     name: "Impetus",
-    timing: "SQQ",
+    timing: "SSS",
     start: "LF bwd and slightly to side (Closed Position)",
     finish: "LF to side and slightly bwd (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Alignment-Direction: although Impetus is normally danced at a corner, it may also be executed along the side of the room. In that case, the Alignment of step 2 will be Facing DC for the Man and Backing DC for the Lady.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 22, p. 95.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1389,7 +2302,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF bwd and slightly to side (Closed Position)",
     finish: "LF diag fwd L side leading (Promenade Position)",
-    notes: [],
+    notes: [
+      "NOTE - Type of Sway: use of Cosmetic Sway to R (Man) and to L (Lady) is possible on step 2.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 23, p. 97.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1400,6 +2316,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Couple position: Step 1 may be danced fwd in CBMP in Outside Partner Position. It may start",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 6 does not recover.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be danced in CBMP in Outside Partner Position.",
+      "It may start in Promenade Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 21, p. 93.",
     ],
   },
   {
@@ -1411,6 +2331,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Couple position: Step 1 may be danced fwd in CBMP in Outside Partner Position.",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 5 does not recover.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be danced fwd in CBMP (Man) bwd in CBMP (Lady) in Outside Partner Position. It may start in Promenade Position.",
+      "NOTE - Rise and Fall: (1) the Foot will maintain the elevation in the second part of step 3 although the knee will be compressed.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 20, p. 91.",
     ],
   },
   {
@@ -1422,6 +2346,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF bwd (Closed Position)",
     notes: [
       "NOTE - Foot Placement/Couple position: Step 1 may be danced in CBMP in Outside Partner Position.",
+      "NOTE - Foot Placement / Couple Position: step 1 may be danced in CBMP in Outside Partner Position",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 6, p. 59.",
     ],
   },
   {
@@ -1433,6 +2359,49 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF in CBMP (Outside Partner Position)",
     notes: [
       "NOTE - Couple position: it may start in Prom Pos. Step 1 may be taken fwd in CBMP in Outside Partner",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 7 does not recover.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be taken fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
+      "It may start also in Promenade Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 30, p. 117.",
+    ],
+  },
+  {
+    dance: "foxtrot",
+    figureType: "natural-twist-turn-with-impetus-and-feather-finish",
+    name: "Natural Twist Turn with Impetus and Feather Finish",
+    timing: "SQ&QQQSQQ",
+    start: "RF fwd",
+    finish: "RF fwd in CBMP",
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 9 does not recover.",
+      "NOTE - Foot Placement / Couple Position: step 1 may be danced fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
+      "It may start also in Promenade Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 32, p. 125.",
+    ],
+  },
+  {
+    dance: "foxtrot",
+    figureType: "natural-twist-turn-with-impetus-to-p-p",
+    name: "Natural Twist Turn with Impetus to P.p.",
+    timing: "SQ&QQQQ",
+    start: "RF fwd",
+    finish: "LF to side",
+    notes: [
+      "NOTE - Foot Placement/Couple Position: step 1 may be danced fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
+      "It may start also in Promenade Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 33, p. 129.",
+    ],
+  },
+  {
+    dance: "foxtrot",
+    figureType: "natural-twist-turn-with-natural-weave",
+    name: "Natural Twist Turn with Natural Weave",
+    timing: "SQ&QSQQQQQQ",
+    start: "RF fwd",
+    finish: "RF fwd in CBMP",
+    notes: [
+      "No per-step chart: the provided PDF scan is missing this figure's Lady pages (printed pp. 123-124 absent), so only the library entry is seeded.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 31, p. 121.",
     ],
   },
   {
@@ -1445,6 +2414,13 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 3-4 may be repeated (Extended Natural Weave).",
       "NOTE - Foot Placement/Couple position: It may start from Prom Pos. Step 1 may be danced in CBMP",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 7 does not recover.",
+      "NOTE - Rotation: (1) the Rotation for Lightness at the end of step 7 will join the possible Rotation for Lightness on the first step of the next figure.",
+      "NOTE - Rise and Fall: (1) although the Foot lowers at the end of step 6, Body and Leg will maintain the elevation.",
+      "NOTE - Foot Placement / Couple Position: step 1 may be danced in CBMP in Outside Partner Position",
+      "NOTE - Couple Position: it may start in Promenade Position.",
+      "NOTE - General: steps 3-4 may be repeated (Extended Natural Weave).",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 9, p. 67.",
     ],
   },
   {
@@ -1454,7 +2430,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQQQ",
     start: "RF fwd and across in CBMP (Promenade Position)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 5 does not recover.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 34, p. 133.",
+    ],
   },
   { dance: "foxtrot", figureType: "natural-zig-zag-from-pp", name: "Natural Zig-Zag from PP" },
   { dance: "foxtrot", figureType: "open-impetus", name: "Open Impetus" },
@@ -1465,7 +2444,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "RF fwd and across in CBMP (Promenade Position)",
     finish: "RF bwd R side leading (Closed Position)",
-    notes: ["NOTE - Couple position: Step 1 may be danced in CBMP in Outside Partner Position."],
+    notes: [
+      "NOTE - Couple position: Step 1 may be danced in CBMP in Outside Partner Position.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be danced in CBMP in Outside Partner Position.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 14, p. 79.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1479,6 +2462,20 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
+    figureType: "outside-spin",
+    name: "Outside Spin",
+    timing: "SQQ",
+    start: "LF bwd in CBMP (small step)",
+    finish: "LF to side",
+    notes: [
+      "NOTE - Quantity of Turn: when the Outside Spin is underturned (no Pivot on step 3) the following step wil be taken BWD (Feather Finish).",
+      "NOTE - Sway and Extension: the sway and extension on steps 2 and 3 are optional, and depend on the type of the figure that follows.",
+      "NOTE - Timing: alternative Timing for Outside Spin: &QQ (&-1-2).",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 28, p. 111.",
+    ],
+  },
+  {
+    dance: "foxtrot",
     figureType: "outside-swivel",
     name: "Outside Swivel",
     timing: "S",
@@ -1487,6 +2484,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: Additional S may be used.",
       "NOTE - Quantity of turn: Swivel may be turned up to 3/8 to R.",
+      "NOTE - Timing: additional S may be used.",
+      "NOTE - Quantity of Turn: Swivel may be turned up to 3/8 to R (Man).",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 27, p. 109.",
     ],
   },
   {
@@ -1515,16 +2515,14 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   {
     dance: "foxtrot",
     figureType: "reverse-turn",
-    name: "Reverse Turn",
+    name: "Reverse Turn (incorporating Feather Finish)",
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF bwd (Closed Position)",
-    notes: [],
-  },
-  {
-    dance: "foxtrot",
-    figureType: "reverse-turn",
-    name: "Reverse Turn (incorporating Feather Finish)",
+    notes: [
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 7, p. 61.",
+      "Named to the ISTD identity ('Reverse Turn (incorporating Feather Finish)') so the library merge yields one catalog row — the WDSF book charts the same 6-step figure (reverse turn 1-3 + feather finish 4-6) as plain 'Reverse Turn'.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1536,6 +2534,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 1-4, 1-6 or 4-6 only may be used.",
       "NOTE- Rise and Fall: when steps 1-4 are used as a preceding figure to Basic Weave there is no",
+      "NOTE - General: steps 1-4, 1-6 or 4-6 only may be used.",
+      "NOTE - Rise and Fall: when steps 1-4 are used as an entry to Basic Weave there will be no lowering action at the end of step 3. The lowering will happen at the end of step 4 instead.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 29, p. 113.",
     ],
   },
   {
@@ -1545,7 +2546,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side and slightly fwd (Closed Position)",
-    notes: [],
+    notes: [
+      "NOTE - Sway: (1) use of Cosmetic Sway to R (Man) and L (Lady) is possible on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to L (Man) and R (Lady) on the second part of step 2. Step 3 as in the chart.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 16, p. 83.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1554,7 +2558,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "LF to side (Promenade Position)",
-    notes: [],
+    notes: [
+      "NOTE - Sway: (1) use of Cosmetic Sway to R (Man) and L (Lady) is possible on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to L (Man) and R (Lady) on the second part of step 2. Step 3 as in the chart.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 17, p. 85.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1563,7 +2570,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF fwd (Closed Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 2, p. 51."],
   },
   {
     dance: "foxtrot",
@@ -1572,7 +2579,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQQQ",
     start: "LF bwd in CBMP (Outside Partner Position)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: [],
+    notes: [
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 4 does not recover.",
+      "NOTE - Rotation: The Rotation for Lightness at the end of step 4 will join the possible Rotation for Lightness of the first step in the next figure.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 26, p. 107.",
+    ],
   },
   {
     dance: "foxtrot",
@@ -1584,6 +2595,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: Steps 3-4 may be repeated (Extended Weave from PP)",
       "NOTE - Foot Placement/Couple position: Step 1 may be danced fwd in CBMP in Outside Partner",
+      "NOTE - Foot Placement: when the first step of the following figure is taken bwd (Man) and fwd (Lady) in Outside partner position the free foot on step 7 does not recover.",
+      "NOTE - Foot Placement/Couple Position: step 1 may be danced fwd in CBMP (Man) bwd (Lady) in Outside Partner Position.",
+      "NOTE - General: steps 3-4 may be repeated (Extended Weave from PP).",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 24, p. 99.",
     ],
   },
   { dance: "foxtrot", figureType: "weave-from-pp", name: "Weave from PP" },
@@ -1594,7 +2609,12 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF fwd (Closed Position)",
     finish: "LF crossed behind RF (Promenade Position)",
-    notes: ["NOTE - Quantity of turn: It may turn up to ¼ to L."],
+    notes: [
+      "NOTE - Quantity of turn: It may turn up to ¼ to L.",
+      "NOTE - Rotation: (1) the two Rotations for Leading the Promenade Position on step 3 should be executed simultaneously. It may be turned up to 1/4 to L.",
+      "NOTE - Rise and Fall: (1) on step 3 the lowering of the Foot should happen at the very end of the step, almost when the next step is taken.",
+      "Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 12, p. 75.",
+    ],
   },
   {
     dance: "tango",
@@ -1605,6 +2625,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: Open Finish may be used instead of the Closed Finish. Steps 2-4 only may be used.",
+      "NOTE - General: Open Finish may be used instead of the Closed Finish.",
+      "Steps 2-4 only may be used.",
+      "Step 1 only may be used as a precede to Rock back on RF.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 7, p. 67.",
     ],
   },
   {
@@ -1617,7 +2641,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General/Timing: steps 3 and 4 may be repeated. Timing will be SS or &S.",
       "NOTE - General: it may start from step 2.",
+      "NOTE - General/Timing: steps 3 and 4 may be repeated. Timing will be SS or & S.",
+      "NOTE - Type of Sway: the Sway on step 3 is optional.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 17, p. 93.",
     ],
+  },
+  {
+    dance: "tango",
+    figureType: "back-whisk",
+    name: "Back Whisk",
+    timing: "QQS",
+    start: "LF bwd in CBMP",
+    finish: "LF crosses behind RF",
+    notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 20, p. 101."],
   },
   {
     dance: "tango",
@@ -1628,6 +2664,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used. Closed Finish may be replaced with Open Finish.",
+      "NOTE - General: steps 1-3 or 4-6 only may be used.",
+      "Closed Finish may be replaced with Open Finish.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 8, p. 69.",
     ],
   },
   {
@@ -1640,6 +2679,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of turn: more turn may be made between steps 1 and 2, up to ¼ to L. Figure may",
       "NOTE - Couple position: may end in Promenade Position.",
+      "NOTE - Quantity of Turn and Alignment-Direction: more turn may be made between steps 1 and 2.",
+      "NOTE - Couple Position: may end in Promenade Position.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 3, p. 59.",
     ],
   },
   {
@@ -1652,6 +2694,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: it may start from step 2. It may finish in Closed Position, Lady will turn only 5/8 to R",
       "NOTE - Timing: alternative timing could be used: SQQQQS&.",
+      "NOTE - General: it may start from step 2.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 36, p. 137.",
     ],
   },
   {
@@ -1661,7 +2705,64 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQ",
     start: "LF fwd in CBMP (Closed Position)",
     finish: "RF to side and slightly bwd (Promenade Position)",
-    notes: [],
+    notes: [
+      "Steps 1-8 are the common CHASE, CHASSE chart; this Method differs by ending with a Progressive Link (steps 9-10 only).",
+      "NOTE - Alignment-Direction: (1) The preceding step should be Facing DW of new LOD. (Man)",
+      "NOTE - Alignment-Direction: (1) The preceding step should be Backing DW of new LOD. (Lady)",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 37, p. 145.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "chase-alternative-endings-chase-chasse-common-steps-1-8",
+    name: "Chase Alternative Endings — Chase, Chasse (common Steps 1-8)",
+    timing: "SQQQQQ&Q",
+    start: "LF to side",
+    finish: "RF to side",
+    notes: [
+      "After step 8, use the description for (Man)/(Lady) - Side 1 and Side 2 for the following four possible endings:",
+      "Method 1 - CHASE, CHASSE follow by WHISK, FWD STEP TO PP (p. 145-148)",
+      "Method 2 - CHASE, CHASSE follow by WHISK, PROMENADE LINK (p. 145-148)",
+      "Method 3 - CHASE, CHASSE follow by WHISK, CLOSE STEP TO PP (p. 145-148)",
+      "Method 4 - CHASE, CHASSE follow by PROGRESSIVE LINK (p. 145-148)",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 37, p. 141.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "chase-alternative-endings-method-1-whisk-fwd-step-to-pp",
+    name: "Chase Alternative Endings — Method 1: Whisk, Fwd Step to PP",
+    timing: "SQQ",
+    start: "LF crosses behind RF",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-8 are the common CHASE, CHASSE chart (see entry 'CHASE ALTERNATIVE ENDINGS — CHASE, CHASSE (COMMON STEPS 1-8)'); this Method differs in steps 9-11 only.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 37, p. 145.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "chase-alternative-endings-method-2-whisk-promenade-link",
+    name: "Chase Alternative Endings — Method 2: Whisk, Promenade Link",
+    timing: "SQQ",
+    start: "LF crosses behind RF",
+    finish: "LF to side small step w/o weight",
+    notes: [
+      "Steps 1-8 are the common CHASE, CHASSE chart; this Method differs in steps 9-11 only.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 37, p. 145.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "chase-alternative-endings-method-3-whisk-close-step-to-pp",
+    name: "Chase Alternative Endings — Method 3: Whisk, Close Step to PP",
+    timing: "SQQ",
+    start: "LF crosses behind RF",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-8 are the common CHASE, CHASSE chart; this Method differs in steps 9-11 only.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 37, p. 145.",
+    ],
   },
   {
     dance: "tango",
@@ -1673,9 +2774,30 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: May start from step 2.",
       "NOTE - Couple position: Man may turn square to Lady on step 3.",
+      "NOTE - General: it may start from step2.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 5, p. 63.",
     ],
   },
   { dance: "tango", figureType: "contra-check", name: "Contra Check" },
+  {
+    dance: "tango",
+    figureType: "drop-oversway",
+    name: "Drop Oversway",
+    timing: "QQSS",
+    start: "LF fwd and slightly to side",
+    finish: "Position held. L knee flexes abruptly",
+    notes: [
+      "After step 4, use the description for Drop Oversway - Side 1 and Side 2 for the following nine possible endings:",
+      "Method 1 - DROP OVERSWAY followed by TRANSFER WEIGHT TO PP (p. 153)",
+      "Method 2 - DROP OVERSWAY followed by CLOSE STEP TO PP (p. 154)",
+      "Method 3 - DROP OVERSWAY followed by CHASSE, WHISK, FWD STEP TO PP (p. 155 Man / p. 156 Lady)",
+      "Method 4 - DROP OVERSWAY followed by CHASSE, WHISK, PROMENADE LINK (p. 157 Man / p. 158 Lady)",
+      "Method 5 - DROP OVERSWAY followed by CHASSE, WHISK, CLOSE STEP TO PP (p. 159 Man / p. 160 Lady)",
+      "Method 6 - DROP OVERSWAY followed by NATURAL SPIN TO PP (p. 161 Man / p. 162 Lady)",
+      "Method 7, 8, 9 - DROP OVERSWAY followed by NATURAL SPIN continued with METHODS 3, 4 or 5 (p. 162 - Note).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 39, p. 151.",
+    ],
+  },
   {
     dance: "tango",
     figureType: "fallaway-four-step",
@@ -1683,7 +2805,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF closes to LF slightly bwd (Promenade Position)",
-    notes: [],
+    notes: [
+      "NOTE - Type of Sway: specific use of head is possible when using Sway on steps 3-4.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 23, p. 109.",
+    ],
   },
   {
     dance: "tango",
@@ -1692,7 +2817,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ SQQ",
     start: "LF to side (Promenade Position)",
     finish: "RF closes to LF slightly bwd (Promenade Position)",
-    notes: ["NOTE - General: it may start from step 2."],
+    notes: [
+      "NOTE - General: it may start from step 2.",
+      "NOTE - Quantity of Turn: the turn for the Man on step 5 is referred to his left foot.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 18, p. 95.",
+    ],
   },
   { dance: "tango", figureType: "fallaway-promenade", name: "Fallaway Promenade" },
   {
@@ -1705,6 +2834,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: when danced into a corner there will be no turn on step 4 (Pivot). The",
       "NOTE - Timing: alternative timings may be used: QQS&, S&QQ, SQ&Q, SQQ&, SQQS.",
+      "NOTE - Quantity of Turn: when danced into a corner there will be no turn on step 4 (Pivot). The Lady's quantity of turn will change accordingly.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 31, p. 127.",
     ],
   },
   {
@@ -1717,6 +2848,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: may be underturned when danced into a corner.",
       "NOTE - Timing: alternative timing QQS&S or S&QQS may be used.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 28, p. 121.",
     ],
   },
   {
@@ -1726,7 +2858,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF closes to LF slightly bwd (Promenade Position)",
-    notes: ["NOTE - General: after steps 1-2 Outside Swivel may be danced."],
+    notes: [
+      "NOTE - General: after steps 1-2 Outside Swivel may be danced.",
+      "NOTE - Type of Sway: (1) the Sway on step 1 is optional.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 22, p. 107.",
+    ],
   },
   {
     dance: "tango",
@@ -1735,7 +2871,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQ&S",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "RF bwd small step (Closed Position)",
-    notes: ["NOTE - Timing: alternative timing QQQQ may be used."],
+    notes: [
+      "NOTE - Timing: alternative timing QQQQ may be used.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 27, p. 119.",
+    ],
   },
   { dance: "tango", figureType: "lf-and-rf-rocks", name: "LF and RF Rocks" },
   {
@@ -1748,6 +2887,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Quantity of Turn: figure can be danced also without turn starting DC and continuing with the",
       "NOTE - Timing: alternative timing QQS&S or S&QQS may be used.",
+      "NOTE - Quantity of Turn: Mini Five Step can be danced also without turn starting DC and continuing with the same alignments describes in the chart.",
+      "NOTE - Timing: Mini Five Step alternative Timing can be as follows: Q-Q-S-&-S (1-2-3.4-&-5.6), or S-&-Q-Q-S (1.2-&-3-4-5.6).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 29, p. 123.",
     ],
   },
   { dance: "tango", figureType: "natural-promenade-turn", name: "Natural Promenade Turn" },
@@ -1760,6 +2902,10 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: when a Rock Turn follows the Natural Turn from PP, step 4 of the Natural Promenade",
+      'NOTE - Foot Action: Foot Action "Heel" is used on step 3 for the Man. However, no progression is made due to the Rock Action, therefore Man\'s R Heel may be considered the centre of the turn.',
+      "NOTE - General: when a Rock Turn follows the Natural Turn from PP, step 4 of the Natural Promenade Turn becomes step 1 of the Rock Turn. There will be no turn to Promenade Position at the end of step 4 of the Natural Promenade Turn; the Foot Position for the Man will be RF fwd and slightly rightwards, alignment Facing DW of new LOD. Continue with steps 2-7 of Rock Turn, end DW.",
+      "Steps 1-4 or 5-7 only may be used.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 12, p. 79.",
     ],
   },
   {
@@ -1772,6 +2918,22 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: it may start from step 2.",
       "NOTE - Timing: alternative timing may be used- SQQS&.",
+      "NOTE - Foot Placement: in the second part of step 3 (Recover Body) the Man is making a type of pivot, therefore the free foot (RF) is not recovered but held in position.",
+      "NOTE - Type of Sway/Extension: the Cosmetic Sway for Man and Lady and the Extension for Lady on step 3 are optional.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 14, p. 87.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "natural-twist-turn",
+    name: "Natural Twist Turn",
+    timing: "SQ&QS",
+    start: "RF fwd",
+    finish: "Feet almost closed",
+    notes: [
+      "NOTE - Alignment-Direction: when the Natural Twist Turn is ended Facing LOD, the Man should turn an extra 1/8 of turn on the last step with a type of swivel over RF. Lady will increase her Quantity of Turn accordingly.",
+      "NOTE - Couple position/Quantity of Turn: it may end in Closed Position. The Man will turn 5/8 to R between 5 and 6, to end backing DC against LOD. Follow with Back Corte.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 35, p. 135.",
     ],
   },
   {
@@ -1785,6 +2947,25 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - General: it may start from step 2.",
       "NOTE - Timing: use of alternative timing QQS is possible after step 3.",
       "NOTE - Couple Position/Quantity of Turn: it may end in Close Position. In this case the Man will turn",
+      "NOTE - Alignment-Direction: due to the type of Back Check action used on step 4 the Lady's R Toe can slightly turn to left.",
+      "NOTE - Timing: use of alternative Timing QQS (5-6-7-8) is possible after step 3.",
+      "NOTE - Couple Position: between Outside Partner Position and Promenade Position the Closed Position is implicit.",
+      "NOTE - Couple Position/Quantity of Turn: it may end in Close Position. In this case the Man will turn 7/8 to R on steps 5-6. Follow with Rock on LF or Back Corte",
+      "NOTE - Sway: sway on step 4 is optional.",
+      "NOTE - General: It may start from step 2.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 13, p. 83.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "open-natural-turn",
+    name: "Open Natural Turn",
+    timing: "QQS",
+    start: "RF fwd and across in CBMP",
+    finish: "RF bwd R side leading",
+    notes: [
+      "NOTE - Timing: alternative Timing for the Open Natural Turn including the Preceding Step can be as follows: S-&-Q-Q (7.8-&-1-2).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 33, p. 131.",
     ],
   },
   {
@@ -1794,7 +2975,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQS",
     start: "LF to side (Promenade Positon)",
     finish: "RF fwd in CBMP (Outside Partner Position)",
-    notes: ["NOTE - General: May start from step 2."],
+    notes: [
+      "NOTE - General: May start from step 2.",
+      "NOTE - General: may start from step 2.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 6, p. 65.",
+    ],
   },
   {
     dance: "tango",
@@ -1805,6 +2990,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used. Closed Finish may be replaced with Open Finish.",
+      "NOTE - General: steps 1-3 or 4-6 only may be used.",
+      "Closed Finish may be replaced with Open Finish.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 9, p. 71.",
     ],
   },
   {
@@ -1819,6 +3007,21 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "tango",
+    figureType: "outside-spin",
+    name: "Outside Spin",
+    timing: "QQS",
+    start: "LF bwd in CBMP (small step)",
+    finish: "LF to side",
+    notes: [
+      "NOTE - Quantity of Turn: when the Outside Spin is underturned (no pivot on step3) the following step will be taken with RF Bwd (Man) and LF Fwd (Lady).",
+      "NOTE - Alignment-Direction: (1) due to the Pointing Step, only Direction can be charted for the Man on step 1.",
+      "NOTE - Timing: Alternative Timing for the Outside Spin is: &-Q-Q (&-1-2).",
+      "NOTE - Extension: (1) the Extension on step 2 is optional and it depends on the type of following figure.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 34, p. 133.",
+    ],
+  },
+  {
+    dance: "tango",
     figureType: "outside-swivel-method-1-after-open-finish-and",
     name: "Outside Swivel Method 1 - After Open Finish and",
     timing: "SQQ",
@@ -1826,6 +3029,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "LF to side small step w/o weight, weight on R foot (Closed Position)",
     notes: [
       "NOTE - General: step 3 may be replaced by a Closed or Open Finish. It may end in PP (same as",
+      "NOTE - General: steps 3 may be replaced by a Closed or Open Finish. May end in PP (same as Promenade Link).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 24, p. 111.",
     ],
   },
   {
@@ -1837,6 +3042,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "Weight on R foot LF to side small step w/o weight, weight on R foot (Closed Position)",
     notes: [
       "NOTE - General: steps 3 may be replaced by a Closed or Open Finish. It may end in PP (same as",
+      "NOTE - Foot Action: (1) in step 1 the Man's R Toe should be in light contact with the floor to help the turn during the swivel.",
+      "NOTE - General: steps 3 may be replaced by a Closed or Open Finish. May end in PP (same as Promenade Link).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 25, p. 113.",
     ],
   },
   {
@@ -1849,10 +3057,107 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: steps 3 may be replaced by a Closed or Open Finish. It may end in PP (same as",
       "NOTE - Quantity of Turn: may be underturned when danced into a corner.",
+      "NOTE - Foot Action: (1) on step 1 the Man's R Toe should be in light contact with the floor to help the turn during the swivel.",
+      "NOTE - General: steps 3 may be replaced by a Closed or Open Finish. May end in PP (same as Promenade Link).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 26, p. 115.",
     ],
   },
   { dance: "tango", figureType: "outside-swivels", name: "Outside Swivels" },
-  { dance: "tango", figureType: "oversway", name: "Oversway" },
+  {
+    dance: "tango",
+    figureType: "oversway",
+    name: "Oversway",
+    timing: "QQSS",
+    start: "LF fwd and slightly to side",
+    finish: "Position held. L knee flexes",
+    notes: [
+      "After step 4, use the description for Oversway - Side 1 and Side 2 for the following nine possible endings:",
+      "Method 1 - OVERSWAY followed by TRANSFER WEIGHT TO PP (p. 153)",
+      "Method 2 - OVERSWAY followed by CLOSE STEP TO PP (p. 154)",
+      "Method 3 - OVERSWAY followed by CHASSE, WHISK, FWD STEP TO PP (p. 155 Man / p. 156 Lady)",
+      "Method 4 - OVERSWAY followed by CHASSE, WHISK, PROMENADE LINK (p. 157 Man / p. 158 Lady)",
+      "Method 5 - OVERSWAY followed by CHASSE, WHISK, CLOSE STEP TO PP (p. 159 Man / p. 160 Lady)",
+      "Method 6 - OVERSWAY followed by NATURAL SPIN TO PP (p. 161 Man / p. 162 Lady)",
+      "Method 7, 8, 9 - OVERSWAY followed by NATURAL SPIN continued with METHODS 3, 4 or 5 (p. 162 - Note).",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 38, p. 149.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-1-transfer-weight-to-pp",
+    name: "Oversway Alternative Endings — Method 1: Transfer Weight to PP",
+    timing: "QQ",
+    start: "Transfer weight to RF",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-6.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 153.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-2-close-step-to-pp",
+    name: "Oversway Alternative Endings — Method 2: Close Step to PP",
+    timing: "&S",
+    start: "RF closes to LF w/o weight",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-6.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 154.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-3-chasse-whisk-fwd-step-to-pp",
+    name: "Oversway Alternative Endings — Method 3: Chasse, Whisk, Fwd Step to PP",
+    timing: "Q&QSQQ",
+    start: "RF to side",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-10.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 155.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-4-chasse-whisk-promenade-link",
+    name: "Oversway Alternative Endings — Method 4: Chasse, Whisk, Promenade Link",
+    timing: "Q&QSQQ",
+    start: "RF to side",
+    finish: "LF to side small step w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-10.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 157.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-5-chasse-whisk-close-step-to-pp",
+    name: "Oversway Alternative Endings — Method 5: Chasse, Whisk, Close Step to PP",
+    timing: "Q&QS&S",
+    start: "RF to side",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-10.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 159.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "oversway-alternative-endings-method-6-natural-spin-to-pp",
+    name: "Oversway Alternative Endings — Method 6: Natural Spin to PP",
+    timing: "QQQQ",
+    start: "RF in place",
+    finish: "LF placed to side w/o weight",
+    notes: [
+      "Steps 1-4 are the OVERSWAY (or DROP OVERSWAY) chart; this Method adds steps 5-8.",
+      "NOTE - General: after the steps 1 and 2 of Method 6 it is possible to continue directly with methods 3, 4 and 5. In these cases the timing will be:",
+      "Method 7 (NATURAL SPIN followed by CHASSE, WHISK, FWD STEP TO PP) - QQQ&QSQQ",
+      "Method 8 (NATURAL SPIN followed by CHASSE, WHISK, PROMENADE LINK) - QQQ&QSQQ",
+      "Method 9 (NATURAL SPIN followed by CHASSE, WHISK, CLOSE STEP TO PP) - QQQ&QS&Q",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 40, p. 161.",
+    ],
+  },
   {
     dance: "tango",
     figureType: "progressive-link",
@@ -1860,7 +3165,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQ",
     start: "LF fwd in CMBP (Closed Position)",
     finish: "RF to side and slightly bwd (Promenade Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 4, p. 61."],
   },
   {
     dance: "tango",
@@ -1872,6 +3177,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: steps 1-2 only may be used.",
       "NOTE - Quantity of turn: figure may be turned up to 3/8 to L.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 2, p. 57.",
     ],
   },
   {
@@ -1883,6 +3189,8 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: steps 1-4 or 1-7 only may be used. Figure may be danced with an Open Finish.",
+      "NOTE - General: steps 1-4 or 1-7 only may be used.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 21, p. 103.",
     ],
   },
   { dance: "tango", figureType: "promenade-link", name: "Promenade Link" },
@@ -1896,6 +3204,9 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: it may start from step 2.",
       "NOTE - Couple Position/Quantity of Turn: it may end in Promenade Position. In this case the Lady",
+      "NOTE - Quantity of Turn: when the Promenade Link is turning left, the quantity of turn for the Man is 1/8 to L and Lady 3/8 to L. The alignment of step 3 for the Man and the Lady will be Facing LOD (Man) and Backing LOD (Lady). In this case the Man will point LOD with his right foot on step 2.",
+      "NOTE - Couple Position/Quantity of Turn: it may end in Promenade Position. In this case the Lady has no turn.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 16, p. 91.",
     ],
   },
   {
@@ -1905,7 +3216,11 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "SQQ",
     start: "LF to side (Promenade Position)",
     finish: "LF to side w/o weight (Closed Position)",
-    notes: ["NOTE - General: it may start from step 2."],
+    notes: [
+      "NOTE - General: it may start from step 2.",
+      "NOTE - General: It may start from step 2.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 15, p. 89.",
+    ],
   },
   {
     dance: "tango",
@@ -1916,6 +3231,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF closes to LF slightly bwd (Closed Position)",
     notes: [
       "NOTE - General: steps 1-3 or 4-6 only may be used. Closed Finish may be replaced by Open Finish.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 30, p. 125.",
     ],
   },
   {
@@ -1937,6 +3253,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - General: figure may be danced with steps 1 and 3 in CBMP following any Open Finish. If",
       "NOTE - Quantity of turn: up to ¼ to R may be made.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 10, p. 75.",
     ],
   },
   {
@@ -1946,7 +3263,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     timing: "QQS",
     start: "RF bwd in CBMP, L shoulder leading (Closed Position)",
     finish: "RF bwd in CBMP, L shoulder leading (Closed Position)",
-    notes: [],
+    notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 11, p. 77."],
   },
   { dance: "tango", figureType: "rock-turn", name: "Rock Turn" },
   {
@@ -1958,6 +3275,40 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     finish: "RF fwd (Closed Position)",
     notes: ["NOTE - General: LF or RF walk only may be used."],
   },
+  {
+    dance: "tango",
+    figureType: "tap-alternative-entries-to-pp",
+    name: "Tap - Alternative Entries to PP",
+    timing: "&",
+    start: "LF to side",
+    finish: "LF to side",
+    notes: [
+      "NOTE - Timing: alternative Timing for the Tap, including also the Preceding Step, could be: S-S (7.8-1.2)",
+      "Note - General: the Tap can be danced after a Closed Finish or after an Open Finish. In both cases the technique used is the same, there are only significant changes in the Foot Placements of the Preceding Step",
+      "TAP after CLOSED FINISH - Foot Placement (Man), Prec. Step: RF closes to LF slightly bwd | Weight on RF; Foot Placement (Lady), Prec. Step: LF closes to RF slightly fwd | Weight on LF",
+      "TAP after OPEN FINISH - Foot Placement (Man), Prec. Step: RF fwd in CBMP | Recover LF; Foot Placement (Lady), Prec. Step: LF bwd in CBMP | Recover RF",
+      "Note (TAP after OPEN FINISH) - Quantity of Turn: due to a slight turn to R on the last step of the Open Finish, the Man will make a slight turn to L on the RF during the Tap.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 1, p. 55.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "telemark-to-pp",
+    name: "Telemark to PP",
+    timing: "QQS",
+    start: "LF fwd and slightly to side",
+    finish: "LF to side",
+    notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 32, p. 129."],
+  },
   { dance: "tango", figureType: "the-chase", name: "The Chase" },
   { dance: "tango", figureType: "walk", name: "Walk" },
+  {
+    dance: "tango",
+    figureType: "whisk",
+    name: "Whisk",
+    timing: "QQS",
+    start: "LF fwd",
+    finish: "LF crosses behind RF",
+    notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 19, p. 99."],
+  },
 ];

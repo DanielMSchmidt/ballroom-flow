@@ -8,11 +8,12 @@
 **Status (updated 2026-07-03):** the TDD suite was authored ahead of the build as
 fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **it has since been
 unskipped and is executing green** as the product modules landed (M1–M9).
-On `development` HEAD the suite runs — **domain 245 passed / 3 skipped, web 382
-passed / 0 skipped, worker 191 passed / 0 skipped** — with exactly ONE story
-still skipped: **US-054** (the book-verified full-syllabus ISTD seed), blocked
-on an external dependency (the paid ISTD/WDSF technique books — PLAN §9 content
-workstream), not on engineering. US-049 Ops, US-053 `/api/profile`, and the M9
+On `development` HEAD the suite runs — **domain 258 passed / 0 skipped, web 449
+passed / 0 skipped, worker 204 passed / 0 skipped** — with NO story still
+skipped: **US-054** (the book-verified full-syllabus seed) was unskipped
+2026-07-06 when the owner's WDSF Technique Books (2nd ed., May 2013) arrived
+and the full five-book syllabus was charted from them (PLAN §9 content
+workstream). US-049 Ops, US-053 `/api/profile`, and the M9
 PWA / all-dances-annotation E2E slices were unskipped and shipped 2026-07-03.
 Source of truth for "what GREEN means" per story is each test's header comment
 (US-ID, intent, multi-user scenario, arrange/act/assert, acceptance criteria +
@@ -165,7 +166,7 @@ web 52 skipped (9 files); typecheck + lint clean; `playwright test --list` → 5
 tests across 3 projects.
 
 **Current (`development` HEAD, 2026-07-03):** the suite executes for real —
-- `pnpm --filter @weavesteps/domain test` → **245 passed, 3 skipped** (only US-054 ISTD seed — blocked on the external technique books, PLAN §9).
+- `pnpm --filter @weavesteps/domain test` → **258 passed, 0 skipped** (US-054 unskipped 2026-07-06 — the technique books arrived and the syllabus is book-charted).
 - `pnpm --filter web test` → **382 passed, 0 skipped**.
 - `pnpm --filter worker test` → **191 passed, 0 skipped** (US-049 ops + US-053 `/api/profile` unskipped and green 2026-07-03); worker `coverage` meets its armed thresholds (lines 89.7 / branches 71.1 / fns 88.2 / stmts 85.9).
 - `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (294 files).

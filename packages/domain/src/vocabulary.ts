@@ -88,6 +88,10 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   bodyActions: RegistryKind;
   sway: RegistryKind;
   turn: RegistryKind;
+  /** WDSF Rotation column (shoulders/hips grading) — free text, per role. */
+  rotation: RegistryKind;
+  /** WDSF head-position ("Extension") column — free text, per role. */
+  head: RegistryKind;
 }
 
 // The 4 travelling dances rise applies to — every Standard dance except Tango,
@@ -106,7 +110,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     color: "#2f5d8f",
     cardinality: "single",
     valueType: "enum",
-    values: ["forward", "back", "side", "behind", "close", "diagonal", "in_place"],
+    values: ["forward", "back", "side", "behind", "close", "in_front", "diagonal", "in_place"],
     description: "Which way the step travels across the floor — the step's headline.",
     valueDefs: {
       forward: "Forward — stepping forward along your line",
@@ -114,6 +118,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       side: "Side — stepping to the side",
       behind: "Behind — crossing behind the supporting foot",
       close: "Close — feet close together, no travel",
+      in_front: "In front — crossing in front of the supporting foot (e.g. lock steps)",
       diagonal: "Diagonal — travelling on a diagonal",
       in_place: "In place — a weight change with no travel",
     },
@@ -156,6 +161,17 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       "flat",
       "heel turn",
       "heel pull",
+      // WDSF technique-book contacts (2nd ed. 2013 Foot Action column)
+      "H flat",
+      "HB",
+      "BT",
+      "TB",
+      "THB",
+      "BHB",
+      "HBH",
+      "I/E of B",
+      "I/E of BH",
+      "O/E of T, BH",
       // compound rolls carried by the figure catalog (kept lossless)
       "BH",
       "HTH",
@@ -181,6 +197,16 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       "heel turn": "Heel turn — commence on the ball, weight onto the heel, closing foot parallel",
       "heel pull":
         "Heel pull — turn on the supporting-foot heel, the moving foot pulled back then to the side",
+      "H flat": "H Flat — heel, then the whole foot flat (WDSF forward drive step)",
+      HB: "HB — Heel-Ball: heel then ball (e.g. the WDSF heel turn)",
+      BT: "BT — Ball-Toe: ball then toe",
+      TB: "TB — Toe-Ball: toe then ball",
+      THB: "THB — Toe-Heel-Ball roll",
+      BHB: "BHB — Ball-Heel-Ball roll (e.g. pivots)",
+      HBH: "HBH — Heel-Ball-Heel roll",
+      "I/E of B": "I/E of B — inside edge of the ball",
+      "I/E of BH": "I/E of BH — inside edge of ball, then heel",
+      "O/E of T, BH": "O/E of T, BH — outside edge of the toe, then ball-heel",
       BH: "BH — Ball-Heel: ball then heel",
       HTH: "HTH — Heel-Toe-Heel roll",
       THT: "THT — Toe-Heel-Toe roll",
@@ -261,11 +287,13 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       "closed",
       "promenade",
       "counter_promenade",
+      "fallaway",
       "outside_partner",
       "left_side",
       "right_side",
       "tandem",
       "wing",
+      "left_angle",
       "CBMP",
     ],
     description: "The hold or dance position the step is danced in.",
@@ -273,7 +301,9 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       closed: "Closed — closed hold, partners square",
       promenade: "Promenade — a V-shape, the open sides of the couple together",
       counter_promenade: "Counter promenade — a V-shape opening to the other (closed) side",
+      fallaway: "Fallaway — promenade shape moving backward (the couple falls away)",
       outside_partner: "Outside partner — stepping outside the partner, usually on the right side",
+      left_angle: "Left angle — the WDSF left-angled couple position (e.g. twist turns, rondes)",
       left_side: "Left side position — partners offset to the left",
       right_side: "Right side position — partners offset to the right",
       tandem: "Tandem — one partner directly in front of the other, both facing the same way",
@@ -365,6 +395,45 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       full_R: "Full R — a full turn to the right",
     },
     // Turn amount often mirrors between partners, so it reads differently per role.
+    roleAware: true,
+    builtin: true,
+  },
+  // The WDSF technique books' Rotation column: how the shoulders/hips rotate through
+  // the step, graded Light./Dyn./Lead. Free text — the books chart it as prose
+  // ("To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)"); the
+  // classical CBM flag lives in bodyActions, this carries the full WDSF grading.
+  rotation: {
+    kind: "rotation",
+    label: "Rotation",
+    color: "#3f7a99",
+    cardinality: "single",
+    valueType: "text",
+    freeText: true,
+    freeTextInput: true,
+    description:
+      "How the shoulders and hips rotate through the step (the WDSF Rotation column — Light./Dyn./Lead. grading).",
+    // Free text (the books chart prose transitions) — no enumerated glossary values.
+    valueDefs: {},
+    // Each role rotates its own side — the books chart Man and Lady separately.
+    roleAware: true,
+    builtin: true,
+  },
+  // The WDSF technique books' head-position column (printed "Extension"): where the
+  // head moves and which numbered head position it ends in ("Gradually back, head
+  // moves to pos. 1"). Free text — the books chart transitions as prose.
+  head: {
+    kind: "head",
+    label: "Head",
+    color: "#8a6a3f",
+    cardinality: "single",
+    valueType: "text",
+    freeText: true,
+    freeTextInput: true,
+    description:
+      "Head position and movement through the step (the WDSF Extension column — e.g. \u201cgradually back, head ends in pos. 1\u201d).",
+    // Free text (the books chart prose transitions) — no enumerated glossary values.
+    valueDefs: {},
+    // Mostly the follower's column, but the books chart Man head entries too.
     roleAware: true,
     builtin: true,
   },

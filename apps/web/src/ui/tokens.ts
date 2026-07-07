@@ -21,6 +21,8 @@ export const ATTRIBUTE_KINDS = [
   "bodyActions",
   "sway",
   "turn",
+  "rotation",
+  "head",
 ] as const;
 export type AttributeKind = (typeof ATTRIBUTE_KINDS)[number];
 
