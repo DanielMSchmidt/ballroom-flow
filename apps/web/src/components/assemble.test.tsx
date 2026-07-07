@@ -472,7 +472,14 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The custom form carries a COUNTS stepper (default 3 — Builder v3 ①).
     // Appended (no insert anchor) → trailing beforePlacementId is undefined.
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 3, undefined);
+    expect(spies.addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "Reverse Wave",
+      undefined,
+      3,
+      undefined,
+      undefined,
+    );
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -508,7 +515,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 3, "p2");
+    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 3, "p2", undefined);
   });
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
@@ -929,13 +936,16 @@ describe("US-027 Add a figure from the library picker", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.click(screen.getByRole("button", { name: /feather step/i }));
-    // A library pick keeps its catalog-derived default length (no explicit bars).
+    // The portion picker (Builder v3 ③) opens; the default range is the whole
+    // figure — confirming adds a live catalog reference with no part window.
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
       "Feather Step",
       "feather-step",
       undefined,
       undefined,
+      null,
     );
   });
 
@@ -955,7 +965,7 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The custom form's counts stepper defaults to 3 (Builder v3 ①).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 3, undefined);
+    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 3, undefined, undefined);
   });
 });
 

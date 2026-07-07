@@ -58,8 +58,11 @@ test.describe("@smoke figure library", () => {
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Add figure" }).click();
-    // The picker lists the dance's library presets; pick the Feather Step.
+    // The picker lists the dance's library presets; pick the Feather Step. The
+    // portion picker (Builder v3 ③) opens with the whole figure pre-selected —
+    // confirm to place the live catalog reference.
     await page.getByRole("button", { name: /feather step/i }).click();
+    await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
   });
 });

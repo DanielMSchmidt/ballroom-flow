@@ -22,11 +22,14 @@ import {
   figureMatchesLibraryOrigin,
   type NumberedBeatEntry,
   numberRoutineBeats,
+  type PlacementPart,
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
   resolveFigureBars,
+  resolveFigureCounts,
   slowQuickTokens,
+  windowAttributes,
 } from "@weavesteps/domain";
 import { memo, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
@@ -43,6 +46,7 @@ import {
   type ReadingColumn,
   usedColumns,
 } from "./reading-columns";
+// (windowAttributes/resolveFigureCounts arrive via the domain import above)
 import { shownReadColumns, useStoredReadColumns } from "./reading-shown";
 import type { TimingView } from "./reading-timing";
 import { filterByRoleView, type RoleView } from "./role-view";
@@ -226,6 +230,7 @@ export function RoutineReadingView({
                     key={pl.id}
                     figure={rp?.figure ?? null}
                     status={rp?.status ?? "loading"}
+                    part={pl.part ?? null}
                     roleView={roleView}
                     columns={shownColumns}
                     beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
@@ -290,10 +295,17 @@ function useStableAnnotationsByFigure(annotations: Annotation[]): Map<string, An
 
 /** A figure's distinct, sorted counts under the active role lens — the same
  *  derivation FigureReadout renders from, so numbering aligns with the rows. */
-function figureCounts(figure: FigureDoc, roleView: RoleView): number[] {
-  const live = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
-    roleView,
+function figureCounts(
+  figure: FigureDoc,
+  roleView: RoleView,
+  part?: PlacementPart | null,
+): number[] {
+  const live = windowAttributes(
+    filterByRoleView(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      roleView,
+    ),
+    part,
   );
   return [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
 }
@@ -323,7 +335,7 @@ function numberRoutineBeats_forRoutine(
         entries.push({ kind: "break", beats: pl.beats ?? beatsPerBar });
       } else {
         const fig = resolved.get(pl.id)?.figure ?? null;
-        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView) : [] });
+        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView, pl.part) : [] });
         if (fig) figureEndByIndex.set(index, resolveFigureBars(fig) * beatsPerBar + 1);
       }
     }
@@ -393,6 +405,7 @@ function columnWeight(col: ReadingColumn): number {
 const FigureReadout = memo(function FigureReadout({
   figure,
   status,
+  part,
   roleView,
   columns,
   beatTokens,
@@ -407,6 +420,8 @@ const FigureReadout = memo(function FigureReadout({
 }: {
   figure: FigureDoc | null;
   status: FigureLoadStatus;
+  /** Portion window (Builder v3 ③) — dance only these counts of the figure. */
+  part?: PlacementPart | null;
   roleView: RoleView;
   /** The routine-wide PICKED columns (Builder v3) — every figure renders
    *  exactly these; a figure without the kind shows empty dots. */
@@ -450,9 +465,12 @@ const FigureReadout = memo(function FigureReadout({
   }
   // The Leader/Follower lens: both-role attributes always show; role-specific
   // ones show only on their side (US: Follower flips role-aware values).
-  const live = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
-    roleView,
+  const live = windowAttributes(
+    filterByRoleView(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      roleView,
+    ),
+    part,
   );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   // The continuous beat token per count (US-004a), zipped with the sorted counts.
@@ -492,6 +510,8 @@ const FigureReadout = memo(function FigureReadout({
             </button>
             <div className="truncate text-2xs font-semibold text-ink-faint">
               {counts.length > 0 ? beatTokens.join(" ") : t.emptyFigureSub}
+              {part &&
+                ` · ${t.partLabel(part.fromCount, part.toCount, resolveFigureCounts(figure))}`}
             </div>
           </div>
         </div>

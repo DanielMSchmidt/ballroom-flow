@@ -49,6 +49,7 @@ export {
   figureCountSlots,
   figureGridSlots,
   type GridSlot,
+  type PlacementPart,
   partBeatSpan,
   resolveFigureBars,
   resolveFigureCounts,

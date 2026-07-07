@@ -30,6 +30,7 @@ const en = {
   customFigure: "Custom figure",
   pagerPosition: (index: number, total: number) => `${index} of ${total}`,
   emptyFigureSub: "empty",
+  partLabel: (from: number, to: number, total: number) => `${from}–${to} of ${total}`,
 
   // Column picker + notes margin (Builder v3)
   shownColumns: "Shown technique columns",
@@ -91,6 +92,7 @@ const de: typeof en = {
   customFigure: "Eigene Figur",
   pagerPosition: (index, total) => `${index} von ${total}`,
   emptyFigureSub: "leer",
+  partLabel: (from, to, total) => `${from}–${to} von ${total}`,
 
   shownColumns: "Angezeigte Technik-Spalten",
   hideColumn: (column) => `Spalte ${column} ausblenden`,
