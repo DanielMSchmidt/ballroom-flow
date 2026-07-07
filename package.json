@@ -28,7 +28,7 @@
     "@remotion/cli": "^4.0.485",
     "@remotion/renderer": "^4.0.485",
     "concurrently": "^9.1.2",
-    "lefthook": "^1.10.10",
+    "lefthook": "^2.0.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "remotion": "^4.0.485",
