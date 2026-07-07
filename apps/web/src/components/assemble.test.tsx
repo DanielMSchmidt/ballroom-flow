@@ -621,6 +621,31 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     expect(await screen.findByText(/added to your library/i)).toBeInTheDocument();
   });
 
+  it("keeps the 'add to library' affordance off the name's header row so the name isn't crowded to a stub", async () => {
+    // Regression: a custom figure crammed the "Custom" pill + the long "add to
+    // library" button into the same flex row as the name, collapsing the name to
+    // a single truncated character on a narrow screen. The affordances now ride
+    // their own row, so the name button and the add button no longer share a parent.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+
+    const nameButton = screen.getByRole("button", { name: /edit steps: glue step/i });
+    const addButton = screen.getByRole("button", { name: /add glue step to my library/i });
+    expect(nameButton.parentElement).not.toBe(addButton.parentElement);
+    // The pill lives with the button on the affordance row, not on the name row.
+    const customPill = screen.getByText("Custom");
+    expect(nameButton.parentElement?.contains(customPill)).toBe(false);
+  });
+
   it("shows 'in your library' (no button) once the figure is bookmarked", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const onAddToLibrary = vi.fn();

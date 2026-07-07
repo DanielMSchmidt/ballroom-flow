@@ -1741,47 +1741,6 @@ function PlacementCard({
             {placement.part && ` · ${t.partSub(placement.part.fromCount, placement.part.toCount)}`}
           </span>
         </button>
-        {isCustom && (
-          <span
-            className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
-            style={{
-              background: "var(--bf-scope-custom-tint)",
-              color: "var(--bf-scope-custom-ink)",
-            }}
-          >
-            {t.customPill}
-          </span>
-        )}
-        {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a choreo-local
-            ACCOUNT figure only; a bookmark is a REFERENCE, never a copy. */}
-        {figure.scope === "account" &&
-          (isBookmarked ? (
-            <span
-              className="flex-none rounded-pill px-2 py-0.5 text-[9px] font-semibold"
-              style={{
-                background: "var(--bf-scope-global-tint)",
-                color: "var(--bf-scope-global-ink)",
-              }}
-            >
-              {t.inYourLibrary}
-            </span>
-          ) : (
-            onAddToLibrary && (
-              <button
-                type="button"
-                aria-label={t.addToLibraryAria(label)}
-                onClick={onAddToLibrary}
-                className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
-                style={{
-                  borderColor: "var(--bf-scope-custom-border)",
-                  color: "var(--bf-scope-custom-ink)",
-                  background: "var(--bf-surface)",
-                }}
-              >
-                <span aria-hidden="true">↟</span> {t.addToLibrary}
-              </button>
-            )
-          ))}
         {/* Drag handle affordance (frame 1.7 ⠿). Reorder is the up/down controls. */}
         <span
           aria-hidden="true"
@@ -1812,6 +1771,54 @@ function PlacementCard({
           </div>
         )}
       </div>
+      {/* Scope + library affordances ride their OWN row (indented under the name,
+          past the scope dot) so the "Custom" pill and the long "add to library"
+          button never crowd the figure name down to a truncated stub on a narrow
+          screen. "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a
+          choreo-local ACCOUNT figure only; a bookmark is a REFERENCE, never a copy. */}
+      {(isCustom || (figure.scope === "account" && (isBookmarked || onAddToLibrary))) && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-4">
+          {isCustom && (
+            <span
+              className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
+              style={{
+                background: "var(--bf-scope-custom-tint)",
+                color: "var(--bf-scope-custom-ink)",
+              }}
+            >
+              {t.customPill}
+            </span>
+          )}
+          {figure.scope === "account" &&
+            (isBookmarked ? (
+              <span
+                className="flex-none rounded-pill px-2 py-0.5 text-[9px] font-semibold"
+                style={{
+                  background: "var(--bf-scope-global-tint)",
+                  color: "var(--bf-scope-global-ink)",
+                }}
+              >
+                {t.inYourLibrary}
+              </span>
+            ) : (
+              onAddToLibrary && (
+                <button
+                  type="button"
+                  aria-label={t.addToLibraryAria(label)}
+                  onClick={onAddToLibrary}
+                  className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
+                  style={{
+                    borderColor: "var(--bf-scope-custom-border)",
+                    color: "var(--bf-scope-custom-ink)",
+                    background: "var(--bf-surface)",
+                  }}
+                >
+                  <span aria-hidden="true">↟</span> {t.addToLibrary}
+                </button>
+              )
+            ))}
+        </div>
+      )}
       {/* The figure's technique at a glance (US-018) — the same per-step chips the
           reading view shows, filtered to the current L·F lens. Tapping the strip
           opens the full-screen figure detail (step editor / read-only view), so an
