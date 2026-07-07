@@ -4,7 +4,7 @@ import { explainerMessages } from "../i18n/messages/explainer";
 import { landingMessages } from "../i18n/messages/landing";
 import { ExplainerVideo } from "../marketing/ExplainerVideo";
 import { SCREENSHOTS, type Screenshot } from "../marketing/screenshots.manifest";
-import { BrandMark, Card, LanguageToggle } from "../ui";
+import { BrandMark, BuildStamp, Card, LanguageToggle } from "../ui";
 
 // Resolve the committed PNGs to fingerprinted asset URLs at build time. The
 // manifest's `file` field is the key into this map.
@@ -114,7 +114,10 @@ export function Landing(): React.JSX.Element {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-5xl px-5 py-8 text-2xs text-ink-muted">Weave Steps</footer>
+      <footer className="mx-auto flex max-w-5xl items-center gap-2 px-5 py-8 text-2xs text-ink-muted">
+        <span>Weave Steps</span>
+        <BuildStamp />
+      </footer>
     </div>
   );
 }

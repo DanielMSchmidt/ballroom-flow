@@ -7,6 +7,7 @@ export { AccessDenied, type AccessDeniedProps } from "./AccessDenied";
 export { AppShell, type AppShellProps, type NavItem } from "./AppShell";
 export { AttrChip, type AttrChipProps } from "./AttrChip";
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
+export { BuildStamp } from "./BuildStamp";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";
 export { Card, type CardProps } from "./Card";
 export { Chip, type ChipProps, type ChipTone } from "./Chip";

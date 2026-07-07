@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useMessages } from "../i18n";
 import { uiMessages } from "../i18n/messages/ui";
+import { BuildStamp } from "./BuildStamp";
 import { cx } from "./cx";
 import { BrandMark } from "./icons";
 import { LanguageToggle } from "./LanguageToggle";
@@ -78,6 +79,11 @@ export function AppShell({ nav, current, onNavigate, children }: AppShellProps) 
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-0 lg:px-6 lg:py-6">
           {children}
+          {/* Deployed commit SHA — a quiet version check at the foot of every
+              app screen (renders nothing in dev/test/E2E). */}
+          <div className="mt-6 px-4 pb-2 text-right lg:px-0">
+            <BuildStamp />
+          </div>
         </main>
 
         {/* Mobile bottom nav (hidden on lg+) */}
