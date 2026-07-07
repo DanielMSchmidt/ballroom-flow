@@ -45,9 +45,13 @@ async function main() {
         "Record it first:  pnpm video:record",
     );
   }
-  /** @type {{ clip: string, durationMs: number, marks: {atMs:number,kicker:string,caption:string}[] }} */
+  /** @type {{ clip: string, durationMs: number, marks: {atMs:number,kicker:string,caption:string}[], pans?: {atMs:number,y:number}[] }} */
   const manifest = JSON.parse(readFileSync(MARKS_PATH, "utf8"));
-  const inputProps = { tourDurationMs: manifest.durationMs, marks: manifest.marks };
+  const inputProps = {
+    tourDurationMs: manifest.durationMs,
+    marks: manifest.marks,
+    pans: manifest.pans ?? [],
+  };
 
   await mkdir(OUT_DIR, { recursive: true });
 

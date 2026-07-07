@@ -28,7 +28,7 @@ export function RemotionRoot(): React.JSX.Element {
       // Placeholder so the Studio/preview and a props-less render still open;
       // the real values arrive via inputProps at render time.
       durationInFrames={INTRO_FRAMES + msToFrames(30_000) + OUTRO_FRAMES}
-      defaultProps={{ tourDurationMs: 30_000, marks: [] } satisfies ExplainerProps}
+      defaultProps={{ tourDurationMs: 30_000, marks: [], pans: [] } satisfies ExplainerProps}
       calculateMetadata={({ props }) => ({
         durationInFrames: INTRO_FRAMES + msToFrames(props.tourDurationMs) + OUTRO_FRAMES,
       })}

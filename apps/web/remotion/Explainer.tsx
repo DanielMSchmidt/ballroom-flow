@@ -17,6 +17,7 @@ import {
   msToFrames,
   OUTRO_CARD,
   OUTRO_FRAMES,
+  type PanKeyframe,
   TOUR_CLIP,
 } from "./timeline";
 
@@ -151,35 +152,36 @@ function Card({ card }: { card: CardSegment }): React.JSX.Element {
   );
 }
 
+/** objectPosition Y (%) at the given moment, interpolated across the recorder's
+ *  pan keyframes (piecewise-linear; holds before the first / after the last).
+ *  0 = show the top of the recording. */
+function panYAt(pans: PanKeyframe[], nowMs: number): number {
+  const first = pans[0];
+  if (!first) return 0;
+  if (nowMs <= first.atMs) return first.y;
+  for (let i = 0; i < pans.length - 1; i++) {
+    const a = pans[i];
+    const b = pans[i + 1];
+    if (a && b && nowMs >= a.atMs && nowMs <= b.atMs) {
+      const span = b.atMs - a.atMs || 1;
+      return a.y + ((b.y - a.y) * (nowMs - a.atMs)) / span;
+    }
+  }
+  return pans[pans.length - 1]?.y ?? 0;
+}
+
 /** The recorded clip in a floating "app window" — bigger than the old tour so a
  *  first-time viewer can actually read the controls. The window shows the top
- *  ~70% of the recording (controls live up top); for the final SHARE step the
- *  share dialog is taller than that, so we pan down to reveal the role picker +
- *  "Create link" — stopping just above the localhost dev URL. */
-function AppWindow({
-  marks,
-  tourDurationMs,
-}: {
-  marks: CaptionMark[];
-  tourDurationMs: number;
-}): React.JSX.Element {
+ *  ~70% of the recording (controls live up top); for steps whose dialog is taller
+ *  than that (the Add-figure picker's custom form, the Share dialog's invite
+ *  controls) the recorder emits pan keyframes that ease the view down to reveal
+ *  them, then back. */
+function AppWindow({ pans }: { pans: PanKeyframe[] }): React.JSX.Element {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 20 });
   const scale = interpolate(enter, [0, 1], [0.97, 1]);
-
-  // objectPosition Y (%). 0 = top of the recording. During the last ~2s of the
-  // tour — only when the closing step is SHARE — ease down to reveal the invite
-  // controls that otherwise sit below the visible crop.
-  const last = marks[marks.length - 1];
-  const tourFrames = msToFrames(tourDurationMs);
-  const panY =
-    last && /share/i.test(last.kicker)
-      ? interpolate(frame, [tourFrames - msToFrames(2400), tourFrames - msToFrames(500)], [0, 92], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        })
-      : 0;
+  const panY = panYAt(pans, (frame / fps) * 1000);
 
   return (
     <div
@@ -306,7 +308,7 @@ function TourCaptions({ marks }: { marks: CaptionMark[] }): React.JSX.Element | 
 }
 
 /** The recorded tour + its step-by-step captions. */
-function Tour({ marks, tourDurationMs }: ExplainerProps): React.JSX.Element {
+function Tour({ marks, pans }: { marks: CaptionMark[]; pans: PanKeyframe[] }): React.JSX.Element {
   return (
     <AbsoluteFill
       style={{
@@ -315,14 +317,14 @@ function Tour({ marks, tourDurationMs }: ExplainerProps): React.JSX.Element {
         alignItems: "center",
       }}
     >
-      <AppWindow marks={marks} tourDurationMs={tourDurationMs} />
+      <AppWindow pans={pans} />
       <TourCaptions marks={marks} />
     </AbsoluteFill>
   );
 }
 
 /** The full tour — intro card → one narrated real-app recording → outro card. */
-export function Explainer({ tourDurationMs, marks }: ExplainerProps): React.JSX.Element {
+export function Explainer({ tourDurationMs, marks, pans }: ExplainerProps): React.JSX.Element {
   const tourFrames = msToFrames(tourDurationMs);
   return (
     <AbsoluteFill style={{ background: COLOR.backdrop }}>
@@ -330,7 +332,7 @@ export function Explainer({ tourDurationMs, marks }: ExplainerProps): React.JSX.
         <Card card={INTRO_CARD} />
       </Sequence>
       <Sequence from={INTRO_FRAMES} durationInFrames={tourFrames} name="tour">
-        <Tour marks={marks} tourDurationMs={tourDurationMs} />
+        <Tour marks={marks} pans={pans} />
       </Sequence>
       <Sequence from={INTRO_FRAMES + tourFrames} durationInFrames={OUTRO_FRAMES} name="outro">
         <Card card={OUTRO_CARD} />

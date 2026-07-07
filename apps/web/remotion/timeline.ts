@@ -57,12 +57,22 @@ export interface CaptionMark {
   caption: string;
 }
 
+/** A vertical-pan keyframe: at `atMs` the window's objectPosition Y should be
+ *  `y` (%). The recorder emits pairs of these to ramp the view DOWN and reveal
+ *  controls that sit below the crop (the tall Add-figure picker + Share dialog),
+ *  then ramp back. Timestamped from the recording so it tracks real UI timing. */
+export interface PanKeyframe {
+  atMs: number;
+  y: number;
+}
+
 /** What the recorder writes next to the clip; what the renderer reads back. */
 export interface TourManifest {
   clip: string;
   /** Recorded clip length (wall-clock ms) — sizes the tour Sequence. */
   durationMs: number;
   marks: CaptionMark[];
+  pans: PanKeyframe[];
 }
 
 /** Props the render script feeds the composition (from the marks file). A type
@@ -71,6 +81,7 @@ export interface TourManifest {
 export type ExplainerProps = {
   tourDurationMs: number;
   marks: CaptionMark[];
+  pans: PanKeyframe[];
 };
 
 /** The single recorded clip + its sidecar marks file (under remotion/public/). */

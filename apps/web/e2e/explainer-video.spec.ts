@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { type Browser, chromium, expect, type Locator, type Page, test } from "@playwright/test";
 import {
   type CaptionMark,
+  type PanKeyframe,
   REC_HEIGHT,
   REC_WIDTH,
   TOUR_CLIP,
@@ -119,6 +120,10 @@ type Step = (
   opts?: { read?: number; settle?: number },
 ) => Promise<void>;
 
+/** Pan the window down to reveal below-the-crop controls, then (optionally) back.
+ *  `y` is the target objectPosition Y (%); ~90 shows the bottom of a tall dialog. */
+type Pan = { reveal: (y: number) => void; restore: (y: number) => void };
+
 const pause = (page: Page, ms: number) => page.waitForTimeout(ms);
 
 /** Type into a field at a slow, human pace (char-by-char) instead of pasting it
@@ -172,29 +177,39 @@ async function recordTour(browser: Browser): Promise<void> {
 
   // Recording starts at page creation; stamp t0 here so mark times line up.
   const startedAt = Date.now();
+  const nowMs = () => Date.now() - startedAt;
   const marks: CaptionMark[] = [];
   const step: Step = async (kicker, caption, fn, opts = {}) => {
     // A generous default GAP between the caption appearing (what we're about to
     // do) and the action starting — the viewer reads the instruction, THEN watches
     // it happen. Deliberately longer than a real user would pause.
     const { read = 2600, settle = 900 } = opts;
-    marks.push({ atMs: Date.now() - startedAt, kicker, caption });
+    marks.push({ atMs: nowMs(), kicker, caption });
     await pause(page, read); // viewer reads the caption before anything moves
     await fn();
     await pause(page, settle); // the result settles on screen
   };
 
-  await seedAuth(page, USER);
-  await tourFlow(page, step);
+  // Vertical pan keyframes — see PanKeyframe. `reveal(y)` eases the window down
+  // from the top to reveal controls below the crop (call once the dialog is open);
+  // `restore(y)` eases back. Emitted from live timestamps so they track the clip.
+  const pans: PanKeyframe[] = [];
+  const pan: Pan = {
+    reveal: (y) => pans.push({ atMs: nowMs(), y: 0 }, { atMs: nowMs() + 900, y }),
+    restore: (y) => pans.push({ atMs: nowMs(), y }, { atMs: nowMs() + 600, y: 0 }),
+  };
 
-  const durationMs = Date.now() - startedAt;
+  await seedAuth(page, USER);
+  await tourFlow(page, step, pan);
+
+  const durationMs = nowMs();
   await context.close(); // finalizes the webm
 
   const video = page.video();
   if (!video) throw new Error("no video recorded — recordVideo not enabled?");
   await video.saveAs(clip(TOUR_CLIP));
 
-  const manifest: TourManifest = { clip: TOUR_CLIP, durationMs, marks };
+  const manifest: TourManifest = { clip: TOUR_CLIP, durationMs, marks, pans };
   await writeFile(MARKS_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
 
   expect(existsSync(clip(TOUR_CLIP)), `missing clip ${TOUR_CLIP}`).toBe(true);
@@ -210,7 +225,7 @@ async function recordTour(browser: Browser): Promise<void> {
 // The guided journey. Each `step(...)` is one narrated moment in the clip; the
 // selectors mirror the real smoke journeys (authoring / library / annotations /
 // permission-quota-invite .spec.ts), so this stays honest to the shipped UI.
-async function tourFlow(page: Page, step: Step): Promise<void> {
+async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
   await page.goto("/");
   await expect(page.getByRole("button", { name: /new choreo/i })).toBeVisible({ timeout: 15_000 });
   await pause(page, 800);
@@ -284,10 +299,15 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     "Not in the catalogue? Type your own figure name and add it.",
     async () => {
       await page.getByRole("button", { name: "Add figure" }).first().click();
-      await pause(page, 800);
+      await pause(page, 1000); // picker opens; the catalogue list is shown up top
+      // The custom-figure form ("Figure name" + "Add custom") sits at the BOTTOM
+      // of the picker, below the crop — pan down to reveal it before we type.
+      pan.reveal(90);
+      await pause(page, 1200);
       await slowType(page.getByLabel("Figure name"), "My Variation");
-      await pause(page, 700);
+      await pause(page, 800);
       await page.getByLabel("Figure name").press("Enter");
+      pan.restore(90); // ease back up as the picker closes
       await expect(page.getByText("My Variation")).toBeVisible({ timeout: 15_000 });
     },
     { read: 2800, settle: 1300 },
@@ -390,6 +410,10 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
       await pause(page, 1000);
       await shareSheet.getByRole("button", { name: /\+ invite someone/i }).click();
       await pause(page, 900);
+      // The role picker + "Create link" sit at the bottom of the dialog — pan
+      // down to reveal them (and hold; the tour ends on the created invite).
+      pan.reveal(90);
+      await pause(page, 1200);
       await slowSelect(page, shareSheet.getByLabel("Role"), "commenter");
       await shareSheet.getByRole("button", { name: "Create link" }).click();
       await expect(shareSheet.locator("code", { hasText: "/invite/" })).toBeVisible({
