@@ -36,19 +36,19 @@ describe("figure library catalog", () => {
     expect(foxtrot.some((f) => /natural spin turn/i.test(f.name))).toBe(false);
   });
 
-  it("carries the charted figure-level entry/exit alignment (Waltz closed changes)", () => {
-    // The closed change doesn't turn, so its alignment is constant — entry == exit,
-    // from the leader's perspective. RF change faces Diagonal Centre; LF faces
-    // Diagonal Wall (dancecentral.info). Figures with no charted alignment carry none.
+  it("carries the charted figure-level entry/exit alignment (Waltz natural turn)", () => {
+    // Alignments come from the WDSF technique-book charts (leader's perspective).
+    // The Natural Turn starts facing Diagonal Wall and ends facing Diagonal Centre;
+    // the closed changes carry NONE — the book charts their alignment as "depending
+    // on the previous figure".
+    const nt = LIBRARY_FIGURES.find((f) => f.dance === "waltz" && f.figureType === "natural-turn");
+    expect(nt?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
+    expect(nt?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
     const rf = LIBRARY_FIGURES.find(
       (f) => f.dance === "waltz" && f.figureType === "closed-change-on-rf",
     );
-    expect(rf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    expect(rf?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    const lf = LIBRARY_FIGURES.find(
-      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-lf",
-    );
-    expect(lf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
+    expect(rf?.entryAlignment).toBeUndefined();
+    expect(rf?.exitAlignment).toBeUndefined();
   });
 
   it("groups a dance's figures by figureType for the library browse", () => {
@@ -65,10 +65,10 @@ describe("figure library catalog", () => {
   });
 
   it("includes the net-new WDSF figures with parsed step attributes", () => {
-    // ~204 figures: the ISTD identity set + WDSF-timed figures, after the re-chart
-    // dropped entries with no verifiable per-step source or mis-catalogued by dance
-    // (real-data charting, no fabrication — see figure-charts.generated.ts).
-    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(200);
+    // ~266 figures: the ISTD identity set + the full WDSF Technique Book syllabus
+    // (all five books charted, incl. the 37-figure Viennese Waltz set), with
+    // unverifiable entries removed rather than guessed (no fabrication).
+    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(260);
 
     const natural = libraryFiguresForDance("waltz").find(
       (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
@@ -85,7 +85,7 @@ describe("figure library catalog", () => {
     const leaderS1Foot = natural?.attributes?.find(
       (a) => a.count === 1 && a.role === "leader" && a.kind === "footwork",
     );
-    expect(leaderS1Foot?.value).toBe("HT");
+    expect(leaderS1Foot?.value).toBe("H flat"); // WDSF book Foot Action for the drive step
 
     // An un-charted figure still falls back to the WDSF start/finish scaffold (footwork-only,
     // role:null). Find any such figure in the catalog and assert the fallback shape.

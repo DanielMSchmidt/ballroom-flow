@@ -28,6 +28,7 @@ const DIRECTION_ABBREV_EN = {
   side: "side",
   behind: "beh",
   close: "close",
+  in_front: "front",
   diagonal: "diag",
   in_place: "in pl",
   // Legacy split-diagonal values (normalize to `diagonal` on read).
@@ -40,6 +41,7 @@ const DIRECTION_ABBREV_DE: typeof DIRECTION_ABBREV_EN = {
   side: "seit",
   behind: "hint",
   close: "schl",
+  in_front: "vorkr",
   diagonal: "diag",
   in_place: "Platz",
   diag_forward: "diag",

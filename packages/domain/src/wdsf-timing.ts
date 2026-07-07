@@ -14,7 +14,11 @@ import { kindAppliesToDance } from "./vocabulary";
 // the cursor, then advances it by the symbol's duration (S=2, Q=1, digit=1,
 // &=0.5). An `&` SPLITS the preceding symbol — a symbol immediately followed by
 // `&` advances only 0.5, the `&` taking the other half (so "Q&Q" → 1,1.5,2).
-// Spaces are bar separators (cosmetic; the cursor already accumulates).
+// A `-` EXTENDS the preceding symbol by one beat WITHOUT emitting a step — the
+// WDSF technique books chart rows spanning 3+ beats (e.g. the Viennese Waltz
+// Drag Hesitation drags through beats 3–5), which S/Q alone cannot express:
+// "SS-Q" → steps on 1, 3 (held through 5), 6. Spaces are bar separators
+// (cosmetic; the cursor already accumulates).
 //
 // Approximations (documented; the public syllabus lacks the rest, refinable
 // later per Q-LIBSEED): a "(… Lady)" group is the follower's variant — stripped,
@@ -27,13 +31,17 @@ export function parseWdsfTiming(timing: string): number[] {
   // Drop follower-specific "(... Lady ...)" alternatives, keep the base timing.
   const base = timing.replace(/\([^()]*Lady[^()]*\)/gi, "");
   // Remaining parens denote optional steps — keep their contents, drop the parens.
-  const tokens = [...base.replace(/[()]/g, "")].filter((ch) => /[SQ&1-9]/.test(ch));
+  const tokens = [...base.replace(/[()]/g, "")].filter((ch) => /[SQ&1-9-]/.test(ch));
 
   const counts: number[] = [];
   let cursor = 1;
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (token === undefined) continue;
+    if (token === "-") {
+      cursor += 1; // hold: the previous step lasts one beat longer, no new step
+      continue;
+    }
     counts.push(Math.round(cursor * 8) / 8); // snap to the 1/8 grid
     const next = tokens[i + 1];
     let dur = DURATION[token] ?? 1; // a digit is one beat
