@@ -155,6 +155,41 @@ const MIGRATION_MESSAGE = "ballroom:migrate";
  */
 const STORAGE_VERSION = 1;
 
+/** A pre-v5 routine doc read defensively for the legacy break→Break-figure migration.
+ *  `sections` is optional so a figure/account DO (no sections) is a no-op, and each
+ *  placement carries the legacy `source`/`beats` plus the `figureRef` the migration
+ *  writes. A boundary view over the raw Automerge doc (the current typed shape can't
+ *  describe a pre-envelope doc), so the read is one documented `as unknown as` here. */
+interface LegacyBreakDoc {
+  id?: string;
+  ownerId?: string;
+  dance?: string;
+  sections?: Array<{
+    deletedAt?: number | null;
+    placements?: Array<{
+      id: string;
+      source?: string;
+      beats?: number;
+      figureRef?: string;
+      deletedAt?: number | null;
+    }>;
+  }>;
+}
+
+/** The identity/type fields the metadata projection reads off a seeded doc. A DocDO
+ *  hosts a routine OR a figure, so both the routine (`title`) and figure
+ *  (`figureType`/`name`) discriminators are read as `unknown` and narrowed with
+ *  `str()` — one boundary view instead of an inline cast at the call site. */
+interface ProjectableDocView {
+  id?: unknown;
+  scope?: unknown;
+  ownerId?: unknown;
+  title?: unknown;
+  name?: unknown;
+  dance?: unknown;
+  figureType?: unknown;
+}
+
 export class DocDO extends DurableObject<Env> {
   /** In-memory Automerge doc; `null` until first load/cold-load from SQLite.
    *  One DocDO class hosts BOTH a routine doc and a figure doc (which one is fixed
@@ -990,20 +1025,7 @@ export class DocDO extends DurableObject<Env> {
   private async migrateLegacyBreaksInner(): Promise<void> {
     const doc = this.loadPersisted();
     if (!doc) return;
-    const raw = doc as unknown as {
-      id?: string;
-      ownerId?: string;
-      dance?: string;
-      sections?: Array<{
-        deletedAt?: number | null;
-        placements?: Array<{
-          id: string;
-          source?: string;
-          beats?: number;
-          deletedAt?: number | null;
-        }>;
-      }>;
-    };
+    const raw = doc as unknown as LegacyBreakDoc;
     if (!Array.isArray(raw.sections)) return; // figure/account docs — nothing to do
     const breaks: Array<{ id: string; beats: number }> = [];
     for (const section of raw.sections) {
@@ -1062,14 +1084,14 @@ export class DocDO extends DurableObject<Env> {
       migrating,
       { message: "migrate legacy breaks (Builder v3 ④)" },
       (draft) => {
-        const d = draft as unknown as typeof raw;
+        const d = draft as unknown as LegacyBreakDoc;
         for (const section of d.sections ?? []) {
           for (const p of section?.placements ?? []) {
             const ref = p && refByPlacement.get(p.id);
             if (!ref) continue;
-            (p as unknown as { figureRef?: string }).figureRef = ref;
-            delete (p as { source?: string }).source;
-            delete (p as { beats?: number }).beats;
+            p.figureRef = ref;
+            delete p.source;
+            delete p.beats;
           }
         }
       },
@@ -1164,15 +1186,7 @@ export class DocDO extends DurableObject<Env> {
     // id/ownerId/title|name/dance (+ figureType for figures), and reading the
     // doc also means a CRDT title rename actually projects. doc_meta remains an
     // explicit override (tests, special cases).
-    const d = this.getDoc() as unknown as {
-      id?: unknown;
-      scope?: unknown;
-      ownerId?: unknown;
-      title?: unknown;
-      name?: unknown;
-      dance?: unknown;
-      figureType?: unknown;
-    };
+    const d = this.getDoc() as unknown as ProjectableDocView;
     const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
     const docRef = meta.docRef ?? str(d.id) ?? meta.doName;
     const docFigureType = meta.figureType ?? str(d.figureType);
