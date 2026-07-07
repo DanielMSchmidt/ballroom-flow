@@ -256,6 +256,14 @@ export interface RoutineStore extends RoutineReadModel {
    */
   retryFigure(figureRef: string): void;
   /**
+   * Whether editing `figureRef` is currently spawning a live variant (⟳v5, §5.2):
+   * the implicit fork is async (POST → onceLive → re-point), so the editor shows
+   * an inline "making this figure yours…" pending state until it lands — otherwise
+   * the first edit of a global figure looks like it "did nothing". Reactive:
+   * `subscribe` fires when this flips. Optional (absent on injected test stores).
+   */
+  isForking?(figureRef: string): boolean;
+  /**
    * Per-actor history undo (US-010/US-038). Always proceeds (CRDT merges);
    * returns whether a change was reverted and the advisory "superseded by
    * others" soft hint (US-038 AC-3) so the caller can pick the toast copy.
@@ -1109,6 +1117,8 @@ export async function openRoutine(
       notify();
     },
 
+    isForking: (figureRef) => cowInFlight.has(figureRef),
+
     undo: () => {
       const actorId = actor ?? "local";
       const before = routineConn.current();
@@ -1267,6 +1277,7 @@ export async function openRoutine(
     // before the first re-point lands would orphan a variant). Cleared on both paths.
     if (cowInFlight.has(figureRef)) return;
     cowInFlight.add(figureRef);
+    notify(); // reactive: the editor flips into its "making this figure yours…" pending state
 
     // The editor operates on the RESOLVED timeline (a global figure is standalone,
     // so that's its own attributes); spawnVariant diffs it against the base to keep
@@ -1325,6 +1336,7 @@ export async function openRoutine(
         // 4) Tell the screen to toast "made this figure yours".
         onCopyOnWrite?.(variant.id);
         cowInFlight.delete(figureRef);
+        notify(); // clear the "making this figure yours…" pending state
       })
       .catch((err) => {
         // The variant POST failed: leave the placement on the base figure (no
@@ -1337,6 +1349,7 @@ export async function openRoutine(
         // `unexpected` failure (e.g. the 409 conflict this PR's migration fixes) is
         // signal worth an event, not a swallowed console.warn.
         cowInFlight.delete(figureRef);
+        notify(); // clear the pending state — the edit didn't land (error toast follows)
         const reason = classifyCowError(err);
         if (reason === "unexpected") {
           reportError(err, { key: `cow-spawn:${figureRef}` });

@@ -28,6 +28,7 @@ const en = {
   undoneSupersededToast: "Undone — others had built on this change",
   makeACopy: "Make a copy",
   madeFigureYours: "Made this figure yours",
+  makingFigureYours: "Making this figure yours…",
   shareSheetTitle: "Share this choreo",
   // Read-mode fork banner + quick-note FAB
   readOnlyBanner: "Viewing a read-only choreo",
@@ -193,6 +194,7 @@ const de: typeof en = {
   undoneSupersededToast: "Rückgängig gemacht — andere hatten auf dieser Änderung aufgebaut",
   makeACopy: "Kopie erstellen",
   madeFigureYours: "Diese Figur gehört jetzt dir",
+  makingFigureYours: "Diese Figur wird deine …",
   shareSheetTitle: "Diese Choreo teilen",
   readOnlyBanner: "Du siehst eine schreibgeschützte Choreo",
   makeItMine: "Zu meiner machen",
