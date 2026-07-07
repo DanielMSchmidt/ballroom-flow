@@ -5586,7 +5586,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "outside_partner",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "B",
@@ -11768,7 +11768,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "outside_partner",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "B",
