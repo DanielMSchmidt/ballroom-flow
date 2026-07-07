@@ -104,7 +104,7 @@ A **graph of Automerge documents**, one per Durable Object; **D1 is a pure index
   - **A cast is only acceptable at a boundary the type system genuinely can't express** — an external library's wrong/over-wide types, a validated parse result, a deserialization edge — and then it goes in **one small, named, documented helper** (see `readFigureSnapshot` in `apps/worker/src/index.ts`), never inline-scattered. The comment must say *why the compiler can't know* and *what guarantees the claim at runtime*.
   - **`as unknown as X` (double cast) is the loudest smell** — it means two types were forced together with zero overlap. Almost always a missing generic, a mis-typed storage/RPC layer, or a shape that should be a union. Fix the layer, don't double-cast the call site.
   - When you must keep one, it should read as *defensive* (a runtime check backs the claim), not as *silencing* the compiler. If you can't state what makes it true at runtime, it's wrong.
-- **Commits:** branch off `main`/`development`; commit/push only when asked. Keep changes within the workspace you own.
+- **Commits:** we do **PR-driven development** — every change lands on a **feature branch** and merges to `main` via a **pull request**. **Never commit directly to `main`** (it deploys to production). Branch off `main`, **commit and push your work as you go — you don't need to be asked** — then open a PR. Keep changes within the workspace you own. (See §7.)
 
 ---
 
@@ -133,22 +133,19 @@ pnpm coverage         # coverage — thresholds ARMED: domain ≥90, worker ≥8
 
 ## 7. Git flow & releases (read before branching)
 
-> **⚠ State of the world (2026-07-05):** `development` was merged into `main` (PR #161) and the
-> branch **deleted from the remote** — the flow below currently has no integration branch.
-> Until `development` is recreated (or this section is rewritten to a new flow), **branch off
-> `main`** and open PRs into `main`; note the deploy workflow still maps `development`→staging
-> and `main`→production, so staging deploys don't trigger while the branch is absent — and
-> **merging a PR into `main` is a production deploy**. Don't merge red.
+We do **PR-driven development**: every change — feature, fix, or docs — lands on its own
+**feature branch** and merges into `main` through a **pull request**. **Never commit directly
+to `main`.**
 
-We use a **git-flow style** with a long-lived integration branch:
+- **Branch off `main`** for new work; name the branch for the change (`fix/…`, `feat/…`,
+  `chore/…`). **Commit as you go and push — you don't need to be asked to commit.**
+- **Open a PR into `main`** and let CI run. Keep it focused. **Don't merge red.**
+- **`main` deploys to production** — merging a PR is a release.
 
-- **`development`** is the **active branch** — all feature work, fixes, and docs land here.
-  **Branch off `development`** for new work and open your PR back into `development`.
-  (`development` deploys to **staging**.)
-- **`main`** is the **release branch** — `development` is merged into `main` only when we cut a
-  **release**. `main` deploys to **production**. Don't develop directly on `main`; it should
-  only ever receive `development` (or a hotfix that is also back-merged to `development`).
+> **Note on staging (2026-07-05):** the deploy workflow also maps a `development` branch →
+> staging, but `development` was merged into `main` (PR #161) and **deleted from the remote**,
+> so there's no staging integration branch right now. Until it's recreated, everything flows
+> through `main` as above; revisit this section if `development` comes back.
 
-So: **start from `development`, not `main`.** A change made on `main` that isn't a release will
-diverge from the real codebase and conflict at the next release. If you're unsure which branch
-you're on, check before you start — the wrong base is expensive to unwind.
+If you're unsure which branch you're on, check before you start — committing to the wrong base
+(especially `main`) is expensive to unwind.
