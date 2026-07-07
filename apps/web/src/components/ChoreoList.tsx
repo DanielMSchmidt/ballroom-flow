@@ -28,6 +28,7 @@ import {
   Modal,
   ScreenHeader,
   Sheet,
+  Spinner,
 } from "../ui";
 import { BranchIcon, EditIcon, PlusIcon, StepsIcon, TrashIcon } from "../ui/icons";
 
@@ -86,6 +87,11 @@ export interface ChoreoRoutineItem extends RoutineListItem {
 export interface ChoreoListProps {
   /** The viewer's routines (owned + shared-in). */
   routines?: ChoreoRoutineItem[];
+  /** The routines query is still loading (no data yet). While true we show a
+   *  neutral placeholder instead of the empty state — otherwise the empty state
+   *  (and its inline product-tour video) flashes in during the load and is then
+   *  replaced by the list, which also destabilises the marketing screenshot. */
+  loading?: boolean;
   /** How many routines the viewer OWNS (drives the quota gate). */
   ownedCount: number;
   /** The viewer's plan; only "free" is capped. */
@@ -135,6 +141,7 @@ function GlyphTile({ color }: { color: string }) {
 
 export function ChoreoList({
   routines = [],
+  loading = false,
   ownedCount,
   plan,
   cap,
@@ -269,7 +276,14 @@ export function ChoreoList({
         </ul>
       )}
 
-      {routines.length === 0 ? (
+      {loading ? (
+        // Don't commit to the empty state until the list has loaded — otherwise
+        // the empty state (with its inline product-tour <video>) flashes in and
+        // is immediately replaced once the routines arrive. (Spinner is role=status.)
+        <div className="flex items-center gap-2 p-6 text-ink-faint">
+          <Spinner /> <span className="text-2xs">{t.loading}</span>
+        </div>
+      ) : routines.length === 0 ? (
         <div className="flex flex-col gap-3">
           {/* Frame 1.2 — the designed empty state. */}
           <EmptyState

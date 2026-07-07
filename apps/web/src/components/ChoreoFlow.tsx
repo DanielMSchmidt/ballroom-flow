@@ -242,6 +242,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   return (
     <ChoreoList
       routines={items}
+      loading={routinesQ.isLoading}
       ownedCount={ownedCount}
       plan={plan}
       cap={routineCap}

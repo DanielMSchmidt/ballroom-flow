@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
@@ -16,6 +16,20 @@ const OUT = path.resolve(
   "../src/marketing/screenshots",
 );
 const shot = (name: string) => path.join(OUT, name);
+
+/** Prepare the empty-state create shot for a STABLE capture. Waiting for the
+ *  tour <video> to attach proves the routines query has settled (so we shoot the
+ *  real empty state, not the loading spinner). We then HIDE that video: its
+ *  poster is a GPU-scaled bitmap that jitters a few sub-pixels run-to-run, which
+ *  the screenshot bot's byte-level commit gate treats as a change and re-commits
+ *  every run — and it isn't the subject of the "create" shot anyway. */
+async function settleEmptyStateForCreateShot(page: Page): Promise<void> {
+  const video = page.locator("video").first();
+  await video.waitFor({ state: "attached", timeout: 15_000 });
+  await video.evaluate((v) => {
+    v.style.display = "none";
+  });
+}
 
 // Long Side then Short Side of the floor (the app's section model).
 const LONG_SIDE = [
@@ -46,6 +60,8 @@ test.describe("@screenshots landing imagery", () => {
     await page.getByLabel("Choreo name").fill("Bronze Waltz");
     // Waltz is the pre-selected chip in the New-choreo sheet.
     await expect(page.getByRole("dialog", { name: "New choreography" })).toBeVisible();
+    // Settle the empty state + drop the jitter-prone tour video before capturing.
+    await settleEmptyStateForCreateShot(page);
     await page.screenshot({ path: shot("create.png") });
     await page
       .getByRole("dialog")

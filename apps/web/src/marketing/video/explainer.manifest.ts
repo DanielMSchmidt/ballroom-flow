@@ -20,7 +20,7 @@ export interface ExplainerVideoAsset {
 export const EXPLAINER: ExplainerVideoAsset = {
   file: "explainer.mp4",
   poster: "explainer-poster.png",
-  title: "A 30-second tour of Weave Steps: authoring, coaching and journaling",
-  caption: "See it in 30 seconds — build a routine, coach it, keep every lesson.",
-  durationSeconds: 32,
+  title: "A guided tour of Weave Steps: build, notate and share a routine",
+  caption: "A slow, step-by-step walkthrough — from your first tap to sharing.",
+  durationSeconds: 84,
 };
