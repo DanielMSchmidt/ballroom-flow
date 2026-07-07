@@ -16,6 +16,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { danceName, getLocale, pickMessages, useLocale, useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
 import { useOnline } from "../lib/use-online";
+import { ExplainerVideo, WatchTour } from "../marketing/ExplainerVideo";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
@@ -286,6 +287,9 @@ export function ChoreoList({
               </Button>
             }
           />
+          {/* No choreos yet → show the product tour inline so a first-time user
+              sees what they're about to build. */}
+          <ExplainerVideo className="max-w-xl self-center" />
           {/* US-045: read-only sample + start-from-template, when the app publishes one. */}
           {sample && (
             <button
@@ -314,64 +318,68 @@ export function ChoreoList({
           )}
         </div>
       ) : (
-        <ul className="flex flex-col gap-2.5">
-          {routines.map((r) => {
-            const forked = Boolean(r.forkedFromTitle);
-            // Meta segments (frame 1.1): Dance · <bars|no figures> · <date>.
-            // Bars/figure-count come from the OPTIONAL parity fields; absent until
-            // the store exposes them, in which case the segment is simply omitted.
-            const barsLabel =
-              r.figureCount === 0 ? t.noFiguresYet : r.bars != null ? t.bars(r.bars) : undefined;
-            const meta = [danceName(r.dance, locale), barsLabel, formatUpdated(r.updatedAt)]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li key={r.docRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => onOpen?.(r.docRef)}
-                  className="flex min-h-[64px] w-full items-center gap-3 rounded-lg border bg-surface py-3 pl-3 pr-12 text-left"
-                  style={
-                    forked
-                      ? {
-                          background: "var(--bf-scope-custom-tint)",
-                          borderColor: "var(--bf-scope-custom-border)",
-                        }
-                      : { borderColor: "var(--bf-border)" }
-                  }
-                >
-                  <GlyphTile color={forked ? "var(--bf-scope-custom)" : DANCE_COLOR[r.dance]} />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span
-                      className="truncate text-xs font-bold"
-                      style={{ color: forked ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
-                    >
-                      {r.title}
-                    </span>
-                    {forked ? (
+        <>
+          {/* Already have choreos → keep the tour a click away, not in the way. */}
+          <WatchTour className="self-start" />
+          <ul className="flex flex-col gap-2.5">
+            {routines.map((r) => {
+              const forked = Boolean(r.forkedFromTitle);
+              // Meta segments (frame 1.1): Dance · <bars|no figures> · <date>.
+              // Bars/figure-count come from the OPTIONAL parity fields; absent until
+              // the store exposes them, in which case the segment is simply omitted.
+              const barsLabel =
+                r.figureCount === 0 ? t.noFiguresYet : r.bars != null ? t.bars(r.bars) : undefined;
+              const meta = [danceName(r.dance, locale), barsLabel, formatUpdated(r.updatedAt)]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li key={r.docRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => onOpen?.(r.docRef)}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-lg border bg-surface py-3 pl-3 pr-12 text-left"
+                    style={
+                      forked
+                        ? {
+                            background: "var(--bf-scope-custom-tint)",
+                            borderColor: "var(--bf-scope-custom-border)",
+                          }
+                        : { borderColor: "var(--bf-border)" }
+                    }
+                  >
+                    <GlyphTile color={forked ? "var(--bf-scope-custom)" : DANCE_COLOR[r.dance]} />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span
-                        className="truncate text-2xs"
-                        style={{ color: "var(--bf-scope-custom-ink)" }}
+                        className="truncate text-xs font-bold"
+                        style={{ color: forked ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
                       >
-                        <span aria-hidden="true">⑂ </span>
-                        {t.forkedFrom(r.forkedFromTitle ?? "")}
+                        {r.title}
                       </span>
-                    ) : (
-                      <span className="truncate text-2xs text-ink-muted">{meta}</span>
-                    )}
-                  </span>
-                </button>
-                <IconButton
-                  label={t.moreOptionsFor(r.title)}
-                  onClick={() => setMenuFor(r)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2"
-                >
-                  <span className="text-base leading-none">⋯</span>
-                </IconButton>
-              </li>
-            );
-          })}
-        </ul>
+                      {forked ? (
+                        <span
+                          className="truncate text-2xs"
+                          style={{ color: "var(--bf-scope-custom-ink)" }}
+                        >
+                          <span aria-hidden="true">⑂ </span>
+                          {t.forkedFrom(r.forkedFromTitle ?? "")}
+                        </span>
+                      ) : (
+                        <span className="truncate text-2xs text-ink-muted">{meta}</span>
+                      )}
+                    </span>
+                  </button>
+                  <IconButton
+                    label={t.moreOptionsFor(r.title)}
+                    onClick={() => setMenuFor(r)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
+                  >
+                    <span className="text-base leading-none">⋯</span>
+                  </IconButton>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {/* New-choreo sheet (frame 1.5) */}

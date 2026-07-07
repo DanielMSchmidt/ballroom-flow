@@ -95,6 +95,48 @@ New dev dependencies:
 - **`vite preview` (not `vite dev`) as the E2E webServer.** Serves the built
   PWA assets + service worker, matching production for install/offline tests.
 
+## Explainer video
+
+An **auto-generated product tour** (`apps/web/src/marketing/video/explainer.mp4` +
+`explainer-poster.png`) — a real-app screencast of the authoring, commenting and
+journaling journeys, stitched with intro/info/outro cards. It's embedded on the README,
+the logged-out Landing page, and the empty Choreo-list state (a subtle "watch the tour"
+disclosure once you already have choreos). Like the marketing **screenshots** pipeline, the
+committed asset is regenerated from the *running app*, so it can't drift from reality.
+
+**Pipeline** (`pnpm video:generate`):
+
+1. **Record** — `pnpm video:record` runs the `@video` Playwright journey
+   (`apps/web/e2e/explainer-video.spec.ts`) against the real #191 worker harness, driving
+   the app through each scene and recording one `webm` per scene into
+   `apps/web/remotion/public/clips/` (gitignored intermediates).
+2. **Render** — `pnpm video:render` (`scripts/render-explainer.mjs`) bundles the Remotion
+   project (`apps/web/remotion/`) and renders the poster still + `h264` MP4 into
+   `apps/web/src/marketing/video/`.
+
+**Single source of truth:** `apps/web/remotion/timeline.ts` defines the scene order, the
+clip filenames the recorder writes, and the on-screen copy — shared by the recorder and the
+composition so they can't disagree (mirrors `screenshots.manifest.ts`). The final asset's
+metadata lives in `apps/web/src/marketing/video/explainer.manifest.ts`.
+
+**CI bot** (`.github/workflows/video.yml`, mirrors the screenshot bot): on PRs that touch the
+UI / worker / pipeline (path-filtered) — plus manual dispatch — CI runs `pnpm video:generate`,
+then decides whether the running app **meaningfully** changed the tour. Because the MP4 is
+non-deterministic (h264 encode + the recorded journey's timing/cursor jitter), a byte compare
+is useless, so `scripts/video-diff.mjs` **pixel-diffs the deterministic poster frame** and
+treats it as changed only when the differing fraction exceeds `VIDEO_DIFF_THRESHOLD` (default
+2%). On a real change it commits the refreshed `explainer.mp4` + poster back to the PR branch
+(`video-bot`, `[skip ci]` — both the message and a guard step stop the self-trigger loop) and
+upserts a sticky **before/after** comment; otherwise it discards the jittered render. Remotion
+downloads its own managed Chromium in CI.
+
+**Notes.** Remotion is a **build-only** dependency — the app embeds the rendered MP4 via a
+plain `<video>` (poster + controls, `preload="none"`), so nothing heavy ships in the client
+bundle. The render points Chromium at `REMOTION_BROWSER` (or the sandbox's preinstalled
+headless shell, else Remotion's managed download); the recorder points at `PW_CHROMIUM_PATH` /
+the preinstalled Chromium, falling back to Playwright's managed browser (CI). `@video` is
+**not** in `@smoke` — the bot regenerates it; humans can too with `pnpm video:generate`.
+
 ## Verification
 
 All commands run clean from a `--frozen-lockfile` install (full outputs in the
