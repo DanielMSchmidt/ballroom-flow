@@ -7,6 +7,7 @@ import { routineCapFor } from "./db/admin";
 import { createFigureRows, getRegistryTypes } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
 import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
+import { readFigureSnapshot } from "./figure-snapshot";
 import type { Env } from "./index";
 import { APP_OWNER } from "./sample";
 
@@ -147,11 +148,7 @@ async function copyAccountFiguresForFork(
   for (const ref of figureRefs) {
     if (types.get(ref) !== "account-figure") continue; // global, or unregistered — leave live
 
-    // The DO RPC stub degrades the `FigureDoc | null` return type — reassert it
-    // (same cast the GET /api/routines/:id/snapshot route uses for the same call).
-    const figure = (await env.DOC_DO.get(
-      env.DOC_DO.idFromName(ref),
-    ).getFigureSnapshot()) as FigureDoc | null;
+    const figure = await readFigureSnapshot(env.DOC_DO.get(env.DOC_DO.idFromName(ref)));
     if (!figure) continue; // never-seeded/dangling doc — nothing to copy
     if (figure.ownerId === APP_OWNER) continue; // app-owned template content — see above
 
