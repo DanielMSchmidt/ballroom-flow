@@ -23,9 +23,11 @@ import {
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
+  type PlacementPart,
   partBeatSpan,
   type RegistryKind,
   type Section,
+  windowAttributes,
 } from "@weavesteps/domain";
 import {
   type FormEvent,
@@ -1700,7 +1702,14 @@ function PlacementCard({
 
   const label = figure.name;
   const isCustom = figure.scope === "account" && !figureMatchesLibraryOrigin(figure);
-  const live = figure.attributes.filter((a) => a.deletedAt == null);
+  // Window the summary to the placement's portion (Builder v3 ③): a partial
+  // placement dances only [fromCount, toCount], so the card must show ONLY those
+  // counts/chips — matching the reading view — not the whole figure with a "steps
+  // N–M" label bolted on. Absent part → whole figure passes through.
+  const live = windowAttributes(
+    figure.attributes.filter((a) => a.deletedAt == null),
+    placement.part,
+  );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   return (
     <div
@@ -1829,7 +1838,12 @@ function PlacementCard({
         onClick={onOpen}
         className="w-full text-left"
       >
-        <PlacementAttributes figure={figure} dance={dance} roleView={roleView} />
+        <PlacementAttributes
+          figure={figure}
+          dance={dance}
+          roleView={roleView}
+          part={placement.part ?? null}
+        />
       </button>
       <AlignmentChips placement={placement} figure={figure} />
     </div>
@@ -2167,14 +2181,21 @@ function PlacementAttributes({
   figure,
   dance,
   roleView,
+  part,
 }: {
   figure: FigureDoc;
   dance: DanceId;
   roleView: RoleView;
+  /** The placement's portion window (Builder v3 ③) — chips render only these
+   *  counts, matching the reading view. Null → the whole figure. */
+  part?: PlacementPart | null;
 }) {
   const t = pickMessages(assembleMessages);
   const forRole = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
+    windowAttributes(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      part,
+    ),
     roleView,
   );
   if (forRole.length === 0) {
