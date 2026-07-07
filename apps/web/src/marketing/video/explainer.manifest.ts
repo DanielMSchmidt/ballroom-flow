@@ -22,5 +22,5 @@ export const EXPLAINER: ExplainerVideoAsset = {
   poster: "explainer-poster.png",
   title: "A guided tour of Weave Steps: build, notate and share a routine",
   caption: "A slow, step-by-step walkthrough — from your first tap to sharing.",
-  durationSeconds: 62,
+  durationSeconds: 81,
 };

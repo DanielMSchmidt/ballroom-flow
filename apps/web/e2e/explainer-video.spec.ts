@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
+import { type Browser, chromium, expect, type Locator, type Page, test } from "@playwright/test";
 import {
   type CaptionMark,
   REC_HEIGHT,
@@ -121,6 +121,22 @@ type Step = (
 
 const pause = (page: Page, ms: number) => page.waitForTimeout(ms);
 
+/** Type into a field at a slow, human pace (char-by-char) instead of pasting it
+ *  in one shot — so a first-time viewer can actually watch the text appear. */
+async function slowType(field: Locator, text: string, delay = 105): Promise<void> {
+  await field.click();
+  await field.pressSequentially(text, { delay });
+}
+
+/** Make a native <select> read as a deliberate human choice: rest the cursor on
+ *  it, pause, pick, then pause again so the new value is seen before moving on. */
+async function slowSelect(page: Page, field: Locator, value: string): Promise<void> {
+  await field.hover();
+  await pause(page, 800);
+  await field.selectOption(value);
+  await pause(page, 900);
+}
+
 test.describe("@video explainer recorder", () => {
   test("record the guided authoring tour", async () => {
     test.setTimeout(300_000);
@@ -158,7 +174,10 @@ async function recordTour(browser: Browser): Promise<void> {
   const startedAt = Date.now();
   const marks: CaptionMark[] = [];
   const step: Step = async (kicker, caption, fn, opts = {}) => {
-    const { read = 1300, settle = 900 } = opts;
+    // A generous default GAP between the caption appearing (what we're about to
+    // do) and the action starting — the viewer reads the instruction, THEN watches
+    // it happen. Deliberately longer than a real user would pause.
+    const { read = 2600, settle = 900 } = opts;
     marks.push({ atMs: Date.now() - startedAt, kicker, caption });
     await pause(page, read); // viewer reads the caption before anything moves
     await fn();
@@ -211,10 +230,10 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     "2 · NAME IT & PICK A DANCE",
     "Give it a name, choose the dance, then create it.",
     async () => {
-      await page.getByLabel("Choreo name").fill("Bronze Foxtrot");
-      await pause(page, 500);
+      await slowType(page.getByLabel("Choreo name"), "Bronze Foxtrot");
+      await pause(page, 900);
       await page.getByRole("button", { name: "Foxtrot" }).click();
-      await pause(page, 500);
+      await pause(page, 900);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: /create choreo/i })
@@ -232,8 +251,9 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     "Sections group your figures. Add one and give it a name.",
     async () => {
       await page.getByRole("button", { name: "Add section" }).click();
-      await page.getByLabel("Section name").fill("Long Side");
-      await pause(page, 400);
+      await pause(page, 500);
+      await slowType(page.getByLabel("Section name"), "Long Side");
+      await pause(page, 700);
       await page.getByLabel("Section name").press("Enter");
       await expect(page.getByRole("heading", { name: "Long Side" })).toBeVisible({
         timeout: 15_000,
@@ -247,13 +267,15 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     "Open the picker and choose a figure from the built-in catalogue.",
     async () => {
       await page.getByRole("button", { name: "Add figure" }).first().click();
+      await pause(page, 1000);
+      await page.getByRole("button", { name: /feather step/i }).hover();
       await pause(page, 700);
       await page.getByRole("button", { name: /feather step/i }).click();
-      await pause(page, 600);
+      await pause(page, 900);
       await page.getByRole("button", { name: /add to choreo/i }).click();
       await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
     },
-    { read: 1400, settle: 1300 },
+    { read: 2800, settle: 1300 },
   );
 
   // 5 — add your own custom figure
@@ -262,13 +284,13 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     "Not in the catalogue? Type your own figure name and add it.",
     async () => {
       await page.getByRole("button", { name: "Add figure" }).first().click();
-      await pause(page, 600);
-      await page.getByLabel("Figure name").fill("My Variation");
-      await pause(page, 400);
+      await pause(page, 800);
+      await slowType(page.getByLabel("Figure name"), "My Variation");
+      await pause(page, 700);
       await page.getByLabel("Figure name").press("Enter");
       await expect(page.getByText("My Variation")).toBeVisible({ timeout: 15_000 });
     },
-    { read: 1400, settle: 1300 },
+    { read: 2800, settle: 1300 },
   );
 
   // 6 — open a figure and notate a step
@@ -280,19 +302,24 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
       await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({
         timeout: 15_000,
       });
-      await pause(page, 800);
+      await pause(page, 900);
       await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
-      await pause(page, 600);
+      await pause(page, 900);
       await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
-      await pause(page, 600);
+      await pause(page, 900);
+      // Pick the two attributes one at a time, resting on each before tapping.
+      await page.getByRole("button", { name: /^Forward$/ }).hover();
+      await pause(page, 700);
       await page.getByRole("button", { name: /^Forward$/ }).click();
-      await pause(page, 500);
+      await pause(page, 900);
+      await page.getByRole("button", { name: /^Heel-Toe$/ }).hover();
+      await pause(page, 700);
       await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-      await pause(page, 500);
+      await pause(page, 900);
       await page.getByRole("button", { name: /^Done$/ }).click();
       await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
     },
-    { read: 1600, settle: 1300 },
+    { read: 3000, settle: 1300 },
   );
 
   // 7 — the annotation reference
@@ -311,7 +338,7 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
         timeout: 15_000,
       });
     },
-    { read: 1500, settle: 800 },
+    { read: 2800, settle: 800 },
   );
 
   // 8 — leave a note on the figure
@@ -321,14 +348,13 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
     async () => {
       const panel = page.getByRole("region", { name: /^annotations$/i });
       await expect(panel).toBeVisible({ timeout: 15_000 });
-      await panel.getByLabel("Kind").selectOption("lesson");
-      await pause(page, 400);
-      await panel.getByRole("textbox", { name: /^note$/i }).fill("Rise later on this step.");
-      await pause(page, 500);
+      await slowSelect(page, panel.getByLabel("Kind"), "lesson");
+      await slowType(panel.getByRole("textbox", { name: /^note$/i }), "Rise later on this step.");
+      await pause(page, 800);
       await panel.getByRole("button", { name: /add note/i }).click();
       await expect(panel.getByText("Rise later on this step.")).toBeVisible({ timeout: 15_000 });
     },
-    { read: 1500, settle: 1300 },
+    { read: 2800, settle: 1300 },
   );
 
   // Close the full-screen step editor → back to the builder.
@@ -346,7 +372,7 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
       await page.getByRole("button", { name: /reading view/i }).click();
       await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     },
-    { read: 1400, settle: 2000 },
+    { read: 2600, settle: 2000 },
   );
 
   // Back to the editing view so Share sits in a known place.
@@ -361,16 +387,15 @@ async function tourFlow(page: Page, step: Step): Promise<void> {
       await page.getByRole("button", { name: "Share" }).click();
       const shareSheet = page.getByRole("dialog", { name: /share this choreo/i });
       await expect(shareSheet).toBeVisible({ timeout: 15_000 });
-      await pause(page, 800);
+      await pause(page, 1000);
       await shareSheet.getByRole("button", { name: /\+ invite someone/i }).click();
-      await pause(page, 600);
-      await shareSheet.getByLabel("Role").selectOption("commenter");
-      await pause(page, 600);
+      await pause(page, 900);
+      await slowSelect(page, shareSheet.getByLabel("Role"), "commenter");
       await shareSheet.getByRole("button", { name: "Create link" }).click();
       await expect(shareSheet.locator("code", { hasText: "/invite/" })).toBeVisible({
         timeout: 15_000,
       });
     },
-    { read: 1600, settle: 2600 },
+    { read: 2800, settle: 2800 },
   );
 }
