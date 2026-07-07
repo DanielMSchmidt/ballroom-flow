@@ -46,6 +46,8 @@ test.describe("@smoke catalog figure alignment", () => {
     // 3. Add the Natural Turn FROM the library (carries the catalog chart).
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByRole("button", { name: /^natural turn$/i }).click();
+    // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+    await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Natural Turn").first()).toBeVisible({ timeout: 15_000 });
 
     // 4. The charted figure-level alignment is seeded with the figure — per the

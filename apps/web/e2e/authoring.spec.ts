@@ -55,12 +55,14 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // 4b. Notate the figure (US-028 hero flow, 2026-07-01 bars grid): open its
-    //     full-screen editor, tap the Step cell at count 1 → the single-attribute
+    // 4b. Notate the figure (US-028 hero flow, Builder v3 ② quick-add): open its
+    //     full-screen editor. The FIRST tap on the empty Step cell places a blank
+    //     step (presence attr + toast); the SECOND tap opens the single-attribute
     //     overlay → set DIRECTION "Forward" (the headline) + FOOTWORK "Heel-Toe"
-    //     (a slot) → Save (closes the overlay). The headline + chip show on count 1.
+    //     (a slot) → Done (closes the overlay). The headline + chip show on count 1.
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
     await page.getByRole("button", { name: /^Done$/ }).click();
