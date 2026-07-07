@@ -10,6 +10,7 @@ import { can, type EffectiveRole } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { shareMessages } from "../i18n/messages/share";
+import { onSelectValue } from "../lib/select-value";
 import { useMe } from "../store/me";
 import {
   type IssuedInvite,
@@ -228,7 +229,7 @@ export function ShareView({
                     label: t.inviteRoleLabels[value],
                   }))}
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as Member["role"])}
+                  onChange={onSelectValue<Member["role"]>(setInviteRole)}
                 />
                 <Button
                   variant="primary"
