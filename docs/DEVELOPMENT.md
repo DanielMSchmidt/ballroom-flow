@@ -60,6 +60,16 @@ accounts** — auth is tested on its negative path; the Worker tests run on loca
 
 Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 
+> **Suites run one at a time.** `pnpm test` and `pnpm coverage` pass
+> `--workspace-concurrency=1` to `pnpm -r`, so the four workspace suites run
+> **sequentially**, each getting the whole machine. Each vitest still parallelizes
+> its own files across CPU cores — but running all four suites at once meant four
+> vitest instances each spawning a CPU-sized worker pool, oversubscribing the
+> cores and starving load-sensitive tests (e.g. the axe sweeps, which are
+> O(DOM nodes)) into timeout *flakes* under load. Serializing costs a little
+> wall-time and buys determinism. Need a single layer fast? Run it directly, e.g.
+> `pnpm --filter web test`.
+
 | Layer | Command | Stack |
 |---|---|---|
 | **Domain** (unit/property) | `pnpm --filter @weavesteps/domain test` | Node + `fast-check` + in-memory Automerge |
