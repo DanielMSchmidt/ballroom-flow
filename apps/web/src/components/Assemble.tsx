@@ -1030,6 +1030,9 @@ export function Assemble({
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
               figureName={notatingFigure.name}
+              onRenameFigure={
+                canEdit ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
+              }
               isBookmarked={
                 notatingFigure.scope === "account" &&
                 (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)

@@ -228,7 +228,9 @@ describe("FigureTimeline — 'add to my library' affordance (⟳v5, PLAN §4.2/�
       />,
     );
     const button = screen.getByRole("button", { name: /add to my library/i });
+    // Builder v3 ⑤: the button opens the naming bar; Save bookmarks.
     await userEvent.click(button);
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
     expect(onAddToLibrary).toHaveBeenCalledTimes(1);
   });
 
@@ -338,5 +340,50 @@ describe("FigureTimeline — presence quick-add (Builder v3 ②)", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 1$/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+describe("FigureTimeline — add-to-library naming flow (Builder v3 ⑤)", () => {
+  it("names the variant, renames the live figure, then bookmarks", async () => {
+    const { FigureTimeline } = await load();
+    const onAddToLibrary = vi.fn();
+    const onRenameFigure = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={onAddToLibrary}
+        onRenameFigure={onRenameFigure}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add to my library/i }));
+    const input = screen.getByRole("textbox", { name: /variant name/i });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Overturned Natural");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(onRenameFigure).toHaveBeenCalledWith("Overturned Natural");
+    expect(onAddToLibrary).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeping the same name skips the rename but still bookmarks", async () => {
+    const { FigureTimeline } = await load();
+    const onAddToLibrary = vi.fn();
+    const onRenameFigure = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={onAddToLibrary}
+        onRenameFigure={onRenameFigure}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add to my library/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(onRenameFigure).not.toHaveBeenCalled();
+    expect(onAddToLibrary).toHaveBeenCalledTimes(1);
   });
 });

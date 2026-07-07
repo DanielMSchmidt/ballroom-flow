@@ -225,6 +225,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     setBreakBeats: editAction((s) => s.setBreakBeats),
     setFigureAttributes: editAction((s) => s.setFigureAttributes),
     setFigureCounts: editAction((s) => s.setFigureCounts),
+    renameFigure: editAction((s) => s.renameFigure),
     setFigureAlignment: editAction(
       (s) => s.setFigureAlignment as (...a: [string, "entry" | "exit", Alignment | null]) => void,
     ),

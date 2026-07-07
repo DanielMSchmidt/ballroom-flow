@@ -48,6 +48,7 @@ function fakeStore(
     setBreakBeats: () => {},
     setFigureAttributes: () => {},
     setFigureCounts: () => {},
+    renameFigure: () => {},
     setFigureAlignment: () => {},
     readAnnotations: () => [],
     createAnnotation: () => {},

@@ -101,6 +101,9 @@ export interface FigureTimelineProps {
   /** The figure's display name — drives the "adjusted for this choreo — still X"
    *  identity reassurance beside Add to library (Builder v3 variant bar). */
   figureName?: string;
+  /** Rename the LIVE figure doc (Builder v3 ⑤): the add-to-library naming flow
+   *  writes the typed name onto the shared doc before bookmarking. */
+  onRenameFigure?: (name: string) => void;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -163,6 +166,7 @@ export function FigureTimeline({
   isBookmarked = false,
   onAddToLibrary,
   figureName,
+  onRenameFigure,
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
@@ -183,6 +187,8 @@ export function FigureTimeline({
   };
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
+  // The in-flight add-to-library naming draft (Builder v3 ⑤), or null.
+  const [libraryName, setLibraryName] = useState<string | null>(null);
   const isGlobal = figureScope === "global";
   const editable = role === "editor";
 
@@ -339,20 +345,53 @@ export function FigureTimeline({
               {t.inYourLibrary}
             </span>
           ) : (
-            onAddToLibrary && (
+            onAddToLibrary &&
+            (libraryName != null ? (
+              /* Naming bar (Builder v3 ⑤): name the variant as it enters the
+                   library — the name renames the LIVE shared figure doc. */
+              <span className="flex items-center gap-2">
+                <input
+                  aria-label={t.variantNameLabel}
+                  placeholder={t.variantNamePlaceholder}
+                  value={libraryName}
+                  onChange={(e) => setLibraryName(e.target.value)}
+                  className="min-h-[36px] rounded-[8px] border-[1.5px] px-2 text-2xs font-semibold text-ink"
+                  style={{ borderColor: "var(--bf-border-strong)" }}
+                />
+                <Button variant="ghost" size="sm" onClick={() => setLibraryName(null)}>
+                  {t.variantNameCancel}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    const next = libraryName.trim();
+                    if (next && next !== figureName) onRenameFigure?.(next);
+                    onAddToLibrary();
+                    setLibraryName(null);
+                  }}
+                >
+                  {t.variantNameSave}
+                </Button>
+              </span>
+            ) : (
               <>
                 {/* Identity reassurance (Builder v3 variant bar): the figure was
-                    adjusted for this choreo but is still the same named figure. */}
+                      adjusted for this choreo but is still the same named figure. */}
                 {figureName && (
                   <span className="rounded-[8px] bg-surface-sunken px-2 py-1.5 text-2xs font-semibold text-ink-muted">
                     {t.adjustedStill(figureName)}
                   </span>
                 )}
-                <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setLibraryName(figureName ?? "")}
+                >
                   <span aria-hidden="true">↟</span> {t.addToMyLibrary}
                 </Button>
               </>
-            )
+            ))
           ))}
       </div>
 

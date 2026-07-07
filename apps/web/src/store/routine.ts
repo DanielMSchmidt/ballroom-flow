@@ -210,6 +210,12 @@ export interface RoutineStore extends RoutineReadModel {
    * figure changes in place. Clamped to 1–64.
    */
   setFigureCounts(figureRef: string, counts: number): void;
+  /**
+   * Rename a figure doc (Builder v3 ⑤ — the add-to-library naming flow). The
+   * figure is LIVE and shared: the new name shows in every routine referencing
+   * it (owner decision 2026-07-07). Blank names are ignored.
+   */
+  renameFigure(figureRef: string, name: string): void;
   /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
   setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Routine-scoped annotations (US-039), tombstones dropped. */
@@ -972,6 +978,11 @@ export async function openRoutine(
     setFigureCounts: (figureRef, rawCounts) => {
       editFigure(figureRef, { counts: Math.min(64, Math.max(1, Math.round(rawCounts))) });
     },
+    renameFigure: (figureRef, name) => {
+      const next = name.trim();
+      if (!next) return;
+      editFigure(figureRef, { name: next });
+    },
 
     setFigureAlignment: (figureRef, edge, alignment) => {
       // Entry/exit alignment lives on the figure doc (US-031). Clearing deletes
@@ -1145,7 +1156,7 @@ export async function openRoutine(
    */
   function editFigure(
     figureRef: string,
-    patch: { attributes?: Attribute[]; counts?: number },
+    patch: { attributes?: Attribute[]; counts?: number; name?: string },
   ): void {
     const figure = readFigureDoc(figureConn(figureRef));
 
@@ -1170,6 +1181,7 @@ export async function openRoutine(
           : patch.attributes;
       }
       if (patch.counts !== undefined) draft.counts = patch.counts;
+      if (patch.name !== undefined) draft.name = patch.name;
     });
   }
 
@@ -1182,7 +1194,7 @@ export async function openRoutine(
   function spawnVariantForEdit(
     figureRef: string,
     base: FigureDoc,
-    patch: { attributes?: Attribute[]; counts?: number },
+    patch: { attributes?: Attribute[]; counts?: number; name?: string },
   ): void {
     const loc = findPlacement(figureRef);
     if (!loc) return;
