@@ -98,6 +98,11 @@ A **graph of Automerge documents**, one per Durable Object; **D1 is a pure index
 - **Permissions** are enforced **per-document at the DO sync boundary** (and the REST surface) — never by post-hoc CRDT cell rejection.
 - **Attribute kinds are data,** not code: editor/lanes/chips render from the merged ATTRIBUTE_REGISTRY (standard + user-defined); respect cardinality and `appliesToDances` (e.g. Tango omits `rise`).
 - **TS strict; no `any`** without justification (`noExplicitAny` is a Biome error). Run `pnpm lint && pnpm typecheck` before committing (lefthook enforces both on staged files).
+- **Keep types honest — a cast is a claim the compiler can't check, so it's a latent bug.** A `as X`, `as unknown as X`, `any`, non-null `!`, or `@ts-expect-error` doesn't fix a type problem, it *silences* it: if reality later diverges from the claim, nothing catches it. Treat every cast as debt with a burden of proof.
+  - **First, make the type honest at the source** so no cast is needed: fix the declaration, add a proper generic/overload, narrow with a runtime check or a **type guard** (`x is T`) instead of asserting, or model the value precisely (a union, a `JsonValue`, a discriminated shape) rather than reaching for `any`/`unknown`+cast. Prefer changing the type over asserting around it.
+  - **A cast is only acceptable at a boundary the type system genuinely can't express** — an external library's wrong/over-wide types, a validated parse result, a deserialization edge — and then it goes in **one small, named, documented helper** (see `readFigureSnapshot` in `apps/worker/src/index.ts`), never inline-scattered. The comment must say *why the compiler can't know* and *what guarantees the claim at runtime*.
+  - **`as unknown as X` (double cast) is the loudest smell** — it means two types were forced together with zero overlap. Almost always a missing generic, a mis-typed storage/RPC layer, or a shape that should be a union. Fix the layer, don't double-cast the call site.
+  - When you must keep one, it should read as *defensive* (a runtime check backs the claim), not as *silencing* the compiler. If you can't state what makes it true at runtime, it's wrong.
 - **Commits:** branch off `main`/`development`; commit/push only when asked. Keep changes within the workspace you own.
 
 ---
