@@ -14,12 +14,25 @@ import { applyMigrations } from "./test-support/seed";
 // the worker's Env so seedStarterRoutine receives the right type.
 const typedEnv = env as unknown as Env;
 
+// Headroom over vitest's 5s default, NOT a blind bump (same rationale as the web
+// suite's load-tolerance timeout, 29d5cbd): the first seedStarterRoutine call in a
+// fresh D1 also builds the app-owned Golden Waltz TEMPLATE — 6 figure Automerge
+// docs + the routine doc — before forking it. The WDSF technique-book re-chart
+// grew that template's embedded catalog payload from 190 to 267 attribute rows
+// (+41%) and its attribute value bytes from ~0.9 KB to ~2.8 KB (3.2×, the verbatim
+// rotation/head prose), which under istanbul coverage instrumentation pushed the
+// build+fork just past 5s on CI (observed 5.0–5.4s). A genuinely stuck seed still
+// fails, just later.
+const STARTER_SEED_TIMEOUT_MS = 15_000;
+
 describe("seedStarterRoutine", () => {
   beforeEach(async () => {
     await applyMigrations();
   });
 
-  it("gifts the user a fork of the app-owned Golden Waltz template", async () => {
+  it("gifts the user a fork of the app-owned Golden Waltz template", {
+    timeout: STARTER_SEED_TIMEOUT_MS,
+  }, async () => {
     const routineId = await seedStarterRoutine(typedEnv, "u_starter2");
 
     // The routine is an owned registry row under the USER (not "app").
@@ -82,7 +95,9 @@ describe("seedStarterRoutine", () => {
     expect(placements).toBe(6);
   });
 
-  it("onboarding still succeeds even if the gift is a fork (idempotent)", async () => {
+  it("onboarding still succeeds even if the gift is a fork (idempotent)", {
+    timeout: STARTER_SEED_TIMEOUT_MS,
+  }, async () => {
     // Calling twice is safe — seedSampleRoutine is idempotent, and a second fork
     // just creates another routine row for the user.
     const id1 = await seedStarterRoutine(typedEnv, "u_starter3");
