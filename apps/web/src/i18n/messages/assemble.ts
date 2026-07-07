@@ -37,6 +37,11 @@ const en = {
   addedToLibrary: "Added to your library",
   alreadyInLibrary: "Already in your library",
   addToLibraryFailed: "Couldn't add to your library",
+  // Variant-spawn (copy-on-write) failure toasts — the optimistic "Step placed"
+  // toast already fired, so a failed save must say so rather than vanish silently.
+  editSaveFailed: "Couldn't save your change — please try again",
+  editSaveQuota: "You've reached your figure limit — that change wasn't saved",
+  editSaveDenied: "You don't have permission to make that change",
   // Thread sheet
   threadSheetTitle: "Thread",
   stepThreadTitle: (figureName: string, count: number) => `${figureName} · step ${count}`,
@@ -195,6 +200,9 @@ const de: typeof en = {
   addedToLibrary: "Zu deiner Bibliothek hinzugefügt",
   alreadyInLibrary: "Schon in deiner Bibliothek",
   addToLibraryFailed: "Konnte nicht zu deiner Bibliothek hinzugefügt werden",
+  editSaveFailed: "Änderung konnte nicht gespeichert werden — bitte versuch es erneut",
+  editSaveQuota: "Du hast dein Figuren-Limit erreicht — die Änderung wurde nicht gespeichert",
+  editSaveDenied: "Du hast keine Berechtigung für diese Änderung",
   threadSheetTitle: "Thread",
   stepThreadTitle: (figureName, count) => `${figureName} · Schritt ${count}`,
   wholeFigure: "ganze Figur",

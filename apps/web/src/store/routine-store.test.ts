@@ -5,7 +5,13 @@ import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@weavesteps/domain";
 import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
+import { reportError } from "../lib/ops";
+import { ApiError } from "../lib/rpc";
 import { type OpenOptions, openRoutine } from "./routine";
+
+// The store reports bug-shaped variant-spawn failures to Sentry via lib/ops —
+// stub it so the failure-surfacing test can assert the call without a real DSN.
+vi.mock("../lib/ops", () => ({ reportError: vi.fn() }));
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-017 — store/ seam (multi-doc) [M2, system]
@@ -1074,6 +1080,68 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // …and NOTHING was ever written to the (unseeded) global DO connection: the old
     // bug's silently-rejected in-place write must not happen.
     expect(sockets.get(ref)?.sent.length ?? 0).toBe(0);
+    store.close();
+  });
+
+  it("surfaces a FAILED variant spawn (error callback + Sentry) instead of dropping it silently", async () => {
+    // Intent (the reported bug's second half): when the variant POST fails, the
+    //   store used to only `console.warn` and drop the edit — but FigureTimeline had
+    //   already fired the optimistic "Step placed" toast, so the user saw success
+    //   then a vanished step. The store must now (a) tell the screen via
+    //   `onCopyOnWriteError` so it can toast the failure, and (b) report a bug-shaped
+    //   failure (a 409 the DB shouldn't produce) to Sentry — while NEVER re-pointing
+    //   the placement (no dangling variant) or firing the success callback.
+    const ref = globalFigureRef("waltz", "running-spin-turn");
+    const { opts, sockets } = fakeWiring();
+    const createFigure = vi.fn(async () => {
+      throw new ApiError(409, { error: "figure_ref_conflict" }, "POST /api/figures -> 409");
+    });
+    const onCopyOnWrite = vi.fn();
+    const onCopyOnWriteError = vi.fn();
+    const store = await openRoutine("rt_fail", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+      onCopyOnWriteError,
+    });
+    const routine = buildRoutineDoc({
+      id: "rt_fail",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: ref, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_fail")?.fireOpen();
+    sockets.get("rt_fail")?.load(routine);
+    sockets.get("rt_fail")?.fireCaughtUp();
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    store.setFigureAttributes(ref, [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ]);
+
+    // The screen is told (so it can toast) — classified as a bug, not a refusal.
+    await vi.waitFor(() =>
+      expect(onCopyOnWriteError).toHaveBeenCalledWith({ figureRef: ref, reason: "unexpected" }),
+    );
+    // …and the bug is reported to Sentry (deduped per figureRef).
+    expect(vi.mocked(reportError)).toHaveBeenCalled();
+    // It must NOT masquerade as success: no "made yours" callback, no re-point —
+    // the placement stays on the base rather than pointing at an uncreated variant.
+    expect(onCopyOnWrite).not.toHaveBeenCalled();
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(ref);
     store.close();
   });
 

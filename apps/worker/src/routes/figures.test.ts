@@ -243,6 +243,51 @@ describe("#187 figure-doc projection", () => {
     expect(conn.status).toBe(101);
   });
 
+  it("allows a SECOND account-figure derived from the SAME base by the same owner (⟳v5 variants; migration 0017)", async () => {
+    // REGRESSION (the reported "toast shows but the step vanishes" bug): editing a
+    // placed CATALOG figure spawns a variant via POST /api/figures, stamped with
+    // `baseFigureRef = global:<dance>:<figureType>`. Re-timing the SAME catalog
+    // figure a second time (another routine, or after a prior variant) minted
+    // another variant with the SAME base. Migration 0010's UNIQUE(ownerId,
+    // forkedFromRef) swallowed the second INSERT → 409 → the client dropped the
+    // edit behind an optimistic toast. Migration 0017 drops that index: a user may
+    // own MANY variants of the same base, so BOTH creates must 201.
+    const base = "global:waltz:running-spin-turn";
+    const ctx = await authedContext({ keypair: kp, userId: "u_mv", docRef: base, role: null });
+    await seedDb({
+      users: [{ id: "u_mv", displayName: "MV", identityColor: "#111", plan: "free" }],
+    });
+    const rt = await seedOwnedRoutine("u_mv");
+
+    const spawnVariant = (figureRef: string) =>
+      SELF.fetch("https://x/api/figures", {
+        method: "POST",
+        headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+        body: JSON.stringify({
+          figureRef,
+          name: "Running Spin Turn",
+          dance: "waltz",
+          figureType: "running-spin-turn",
+          routineId: rt,
+          baseFigureRef: base,
+        }),
+      });
+
+    const firstRef = uniqueDocName("fig_var");
+    const secondRef = uniqueDocName("fig_var");
+    expect((await spawnVariant(firstRef)).status).toBe(201);
+    // Pre-0017 this second create 409'd on the (owner, base) unique index.
+    expect((await spawnVariant(secondRef)).status).toBe(201);
+
+    // Both variants are real, independent, owner-owned rows sharing the one base.
+    const derivatives = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND forkedFromRef = ? AND type = 'account-figure' AND deletedAt IS NULL",
+    )
+      .bind("u_mv", base)
+      .first<{ n: number }>();
+    expect(derivatives?.n).toBe(2);
+  });
+
   it("the projection is what UNBLOCKS the connect (owner 403 before, 101 after)", async () => {
     // RED property (the figure analog of US-021 owner elevation): the ONLY thing
     // that changes between the two connects is the projection. An owner connecting

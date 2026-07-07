@@ -95,6 +95,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
       accountKinds: opts.accountKinds,
       saveCustomKind: opts.saveCustomKind,
       onCopyOnWrite: opts.onCopyOnWrite,
+      onCopyOnWriteError: opts.onCopyOnWriteError,
       eagerFigures: false,
       figureContent: (ref) => snapshot.figureFor(ref),
       // Forward the figure-load-robustness knobs (#94) so an OPENED figure still
