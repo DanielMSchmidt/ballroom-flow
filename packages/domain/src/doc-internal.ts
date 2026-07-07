@@ -31,17 +31,23 @@ function stripUndefined<V>(value: V): V {
 }
 
 /** Build an in-memory Automerge doc from a plain logical shape. */
-export function buildDoc<T extends Record<string, unknown>>(initial: T): A.Doc<T> {
+export function buildDoc<T extends object>(initial: T): A.Doc<T> {
   // Deep-clone (so a frozen fixture is never adopted by reference) and drop
   // undefined-valued optionals, which Automerge refuses to store.
-  return A.from(stripUndefined(structuredClone(initial)));
+  //
+  // `A.from` requires a `Record<string, unknown>` (index signature); our doc shapes
+  // are `interface`s, which structurally ARE plain string-keyed objects but lack an
+  // implicit index signature. Bridge that ONE mismatch here so every caller passes a
+  // typed doc and gets `A.Doc<T>` back with no cast (CLAUDE.md §4).
+  const seed = stripUndefined(structuredClone(initial)) as Record<string, unknown>;
+  return A.from(seed) as A.Doc<T>;
 }
 
 /** A plain, mutable, detached copy of an Automerge doc's current value. */
 export function materialize<T>(doc: A.Doc<T>): T {
   // `A.toJS` already returns a fully detached, non-frozen, deeply-mutable POJO
   // (verified: mutating it does not touch the doc), so no extra clone is needed.
-  return A.toJS(doc) as T;
+  return A.toJS(doc);
 }
 
 /** True when an entity is soft-deleted (a truthy `deletedAt` tombstone). */

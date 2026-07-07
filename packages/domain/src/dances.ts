@@ -19,6 +19,15 @@ export const DANCE_IDS = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "ta
 /** The 5 Standard travelling dances of v1 (no Latin/spot). */
 export type DanceId = (typeof DANCE_IDS)[number];
 
+/**
+ * Runtime narrowing for a `DanceId`. Use this instead of asserting `x as DanceId`
+ * on a raw string from D1/CRDT/a parsed ref — it keeps the type honest (a bogus
+ * value is rejected, not silently trusted). See CLAUDE.md §4 (keep types honest).
+ */
+export function isDanceId(x: unknown): x is DanceId {
+  return typeof x === "string" && (DANCE_IDS as readonly string[]).includes(x);
+}
+
 /** Per-dance metadata driving timing, phrasing, and applicability. */
 export interface DanceMeta {
   /** Musical time signature, e.g. "3/4" (display + reference). */

@@ -14,7 +14,7 @@
 // the schema is data, not a hand-maintained enum.
 import { z } from "zod";
 import type { DanceId } from "./dances";
-import type { Attribute, Role } from "./doc-types";
+import type { Attribute } from "./doc-types";
 import { isOnEighthGrid } from "./timing";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 
@@ -42,7 +42,7 @@ function toAttribute(parsed: z.infer<typeof baseAttribute>): Attribute {
     id: parsed.id,
     kind: parsed.kind,
     count: parsed.count,
-    role: (parsed.role ?? null) as Role,
+    role: parsed.role ?? null,
     value: parsed.value,
     deletedAt: parsed.deletedAt ?? null,
   };

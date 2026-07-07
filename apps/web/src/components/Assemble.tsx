@@ -445,7 +445,7 @@ export function Assemble({
   const routine = store.readRoutine();
   // The S/Q lens is only meaningful (and only shown) for Tango/Foxtrot/Quickstep;
   // every other dance always reads in numeric counts even if `bb_timing` is stale.
-  const slowQuickEligible = supportsSlowQuick(routine.dance as DanceId);
+  const slowQuickEligible = supportsSlowQuick(routine.dance);
   const effectiveTimingView = slowQuickEligible ? timingView : "counts";
   const resolvedByPlacement = new Map<string, ResolvedPlacement>(
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp]),
@@ -741,12 +741,7 @@ export function Assemble({
                     <SectionHeader
                       section={section}
                       collapsed={isCollapsed}
-                      meta={sectionMeta(
-                        section,
-                        resolvedByPlacement,
-                        routine.dance as DanceId,
-                        isCollapsed,
-                      )}
+                      meta={sectionMeta(section, resolvedByPlacement, routine.dance, isCollapsed)}
                       canEdit={canEdit}
                       isFirst={index === 0}
                       isLast={index === routine.sections.length - 1}
@@ -763,9 +758,7 @@ export function Assemble({
                           const card =
                             placement.source === "break" ? (
                               <BreakCard
-                                beats={
-                                  placement.beats ?? DANCES[routine.dance as DanceId].beatsPerBar
-                                }
+                                beats={placement.beats ?? DANCES[routine.dance].beatsPerBar}
                                 canEdit={canEdit}
                                 onChangeBeats={(next) =>
                                   store.setBreakBeats(section.id, placement.id, next)
@@ -778,7 +771,7 @@ export function Assemble({
                               <PlacementCard
                                 placement={placement}
                                 figure={placementFigure}
-                                dance={routine.dance as DanceId}
+                                dance={routine.dance}
                                 roleView={roleView}
                                 status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                                 canEdit={canEdit}
@@ -857,7 +850,7 @@ export function Assemble({
                                   section.id,
                                   t.breakFigureName,
                                   undefined,
-                                  DANCES[routine.dance as DanceId].beatsPerBar,
+                                  DANCES[routine.dance].beatsPerBar,
                                 )
                               }
                             />
@@ -919,7 +912,7 @@ export function Assemble({
         title={t.addFigureSheetTitle}
       >
         <AddFigurePicker
-          dance={routine.dance as DanceId}
+          dance={routine.dance}
           onAdd={(name, figureType, counts, part) => {
             if (addingFigureTo)
               store.addPlacement(
@@ -1028,7 +1021,7 @@ export function Assemble({
             )}
             <FigureTimeline
               role={canEdit ? role : "viewer"}
-              dance={routine.dance as DanceId}
+              dance={routine.dance}
               attributes={notatingFigure.attributes}
               counts={notatingFigure.counts}
               legacyBars={notatingFigure.bars}
@@ -1100,7 +1093,7 @@ export function Assemble({
                 author one (server-mediated, co-membership-gated). */}
             <FamilyNotes
               figureType={notatingFigure.figureType}
-              dance={routine.dance as DanceId}
+              dance={routine.dance}
               notes={familyNotes}
               canAnnotate={can(role, "canAnnotate")}
               onCreate={async (input) => {
@@ -1156,7 +1149,7 @@ export function Assemble({
       <AddKindPicker
         open={addKindOpen}
         onClose={() => setAddKindOpen(false)}
-        dance={routine.dance as DanceId}
+        dance={routine.dance}
         customKinds={store.customKinds()}
         onSelectKind={() => setAddKindOpen(false)}
         onCreate={(k) => store.createCustomKind(k)}

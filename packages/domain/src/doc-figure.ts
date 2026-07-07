@@ -12,7 +12,7 @@ import type { FigureDoc, ReadOptions } from "./doc-types";
 
 /** Build an in-memory Automerge figure doc from its logical shape. */
 export function buildFigureDoc(figure: FigureDoc): A.Doc<FigureDoc> {
-  return buildDoc(figure as unknown as Record<string, unknown>) as A.Doc<FigureDoc>;
+  return buildDoc(figure);
 }
 
 /**

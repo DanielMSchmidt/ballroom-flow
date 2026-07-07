@@ -98,7 +98,7 @@ export function RoutineReadingView({
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const t = useMessages(timelineMessages);
-  const dance = routine.dance as DanceId;
+  const dance = routine.dance;
   const resolvedByPlacement = useMemo(
     () => new Map(placements.map((p) => [p.placement.id, p])),
     [placements],
