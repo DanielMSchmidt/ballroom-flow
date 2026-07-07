@@ -12,23 +12,26 @@ interface PickerModule {
 }
 const load = () => importComponent<PickerModule>("../components/AddKindPicker");
 
-const head: RegistryKind = {
-  kind: "head",
-  label: "Head",
+// NOTE: `head` is a BUILTIN kind since the WDSF technique-book charting (its slug is
+// reserved — mergeRegistry ignores a colliding custom kind), so the custom fixture
+// uses its own slug.
+const energy: RegistryKind = {
+  kind: "energy",
+  label: "Energy",
   color: "#4a9d9a",
   cardinality: "single",
   valueType: "enum",
-  values: ["left", "right"],
+  values: ["low", "high"],
   builtin: false,
 };
 
 describe("AddKindPicker (frame 1.15)", () => {
   it("lists standard + custom kinds and marks the custom one", async () => {
     const { AddKindPicker } = await load();
-    renderUi(<AddKindPicker open customKinds={[head]} />);
+    renderUi(<AddKindPicker open customKinds={[energy]} />);
     // A standard kind and the custom kind both appear.
     expect(screen.getByRole("button", { name: /rise & fall/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /head/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /energy/i })).toBeInTheDocument();
     // The custom kind is marked "custom".
     expect(screen.getByText(/custom/i)).toBeInTheDocument();
   });

@@ -83,6 +83,7 @@ export function buildWdsfAttributes(input: {
       for (const role of ["leader", "follower"] as const) {
         const base = `fig-${input.figureType}-${input.dance}-${role}-s${i + 1}`;
         const f = step[role];
+        if (!f) continue; // a count the other role dances alone (role-asymmetric chart)
         out.push({
           id: `${base}-dir`,
           kind: "direction",
@@ -134,6 +135,25 @@ export function buildWdsfAttributes(input: {
             count,
             role,
             value: f.footPosition,
+            deletedAt: null,
+          });
+        // The WDSF books' Rotation + head ("Extension") columns, verbatim free text.
+        if (f.rotation)
+          out.push({
+            id: `${base}-rot`,
+            kind: "rotation",
+            count,
+            role,
+            value: f.rotation,
+            deletedAt: null,
+          });
+        if (f.head)
+          out.push({
+            id: `${base}-head`,
+            kind: "head",
+            count,
+            role,
+            value: f.head,
             deletedAt: null,
           });
       }

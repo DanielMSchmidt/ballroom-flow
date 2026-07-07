@@ -20,14 +20,17 @@ describe("authored figure steps", () => {
     }
   });
 
-  it("uses valid direction values and non-empty footwork for both roles", () => {
+  it("uses valid direction values and non-empty footwork for every charted role", () => {
+    // A step may carry only ONE role (role-asymmetric charts — e.g. the Double
+    // Reverse Spin's follower "&" step), but never neither.
     for (const [key, steps] of Object.entries(FIGURE_STEPS)) {
       for (const [i, step] of steps.entries()) {
+        expect(step.leader || step.follower, `${key}[${i}] has at least one role`).toBeTruthy();
         for (const role of ["leader", "follower"] as const) {
-          expect(directionValues.has(step[role].direction), `${key} ${role}[${i}] direction`).toBe(
-            true,
-          );
-          expect(step[role].footwork.length, `${key} ${role}[${i}] footwork`).toBeGreaterThan(0);
+          const f = step[role];
+          if (!f) continue;
+          expect(directionValues.has(f.direction), `${key} ${role}[${i}] direction`).toBe(true);
+          expect(f.footwork.length, `${key} ${role}[${i}] footwork`).toBeGreaterThan(0);
         }
       }
     }
@@ -48,6 +51,7 @@ describe("authored figure steps", () => {
           expect(positionValues.has(step.position), `${key}[${i}] position`).toBe(true);
         for (const role of ["leader", "follower"] as const) {
           const f = step[role];
+          if (!f) continue;
           if (f.sway) expect(swayValues.has(f.sway), `${key} ${role}[${i}] sway`).toBe(true);
           if (f.turn) expect(turnValues.has(f.turn), `${key} ${role}[${i}] turn`).toBe(true);
           for (const ba of f.bodyActions ?? [])

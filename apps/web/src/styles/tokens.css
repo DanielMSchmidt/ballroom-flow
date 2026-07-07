@@ -100,6 +100,18 @@
   --bf-kind-turn-tint: #e3e8f2;
   --bf-kind-turn-border: #5b6b8a;
 
+  /* rotation (WDSF shoulders/hips column) — steel cyan */
+  --bf-kind-rotation: #3f7a99;
+  --bf-kind-rotation-ink: #285d77;
+  --bf-kind-rotation-tint: #e0eef5;
+  --bf-kind-rotation-border: #3f7a99;
+
+  /* head (WDSF head-position "Extension" column) — bronze */
+  --bf-kind-head: #8a6a3f;
+  --bf-kind-head-ink: #5c4527;
+  --bf-kind-head-tint: #f1e9da;
+  --bf-kind-head-border: #8a6a3f;
+
   /* =============================================================
    * Figure scopes (DESIGN-PRINCIPLES #11). Three scopes, each a
    * consistent + DISTINCT treatment, ALWAYS paired with a word +

@@ -160,4 +160,38 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
       expect(() => parseAttributeWrite(a, { dance: "waltz" })).not.toThrow();
     }
   });
+
+  it("carries the WDSF head + rotation columns as per-role free-text attributes", () => {
+    // The books' Rotation column (shoulder/hip grading) and the head-position
+    // ("Extension") column are charted verbatim per role.
+    const rot = natural.find((a) => a.count === 1 && a.role === "leader" && a.kind === "rotation");
+    expect(String(rot?.value)).toMatch(/with shoulders/i);
+    const head = natural.find((a) => a.count === 2 && a.role === "follower" && a.kind === "head");
+    expect(String(head?.value)).toMatch(/pos\. 1/i);
+  });
+});
+
+describe("buildWdsfAttributes — role-asymmetric charts (per-role step grids)", () => {
+  // The Waltz Double Reverse Spin: the leader dances 3 steps (1 2 3) while the
+  // follower dances 4 (1 2 & 3) — the book charts her extra "&" step, and the
+  // union timing grid carries a follower-only count at 2.5.
+  const drs = buildWdsfAttributes({
+    figureType: "double-reverse-spin",
+    dance: "waltz",
+    timing: "12&3",
+  });
+
+  it("emits follower attributes on the follower-only count and none for the leader", () => {
+    const at25 = drs.filter((a) => a.count === 2.5);
+    expect(at25.length).toBeGreaterThan(0);
+    // Only follower (and couple-shared) attributes — the leader has no step here.
+    expect(at25.some((a) => a.role === "leader")).toBe(false);
+    expect(at25.some((a) => a.role === "follower")).toBe(true);
+    expect(at25.some((a) => a.kind === "direction" && a.value === "side")).toBe(true);
+  });
+
+  it("still emits both roles on the shared counts", () => {
+    const roles1 = new Set(drs.filter((a) => a.count === 1 && a.role).map((a) => a.role));
+    expect(roles1).toEqual(new Set(["leader", "follower"]));
+  });
 });

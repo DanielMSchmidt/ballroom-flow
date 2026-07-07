@@ -88,6 +88,10 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   bodyActions: RegistryKind;
   sway: RegistryKind;
   turn: RegistryKind;
+  /** WDSF Rotation column (shoulders/hips grading) — free text, per role. */
+  rotation: RegistryKind;
+  /** WDSF head-position ("Extension") column — free text, per role. */
+  head: RegistryKind;
 }
 
 // The 4 travelling dances rise applies to — every Standard dance except Tango,
@@ -391,6 +395,45 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
       full_R: "Full R — a full turn to the right",
     },
     // Turn amount often mirrors between partners, so it reads differently per role.
+    roleAware: true,
+    builtin: true,
+  },
+  // The WDSF technique books' Rotation column: how the shoulders/hips rotate through
+  // the step, graded Light./Dyn./Lead. Free text — the books chart it as prose
+  // ("To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)"); the
+  // classical CBM flag lives in bodyActions, this carries the full WDSF grading.
+  rotation: {
+    kind: "rotation",
+    label: "Rotation",
+    color: "#3f7a99",
+    cardinality: "single",
+    valueType: "text",
+    freeText: true,
+    freeTextInput: true,
+    description:
+      "How the shoulders and hips rotate through the step (the WDSF Rotation column — Light./Dyn./Lead. grading).",
+    // Free text (the books chart prose transitions) — no enumerated glossary values.
+    valueDefs: {},
+    // Each role rotates its own side — the books chart Man and Lady separately.
+    roleAware: true,
+    builtin: true,
+  },
+  // The WDSF technique books' head-position column (printed "Extension"): where the
+  // head moves and which numbered head position it ends in ("Gradually back, head
+  // moves to pos. 1"). Free text — the books chart transitions as prose.
+  head: {
+    kind: "head",
+    label: "Head",
+    color: "#8a6a3f",
+    cardinality: "single",
+    valueType: "text",
+    freeText: true,
+    freeTextInput: true,
+    description:
+      "Head position and movement through the step (the WDSF Extension column — e.g. \u201cgradually back, head ends in pos. 1\u201d).",
+    // Free text (the books chart prose transitions) — no enumerated glossary values.
+    valueDefs: {},
+    // Mostly the follower's column, but the books chart Man head entries too.
     roleAware: true,
     builtin: true,
   },

@@ -123,7 +123,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "waltz",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "123 (12&3 Lady)",
+    timing: "QQ&Q",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "Weight on RF",
     notes: [
@@ -646,7 +646,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "viennese_waltz",
     figureType: "double-leg-ronde",
     name: "Double Leg Ronde",
-    timing: "QQQS-QS---",
+    timing: "QQQS-QQQSQ",
     start: "LF fwd in CBMP, part weight",
     finish:
       "Turn on LF, RF held to side and slightly bwd w/o weight to end with low bwd Ronde Action",
@@ -662,7 +662,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "viennese_waltz",
     figureType: "double-reverse-spin-overspin",
     name: "Double Reverse Spin Overspin",
-    timing: "QQQSQ",
+    timing: "QQ&QSQ",
     start: "LF fwd",
     finish: "RF bwd and slightly to side, outside lady's LF",
     notes: [
@@ -1460,7 +1460,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "quickstep",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "SSS",
+    timing: "SSQQ",
     start: "LF fwd and slightly to side (Closed Position)",
     finish: "Weight on RF, LF closes to RF without weight (Closed Position)",
     notes: [
@@ -2137,7 +2137,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "double-reverse-spin",
     name: "Double Reverse Spin",
-    timing: "SQ (Q) (SQ&Q Lady)",
+    timing: "SQ&Q",
     start: "LF FWD and slightly to side (Closed Position)",
     finish: "LF closes to RF w/o weight, weight on R foot (Closed Pos)",
     notes: [
@@ -2383,7 +2383,7 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     dance: "foxtrot",
     figureType: "natural-twist-turn-with-impetus-to-p-p",
     name: "Natural Twist Turn with Impetus to P.p.",
-    timing: "SQ&QSQ",
+    timing: "SQ&QQQQ",
     start: "RF fwd",
     finish: "LF to side",
     notes: [

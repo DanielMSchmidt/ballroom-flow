@@ -457,7 +457,7 @@
    "wdsf": {
     "start": "LF fwd and slightly to side (Closed Position)",
     "finish": "Weight on RF",
-    "timing": "123 (12&3 Lady)",
+    "timing": "QQ&Q",
     "notes": [
      "NOTE - Quantity of Turn: may turn between ¾ and 1 full turn to L",
      "NOTE- Timing: alternative timing of 123& may be used for the Lady",
@@ -1176,7 +1176,7 @@
    "wdsf": {
     "start": "LF FWD and slightly to side (Closed Position)",
     "finish": "LF closes to RF w/o weight, weight on R foot (Closed Pos)",
-    "timing": "SQ (Q) (SQ&Q Lady)",
+    "timing": "SQ&Q",
     "notes": [
      "NOTE - Timing: Alternative timing of SSQQ may be used.",
      "NOTE - Timing: alternative timing of S S Q Q may be used.",
@@ -1940,7 +1940,7 @@
    "wdsf": {
     "start": "LF fwd and slightly to side (Closed Position)",
     "finish": "Weight on RF, LF closes to RF without weight (Closed Position)",
-    "timing": "SSS",
+    "timing": "SSQQ",
     "notes": [
      "NOTE - Quantity of Turn: it may turn from 3/4 to 1 full turn to L.",
      "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 17, p. 85."
@@ -4284,7 +4284,7 @@
    "wdsf": {
     "start": "LF fwd",
     "finish": "RF bwd and slightly to side, outside lady's LF",
-    "timing": "QQQSQ",
+    "timing": "QQ&QSQ",
     "notes": [
      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step.",
      "Charted from WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 31, p. 129."
@@ -4364,7 +4364,7 @@
    "wdsf": {
     "start": "LF fwd in CBMP, part weight",
     "finish": "Turn on LF, RF held to side and slightly bwd w/o weight to end with low bwd Ronde Action",
-    "timing": "QQQS-QS---",
+    "timing": "QQQS-QQQSQ",
     "notes": [
      "NOTE - General: during a Pivot, the free foot should be kept parallel to the stepping foot in order to be ready for the next step. Steps 4-6 (Man), 4-9 (Lady) only may be used.",
      "NOTE - Rotation: (1) as step 9 of the Lady will be danced in Outside Partner Position, Rotation for Leading is necessary on step 6 of the Man. The moment of Rotation should correspond with Lady's step 8.",
@@ -4921,7 +4921,7 @@
    "wdsf": {
     "start": "RF fwd",
     "finish": "LF to side",
-    "timing": "SQ&QSQ",
+    "timing": "SQ&QQQQ",
     "notes": [
      "NOTE - Foot Placement/Couple Position: step 1 may be danced fwd in CBMP (Man), bwd in CBMP (Lady) in Outside Partner Position.",
      "It may start also in Promenade Position.",
