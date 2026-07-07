@@ -26,6 +26,7 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | [`docs/spike/SPIKE-FINDINGS.md`](docs/spike/SPIKE-FINDINGS.md) | M0.5 spike results: Automerge-in-DO proven; **sharp edges** (testing/persistence gotchas). | Working on the DO/sync/persistence layer (M2). |
 | [`research/*.md`](research/) | Deep-dive research behind the plan. `extensibility-crdt.md` & `critique-sync.md` are load-bearing for the architecture. | Deep questions the plan summarizes but doesn't fully reproduce. |
 | [`PROVISIONING.md`](PROVISIONING.md) | Accounts & secrets (Clerk, Cloudflare) needed to run/deploy. | Running the real app or deploying. |
+| [`OPS.md`](OPS.md) | Operator runbook for live-app actions against remote D1 (e.g. granting a user a higher routine cap without payment). | Performing a manual ops action (quota grants, admin seams). |
 
 > **`docs/PLAN.md` is the canonical, living source of truth — keep it that way.** When a
 > decision is made or changes (an attribute model, a locked decision, a roadmap shift),
