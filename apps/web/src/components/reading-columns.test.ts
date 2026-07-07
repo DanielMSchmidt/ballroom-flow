@@ -2,6 +2,7 @@ import type { Attribute, RegistryKind } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
 import {
   allColumns,
+  cellPresent,
   cellValue,
   isOffBeatCount,
   stepChipLabel,
@@ -103,6 +104,30 @@ describe("cellValue", () => {
     if (!turnCol) throw new Error("turn column expected");
     expect(cellValue([attr(1, "turn", "quarter_R")], turnCol)).toBe("¼R");
     expect(cellValue([], turnCol)).toBeNull();
+  });
+});
+
+describe("cellPresent — a notated-but-valueless step (Builder v3 ②)", () => {
+  const cols = usedColumns([attr(1, "direction", null), attr(1, "turn", null)]);
+  const stepCol = cols[0];
+  const turnCol = cols.find((c) => c.id === "turn");
+
+  it("is true when the Step column has a valueless direction/footwork", () => {
+    if (!stepCol) throw new Error("step column expected");
+    expect(cellPresent([attr(1, "direction", null)], stepCol)).toBe(true);
+    expect(cellPresent([attr(1, "footwork", "")], stepCol)).toBe(true);
+  });
+
+  it("is true when a technique column has a valueless attribute", () => {
+    if (!turnCol) throw new Error("turn column expected");
+    expect(cellPresent([attr(1, "turn", null)], turnCol)).toBe(true);
+  });
+
+  it("is false when the value is set, or nothing is there at all", () => {
+    if (!stepCol || !turnCol) throw new Error("columns expected");
+    expect(cellPresent([attr(1, "direction", "forward")], stepCol)).toBe(false);
+    expect(cellPresent([attr(1, "turn", "quarter_R")], turnCol)).toBe(false);
+    expect(cellPresent([], stepCol)).toBe(false);
   });
 });
 

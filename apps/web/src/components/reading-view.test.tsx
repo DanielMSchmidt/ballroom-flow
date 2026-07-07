@@ -162,6 +162,31 @@ describe("RoutineReadingView — routine-wide picked columns (Builder v3)", () =
     expect(screen.getByText("1 2 3")).toBeInTheDocument();
   });
 
+  it("marks a notated-but-valueless step with a present dot, not a blank slot", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // A step placed with no value yet is a PRESENCE attribute (value null —
+    // Builder v3 ②). It must still read as "a step is here": the reading view
+    // shows a kind-colored present dot in the Step column, NOT an empty slot.
+    // count 1 has a valueless step; count 2 has a real Rise value (so the table
+    // carries both a Step and a Rise column, and empty slots to contrast).
+    const { container } = renderReading(
+      figure({ attributes: [attr(1, "direction", null), attr(2, "rise", "commence")] }),
+    );
+    // The step rows render (the figure isn't "empty").
+    expect(screen.queryByText(/^empty$/i)).toBeNull();
+    const steps = screen.getByRole("list", { name: /natural turn steps/i });
+    // A present marker exists for the notated step…
+    const present = steps.querySelectorAll("[data-present-cell]");
+    expect(present.length).toBeGreaterThan(0);
+    // …tinted to the Step (direction) kind, not the grey empty-slot border.
+    const dot = present[0] as HTMLElement;
+    expect(dot.style.background).toContain("bf-kind-direction");
+    // …and it's distinct from a truly empty slot (still rendered elsewhere).
+    expect(container.querySelectorAll('ol [style*="bf-border-strong"]').length).toBeGreaterThan(0);
+  });
+
   it("dims off-beat (sub-beat) rows", async () => {
     ({ RoutineReadingView } = await importComponent<ReadingModule>(
       "../components/RoutineReadingView",
