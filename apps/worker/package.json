@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "grant-cap": "node scripts/grant-cap.mjs",
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --passWithNoTests --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json"
