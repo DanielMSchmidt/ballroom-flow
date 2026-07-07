@@ -456,6 +456,7 @@ app.post("/api/figures", async (c) => {
     figureType,
     routineId,
     attributes,
+    counts,
     bars,
     baseFigureRef,
     entryAlignment,
@@ -511,10 +512,11 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
-    // The authored bar length (PLAN §2.5) — omitted when the client didn't send
-    // one (buildDoc drops undefined optionals); the DO then falls back to the
-    // whole-beat-derived default when projecting the card count.
-    ...(bars != null ? { bars } : {}),
+    // The authored COUNT length (Builder v3 ① — beats; bar displays derive
+    // ⌈counts / beatsPerBar⌉). A legacy client may still send `bars`; counts
+    // wins when both arrive. Omitted → the DO falls back to the whole-beat
+    // default when projecting the card count.
+    ...(counts != null ? { counts } : bars != null ? { bars } : {}),
     // Figure-level entry/exit alignment (per-figure, where the catalog charts it) —
     // buildDoc drops undefined optionals, so an uncharted figure carries neither.
     ...(entryAlignment ? { entryAlignment } : {}),

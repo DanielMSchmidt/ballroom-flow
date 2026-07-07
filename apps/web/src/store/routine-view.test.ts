@@ -71,7 +71,7 @@ function fakeLive() {
     addBreak: vi.fn(),
     setBreakBeats: vi.fn(),
     setFigureAttributes: vi.fn(),
-    setFigureBars: vi.fn(),
+    setFigureCounts: vi.fn(),
     setFigureAlignment: vi.fn(),
     createAnnotation: vi.fn(),
     addReply: vi.fn(),

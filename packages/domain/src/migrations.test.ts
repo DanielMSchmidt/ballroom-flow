@@ -223,7 +223,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
   it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
     // Intent: docs already at schemaVersion 2 (migrated before this PR) may still
     // carry a stray `overlay` key. The v2→v3 step must strip it on read.
-    const { migrate } = await importDomain();
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
 
     const v2DocWithOverlay = {
       schemaVersion: 2,
@@ -234,8 +234,8 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     };
     const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
 
-    // migrate() runs to CURRENT (4): the overlay strip happens at the v2→v3 step.
-    expect(migrated.schemaVersion).toBe(4);
+    // migrate() runs to CURRENT: the overlay strip happens at the v2→v3 step.
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect("overlay" in migrated).toBe(false);
     expect(migrated.figureType).toBe("feather");
   });
@@ -288,7 +288,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
   });
 
   it("leaves an untouched sub-tree's object identity alone (only changed keys are written)", async () => {
-    const { migrateDraft } = await importDomain();
+    const { migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
     // schemaVersion 3 → 4 only backfills sortKeys; a figure-shaped draft (no
     // `sections`) has nothing for the v3→v4 step to do, so `attributes` must
     // survive as the SAME array reference (never rebuilt/reassigned).
@@ -300,7 +300,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       attributes,
     } as unknown as { schemaVersion: number } & Record<string, unknown>;
     migrateDraft(draft);
-    expect(draft.schemaVersion).toBe(4);
+    expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(draft.attributes).toBe(attributes); // untouched — same reference
   });
 
@@ -332,5 +332,62 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
     migrateDraft(d1);
     migrateDraft(d2);
     expect(d1).toEqual(d2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ① (owner-approved 2026-07-07) — v4→v5: counts-based figure length.
+// A figure doc's authored `bars` becomes `counts = bars × beatsPerBar` (the
+// dance's), and the legacy `bars` key is dropped. Routine/account docs (no
+// `bars`) pass through with the version bump alone.
+// ─────────────────────────────────────────────────────────────────────────
+describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
+  it("converts a Waltz figure's bars to counts (× 3) and drops bars", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const v4Figure = {
+      schemaVersion: 4,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [],
+      bars: 2,
+    };
+    const migrated = migrate(v4Figure) as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.counts).toBe(6); // 2 bars × 3 beats
+    expect("bars" in migrated).toBe(false);
+  });
+
+  it("uses the figure's own dance meter (Quickstep 4/4 → × 4)", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "quarter-turn",
+      dance: "quickstep",
+      attributes: [],
+      bars: 3,
+    }) as Record<string, unknown>;
+    expect(migrated.counts).toBe(12);
+  });
+
+  it("leaves a routine doc untouched but for the version bump", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const routine = { schemaVersion: 4, sections: [], annotations: [] };
+    const migrated = migrate(routine) as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("counts" in migrated).toBe(false);
+  });
+
+  it("never double-converts: a figure already carrying counts keeps it", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "whisk",
+      dance: "waltz",
+      attributes: [],
+      bars: 2,
+      counts: 5, // authored by a newer client pre-migration
+    }) as Record<string, unknown>;
+    expect(migrated.counts).toBe(5);
+    expect("bars" in migrated).toBe(false);
   });
 });

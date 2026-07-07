@@ -119,6 +119,13 @@ export interface DomainApi {
   countLabel(count: number): string;
   countToPhrase(count: number, dance: DanceId): { phrase: number; countInPhrase: number };
   barsForFigure(counts: number[], dance: DanceId): number;
+  defaultFigureCounts(attributes: Attribute[]): number;
+  resolveFigureCounts(figure: {
+    counts?: number;
+    bars?: number;
+    attributes: Attribute[];
+    dance: DanceId;
+  }): number;
   offBeatSymbol(count: number): string | null;
   numberRoutineBeats(entries: RoutineBeatEntry[], dance: DanceId): NumberedBeatEntry[];
   slowQuickTokens(counts: number[], endCount: number): string[];
@@ -144,7 +151,7 @@ export interface DomainApi {
   // ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02)
   ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number>;
   resolveFigure(
-    base: Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment">,
+    base: Pick<FigureDoc, "attributes" | "counts" | "bars" | "entryAlignment" | "exitAlignment">,
     variant: FigureDoc,
   ): FigureDoc;
   variantAttributesForEdit(

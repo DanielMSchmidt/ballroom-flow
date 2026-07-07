@@ -1,7 +1,13 @@
 // US-004 / US-028 — bars-driven figure timing grid (PLAN §2.5, §4.4).
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
-import { defaultFigureBars, figureGridSlots, resolveFigureBars } from "./figure-grid";
+import {
+  defaultFigureBars,
+  figureCountSlots,
+  figureGridSlots,
+  resolveFigureBars,
+  resolveFigureCounts,
+} from "./figure-grid";
 
 const step = (count: number, kind = "footwork"): Attribute => ({
   id: `${kind}-${count}`,
@@ -87,5 +93,37 @@ describe("figureGridSlots — every timing a bar count allows", () => {
 
   it("clamps a non-positive bar count to one bar", () => {
     expect(figureGridSlots(0, "waltz").filter((s) => s.whole)).toHaveLength(3);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ① — counts-based length: `counts` is the authored figure length
+// (beats); bars are DERIVED (⌈counts / beatsPerBar⌉) for every bar display.
+// ─────────────────────────────────────────────────────────────────────────
+describe("counts-based figure length (Builder v3 ①)", () => {
+  it("resolveFigureCounts prefers authored counts, then legacy bars × bpb, then the step default", () => {
+    expect(resolveFigureCounts({ counts: 5, attributes: [], dance: "waltz" })).toBe(5);
+    expect(resolveFigureCounts({ bars: 2, attributes: [], dance: "waltz" })).toBe(6);
+    expect(resolveFigureCounts({ attributes: [step(1), step(2)], dance: "waltz" })).toBe(2);
+    expect(resolveFigureCounts({ attributes: [], dance: "waltz" })).toBe(1);
+  });
+
+  it("resolveFigureBars derives ⌈counts / beatsPerBar⌉ (a 4-count Waltz figure spans 2 bars)", () => {
+    expect(resolveFigureBars({ counts: 4, attributes: [], dance: "waltz" })).toBe(2);
+    expect(resolveFigureBars({ counts: 3, attributes: [], dance: "waltz" })).toBe(1);
+    // Legacy docs keep their exact bar count (bars 2 → counts 6 → bars 2).
+    expect(resolveFigureBars({ bars: 2, attributes: [], dance: "waltz" })).toBe(2);
+  });
+
+  it("figureCountSlots generates one whole + e/&/a rows per count, grouped into bars", () => {
+    const slots = figureCountSlots(4, "waltz");
+    // 4 counts × (1 whole + 3 sub-beats) rows.
+    expect(slots).toHaveLength(16);
+    expect(slots[0]).toMatchObject({ count: 1, bar: 1, whole: true });
+    // Count 4 starts bar 2 in 3/4.
+    const four = slots.find((s) => s.count === 4);
+    expect(four).toMatchObject({ bar: 2, whole: true });
+    const fourAnd = slots.find((s) => s.count === 4.5);
+    expect(fourAnd).toMatchObject({ bar: 2, whole: false, label: "4&" });
   });
 });

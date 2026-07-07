@@ -41,8 +41,8 @@ const en = {
   notesForFigure: (name: string) => `Notes — ${name}`,
 
   // Figure timeline (FigureTimeline)
-  barsStepperLabel: "Bars",
-  barsStepperUnit: "bars",
+  countsStepperLabel: "Length",
+  countsStepperUnit: "counts",
   inYourLibrary: "In your library",
   addToMyLibrary: "Add to my library",
   adjustedStill: (name: string) => `adjusted for this choreo — still ${name}`,
@@ -58,6 +58,8 @@ const en = {
   countAttributes: (count: number) => `count ${count} attributes`,
   editCell: (column: string, count: string) => `Edit ${column} at count ${count}`,
   addCell: (column: string, count: string) => `Add ${column} at count ${count}`,
+  stepPlacedToast: "Step placed · add detail anytime",
+  presenceAddedToast: "Added · tap the dot to add detail",
 
   // Lanes
   viewing: "Viewing:",
@@ -99,8 +101,8 @@ const de: typeof en = {
   notesForCount: (count) => `Notizen — Zählzeit ${count}`,
   notesForFigure: (name) => `Notizen — ${name}`,
 
-  barsStepperLabel: "Takte",
-  barsStepperUnit: "Takte",
+  countsStepperLabel: "Länge",
+  countsStepperUnit: "Zählzeiten",
   inYourLibrary: "In deiner Bibliothek",
   addToMyLibrary: "Zu meiner Bibliothek hinzufügen",
   adjustedStill: (name) => `für diese Choreo angepasst — weiterhin ${name}`,
@@ -116,6 +118,8 @@ const de: typeof en = {
   countAttributes: (count) => `Attribute bei Zählzeit ${count}`,
   editCell: (column, count) => `${column} bei Zählzeit ${count} bearbeiten`,
   addCell: (column, count) => `${column} bei Zählzeit ${count} hinzufügen`,
+  stepPlacedToast: "Schritt platziert · Details jederzeit ergänzen",
+  presenceAddedToast: "Hinzugefügt · tippe auf den Punkt für Details",
 
   viewing: "Ansicht:",
   flipRoleTo: (target) => `Rolle zu ${target} wechseln`,

@@ -47,7 +47,7 @@ function fakeStore(
     addBreak: () => {},
     setBreakBeats: () => {},
     setFigureAttributes: () => {},
-    setFigureBars: () => {},
+    setFigureCounts: () => {},
     setFigureAlignment: () => {},
     readAnnotations: () => [],
     createAnnotation: () => {},
@@ -470,9 +470,9 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form carries a bars stepper (default 2 — PLAN §2.5).
+    // The custom form carries a COUNTS stepper (default 3 — Builder v3 ①).
     // Appended (no insert anchor) → trailing beforePlacementId is undefined.
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 2, undefined);
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 3, undefined);
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -508,7 +508,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 2, "p2");
+    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 3, "p2");
   });
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
@@ -954,8 +954,8 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form's bars stepper defaults to 2 (PLAN §2.5).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 2, undefined);
+    // The custom form's counts stepper defaults to 3 (Builder v3 ①).
+    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 3, undefined);
   });
 });
 
@@ -1062,14 +1062,14 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // The bars-driven grid shows; tap the Step cell at count 1 → the single-attribute
-    // overlay → pick footwork "HT".
+    // The counts-driven grid shows; tap the empty Step cell at count 1 — the
+    // Builder v3 ② quick-add places a blank step (presence direction attr)
+    // straight through the store, no overlay needed.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
     const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
     expect(figureRef).toBe("feather");
-    expect(attrs.some((a) => a.kind === "footwork" && a.value === "HT" && a.count === 1)).toBe(
+    expect(attrs.some((a) => a.kind === "direction" && a.value === null && a.count === 1)).toBe(
       true,
     );
   });

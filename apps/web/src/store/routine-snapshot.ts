@@ -12,7 +12,7 @@
 import {
   type Annotation,
   CURRENT_SCHEMA_VERSION,
-  defaultFigureBars,
+  defaultFigureCounts,
   type FigureDoc,
   isReservedKind,
   libraryFigureByRef,
@@ -79,7 +79,7 @@ function catalogSnapshotFigure(ref: string): FigureDoc | null {
     dance: cat.dance,
     name: cat.name,
     source: "library",
-    bars: defaultFigureBars(attributes, cat.dance),
+    counts: defaultFigureCounts(attributes),
     attributes,
     ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
     ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),

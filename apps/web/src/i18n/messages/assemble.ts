@@ -114,8 +114,8 @@ const en = {
   figureNameLabel: "Figure name",
   createYourOwnPlaceholder: "…or create your own",
   length: "Length",
-  barsLabel: "Bars",
-  barsUnit: "bars",
+  countsLabel: "Counts",
+  countsUnit: "counts",
   addCustom: "Add custom",
   // Alignment editor + chips (US-031). Display labels only — stored qualifier/
   // direction values stay English.
@@ -252,8 +252,8 @@ const de: typeof en = {
   figureNameLabel: "Figurname",
   createYourOwnPlaceholder: "… oder erstelle deine eigene",
   length: "Länge",
-  barsLabel: "Takte",
-  barsUnit: "Takte",
+  countsLabel: "Zählzeiten",
+  countsUnit: "Zählzeiten",
   addCustom: "Eigene hinzufügen",
   alignment: "Ausrichtung",
   entry: "Einstieg",

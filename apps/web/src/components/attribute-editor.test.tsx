@@ -52,8 +52,18 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
       "../components/FigureTimeline",
     );
     const onChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={1} onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 2$/i }));
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        attributes={[
+          { id: "d2", kind: "direction", count: 2, value: null, role: null, deletedAt: null },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(

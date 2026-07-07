@@ -906,13 +906,13 @@ export function Assemble({
       >
         <AddFigurePicker
           dance={routine.dance as DanceId}
-          onAdd={(name, figureType, bars) => {
+          onAdd={(name, figureType, counts) => {
             if (addingFigureTo)
               store.addPlacement(
                 addingFigureTo.sectionId,
                 name,
                 figureType,
-                bars,
+                counts,
                 addingFigureTo.beforePlacementId,
               );
             setAddingFigureTo(null);
@@ -1015,8 +1015,9 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
-              bars={notatingFigure.bars}
-              onBarsChange={(next) => store.setFigureBars(notatingFigure.id, next)}
+              counts={notatingFigure.counts}
+              legacyBars={notatingFigure.bars}
+              onCountsChange={(next) => store.setFigureCounts(notatingFigure.id, next)}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               scopeLabel={routine.title || notatingFigure.name}
@@ -1231,15 +1232,17 @@ function sectionMeta(
     const fig = resolved.get(pl.id)?.figure;
     if (!fig) continue;
     // Mirror the routine-card projection (worker doc-do.ts §2.7): a figure's bar
-    // span is its AUTHORED `bars` when set, else the phrase span of its steps
-    // (`barsForFigure`). The old code summed only `barsForFigure` and skipped any
-    // figure with no notated steps — so a section of freshly-placed figures (which
-    // carry an authored `bars` but empty `attributes` until notated) read "0 bars".
-    const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
+    // span is its AUTHORED `counts` when set (Builder v3 ① — ⌈counts ÷
+    // beatsPerBar⌉), else a legacy authored `bars`, else the phrase span of its
+    // steps (`barsForFigure`) — a freshly-placed figure with an authored length
+    // but no notated steps still counts.
+    const stepCounts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
     bars +=
-      typeof fig.bars === "number" && fig.bars >= 1
-        ? Math.floor(fig.bars)
-        : barsForFigure(counts, dance);
+      typeof fig.counts === "number" && fig.counts >= 1
+        ? Math.max(1, Math.ceil(Math.floor(fig.counts) / beatsPerBar))
+        : typeof fig.bars === "number" && fig.bars >= 1
+          ? Math.floor(fig.bars)
+          : barsForFigure(stepCounts, dance);
   }
   return t.barCount(bars);
 }
@@ -1814,15 +1817,16 @@ function AddFigurePicker({
   onAdd,
 }: {
   dance: DanceId;
-  onAdd: (name: string, figureType?: string, bars?: number) => void;
+  onAdd: (name: string, figureType?: string, counts?: number) => void;
 }) {
   const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
-  // The new custom figure's authored length (PLAN §2.5) — chosen here on creation
-  // and adjustable later in the editor header. Library picks keep their catalog
-  // default (their charted steps), so the stepper applies to the custom form only.
-  const [bars, setBars] = useState(2);
+  // The new custom figure's authored length in COUNTS (Builder v3 ①) — chosen
+  // here on creation and adjustable later in the editor header. Library picks
+  // keep their catalog default (their charted steps), so the stepper applies to
+  // the custom form only.
+  const [counts, setCounts] = useState(3);
   const q = filter.trim().toLowerCase();
   const presets = libraryFiguresForDance(dance).filter(
     (f) => q === "" || f.name.toLowerCase().includes(q),
@@ -1867,7 +1871,7 @@ function AddFigurePicker({
           e.preventDefault();
           const next = name.trim();
           if (!next) return;
-          onAdd(next, undefined, bars);
+          onAdd(next, undefined, counts);
           setName("");
         }}
       >
@@ -1882,13 +1886,13 @@ function AddFigurePicker({
             {t.length}
           </span>
           <Stepper
-            label={t.barsLabel}
+            label={t.countsLabel}
             hideLabel
-            unit={t.barsUnit}
+            unit={t.countsUnit}
             min={1}
-            max={32}
-            value={bars}
-            onChange={setBars}
+            max={64}
+            value={counts}
+            onChange={setCounts}
           />
         </div>
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>

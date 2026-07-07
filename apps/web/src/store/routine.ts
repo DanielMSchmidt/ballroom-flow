@@ -18,7 +18,7 @@ import {
   addSection,
   CURRENT_SCHEMA_VERSION,
   DANCES,
-  defaultFigureBars,
+  defaultFigureCounts,
   ensureSortKeys,
   type FigureDoc,
   globalFigureRef,
@@ -202,12 +202,13 @@ export interface RoutineStore extends RoutineReadModel {
    */
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
   /**
-   * Set a figure's authored length in musical bars (PLAN §2.5). Drives the editor
-   * grid (every bar → beat → e/&/a slot). Like {@link setFigureAttributes}, editing
-   * a global (app-owned library) figure forks a frozen owned copy first (COW,
-   * US-035); an owned/account figure changes in place. Clamped to ≥1.
+   * Set a figure's authored length in COUNTS (beats — Builder v3 ①). Drives the
+   * editor grid (every count → e/&/a slot); bar displays derive ⌈counts ÷
+   * beatsPerBar⌉. Like {@link setFigureAttributes}, editing a global (app-owned
+   * library) figure forks an owned variant first (US-035); an owned/account
+   * figure changes in place. Clamped to 1–64.
    */
-  setFigureBars(figureRef: string, bars: number): void;
+  setFigureCounts(figureRef: string, counts: number): void;
   /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
   setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Routine-scoped annotations (US-039), tombstones dropped. */
@@ -287,8 +288,8 @@ export type CreateFigureFn = (figure: {
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
   attributes: Attribute[];
-  /** The figure's authored length in musical bars (PLAN §2.5) — chosen on create. */
-  bars?: number;
+  /** The figure's authored length in counts (Builder v3 ①) — chosen on create. */
+  counts?: number;
   /** Figure-level entry/exit alignment seeded from the catalog chart, where charted. */
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
@@ -810,7 +811,7 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg, barsArg, beforePlacementId) => {
+    addPlacement: (sectionId, figureName, figureTypeArg, countsArg, beforePlacementId) => {
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
       // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
@@ -868,8 +869,8 @@ export async function openRoutine(
       placeRef(figureRef);
 
       // A fresh custom carries no charted timeline; its authored length defaults to
-      // the create flow's chosen `bars`, else 1 bar (defaultFigureBars of []).
-      const bars = barsArg ?? defaultFigureBars([], dance);
+      // the create flow's chosen `counts`, else a bar's worth of beats.
+      const counts = countsArg ?? DANCES[dance].beatsPerBar;
 
       // Project the figure to D1 + an owner membership AND server-seed its CRDT
       // content durably (#187/#205): POST /api/figures both projects the registry/
@@ -877,7 +878,7 @@ export async function openRoutine(
       // figure name is DO-persisted the instant it exists — no racy client seed
       // write that could be lost on an immediate reload. We then just OPEN the
       // figure connection so its (server-seeded) content replays on catch-up.
-      createFigure({ figureRef, name, dance, figureType, routineId, attributes: [], bars })
+      createFigure({ figureRef, name, dance, figureType, routineId, attributes: [], counts })
         .then(() => {
           // Created server-side (DO seeded) → safe to open: the catch-up replay
           // now carries the seed, so the figure hydrates deterministically.
@@ -965,8 +966,8 @@ export async function openRoutine(
       editFigure(figureRef, { attributes });
     },
 
-    setFigureBars: (figureRef, rawBars) => {
-      editFigure(figureRef, { bars: Math.max(1, Math.round(rawBars)) });
+    setFigureCounts: (figureRef, rawCounts) => {
+      editFigure(figureRef, { counts: Math.min(64, Math.max(1, Math.round(rawCounts))) });
     },
 
     setFigureAlignment: (figureRef, edge, alignment) => {
@@ -1139,7 +1140,10 @@ export async function openRoutine(
    *
    * Shared by `setFigureAttributes` and `setFigureBars`.
    */
-  function editFigure(figureRef: string, patch: { attributes?: Attribute[]; bars?: number }): void {
+  function editFigure(
+    figureRef: string,
+    patch: { attributes?: Attribute[]; counts?: number },
+  ): void {
     const figure = readFigureDoc(figureConn(figureRef));
 
     // ⟳v5 variant-on-edit of a GLOBAL figure (non-admin). The DO boundary rejects a
@@ -1162,7 +1166,7 @@ export async function openRoutine(
           ? variantAttributesForEdit(base, patch.attributes)
           : patch.attributes;
       }
-      if (patch.bars !== undefined) draft.bars = patch.bars;
+      if (patch.counts !== undefined) draft.counts = patch.counts;
     });
   }
 
@@ -1175,7 +1179,7 @@ export async function openRoutine(
   function spawnVariantForEdit(
     figureRef: string,
     base: FigureDoc,
-    patch: { attributes?: Attribute[]; bars?: number },
+    patch: { attributes?: Attribute[]; counts?: number },
   ): void {
     const loc = findPlacement(figureRef);
     if (!loc) return;
@@ -1205,9 +1209,9 @@ export async function openRoutine(
       figureType: variant.figureType,
       routineId,
       attributes: variant.attributes, // ⟳v5: ONLY the owned beats, not a full copy
-      // bars/alignment are NOT copied — they resolve live from the base (§2.5.2)
-      // until the variant authors its own; forward `bars` only if the user set it.
-      ...(patch.bars != null ? { bars: patch.bars } : {}),
+      // length/alignment are NOT copied — they resolve live from the base (§2.5.2)
+      // until the variant authors its own; forward `counts` only if the user set it.
+      ...(patch.counts != null ? { counts: patch.counts } : {}),
       baseFigureRef: variant.baseFigureRef ?? base.id,
     })
       .then(() => {
@@ -1226,7 +1230,7 @@ export async function openRoutine(
             draft.name = variant.name;
             draft.baseFigureRef = variant.baseFigureRef ?? base.id; // LIVE link
             draft.attributes = variant.attributes; // owned beats only
-            if (patch.bars != null) draft.bars = patch.bars;
+            if (patch.counts != null) draft.counts = patch.counts;
             draft.schemaVersion = base.schemaVersion;
             draft.deletedAt = null;
           });
@@ -1306,7 +1310,7 @@ export async function openRoutine(
       dance: cat.dance,
       name: cat.name,
       source: "library",
-      bars: defaultFigureBars(attributes, cat.dance),
+      counts: defaultFigureCounts(attributes),
       attributes,
       ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
       ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),

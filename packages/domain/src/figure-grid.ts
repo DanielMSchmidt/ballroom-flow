@@ -34,34 +34,64 @@ export interface GridSlot {
 }
 
 /**
- * The default bar count for a figure: ⌈(number of whole-beat steps) ÷
- * beatsPerBar⌉, at least 1. A "whole-beat step" is a distinct integer count that
- * carries ≥1 live (non-tombstoned) attribute — i.e. how many on-beat steps the
- * figure already has. Used to seed a new figure's length and as the fallback when
- * a doc has no explicit `bars` (see {@link resolveFigureBars}).
+ * The default COUNT length for a figure: the number of distinct whole-beat
+ * steps (integer counts carrying ≥1 live attribute), at least 1. Used to seed a
+ * new figure's length and as the fallback when a doc has neither an authored
+ * `counts` nor a legacy `bars` (see {@link resolveFigureCounts}).
  */
-export function defaultFigureBars(attributes: Attribute[], dance: DanceId): number {
-  const { beatsPerBar } = DANCES[dance];
+export function defaultFigureCounts(attributes: Attribute[]): number {
   const wholeBeats = new Set<number>();
   for (const a of attributes) {
     if (a.deletedAt != null) continue;
     if (Number.isInteger(a.count)) wholeBeats.add(a.count);
   }
-  return Math.max(1, Math.ceil(wholeBeats.size / beatsPerBar));
+  return Math.max(1, wholeBeats.size);
 }
 
 /**
- * A figure's effective bar count: its explicit `bars` when set (the authored
- * length), else {@link defaultFigureBars} over its attributes. Tolerates a
- * non-positive stored value (clamps to ≥1) so a corrupt/legacy doc still renders.
+ * The default bar count for a figure: ⌈{@link defaultFigureCounts} ÷
+ * beatsPerBar⌉, at least 1. Retained for count-less callers (catalog charts);
+ * length-aware callers go through {@link resolveFigureCounts}.
  */
-export function resolveFigureBars(figure: {
+export function defaultFigureBars(attributes: Attribute[], dance: DanceId): number {
+  const { beatsPerBar } = DANCES[dance];
+  return Math.max(1, Math.ceil(defaultFigureCounts(attributes) / beatsPerBar));
+}
+
+/**
+ * A figure's effective length in COUNTS (Builder v3 ①, 2026-07-07): the
+ * authored `counts` when set, else a legacy authored `bars × beatsPerBar`
+ * (pre-v5 docs — the v4→v5 migration converts them in storage, this is the
+ * lenient read), else {@link defaultFigureCounts} over its attributes.
+ * Non-positive stored values clamp to ≥1 so a corrupt doc still renders.
+ */
+export function resolveFigureCounts(figure: {
+  counts?: number;
   bars?: number;
   attributes: Attribute[];
   dance: DanceId;
 }): number {
-  if (typeof figure.bars === "number" && figure.bars >= 1) return Math.floor(figure.bars);
-  return defaultFigureBars(figure.attributes, figure.dance);
+  if (typeof figure.counts === "number" && figure.counts >= 1) return Math.floor(figure.counts);
+  const { beatsPerBar } = DANCES[figure.dance];
+  if (typeof figure.bars === "number" && figure.bars >= 1) {
+    return Math.floor(figure.bars) * beatsPerBar;
+  }
+  return defaultFigureCounts(figure.attributes);
+}
+
+/**
+ * A figure's effective bar count — DERIVED: ⌈{@link resolveFigureCounts} ÷
+ * beatsPerBar⌉. Every bar display (routine cards, section sums, numbering
+ * ends) reads through here; `bars` is no longer authored (Builder v3 ①).
+ */
+export function resolveFigureBars(figure: {
+  counts?: number;
+  bars?: number;
+  attributes: Attribute[];
+  dance: DanceId;
+}): number {
+  const { beatsPerBar } = DANCES[figure.dance];
+  return Math.max(1, Math.ceil(resolveFigureCounts(figure) / beatsPerBar));
 }
 
 /**
@@ -73,16 +103,27 @@ export function resolveFigureBars(figure: {
  */
 export function figureGridSlots(bars: number, dance: DanceId): GridSlot[] {
   const { beatsPerBar } = DANCES[dance];
-  const barCount = Math.max(1, Math.floor(bars));
+  return figureCountSlots(Math.max(1, Math.floor(bars)) * beatsPerBar, dance);
+}
+
+/**
+ * Every timing slot a `counts`-long figure in `dance` can hold, in count order:
+ * each whole beat then its e/&/a sub-beats, tagged with the bar it falls in
+ * (⌈beat / beatsPerBar⌉ — drives the "bar N" divider). The COUNT-length
+ * counterpart to {@link figureGridSlots} (Builder v3 ①): a figure's length is
+ * authored in beats, not whole bars, so the grid may end mid-bar. `counts` is
+ * clamped to ≥1.
+ */
+export function figureCountSlots(counts: number, dance: DanceId): GridSlot[] {
+  const { beatsPerBar } = DANCES[dance];
+  const countTotal = Math.max(1, Math.floor(counts));
   const slots: GridSlot[] = [];
-  for (let bar = 1; bar <= barCount; bar++) {
-    for (let k = 1; k <= beatsPerBar; k++) {
-      const beat = (bar - 1) * beatsPerBar + k;
-      slots.push({ count: beat, label: countLabel(beat), bar, beat, whole: true });
-      for (const frac of SUB_BEATS) {
-        const count = beat + frac;
-        slots.push({ count, label: countLabel(count), bar, beat, whole: false });
-      }
+  for (let beat = 1; beat <= countTotal; beat++) {
+    const bar = Math.ceil(beat / beatsPerBar);
+    slots.push({ count: beat, label: countLabel(beat), bar, beat, whole: true });
+    for (const frac of SUB_BEATS) {
+      const count = beat + frac;
+      slots.push({ count, label: countLabel(count), bar, beat, whole: false });
     }
   }
   return slots;

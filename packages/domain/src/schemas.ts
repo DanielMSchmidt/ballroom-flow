@@ -87,7 +87,10 @@ export function parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): 
       // free-text kind (step, §3/#83) treats `values` as suggestions, so any
       // string passes — only its non-string/empty shape would be invalid.
       const kind = ATTRIBUTE_REGISTRY[attr.kind];
-      if (kind?.valueType === "enum" && kind.values && !kind.freeText) {
+      // Presence attribute (Builder v3 ②): `value: null` is always a legal
+      // write — the attribute exists with no value yet (the editor's dashed
+      // ring). Enum membership applies only once a value is actually set.
+      if (kind?.valueType === "enum" && kind.values && !kind.freeText && attr.value !== null) {
         if (typeof attr.value !== "string" || !kind.values.includes(attr.value)) {
           refineCtx.addIssue({
             code: "custom",

@@ -1119,13 +1119,16 @@ export class DocDO extends DurableObject<Env> {
       const counts = (figure.attributes ?? [])
         .filter((a) => a.deletedAt == null)
         .map((a) => a.count);
-      // The figure's card bar count (PLAN §2.5): the explicit authored `bars` when
-      // set, else the phrase span its steps occupy (`barsForFigure`) — a legacy
-      // figure with no authored length still gets an honest span-based estimate.
+      // The figure's card bar count: the authored `counts` when set (Builder v3 ①
+      // — bars derive as ⌈counts / beatsPerBar⌉), else a legacy authored `bars`,
+      // else the phrase span its steps occupy (`barsForFigure`) — a figure with
+      // no authored length still gets an honest span-based estimate.
       const bars =
-        typeof figure.bars === "number" && figure.bars >= 1
-          ? Math.floor(figure.bars)
-          : barsForFigure(counts, figureDance);
+        typeof figure.counts === "number" && figure.counts >= 1
+          ? Math.max(1, Math.ceil(Math.floor(figure.counts) / DANCES[figureDance].beatsPerBar))
+          : typeof figure.bars === "number" && figure.bars >= 1
+            ? Math.floor(figure.bars)
+            : barsForFigure(counts, figureDance);
       return { bars, figureCount: null };
     }
 

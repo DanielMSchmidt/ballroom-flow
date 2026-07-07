@@ -30,9 +30,9 @@ const baseFigure = (attributes: Attribute[]): FigureDoc => ({
   dance: "waltz",
   name: "Test Figure",
   source: "library",
-  bars: 1,
+  counts: 3,
   attributes,
-  schemaVersion: 1,
+  schemaVersion: 5,
   deletedAt: null,
 });
 
@@ -50,7 +50,7 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     const doc = buildFigureDoc(baseFigure([seededAttr("fig-test-s1-foot", "HT")]));
     const { doc: after, changed } = reconcileSeededFigure(doc, {
       name: "Test Figure",
-      bars: 1,
+      counts: 3,
       attributes: [seededAttr("fig-test-s1-foot", "H flat")],
     });
     expect(changed).toBe(true);
@@ -65,7 +65,7 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
       doc,
       {
         name: "Test Figure",
-        bars: 1,
+        counts: 3,
         attributes: [seededAttr("fig-test-s2-foot", "TH", 2)],
       },
       { now: 1234 },
@@ -88,7 +88,7 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     const doc = buildFigureDoc(baseFigure([seededAttr("fig-test-s1-foot", "HT"), user]));
     const { doc: after } = reconcileSeededFigure(doc, {
       name: "Test Figure",
-      bars: 1,
+      counts: 3,
       attributes: [seededAttr("fig-test-s1-foot", "H flat")],
     });
     expect(readFigure(after).attributes).toEqual(
@@ -102,7 +102,7 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     );
     const { doc: after } = reconcileSeededFigure(doc, {
       name: "Test Figure",
-      bars: 1,
+      counts: 3,
       attributes: [seededAttr("fig-test-s1-foot", "HT")],
     });
     expect(readFigure(after).attributes).toEqual([
@@ -110,17 +110,17 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     ]);
   });
 
-  it("updates the doc-level name / bars / alignments from the seed", () => {
+  it("updates the doc-level name / counts / alignments from the seed", () => {
     const doc = buildFigureDoc(baseFigure([seededAttr("fig-test-s1-foot", "HT")]));
     const { doc: after } = reconcileSeededFigure(doc, {
       name: "Renamed Figure",
-      bars: 2,
+      counts: 6,
       entryAlignment: { qualifier: "facing", direction: "DW" },
       attributes: [seededAttr("fig-test-s1-foot", "HT")],
     });
     const read = readFigure(after);
     expect(read.name).toBe("Renamed Figure");
-    expect(read.bars).toBe(2);
+    expect(read.counts).toBe(6);
     expect(read.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
   });
 
@@ -128,7 +128,7 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     const doc = buildFigureDoc(baseFigure([seededAttr("fig-test-s1-foot", "HT")]));
     const seed = {
       name: "Test Figure",
-      bars: 1,
+      counts: 3,
       attributes: [seededAttr("fig-test-s1-foot", "HT")],
     };
     const first = reconcileSeededFigure(doc, seed);

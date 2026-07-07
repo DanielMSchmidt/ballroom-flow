@@ -34,16 +34,17 @@ import {
   countLabel,
   DANCES,
   type DanceId,
-  defaultFigureBars,
-  figureGridSlots,
+  figureCountSlots,
   type GridSlot,
+  mergeRegistry,
   offBeatSymbol,
   type RegistryKind,
+  resolveFigureCounts,
 } from "@weavesteps/domain";
 import { type ReactNode, useMemo, useState } from "react";
-import { pickMessages, useLocale, useMessages } from "../i18n";
+import { getLocale, localizedRegistry, pickMessages, useLocale, useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
-import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper } from "../ui";
+import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper, useToast } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -64,11 +65,14 @@ export interface FigureTimelineProps {
   dance?: DanceId;
   /** The figure's current attributes (controlled-with-fallback). */
   attributes?: Attribute[];
-  /** The figure's authored length in musical bars (drives the generated grid).
-   *  Falls back to ⌈whole-beat steps ÷ beatsPerBar⌉ when omitted. */
-  bars?: number;
-  /** Emits the next bar count when the header stepper is used (editor only). */
-  onBarsChange?: (next: number) => void;
+  /** The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①; drives
+   *  the generated grid). Falls back to `legacyBars × beatsPerBar`, then to a
+   *  bar's worth of beats for an empty figure / the step default otherwise. */
+  counts?: number;
+  /** A pre-v5 doc's authored length in whole bars (lenient read only). */
+  legacyBars?: number;
+  /** Emits the next count length when the header LENGTH stepper is used (editor only). */
+  onCountsChange?: (next: number) => void;
   /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
   initialView?: "leader" | "follower";
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
@@ -144,8 +148,9 @@ export function FigureTimeline({
   role,
   dance,
   attributes,
-  bars,
-  onBarsChange,
+  counts,
+  legacyBars,
+  onCountsChange,
   initialView,
   roleView,
   onRoleViewChange,
@@ -161,6 +166,7 @@ export function FigureTimeline({
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
+  const toast = useToast();
   const attrs = attributes ?? [];
   // The open attribute overlay: a (timing, column) target, or null (frame 1.12).
   const [openCell, setOpenCell] = useState<{ count: number; column: ReadingColumn } | null>(null);
@@ -196,10 +202,20 @@ export function FigureTimeline({
 
   const gridDance = (dance ?? "waltz") as DanceId;
   const beatsPerBar = DANCES[gridDance].beatsPerBar;
-  // The figure's authored length: the explicit `bars` prop, else the default from
-  // its whole-beat steps. Clamped so the stepper never drops below one bar.
+  // The figure's authored length in COUNTS (Builder v3 ①): the explicit `counts`
+  // prop, else a legacy `bars × beatsPerBar`, else the step default — but an
+  // entirely EMPTY un-authored figure opens with a full bar's worth of slots so
+  // there's somewhere to notate. Clamped ≥1.
   const liveAttrs = useMemo(() => attrs.filter((a) => a.deletedAt == null), [attrs]);
-  const resolvedBars = Math.max(1, bars ?? defaultFigureBars(liveAttrs, gridDance));
+  const resolvedCounts =
+    counts == null && legacyBars == null && liveAttrs.length === 0
+      ? beatsPerBar
+      : resolveFigureCounts({
+          ...(counts != null ? { counts } : {}),
+          ...(legacyBars != null ? { bars: legacyBars } : {}),
+          attributes: liveAttrs,
+          dance: gridDance,
+        });
 
   // The grid columns: every kind applicable to the dance (all-applicable, so empty
   // cells are addable) — the EDIT counterpart to the reading view's used-columns.
@@ -215,7 +231,7 @@ export function FigureTimeline({
   // generated from `bars` (US-028) — plus any attribute placed OUTSIDE that range
   // (e.g. a step left beyond a since-shrunk bar count) so no value is ever hidden.
   const rows = useMemo(() => {
-    const slots = figureGridSlots(resolvedBars, gridDance);
+    const slots = figureCountSlots(resolvedCounts, gridDance);
     const inGrid = new Set(slots.map((s) => s.count));
     const extras: GridSlot[] = placedCounts
       .filter((c) => !inGrid.has(c))
@@ -227,7 +243,7 @@ export function FigureTimeline({
         whole: Number.isInteger(c),
       }));
     return [...slots, ...extras].sort((a, b) => a.count - b.count);
-  }, [resolvedBars, gridDance, beatsPerBar, placedCounts]);
+  }, [resolvedCounts, gridDance, beatsPerBar, placedCounts]);
 
   /** Replace one count's attributes within the full set + emit (COW on first
    *  edit of a non-owned global figure). */
@@ -237,20 +253,61 @@ export function FigureTimeline({
     onChange?.([...others, ...next]);
   };
 
+  // Quick-add (Builder v3 ②): tapping an EMPTY cell of an OPEN kind (the merged
+  // Step column, a free-text kind, or one with no closed value list) instantly
+  // places a PRESENCE attribute (`value: null` — the dashed ring) instead of
+  // opening the editor; tap it again to set its value. A closed-enum kind still
+  // opens the single-attribute editor directly — there's a value to pick.
+  // biome-ignore lint/correctness/useExhaustiveDependencies(locale): localizedRegistry reads the active locale via getLocale(), so it must recompute on switch.
+  const registry = useMemo(
+    () => mergeRegistry(localizedRegistry(getLocale()), customKinds),
+    [customKinds, locale],
+  );
+  const quickAddKind = (col: ReadingColumn): string | null => {
+    if (col.isStep) return "direction"; // a blank STEP = a presence direction attr
+    const kind = registry[col.kind];
+    if (!kind || kind.valueType === "text" || kind.freeText || !kind.values?.length) {
+      return col.kind;
+    }
+    return null;
+  };
+  const onCellTap = (count: number, col: ReadingColumn): void => {
+    const here = (byCount.get(count) ?? []).filter((a) => columnKinds(col).includes(a.kind));
+    if (here.length === 0) {
+      const kind = quickAddKind(col);
+      if (kind) {
+        onCountChange(count, [
+          ...(byCount.get(count) ?? []),
+          {
+            id: `${kind}-${count}-presence-${Date.now()}`,
+            kind,
+            count,
+            value: null,
+            role: null,
+            deletedAt: null,
+          },
+        ]);
+        toast.show(col.isStep ? t.stepPlacedToast : t.presenceAddedToast);
+        return;
+      }
+    }
+    setOpenCell({ count, column: col });
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header controls: the "− N bars +" length stepper (editor only) + the
           "Steps for" role lens (frame 1.11). The lens is a per-device VIEW. */}
       <div className="flex flex-wrap items-center gap-3">
-        {editable && onBarsChange && (
+        {editable && onCountsChange && (
           <Stepper
-            label={t.barsStepperLabel}
+            label={t.countsStepperLabel}
             hideLabel
-            unit={t.barsStepperUnit}
+            unit={t.countsStepperUnit}
             min={1}
-            max={32}
-            value={resolvedBars}
-            onChange={(next) => onBarsChange(next)}
+            max={64}
+            value={resolvedCounts}
+            onChange={(next) => onCountsChange(next)}
           />
         )}
         <div className="flex items-center gap-2">
@@ -378,7 +435,7 @@ export function FigureTimeline({
                           offBeat={!row.whole}
                           editable={editable}
                           color={colorByKind.get(col.kind)}
-                          onOpen={() => setOpenCell({ count: row.count, column: col })}
+                          onOpen={() => onCellTap(row.count, col)}
                         />
                       </td>
                     ))}

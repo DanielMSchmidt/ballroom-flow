@@ -46,11 +46,19 @@ export interface FigureDoc {
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
   /**
-   * The figure's length in musical bars (§2.5). Authored explicitly — chosen on
-   * creation and adjustable in the editor — and drives the editor's timing grid
-   * (every bar → beat → e/&/a slot). Optional for lenient reads of pre-bars docs;
-   * `resolveFigureBars` falls back to `defaultFigureBars` (⌈whole-beat steps ÷
-   * beatsPerBar⌉) when absent, so a legacy figure still renders a full grid.
+   * The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①,
+   * 2026-07-07): chosen on creation and adjustable in the editor's LENGTH
+   * stepper, it drives the timing grid (every count → e/&/a slot) and every
+   * derived bar display (`resolveFigureBars` = ⌈counts / beatsPerBar⌉).
+   * Optional for lenient reads of pre-v5 docs, which authored `bars` instead —
+   * `resolveFigureCounts` reads `bars × beatsPerBar` for those until the v4→v5
+   * migration converts them in storage.
+   */
+  counts?: number;
+  /**
+   * LEGACY (pre-v5): the figure's authored length in whole bars. Superseded by
+   * `counts` (the v4→v5 migration converts + drops this); kept optional so a
+   * not-yet-migrated doc still reads leniently. Never write this field.
    */
   bars?: number;
   attributes: Attribute[];
