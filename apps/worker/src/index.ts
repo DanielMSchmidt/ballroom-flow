@@ -852,6 +852,20 @@ app.get("/api/docs/:id/access", async (c) => {
   return c.json({ role }, 200);
 });
 
+// Read a figure DO's snapshot across the RPC boundary, degrading a failed read to
+// `null` (the caller renders the figure missing) rather than aborting the request.
+//
+// Why the wrapper: the DO stub's `Rpc.Result<FigureDoc>` collapses to `never` because
+// `Attribute.value` is deliberately typed `unknown` (D7 forward-compat — an unknown
+// value must survive a round-trip) and Cloudflare's `Serializable<T>` can't prove
+// `unknown` is structured-cloneable, though at runtime it always is. Declaring the
+// true return type ONCE here recovers `FigureDoc | null` for every call site with no
+// per-call cast — the return value is a subtype of the declared type, so it widens
+// cleanly without an assertion.
+function readFigureSnapshot(stub: DurableObjectStub<DocDO>): Promise<FigureDoc | null> {
+  return stub.getFigureSnapshot().catch(() => null);
+}
+
 // GET /api/routines/:id/snapshot — the READ-ONLY snapshot path (read/edit split).
 // A single REST read hydrates a routine + ALL its referenced figures — plus, for
 // any figure that is a v5 VARIANT, the live BASE it resolves against — with NO
@@ -894,13 +908,7 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
-      // Cast: the DO RPC stub degrades the `FigureDoc | null` return type — we
-      // own getFigureSnapshot, so re-assert the real shape here. A single figure
-      // that fails to read must degrade to "missing" (the client renders it so),
-      // never abort the whole routine snapshot with a 500.
-      const fig = (await doc(ref)
-        .getFigureSnapshot()
-        .catch(() => null)) as FigureDoc | null;
+      const fig = await readFigureSnapshot(doc(ref));
       if (!fig?.figureType) return;
       figures[ref] = fig;
     }),
@@ -918,9 +926,7 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   const bases: Record<string, FigureDoc> = {};
   await Promise.all(
     [...baseRefs].map(async (ref) => {
-      const base = (await doc(ref)
-        .getFigureSnapshot()
-        .catch(() => null)) as FigureDoc | null;
+      const base = await readFigureSnapshot(doc(ref));
       if (!base?.figureType) return;
       bases[ref] = base;
     }),
