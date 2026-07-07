@@ -249,14 +249,18 @@ seeder exists — `seedGlobalFigures` in **`apps/worker/src/seed-global-figures.
 (`apps/worker/src/index.ts`; a non-admin gets 403) and reused by the E2E test-seed
 path (`routes/test-seed.ts`, `seedGlobalFigures: true`). Its D30 contract:
 
-- **One-time import per figure** into a real global figure doc keyed by
-  `globalFigureRef(dance, figureType)` = `global:<dance>:<figureType>`; **after
-  import the DOC is the source of truth**, refined by admin in-app edits — not
-  re-imports.
-- **Additive + idempotent:** re-running only ADDS figures that don't exist yet; it
-  never overwrites an existing doc (`INSERT OR IGNORE` registry row + no-clobber
-  `seedDoc`). A seed-JSON correction after import does NOT reach already-imported
-  figures — those are fixed by an admin editing the doc.
+- **Import + reconcile per figure** into a real global figure doc keyed by
+  `globalFigureRef(dance, figureType)` = `global:<dance>:<figureType>`. **D30
+  ⟳2026-07-07 (owner decision): the SEED is authoritative for seeded content** —
+  re-running the seeder imports missing figures AND reconciles existing docs to
+  the current bundle (`reconcileSeededFigure` in `packages/domain/src/seed-reconcile.ts`,
+  driven by the DO's `reconcileSeed`): seeded attributes (deterministic
+  `fig-`/`wdsf-` ids) are updated/added/tombstoned to match; user/admin-ADDED
+  attributes (client ULIDs) are preserved; variants keep their owned beats. A
+  doc already matching the seed persists nothing.
+- **Idempotent:** a same-content re-run reports every existing figure `unchanged`.
+  A seed-JSON correction now DOES reach already-imported figures on the next
+  seeder run; admin in-app edits to SEEDED cells are subordinate to the seed.
 - The bundled catalog (`library-data.ts`) remains the browse/picker index (names,
   families, dances); **figure content in routines reads from the docs** (PLAN §9
   content workstream). The store still uses the bundle as the last-resort render

@@ -65,10 +65,95 @@ describe("seedGlobalFigures — additive, idempotent import (D30)", () => {
     expect(fig?.scope).toBe("global");
     expect(fig?.attributes?.length).toBe(2);
 
-    // Re-run: additive → nothing new created, existing doc untouched (D30).
+    // Re-run with the SAME content: nothing created, nothing rewritten (D30 ⟳:
+    // the reconcile is a no-op when the doc already matches the seed).
     const second = await seedGlobalFigures(seedEnv, { figures: SAMPLE });
     expect(second.created).toBe(0);
-    expect(second.skipped).toBe(1);
+    expect(second.updated).toBe(0);
+    expect(second.unchanged).toBe(1);
+  });
+
+  it("re-seeding is AUTHORITATIVE for seeded content but preserves user-added attributes (D30 ⟳)", async () => {
+    const { seedGlobalFigures } = await import("./seed-global-figures");
+    const family = "gf_reconcile_family";
+    const ref = globalFigureRef("waltz", family);
+    const s1 = {
+      id: "fig-reconcile-s1-foot",
+      kind: "footwork",
+      count: 1,
+      role: "leader" as const,
+      value: "HT",
+      deletedAt: null,
+    };
+    const s2 = {
+      id: "fig-reconcile-s2-foot",
+      kind: "footwork",
+      count: 2,
+      role: "leader" as const,
+      value: "T",
+      deletedAt: null,
+    };
+    // The doc also carries a user-added (ULID) attribute — attribute edits arrive
+    // over the WS sync in production; here it ships in the initial doc content,
+    // which is equivalent for the reconcile (it only owns fig-/wdsf- ids).
+    const userAttr = {
+      id: "01JUSERADDEDATTRIBUTE0000",
+      kind: "sway",
+      count: 1,
+      role: "leader" as const,
+      value: "to_L",
+      deletedAt: null,
+    };
+    const base = {
+      dance: "waltz" as const,
+      figureType: family,
+      name: "Reconcile Figure",
+      timing: "1 2 3",
+    };
+    const v1: LibraryFigure[] = [{ ...base, attributes: [s1, s2, userAttr] }];
+    await seedGlobalFigures(seedEnv, { figures: v1 });
+    const stub = docs.get(docs.idFromName(ref));
+
+    // The catalog is refined: s1 corrected to the book's "H flat", s2 dropped,
+    // s3 added, and the figure renamed.
+    const v2: LibraryFigure[] = [
+      {
+        ...base,
+        name: "Reconcile Figure (Book)",
+        attributes: [
+          { ...s1, value: "H flat" }, // the seeded s1 row, corrected by the book
+          {
+            id: "fig-reconcile-s3-foot",
+            kind: "footwork",
+            count: 3,
+            role: "leader",
+            value: "TH",
+            deletedAt: null,
+          },
+        ],
+      },
+    ];
+    const run = await seedGlobalFigures(seedEnv, { figures: v2 });
+    expect(run.created).toBe(0);
+    expect(run.updated).toBe(1);
+
+    const fig = (await stub.getFigureSnapshot()) as {
+      name?: string;
+      attributes?: Array<{ id: string; value?: unknown; deletedAt?: number | null }>;
+    } | null;
+    expect(fig?.name).toBe("Reconcile Figure (Book)");
+    const byId = new Map((fig?.attributes ?? []).map((a) => [a.id, a]));
+    expect(byId.get("fig-reconcile-s1-foot")?.value).toBe("H flat"); // corrected
+    expect(byId.get("fig-reconcile-s3-foot")?.value).toBe("TH"); // added
+    // Dropped seeded attribute is TOMBSTONED (soft-delete), never removed.
+    expect(byId.get("fig-reconcile-s2-foot")?.deletedAt).not.toBeNull();
+    // The user's own attribute survives untouched.
+    expect(byId.get("01JUSERADDEDATTRIBUTE0000")?.value).toBe("to_L");
+    // The registry row's display name follows the seed too.
+    const row = await env.DB.prepare("SELECT title FROM document_registry WHERE docRef = ?")
+      .bind(ref)
+      .first<{ title: string }>();
+    expect(row?.title).toBe("Reconcile Figure (Book)");
   });
 });
 

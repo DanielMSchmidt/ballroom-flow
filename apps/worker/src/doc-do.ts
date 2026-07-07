@@ -39,6 +39,8 @@ import {
   type RoutineDoc,
   readFigure,
   readRoutine,
+  reconcileSeededFigure,
+  type SeedFigureContent,
   softDeleteAnnotation,
 } from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
@@ -329,6 +331,30 @@ export class DocDO extends DurableObject<Env> {
     // reconnects (a reload). Mirrors the applyChange broadcast; a no-op when no
     // sockets are connected.
     this.broadcast(A.getAllChanges(seeded), null);
+  }
+
+  /**
+   * D30 ⟳ (seed-authoritative): reconcile an ALREADY-IMPORTED global figure doc to
+   * the current bundled catalog. Seeded attributes (deterministic `fig-`/`wdsf-`
+   * ids) are updated/added/tombstoned to match the seed; user-added (ULID)
+   * attributes are untouched, and variants pick refreshed unowned beats up via
+   * per-beat resolution. A doc already matching the seed persists nothing.
+   * Single-writer by construction: only this doc's DO runs its reconcile.
+   */
+  async reconcileSeed(seed: SeedFigureContent): Promise<{ changed: boolean }> {
+    const before = this.getDoc() as unknown as A.Doc<FigureDoc>;
+    const { doc: after, changed } = reconcileSeededFigure(before, seed);
+    if (!changed) return { changed: false };
+    const changes = A.getChanges(
+      before as unknown as A.Doc<RoutineDoc>,
+      after as unknown as A.Doc<RoutineDoc>,
+    );
+    this.doc = after as unknown as A.Doc<RoutineDoc>;
+    this.persist(changes);
+    await this.maybeScheduleCompaction();
+    // Live clients of this doc see the refreshed catalog content immediately.
+    this.broadcast(changes, null);
+    return { changed: true };
   }
 
   /**

@@ -91,6 +91,11 @@ export {
   type MembershipRole,
 } from "./permissions";
 export { parseAttributeRead, parseAttributeWrite } from "./schemas";
+export {
+  isSeededAttributeId,
+  reconcileSeededFigure,
+  type SeedFigureContent,
+} from "./seed-reconcile";
 export { buildGoldenWaltzBasic } from "./starter-routine";
 export {
   barsForFigure,
