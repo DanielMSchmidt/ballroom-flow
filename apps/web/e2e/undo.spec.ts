@@ -126,16 +126,21 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     // tap the Step cell → the overlay → DIRECTION "Forward" → Save (closes overlay).
     await page.getByRole("button", { name: /edit steps: My Step/i }).click();
     const editor = page.getByRole("dialog", { name: /steps · my step/i });
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     // The edit landed: count 1 now carries the "forward" headline.
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
 
     // Undo from the EDITOR HEADER (scoped to the dialog so it's the figure's undo,
-    // not the routine toolbar's) → "Undone" toast, and count 1 empties again (§5.4).
+    // not the routine toolbar's) → "Undone" toast (§5.4). The notate flow was TWO
+    // changes (Builder v3 ②: the quick-added blank step, then the Forward pick),
+    // so the first undo reverts the pick and a second removes the blank step —
+    // count 1 empties again.
     await editor.getByRole("button", { name: /^undo$/i }).click();
     await expect(page.getByText(/^undone$/i)).toBeVisible();
+    await editor.getByRole("button", { name: /^undo$/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveCount(0, { timeout: 15_000 });
   });
 });

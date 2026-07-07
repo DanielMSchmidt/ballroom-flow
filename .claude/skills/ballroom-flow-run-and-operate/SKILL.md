@@ -208,8 +208,10 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 
 ### Screenshot bot (`.github/workflows/screenshots.yml`)
 
-Regenerates the committed landing-page marketing screenshots on PRs into `development`,
-auto-commits them to the PR branch, and upserts a before/after comment.
+Regenerates the committed landing-page marketing screenshots on PRs into `development`
+or `main` (both listed since 2026-07-07 — the workflow was dead while pinned to the
+deleted `development` branch), auto-commits them to the PR branch, and upserts a
+before/after comment.
 
 - **Trigger:** `pull_request` path-filtered to `apps/web/**`, `apps/worker/**`,
   `packages/**`, the workflow itself, and `scripts/screenshot-diff.mjs`; plus

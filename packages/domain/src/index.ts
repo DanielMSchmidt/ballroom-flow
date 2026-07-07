@@ -45,10 +45,16 @@ export type {
 } from "./doc-types";
 export {
   defaultFigureBars,
+  defaultFigureCounts,
+  figureCountSlots,
   figureGridSlots,
   type GridSlot,
+  type PlacementPart,
+  partBeatSpan,
   resolveFigureBars,
+  resolveFigureCounts,
   SUB_BEATS,
+  windowAttributes,
 } from "./figure-grid";
 export { matchesFigureType } from "./figuretype";
 export {

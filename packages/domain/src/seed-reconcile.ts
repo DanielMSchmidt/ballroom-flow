@@ -29,7 +29,8 @@ export function isSeededAttributeId(id: string): boolean {
 
 export interface SeedFigureContent {
   name: string;
-  bars?: number;
+  /** The authored beat length (§2.5.2 counts model — bars derive from it). */
+  counts?: number;
   entryAlignment?: Alignment;
   exitAlignment?: Alignment;
   attributes: readonly Attribute[];
@@ -90,7 +91,7 @@ export function reconcileSeededFigure(
   }
 
   const nameChanged = doc.name !== seed.name;
-  const barsChanged = seed.bars !== undefined && doc.bars !== seed.bars;
+  const countsChanged = seed.counts !== undefined && doc.counts !== seed.counts;
   const entryChanged =
     seed.entryAlignment !== undefined && !sameAlignment(doc.entryAlignment, seed.entryAlignment);
   const exitChanged =
@@ -102,14 +103,14 @@ export function reconcileSeededFigure(
     additions.length > 0 ||
     tombstone.length > 0 ||
     nameChanged ||
-    barsChanged ||
+    countsChanged ||
     entryChanged ||
     exitChanged;
   if (!changed) return { doc, changed: false };
 
   const next = A.change(doc, "seed: reconcile to the current catalog", (d) => {
     if (nameChanged) d.name = seed.name;
-    if (barsChanged && seed.bars !== undefined) d.bars = seed.bars;
+    if (countsChanged && seed.counts !== undefined) d.counts = seed.counts;
     if (entryChanged && seed.entryAlignment) d.entryAlignment = { ...seed.entryAlignment };
     if (exitChanged && seed.exitAlignment) d.exitAlignment = { ...seed.exitAlignment };
     for (const u of updates) {

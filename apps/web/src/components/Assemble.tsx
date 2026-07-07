@@ -23,6 +23,7 @@ import {
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
+  partBeatSpan,
   type RegistryKind,
   type Section,
 } from "@weavesteps/domain";
@@ -55,7 +56,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   Chip,
-  CountPill,
   cx,
   EditIcon,
   FullScreen,
@@ -846,7 +846,18 @@ export function Assemble({
                               className="flex-1"
                               label={t.addBreak}
                               tone="break"
-                              onClick={() => store.addBreak(section.id)}
+                              onClick={() =>
+                                // Builder v3 ④: a Break is a real (choreo-local)
+                                // figure — a bar's worth of empty counts, sized/
+                                // edited like any figure. Legacy break placements
+                                // keep the BreakCard until the DO migrates them.
+                                store.addPlacement(
+                                  section.id,
+                                  t.breakFigureName,
+                                  undefined,
+                                  DANCES[routine.dance as DanceId].beatsPerBar,
+                                )
+                              }
                             />
                           </div>
                         )}
@@ -907,14 +918,15 @@ export function Assemble({
       >
         <AddFigurePicker
           dance={routine.dance as DanceId}
-          onAdd={(name, figureType, bars) => {
+          onAdd={(name, figureType, counts, part) => {
             if (addingFigureTo)
               store.addPlacement(
                 addingFigureTo.sectionId,
                 name,
                 figureType,
-                bars,
+                counts,
                 addingFigureTo.beforePlacementId,
+                part,
               );
             setAddingFigureTo(null);
           }}
@@ -1016,8 +1028,9 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance as DanceId}
               attributes={notatingFigure.attributes}
-              bars={notatingFigure.bars}
-              onBarsChange={(next) => store.setFigureBars(notatingFigure.id, next)}
+              counts={notatingFigure.counts}
+              legacyBars={notatingFigure.bars}
+              onCountsChange={(next) => store.setFigureCounts(notatingFigure.id, next)}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               scopeLabel={routine.title || notatingFigure.name}
@@ -1027,6 +1040,10 @@ export function Assemble({
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+              figureName={notatingFigure.name}
+              onRenameFigure={
+                canEdit ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
+              }
               isBookmarked={
                 notatingFigure.scope === "account" &&
                 (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)
@@ -1228,18 +1245,26 @@ function sectionMeta(
       bars += Math.max(1, Math.round((pl.beats ?? beatsPerBar) / beatsPerBar));
       continue;
     }
+    // A portioned placement spans its WINDOW, not the figure's full length
+    // (Builder v3 ③) — no figure load needed.
+    if (pl.part) {
+      bars += Math.max(1, Math.ceil(partBeatSpan(pl.part) / beatsPerBar));
+      continue;
+    }
     const fig = resolved.get(pl.id)?.figure;
     if (!fig) continue;
     // Mirror the routine-card projection (worker doc-do.ts §2.7): a figure's bar
-    // span is its AUTHORED `bars` when set, else the phrase span of its steps
-    // (`barsForFigure`). The old code summed only `barsForFigure` and skipped any
-    // figure with no notated steps — so a section of freshly-placed figures (which
-    // carry an authored `bars` but empty `attributes` until notated) read "0 bars".
-    const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
+    // span is its AUTHORED `counts` when set (Builder v3 ① — ⌈counts ÷
+    // beatsPerBar⌉), else a legacy authored `bars`, else the phrase span of its
+    // steps (`barsForFigure`) — a freshly-placed figure with an authored length
+    // but no notated steps still counts.
+    const stepCounts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
     bars +=
-      typeof fig.bars === "number" && fig.bars >= 1
-        ? Math.floor(fig.bars)
-        : barsForFigure(counts, dance);
+      typeof fig.counts === "number" && fig.counts >= 1
+        ? Math.max(1, Math.ceil(Math.floor(fig.counts) / beatsPerBar))
+        : typeof fig.bars === "number" && fig.bars >= 1
+          ? Math.floor(fig.bars)
+          : barsForFigure(stepCounts, dance);
   }
   return t.barCount(bars);
 }
@@ -1701,12 +1726,21 @@ function PlacementCard({
           type="button"
           aria-label={t.openSteps(canEdit, label)}
           onClick={onOpen}
-          className="min-w-0 flex-1 truncate text-left text-[13px] font-bold"
-          style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+          className="min-w-0 flex-1 text-left"
         >
-          {label}
+          {/* Two-line card (Builder v3): the name over its timing sub — the
+              figure's counts, or an honest "empty — add steps" nudge. */}
+          <span
+            className="block truncate text-[13px] font-bold"
+            style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+          >
+            {label}
+          </span>
+          <span className="block truncate text-2xs font-semibold text-ink-faint">
+            {counts.length > 0 ? counts.map((c) => countLabel(c)).join(" ") : t.emptyAddSteps}
+            {placement.part && ` · ${t.partSub(placement.part.fromCount, placement.part.toCount)}`}
+          </span>
         </button>
-        {counts.length > 0 && <CountPill counts={counts.map((c) => countLabel(c))} />}
         {isCustom && (
           <span
             className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
@@ -1806,19 +1840,117 @@ function AddFigurePicker({
   onAdd,
 }: {
   dance: DanceId;
-  onAdd: (name: string, figureType?: string, bars?: number) => void;
+  onAdd: (
+    name: string,
+    figureType?: string,
+    counts?: number,
+    part?: { fromCount: number; toCount: number } | null,
+  ) => void;
 }) {
   const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
-  // The new custom figure's authored length (PLAN §2.5) — chosen here on creation
-  // and adjustable later in the editor header. Library picks keep their catalog
-  // default (their charted steps), so the stepper applies to the custom form only.
-  const [bars, setBars] = useState(2);
+  // The new custom figure's authored length in COUNTS (Builder v3 ①) — chosen
+  // here on creation and adjustable later in the editor header. Library picks
+  // keep their catalog default (their charted steps), so the stepper applies to
+  // the custom form only.
+  const [counts, setCounts] = useState(3);
+  // The in-flight portion pick (Builder v3 ③): which counts of the tapped
+  // catalog figure to dance. `to < from` never happens (taps clamp).
+  const [portion, setPortion] = useState<{
+    name: string;
+    figureType: string;
+    total: number;
+    from: number;
+    to: number;
+  } | null>(null);
   const q = filter.trim().toLowerCase();
   const presets = libraryFiguresForDance(dance).filter(
     (f) => q === "" || f.name.toLowerCase().includes(q),
   );
+  if (portion) {
+    const whole = portion.from === 1 && portion.to === portion.total;
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-bold text-ink">{t.howMuchOf(portion.name)}</p>
+        <p className="text-[14px] text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
+          {t.portionHint(portion.name)}
+        </p>
+        <fieldset aria-label={t.portionRangeAria} className="flex flex-wrap items-center gap-1">
+          {Array.from({ length: portion.total }, (_, i) => i + 1).map((n) => {
+            const inRange = n >= portion.from && n <= portion.to;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={inRange}
+                aria-label={t.portionCountAria(n)}
+                onClick={() =>
+                  setPortion((p) => {
+                    if (!p) return p;
+                    // First tap anchors the start; a second tap extends to the
+                    // end (v3: tap a start, then an end). Tapping below the
+                    // anchor re-anchors.
+                    if (n < p.from || (p.from !== p.to && n >= p.from)) {
+                      return { ...p, from: n, to: n };
+                    }
+                    return { ...p, to: Math.max(p.from, n) };
+                  })
+                }
+                className="min-h-[40px] min-w-[36px] rounded-[8px] border-[1.5px] px-2 text-[12px] font-bold tabular-nums"
+                style={
+                  inRange
+                    ? {
+                        background: "var(--bf-accent)",
+                        color: "var(--bf-ink-inverse)",
+                        borderColor: "var(--bf-accent)",
+                      }
+                    : { color: "var(--bf-ink-muted)", borderColor: "var(--bf-border-strong)" }
+                }
+              >
+                {n}
+              </button>
+            );
+          })}
+        </fieldset>
+        <div className="flex items-center gap-2">
+          <span className="rounded-[7px] bg-accent-tint px-2 py-1 text-2xs font-bold text-accent">
+            {whole ? t.wholeFigureLabel : t.portionToLabel(portion.from, portion.to)}
+          </span>
+          {!whole && (
+            <button
+              type="button"
+              className="ml-auto min-h-[36px] text-2xs font-semibold text-accent"
+              onClick={() => setPortion((p) => (p ? { ...p, from: 1, to: p.total } : p))}
+            >
+              {t.wholeFigureAction}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setPortion(null)}>
+            {t.portionBack}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex-1"
+            onClick={() =>
+              onAdd(
+                portion.name,
+                portion.figureType,
+                undefined,
+                whole ? null : { fromCount: portion.from, toCount: portion.to },
+              )
+            }
+          >
+            {t.portionConfirm}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <Input
@@ -1845,7 +1977,19 @@ function AddFigurePicker({
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start"
-                onClick={() => onAdd(f.name, f.figureType)}
+                onClick={() => {
+                  // Portion picker (Builder v3 ③): choose how much of the
+                  // figure to dance before it lands.
+                  const canon = [
+                    ...new Set(
+                      (f.attributes ?? [])
+                        .filter((a) => a.deletedAt == null && Number.isInteger(a.count))
+                        .map((a) => a.count),
+                    ),
+                  ].sort((x, y) => x - y);
+                  const total = canon.length > 0 ? (canon[canon.length - 1] as number) : 3;
+                  setPortion({ name: f.name, figureType: f.figureType, total, from: 1, to: total });
+                }}
               >
                 {f.name}
               </Button>
@@ -1859,7 +2003,7 @@ function AddFigurePicker({
           e.preventDefault();
           const next = name.trim();
           if (!next) return;
-          onAdd(next, undefined, bars);
+          onAdd(next, undefined, counts);
           setName("");
         }}
       >
@@ -1874,13 +2018,13 @@ function AddFigurePicker({
             {t.length}
           </span>
           <Stepper
-            label={t.barsLabel}
+            label={t.countsLabel}
             hideLabel
-            unit={t.barsUnit}
+            unit={t.countsUnit}
             min={1}
-            max={32}
-            value={bars}
-            onChange={setBars}
+            max={64}
+            value={counts}
+            onChange={setCounts}
           />
         </div>
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>

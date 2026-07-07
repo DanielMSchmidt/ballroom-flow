@@ -146,9 +146,10 @@ export function AttributeEditor({
         },
       ];
     } else {
-      // Multi: add to the set.
+      // Multi: add to the set — dropping any presence-only (value: null) attr in
+      // this slot, which the picked value supersedes (Builder v3 ②).
       next = [
-        ...live,
+        ...live.filter((a) => !(sameSlot(a) && a.value == null)),
         {
           id: `${kind}-${count}-${v}-${scope ?? "both"}`,
           kind,
@@ -330,7 +331,7 @@ export function AttributeEditor({
         )}
         {onDone && (
           <Button variant="primary" size="sm" onClick={onDone}>
-            {t.save}
+            {t.done}
           </Button>
         )}
       </div>

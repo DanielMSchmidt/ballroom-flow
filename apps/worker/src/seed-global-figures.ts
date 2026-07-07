@@ -14,11 +14,12 @@
 // and existing choreos are enhanced — never broken.
 //
 // A seeded global doc carries `scope: "global"` (so the DO alarm projects it as
-// `global-figure`) + the catalog's charted attributes / alignment / authored bar
-// length. Placements reference these docs live (§4.3); a non-admin edit spawns a
+// `global-figure`) + the catalog's charted attributes / alignment / authored count
+// length (§2.5.2). Placements reference these docs live (§4.3); a non-admin edit spawns a
 // variant that resolves its untouched beats live from the base (§5.2).
 import {
-  defaultFigureBars,
+  CURRENT_SCHEMA_VERSION,
+  defaultFigureCounts,
   globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
@@ -61,7 +62,9 @@ export async function seedGlobalFigures(
 
     try {
       const attributes = f.attributes ?? [];
-      const bars = defaultFigureBars(attributes, f.dance);
+      // The authored COUNT length (Builder v3 ①): the charted timeline's
+      // whole-beat steps, so the editor grid shows the right extent.
+      const counts = defaultFigureCounts(attributes);
       // Additive D1 row (INSERT OR IGNORE). A false return = the row already
       // existed → the doc was imported before → reconcile it to the seed.
       const isNew = await createGlobalFigureRow(env.DB, {
@@ -74,7 +77,7 @@ export async function seedGlobalFigures(
       if (!isNew) {
         const { changed } = await stub.reconcileSeed({
           name: f.name,
-          bars,
+          counts,
           ...(f.entryAlignment ? { entryAlignment: f.entryAlignment } : {}),
           ...(f.exitAlignment ? { exitAlignment: f.exitAlignment } : {}),
           attributes,
@@ -101,14 +104,12 @@ export async function seedGlobalFigures(
         name: f.name,
         source: "library",
         attributes,
-        // The authored bar length (PLAN §2.5.2): ⌈whole-beat steps ÷ beatsPerBar⌉
-        // from the charted timeline, so the editor grid shows the right extent.
-        bars,
+        counts,
         // Charted figure-level entry/exit alignment, where present (buildDoc drops
         // undefined optionals, so an uncharted figure carries neither).
         ...(f.entryAlignment ? { entryAlignment: f.entryAlignment } : {}),
         ...(f.exitAlignment ? { exitAlignment: f.exitAlignment } : {}),
-        schemaVersion: 1,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
         deletedAt: null,
       });
       result.created += 1;

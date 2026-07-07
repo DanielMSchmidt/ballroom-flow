@@ -219,7 +219,17 @@ export function cellValue(here: Attribute[], column: ReadingColumn): string | nu
     return stepChipLabel(direction, footwork);
   }
   const a = here.find((x) => x.kind === column.kind);
-  return a ? abbrevValue(column.kind, a.value) : null;
+  // A PRESENCE attribute (value: null/empty — Builder v3 ②) has no chip label:
+  // the edit grid renders its dashed ring, the reading view its empty dot.
+  return a && hasAttrValue(a.value) ? abbrevValue(column.kind, a.value) : null;
+}
+
+/** Whether an attribute actually carries a value (vs a presence-only `null`/
+ *  empty write — Builder v3 ②). */
+export function hasAttrValue(value: unknown): boolean {
+  if (value == null || value === "") return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
 }
 
 /** True when a count sits off the beat (a fractional sub-beat — &, a, e, …);

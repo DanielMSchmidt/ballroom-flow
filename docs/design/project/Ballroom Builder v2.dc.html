@@ -44,8 +44,14 @@
     <!-- ===== CHOREO LIST ===== -->
     <sc-if value="{{ scList }}" hint-placeholder-val="{{ true }}">
       <div style="height:100%;display:flex;flex-direction:column">
-        <div style="flex:0 0 auto;display:flex;align-items:center;padding:6px 18px 12px;border-bottom:1px solid #ece8e0">
-          <span style="flex:1;font:700 19px 'Inconsolata';color:#1c1c1e;letter-spacing:-.2px">My Choreos</span>
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:6px 18px 12px;border-bottom:1px solid #ece8e0">
+          <span style="flex:1;font:700 19px 'Inconsolata';color:#1c1c1e;letter-spacing:-.2px">{{ t.myChoreos }}</span>
+          <div style="display:inline-flex;border:1.5px solid #e1dcd2;border-radius:9px;overflow:hidden;flex:0 0 auto">
+            <sc-if value="{{ langEN }}" hint-placeholder-val="{{ true }}"><span style="font:700 10px 'Inconsolata';background:#eef4fb;color:#2f5d8f;padding:8px 10px">EN</span></sc-if>
+            <sc-if value="{{ langDE }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onLangEN }}" style="font:700 10px 'Inconsolata';color:#a79f90;padding:8px 10px;cursor:pointer">EN</span></sc-if>
+            <sc-if value="{{ langEN }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onLangDE }}" style="font:700 10px 'Inconsolata';color:#a79f90;padding:8px 10px;cursor:pointer">DE</span></sc-if>
+            <sc-if value="{{ langDE }}" hint-placeholder-val="{{ true }}"><span style="font:700 10px 'Inconsolata';background:#eef4fb;color:#2f5d8f;padding:8px 10px">DE</span></sc-if>
+          </div>
           <span onClick="{{ onNewChoreo }}" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f4f1ea;cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5a554c" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
         </div>
         <div class="scrl" style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 22px;display:flex;flex-direction:column;gap:9px">
@@ -80,8 +86,8 @@
           <div style="flex:1">
             <div style="font:700 17px 'Inconsolata';color:#1c1c1e;letter-spacing:-.2px">{{ routineTitle }}</div>
             <sc-if value="{{ isForked }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:4px;margin-top:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a9742c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"></circle><circle cx="18" cy="6" r="2.6"></circle><circle cx="12" cy="20" r="2.6"></circle><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3M12 14.5v3"></path></svg><span style="font:600 9px 'Inconsolata';color:#a9742c">forked from {{ forkedFromName }} · independent copy</span></div></sc-if>
-            <sc-if value="{{ assembleView }}" hint-placeholder-val="{{ true }}"><div style="font:500 10px 'Inconsolata';color:#9a958c;margin-top:1px">reading</div></sc-if>
-            <sc-if value="{{ assembleEdit }}" hint-placeholder-val="{{ true }}"><div style="font:500 10px 'Inconsolata';color:#9a958c;margin-top:1px">editing</div></sc-if>
+            <sc-if value="{{ assembleView }}" hint-placeholder-val="{{ true }}"><div style="font:500 10px 'Inconsolata';color:#9a958c;margin-top:1px">{{ t.reading }}</div></sc-if>
+            <sc-if value="{{ assembleEdit }}" hint-placeholder-val="{{ true }}"><div style="font:500 10px 'Inconsolata';color:#9a958c;margin-top:1px">{{ t.editing }}</div></sc-if>
           </div>
           <sc-if value="{{ assembleView }}" hint-placeholder-val="{{ true }}">
             <div title="steps for — leader / follower" style="display:inline-flex;border:1.5px solid #e1dcd2;border-radius:9px;overflow:hidden;flex:0 0 auto">
@@ -279,7 +285,7 @@
 
         <!-- role toggle: leader / follower steps (persisted) -->
         <div style="flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:8px 16px 2px">
-          <span style="font:700 9px 'Inconsolata';color:#6f6a61;letter-spacing:.4px">STEPS FOR</span>
+          <span style="font:700 9px 'Inconsolata';color:#6f6a61;letter-spacing:.4px">{{ t.stepsFor }}</span>
           <div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:9px;overflow:hidden">
             <sc-if value="{{ roleLeader }}" hint-placeholder-val="{{ true }}"><span style="font:700 10px 'Inconsolata';background:#2f5d8f;color:#fff;padding:8px 14px">Leader</span></sc-if>
             <sc-if value="{{ notRoleLeader }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onRoleLeader }}" style="font:700 10px 'Inconsolata';color:#2f5d8f;padding:8px 14px;cursor:pointer">Leader</span></sc-if>
@@ -436,30 +442,57 @@
       </div>
     </sc-if>
 
-    <!-- ===== NEW CUSTOM TYPE (sheet) ===== -->
+    <!-- ===== NEW / EDIT CUSTOM TYPE (sheet) ===== -->
     <sc-if value="{{ newTypeForm.open }}" hint-placeholder-val="{{ true }}">
       <div onClick="{{ newTypeForm.onCancel }}" style="position:absolute;inset:0;background:rgba(20,18,12,.4);z-index:22"></div>
-      <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:14px 16px 24px;z-index:23;box-shadow:0 -8px 30px rgba(0,0,0,.2)">
+      <div class="scrl" style="position:absolute;left:0;right:0;bottom:0;max-height:90%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:14px 16px 22px;z-index:23;box-shadow:0 -8px 30px rgba(0,0,0,.2)">
         <div style="width:34px;height:4px;border-radius:3px;background:#e0dbd0;margin:0 auto 12px"></div>
-        <div style="font:700 13px 'Inconsolata';color:#1c1c1e;margin-bottom:11px">New attribute type · this choreo</div>
-        <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">NAME</div>
-        <input value="{{ newTypeForm.label }}" onChange="{{ newTypeForm.onLabel }}" placeholder="e.g. Head, Hand, Foot rise" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none;margin-bottom:12px"></input>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px"><span style="font:700 13px 'Inconsolata';color:#1c1c1e;flex:1">{{ newTypeForm.title }}</span><span style="font:600 8px 'Inconsolata';color:#0f8a8a;background:#e0f2f2;border-radius:5px;padding:2px 6px">{{ newTypeForm.thisChoreo }}</span></div>
+
+        <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bName }} <span style="color:#c0563f">•</span></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">
+          <input value="{{ newTypeForm.label }}" onChange="{{ newTypeForm.onLabel }}" placeholder="e.g. Head, Hand, Foot rise" style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none"></input>
+          <sc-if value="{{ newTypeForm.showSlug }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;font:600 8px 'Inconsolata';color:#8a857b;background:#efece5;border-radius:6px;padding:7px 8px;flex:0 0 auto">{{ t.bSlug }}: {{ newTypeForm.slug }}</span></sc-if>
+        </div>
+        <sc-if value="{{ newTypeForm.showSlug }}" hint-placeholder-val="{{ true }}"><div style="font:500 12px var(--note-font);color:#9a958c;margin:-8px 0 12px">{{ t.bSlugHint }}</div></sc-if>
+
+        <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bDesc }} <span style="color:#bdb8ad;font-weight:500">· {{ newTypeForm.descCount }}</span></div>
+        <input value="{{ newTypeForm.desc }}" onChange="{{ newTypeForm.onDesc }}" placeholder="{{ t.bDescHint }}" style="width:100%;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 11px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none;margin-bottom:12px"></input>
+
+        <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:6px">{{ t.bColour }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px">
+          <sc-for list="{{ newTypeForm.palette }}" as="sw" hint-placeholder-count="12">
+            <span onClick="{{ sw.onPick }}" style="width:26px;height:26px;border-radius:8px;background:{{ sw.color }};cursor:pointer;display:flex;align-items:center;justify-content:center">
+              <sc-if value="{{ sw.selected }}" hint-placeholder-val="{{ true }}"><span style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px 'Inconsolata';box-shadow:0 0 0 2px #fff,0 0 0 4px #1c1c1e">✓</span></sc-if>
+            </span>
+          </sc-for>
+        </div>
+        <div style="font:500 12px var(--note-font);color:#9a958c;margin-bottom:13px">{{ t.bColourHint }}</div>
+
         <div style="display:flex;gap:16px;margin-bottom:12px">
-          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">CHOICES</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.single }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">single</span><span onClick="{{ newTypeForm.onToggleMulti }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">multi</span></sc-if><sc-if value="{{ newTypeForm.multi }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleMulti }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">single</span><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">multi</span></sc-if></div></div>
-          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">ROLE-AWARE</div><sc-if value="{{ newTypeForm.roleAware }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleRole }}" style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;border-radius:8px;padding:5px 11px;cursor:pointer">yes</span></sc-if><sc-if value="{{ newTypeForm.list }}" hint-placeholder-val="{{ true }}"></sc-if><sc-if value="{{ newTypeForm.notRoleAware }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleRole }}" style="font:700 9px 'Inconsolata';border:1.5px solid #dcd5ca;color:#7a746a;border-radius:8px;padding:5px 11px;cursor:pointer">no</span></sc-if></div>
+          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bCardinality }}</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.single }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 10px">{{ t.bSingle }}</span><span onClick="{{ newTypeForm.onToggleMulti }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bMulti }}</span></sc-if><sc-if value="{{ newTypeForm.multi }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleMulti }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bSingle }}</span><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 10px">{{ t.bMulti }}</span></sc-if></div></div>
+          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bValueType }}</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.list }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">{{ t.bFromList }}</span><span onClick="{{ newTypeForm.onToggleFree }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">{{ t.bFreeText }}</span></sc-if><sc-if value="{{ newTypeForm.freetext }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleFree }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">{{ t.bFromList }}</span><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">{{ t.bFreeText }}</span></sc-if></div></div>
         </div>
-        <div style="display:flex;gap:16px;margin-bottom:11px">
-          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">VALUES</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.list }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">from list</span><span onClick="{{ newTypeForm.onToggleFree }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">free text</span></sc-if><sc-if value="{{ newTypeForm.freetext }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleFree }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">from list</span><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">free text</span></sc-if></div></div>
-          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">REQUIRED</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.optional }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 9px">optional</span><span onClick="{{ newTypeForm.onToggleReq }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">required</span></sc-if><sc-if value="{{ newTypeForm.required }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleReq }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 9px;cursor:pointer">optional</span><span style="font:700 9px 'Inconsolata';background:#c0563f;color:#fff;padding:5px 9px">required</span></sc-if></div></div>
-        </div>
+
         <sc-if value="{{ newTypeForm.list }}" hint-placeholder-val="{{ true }}">
-          <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:6px">CHOICES <span style="color:#bdb8ad;font-weight:500">add each value with ＋</span></div>
-          <sc-if value="{{ newTypeForm.hasOpts }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"><sc-for list="{{ newTypeForm.optChips }}" as="o" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;gap:5px;font:700 10px 'Inconsolata';background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">{{ o.label }}<span onClick="{{ o.onRemove }}" style="cursor:pointer;color:#0f8a8a;font-weight:700">×</span></span></sc-for></div></sc-if>
-          <div style="display:flex;gap:7px;margin-bottom:15px"><input value="{{ newTypeForm.optDraft }}" onChange="{{ newTypeForm.onOptDraft }}" placeholder="add a value…" style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none"></input><span onClick="{{ newTypeForm.onAddOpt }}" style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 17px 'Inconsolata';cursor:pointer">＋</span></div>
+          <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:6px">{{ t.bValues }} <span style="color:#bdb8ad;font-weight:500">{{ t.bValuesHint }}</span></div>
+          <sc-if value="{{ newTypeForm.hasOpts }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"><sc-for list="{{ newTypeForm.optChips }}" as="o" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;gap:6px;font:700 10px 'Inconsolata';color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">{{ o.label }}<span onClick="{{ o.onRemove }}" style="cursor:pointer;color:#0f8a8a;font-weight:700">✕</span></span></sc-for></div></sc-if>
+          <div style="display:flex;gap:7px;margin-bottom:12px"><input value="{{ newTypeForm.optDraft }}" onChange="{{ newTypeForm.onOptDraft }}" placeholder="{{ t.bAddValue }}" style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px 'Inconsolata';color:#3a352d;background:#f7f5f0;outline:none"></input><span onClick="{{ newTypeForm.onAddOpt }}" style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 17px 'Inconsolata';cursor:pointer">＋</span></div>
+          <sc-if value="{{ newTypeForm.hasDefs }}" hint-placeholder-val="{{ true }}">
+            <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:6px">{{ t.bDefs }}</div>
+            <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:5px"><sc-for list="{{ newTypeForm.defRows }}" as="d" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 10px;background:#fff"><span style="font:700 9px 'Inconsolata';color:#0f6b66;flex:0 0 auto;min-width:42px">{{ d.val }}</span><input value="{{ d.def }}" onChange="{{ d.onDef }}" placeholder="{{ d.placeholder }}" style="flex:1;border:none;background:transparent;font:600 10px 'Inconsolata';color:#3a352d;outline:none"></input></div></sc-for></div>
+            <div style="font:500 12px var(--note-font);color:#9a958c;margin-bottom:13px">{{ t.bDefsHint }}</div>
+          </sc-if>
         </sc-if>
+
+        <div style="display:flex;gap:16px;margin-bottom:14px">
+          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bDiffersRole }}</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.roleAware }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 10px">{{ t.bYes }}</span><span onClick="{{ newTypeForm.onToggleRole }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bNo }}</span></sc-if><sc-if value="{{ newTypeForm.notRoleAware }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleRole }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bYes }}</span><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 10px">{{ t.bNo }}</span></sc-if></div></div>
+          <div style="flex:1"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:5px">{{ t.bRequiredLbl }}</div><div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><sc-if value="{{ newTypeForm.optional }}" hint-placeholder-val="{{ true }}"><span style="font:700 9px 'Inconsolata';background:#2f5d8f;color:#fff;padding:5px 10px">{{ t.bOptional }}</span><span onClick="{{ newTypeForm.onToggleReq }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bReq }}</span></sc-if><sc-if value="{{ newTypeForm.required }}" hint-placeholder-val="{{ true }}"><span onClick="{{ newTypeForm.onToggleReq }}" style="font:700 9px 'Inconsolata';color:#2f5d8f;padding:5px 10px;cursor:pointer">{{ t.bOptional }}</span><span style="font:700 9px 'Inconsolata';background:#c0563f;color:#fff;padding:5px 10px">{{ t.bReq }}</span></sc-if></div></div>
+        </div>
+
         <div style="display:flex;gap:8px">
-          <span onClick="{{ newTypeForm.onCancel }}" style="flex:1;text-align:center;font:600 11px 'Inconsolata';border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px;cursor:pointer">cancel</span>
-          <span onClick="{{ newTypeForm.onCreate }}" style="flex:2;text-align:center;font:700 11px 'Inconsolata';background:#0f8a8a;color:#fff;border-radius:10px;padding:11px;cursor:pointer">create &amp; add</span>
+          <span onClick="{{ newTypeForm.onCancel }}" style="flex:1;text-align:center;font:600 11px 'Inconsolata';border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:12px;cursor:pointer">{{ t.bCancel }}</span>
+          <span onClick="{{ newTypeForm.onCreate }}" style="flex:2;text-align:center;font:700 11px 'Inconsolata';background:#0f8a8a;color:#fff;border-radius:10px;padding:12px;cursor:pointer">{{ newTypeForm.primaryLabel }}</span>
         </div>
       </div>
     </sc-if>
@@ -573,12 +606,12 @@
     <sc-if value="{{ scProfile }}" hint-placeholder-val="{{ true }}">
       <div style="height:100%;display:flex;flex-direction:column">
         <div style="flex:0 0 auto;display:flex;align-items:center;padding:6px 18px 10px;border-bottom:1px solid #ece8e0">
-          <span style="flex:1;font:700 19px 'Inconsolata';color:#1c1c1e;letter-spacing:-.2px">Profile</span>
+          <span style="flex:1;font:700 19px 'Inconsolata';color:#1c1c1e;letter-spacing:-.2px">{{ t.profile }}</span>
         </div>
         <div class="scrl" style="flex:1;min-height:0;overflow-y:auto;padding:20px 18px;display:flex;flex-direction:column;align-items:center;gap:16px">
           <span style="width:72px;height:72px;border-radius:50%;background:{{ pColor }};color:#fff;font:700 28px 'Inconsolata';display:flex;align-items:center;justify-content:center">{{ pInitial }}</span>
-          <div style="text-align:center"><div style="font:700 16px 'Inconsolata';color:#3a352d">{{ pName }}</div><div style="font:500 11px 'Inconsolata';color:#9a958c">shares 2 choreos</div></div>
-          <div style="width:100%"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:10px">YOUR NOTE COLOUR</div>
+          <div style="text-align:center"><div style="font:700 16px 'Inconsolata';color:#3a352d">{{ pName }}</div><div style="font:500 11px 'Inconsolata';color:#9a958c">{{ t.sharesN }}</div></div>
+          <div style="width:100%"><div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:10px">{{ t.noteColour }}</div>
             <div style="display:flex;gap:10px;justify-content:space-between">
               <sc-for list="{{ swatches }}" as="sw" hint-placeholder-count="6">
                 <span onClick="{{ sw.onPick }}" style="position:relative;width:38px;height:38px;border-radius:50%;background:{{ sw.color }};cursor:pointer;display:flex;align-items:center;justify-content:center">
@@ -587,9 +620,19 @@
               </sc-for>
             </div>
           </div>
-          <div style="width:100%;background:{{ pPreviewBg }};border-left:3px solid {{ pColor }};border-radius:0 10px 10px 0;padding:10px 12px"><div style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:{{ pColor }}"></span><span style="font:700 9px 'Inconsolata';color:{{ pColor }}">Preview · your notes</span></div><div style="font:500 15px var(--note-font);color:{{ pPreviewInk }};margin-top:2px">this is how your notes appear to others</div></div>
+          <div style="width:100%;background:{{ pPreviewBg }};border-left:3px solid {{ pColor }};border-radius:0 10px 10px 0;padding:10px 12px"><div style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:{{ pColor }}"></span><span style="font:700 9px 'Inconsolata';color:{{ pColor }}">{{ t.previewNotes }}</span></div><div style="font:500 15px var(--note-font);color:{{ pPreviewInk }};margin-top:2px">{{ t.previewHint }}</div></div>
           <div style="width:100%">
-            <div style="display:flex;align-items:center;margin-bottom:10px"><span style="flex:1;font:700 9px 'Inconsolata';color:#6f6a61">ATTRIBUTE TYPES</span><span onClick="{{ onAddType }}" style="font:700 9px 'Inconsolata';color:#0f8a8a;cursor:pointer">＋ new type</span></div>
+            <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:6px">{{ t.language }}</div>
+            <div style="font:500 13px var(--note-font);color:#9a958c;margin-bottom:8px">{{ t.languageHint }}</div>
+            <div style="display:inline-flex;border:1.5px solid #cdddee;border-radius:9px;overflow:hidden">
+              <sc-if value="{{ langEN }}" hint-placeholder-val="{{ true }}"><span style="font:700 11px 'Inconsolata';background:#2f5d8f;color:#fff;padding:9px 20px">EN</span></sc-if>
+              <sc-if value="{{ langDE }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onLangEN }}" style="font:700 11px 'Inconsolata';color:#2f5d8f;padding:9px 20px;cursor:pointer">EN</span></sc-if>
+              <sc-if value="{{ langEN }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onLangDE }}" style="font:700 11px 'Inconsolata';color:#2f5d8f;padding:9px 20px;cursor:pointer">DE</span></sc-if>
+              <sc-if value="{{ langDE }}" hint-placeholder-val="{{ true }}"><span style="font:700 11px 'Inconsolata';background:#2f5d8f;color:#fff;padding:9px 20px">DE</span></sc-if>
+            </div>
+          </div>
+          <div style="width:100%">
+            <div style="display:flex;align-items:center;margin-bottom:10px"><span style="flex:1;font:700 9px 'Inconsolata';color:#6f6a61">{{ t.attributeTypes }}</span><span onClick="{{ onAddType }}" style="font:700 9px 'Inconsolata';color:#0f8a8a;cursor:pointer">{{ t.newType }}</span></div>
             <div style="display:flex;flex-direction:column;gap:6px">
               <sc-for list="{{ profileTypes }}" as="t" hint-placeholder-count="6">
                 <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px">
@@ -597,13 +640,13 @@
                   <span style="flex:1;font:700 11px 'Inconsolata';color:#3a352d">{{ t.label }}</span>
                   <sc-if value="{{ t.hasRole }}" hint-placeholder-val="{{ true }}"><span style="font:600 8px 'Inconsolata';color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span></sc-if>
                   <span style="font:600 8px 'Inconsolata';color:#9a958c">{{ t.badge }}</span>
-                  <span style="font:600 8px 'Inconsolata';color:#8a857b">· {{ t.scope }}</span>
+                  <span style="font:600 8px 'Inconsolata';color:#8a857b">· {{ t.scope }}</span><sc-if value="{{ t.isCustom }}" hint-placeholder-val="{{ true }}"><span onClick="{{ t.onEdit }}" style="font:700 13px 'Inconsolata';color:#0f8a8a;cursor:pointer;padding:0 2px;flex:0 0 auto">✎</span></sc-if>
                 </div>
               </sc-for>
             </div>
-            <div style="font:500 13px var(--note-font);color:#8a857b;margin-top:8px">standard types are shared by everyone · custom types you add here are scoped to this choreo so partners see them too</div>
+            <div style="font:500 13px var(--note-font);color:#8a857b;margin-top:8px">{{ t.typesNote }}</div>
           </div>
-          <div style="margin-top:auto;width:100%;font:500 15px var(--note-font);color:#8a857b;text-align:center;line-height:1.4">Each member picks their own colour; it stays consistent across every shared choreo.</div>
+          <div style="margin-top:auto;width:100%;font:500 15px var(--note-font);color:#8a857b;text-align:center;line-height:1.4">{{ t.colourNote }}</div>
         </div>
       </div>
     </sc-if>
@@ -695,20 +738,20 @@
     <sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
       <div style="flex:0 0 auto;display:flex;border-top:1px solid #e6e1d8;background:#fcfbf8;padding:7px 0 22px">
         <div onClick="{{ onTabChoreo }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
-          <sc-if value="{{ isChoreo }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">Choreo</span></sc-if>
-          <sc-if value="{{ notChoreo }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">Choreo</span></sc-if>
+          <sc-if value="{{ isChoreo }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">{{ t.tabChoreo }}</span></sc-if>
+          <sc-if value="{{ notChoreo }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">{{ t.tabChoreo }}</span></sc-if>
         </div>
         <div onClick="{{ onTabLibrary }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
-          <sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2 2 0 0 1 6 3h7v16H6a2 2 0 0 0-2 1.5z"></path><path d="M20 3h-3a2 2 0 0 0-2 2v14a2 2 0 0 1 2-1.5h3z"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">Library</span></sc-if>
-          <sc-if value="{{ notLibrary }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2 2 0 0 1 6 3h7v16H6a2 2 0 0 0-2 1.5z"></path><path d="M20 3h-3a2 2 0 0 0-2 2v14a2 2 0 0 1 2-1.5h3z"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">Library</span></sc-if>
+          <sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2 2 0 0 1 6 3h7v16H6a2 2 0 0 0-2 1.5z"></path><path d="M20 3h-3a2 2 0 0 0-2 2v14a2 2 0 0 1 2-1.5h3z"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">{{ t.tabLibrary }}</span></sc-if>
+          <sc-if value="{{ notLibrary }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2 2 0 0 1 6 3h7v16H6a2 2 0 0 0-2 1.5z"></path><path d="M20 3h-3a2 2 0 0 0-2 2v14a2 2 0 0 1 2-1.5h3z"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">{{ t.tabLibrary }}</span></sc-if>
         </div>
         <div onClick="{{ onTabJournal }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
-          <sc-if value="{{ isJournal }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 4h13v15H6a2 2 0 0 0-2 2z"></path><path d="M19 19v2H6"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">Journal</span></sc-if>
-          <sc-if value="{{ notJournal }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 4h13v15H6a2 2 0 0 0-2 2z"></path><path d="M19 19v2H6"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">Journal</span></sc-if>
+          <sc-if value="{{ isJournal }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 4h13v15H6a2 2 0 0 0-2 2z"></path><path d="M19 19v2H6"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">{{ t.tabJournal }}</span></sc-if>
+          <sc-if value="{{ notJournal }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 4h13v15H6a2 2 0 0 0-2 2z"></path><path d="M19 19v2H6"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">{{ t.tabJournal }}</span></sc-if>
         </div>
         <div onClick="{{ onTabProfile }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
-          <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">Profile</span></sc-if>
-          <sc-if value="{{ notProfile }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">Profile</span></sc-if>
+          <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg><span style="font:700 9px 'Inconsolata';color:var(--accent)">{{ t.tabProfile }}</span></sc-if>
+          <sc-if value="{{ notProfile }}" hint-placeholder-val="{{ true }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#a7a299" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg><span style="font:600 9px 'Inconsolata';color:#a7a299">{{ t.tabProfile }}</span></sc-if>
         </div>
       </div>
     </sc-if>
@@ -953,11 +996,12 @@ class Component extends DCLogic {
       collapsed:{ s3:true },
       figMode:'view', expandedStepId:null,
       role:(()=>{ try { return localStorage.getItem('bb_role')||'leader'; } catch(e){ return 'leader'; } })(),
+      lang:(()=>{ try { return localStorage.getItem('bb_lang')||'en'; } catch(e){ return 'en'; } })(),
       hiddenTypes:(()=>{ try { return JSON.parse(localStorage.getItem('bb_hidden_types')||'{}')||{}; } catch(e){ return {}; } })(),
       peekFigId:null,
       threadStepKey:null,
       // attribute editing
-      customTypes:[ { key:'cu_head', label:'Head', color:'#0f8a8a', mode:'list', opts:['left','right','closed','to partner'], single:true, roleAware:true, dances:null, scope:'choreo' } ],
+      customTypes:[ { key:'cu_head', label:'Head', color:'#0f6b66', desc:'Where the head is placed & turned', mode:'list', opts:['left','right','closed','to partner'], defs:{ left:'head stays left, resist turning', right:'head turned to the right', closed:'head centred over the frame' }, single:true, roleAware:true, dances:null, scope:'choreo' } ],
       momentStepId:null, editAttr:null, addAttrFor:null, newType:null, addTimingOpen:false,
       routine,
       threads:{
@@ -1189,7 +1233,7 @@ class Component extends DCLogic {
     sway:{name:'Sway',color:'#c0563f',desc:'The inclination of the body to one side, a natural consequence of rise and the centrifugal force of turning. Sway is never forced — it arises from correct technique and is always away from the centre of the turn.'},
     turn:{name:'Turn',color:'#5b6b8a',desc:'The exact amount of rotation made on this step — the change of facing between it and the next step. Every step states its own amount (which may be “No turn”), and the per-step amounts across a figure sum to the figure’s total rotation.'},
   })[k] || {name:'',color:'#9a958c',desc:''};
-    if (!meta.name){ const t = this.typeInfo(k); if (t && t.key === k && (t.opts||[]).length){ return { name:t.label, color:t.color, desc:'A custom attribute type for this choreo.', values:(t.opts||[]).map(o => ({ key:o, code:o, label:o, d:'' })) }; } }
+    if (!meta.name){ const t = this.typeInfo(k); if (t && t.key === k){ return { name:t.label, color:t.color, desc:(t.desc||'A custom attribute type for this choreo.'), values:(t.opts||[]).map(o => ({ key:o, code:o, label:o, d:(t.defs&&t.defs[o])||'' })) }; } }
     const vals = (this.valueCat()[k] || []).map(e => ({ key:e.key, code:e.code, label:e.label, d:e.def }));
     return { name:meta.name, color:meta.color, desc:meta.desc, values:vals }; }
   shorten(k, v){
@@ -1233,6 +1277,48 @@ class Component extends DCLogic {
   editCell(stepId, typeKey){ const st=this._findStep(stepId); const a=st&&st.attrs.find(x=>!x.removed&&x.type===typeKey); if(a){ this.openAttr(stepId,a.id); } else { const dv=this.defaultVal(typeKey); this.setState({ editAttr:{ stepId, attrId:null, typeKey, l:dv, f:null, linked:true, count:(st?st.count:'') } }); } }
   createStepThenEdit(figId, idx, count, typeKey){ const nid='st'+Date.now(); this._editFigure(figId, f=>{ const steps=f.steps.slice(); steps.splice(idx,0,{id:nid,count:count,attrs:[]}); return {...f, steps}; }); const dv=this.defaultVal(typeKey); this.setState({ editAttr:{ stepId:nid, attrId:null, typeKey, l:dv, f:null, linked:true, count:count } }); }
   setRole(r){ try { localStorage.setItem('bb_role', r); } catch(e){} this.setState({ role:r }); }
+  /* ---- UI language (client-only preference, persisted; independent of the ballroom vocabulary) ---- */
+  setLang(l){ try { localStorage.setItem('bb_lang', l); } catch(e){} this.setState({ lang:l }); }
+  strings(){ return {
+    en:{ myChoreos:'My Choreos', bars:'bars', noFigures:'no figures yet',
+      tabChoreo:'Choreo', tabLibrary:'Library', tabJournal:'Journal', tabProfile:'Profile',
+      profile:'Profile', sharesN:'shares 2 choreos', noteColour:'YOUR NOTE COLOUR',
+      previewNotes:'Preview · your notes', previewHint:'this is how your notes appear to others',
+      language:'Language / Sprache', languageHint:'a personal preference, applied instantly — no reload',
+      attributeTypes:'ATTRIBUTE TYPES', newType:'＋ new type',
+      typesNote:'standard types are shared by everyone · custom types you add here are scoped to this choreo so partners see them too',
+      colourNote:'Each member picks their own colour; it stays consistent across every shared choreo.',
+      reading:'reading', editing:'editing', stepsFor:'STEPS FOR',
+      bNewTitle:'New attribute type', bEditTitle:'Edit type', bThisChoreo:'this choreo',
+      bName:'NAME', bDesc:'DESCRIPTION', bDescHint:'shown when someone taps the type to learn what it means',
+      bColour:'COLOUR', bColourHint:'picked from a readable set so values stay legible on the timeline',
+      bCardinality:'CARDINALITY', bSingle:'single', bMulti:'multi',
+      bValueType:'VALUE TYPE', bFromList:'from a list', bFreeText:'free text',
+      bValues:'VALUES', bValuesHint:'add each value; ✕ to remove', bAddValue:'add a value…',
+      bDefs:'PER-VALUE DEFINITIONS', bDefsHint:'one line each — also feeds the info-sheet', bDefinePh:'short definition',
+      bDiffersRole:'DIFFERS BY ROLE', bRequiredLbl:'REQUIRED', bOptional:'optional', bReq:'req', bYes:'yes · L / F', bNo:'no',
+      bCancel:'Cancel', bCreate:'Create', bSave:'Save changes', bSlug:'slug', bSlugHint:'renaming never re-keys the type — existing data stays linked',
+      bgRequired:'required', bgSingle:'single', bgMulti:'multi', scStandard:'standard', scChoreo:'this choreo', scPersonal:'personal' },
+    de:{ myChoreos:'Meine Choreos', bars:'Takte', noFigures:'noch keine Figuren',
+      tabChoreo:'Choreo', tabLibrary:'Bibliothek', tabJournal:'Journal', tabProfile:'Profil',
+      profile:'Profil', sharesN:'teilt 2 Choreos', noteColour:'DEINE NOTIZFARBE',
+      previewNotes:'Vorschau · deine Notizen', previewHint:'so erscheinen deine Notizen bei anderen',
+      language:'Sprache / Language', languageHint:'eine persönliche Einstellung, sofort angewendet — kein Neuladen',
+      attributeTypes:'ATTRIBUTTYPEN', newType:'＋ neuer Typ',
+      typesNote:'Standardtypen sehen alle · eigene Typen hier sind auf diese Choreo begrenzt, damit Partner sie sehen',
+      colourNote:'Jedes Mitglied wählt seine eigene Farbe; sie bleibt in jeder geteilten Choreo gleich.',
+      reading:'Lesen', editing:'Bearbeiten', stepsFor:'SCHRITTE FÜR',
+      bNewTitle:'Neuer Attributtyp', bEditTitle:'Typ bearbeiten', bThisChoreo:'diese Choreo',
+      bName:'NAME', bDesc:'BESCHREIBUNG', bDescHint:'wird gezeigt, wenn jemand den Typ antippt, um seine Bedeutung zu sehen',
+      bColour:'FARBE', bColourHint:'aus einem gut lesbaren Set, damit Werte auf der Timeline lesbar bleiben',
+      bCardinality:'ANZAHL', bSingle:'einzeln', bMulti:'mehrere',
+      bValueType:'WERTTYP', bFromList:'aus Liste', bFreeText:'Freitext',
+      bValues:'WERTE', bValuesHint:'jeden Wert hinzufügen; ✕ zum Entfernen', bAddValue:'Wert hinzufügen…',
+      bDefs:'DEFINITIONEN JE WERT', bDefsHint:'je eine Zeile — fließt auch ins Info-Blatt', bDefinePh:'kurze Definition',
+      bDiffersRole:'ROLLENABHÄNGIG', bRequiredLbl:'PFLICHT', bOptional:'optional', bReq:'Pflicht', bYes:'ja · L / F', bNo:'nein',
+      bCancel:'Abbrechen', bCreate:'Erstellen', bSave:'Änderungen sichern', bSlug:'Slug', bSlugHint:'Umbenennen ändert den Schlüssel nie — bestehende Daten bleiben verknüpft',
+      bgRequired:'Pflicht', bgSingle:'einzeln', bgMulti:'mehrere', scStandard:'Standard', scChoreo:'diese Choreo', scPersonal:'persönlich' }
+  }; }
   /* column filter: hidden type keys — per device, shared across choreos (like role) */
   toggleTypeChip(key){ if(key==='step'){ this.toast('Step is always shown'); return; } this.setState(s=>{ const h={...(s.hiddenTypes||{})}; if(h[key]) delete h[key]; else h[key]=1; try { localStorage.setItem('bb_hidden_types', JSON.stringify(h)); } catch(e){} return { hiddenTypes:h, peekFigId:null }; }); }
   peekFig(id){ this._peekAt=Date.now(); this.setState(s=>({ peekFigId: s.peekFigId===id?null:id })); }
@@ -1271,11 +1357,16 @@ class Component extends DCLogic {
   removeAttr(){ const e = this.state.editAttr; if (!e || !e.attrId) { this.setState({ editAttr:null }); return; } this._editStep(e.stepId, st => ({ ...st, attrs: st.attrs.map(a => a.id === e.attrId ? { ...a, removed:true } : a) })); this.setState({ editAttr:null }); }
   closeAttr(){ this.setState({ editAttr:null }); }
   openValInfo(family, key){ this.setState({ infoKey:family, infoValue:key }); }
-  startNewType(){ this.setState({ newType:{ label:'', color:'#0f8a8a', multi:false, freetext:false, opts:[], optDraft:'', roleAware:false, required:false } }); }
+  startNewType(){ this.setState({ newType:{ mode:'create', key:null, label:'', desc:'', color:'#0f6b66', multi:false, freetext:false, opts:[], optDraft:'', defs:{}, roleAware:false, required:false } }); }
   addNewTypeOpt(){ this.setState(s=>{ const d=(s.newType.optDraft||'').trim(); if(!d) return {}; return { newType:{ ...s.newType, opts:(s.newType.opts||[]).concat([d]), optDraft:'' } }; }); }
   removeNewTypeOpt(i){ this.setState(s=>({ newType:{ ...s.newType, opts:(s.newType.opts||[]).filter((_,x)=>x!==i) } })); }
   setNewType(k, v){ this.setState(s => ({ newType:{ ...s.newType, [k]:v } })); }
-  createCustomType(){ const n = this.state.newType; if (!n || !(n.label||'').trim()) return; const key = 'cu_' + Date.now(); const opts = n.freetext ? [] : (n.opts||[]); const t = { key, label:n.label.trim(), color:n.color||'#0f8a8a', mode:(n.freetext ? 'text' : 'list'), opts, single:!n.multi, roleAware:!!n.roleAware, required:!!n.required, dances:null, scope:'choreo' }; const hadStep = !!this.state.addAttrFor; this.setState(s => ({ customTypes: s.customTypes.concat([t]), newType:null }), () => { if (hadStep) this.pickType(key); }); }
+  startEditType(key){ const t=(this.state.customTypes||[]).find(x=>x.key===key); if(!t) return; this.setState({ newType:{ mode:'edit', key:t.key, label:t.label, desc:t.desc||'', color:t.color, multi:!t.single, freetext:(t.mode==='text'), opts:(t.opts||[]).slice(), optDraft:'', defs:{ ...(t.defs||{}) }, roleAware:!!t.roleAware, required:!!t.required } }); }
+  setNewTypeDef(val, text){ this.setState(s=>({ newType:{ ...s.newType, defs:{ ...((s.newType&&s.newType.defs)||{}), [val]:text } } })); }
+  typePalette(){ return ['#3a4a63','#2f5d8f','#4a4d9c','#6b4a9c','#9c3d7a','#b03a5b','#b0472f','#8a6a1f','#6b4a2c','#5e6b1f','#1f7a4d','#0f6b66']; }
+  createCustomType(){ const n = this.state.newType; if (!n || !(n.label||'').trim()) return; const opts = n.freetext ? [] : (n.opts||[]); const defs = {}; opts.forEach(o=>{ if(n.defs&&n.defs[o]) defs[o]=n.defs[o]; });
+    if (n.mode==='edit' && n.key){ this.setState(s => ({ customTypes: s.customTypes.map(t => t.key!==n.key ? t : ({ ...t, label:n.label.trim(), desc:(n.desc||'').trim(), color:n.color||t.color, mode:(n.freetext?'text':'list'), opts, defs, single:!n.multi, roleAware:!!n.roleAware, required:!!n.required })), newType:null }), () => this.toast('Type saved')); return; }
+    const key = 'cu_' + Date.now(); const t = { key, label:n.label.trim(), desc:(n.desc||'').trim(), color:n.color||'#0f6b66', mode:(n.freetext ? 'text' : 'list'), opts, defs, single:!n.multi, roleAware:!!n.roleAware, required:!!n.required, dances:null, scope:'choreo' }; const hadStep = !!this.state.addAttrFor; this.setState(s => ({ customTypes: s.customTypes.concat([t]), newType:null }), () => { if (hadStep) this.pickType(key); }); }
   addReply(){
     const txt = (this.state.replyText || '').trim();
     if (!txt) return;
@@ -1373,6 +1464,7 @@ class Component extends DCLogic {
 
   renderVals(){
     const st = this.state, profile = st.profile, view = st.choreoView;
+    const lang = st.lang || 'en'; const L = this.strings()[lang];
     const slot = (step, k) => { const v = step[k]; return { set:!!v, unset:!v, label: v ? this.shorten(k, v) : '' }; };
 
     const isChoreo = st.tab === 'choreo', isJournal = st.tab === 'journal', isProfile = st.tab === 'profile', isLibrary = st.tab === 'library';
@@ -1390,7 +1482,7 @@ class Component extends DCLogic {
     const showTabBar = !(isChoreo && (view === 'step' || view === 'thread' || view === 'share')) && !scEntry;
     const openChoreo = st.choreos.find(c => c.id === st.openChoreoId) || st.choreos[0];
     const danceColor = {Waltz:'#2f5d8f',Quickstep:'#1f8a5b',Foxtrot:'#8a5cab',Tango:'#c0563f',Viennese:'#5b6b8a'};
-    const choreoList = st.choreos.map(c => ({ id:c.id, title:c.title, dance:c.dance, created:c.created||'—', barLabel:c.bars ? c.bars+' bars' : 'no figures yet', color:danceColor[c.dance]||'#2f5d8f', isForked:!!c.forkedFrom, forkedFrom:c.forkedFrom||'', onOpen:()=>this.setState({openChoreoId:c.id,choreoView:'assemble',assembleEdit:false}), onMenu:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({forkMenuId:c.id}); } }));
+    const choreoList = st.choreos.map(c => ({ id:c.id, title:c.title, dance:c.dance, created:c.created||'—', barLabel:c.bars ? c.bars+' '+L.bars : L.noFigures, color:danceColor[c.dance]||'#2f5d8f', isForked:!!c.forkedFrom, forkedFrom:c.forkedFrom||'', onOpen:()=>this.setState({openChoreoId:c.id,choreoView:'assemble',assembleEdit:false}), onMenu:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({forkMenuId:c.id}); } }));
 
     /* application library tab */
     const dances = ['All','Waltz','Viennese Waltz','Quickstep','Foxtrot','Tango'];
@@ -1469,8 +1561,16 @@ class Component extends DCLogic {
         onToggleLink:()=>this.toggleEditLink(), onSave:()=>this.saveAttr(), onRemove:()=>this.removeAttr(), onClose:()=>this.closeAttr() };
     }
     const nt = st.newType;
-    const newTypeForm = nt ? { open:true, label:nt.label, color:nt.color, multi:nt.multi, single:!nt.multi, freetext:nt.freetext, list:!nt.freetext, roleAware:nt.roleAware, notRoleAware:!nt.roleAware, required:nt.required, optional:!nt.required, optDraft:nt.optDraft||'', optChips:(nt.opts||[]).map((o,i)=>({ label:o, onRemove:()=>this.removeNewTypeOpt(i) })), hasOpts:(nt.opts||[]).length>0,
-      onLabel:(ev)=>this.setNewType('label',ev.target.value), onOptDraft:(ev)=>this.setNewType('optDraft',ev.target.value), onAddOpt:()=>this.addNewTypeOpt(),
+    const newTypeForm = nt ? { open:true, isEdit:nt.mode==='edit', isCreate:nt.mode!=='edit',
+      title:(nt.mode==='edit'?L.bEditTitle:L.bNewTitle), thisChoreo:L.bThisChoreo, primaryLabel:(nt.mode==='edit'?L.bSave:L.bCreate),
+      showSlug:nt.mode==='edit', slug:(nt.key||'').replace(/^cu_/,''),
+      label:nt.label, desc:nt.desc||'', descCount:((nt.desc||'').length)+' / 140',
+      color:nt.color, multi:nt.multi, single:!nt.multi, freetext:nt.freetext, list:!nt.freetext, roleAware:nt.roleAware, notRoleAware:!nt.roleAware, required:nt.required, optional:!nt.required,
+      palette:this.typePalette().map(c=>({ color:c, selected:c===nt.color, notSelected:c!==nt.color, onPick:()=>this.setNewType('color',c) })),
+      optDraft:nt.optDraft||'', optChips:(nt.opts||[]).map((o,i)=>({ label:o, onRemove:()=>this.removeNewTypeOpt(i) })), hasOpts:(nt.opts||[]).length>0,
+      hasDefs:!nt.freetext && (nt.opts||[]).length>0,
+      defRows:(nt.opts||[]).map(o=>({ val:o, def:(nt.defs&&nt.defs[o])||'', placeholder:L.bDefinePh, onDef:(ev)=>this.setNewTypeDef(o,ev.target.value) })),
+      onLabel:(ev)=>this.setNewType('label',ev.target.value), onDesc:(ev)=>this.setNewType('desc',ev.target.value), onOptDraft:(ev)=>this.setNewType('optDraft',ev.target.value), onAddOpt:()=>this.addNewTypeOpt(),
       onToggleMulti:()=>this.setNewType('multi',!nt.multi), onToggleFree:()=>this.setNewType('freetext',!nt.freetext), onToggleRole:()=>this.setNewType('roleAware',!nt.roleAware), onToggleReq:()=>this.setNewType('required',!nt.required),
       onCreate:()=>this.createCustomType(), onCancel:()=>this.setState({newType:null}) } : { open:false };
     const onStartNewType = ()=>this.startNewType();
@@ -1584,6 +1684,7 @@ class Component extends DCLogic {
       routineTitle: openChoreo ? openChoreo.title : st.routine.title,
       isChoreo, notChoreo:!isChoreo, isJournal, notJournal:!isJournal, isProfile, notProfile:!isProfile, isLibrary, notLibrary:!isLibrary,
       onTabChoreo:() => this.setTab('choreo'), onTabJournal:() => this.setTab('journal'), onTabProfile:() => this.setTab('profile'), onTabLibrary:() => this.setTab('library'),
+      t:L, langEN:lang==='en', langDE:lang==='de', onLangEN:()=>this.setLang('en'), onLangDE:()=>this.setLang('de'),
       scList, scAssemble, scFigure, scStep, scThread, scShare, scEntry, scJournal, scProfile, scLibrary, showTabBar,
       libTabs, globalFamilies, myVariants, myVariantsEmpty,
       forkMenuOpen: !!st.forkMenuId,
@@ -1660,7 +1761,7 @@ class Component extends DCLogic {
       pName:profile.name, pInitial:(profile.name||'D')[0], pColor:profile.color,
       pPreviewBg:this.lighten(profile.color,.86), pPreviewInk:this.darken(profile.color,.45),
       swatches,
-      profileTypes: this.allTypes().map(t=>({ label:t.label, color:t.color, hasRole:!!t.roleAware, badge:(t.required?'required':(t.single?'single':'multi')), scope:(t.scope==='choreo'?'this choreo':(t.key.indexOf('cu_')===0?'personal':'standard')) })),
+      profileTypes: this.allTypes().map(t=>({ label:t.label, color:t.color, hasRole:!!t.roleAware, isCustom:(t.key.indexOf('cu_')===0), notCustom:(t.key.indexOf('cu_')!==0), onEdit:()=>this.startEditType(t.key), badge:(t.required?L.bgRequired:(t.single?L.bgSingle:L.bgMulti)), scope:(t.scope==='choreo'?L.scChoreo:(t.key.indexOf('cu_')===0?L.scPersonal:L.scStandard)) })),
       onAddType:()=>this.startNewType(),
 
       infoDisplay: st.infoKey ? 'block' : 'none',
