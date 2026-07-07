@@ -11306,7 +11306,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "commence",
+      rise: "lowering",
       position: "outside_partner",
       leader: {
         direction: "side",
