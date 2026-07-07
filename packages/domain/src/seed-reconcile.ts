@@ -40,6 +40,18 @@ export interface SeedFigureContent {
  *  separately so a reconcile can also resurrect a tombstoned seeded row). */
 const ATTR_FIELDS = ["kind", "count", "role", "value"] as const;
 
+/** Copy one seed-owned field from a source attribute onto a live row. The generic
+ *  key `K` lets TS prove `source[field]` and `row[field]` are the SAME type, so the
+ *  field-wise assignment needs no cast/any (CLAUDE.md §4) — the correlated-union
+ *  write that a `{field, value}` record can't express. */
+function copyAttrField<K extends keyof Attribute>(
+  row: Attribute,
+  source: Attribute,
+  field: K,
+): void {
+  row[field] = source[field];
+}
+
 function sameAlignment(a: Alignment | undefined, b: Alignment | undefined): boolean {
   if (!a || !b) return a === b;
   return a.qualifier === b.qualifier && a.direction === b.direction;
@@ -66,7 +78,8 @@ export function reconcileSeededFigure(
     existingById.set(attr.id, { index, attr });
   });
 
-  const updates: Array<{ index: number; field: (typeof ATTR_FIELDS)[number]; value: unknown }> = [];
+  const updates: Array<{ index: number; field: (typeof ATTR_FIELDS)[number]; source: Attribute }> =
+    [];
   const resurrect: number[] = [];
   const additions: Attribute[] = [];
   const tombstone: number[] = [];
@@ -80,7 +93,7 @@ export function reconcileSeededFigure(
     for (const field of ATTR_FIELDS) {
       const want = sa[field] ?? null;
       const have = found.attr[field] ?? null;
-      if (want !== have) updates.push({ index: found.index, field, value: sa[field] });
+      if (want !== have) updates.push({ index: found.index, field, source: sa });
     }
     if (found.attr.deletedAt != null) resurrect.push(found.index);
   }
@@ -116,8 +129,7 @@ export function reconcileSeededFigure(
     for (const u of updates) {
       const row = d.attributes[u.index];
       if (!row) continue;
-      // biome-ignore lint/suspicious/noExplicitAny: field-wise assignment over the planned union
-      (row as any)[u.field] = u.value;
+      copyAttrField(row, u.source, u.field);
     }
     for (const index of resurrect) {
       const row = d.attributes[index];
