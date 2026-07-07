@@ -330,7 +330,7 @@ export function AttributeEditor({
         )}
         {onDone && (
           <Button variant="primary" size="sm" onClick={onDone}>
-            {t.save}
+            {t.done}
           </Button>
         )}
       </div>

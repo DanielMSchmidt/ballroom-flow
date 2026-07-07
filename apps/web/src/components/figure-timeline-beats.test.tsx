@@ -231,3 +231,39 @@ describe("FigureTimeline — 'add to my library' affordance (⟳v5, PLAN §4.2/�
     expect(screen.queryByRole("button", { name: /add to my library/i })).toBeNull();
   });
 });
+
+describe("FigureTimeline — Builder v3 edit-grid parity", () => {
+  it("marks the Step column like every other (nothing is required — no asterisk)", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" />);
+    const step = screen.getByRole("button", { name: /about step/i });
+    expect(step.textContent).not.toContain("*");
+  });
+
+  it("renders a dashed 'present' marker for an attribute whose value is empty", async () => {
+    const { FigureTimeline } = await load();
+    const { container } = renderUi(
+      <FigureTimeline role="editor" dance="waltz" attributes={[attr("rise", "", 1)]} />,
+    );
+    // The cell is neither a value chip nor the faint ＋ — the attribute exists
+    // but has no value yet (Builder v3 three-state cell).
+    expect(container.querySelector("[data-present-cell]")).not.toBeNull();
+    // It still opens the single-attribute editor for that (count, kind).
+    expect(screen.getByRole("button", { name: /^Edit Rise at count 1$/i })).toBeInTheDocument();
+  });
+
+  it("shows the 'adjusted — still {name}' chip beside Add to library for a diverged figure", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/adjusted for this choreo — still Natural Turn/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+  });
+});

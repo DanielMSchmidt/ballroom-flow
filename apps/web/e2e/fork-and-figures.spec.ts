@@ -127,7 +127,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
@@ -444,7 +444,7 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
     await editor.page.getByRole("button", { name: /Step at count 1$/i }).click();
     await editor.page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await editor.page.getByRole("button", { name: /^Save$/ }).click();
+    await editor.page.getByRole("button", { name: /^Done$/ }).click();
     await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });

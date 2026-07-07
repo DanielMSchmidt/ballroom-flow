@@ -239,6 +239,20 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
           required
           error={error?.field === "label" ? error.msg : undefined}
         />
+        {/* Edit mode (wireframe 1.16b): the derived slug is held stable across a
+            rename — attributes reference a kind by slug, so surfacing it (locked)
+            explains why existing data stays linked. */}
+        {editing && (
+          <div className="-mt-1 flex flex-col gap-1">
+            <span
+              className="self-start rounded-[5px] px-1.5 py-0.5 text-2xs font-semibold text-ink-muted"
+              style={{ background: "var(--bf-surface-sunken)" }}
+            >
+              {t.slugLocked(initial.kind)}
+            </span>
+            <p className="text-2xs italic text-ink-faint">{t.slugStableHint}</p>
+          </div>
+        )}
         <Input
           label={t.descriptionField}
           placeholder={t.descriptionPlaceholder}

@@ -63,7 +63,7 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
     // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)

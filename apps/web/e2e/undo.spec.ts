@@ -128,7 +128,7 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     const editor = page.getByRole("dialog", { name: /steps · my step/i });
     await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     // The edit landed: count 1 now carries the "forward" headline.
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
 

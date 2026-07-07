@@ -73,19 +73,15 @@ test.describe("@smoke catalog figure alignment", () => {
 
     await page.getByRole("radio", { name: "Leader" }).click();
 
-    // 6. Type-chips column filter (design 1.23): hiding Rise tucks the column
-    //    away across the programme, the figure grows a "+1 hidden" peek pill,
-    //    and peeking brings the column back for THAT figure only (chips stay
-    //    put). Hiding never touches data — showing it again restores the column.
+    // 6. Column picker (Builder v3): Rise is one of the default picks, so its
+    //    column is laid out across the programme. Un-picking it removes the
+    //    column everywhere (never the data); picking it again restores it.
     const riseHeader = reading.getByRole("button", { name: "About Rise", exact: true });
+    await expect(riseHeader.first()).toBeVisible();
     await page.getByRole("button", { name: "Hide the Rise column" }).click();
     await expect(riseHeader).toHaveCount(0);
-    await reading.getByRole("button", { name: "Peek at 1 hidden column" }).click();
-    await expect(riseHeader).toBeVisible();
-    await reading.getByRole("button", { name: "Hide the tucked-away columns again" }).click();
-    await expect(riseHeader).toHaveCount(0);
     await page.getByRole("button", { name: "Show the Rise column" }).click();
-    await expect(riseHeader).toBeVisible();
+    await expect(riseHeader.first()).toBeVisible();
 
     await page.screenshot({ path: "test-results/natural-turn-alignment.png", fullPage: true });
   });

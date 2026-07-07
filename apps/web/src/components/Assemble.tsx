@@ -55,7 +55,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   Chip,
-  CountPill,
   cx,
   EditIcon,
   FullScreen,
@@ -1027,6 +1026,7 @@ export function Assemble({
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+              figureName={notatingFigure.name}
               isBookmarked={
                 notatingFigure.scope === "account" &&
                 (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)
@@ -1701,12 +1701,20 @@ function PlacementCard({
           type="button"
           aria-label={t.openSteps(canEdit, label)}
           onClick={onOpen}
-          className="min-w-0 flex-1 truncate text-left text-[13px] font-bold"
-          style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+          className="min-w-0 flex-1 text-left"
         >
-          {label}
+          {/* Two-line card (Builder v3): the name over its timing sub — the
+              figure's counts, or an honest "empty — add steps" nudge. */}
+          <span
+            className="block truncate text-[13px] font-bold"
+            style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+          >
+            {label}
+          </span>
+          <span className="block truncate text-2xs font-semibold text-ink-faint">
+            {counts.length > 0 ? counts.map((c) => countLabel(c)).join(" ") : t.emptyAddSteps}
+          </span>
         </button>
-        {counts.length > 0 && <CountPill counts={counts.map((c) => countLabel(c))} />}
         {isCustom && (
           <span
             className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"

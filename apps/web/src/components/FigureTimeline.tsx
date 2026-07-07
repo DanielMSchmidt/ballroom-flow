@@ -94,6 +94,9 @@ export interface FigureTimelineProps {
   /** Bookmark this figure into the caller's library — shown for an OWNED (account)
    *  figure only; a "↟ save" on a global figure lives on the Library screen instead. */
   onAddToLibrary?: () => void;
+  /** The figure's display name — drives the "adjusted for this choreo — still X"
+   *  identity reassurance beside Add to library (Builder v3 variant bar). */
+  figureName?: string;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -154,6 +157,7 @@ export function FigureTimeline({
   scopeLabel,
   isBookmarked = false,
   onAddToLibrary,
+  figureName,
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
@@ -279,9 +283,18 @@ export function FigureTimeline({
             </span>
           ) : (
             onAddToLibrary && (
-              <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
-                <span aria-hidden="true">↟</span> {t.addToMyLibrary}
-              </Button>
+              <>
+                {/* Identity reassurance (Builder v3 variant bar): the figure was
+                    adjusted for this choreo but is still the same named figure. */}
+                {figureName && (
+                  <span className="rounded-[8px] bg-surface-sunken px-2 py-1.5 text-2xs font-semibold text-ink-muted">
+                    {t.adjustedStill(figureName)}
+                  </span>
+                )}
+                <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
+                  <span aria-hidden="true">↟</span> {t.addToMyLibrary}
+                </Button>
+              </>
             )
           ))}
       </div>
@@ -332,7 +345,6 @@ export function FigureTimeline({
                     style={{ color: "inherit" }}
                   >
                     {col.label}
-                    {col.isStep && <span aria-hidden="true">*</span>}
                   </button>
                 </th>
               ))}
@@ -362,6 +374,7 @@ export function FigureTimeline({
                           column={col}
                           count={row.count}
                           label={cellValue(here, col)}
+                          present={columnKinds(col).some((k) => here.some((a) => a.kind === k))}
                           offBeat={!row.whole}
                           editable={editable}
                           color={colorByKind.get(col.kind)}
@@ -515,12 +528,15 @@ function CountCell({ label, offBeat }: { label: string; offBeat: boolean }) {
   );
 }
 
-/** One grid cell: a filled AttrChip (Step = merged direction·footwork) or a faint
- *  ＋ placeholder. Tapping a filled cell edits; tapping a ＋ adds. */
+/** One grid cell — three states (Builder v3): a filled AttrChip (Step = merged
+ *  direction·footwork) for a set value; a dashed "present" ring when the
+ *  attribute exists but carries no value yet; a faint ＋ for an empty slot.
+ *  Tapping a filled/present cell edits; tapping a ＋ adds. */
 function GridCell({
   column,
   count,
   label,
+  present,
   offBeat,
   editable,
   color,
@@ -529,17 +545,29 @@ function GridCell({
   column: ReadingColumn;
   count: number;
   label: string | null;
+  /** The attribute exists at this (count, kind) — even if it has no value. */
+  present: boolean;
   offBeat: boolean;
   editable: boolean;
   color?: string;
   onOpen: () => void;
 }) {
   const t = useMessages(timelineMessages);
-  const cellLabel = label
+  const cellLabel = present
     ? t.editCell(column.label, countLabel(count))
     : t.addCell(column.label, countLabel(count));
+  const ringColor = color ?? columnColor(column);
   const content = label ? (
     <AttrChip kind={column.kind} label={label} color={color} dimmed={offBeat} />
+  ) : present ? (
+    <span
+      aria-hidden="true"
+      data-present-cell
+      className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full border-[1.5px] border-dashed text-[10px] font-bold leading-none"
+      style={{ borderColor: ringColor, color: ringColor }}
+    >
+      +
+    </span>
   ) : (
     <span
       aria-hidden="true"
@@ -551,9 +579,11 @@ function GridCell({
   const base = "flex min-h-[34px] w-[68px] items-center justify-center rounded-md";
   const fillStyle = { background: label ? undefined : "var(--bf-surface-sunken)" };
   if (!editable) {
-    // Read grid: values only, no add affordances.
-    return label ? (
-      <span className={base}>{content}</span>
+    // Read grid: values (and present markers) only, no add affordances.
+    return label || present ? (
+      <span className={base} style={fillStyle}>
+        {content}
+      </span>
     ) : (
       <span className={base} style={fillStyle} aria-hidden="true" />
     );
