@@ -23,7 +23,12 @@ export function readFigure(doc: A.Doc<FigureDoc>, opts?: ReadOptions): FigureDoc
   const plain = materialize(doc);
   return {
     ...plain,
-    attributes: filterDeleted(plain.attributes, opts),
+    // Defensive: a figure-typed DO whose content was never seeded as a FigureDoc
+    // (e.g. a `figureRef` resolving to a doc with no `attributes`) materializes
+    // with `attributes === undefined` — treat it as an empty timeline rather than
+    // letting `filterDeleted` throw (`Cannot read properties of undefined (reading
+    // 'filter')`) and 500 the whole snapshot read. Mirrors the guard in doc-do.ts.
+    attributes: filterDeleted(plain.attributes ?? [], opts),
   };
 }
 
