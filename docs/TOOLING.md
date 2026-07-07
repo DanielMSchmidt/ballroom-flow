@@ -95,6 +95,37 @@ New dev dependencies:
 - **`vite preview` (not `vite dev`) as the E2E webServer.** Serves the built
   PWA assets + service worker, matching production for install/offline tests.
 
+## Explainer video
+
+An **auto-generated product tour** (`apps/web/src/marketing/video/explainer.mp4` +
+`explainer-poster.png`) — a real-app screencast of the authoring, commenting and
+journaling journeys, stitched with intro/info/outro cards. It's embedded on the README,
+the logged-out Landing page, and the empty Choreo-list state (a subtle "watch the tour"
+disclosure once you already have choreos). Like the marketing **screenshots** pipeline, the
+committed asset is regenerated from the *running app*, so it can't drift from reality.
+
+**Pipeline** (`pnpm video:generate`):
+
+1. **Record** — `pnpm video:record` runs the `@video` Playwright journey
+   (`apps/web/e2e/explainer-video.spec.ts`) against the real #191 worker harness, driving
+   the app through each scene and recording one `webm` per scene into
+   `apps/web/remotion/public/clips/` (gitignored intermediates).
+2. **Render** — `pnpm video:render` (`scripts/render-explainer.mjs`) bundles the Remotion
+   project (`apps/web/remotion/`) and renders the poster still + `h264` MP4 into
+   `apps/web/src/marketing/video/`.
+
+**Single source of truth:** `apps/web/remotion/timeline.ts` defines the scene order, the
+clip filenames the recorder writes, and the on-screen copy — shared by the recorder and the
+composition so they can't disagree (mirrors `screenshots.manifest.ts`). The final asset's
+metadata lives in `apps/web/src/marketing/video/explainer.manifest.ts`.
+
+**Notes.** Remotion is a **build-only** dependency — the app embeds the rendered MP4 via a
+plain `<video>` (poster + controls, `preload="none"`), so nothing heavy ships in the client
+bundle. The render points Chromium at `REMOTION_BROWSER` (or the sandbox's preinstalled
+headless shell); the recorder points at `PW_CHROMIUM_PATH` / the preinstalled Chromium when
+the Playwright-managed build isn't present. `@video` is **not** in `@smoke` — regenerate on
+demand, commit the two assets.
+
 ## Verification
 
 All commands run clean from a `--frozen-lockfile` install (full outputs in the

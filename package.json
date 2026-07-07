@@ -17,14 +17,21 @@
     "format": "biome format --write .",
     "typecheck": "pnpm -r typecheck",
     "prepare": "lefthook install",
-    "screenshots:diff": "node scripts/screenshot-diff.mjs"
+    "screenshots:diff": "node scripts/screenshot-diff.mjs",
+    "video:record": "pnpm --filter web exec playwright test --grep @video --project=chromium-desktop",
+    "video:render": "node scripts/render-explainer.mjs",
+    "video:generate": "pnpm video:record && pnpm video:render"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",
+    "@remotion/bundler": "^4.0.485",
+    "@remotion/cli": "^4.0.485",
+    "@remotion/renderer": "^4.0.485",
     "concurrently": "^9.1.2",
     "lefthook": "^1.10.10",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
+    "remotion": "^4.0.485",
     "typescript": "^6.0.3"
   }
 }

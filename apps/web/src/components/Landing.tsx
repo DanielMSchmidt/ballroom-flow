@@ -1,6 +1,8 @@
 import { AccountControls } from "../auth/app-auth";
 import { useMessages } from "../i18n";
+import { explainerMessages } from "../i18n/messages/explainer";
 import { landingMessages } from "../i18n/messages/landing";
+import { ExplainerVideo } from "../marketing/ExplainerVideo";
 import { SCREENSHOTS, type Screenshot } from "../marketing/screenshots.manifest";
 import { BrandMark, Card, LanguageToggle } from "../ui";
 
@@ -44,6 +46,7 @@ const FEATURES = ["create", "sections", "notate", "lanes", "reading"] as const;
  */
 export function Landing(): React.JSX.Element {
   const t = useMessages(landingMessages);
+  const tv = useMessages(explainerMessages);
   const hero = shot("hero");
   return (
     <div className="min-h-dvh bg-surface text-ink">
@@ -69,6 +72,13 @@ export function Landing(): React.JSX.Element {
             </div>
           </div>
           <Shot s={hero} className="max-w-3xl" />
+        </section>
+
+        {/* Auto-generated product tour — a real-app screencast of authoring,
+            coaching and journaling, stitched by the @video journey + Remotion. */}
+        <section className="flex flex-col items-center gap-5 py-6 text-center lg:py-10">
+          <h2 className="max-w-2xl text-xl font-bold tracking-tight lg:text-2xl">{tv.title}</h2>
+          <ExplainerVideo className="max-w-3xl" />
         </section>
 
         {/* Feature blocks, alternating sides */}

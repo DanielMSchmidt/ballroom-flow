@@ -16,6 +16,20 @@ notes — anchored to a count, a figure, or a whole cross-dance figure *family*.
 It's built on a **CRDT document graph** (Automerge) so collaboration, offline-capability,
 and forking are first-class rather than retrofitted.
 
+## See it in 30 seconds
+
+An **auto-generated** product tour — real-app snippets of authoring, coaching and
+journaling, recorded straight from the running app and stitched together so it never
+goes stale. Click to play:
+
+<a href="apps/web/src/marketing/video/explainer.mp4">
+  <img src="apps/web/src/marketing/video/explainer-poster.png" alt="A 30-second tour of Weave Steps: building a routine, leaving lessons, and the practice journal" width="720" />
+</a>
+
+> ▶ **[Watch the tour](apps/web/src/marketing/video/explainer.mp4)** — regenerate it any
+> time with `pnpm video:generate` (records the clips via Playwright, then renders the MP4
+> with Remotion). See [`docs/TOOLING.md`](docs/TOOLING.md#explainer-video).
+
 ## Goals & constraints
 
 - **Collaborative & local-first** — concurrent editing merges cleanly; fork/inheritance is the v1 centerpiece.
