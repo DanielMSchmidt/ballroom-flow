@@ -2,7 +2,10 @@ import {
   SYNC_SUBPROTOCOL_V1,
   zCreateFigure,
   zCreateRoutine,
+  zFamilyNoteBody,
+  zFigureRefBody,
   zIssueInvite,
+  zProfileBody,
   zRegistryKind,
   zSaveToLibrary,
 } from "@weavesteps/contract";
@@ -227,15 +230,9 @@ app.post("/api/onboarding", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const body = (await c.req.json().catch(() => null)) as {
-    displayName?: unknown;
-    identityColor?: unknown;
-  } | null;
-  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
-  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
-  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
-    return c.json({ error: "invalid_profile" }, 400);
-  }
+  const parsed = zProfileBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_profile" }, 400);
+  const { displayName, identityColor } = parsed.data;
 
   const db = drizzle(c.env.DB);
   // Detect a genuine first onboarding (no prior users row) so the starter routine
@@ -291,15 +288,9 @@ app.get("/api/profile", async (c) => {
 app.patch("/api/profile", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
-  const body = (await c.req.json().catch(() => null)) as {
-    displayName?: unknown;
-    identityColor?: unknown;
-  } | null;
-  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
-  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
-  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
-    return c.json({ error: "invalid_profile" }, 400);
-  }
+  const parsed = zProfileBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_profile" }, 400);
+  const { displayName, identityColor } = parsed.data;
   const db = drizzle(c.env.DB);
   const existing = await db
     .select({ id: users.id })
@@ -597,9 +588,9 @@ app.post("/api/figures/save-to-library", async (c) => {
 app.delete("/api/figures/save-to-library", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
-  const body = (await c.req.json().catch(() => null)) as { figureRef?: unknown } | null;
-  const figureRef = typeof body?.figureRef === "string" ? body.figureRef : null;
-  if (!figureRef) return c.json({ error: "invalid_request" }, 400);
+  const parsed = zFigureRefBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_request" }, 400);
+  const { figureRef } = parsed.data;
   await unbookmarkFigure(c.env.DB, user.sub, figureRef);
   return c.json({ ok: true }, 200);
 });
@@ -661,26 +652,9 @@ app.post("/api/account/family-notes", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const body = (await c.req.json().catch(() => null)) as {
-    kind?: unknown;
-    text?: unknown;
-    figureType?: unknown;
-    danceScope?: unknown;
-  } | null;
-  const kind = body?.kind;
-  const text = typeof body?.text === "string" ? body.text.trim() : "";
-  const figureType = body?.figureType;
-  const danceScope = body?.danceScope;
-  if (
-    (kind !== "note" && kind !== "lesson" && kind !== "practice") ||
-    !text ||
-    typeof figureType !== "string" ||
-    !figureType ||
-    typeof danceScope !== "string" ||
-    !danceScope
-  ) {
-    return c.json({ error: "invalid_family_note" }, 400);
-  }
+  const parsed = zFamilyNoteBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_family_note" }, 400);
+  const { kind, text, figureType, danceScope } = parsed.data;
 
   const noteId = newId();
   await insertFamilyNote(c.env.DB, {

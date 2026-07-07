@@ -141,6 +141,37 @@ export const zIssueInvite = z.object({
 export type IssueInvite = z.infer<typeof zIssueInvite>;
 
 /**
+ * Account profile write (US-019 onboarding / US-053 profile edit): displayName
+ * (trimmed, non-empty) + identity colour (a 3–8 digit hex). Shared by POST
+ * /api/onboarding and PATCH /api/profile — both write the same columns, so both
+ * parse this schema instead of hand-narrowing an untrusted `as {…}` body.
+ */
+export const zProfileBody = z.object({
+  displayName: z.string().trim().min(1),
+  identityColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{3,8}$/),
+});
+export type ProfileBody = z.infer<typeof zProfileBody>;
+
+/** A bare `{ figureRef }` request body (e.g. unbookmark, DELETE /api/library). */
+export const zFigureRefBody = z.object({ figureRef: z.string().min(1) });
+export type FigureRefBody = z.infer<typeof zFigureRefBody>;
+
+/**
+ * Account-scoped figure-family note write (T6): a lesson/practice/note attached
+ * to a figureType within a dance scope. Replaces a hand-narrowed untrusted body.
+ */
+export const zFamilyNoteBody = z.object({
+  kind: z.enum(["note", "lesson", "practice"]),
+  text: z.string().trim().min(1),
+  figureType: z.string().min(1),
+  danceScope: z.string().min(1),
+});
+export type FamilyNoteBody = z.infer<typeof zFamilyNoteBody>;
+
+/**
  * WS sync marker (#202): a TEXT frame the DO sends to a client once it has
  * finished replaying the document's full change log on connect (the initial
  * catch-up). Receiving it means the client's doc is HYDRATED (caught up), as
