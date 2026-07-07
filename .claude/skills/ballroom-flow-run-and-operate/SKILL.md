@@ -275,15 +275,9 @@ pnpm exec wrangler d1 execute DB --env staging --remote \
 **Elevation** (`account → global` re-scope, same docRef so placements survive) likewise
 remains ops-driven, admin-approved (queue UI is v1.1, PLAN §11).
 
-### Seeding the global figure catalog — admin-only route (PR #137, D30)
+### Seeding the global figure catalog — self-healing (PR #137, D30 ⟳2026-07-07)
 
-`POST /api/admin/seed-global-figures` (caller must be `isAdmin`; non-admin → 403) imports
-the bundled catalog into **real, admin-owned global figure docs** via `seedGlobalFigures`
-(`apps/worker/src/seed-global-figures.ts`). **Additive + idempotent** (D30): re-running only
-creates missing figures — an existing doc is never overwritten, so admin in-app edits are
-safe from a re-seed. Response reports `{ ok, created, skipped }`. This is the per-environment
-ops action that stands up the catalog (staging/production) until the admin UI lands; seed
-semantics live in **ballroom-flow-figure-data-pipeline** §7.
+**Global-figure seeding is SELF-HEALING (D30 ⟳2026-07-07)** — no ops action. `ensureGlobalFigures` (`apps/worker/src/seed-global-figures.ts`) runs fire-and-forget on the `/api/*` seam of deployed envs (wrangler.toml `SELF_SEED="1"` on staging/production; unit/E2E harnesses carry no var). It is hash-guarded by an `app_meta` row: when the bundled catalog content changes (a deploy), the next API request reconciles every seeded doc to the seed (seeded `fig-`/`wdsf-` attribute ids updated/added/tombstoned; user-added ULID attributes and variant-owned beats preserved). The former admin route `POST /api/admin/seed-global-figures` is REMOVED. Local `wrangler dev` does not self-seed (no var); the store's bundled-catalog fallback renders figures regardless
 
 ### Sample/template self-healing — no ops action needed
 
@@ -320,8 +314,8 @@ commit `e71d06d` (the staging auth-bypass incident, full message), root + worker
 `package.json`, `apps/web/vite.config.ts` (:8787 proxy), `apps/web/src/main.tsx`
 (Clerk-key notice), `apps/worker/drizzle.config.ts`, the 15 files in
 `apps/worker/migrations/` (hand-written SQL, no drizzle `meta/`; 0014/0015 read in full),
-`apps/worker/src/db/admin.ts` + `src/seed-global-figures.ts` + the `/api/me` and
-`/api/admin/seed-global-figures` routes, `apps/worker/src/sample.ts`
+`apps/worker/src/db/admin.ts` + `src/seed-global-figures.ts` + the `/api/me` route,
+`apps/worker/src/sample.ts`
 + `src/index.ts` `ensureSample`, `scripts/gen-library.mjs` / `gen-figure-charts.mjs`
 (both executed earlier this cycle: 204 figures / 147 charts, clean diff), `PROVISIONING.md`
 (production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅).
@@ -334,6 +328,6 @@ grep -n "wrangler d1 migrations apply\|wrangler deploy" .github/workflows/deploy
 ls apps/worker/migrations/                                       # migration count (15)
 node scripts/gen-library.mjs && node scripts/gen-figure-charts.mjs && git diff --stat  # counts + determinism
 grep -n "isAdmin\|routineCapOverride" apps/worker/src/db/schema.ts   # admin columns present
-grep -n "seed-global-figures" apps/worker/src/index.ts           # admin seeder route present
+grep -n "ensureGlobalFigures" apps/worker/src/index.ts           # self-healing seed armed on /api/*
 grep -n "CLERK_SECRET_KEY" PROVISIONING.md                       # production secret still TODO?
 ```

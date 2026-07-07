@@ -228,28 +228,77 @@ describe("resolveEffectiveRole — global figure boundary (⟳v5, §5.1)", () =>
   });
 });
 
-describe("POST /api/admin/seed-global-figures — admin-gated (D31)", () => {
-  async function post(userId: string): Promise<Response> {
-    const token = await makeTestJWT(kp, { sub: userId });
-    return SELF.fetch("https://example.com/api/admin/seed-global-figures", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  }
+describe("ensureGlobalFigures — hash-guarded self-healing seed (D30 ⟳)", () => {
+  // The catalog reconcile runs itself: a cheap app_meta hash check on the API
+  // seam, the full seeder only when the bundled catalog actually changed (a
+  // deploy with new seed content, a fresh environment, or a wiped D1).
+  const family = "gf_ensure_family";
+  const mk = (value: string, name = "Ensure Figure"): LibraryFigure[] => [
+    {
+      dance: "waltz",
+      figureType: family,
+      name,
+      timing: "1 2 3",
+      attributes: [
+        {
+          id: "fig-ensure-s1-foot",
+          kind: "footwork",
+          count: 1,
+          role: "leader",
+          value,
+          deletedAt: null,
+        },
+      ],
+    },
+  ];
 
-  it("rejects an unauthenticated caller (401)", async () => {
-    const res = await SELF.fetch("https://example.com/api/admin/seed-global-figures", {
-      method: "POST",
-    });
-    expect(res.status).toBe(401);
+  it("seeds when the stored hash is absent, then short-circuits, then reconciles on change", async () => {
+    const { ensureGlobalFigures } = await import("./seed-global-figures");
+    const ref = globalFigureRef("waltz", family);
+
+    // 1) Fresh environment: no hash row → the seeder runs and the hash persists.
+    const first = await ensureGlobalFigures(seedEnv, { figures: mk("HT") });
+    expect(first.ran).toBe(true);
+    expect(first.result?.created).toBe(1);
+    const row = await env.DB.prepare("SELECT value FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .first<{ value: string }>();
+    expect(row?.value).toBeTruthy();
+
+    // 2) Same catalog: the hash matches → nothing runs (one PK SELECT, no writes).
+    const second = await ensureGlobalFigures(seedEnv, { figures: mk("HT") });
+    expect(second.ran).toBe(false);
+
+    // 3) The catalog changes (a deploy with refined seed content): the hash
+    //    differs → the reconcile runs and the doc follows the seed.
+    const third = await ensureGlobalFigures(seedEnv, { figures: mk("H flat") });
+    expect(third.ran).toBe(true);
+    expect(third.result?.updated).toBe(1);
+    const fig = (await docs.get(docs.idFromName(ref)).getFigureSnapshot()) as {
+      attributes?: Array<{ id: string; value?: unknown }>;
+    } | null;
+    expect(fig?.attributes?.find((a) => a.id === "fig-ensure-s1-foot")?.value).toBe("H flat");
   });
 
-  it("rejects a non-admin caller (403) before doing any work", async () => {
-    await seedDb({
-      users: [{ id: "u_nonadmin", displayName: "N", identityColor: "#111", plan: "free" }],
-    });
-    const res = await post("u_nonadmin");
-    expect(res.status).toBe(403);
+  it("does not persist the hash when figures errored, so the next check retries", async () => {
+    const { ensureGlobalFigures } = await import("./seed-global-figures");
+    // Reset the stored hash so this test is order-independent.
+    await env.DB.prepare("DELETE FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .run();
+    // An invalid figure makes the per-figure work throw → counted skipped; the
+    // hash must NOT be written. An `undefined` name is the deterministic trigger:
+    // createGlobalFigureRow's D1 `.bind(undefined)` rejects. (The previous
+    // bad-dance fixture stopped erroring when Builder v3 ① switched the seeder
+    // from defaultFigureBars(attrs, dance) to the dance-free defaultFigureCounts.)
+    const bad = [{ ...mk("HT")[0], name: undefined as unknown as string }] as LibraryFigure[];
+    const run = await ensureGlobalFigures(seedEnv, { figures: bad });
+    expect(run.ran).toBe(true);
+    expect((run.result?.skipped ?? 0) > 0).toBe(true);
+    const row = await env.DB.prepare("SELECT value FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .first<{ value: string }>();
+    expect(row).toBeNull();
   });
 });
 

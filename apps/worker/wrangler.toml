@@ -120,6 +120,11 @@ class_name = "DocDO"
 binding = "ANALYTICS"
 dataset = "weave_steps_staging"
 
+# D30 ⟳ self-healing catalog: opt-in per deployed env (unit tests + e2e have no
+# var, so nothing implicitly seeds 260+ DOs under a test harness).
+[env.staging.vars]
+SELF_SEED = "1"
+
 # --- Production (deployed from the `main` branch).
 [env.production]
 name = "weave-steps-production"
@@ -139,6 +144,9 @@ run_worker_first = ["/api/*"]
 
 # database_id binds the D1 instance (name is only a label); this id is the
 # existing production index.
+[env.production.vars]
+SELF_SEED = "1"
+
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "weave-steps-production"

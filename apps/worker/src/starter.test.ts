@@ -14,21 +14,31 @@ import { applyMigrations } from "./test-support/seed";
 // the worker's Env so seedStarterRoutine receives the right type.
 const typedEnv = env as unknown as Env;
 
+// Headroom over vitest's 5s default, NOT a blind bump (the b419e0a/ad22e16/29d5cbd
+// convention) — two independently measured pressures stack on this template-fork:
+//  1. Shared-runtime state (measured 2026-07-07 on main): in the FULL suite the
+//     fork consistently takes ~4.8–5.1s on the single-runtime pool
+//     (isolatedStorage: false accumulates D1/DO state across every earlier file)
+//     vs ~0.5s in isolation — already a coin flip at the 5s default before any
+//     content change. Why the fork degrades with suite-wide state is a real
+//     (pre-existing) perf question — tracked for its own investigation.
+//  2. Template payload (measured 2026-07-07 on the WDSF re-chart branch): the
+//     first seedStarterRoutine call in a fresh D1 also builds the app-owned
+//     Golden Waltz TEMPLATE — 6 figure Automerge docs + the routine — before
+//     forking, and the technique-book re-chart grew its embedded catalog payload
+//     from 190 to 267 attribute rows (+41%), attribute value bytes ~0.9 KB →
+//     ~2.8 KB (3.2×, the verbatim rotation/head prose). Under istanbul coverage
+//     that pushed the build+fork past 5s on CI (observed 5.0–5.4s).
+// A genuinely stuck seed still fails, just later.
+const STARTER_SEED_TIMEOUT_MS = 15_000;
+
 describe("seedStarterRoutine", () => {
   beforeEach(async () => {
     await applyMigrations();
   });
 
-  // Justified headroom (the b419e0a/ad22e16 convention, measured 2026-07-07):
-  // in the FULL suite this template-fork consistently takes ~4.8–5.1s — right at
-  // vitest's 5s default — on the shared single-runtime pool (isolatedStorage:
-  // false accumulates D1/DO state across every earlier file), while the same
-  // test runs in ~0.5s in isolation. That was true BEFORE the counts/presence
-  // work too (parent commit measured 4.97s), so the default budget was a coin
-  // flip, not a regression signal. Why the fork degrades with suite-wide state
-  // is a real (pre-existing) perf question — tracked for its own investigation.
   it("gifts the user a fork of the app-owned Golden Waltz template", {
-    timeout: 15_000,
+    timeout: STARTER_SEED_TIMEOUT_MS,
   }, async () => {
     const routineId = await seedStarterRoutine(typedEnv, "u_starter2");
 
@@ -92,7 +102,9 @@ describe("seedStarterRoutine", () => {
     expect(placements).toBe(6);
   });
 
-  it("onboarding still succeeds even if the gift is a fork (idempotent)", async () => {
+  it("onboarding still succeeds even if the gift is a fork (idempotent)", {
+    timeout: STARTER_SEED_TIMEOUT_MS,
+  }, async () => {
     // Calling twice is safe — seedSampleRoutine is idempotent, and a second fork
     // just creates another routine row for the user.
     const id1 = await seedStarterRoutine(typedEnv, "u_starter3");
