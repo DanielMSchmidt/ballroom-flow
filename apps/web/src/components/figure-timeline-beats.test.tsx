@@ -41,22 +41,32 @@ describe("FigureTimeline — bars-driven beat-row grid", () => {
     expect(screen.queryByRole("button", { name: /^Add Step at count 4$/i })).toBeNull();
   });
 
-  it("honors an explicit bar count from the `bars` prop", async () => {
+  it("honors an explicit count length (Builder v3 ① — counts, not whole bars)", async () => {
     const { FigureTimeline } = await load();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={2} />);
+    renderUi(<FigureTimeline role="editor" dance="waltz" counts={4} />);
+    // A 4-count figure ends mid-bar: count 4 exists, count 5 doesn't.
+    expect(screen.getByRole("button", { name: /^Add Step at count 4$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Add Step at count 5$/i })).toBeNull();
+  });
+
+  it("reads a legacy bars prop as bars × beatsPerBar", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" legacyBars={2} />);
     // Two Waltz bars = 6 beats; beat 7 is beyond the figure.
     expect(screen.getByRole("button", { name: /^Add Step at count 6$/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Add Step at count 7$/i })).toBeNull();
   });
 
-  it("the bars stepper emits the next length (controlled by the parent)", async () => {
+  it("the LENGTH stepper emits the next count length (controlled by the parent)", async () => {
     const { FigureTimeline } = await load();
-    const onBarsChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={2} onBarsChange={onBarsChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /increase bars/i }));
-    expect(onBarsChange).toHaveBeenCalledWith(3);
-    await userEvent.click(screen.getByRole("button", { name: /decrease bars/i }));
-    expect(onBarsChange).toHaveBeenLastCalledWith(1);
+    const onCountsChange = vi.fn();
+    renderUi(
+      <FigureTimeline role="editor" dance="waltz" counts={6} onCountsChange={onCountsChange} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /increase length/i }));
+    expect(onCountsChange).toHaveBeenCalledWith(7);
+    await userEvent.click(screen.getByRole("button", { name: /decrease length/i }));
+    expect(onCountsChange).toHaveBeenLastCalledWith(5);
   });
 
   it("renders every whole beat plus its e/&/a sub-beat rows", async () => {
@@ -109,12 +119,23 @@ describe("FigureTimeline — the per-count recap (always visible)", () => {
 });
 
 describe("FigureTimeline — placing a step via a cell overlay", () => {
-  it("opens the single-attribute overlay on a cell and places the value at that count", async () => {
+  it("opens the single-attribute overlay on a PRESENT Step cell and places the value at that count", async () => {
     const { FigureTimeline } = await load();
     const onChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={1} onChange={onChange} />);
-    // Tap the Step cell at count 2 → the focused overlay → pick footwork "Heel-Toe".
-    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 2$/i }));
+    // A blank step already placed at count 2 (Builder v3 ② quick-add put it there);
+    // tapping the present cell opens the focused overlay → pick footwork "Heel-Toe".
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        attributes={[
+          { id: "d2", kind: "direction", count: 2, value: null, role: null, deletedAt: null },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
@@ -125,8 +146,18 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
   it("places a value on a sub-beat cell (¼ off-beat) at that fractional count", async () => {
     const { FigureTimeline } = await load();
     const onChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={1} onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 2e$/i }));
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        attributes={[
+          { id: "d2e", kind: "direction", count: 2.25, value: null, role: null, deletedAt: null },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2e$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
       (a) => a.kind === "footwork",
@@ -139,7 +170,7 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
     renderUi(<FigureTimeline role="viewer" dance="waltz" />);
     // A viewer sees values but gets no add-cell buttons and no bars stepper.
     expect(screen.queryByRole("button", { name: /Add .* at count/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /increase bars/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /increase length/i })).toBeNull();
   });
 });
 
@@ -197,7 +228,9 @@ describe("FigureTimeline — 'add to my library' affordance (⟳v5, PLAN §4.2/�
       />,
     );
     const button = screen.getByRole("button", { name: /add to my library/i });
+    // Builder v3 ⑤: the button opens the naming bar; Save bookmarks.
     await userEvent.click(button);
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
     expect(onAddToLibrary).toHaveBeenCalledTimes(1);
   });
 
@@ -229,5 +262,128 @@ describe("FigureTimeline — 'add to my library' affordance (⟳v5, PLAN §4.2/�
     const { FigureTimeline } = await load();
     renderUi(<FigureTimeline role="editor" dance="waltz" figureScope="owned" />);
     expect(screen.queryByRole("button", { name: /add to my library/i })).toBeNull();
+  });
+});
+
+describe("FigureTimeline — Builder v3 edit-grid parity", () => {
+  it("marks the Step column like every other (nothing is required — no asterisk)", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" />);
+    const step = screen.getByRole("button", { name: /about step/i });
+    expect(step.textContent).not.toContain("*");
+  });
+
+  it("renders a dashed 'present' marker for an attribute whose value is empty", async () => {
+    const { FigureTimeline } = await load();
+    const { container } = renderUi(
+      <FigureTimeline role="editor" dance="waltz" attributes={[attr("rise", "", 1)]} />,
+    );
+    // The cell is neither a value chip nor the faint ＋ — the attribute exists
+    // but has no value yet (Builder v3 three-state cell).
+    expect(container.querySelector("[data-present-cell]")).not.toBeNull();
+    // It still opens the single-attribute editor for that (count, kind).
+    expect(screen.getByRole("button", { name: /^Edit Rise at count 1$/i })).toBeInTheDocument();
+  });
+
+  it("shows the 'adjusted — still {name}' chip beside Add to library for a diverged figure", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/adjusted for this choreo — still Natural Turn/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+  });
+});
+
+describe("FigureTimeline — presence quick-add (Builder v3 ②)", () => {
+  it("tapping an empty Step cell places a blank step (presence direction attr) without opening the editor", async () => {
+    const { FigureTimeline } = await load();
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 1$/i }));
+    // The blank step lands instantly as a value-less direction attribute…
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0]?.[0] as Array<{ kind: string; value: unknown }>;
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ kind: "direction", value: null, count: 1 });
+    // …no editor sheet opens…
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // …and the toast confirms the placement.
+    expect(screen.getByText(/step placed/i)).toBeInTheDocument();
+  });
+
+  it("tapping an empty closed-enum cell (Rise) still opens the single-attribute editor", async () => {
+    const { FigureTimeline } = await load();
+    const onChange = vi.fn();
+    renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Add Rise at count 1$/i }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("tapping a PRESENT (value-less) cell opens the editor to set its value", async () => {
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        attributes={[
+          { id: "a1", kind: "direction", count: 1, value: null, role: null, deletedAt: null },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 1$/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+describe("FigureTimeline — add-to-library naming flow (Builder v3 ⑤)", () => {
+  it("names the variant, renames the live figure, then bookmarks", async () => {
+    const { FigureTimeline } = await load();
+    const onAddToLibrary = vi.fn();
+    const onRenameFigure = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={onAddToLibrary}
+        onRenameFigure={onRenameFigure}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add to my library/i }));
+    const input = screen.getByRole("textbox", { name: /variant name/i });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Overturned Natural");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(onRenameFigure).toHaveBeenCalledWith("Overturned Natural");
+    expect(onAddToLibrary).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeping the same name skips the rename but still bookmarks", async () => {
+    const { FigureTimeline } = await load();
+    const onAddToLibrary = vi.fn();
+    const onRenameFigure = vi.fn();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Natural Turn"
+        onAddToLibrary={onAddToLibrary}
+        onRenameFigure={onRenameFigure}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add to my library/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(onRenameFigure).not.toHaveBeenCalled();
+    expect(onAddToLibrary).toHaveBeenCalledTimes(1);
   });
 });

@@ -256,3 +256,36 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ② (owner-approved 2026-07-07) — presence attributes: `value: null`
+// is a legal WRITE for any kind ("present, no value yet" — the editor's dashed
+// ring). The enum-membership check applies only once a value is actually set.
+// ─────────────────────────────────────────────────────────────────────────
+describe("presence attributes — value:null writes (Builder v3 ②)", () => {
+  it("accepts a null value for a closed enum kind (rise)", async () => {
+    const { parseAttributeWrite } = await importDomain();
+    const attr = parseAttributeWrite(
+      { id: "a1", kind: "rise", count: 1, value: null },
+      { dance: "waltz" },
+    );
+    expect(attr.value).toBeNull();
+  });
+
+  it("still rejects a non-null unknown value for a closed enum kind", async () => {
+    const { parseAttributeWrite } = await importDomain();
+    expect(() =>
+      parseAttributeWrite({ id: "a1", kind: "rise", count: 1, value: "bogus" }, { dance: "waltz" }),
+    ).toThrow();
+  });
+
+  it("a presence attribute still counts toward the figure's default length", async () => {
+    const { defaultFigureCounts } = await importDomain();
+    expect(
+      defaultFigureCounts([
+        { id: "a1", kind: "rise", count: 1, value: null, role: null, deletedAt: null },
+        { id: "a2", kind: "rise", count: 2, value: null, role: null, deletedAt: null },
+      ]),
+    ).toBe(2);
+  });
+});

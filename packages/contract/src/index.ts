@@ -85,9 +85,12 @@ export const zCreateFigure = z.object({
   /** The routine this figure is being added to — records the placement edge so
    *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
   routineId: z.string().min(1),
-  /** The figure's authored length in musical bars (PLAN §2.5). Chosen on creation
-   *  (stepper) and drives the editor grid. Optional/legacy: the DO falls back to
-   *  ⌈whole-beat steps ÷ beatsPerBar⌉ (`resolveFigureBars`) when absent. */
+  /** The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①). Chosen
+   *  on creation (stepper) and drives the editor grid; every bar display derives
+   *  ⌈counts / beatsPerBar⌉. Optional: the DO falls back to the whole-beat default. */
+  counts: z.number().int().min(1).max(64).optional(),
+  /** LEGACY pre-v5 length in whole bars — accepted for old clients; new writes
+   *  send `counts`. */
   bars: z.number().int().min(1).optional(),
   attributes: z.array(zAttribute).default([]),
   /** Figure-level entry/exit alignment (per-figure, leader's perspective) seeded

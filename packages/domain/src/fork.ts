@@ -130,7 +130,7 @@ export function ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number> 
  * resolution — callers may pass it straight through.
  */
 export function resolveFigure(
-  base: Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment">,
+  base: Pick<FigureDoc, "attributes" | "counts" | "bars" | "entryAlignment" | "exitAlignment">,
   variant: FigureDoc,
 ): FigureDoc {
   const owned = ownedBeats(variant);
@@ -141,7 +141,12 @@ export function resolveFigure(
   return {
     ...variant,
     attributes,
-    ...(variant.bars != null ? {} : base.bars != null ? { bars: base.bars } : {}),
+    ...(variant.counts == null && variant.bars == null
+      ? {
+          ...(base.counts != null ? { counts: base.counts } : {}),
+          ...(base.bars != null ? { bars: base.bars } : {}),
+        }
+      : {}),
     ...(variant.entryAlignment || !base.entryAlignment
       ? {}
       : { entryAlignment: base.entryAlignment }),

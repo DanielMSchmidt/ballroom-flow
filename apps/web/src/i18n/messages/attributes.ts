@@ -18,6 +18,7 @@ const en = {
   remove: "Remove",
   removeAttribute: "remove attribute",
   save: "Save",
+  done: "Done",
   add: "Add",
   aboutKind: (label: string) => `About ${label}`,
   customValueLabel: (label: string) => `Custom ${label}`,
@@ -47,6 +48,9 @@ const en = {
   // AddKindSheet (frame 1.16) — the custom-type builder / editor.
   addKindTitle: "Add attribute kind",
   editKindTitle: "Edit attribute kind",
+  slugLocked: (slug: string) => `slug: ${slug}`,
+  slugStableHint:
+    "rename freely — the derived slug is held stable, so existing attributes stay linked",
   labelField: "Label",
   labelPlaceholder: "e.g. Energy",
   descriptionField: "Description",
@@ -109,6 +113,7 @@ const de: typeof en = {
   remove: "Entfernen",
   removeAttribute: "Attribut entfernen",
   save: "Speichern",
+  done: "Fertig",
   add: "Hinzufügen",
   aboutKind: (label) => `Über ${label}`,
   // German kind labels are capitalized nouns — no lowercasing as in English.
@@ -139,6 +144,9 @@ const de: typeof en = {
   // AddKindSheet (frame 1.16) — the custom-type builder / editor.
   addKindTitle: "Attributtyp hinzufügen",
   editKindTitle: "Attributtyp bearbeiten",
+  slugLocked: (slug) => `Slug: ${slug}`,
+  slugStableHint:
+    "frei umbenennen — der abgeleitete Slug bleibt stabil, bestehende Attribute bleiben verknüpft",
   labelField: "Bezeichnung",
   labelPlaceholder: "z. B. Energie",
   descriptionField: "Beschreibung",

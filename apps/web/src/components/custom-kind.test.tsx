@@ -44,6 +44,24 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     );
   });
 
+  it("shows the locked slug beside the name in edit mode (wireframe 1.16b)", async () => {
+    // The derived slug is held stable across a rename — surfacing it tells the
+    // user why existing attributes stay linked.
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const initial = {
+      kind: "energy",
+      label: "Energy",
+      color: "#0f6b66",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["low", "high"],
+      builtin: false,
+    } as const;
+    renderUi(<AddKindSheet open initial={initial} onCreate={vi.fn()} />);
+    expect(screen.getByText(/slug: energy/i)).toBeInTheDocument();
+    expect(screen.getByText(/held stable/i)).toBeInTheDocument();
+  });
+
   it("edits an existing custom kind: keeps the slug stable and saves changes", async () => {
     // Intent: US-043 AC-1 (create/EDIT). Opening the sheet with `initial` pre-fills
     // it; the slug is held stable so existing attributes keep resolving, and the

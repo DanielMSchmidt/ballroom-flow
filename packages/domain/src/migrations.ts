@@ -26,10 +26,11 @@
 // current in storage — not just lenient-read-shimmed on the way out. Every
 // fresh-doc call site stamps `CURRENT_SCHEMA_VERSION` (never a literal `1`).
 
+import { DANCES, type DanceId } from "./dances";
 import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -105,6 +106,26 @@ const MIGRATIONS: Record<number, MigrationStep> = {
       return out;
     });
     return { ...doc, sections };
+  },
+
+  // v4 → v5 (Builder v3 ①, owner decision 2026-07-07): counts-based figure
+  // length. A figure doc's authored `bars` becomes `counts = bars × the dance's
+  // beatsPerBar`, and the legacy `bars` key is dropped — `bars` is DERIVED from
+  // counts everywhere after this (⌈counts / beatsPerBar⌉, figure-grid.ts).
+  // DETERMINISTIC (the meter comes from the doc's own immutable `dance`);
+  // STRUCTURE-ONLY otherwise; a doc without `bars` (routine/account docs, or a
+  // figure authored counts-first by a newer client) passes through unchanged —
+  // except that a figure carrying BOTH keeps its authored `counts` and only
+  // drops the stale `bars` (never double-converts).
+  4: (doc) => {
+    if (typeof doc.bars !== "number") return { ...doc };
+    const { bars, ...rest } = doc;
+    if (typeof doc.counts === "number") return rest as VersionedDoc; // counts wins
+    const dance = typeof doc.dance === "string" ? (doc.dance as DanceId) : undefined;
+    const meter = dance ? DANCES[dance] : undefined;
+    if (!meter) return { ...doc }; // not a figure doc we can meter — leave as-is
+    const counts = Math.max(1, Math.floor(bars)) * meter.beatsPerBar;
+    return { ...rest, counts } as VersionedDoc;
   },
 };
 

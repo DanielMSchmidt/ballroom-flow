@@ -159,9 +159,9 @@ describe("US-035 Auto-variant on editing a global figure (⟳v5 variant-spawn to
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" figureScope="global" />);
-    // Editing a global figure via a cell overlay spawns a variant.
+    // The Builder v3 ② quick-add (blank step) is itself the first edit of the
+    // global figure — it spawns the variant immediately.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(await screen.findByText(/made this figure yours/i)).toBeInTheDocument();
   });
 });

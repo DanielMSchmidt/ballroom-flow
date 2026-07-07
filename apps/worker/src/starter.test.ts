@@ -14,15 +14,22 @@ import { applyMigrations } from "./test-support/seed";
 // the worker's Env so seedStarterRoutine receives the right type.
 const typedEnv = env as unknown as Env;
 
-// Headroom over vitest's 5s default, NOT a blind bump (same rationale as the web
-// suite's load-tolerance timeout, 29d5cbd): the first seedStarterRoutine call in a
-// fresh D1 also builds the app-owned Golden Waltz TEMPLATE — 6 figure Automerge
-// docs + the routine doc — before forking it. The WDSF technique-book re-chart
-// grew that template's embedded catalog payload from 190 to 267 attribute rows
-// (+41%) and its attribute value bytes from ~0.9 KB to ~2.8 KB (3.2×, the verbatim
-// rotation/head prose), which under istanbul coverage instrumentation pushed the
-// build+fork just past 5s on CI (observed 5.0–5.4s). A genuinely stuck seed still
-// fails, just later.
+// Headroom over vitest's 5s default, NOT a blind bump (the b419e0a/ad22e16/29d5cbd
+// convention) — two independently measured pressures stack on this template-fork:
+//  1. Shared-runtime state (measured 2026-07-07 on main): in the FULL suite the
+//     fork consistently takes ~4.8–5.1s on the single-runtime pool
+//     (isolatedStorage: false accumulates D1/DO state across every earlier file)
+//     vs ~0.5s in isolation — already a coin flip at the 5s default before any
+//     content change. Why the fork degrades with suite-wide state is a real
+//     (pre-existing) perf question — tracked for its own investigation.
+//  2. Template payload (measured 2026-07-07 on the WDSF re-chart branch): the
+//     first seedStarterRoutine call in a fresh D1 also builds the app-owned
+//     Golden Waltz TEMPLATE — 6 figure Automerge docs + the routine — before
+//     forking, and the technique-book re-chart grew its embedded catalog payload
+//     from 190 to 267 attribute rows (+41%), attribute value bytes ~0.9 KB →
+//     ~2.8 KB (3.2×, the verbatim rotation/head prose). Under istanbul coverage
+//     that pushed the build+fork past 5s on CI (observed 5.0–5.4s).
+// A genuinely stuck seed still fails, just later.
 const STARTER_SEED_TIMEOUT_MS = 15_000;
 
 describe("seedStarterRoutine", () => {

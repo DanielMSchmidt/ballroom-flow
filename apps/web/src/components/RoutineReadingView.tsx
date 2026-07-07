@@ -1,14 +1,14 @@
-// Reading lens (design frame 1.6 — Assemble · READING). A clean, read-only
-// "programme" of the whole routine: a TYPE-CHIPS filter row (design 1.23 —
-// tap a chip to hide/show that technique column across every figure; Step*
-// locked; remembered per device, across choreos), then per section a
-// SectionDivider, then per figure a compact table whose columns are ONLY the
-// attribute kinds that figure uses (the Step column merges direction +
-// footwork into one blue chip) minus the hidden ones — a "+N hidden" pill
-// peeks at what's tucked (collapses on the next scroll). The Leader/Follower
-// role lens moved to the screen header as a compact L·F (Assemble). Off-beat
-// (sub-beat) rows render dimmed. Inline comments surface the latest
-// annotations on a step and open the thread.
+// Reading lens (Builder v3 — Assemble · READING). A clean, read-only
+// "programme" of the whole routine: a COLUMN-PICKER chips row (tap a chip to
+// pick up to 4 technique columns, laid side-by-side across EVERY figure —
+// picking a 5th drops the oldest, the last pick can't be removed; remembered
+// per device, across choreos), a hand-written hint line, then per section a
+// SectionDivider, then per figure a two-line header (name + beat-token timing
+// sub) over a count × picked-columns table. The right 29% of every figure is
+// the NOTES MARGIN: each step row (and the figure header) carries a margin
+// cell with the note authors' avatars, a ＋ add affordance (commenter+), and
+// the latest note as a two-line Caveat snippet — tapping the cell opens that
+// anchor's thread. Off-beat (sub-beat) rows render dimmed.
 //
 // Pure presentation over the same store reads (no editing, no I/O). A null
 // figure is rendered honestly per its load status (skeleton / unavailable),
@@ -16,33 +16,26 @@
 import {
   type Annotation,
   type Attribute,
-  barsForFigure,
   DANCES,
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
   type NumberedBeatEntry,
   numberRoutineBeats,
+  type PlacementPart,
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
   resolveFigureBars,
+  resolveFigureCounts,
   slowQuickTokens,
+  windowAttributes,
 } from "@weavesteps/domain";
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
-import {
-  AttrChip,
-  CountPill,
-  cx,
-  IDENTITY_COLORS,
-  kindVar,
-  SectionDivider,
-  Skeleton,
-  useToast,
-} from "../ui";
+import { AttrChip, cx, IDENTITY_COLORS, kindVar, SectionDivider, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
 import {
@@ -53,15 +46,13 @@ import {
   type ReadingColumn,
   usedColumns,
 } from "./reading-columns";
-import {
-  hasSeenHiddenHint,
-  hiddenColumnCount,
-  markHiddenHintSeen,
-  useStoredHiddenColumns,
-  visibleColumns,
-} from "./reading-filter";
+// (windowAttributes/resolveFigureCounts arrive via the domain import above)
+import { shownReadColumns, useStoredReadColumns } from "./reading-shown";
 import type { TimingView } from "./reading-timing";
 import { filterByRoleView, type RoleView } from "./role-view";
+
+/** The notes margin's share of the row (Builder v3: `flex:0 0 29%`). */
+const MARGIN_BASIS = "29%";
 
 export function RoutineReadingView({
   routine,
@@ -78,34 +69,32 @@ export function RoutineReadingView({
 }: {
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
-  /** Annotations on this routine — surfaced as inline comments under their step. */
+  /** Annotations on this routine — surfaced in the notes margin beside their step. */
   annotations?: Annotation[];
   /** Whether THIS member may add a comment (commenter/editor — NOT a viewer).
-   *  Gates the inline "+ add comment" affordance (a viewer reads comments only). */
+   *  Gates the margin's ＋ add affordance (a viewer reads notes only). */
   canComment?: boolean;
   /** Real `authorId → stored hex` map built from `useMembers` + `useMe` by the
-   *  caller (Assemble). When an authorId is found here, the inline avatar uses
+   *  caller (Assemble). When an authorId is found here, the margin avatar uses
    *  the stored colour directly. Unknown authors fall back to the hash. */
   memberColors?: Record<string, string>;
   /** `authorId → display name` map (same source) — drives the initial inside
-   *  the inline comment avatar (Builder v2: colour is paired with an initial,
-   *  never colour alone — #5). Unknown authors show no initial. */
+   *  the margin avatar (colour is never the only signal — #5). */
   memberNames?: Record<string, string>;
   /** User-defined kinds merged into the registry (US-043) — so the attribute info
    *  overlay (frame 1.13) can describe a custom kind's prose/values too. */
   customKinds?: RegistryKind[];
   /** The active Leader/Follower lens (controlled — persisted by the caller,
-   *  who renders the compact L·F toggle in the screen header — design 1.23). */
+   *  who renders the compact L·F toggle in the screen header). */
   roleView: RoleView;
   /** How step timings read: numeric counts (default) or slow/quick syllables
    *  (Tango/Foxtrot/Quickstep). Controlled + persisted by the caller. */
   timingView?: TimingView;
   /** Tap a figure name → Figure detail (existing open-figure flow). */
   onOpenFigure?: (figureId: string) => void;
-  /** Tap a comment / "+ add comment" → open the annotation thread for that
-   *  anchor (QUAL-2 fix: passes the specific figureRef + count, not just the
-   *  figure id, so the caller can focus the panel on the right anchor). A
-   *  whole-figure note omits `count` (US-004a). */
+  /** Tap a margin cell → open the annotation thread for that anchor (QUAL-2:
+   *  passes the specific figureRef + count so the caller can focus the panel
+   *  on the right anchor). A whole-figure cell omits `count` (US-004a). */
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
   const t = useMessages(timelineMessages);
@@ -137,11 +126,11 @@ export function RoutineReadingView({
   // figure whose notes changed gets a new array — every other FigureReadout
   // sees reference-equal props and skips its re-render (React.memo below).
   const annotationsByFigure = useStableAnnotationsByFigure(annotations);
-  const toast = useToast();
-  // The column filter (design 1.23): hidden column ids, per device + across
-  // choreos. The chips row covers every type USED anywhere in this routine
-  // (under the active role lens — same "only what's set" rule as the tables).
-  const [hiddenColumns, toggleHiddenColumn] = useStoredHiddenColumns();
+  // The column picker (Builder v3): the reader's picked column ids, per device
+  // + across choreos. The chips row covers every type USED anywhere in this
+  // routine (under the active role lens — same "only what's set" rule as the
+  // tables); every figure renders exactly the picked columns.
+  const [pickedColumns, togglePickedColumn] = useStoredReadColumns();
   const routineColumns = useMemo(() => {
     const all: Attribute[] = [];
     for (const rp of placements) {
@@ -155,74 +144,71 @@ export function RoutineReadingView({
     }
     return usedColumns(all, dance);
   }, [placements, roleView, dance]);
-  // "+N hidden" peek (design 1.23 pin 2): ONE figure at a time expands to show
-  // everything; chips stay put; collapses on the next scroll (a 450ms grace
-  // absorbs the browser's own scroll on tap — same rule as the prototype).
-  const [peekedPlacement, setPeekedPlacement] = useState<string | null>(null);
-  const peekedAtRef = useRef(0);
-  const onChipTap = useCallback(
-    (col: ReadingColumn) => {
-      if (col.isStep) {
-        // Step* is required — never hideable (design 1.23).
-        toast.show(t.columnAlwaysShownToast(col.label));
-        return;
-      }
-      // The user plainly knows the filter now — never show the one-time hint.
-      markHiddenHintSeen();
-      setPeekedPlacement(null);
-      toggleHiddenColumn(col.id);
-    },
-    [toast, toggleHiddenColumn, t],
+  const shownColumns = useMemo(
+    () => shownReadColumns(pickedColumns, routineColumns),
+    [pickedColumns, routineColumns],
   );
-  const onTogglePeek = useCallback((placementId: string) => {
-    peekedAtRef.current = Date.now();
-    setPeekedPlacement((prev) => (prev === placementId ? null : placementId));
-  }, []);
-  useEffect(() => {
-    if (peekedPlacement === null) return;
-    const onScroll = () => {
-      if (Date.now() - peekedAtRef.current > 450) setPeekedPlacement(null);
-    };
-    // Capture-phase so a scrolling ancestor container collapses the peek too.
-    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => window.removeEventListener("scroll", onScroll, { capture: true });
-  }, [peekedPlacement]);
-  // Backup for tour skippers (design 1.26): the FIRST time a view hides data,
-  // a one-time toast points at the "+N hidden" affordance.
-  const hidesData = routineColumns.some((c) => !c.isStep && hiddenColumns.has(c.id));
-  useEffect(() => {
-    if (!hidesData || hasSeenHiddenHint()) return;
-    markHiddenHintSeen();
-    toast.show(t.hiddenColumnsHintToast);
-  }, [hidesData, toast, t]);
+  const onChipTap = (col: ReadingColumn) => {
+    // The last shown column can't be removed (min 1 — Builder v3).
+    if (shownColumns.length === 1 && shownColumns[0]?.id === col.id) return;
+    togglePickedColumn(col.id);
+  };
   return (
     <div data-testid="reading-view" className="flex flex-col gap-[10px]">
-      {/* Type chips (design 1.23 — ✓ chosen): one per used type, tap to hide /
-          show that column across EVERY figure. Default: everything on. The
+      {/* Column picker (Builder v3): one chip per used type — tap to pick up
+          to 4 columns, laid side-by-side across EVERY figure. The
           Leader/Follower lens lives in the screen header (Assemble). */}
       {routineColumns.length > 0 && (
-        <fieldset
-          data-tour="type-chips"
-          aria-label={t.shownColumns}
-          className="flex flex-wrap items-center gap-[5px]"
-        >
-          {routineColumns.map((col) => (
-            <FilterChip
-              key={col.id}
-              column={col}
-              on={col.isStep === true || !hiddenColumns.has(col.id)}
-              customKinds={customKinds}
-              onTap={onChipTap}
-            />
-          ))}
-        </fieldset>
+        <>
+          <fieldset
+            data-tour="type-chips"
+            aria-label={t.shownColumns}
+            className="flex flex-wrap items-center gap-[5px]"
+          >
+            {routineColumns.map((col) => (
+              <FilterChip
+                key={col.id}
+                column={col}
+                on={shownColumns.some((c) => c.id === col.id)}
+                customKinds={customKinds}
+                onTap={onChipTap}
+              />
+            ))}
+          </fieldset>
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-[7px] bg-accent-tint"
+            >
+              <svg
+                aria-hidden="true"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--bf-accent)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-8.9 8.4 8.5 8.5 0 0 1-3.8-.9L3 20l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.4-8.9 8.5 8.5 0 0 1 8.6 8.4z" />
+              </svg>
+            </span>
+            <span
+              className="flex-1 text-[14px] text-ink-faint"
+              style={{ fontFamily: "var(--bf-font-note)" }}
+            >
+              {t.readingHint}
+            </span>
+          </div>
+        </>
       )}
 
       {routine.sections.length === 0 ? (
         <p className="text-2xs text-ink-faint">{t.noSections}</p>
       ) : (
         routine.sections.map((section) => (
-          <section key={section.id} className="flex flex-col gap-[9px]">
+          <section key={section.id} className="flex flex-col gap-[12px]">
             <SectionDivider label={section.name} />
             {section.placements.length === 0 ? (
               <p className="text-2xs text-ink-faint">{t.noFiguresInSection}</p>
@@ -244,8 +230,9 @@ export function RoutineReadingView({
                     key={pl.id}
                     figure={rp?.figure ?? null}
                     status={rp?.status ?? "loading"}
-                    dance={dance}
+                    part={pl.part ?? null}
                     roleView={roleView}
+                    columns={shownColumns}
                     beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
                     annotations={(figureId && annotationsByFigure.get(figureId)) || NO_ANNOTATIONS}
                     canComment={canComment}
@@ -253,10 +240,6 @@ export function RoutineReadingView({
                     memberNames={memberNames}
                     customKinds={customKinds}
                     scopeLabel={routine.title}
-                    hiddenColumns={hiddenColumns}
-                    peekKey={pl.id}
-                    peeked={peekedPlacement === pl.id}
-                    onTogglePeek={onTogglePeek}
                     onOpenFigure={onOpenFigure}
                     onOpenThread={onOpenThread}
                   />
@@ -312,10 +295,17 @@ function useStableAnnotationsByFigure(annotations: Annotation[]): Map<string, An
 
 /** A figure's distinct, sorted counts under the active role lens — the same
  *  derivation FigureReadout renders from, so numbering aligns with the rows. */
-function figureCounts(figure: FigureDoc, roleView: RoleView): number[] {
-  const live = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
-    roleView,
+function figureCounts(
+  figure: FigureDoc,
+  roleView: RoleView,
+  part?: PlacementPart | null,
+): number[] {
+  const live = windowAttributes(
+    filterByRoleView(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      roleView,
+    ),
+    part,
   );
   return [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
 }
@@ -345,7 +335,7 @@ function numberRoutineBeats_forRoutine(
         entries.push({ kind: "break", beats: pl.beats ?? beatsPerBar });
       } else {
         const fig = resolved.get(pl.id)?.figure ?? null;
-        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView) : [] });
+        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView, pl.part) : [] });
         if (fig) figureEndByIndex.set(index, resolveFigureBars(fig) * beatsPerBar + 1);
       }
     }
@@ -401,7 +391,13 @@ function figureScope(figure: FigureDoc): FigureScope {
   return figureMatchesLibraryOrigin(figure) ? "library" : "custom";
 }
 
-/** One figure's notation, read-only: a compact count × used-columns table.
+/** The column's flex weight (Builder v3: the merged Step column gets 1.7×). */
+function columnWeight(col: ReadingColumn): number {
+  return col.isStep ? 1.7 : 1;
+}
+
+/** One figure's notation, read-only: a two-line header + a count × picked-
+ *  columns table, with the notes margin owning the right 29% of every row.
  *  MEMOIZED: with the store's reconcile keeping figure/annotation identities
  *  stable, a note added elsewhere (or any unrelated doc change) leaves every
  *  prop reference-equal and this whole subtree skips its re-render — only the
@@ -409,8 +405,9 @@ function figureScope(figure: FigureDoc): FigureScope {
 const FigureReadout = memo(function FigureReadout({
   figure,
   status,
-  dance,
+  part,
   roleView,
+  columns,
   beatTokens,
   annotations,
   canComment,
@@ -418,19 +415,19 @@ const FigureReadout = memo(function FigureReadout({
   memberNames,
   customKinds = [],
   scopeLabel,
-  hiddenColumns,
-  peekKey,
-  peeked,
-  onTogglePeek,
   onOpenFigure,
   onOpenThread,
 }: {
   figure: FigureDoc | null;
   status: FigureLoadStatus;
-  dance: DanceId;
+  /** Portion window (Builder v3 ③) — dance only these counts of the figure. */
+  part?: PlacementPart | null;
   roleView: RoleView;
+  /** The routine-wide PICKED columns (Builder v3) — every figure renders
+   *  exactly these; a figure without the kind shows empty dots. */
+  columns: ReadingColumn[];
   /** The continuous beat token per distinct sorted count (US-004a), aligned to
-   *  this figure's `counts`. Drives the count pill + per-step count cell. */
+   *  this figure's `counts`. Drives the timing sub + per-step count cell. */
   beatTokens: string[];
   annotations: Annotation[];
   canComment: boolean;
@@ -438,14 +435,6 @@ const FigureReadout = memo(function FigureReadout({
   memberNames?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
-  /** The routine-wide hidden column ids (design 1.23 type chips). */
-  hiddenColumns: ReadonlySet<string>;
-  /** This readout's placement id — the peek key (stable across renders so the
-   *  memo bails; the single `onTogglePeek` callback stays shared). */
-  peekKey: string;
-  /** While peeked this figure shows EVERY used column ("– hide" collapses). */
-  peeked: boolean;
-  onTogglePeek: (peekKey: string) => void;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
@@ -476,78 +465,94 @@ const FigureReadout = memo(function FigureReadout({
   }
   // The Leader/Follower lens: both-role attributes always show; role-specific
   // ones show only on their side (US: Follower flips role-aware values).
-  const live = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
-    roleView,
+  const live = windowAttributes(
+    filterByRoleView(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      roleView,
+    ),
+    part,
   );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
-  // The figure's used columns, minus the routine-wide hidden ones (design
-  // 1.23) — unless peeked, which shows everything. The "+N hidden" pill counts
-  // the used-but-hidden columns; hiding never touches data (notes, breaks and
-  // whole-figure comments are never filtered).
-  const allUsedColumns = usedColumns(live, dance);
-  const hiddenHere = hiddenColumnCount(allUsedColumns, hiddenColumns);
-  const columns = visibleColumns(allUsedColumns, hiddenColumns, peeked);
-  const bars = barsForFigure(counts, dance);
   // The continuous beat token per count (US-004a), zipped with the sorted counts.
   const tokenByCount = new Map(counts.map((c, i) => [c, beatTokens[i] ?? String(c)]));
-  // Inline comments anchored to a specific step (point) of this figure.
+  // Notes anchored to a specific step (point) of this figure — margin cells.
   const figureComments = annotations.filter(
     (a) =>
       a.deletedAt == null &&
       a.anchors.some((an) => an.type === "point" && an.figureRef === figure.id),
   );
-  // Comments anchored to the WHOLE figure (figure anchor, no count — US-004a).
+  // Notes anchored to the WHOLE figure (figure anchor, no count — US-004a).
   const wholeFigureComments = annotations.filter(
     (a) =>
       a.deletedAt == null &&
       a.anchors.some((an) => an.type === "figure" && an.figureRef === figure.id),
   );
   return (
-    <div className="flex flex-col gap-[7px]">
-      {/* Figure headline: scope dot + name + counts + (optional) bars. */}
-      <div className="flex items-center gap-[7px]">
-        <ScopeDot scope={figureScope(figure)} />
-        <button
-          type="button"
-          className="text-[13px] font-bold text-ink hover:underline"
-          onClick={() => onOpenFigure?.(figure.id)}
-        >
-          {figure.name}
-        </button>
-        {counts.length > 0 && <CountPill counts={beatTokens} />}
-        {counts.length > 0 && (
-          <span className="text-2xs font-medium text-ink-muted">{t.bars(bars)}</span>
-        )}
-      </div>
-
-      {/* WHOLE FIGURE notes (US-004a): a note block under the header, distinct
-          from per-step threads. Shown when there are notes OR the user may add
-          the first one. Tapping opens the figure-level thread (no count). */}
-      {(wholeFigureComments.length > 0 || canComment) && (
-        <WholeFigureNotes
+    <div className="relative flex flex-col gap-[5px]">
+      {/* The vertical rule between the notation and the notes margin. */}
+      <div
+        aria-hidden="true"
+        className="absolute bottom-0 top-[2px] w-[1.5px]"
+        style={{ right: MARGIN_BASIS, background: "var(--bf-border-subtle)" }}
+      />
+      {/* Figure header row: scope dot + two-line name / timing sub, then the
+          whole-figure notes margin cell. */}
+      <div className="flex items-stretch">
+        <div className="flex min-w-0 flex-1 items-center gap-2 pr-[10px]">
+          <ScopeDot scope={figureScope(figure)} />
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              className="block max-w-full truncate text-left text-[14px] font-bold text-ink hover:underline"
+              onClick={() => onOpenFigure?.(figure.id)}
+            >
+              {figure.name}
+            </button>
+            <div className="truncate text-2xs font-semibold text-ink-faint">
+              {counts.length > 0 ? beatTokens.join(" ") : t.emptyFigureSub}
+              {part &&
+                ` · ${t.partLabel(part.fromCount, part.toCount, resolveFigureCounts(figure))}`}
+            </div>
+          </div>
+        </div>
+        <NotesMarginCell
+          label={t.notesForFigure(figure.name)}
           comments={wholeFigureComments}
-          figureId={figure.id}
           canComment={canComment}
           memberColors={memberColors}
           memberNames={memberNames}
-          onOpenThread={onOpenThread}
+          onOpen={onOpenThread && (() => onOpenThread({ figureRef: figure.id }))}
         />
-      )}
+      </div>
 
-      {counts.length === 0 ? (
-        <p className="text-2xs text-ink-faint">{t.noStepsYet}</p>
-      ) : (
+      {counts.length > 0 && (
         <>
-          <ColumnHeader
-            columns={columns}
-            onOpenInfo={setInfoCol}
-            trailing={
-              hiddenHere > 0 ? (
-                <PeekPill count={hiddenHere} peeked={peeked} onTap={() => onTogglePeek(peekKey)} />
-              ) : undefined
-            }
-          />
+          {/* Column header row + the NOTES margin label. */}
+          <div className="flex items-stretch">
+            <div className="flex min-h-[36px] min-w-0 flex-1 items-center gap-1 pr-[10px]">
+              <span className="w-[18px] flex-none" aria-hidden="true" />
+              {columns.map((col) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  aria-label={t.aboutColumn(col.label)}
+                  onClick={() => setInfoCol(col)}
+                  className="min-w-0 cursor-pointer py-[6px] text-center text-2xs font-bold leading-none tracking-wide"
+                  style={{ flexGrow: columnWeight(col), flexBasis: 0, color: columnColor(col) }}
+                >
+                  {col.label}
+                </button>
+              ))}
+            </div>
+            <div
+              className="flex flex-none items-center pl-[10px]"
+              style={{ flexBasis: MARGIN_BASIS }}
+            >
+              <span className="text-[8px] font-bold tracking-[.06em] text-ink-faint">
+                {t.notesHeader}
+              </span>
+            </div>
+          </div>
           <ol className="flex flex-col gap-[5px]" aria-label={t.figureSteps(figure.name)}>
             {counts.map((count) => (
               <StepRow
@@ -573,7 +578,7 @@ const FigureReadout = memo(function FigureReadout({
 
       {/* The attribute explainer (Builder v2 — a full page) — opened by tapping a
           value chip or a column header. The merged Step column describes
-          direction + footwork. The footer pager walks this figure's columns. */}
+          direction + footwork. The footer pager walks the picked columns. */}
       {infoCol &&
         (() => {
           const [primary, ...rest] = infoKindsForColumn(infoCol, customKinds, live);
@@ -608,45 +613,11 @@ const FigureReadout = memo(function FigureReadout({
   );
 });
 
-/** The per-figure column header: a count gutter then each used kind in its
- *  kind color (frame 1.6: Step · Rise · Pos · Sway · Turn). Each kind label is a
- *  button that opens that kind's attribute info overlay (frame 1.13). The
- *  trailing slot carries the "+N hidden" peek pill (design 1.23). */
-function ColumnHeader({
-  columns,
-  onOpenInfo,
-  trailing,
-}: {
-  columns: ReadingColumn[];
-  onOpenInfo: (col: ReadingColumn) => void;
-  trailing?: ReactNode;
-}) {
-  const t = useMessages(timelineMessages);
-  return (
-    <div className="flex min-h-[40px] items-center gap-1 px-[2px]">
-      <span className="w-[18px] flex-none" aria-hidden="true" />
-      {columns.map((col) => (
-        <button
-          key={col.id}
-          type="button"
-          aria-label={t.aboutColumn(col.label)}
-          onClick={() => onOpenInfo(col)}
-          className="flex-1 cursor-pointer py-3 text-center text-2xs font-bold leading-none tracking-wide"
-          style={{ color: columnColor(col) }}
-        >
-          {col.label}
-        </button>
-      ))}
-      {trailing}
-    </div>
-  );
-}
-
-/** One type chip (design 1.23): ON = the kind's tint/ink/border family; OFF =
- *  dashed grey over the plain surface (grey stays "empty / off", never data).
- *  Step* is locked — tapping it only surfaces the "always shown" toast. A
- *  custom kind passes its registry color through (border/ink + a leading dot,
- *  like AttrChip) so user-defined types sit in the row like builtins. */
+/** One column-picker chip (Builder v3): ON = the kind's tint/ink/border family
+ *  (this column is laid out); OFF = dashed grey over the plain surface (grey
+ *  stays "empty / off", never data). A custom kind passes its registry color
+ *  through (border/ink + a leading dot, like AttrChip) so user-defined types
+ *  sit in the row like builtins. */
 function FilterChip({
   column,
   on,
@@ -659,19 +630,12 @@ function FilterChip({
   onTap: (col: ReadingColumn) => void;
 }) {
   const t = useMessages(timelineMessages);
-  const locked = column.isStep === true;
   const family = columnChipFamily(column, customKinds);
   return (
     <button
       type="button"
       aria-pressed={on}
-      aria-label={
-        locked
-          ? t.columnAlwaysShown(column.label)
-          : on
-            ? t.hideColumn(column.label)
-            : t.showColumn(column.label)
-      }
+      aria-label={on ? t.hideColumn(column.label) : t.showColumn(column.label)}
       onClick={() => onTap(column)}
       className={cx(
         "inline-flex min-h-[36px] items-center gap-1 rounded-[6px] border-[1.5px] px-2 py-1 text-2xs leading-none",
@@ -687,7 +651,7 @@ function FilterChip({
             }
       }
     >
-      {locked ? `${column.label}*` : column.label}
+      {column.label}
       {family.dot && on && (
         <span
           aria-hidden="true"
@@ -723,25 +687,6 @@ function columnChipFamily(
   };
 }
 
-/** The "+N hidden" peek pill (design 1.23 pin 2): sits at the end of a
- *  figure's column-header row when the filter hides columns this figure uses.
- *  Tap to peek (this figure shows everything, label flips to "– hide");
- *  collapses on the next scroll. */
-function PeekPill({ count, peeked, onTap }: { count: number; peeked: boolean; onTap: () => void }) {
-  const t = useMessages(timelineMessages);
-  return (
-    <button
-      type="button"
-      aria-expanded={peeked}
-      aria-label={peeked ? t.peekCollapseLabel : t.peekHiddenLabel(count)}
-      onClick={onTap}
-      className="min-h-[36px] flex-none cursor-pointer rounded-[6px] bg-surface-sunken px-2 py-1 text-[10px] font-bold leading-none text-ink-muted"
-    >
-      {peeked ? t.peekCollapse : t.hiddenCountPill(count)}
-    </button>
-  );
-}
-
 /** The kind ids with a `--bf-kind-*` token family (headers + filter chips). */
 const STANDARD_COLUMN_KINDS = [
   "direction",
@@ -761,8 +706,9 @@ function columnColor(col: ReadingColumn): string {
     : "var(--bf-ink-secondary)";
 }
 
-/** One step row: count cell + a chip-or-dot per used column. Off-beat (sub-beat)
- *  rows render dimmed (muted surface + slate count). */
+/** One step row: the sunken notation strip (count cell + a chip-or-dot per
+ *  picked column) then the step's notes margin cell. Off-beat (sub-beat) rows
+ *  render dimmed. */
 function StepRow({
   count,
   label,
@@ -793,224 +739,131 @@ function StepRow({
   const t = useMessages(timelineMessages);
   const offBeat = isOffBeatCount(count);
   return (
-    <li className="flex flex-col gap-[3px]">
-      <div
-        data-offbeat={offBeat ? "true" : undefined}
-        className="flex min-h-[44px] items-center gap-1 rounded-[8px] bg-surface-muted px-[5px] py-[5px]"
-      >
-        <span
-          className={cx(
-            "w-[18px] flex-none text-center font-bold text-accent tabular-nums",
-            offBeat ? "text-[10px]" : "text-[12px]",
-          )}
+    <li className="flex items-stretch">
+      <div className="flex min-w-0 flex-1 pr-[10px]">
+        <div
+          data-offbeat={offBeat ? "true" : undefined}
+          className="flex min-h-[40px] flex-1 items-stretch gap-1 rounded-[8px] bg-surface-muted px-[5px] py-[5px]"
         >
-          {label}
-        </span>
-        {columns.map((col) => {
-          const label = cellValue(here, col);
-          return (
-            <span key={col.id} className="flex flex-1 justify-center">
-              {label ? (
-                <button
-                  type="button"
-                  aria-label={t.aboutValue(col.label, label)}
-                  onClick={() => onOpenInfo(col)}
-                  className="cursor-pointer"
-                >
-                  <AttrChip kind={col.kind} label={label} />
-                </button>
-              ) : (
-                <EmptySlot />
-              )}
-            </span>
-          );
-        })}
+          <span
+            className={cx(
+              "w-[18px] flex-none self-center text-center font-bold tabular-nums",
+              offBeat ? "text-[10px] text-ink-faint" : "text-[12px] text-accent",
+            )}
+          >
+            {label}
+          </span>
+          {columns.map((col) => {
+            const value = cellValue(here, col);
+            return (
+              <span
+                key={col.id}
+                className="flex min-w-0 items-center justify-center"
+                style={{ flexGrow: columnWeight(col), flexBasis: 0 }}
+              >
+                {value ? (
+                  <button
+                    type="button"
+                    aria-label={t.aboutValue(col.label, value)}
+                    onClick={() => onOpenInfo(col)}
+                    className="max-w-full cursor-pointer"
+                  >
+                    <AttrChip kind={col.kind} label={value} />
+                  </button>
+                ) : (
+                  <EmptySlot />
+                )}
+              </span>
+            );
+          })}
+        </div>
       </div>
-      {/* Render the comment block whenever there's something to read OR the user
-          may add the FIRST comment — so "+ add comment" is reachable at zero. */}
-      {(comments.length > 0 || canComment) && (
-        <InlineComments
-          comments={comments}
-          figureId={figureId}
-          count={count}
-          canComment={canComment}
-          memberColors={memberColors}
-          memberNames={memberNames}
-          onOpenThread={onOpenThread}
-        />
-      )}
+      <NotesMarginCell
+        label={t.notesForCount(label)}
+        comments={comments}
+        canComment={canComment}
+        memberColors={memberColors}
+        memberNames={memberNames}
+        onOpen={onOpenThread && (() => onOpenThread({ figureRef: figureId, count }))}
+      />
     </li>
   );
 }
 
-/** Inline comments under a step: the latest ~2 read-only (truncated, an
- *  author-coloured avatar with the author's initial + Caveat text), a "+N more"
- *  hint, plus an "✎ Add note" affordance shown only to a member who may comment
- *  (commenter/editor — never a pure viewer). Tapping any of them opens the
- *  annotation thread for this specific anchor (QUAL-2 fix: passes { figureRef,
- *  count } so the thread panel opens on the right anchor — not the figure
- *  timeline). */
-function InlineComments({
+/** A notes-margin cell (Builder v3): the note authors' avatars (latest-first,
+ *  up to 3 — initial inside the dot, colour never the only signal #5), a ＋
+ *  add chip for a member who may comment, and the latest note as a two-line
+ *  Caveat snippet. The whole cell is one tap target opening the anchor's
+ *  thread (a viewer may read it; only a commenter may add). */
+function NotesMarginCell({
+  label,
   comments,
-  figureId,
-  count,
   canComment,
   memberColors,
   memberNames,
-  onOpenThread,
+  onOpen,
 }: {
+  label: string;
   comments: Annotation[];
-  figureId: string;
-  count: number;
   canComment: boolean;
-  /** Real `authorId → stored hex` map — use this first; hash-fallback only for
-   *  unknown authors (e.g. very old annotations before T8 wired identity). */
   memberColors?: Record<string, string>;
   memberNames?: Record<string, string>;
-  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
+  onOpen?: () => void;
 }) {
-  const t = useMessages(timelineMessages);
-  const latest = comments.slice(-2);
-  const more = Math.max(0, comments.length - latest.length);
-  const anchor = { figureRef: figureId, count };
-  return (
-    <div className="ml-[22px] flex flex-col gap-[2px]">
-      {latest.map((c) => (
-        <CommentLine
-          key={c.id}
-          comment={c}
-          memberColors={memberColors}
-          memberNames={memberNames}
-          onClick={() => onOpenThread?.(anchor)}
-        />
-      ))}
-      <div className="flex items-center gap-[10px]">
-        {more > 0 && (
-          <button
-            type="button"
-            className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
-            onClick={() => onOpenThread?.(anchor)}
-          >
-            {t.moreComments(more)}
-          </button>
-        )}
-        {canComment && <AddNoteButton onClick={() => onOpenThread?.(anchor)} />}
-      </div>
-    </div>
-  );
-}
-
-/** One truncated read-only comment line: the author's identity-coloured avatar
- *  (initial inside — colour is never the only signal, #5) + Caveat text. */
-function CommentLine({
-  comment,
-  memberColors,
-  memberNames,
-  onClick,
-}: {
-  comment: Annotation;
-  memberColors?: Record<string, string>;
-  memberNames?: Record<string, string>;
-  onClick: () => void;
-}) {
-  const name = memberNames?.[comment.authorId];
-  return (
-    <button type="button" className="flex items-center gap-[6px] text-left" onClick={onClick}>
-      <span
-        aria-hidden="true"
-        className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-full text-[8px] font-bold text-ink-inverse"
-        style={{ background: memberColors?.[comment.authorId] ?? identityColor(comment.authorId) }}
-      >
-        {authorInitial(name)}
-      </span>
-      {name && <span className="bf-sr-only">{name}:</span>}
-      <span
-        className="flex-1 truncate text-[13px] text-ink-secondary"
-        style={{ fontFamily: "var(--bf-font-note)" }}
-      >
-        {comment.text}
-      </span>
-    </button>
-  );
-}
-
-/** The "✎ Add note" affordance (Builder v2) — accent-coloured with a ≥36px hit
- *  area, replacing the old faint "+ add comment" hint. */
-function AddNoteButton({ onClick, label }: { onClick: () => void; label?: string }) {
-  const t = useMessages(timelineMessages);
+  const latest = comments.length > 0 ? comments[comments.length - 1] : undefined;
+  // Distinct authors, latest first (Builder v3 `_margin`), capped at 3.
+  const authors: string[] = [];
+  for (let i = comments.length - 1; i >= 0 && authors.length < 3; i--) {
+    const id = comments[i]?.authorId;
+    if (id && !authors.includes(id)) authors.push(id);
+  }
   return (
     <button
       type="button"
-      className="inline-flex min-h-[36px] items-center gap-[5px] py-2 text-left text-2xs font-bold text-accent"
-      onClick={onClick}
+      aria-label={label}
+      onClick={onOpen}
+      className="flex min-h-[40px] min-w-0 flex-none cursor-pointer flex-col justify-center gap-[3px] pl-[10px] text-left"
+      style={{ flexBasis: MARGIN_BASIS }}
     >
-      <span aria-hidden="true">✎</span> {label ?? t.addNote}
+      <span className="flex items-center gap-[3px]">
+        {authors.map((id) => (
+          <span
+            key={id}
+            data-avatar
+            className="flex h-[16px] w-[16px] flex-none items-center justify-center rounded-full text-[8px] font-bold text-ink-inverse"
+            style={{ background: memberColors?.[id] ?? identityColor(id) }}
+          >
+            {authorInitial(memberNames?.[id])}
+          </span>
+        ))}
+        {canComment && (
+          <span
+            aria-hidden="true"
+            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full border-[1.5px] text-[12px] font-bold leading-none text-accent"
+            style={{ borderColor: "var(--bf-accent-border)" }}
+          >
+            ＋
+          </span>
+        )}
+      </span>
+      {latest && (
+        <span
+          className="line-clamp-2 text-[12px] leading-[1.3] text-ink-secondary"
+          style={{ fontFamily: "var(--bf-font-note)" }}
+        >
+          {latest.text}
+        </span>
+      )}
     </button>
   );
 }
 
-/** The author's display initial for the comment avatar — empty when unknown. */
+/** The author's display initial for the margin avatar — empty when unknown. */
 function authorInitial(name: string | undefined): string {
   return name?.trim().charAt(0).toUpperCase() ?? "";
 }
 
-/** WHOLE-FIGURE notes (US-004a): a note block under the figure header, distinct
- *  from per-step threads. Shows a "WHOLE FIGURE" label, the latest ~2 notes
- *  (truncated), a "+N more" hint, and a "+ note on whole figure" affordance for a
- *  commenter. Tapping any opens the figure-level thread (a figure anchor, no
- *  count). */
-function WholeFigureNotes({
-  comments,
-  figureId,
-  canComment,
-  memberColors,
-  memberNames,
-  onOpenThread,
-}: {
-  comments: Annotation[];
-  figureId: string;
-  canComment: boolean;
-  memberColors?: Record<string, string>;
-  memberNames?: Record<string, string>;
-  onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
-}) {
-  const t = useMessages(timelineMessages);
-  const latest = comments.slice(-2);
-  const more = Math.max(0, comments.length - latest.length);
-  const anchor = { figureRef: figureId };
-  return (
-    <div data-testid="whole-figure-notes" className="ml-[15px] flex flex-col gap-[2px]">
-      <span className="self-start rounded-[4px] bg-accent-tint px-[5px] py-[1px] text-[7px] font-bold uppercase tracking-wider text-accent">
-        {t.wholeFigure}
-      </span>
-      {latest.map((c) => (
-        <CommentLine
-          key={c.id}
-          comment={c}
-          memberColors={memberColors}
-          memberNames={memberNames}
-          onClick={() => onOpenThread?.(anchor)}
-        />
-      ))}
-      <div className="flex items-center gap-[10px]">
-        {more > 0 && (
-          <button
-            type="button"
-            className="min-h-[36px] py-2 text-left text-2xs font-bold text-accent"
-            onClick={() => onOpenThread?.(anchor)}
-          >
-            {t.moreComments(more)}
-          </button>
-        )}
-        {canComment && (
-          <AddNoteButton label={t.addNoteWholeFigure} onClick={() => onOpenThread?.(anchor)} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** A stable identity color slot for an author (profile-colored comment dot). */
+/** A stable identity color slot for an author (profile-colored avatar). */
 function identityColor(authorId: string): string {
   let h = 0;
   for (let i = 0; i < authorId.length; i++) h = (h * 31 + authorId.charCodeAt(i)) >>> 0;

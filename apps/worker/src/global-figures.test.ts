@@ -286,11 +286,12 @@ describe("ensureGlobalFigures — hash-guarded self-healing seed (D30 ⟳)", () 
     await env.DB.prepare("DELETE FROM app_meta WHERE key = ?")
       .bind("global_figure_seed_hash")
       .run();
-    // An invalid figure (bad dance) makes createGlobalFigureRow/seedDoc throw →
-    // counted skipped; the hash must NOT be written.
-    const bad = [
-      { ...mk("HT")[0], dance: "not-a-dance" as unknown as LibraryFigure["dance"] },
-    ] as LibraryFigure[];
+    // An invalid figure makes the per-figure work throw → counted skipped; the
+    // hash must NOT be written. An `undefined` name is the deterministic trigger:
+    // createGlobalFigureRow's D1 `.bind(undefined)` rejects. (The previous
+    // bad-dance fixture stopped erroring when Builder v3 ① switched the seeder
+    // from defaultFigureBars(attrs, dance) to the dance-free defaultFigureCounts.)
+    const bad = [{ ...mk("HT")[0], name: undefined as unknown as string }] as LibraryFigure[];
     const run = await ensureGlobalFigures(seedEnv, { figures: bad });
     expect(run.ran).toBe(true);
     expect((run.result?.skipped ?? 0) > 0).toBe(true);

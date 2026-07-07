@@ -36,6 +36,8 @@ import {
   type FigureDoc,
   libraryFigureByRef,
   migrateDraft,
+  newId,
+  partBeatSpan,
   type RoutineDoc,
   readFigure,
   readRoutine,
@@ -44,8 +46,10 @@ import {
   softDeleteAnnotation,
 } from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
+import { createFigureRows } from "./db/figures";
 import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
 import { resolveEffectiveRole } from "./db/membership";
+import { linkPlacement } from "./db/placement-edge";
 import type { Env } from "./index";
 
 /** Per-connection socket attachment (survives hibernation). */
@@ -133,6 +137,11 @@ function emptyRoutine(): RoutineDoc {
  * Automerge requires for an actor id.
  */
 const MIGRATION_ACTOR = `${"0".repeat(31)}1`;
+/** A distinct fixed actor for the alarm-driven break migration (Builder v3 ④):
+ *  like MIGRATION_ACTOR it brands a server change per-user undo can never
+ *  select — distinct so its seq counter can never collide with the ladder
+ *  migration's on a doc that has already been schema-migrated once. */
+const BREAK_MIGRATION_ACTOR = `${"0".repeat(31)}2`;
 
 /** The Automerge change message stamped on every migration change (PLAN §7). */
 const MIGRATION_MESSAGE = "ballroom:migrate";
@@ -906,6 +915,14 @@ export class DocDO extends DurableObject<Env> {
       console.error("doc-do alarm: compaction failed", err);
     }
     try {
+      // Builder v3 ④ (owner decision 2026-07-07): legacy {source:'break'}
+      // placements become real Break FIGURE docs. Runs BEFORE the projection so
+      // the rewritten placements project their figure-based bar counts.
+      await this.migrateLegacyBreaks();
+    } catch (err) {
+      console.error("doc-do alarm: legacy break migration failed", err);
+    }
+    try {
       await this.projectToD1();
     } catch (err) {
       console.error("doc-do alarm: D1 index projection failed", err);
@@ -920,6 +937,133 @@ export class DocDO extends DurableObject<Env> {
     } catch (err) {
       console.error("doc-do alarm: invite expiry failed", err);
     }
+  }
+
+  /**
+   * Legacy break → Break-figure migration (Builder v3 ④, 2026-07-07). A Break
+   * is a real choreo-local figure now (a bar's worth of empty counts, sized/
+   * edited like any figure); the pre-v3 special `{source:'break', beats}`
+   * placement is converted here, on the ALARM (async, off the request path):
+   *
+   *   1. MINT each break's Break figure doc FIRST — registry row + placement
+   *      edge + DO seed, owned by the routine's owner (`counts` = the break's
+   *      beats) — the fork.ts discipline: never post-hoc CRDT surgery on a
+   *      routine that references un-seeded docs.
+   *   2. Then rewrite the routine's placements in ONE change under the fixed
+   *      MIGRATION_ACTOR (per-user undo can never select it): set `figureRef`,
+   *      drop `source`/`beats`.
+   *
+   * Idempotent: after the rewrite no `{source:'break'}` placements remain, so a
+   * later alarm is a no-op. Clients keep rendering a legacy break via the
+   * BreakCard/BreakReadout fallbacks until this lands and syncs to them.
+   */
+  /** Re-entrancy guard: the scheduled alarm and an explicit run can interleave
+   *  across this method's awaits — two concurrent runs would each mint figures
+   *  and persist a same-actor same-seq change (a storage-corrupting duplicate).
+   *  DOs are single-threaded per event, so a plain flag serializes them. */
+  private breakMigrationInFlight = false;
+
+  private async migrateLegacyBreaks(): Promise<void> {
+    if (this.breakMigrationInFlight) return;
+    this.breakMigrationInFlight = true;
+    try {
+      await this.migrateLegacyBreaksInner();
+    } finally {
+      this.breakMigrationInFlight = false;
+    }
+  }
+
+  private async migrateLegacyBreaksInner(): Promise<void> {
+    const doc = this.loadPersisted();
+    if (!doc) return;
+    const raw = doc as unknown as {
+      id?: string;
+      ownerId?: string;
+      dance?: string;
+      sections?: Array<{
+        deletedAt?: number | null;
+        placements?: Array<{
+          id: string;
+          source?: string;
+          beats?: number;
+          deletedAt?: number | null;
+        }>;
+      }>;
+    };
+    if (!Array.isArray(raw.sections)) return; // figure/account docs — nothing to do
+    const breaks: Array<{ id: string; beats: number }> = [];
+    for (const section of raw.sections) {
+      if (section?.deletedAt != null) continue;
+      for (const p of section?.placements ?? []) {
+        if (p?.source === "break" && p.deletedAt == null) {
+          breaks.push({ id: p.id, beats: Math.max(1, Math.round(p.beats ?? 1)) });
+        }
+      }
+    }
+    if (breaks.length === 0) return;
+
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; docRef: string | null }>(
+        "SELECT doName, docRef FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    const routineRef = meta?.docRef ?? raw.id ?? meta?.doName;
+    const ownerId = raw.ownerId;
+    if (!routineRef || !ownerId) return; // can't attribute the minted docs yet
+    const dance = (typeof raw.dance === "string" ? raw.dance : "waltz") as DanceId;
+
+    // 1. Mint + project + seed every Break figure BEFORE touching the routine.
+    const refByPlacement = new Map<string, string>();
+    for (const brk of breaks) {
+      const figureRef = newId();
+      const created = await createFigureRows(this.env.DB, {
+        figureRef,
+        ownerId,
+        name: "Break",
+        dance,
+        figureType: "break",
+      });
+      if (created === "owner_conflict") continue; // fresh ULID — unreachable; never clobber
+      await linkPlacement(this.env.DB, routineRef, figureRef);
+      await this.env.DOC_DO.get(this.env.DOC_DO.idFromName(figureRef)).seedDoc({
+        id: figureRef,
+        scope: "account",
+        ownerId,
+        figureType: "break",
+        dance,
+        name: "Break",
+        source: "custom",
+        attributes: [],
+        counts: brk.beats,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        deletedAt: null,
+      });
+      refByPlacement.set(brk.id, figureRef);
+    }
+    if (refByPlacement.size === 0) return;
+
+    // 2. Rewrite the placements in one migration-actor change.
+    const migrating = A.clone(doc, { actor: BREAK_MIGRATION_ACTOR });
+    const migrated = A.change(
+      migrating,
+      { message: "migrate legacy breaks (Builder v3 ④)" },
+      (draft) => {
+        const d = draft as unknown as typeof raw;
+        for (const section of d.sections ?? []) {
+          for (const p of section?.placements ?? []) {
+            const ref = p && refByPlacement.get(p.id);
+            if (!ref) continue;
+            (p as unknown as { figureRef?: string }).figureRef = ref;
+            delete (p as { source?: string }).source;
+            delete (p as { beats?: number }).beats;
+          }
+        }
+      },
+    );
+    const changes = A.getChanges(doc, migrated);
+    if (changes.length === 0) return;
+    this.persist(changes);
+    this.doc = A.clone(migrated); // adopt (see migrateOnLoad's divergence note)
   }
 
   /** Test hook: run the alarm body synchronously (no real timer). */
@@ -1090,22 +1234,31 @@ export class DocDO extends DurableObject<Env> {
       const beatsPerBar = DANCES[(routine.dance ?? "waltz") as DanceId].beatsPerBar;
       const placementRefs: string[] = [];
       let breakBars = 0; // a break contributes bars but isn't a figure (US-004a)
+      let partBars = 0; // portioned placements span their WINDOW (Builder v3 ③)
       let figureCount = 0;
       for (const section of routine.sections) {
         for (const placement of section.placements) {
           if (placement.source === "break") {
             breakBars += Math.max(1, Math.round((placement.beats ?? beatsPerBar) / beatsPerBar));
           } else if (placement.figureRef) {
-            placementRefs.push(placement.figureRef);
+            if (placement.part) {
+              // A portion dances only its count window — its bar contribution is
+              // the window's whole-beat span, not the figure's full length.
+              partBars += Math.max(1, Math.ceil(partBeatSpan(placement.part) / beatsPerBar));
+            } else {
+              placementRefs.push(placement.figureRef);
+            }
             figureCount += 1;
           }
         }
       }
       const barsByRef = await this.resolveFigureBars([...new Set(placementRefs)]);
       // Sum PER PLACEMENT (a figure placed twice counts its bars twice), then add
-      // break beats — the section/routine bar-count includes break bars (US-004a).
+      // portion windows + break beats — the routine bar-count includes both.
       const bars =
-        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) + breakBars;
+        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) +
+        partBars +
+        breakBars;
       return { bars, figureCount };
     }
 
@@ -1119,13 +1272,16 @@ export class DocDO extends DurableObject<Env> {
       const counts = (figure.attributes ?? [])
         .filter((a) => a.deletedAt == null)
         .map((a) => a.count);
-      // The figure's card bar count (PLAN §2.5): the explicit authored `bars` when
-      // set, else the phrase span its steps occupy (`barsForFigure`) — a legacy
-      // figure with no authored length still gets an honest span-based estimate.
+      // The figure's card bar count: the authored `counts` when set (Builder v3 ①
+      // — bars derive as ⌈counts / beatsPerBar⌉), else a legacy authored `bars`,
+      // else the phrase span its steps occupy (`barsForFigure`) — a figure with
+      // no authored length still gets an honest span-based estimate.
       const bars =
-        typeof figure.bars === "number" && figure.bars >= 1
-          ? Math.floor(figure.bars)
-          : barsForFigure(counts, figureDance);
+        typeof figure.counts === "number" && figure.counts >= 1
+          ? Math.max(1, Math.ceil(Math.floor(figure.counts) / DANCES[figureDance].beatsPerBar))
+          : typeof figure.bars === "number" && figure.bars >= 1
+            ? Math.floor(figure.bars)
+            : barsForFigure(counts, figureDance);
       return { bars, figureCount: null };
     }
 
