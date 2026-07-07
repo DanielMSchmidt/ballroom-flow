@@ -165,9 +165,9 @@ function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
     >
       <div
         style={{
-          width: 1040,
-          height: 508,
-          marginBottom: 96,
+          width: 1180,
+          height: 576,
+          marginBottom: 88,
           transform: `scale(${scale})`,
           opacity: enter,
           borderRadius: 18,
@@ -214,8 +214,8 @@ function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 180,
-          background: `linear-gradient(to top, ${COLOR.backdrop}, rgba(20,24,29,0))`,
+          height: 250,
+          background: `linear-gradient(to top, ${COLOR.backdrop} 32%, rgba(20,24,29,0))`,
         }}
       />
 
@@ -240,11 +240,12 @@ function Scene({ scene }: { scene: SceneSegment }): React.JSX.Element {
         <p
           style={{
             fontFamily: BODY,
-            fontWeight: 700,
-            fontSize: 30,
+            fontWeight: 600,
+            fontSize: 26,
             color: COLOR.onDark,
             margin: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.3,
+            maxWidth: 1000,
           }}
         >
           {scene.caption}

@@ -65,12 +65,13 @@ async function main() {
   const chromiumOptions = { gl: "swiftshader" };
 
   // Poster: a SETTLED frame in the author scene's static tail (the open step
-  // grid, ~10.7s in — window + caption on, no cursor motion). A settled frame
-  // keeps the poster near-identical run-to-run so the CI bot's poster pixel-diff
+  // grid, ~12.3s into the composition — intro card 4.0s + the author clip's
+  // final settle, window + caption on, cursor at rest). A settled frame keeps
+  // the poster near-identical run-to-run so the CI bot's poster pixel-diff
   // reflects real UI changes, not recording jitter. Update if the timeline
-  // (apps/web/remotion/timeline.ts) reorders scenes materially.
+  // (apps/web/remotion/timeline.ts) reorders scenes or retimes the author clip.
   const posterFrame = Math.min(
-    Math.round(10.7 * composition.fps),
+    Math.round(12.3 * composition.fps),
     composition.durationInFrames - 1,
   );
   console.log(`[explainer] rendering poster (frame ${posterFrame})…`);

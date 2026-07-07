@@ -3,7 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
-import { HEIGHT, SCENES, WIDTH } from "../remotion/timeline";
+import { REC_HEIGHT, REC_WIDTH, SCENES } from "../remotion/timeline";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
@@ -50,13 +50,71 @@ function chromiumExecutable(): string | undefined {
   return existsSync(preinstalled) ? preinstalled : undefined;
 }
 
+// A visible pointer for the screencast. Playwright drives the REAL mouse (it
+// moves to an element's centre before clicking), but browser recordings don't
+// paint a hardware cursor — so we inject our own ring that follows mousemove,
+// glides between targets (CSS transition), and fires a ripple on mousedown.
+// This is what lets a first-time viewer see *where* every tap lands.
+const CURSOR_INIT = `(() => {
+  const ACCENT = "rgba(79,134,198,0.95)";
+  const install = () => {
+    if (document.getElementById("__tour_cursor__")) return;
+    if (!document.body) return;
+    const ring = document.createElement("div");
+    ring.id = "__tour_cursor__";
+    Object.assign(ring.style, {
+      position: "fixed", left: "0", top: "0", width: "30px", height: "30px",
+      marginLeft: "-15px", marginTop: "-15px", borderRadius: "50%",
+      border: "3px solid " + ACCENT, background: "rgba(79,134,198,0.16)",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.35)", pointerEvents: "none",
+      zIndex: "2147483647", transform: "translate(-120px,-120px)",
+      transition: "transform 0.34s cubic-bezier(0.22,0.61,0.36,1)", willChange: "transform",
+    });
+    const dot = document.createElement("div");
+    Object.assign(dot.style, {
+      position: "absolute", left: "50%", top: "50%", width: "6px", height: "6px",
+      marginLeft: "-3px", marginTop: "-3px", borderRadius: "50%",
+      background: "rgba(47,93,143,0.95)",
+    });
+    ring.appendChild(dot);
+    document.body.appendChild(ring);
+    let x = -120, y = -120;
+    window.addEventListener("mousemove", (e) => {
+      x = e.clientX; y = e.clientY;
+      ring.style.transform = "translate(" + x + "px," + y + "px)";
+    }, true);
+    window.addEventListener("mousedown", () => {
+      ring.animate(
+        [{ transform: "translate(" + x + "px," + y + "px) scale(0.65)" },
+         { transform: "translate(" + x + "px," + y + "px) scale(1)" }],
+        { duration: 300, easing: "ease-out" },
+      );
+      const r = document.createElement("div");
+      Object.assign(r.style, {
+        position: "fixed", left: x + "px", top: y + "px", width: "16px", height: "16px",
+        marginLeft: "-8px", marginTop: "-8px", borderRadius: "50%",
+        border: "3px solid " + ACCENT, pointerEvents: "none", zIndex: "2147483646",
+        transform: "scale(1)", opacity: "1",
+        transition: "transform 0.55s ease-out, opacity 0.55s ease-out",
+      });
+      (document.body || document.documentElement).appendChild(r);
+      requestAnimationFrame(() => { r.style.transform = "scale(3.6)"; r.style.opacity = "0"; });
+      setTimeout(() => r.remove(), 600);
+    }, true);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+  document.addEventListener("DOMContentLoaded", install);
+})()`;
+
 /** A recorded page in its own video context (one webm per scene). */
 async function recordScene(browser: Browser, flow: (page: Page) => Promise<void>): Promise<Page> {
   const context = await browser.newContext({
     baseURL: BASE_URL,
-    viewport: { width: WIDTH, height: HEIGHT },
-    recordVideo: { dir: CLIPS_DIR, size: { width: WIDTH, height: HEIGHT } },
+    viewport: { width: REC_WIDTH, height: REC_HEIGHT },
+    recordVideo: { dir: CLIPS_DIR, size: { width: REC_WIDTH, height: REC_HEIGHT } },
   });
+  await context.addInitScript(CURSOR_INIT);
   const page = await context.newPage();
   await seedAuth(page, USER);
   await flow(page);
@@ -64,8 +122,10 @@ async function recordScene(browser: Browser, flow: (page: Page) => Promise<void>
   return page;
 }
 
-/** Deliberate on-screen pacing for the screencast (see header). */
-const beat = (page: Page, ms = 650) => page.waitForTimeout(ms);
+/** Deliberate on-screen pacing for the screencast (see header). Held longer
+ * than a real user would pause so the ring cursor's glide + click ripple read
+ * clearly, and a first-timer can see the result of each action settle. */
+const beat = (page: Page, ms = 950) => page.waitForTimeout(ms);
 
 async function saveClip(page: Page, file: string): Promise<void> {
   const video = page.video();
@@ -164,7 +224,7 @@ async function recordAll(browser: Browser): Promise<void> {
       await page.getByLabel("Figure name").fill(figure);
       await page.getByLabel("Figure name").press("Enter");
       await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
-      await beat(page, 420);
+      await beat(page, 750);
     }
     await page.evaluate(() => window.scrollTo(0, 0));
     await beat(page);
@@ -176,7 +236,7 @@ async function recordAll(browser: Browser): Promise<void> {
     await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({
       timeout: 15_000,
     });
-    await beat(page, 1400);
+    await beat(page, 2000);
   });
   await saveClip(authorPage, scene("author").clip);
 
@@ -211,15 +271,15 @@ async function recordAll(browser: Browser): Promise<void> {
     await beat(page);
     await panel.getByLabel("Kind").selectOption("lesson");
     await panel.getByRole("textbox", { name: /^note$/i }).fill("Keep the head left.");
-    await beat(page, 400);
+    await beat(page, 700);
     await panel.getByRole("button", { name: /add note/i }).click();
     await expect(panel.getByText("Keep the head left.")).toBeVisible({ timeout: 15_000 });
     await beat(page);
     await panel.getByRole("textbox", { name: /reply/i }).fill("On every Feather.");
-    await beat(page, 400);
+    await beat(page, 700);
     await panel.getByRole("button", { name: /post reply/i }).click();
     await expect(panel.getByText("On every Feather.")).toBeVisible({ timeout: 15_000 });
-    await beat(page, 1200);
+    await beat(page, 1900);
   });
   await saveClip(annotatePage, scene("annotate").clip);
 
@@ -236,10 +296,10 @@ async function recordAll(browser: Browser): Promise<void> {
     await expect(entries.getByText(/through the whole Natural Turn/)).toBeVisible({
       timeout: 15_000,
     });
-    await beat(page, 1400);
+    await beat(page, 1900);
     // Filter to lessons — a designed interaction, and it keeps the shot lively.
     await page.getByRole("button", { name: /^lessons$/i }).click();
-    await beat(page, 1600);
+    await beat(page, 2200);
   });
   await saveClip(journalPage, scene("journal").clip);
 

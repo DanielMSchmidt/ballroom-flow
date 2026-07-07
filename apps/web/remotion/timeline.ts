@@ -15,6 +15,15 @@ export const FPS = 30;
 export const WIDTH = 1280;
 export const HEIGHT = 720;
 
+// The recorder films at a NARROWER desktop viewport than the composition frame.
+// The app content is a 672px centred column; at 1280px it floats in ~192px of
+// empty gutter each side (why the UI "looks small"). 1024px is the smallest
+// width that still keeps the desktop layout — the side rail + centred dialogs
+// the @video journey selects by role — so recording here nearly halves the
+// gutters and makes every control noticeably bigger without changing structure.
+export const REC_WIDTH = 1024;
+export const REC_HEIGHT = 720;
+
 /** Seconds → whole frames at the composition FPS. */
 export const sec = (s: number): number => Math.round(s * FPS);
 
@@ -37,7 +46,8 @@ export interface SceneSegment {
   /** Clip file written by the journey, under remotion/public/clips/. */
   clip: string;
   seconds: number;
-  /** Speed the raw journey clip up to fit its window without dead air. */
+  /** Playback speed for the raw journey clip. 1.0 = real time (the recorder
+   * already bakes in generous pauses); >1 fast-forwards, <1 slows further. */
   playbackRate: number;
   /** Mono eyebrow in the lower-third. */
   kicker: string;
@@ -53,61 +63,69 @@ export const TIMELINE: Segment[] = [
     type: "card",
     id: "intro",
     variant: "intro",
-    seconds: 2.6,
+    seconds: 4,
     kicker: "WEAVE STEPS",
     title: "Build ballroom choreography, step by step.",
-    subtitle: "A mobile-first studio for couples and coaches.",
+    subtitle: "A calm, mobile-first studio for couples and coaches. Let's take a slow tour.",
   },
   {
     type: "scene",
     id: "author",
     clip: "author.webm",
-    seconds: 8.5,
-    playbackRate: 2.4,
-    kicker: "AUTHOR",
-    caption: "Assemble a routine figure by figure — then notate every step.",
+    // Real-time (1.0×) — the recorder already builds in generous pauses, so we
+    // play the clip at natural speed rather than fast-forwarding it. `seconds`
+    // matches the recorded clip length so there's no dead-air freeze at the end.
+    // (Clip durations measured from public/clips/*.webm; re-tune if the journey
+    // beats change.)
+    seconds: 9.3,
+    playbackRate: 1.0,
+    kicker: "1 · START A ROUTINE",
+    caption:
+      "Tap “New choreo”, give it a name, then add figures one at a time. Nothing is locked in — you can rename or remove anything.",
   },
   {
     type: "card",
     id: "coach-info",
     variant: "info",
-    seconds: 2.2,
+    seconds: 3.6,
     kicker: "COACH & COLLABORATE",
-    title: "Leave lessons on any step.",
-    subtitle: "Corrections, drills and notes — anchored where they belong.",
+    title: "Every step can hold a note.",
+    subtitle: "Corrections, drills and reminders — pinned exactly where they belong.",
   },
   {
     type: "scene",
     id: "annotate",
     clip: "annotate.webm",
-    seconds: 7.5,
-    playbackRate: 2.2,
-    kicker: "ANNOTATE",
-    caption: "Add a lesson, reply in a thread, and filter the ones that matter.",
+    seconds: 8.4,
+    playbackRate: 1.0,
+    kicker: "2 · LEAVE A NOTE",
+    caption:
+      "Open a step, choose a note type and write it. Reply underneath to build a thread — just like chatting about the dance.",
   },
   {
     type: "card",
     id: "journal-info",
     variant: "info",
-    seconds: 2.2,
+    seconds: 3.6,
     kicker: "PRACTICE JOURNAL",
-    title: "Every lesson flows into your journal.",
-    subtitle: "Across every routine, ready for your next practice.",
+    title: "Every note flows into your journal.",
+    subtitle: "Gathered across every routine, ready for your next practice.",
   },
   {
     type: "scene",
     id: "journal",
     clip: "journal.webm",
-    seconds: 6.5,
-    playbackRate: 2.0,
-    kicker: "JOURNAL",
-    caption: "Notes you write while building surface, cross-routine, in one place.",
+    seconds: 5.1,
+    playbackRate: 1.0,
+    kicker: "3 · REVIEW & PRACTISE",
+    caption:
+      "Open the Journal to see notes from all your routines together. Filter to just lessons when you want to focus.",
   },
   {
     type: "card",
     id: "outro",
     variant: "outro",
-    seconds: 3,
+    seconds: 4,
     kicker: "GET STARTED",
     title: "Weave your next routine.",
     subtitle: "Free to start · works on your phone",
