@@ -7,7 +7,7 @@
 // worker passes `newId`. Figures are separate docs (figureRef) — created and
 // seeded before the routine by the caller.
 import type { DanceId } from "./dances";
-import type { Attribute, FigureDoc, RoutineDoc } from "./doc-types";
+import type { FigureDoc, RoutineDoc } from "./doc-types";
 import { LIBRARY_FIGURES } from "./library";
 import { CURRENT_SCHEMA_VERSION } from "./migrations";
 import { keyBetween, sequentialKeys } from "./order";
@@ -52,7 +52,7 @@ export function buildGoldenWaltzBasic(
       dance: WALTZ,
       name: lib.name,
       source: "custom",
-      attributes: (lib.attributes ?? []) as Attribute[],
+      attributes: lib.attributes ?? [],
       schemaVersion: CURRENT_SCHEMA_VERSION,
       deletedAt: null,
     });

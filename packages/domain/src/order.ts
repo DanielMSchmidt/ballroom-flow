@@ -97,8 +97,10 @@ export function sortByOrder<T extends Ordered>(items: readonly T[]): T[] {
     return items.slice();
   }
   return items.slice().sort((x, y) => {
-    const xk = x.sortKey as string;
-    const yk = y.sortKey as string;
+    // Past the `every(... typeof === "string")` guard above, both keys are strings;
+    // `?? ""` re-expresses that for the closure without an assertion.
+    const xk = x.sortKey ?? "";
+    const yk = y.sortKey ?? "";
     if (xk !== yk) return xk < yk ? -1 : 1;
     return x.id < y.id ? -1 : x.id > y.id ? 1 : 0;
   });

@@ -8,7 +8,7 @@
 // Picking a preset seeds an owned figure with this canonical name + figureType —
 // the cross-routine identity that later enables figure-level features;
 // notation is then entered on the timeline (US-028).
-import type { DanceId } from "./dances";
+import { type DanceId, isDanceId } from "./dances";
 import type { Alignment, Attribute } from "./doc-types";
 import { authoredAlignment } from "./figure-steps";
 import { LIBRARY_FIGURE_DATA } from "./library-data";
@@ -113,8 +113,10 @@ export function parseGlobalFigureRef(ref: string): { dance: DanceId; figureType:
   if (sep === -1) return null;
   const dance = rest.slice(0, sep);
   const figureType = rest.slice(sep + 1);
-  if (!dance || !figureType) return null;
-  return { dance: dance as DanceId, figureType };
+  // Validate the dance segment instead of trusting it — a `global:bogus:x` ref must
+  // return null, not a `FigureDoc` with an invalid `dance` (CLAUDE.md §4).
+  if (!isDanceId(dance) || !figureType) return null;
+  return { dance, figureType };
 }
 
 /**

@@ -61,7 +61,7 @@ function changesByActor<T>(doc: A.Doc<T>, actorId: string): ChangeMeta[] {
     .map((c) => ({
       actor: c.actor,
       seq: c.seq,
-      hash: c.hash as string,
+      hash: c.hash,
       deps: c.deps,
       message: c.message,
     }))
@@ -238,7 +238,7 @@ function recordIdentityOps(
       if (patch.action === "splice" && typeof patch.value === "string") {
         obj[field] = cur.slice(0, rawKey) + patch.value + cur.slice(rawKey);
       } else if (patch.action === "del") {
-        const len = (patch as { length?: number }).length ?? 1;
+        const len = patch.length ?? 1;
         obj[field] = cur.slice(0, rawKey) + cur.slice(rawKey + len);
       } else {
         continue;
@@ -252,13 +252,13 @@ function recordIdentityOps(
     switch (patch.action) {
       case "put": {
         const idPath = identityPath(sim, containerPath);
-        (container as Record<string | number, unknown>)[rawKey] = patch.value as unknown;
+        (container as Record<string | number, unknown>)[rawKey] = patch.value;
         recordSet(idPath, String(rawKey));
         break;
       }
       case "del": {
         if (Array.isArray(container) && typeof rawKey === "number") {
-          const len = (patch as { length?: number }).length ?? 1;
+          const len = patch.length ?? 1;
           const idPath = identityPath(sim, containerPath);
           for (let i = 0; i < len && rawKey < container.length; i += 1) {
             const [removed] = container.splice(rawKey, 1);
@@ -276,7 +276,7 @@ function recordIdentityOps(
         const idPath = identityPath(sim, containerPath);
         const after =
           rawKey > 0 && rawKey - 1 < container.length ? elemKeyOf(container[rawKey - 1]) : null;
-        const inserted = (patch.values as unknown[]).map((v) =>
+        const inserted = patch.values.map((v) =>
           v !== null && typeof v === "object" ? structuredClone(v) : v,
         );
         container.splice(rawKey, 0, ...inserted);
@@ -373,10 +373,10 @@ function invertChange<T>(doc: A.Doc<T>, target: ChangeMeta, message: string): A.
   // AFTER→BEFORE diff = the patches that revert this change (historical coords).
   const inverse = A.diff(doc, [target.hash], target.deps);
   // The historical state those coordinates are exact in.
-  const sim = A.toJS(A.view(doc, [target.hash])) as unknown;
+  const sim: unknown = A.toJS(A.view(doc, [target.hash]));
   const { ops, sets } = recordIdentityOps(sim, inverse);
   return A.change(doc, { message }, (draft) => {
-    applyIdentityOps(draft as unknown, sim, ops, sets);
+    applyIdentityOps(draft, sim, ops, sets);
   });
 }
 

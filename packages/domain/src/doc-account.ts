@@ -30,7 +30,7 @@ import { newId } from "./ids";
 
 /** Build an in-memory Automerge account doc from its logical shape. */
 export function buildAccountDoc(account: AccountDoc): A.Doc<AccountDoc> {
-  return buildDoc(account as unknown as Record<string, unknown>) as A.Doc<AccountDoc>;
+  return buildDoc(account);
 }
 
 /** Read an account doc as a plain POJO; tombstoned notes/replies dropped by default. */

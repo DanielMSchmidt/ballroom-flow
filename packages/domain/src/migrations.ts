@@ -26,7 +26,7 @@
 // current in storage — not just lenient-read-shimmed on the way out. Every
 // fresh-doc call site stamps `CURRENT_SCHEMA_VERSION` (never a literal `1`).
 
-import { DANCES, type DanceId } from "./dances";
+import { DANCES, isDanceId } from "./dances";
 import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
@@ -75,7 +75,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   2: (doc) => {
     if (!("overlay" in doc)) return doc;
     const { overlay: _dropped, ...rest } = doc;
-    return rest as VersionedDoc;
+    return rest;
   },
 
   // v3 → v4 (#63 same-section reorder convergence): assign a fractional-index
@@ -120,12 +120,12 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   4: (doc) => {
     if (typeof doc.bars !== "number") return { ...doc };
     const { bars, ...rest } = doc;
-    if (typeof doc.counts === "number") return rest as VersionedDoc; // counts wins
-    const dance = typeof doc.dance === "string" ? (doc.dance as DanceId) : undefined;
+    if (typeof doc.counts === "number") return rest; // counts wins
+    const dance = isDanceId(doc.dance) ? doc.dance : undefined;
     const meter = dance ? DANCES[dance] : undefined;
     if (!meter) return { ...doc }; // not a figure doc we can meter — leave as-is
     const counts = Math.max(1, Math.floor(bars)) * meter.beatsPerBar;
-    return { ...rest, counts } as VersionedDoc;
+    return { ...rest, counts };
   },
 };
 
