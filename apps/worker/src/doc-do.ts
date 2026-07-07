@@ -31,9 +31,9 @@ import {
   CURRENT_SCHEMA_VERSION,
   can,
   DANCES,
-  type DanceId,
   type EffectiveRole,
   type FigureDoc,
+  isDanceId,
   libraryFigureByRef,
   migrateDraft,
   newId,
@@ -156,8 +156,12 @@ const MIGRATION_MESSAGE = "ballroom:migrate";
 const STORAGE_VERSION = 1;
 
 export class DocDO extends DurableObject<Env> {
-  /** In-memory Automerge doc; `null` until first load/cold-load from SQLite. */
-  private doc: A.Doc<RoutineDoc> | null = null;
+  /** In-memory Automerge doc; `null` until first load/cold-load from SQLite.
+   *  One DocDO class hosts BOTH a routine doc and a figure doc (which one is fixed
+   *  at seed time), so the field is honestly typed as either. Routine-shaped access
+   *  goes through {@link getDoc} (the routine accessor); figure reads use
+   *  `loadPersisted<FigureDoc>()`. */
+  private doc: A.Doc<RoutineDoc | FigureDoc> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -200,7 +204,11 @@ export class DocDO extends DurableObject<Env> {
    * creation changes — making the cold-load path self-contained.
    */
   private getDoc(): A.Doc<RoutineDoc> {
-    if (this.doc) return this.doc;
+    // The ROUTINE accessor: it materializes an empty routine on first touch and is
+    // only reached by routine-hosting paths (setMetadata/applyOp/getSnapshot). A
+    // figure DO never routes here — it reads via `loadPersisted<FigureDoc>()`. So
+    // narrowing the dual-host field to RoutineDoc here is sound by construction.
+    if (this.doc) return this.doc as A.Doc<RoutineDoc>;
 
     const persisted = this.loadPersisted();
     if (persisted) {
@@ -362,9 +370,9 @@ export class DocDO extends DurableObject<Env> {
     const { doc: after, changed } = reconcileSeededFigure(before, seed);
     if (!changed) return { changed: false };
     const changes = A.getChanges(before, after);
-    // `this.doc` is typed to RoutineDoc for the DO's routine-hosting majority; a
-    // figure DO holds a FigureDoc at runtime (the known dual-host seam).
-    this.doc = after as unknown as A.Doc<RoutineDoc>;
+    // `this.doc` holds this figure DO's FigureDoc — assignable to the dual-host
+    // field with no cast now that the field is `A.Doc<RoutineDoc | FigureDoc>`.
+    this.doc = after;
     this.persist(changes);
     await this.maybeScheduleCompaction();
     // Live clients of this doc see the refreshed catalog content immediately.
@@ -1016,7 +1024,7 @@ export class DocDO extends DurableObject<Env> {
     const routineRef = meta?.docRef ?? raw.id ?? meta?.doName;
     const ownerId = raw.ownerId;
     if (!routineRef || !ownerId) return; // can't attribute the minted docs yet
-    const dance = (typeof raw.dance === "string" ? raw.dance : "waltz") as DanceId;
+    const dance = isDanceId(raw.dance) ? raw.dance : "waltz";
 
     // 1. Mint + project + seed every Break figure BEFORE touching the routine.
     const refByPlacement = new Map<string, string>();
@@ -1232,12 +1240,14 @@ export class DocDO extends DurableObject<Env> {
     type: string,
     dance: string | null,
   ): Promise<{ bars: number | null; figureCount: number | null }> {
-    const doc = this.loadPersisted();
-    if (!doc) return { bars: null, figureCount: null };
+    const none = { bars: null, figureCount: null };
 
     if (type === "routine") {
+      const doc = this.loadPersisted();
+      if (!doc) return none;
       const routine = readRoutine(doc); // tombstones dropped → live placements only
-      const beatsPerBar = DANCES[(routine.dance ?? "waltz") as DanceId].beatsPerBar;
+      // `routine.dance` is already a `DanceId`; `?? "waltz"` covers a legacy doc.
+      const beatsPerBar = DANCES[routine.dance ?? "waltz"].beatsPerBar;
       const placementRefs: string[] = [];
       let breakBars = 0; // a break contributes bars but isn't a figure (US-004a)
       let partBars = 0; // portioned placements span their WINDOW (Builder v3 ③)
@@ -1269,12 +1279,18 @@ export class DocDO extends DurableObject<Env> {
     }
 
     if (type === "global-figure" || type === "account-figure") {
-      // Defensive: a figure-typed DO whose content was never seeded as a FigureDoc
-      // (e.g. an auto-materialized empty-routine placeholder from a stray getDoc)
-      // has no `attributes` — treat it as an empty (1-bar) figure rather than
-      // letting readFigure throw and abort the whole projection.
-      const figure = A.toJS(doc) as Partial<FigureDoc>;
-      const figureDance = (figure.dance ?? dance ?? "waltz") as DanceId;
+      const doc = this.loadPersisted<FigureDoc>();
+      if (!doc) return none;
+      const figure = A.toJS(doc);
+      // `dance` (the D1-projected column) is a plain string; fall back through it
+      // and finally "waltz" when the figure carries no valid dance.
+      const figureDance = isDanceId(figure.dance)
+        ? figure.dance
+        : isDanceId(dance)
+          ? dance
+          : "waltz";
+      // Defensive: a never-seeded figure doc has no `attributes` — treat it as an
+      // empty timeline rather than letting the read throw and abort the projection.
       const counts = (figure.attributes ?? [])
         .filter((a) => a.deletedAt == null)
         .map((a) => a.count);
@@ -1291,7 +1307,7 @@ export class DocDO extends DurableObject<Env> {
       return { bars, figureCount: null };
     }
 
-    return { bars: null, figureCount: null }; // account / unknown — no card counts
+    return none; // account / unknown — no card counts
   }
 
   /**
