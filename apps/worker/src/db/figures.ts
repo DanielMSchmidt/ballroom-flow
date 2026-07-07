@@ -97,6 +97,18 @@ export async function createGlobalFigureRow(
   return (res.meta?.changes ?? 0) > 0;
 }
 
+/** D30 ⟳: keep the registry's display title in step with an authoritative re-seed. */
+export async function updateGlobalFigureRowTitle(
+  db: D1Database,
+  docRef: string,
+  title: string,
+): Promise<void> {
+  await db
+    .prepare("UPDATE document_registry SET title = ?, updatedAt = ? WHERE docRef = ?")
+    .bind(title, Date.now(), docRef)
+    .run();
+}
+
 export interface GlobalFigureRow {
   docRef: string;
   figureType: string | null;
