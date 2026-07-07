@@ -69,6 +69,24 @@ describe("US-025 Create a routine (UI)", () => {
   });
 });
 
+describe("routines list loading state", () => {
+  it("shows a loading placeholder — NOT the empty-state tour video — while routines load", async () => {
+    // Intent: the empty state (and its inline product-tour <video>) must not
+    // render before the list has loaded, or it flashes in and is immediately
+    // replaced once routines arrive (which also destabilises the marketing shot).
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    renderUi(<ChoreoList ownedCount={0} plan="free" loading />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  it("shows the empty state with the tour video once loaded and empty", async () => {
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    expect(document.querySelector("video")).not.toBeNull();
+  });
+});
+
 // US-037 Choreo fork ("make it your own"): the fork affordance ("Make a copy")
 // and the "Forked copy" lineage badge live on the OPEN routine (the Assemble
 // header), not on a list card — so the component coverage is in
