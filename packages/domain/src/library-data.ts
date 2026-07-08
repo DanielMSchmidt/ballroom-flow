@@ -15,7 +15,7 @@ export interface LibraryFigureData {
   notes?: string[];
 }
 
-/** 265 canonical figures across the five Standard dances. */
+/** 280 canonical figures across the five Standard dances. */
 export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "waltz", figureType: "back-lock", name: "Back Lock" },
   {
@@ -192,6 +192,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "waltz",
+    figureType: "hinge",
+    name: "Hinge",
+    timing: "123",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "1 2 3" ("other timings are acceptable"); charted as "123" to give one step per count.',
+    ],
+  },
+  {
+    dance: "waltz",
     figureType: "hover-corte",
     name: "Hover Corté",
     timing: "123",
@@ -348,6 +360,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "waltz",
+    figureType: "oversway",
+    name: "Oversway",
+    timing: "123",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "1 2 3" ("other timings are acceptable"); charted as "123" to give one step per count.',
+    ],
+  },
+  {
+    dance: "waltz",
     figureType: "overturned-running-spin-turn",
     name: "Overturned Running Spin Turn",
     timing: "QQQQ&QQQQ&Q",
@@ -485,6 +509,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "waltz",
+    figureType: "same-foot-lunge",
+    name: "Same Foot Lunge",
+    timing: "123 1",
+    start: "RF fwd (Lady LF back)",
+    finish:
+      "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "1 2 3 123" ("other timings are acceptable"); charted as "123 1" to give one step per count.',
+    ],
+  },
+  {
+    dance: "waltz",
     figureType: "telemark",
     name: "Telemark",
     timing: "123",
@@ -509,6 +546,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - Foot Placement/Couple Position: may start LF fwd in CBMP in Wing Position.",
       "NOTE - Type of Sway: (1) on step 1 it is possible to use Cosmetic Sway to R for the Man and to L for the Lady, maintaining the sway on the 1st part of step 2, changing it on the 2nd part of step 2 to Technical Sway to L for the Man and to R for the Lady. Step 3 as chart.",
       "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 17, p. 81.",
+    ],
+  },
+  {
+    dance: "waltz",
+    figureType: "throwaway-oversway",
+    name: "Throwaway Oversway",
+    timing: "123",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish:
+      "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+      'idans lists timing "123" for this dance ("other timings are acceptable").',
     ],
   },
   { dance: "waltz", figureType: "turning-lock", name: "Turning Lock" },
@@ -1545,6 +1595,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "quickstep",
+    figureType: "hinge",
+    name: "Hinge",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q S" ("other timings are acceptable"); charted as "QQS" to give one step per count.',
+    ],
+  },
+  {
+    dance: "quickstep",
     figureType: "hover-corte",
     name: "Hover Corté",
     timing: "SSS",
@@ -1701,6 +1763,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 31, p. 115.",
     ],
   },
+  {
+    dance: "quickstep",
+    figureType: "oversway",
+    name: "Oversway",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q S" ("other timings are acceptable"); charted as "QQS" to give one step per count.',
+    ],
+  },
   { dance: "quickstep", figureType: "progressive-chasse", name: "Progressive Chassé" },
   {
     dance: "quickstep",
@@ -1838,6 +1912,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "quickstep",
+    figureType: "same-foot-lunge",
+    name: "Same Foot Lunge",
+    timing: "SQQS",
+    start: "RF fwd (Lady LF back)",
+    finish:
+      "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "S Q Q SS" ("other timings are acceptable"); charted as "SQQS" to give one step per count.',
+    ],
+  },
+  {
+    dance: "quickstep",
     figureType: "six-quick-run",
     name: "Six Quick Run",
     timing: "QQQQQQ",
@@ -1877,6 +1964,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "NOTE - Sway: Cosmetic Sway to right (Man) and left (Lady) may be used on step 1. The Cosmetic Sway should be maintained on the first part of step 2 and changed to Technical Sway to left (Man) and right (Lady) on second part of step 2. Step 3 as chart.",
       "NOTE - Timing: alternative timing S S S may be used.",
       "Charted from WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 21, p. 93.",
+    ],
+  },
+  {
+    dance: "quickstep",
+    figureType: "throwaway-oversway",
+    name: "Throwaway Oversway",
+    timing: "SSS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish:
+      "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+      'idans lists timing "SSS" for this dance ("other timings are acceptable").',
     ],
   },
   {
@@ -2219,6 +2319,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
+    figureType: "hinge",
+    name: "Hinge",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q S" ("other timings are acceptable"); charted as "QQS" to give one step per count.',
+    ],
+  },
+  {
+    dance: "foxtrot",
     figureType: "hover-corte",
     name: "Hover Corte",
     timing: "SQQ",
@@ -2491,6 +2603,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
+    figureType: "oversway",
+    name: "Oversway",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q S" ("other timings are acceptable"); charted as "QQS" to give one step per count.',
+    ],
+  },
+  {
+    dance: "foxtrot",
     figureType: "quick-open-reverse-turn",
     name: "Quick Open Reverse Turn",
     timing: "SQ&QQQ",
@@ -2541,6 +2665,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   },
   {
     dance: "foxtrot",
+    figureType: "same-foot-lunge",
+    name: "Same Foot Lunge",
+    timing: "SQQS",
+    start: "RF fwd (Lady LF back)",
+    finish:
+      "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "S Q Q SS" ("other timings are acceptable"); charted as "SQQS" to give one step per count.',
+    ],
+  },
+  {
+    dance: "foxtrot",
     figureType: "telemark",
     name: "Telemark",
     timing: "SQQ",
@@ -2571,6 +2708,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     start: "LF fwd (Closed Position)",
     finish: "LF fwd (Closed Position)",
     notes: ["Charted from WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 2, p. 51."],
+  },
+  {
+    dance: "foxtrot",
+    figureType: "throwaway-oversway",
+    name: "Throwaway Oversway",
+    timing: "SSS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish:
+      "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+      'idans lists timing "SSS" for this dance ("other timings are acceptable").',
+    ],
   },
   {
     dance: "foxtrot",
@@ -2778,7 +2928,18 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
       "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 5, p. 63.",
     ],
   },
-  { dance: "tango", figureType: "contra-check", name: "Contra Check" },
+  {
+    dance: "tango",
+    figureType: "contra-check",
+    name: "Contra Check",
+    timing: "SQQ",
+    start: "LF fwd in CBMP (knees flexed)",
+    finish: "LF placed to side in PP (w/o weight)",
+    notes: [
+      "NOTE - Type of Sway: during the sway the Man and the Lady will use a translation to L with the upper part of the body.",
+      "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 41, p. 163.",
+    ],
+  },
   {
     dance: "tango",
     figureType: "drop-oversway",
@@ -2874,6 +3035,19 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: [
       "NOTE - Timing: alternative timing QQQQ may be used.",
       "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 27, p. 119.",
+    ],
+  },
+  {
+    dance: "tango",
+    figureType: "hinge",
+    name: "Hinge",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish: "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q S or Q Q SS" ("other timings are acceptable"); charted as "QQS" to give one step per count.',
+      "Tango omits rise & fall; danced with Tango character (staccato, no swing into 1-2).",
     ],
   },
   { dance: "tango", figureType: "lf-and-rf-rocks", name: "LF and RF Rocks" },
@@ -3268,6 +3442,20 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
   { dance: "tango", figureType: "rock-turn", name: "Rock Turn" },
   {
     dance: "tango",
+    figureType: "same-foot-lunge",
+    name: "Same Foot Lunge",
+    timing: "QQ&S",
+    start: "RF fwd (Lady LF back)",
+    finish:
+      "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+      'Source timing for this dance: "Q Q & S or Q Q & SS or Q Q Q QS" ("other timings are acceptable"); charted as "QQ&S" to give one step per count.',
+      "Tango omits rise & fall; danced with Tango character (staccato, no swing into 1-2).",
+    ],
+  },
+  {
+    dance: "tango",
     figureType: "tango-walk",
     name: "Tango Walk",
     timing: "SS",
@@ -3301,6 +3489,20 @@ export const LIBRARY_FIGURE_DATA: readonly LibraryFigureData[] = [
     notes: ["Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 32, p. 129."],
   },
   { dance: "tango", figureType: "the-chase", name: "The Chase" },
+  {
+    dance: "tango",
+    figureType: "throwaway-oversway",
+    name: "Throwaway Oversway",
+    timing: "QQS",
+    start: "RF back, toe turned in (Lady LF fwd)",
+    finish:
+      "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    notes: [
+      "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+      'idans lists timing "QQS" for this dance ("other timings are acceptable").',
+      "Tango omits rise & fall and is danced with Tango character.",
+    ],
+  },
   { dance: "tango", figureType: "walk", name: "Walk" },
   {
     dance: "tango",

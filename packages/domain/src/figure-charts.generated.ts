@@ -10234,6 +10234,53 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
+  "tango:contra-check": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
+        head: "Direct back and leftwards, head ends in pos. 1",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+        rotation: "Slightly to R with shoulders (Ligh.), then to R with shoulders (Lead.)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "Flat F",
+        bodyActions: ["CBM"],
+        rotation: "Slightly to R with shoulders (Light.), then to R with hips (Lead.)",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "quarter_R",
+      },
+    },
+  ],
   "viennese_waltz:chasse-change-step": [
     {
       rise: "commence",
@@ -14796,6 +14843,732 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
+  "waltz:throwaway-oversway": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "foxtrot:throwaway-oversway": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "quickstep:throwaway-oversway": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "tango:throwaway-oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "waltz:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "foxtrot:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "quickstep:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "foxtrot:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "quickstep:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "tango:hinge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "waltz:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "foxtrot:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "quickstep:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "tango:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
 };
 
 /** Figure-level entry/exit alignment (per-figure, leader's perspective), where charted. */
@@ -16283,6 +17056,16 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         direction: "DW",
       },
     },
+    "tango:contra-check": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
     "viennese_waltz:chasse-change-step": {
       entry: {
         qualifier: "facing",
@@ -16907,6 +17690,156 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       exit: {
         qualifier: "backing",
         direction: "DW",
+      },
+    },
+    "waltz:throwaway-oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:throwaway-oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "quickstep:throwaway-oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:throwaway-oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "waltz:oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "quickstep:oversway": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+    },
+    "waltz:hinge": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "foxtrot:hinge": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "quickstep:hinge": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "tango:hinge": {
+      entry: {
+        qualifier: "backing",
+        direction: "DC",
+      },
+      exit: {
+        qualifier: "pointing",
+        direction: "DW",
+      },
+    },
+    "waltz:same-foot-lunge": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "foxtrot:same-foot-lunge": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "quickstep:same-foot-lunge": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
+      },
+    },
+    "tango:same-foot-lunge": {
+      entry: {
+        qualifier: "facing",
+        direction: "DW",
+      },
+      exit: {
+        qualifier: "facing",
+        direction: "LOD",
       },
     },
   };

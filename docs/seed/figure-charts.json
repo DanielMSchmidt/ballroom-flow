@@ -14514,6 +14514,80 @@
    }
   },
   {
+   "dance": "tango",
+   "figureType": "contra-check",
+   "source": "WDSF Technique Book — Tango (2nd ed., May 2013), fig. 41, p. 163-164",
+   "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book page images (Man + Lady, Side 1 + Side 2, pp. 163-164); Tango omits rise & fall so no rise cells exist.",
+   "note": "Tango timing S Q Q (beats 1·2 / 3 / 4). Couple Position: Closed on steps 1-2, Promenade on step 3 (step 1 charted as CBMP per Foot Placement). Sway on step 1 is charted \"To R (Cosmetic)\" (Man) / \"To L (Cosmetic)\" (Lady); the WDSF NOTE adds \"During the Sway the Man and the Lady will use a translation to L with the upper part of the body.\" Step 2 both roles: WDSF charts \"Slightly body turn to R on 2\" (a body rotation, not a quantified foot turn, so left off the turn cell). Follower step 3: WDSF \"1/4 to R between 2 and 3\". Sudden Movement column: \"With Pressure (Go-Stop)\" on steps 1 and 3. Exit alignment (WDSF verbatim, step 3): \"Facing DW, body almost facing W (Next step: Pointing DW, Moving LOD)\".",
+   "steps": [
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "to_R",
+      "bodyActions": [
+       "CBM"
+      ],
+      "rotation": "To L with shoulders (Light.), then to L with shoulders (Dyn.)"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "B",
+      "sway": "to_L",
+      "bodyActions": [
+       "CBM"
+      ],
+      "rotation": "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
+      "head": "Direct back and leftwards, head ends in pos. 1"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ],
+      "rotation": "Slightly to R with shoulders (Ligh.), then to R with shoulders (Lead.)"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "Flat F",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ],
+      "rotation": "Slightly to R with shoulders (Light.), then to R with hips (Lead.)"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none",
+      "turn": "quarter_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
    "dance": "viennese_waltz",
    "figureType": "chasse-change-step",
    "source": "WDSF Technique Book — Viennese Waltz (2nd ed., May 2013), fig. 7, p. 61",
@@ -20885,6 +20959,1066 @@
    "exitAlignment": {
     "qualifier": "backing",
     "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "throwaway-oversway",
+   "source": "https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source (idans.nl / Ballroom Guide 'Advanced Ballroom Figures'); one per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF Technique Book — the books do not chart this figure for this dance. The 4-step Viennese Waltz 'Throwaway Oversway' in this catalog is a distinct figure from a different (WDSF) source.",
+   "note": "idans charts turn as between-steps prose ('1/8 to L between prev. step and 1', '1/4 between 1-2', step-3 'body overturns to L'); charted the clear per-step fractions (leader 1/8+1/4 L; follower 1/8 then 1/4 L) and OMITTED the step-3 overturn (unquantified). Rise given as prose ('lower into / down in a flexed knee'); charted 'lowering' on step 1 only — the figure remains lowered thereafter (omitted, not guessed). Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Man sway L L R; Lady sway S S (slightly L).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "rise": "lowering"
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
+   "figureType": "throwaway-oversway",
+   "source": "https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source (idans.nl / Ballroom Guide 'Advanced Ballroom Figures'); one per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF Technique Book — the books do not chart this figure for this dance. The 4-step Viennese Waltz 'Throwaway Oversway' in this catalog is a distinct figure from a different (WDSF) source.",
+   "note": "idans charts turn as between-steps prose ('1/8 to L between prev. step and 1', '1/4 between 1-2', step-3 'body overturns to L'); charted the clear per-step fractions (leader 1/8+1/4 L; follower 1/8 then 1/4 L) and OMITTED the step-3 overturn (unquantified). Rise given as prose ('lower into / down in a flexed knee'); charted 'lowering' on step 1 only — the figure remains lowered thereafter (omitted, not guessed). Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Man sway L L R; Lady sway S S (slightly L).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "rise": "lowering"
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "throwaway-oversway",
+   "source": "https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source (idans.nl / Ballroom Guide 'Advanced Ballroom Figures'); one per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF Technique Book — the books do not chart this figure for this dance. The 4-step Viennese Waltz 'Throwaway Oversway' in this catalog is a distinct figure from a different (WDSF) source.",
+   "note": "idans charts turn as between-steps prose ('1/8 to L between prev. step and 1', '1/4 between 1-2', step-3 'body overturns to L'); charted the clear per-step fractions (leader 1/8+1/4 L; follower 1/8 then 1/4 L) and OMITTED the step-3 overturn (unquantified). Rise given as prose ('lower into / down in a flexed knee'); charted 'lowering' on step 1 only — the figure remains lowered thereafter (omitted, not guessed). Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Man sway L L R; Lady sway S S (slightly L).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "rise": "lowering"
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "throwaway-oversway",
+   "source": "https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source (idans.nl / Ballroom Guide 'Advanced Ballroom Figures'); one per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF Technique Book — the books do not chart this figure for this dance. The 4-step Viennese Waltz 'Throwaway Oversway' in this catalog is a distinct figure from a different (WDSF) source.",
+   "note": "idans charts turn as between-steps prose ('1/8 to L between prev. step and 1', '1/4 between 1-2', step-3 'body overturns to L'); charted the clear per-step fractions (leader 1/8+1/4 L; follower 1/8 then 1/4 L) and OMITTED the step-3 overturn (unquantified). Rise given as prose ('lower into / down in a flexed knee'); charted 'lowering' on step 1 only — the figure remains lowered thereafter (omitted, not guessed). Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Man sway L L R; Lady sway S S (slightly L). TANGO: rise omitted (Tango has no rise & fall); sway set to none per idans 'be careful not to rise or swing into 1-2' — Tango uses only cosmetic body translation.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "none",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "none",
+      "turn": "quarter_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "oversway",
+   "source": "https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Cross-dance Oversway (3-step fallaway line). Man footwork o/e TH; i/e TH; WF(LF), i/e T(RF); sway L L R; CBM on 1. Turn charted from source fractions (Man 1/8 then 1/4 L; Lady 1/8 then 1/8 L); step-3 'body turns to L' unquantified -> omitted. Rise: Man 'No Rise' (step 1, omitted), slight straighten of knee on 2 (body_rise), lower on 3; Lady mirrors. Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Tango is NOT added here - the catalog already has the 4-step WDSF-book Tango Oversway (superior source).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
+   "figureType": "oversway",
+   "source": "https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Cross-dance Oversway (3-step fallaway line). Man footwork o/e TH; i/e TH; WF(LF), i/e T(RF); sway L L R; CBM on 1. Turn charted from source fractions (Man 1/8 then 1/4 L; Lady 1/8 then 1/8 L); step-3 'body turns to L' unquantified -> omitted. Rise: Man 'No Rise' (step 1, omitted), slight straighten of knee on 2 (body_rise), lower on 3; Lady mirrors. Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Tango is NOT added here - the catalog already has the 4-step WDSF-book Tango Oversway (superior source).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "oversway",
+   "source": "https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Cross-dance Oversway (3-step fallaway line). Man footwork o/e TH; i/e TH; WF(LF), i/e T(RF); sway L L R; CBM on 1. Turn charted from source fractions (Man 1/8 then 1/4 L; Lady 1/8 then 1/8 L); step-3 'body turns to L' unquantified -> omitted. Rise: Man 'No Rise' (step 1, omitted), slight straighten of knee on 2 (body_rise), lower on 3; Lady mirrors. Head weight (Man 'slightly L, L, R'; Lady 'R R L') not modeled. Tango is NOT added here - the catalog already has the 4-step WDSF-book Tango Oversway (superior source).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "hinge",
+   "source": "https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Hinge (3-step line; Lady's body opens/falls away into the hinge on 3). Man technique matches Oversway/Throwaway; Lady differs on 3 (LF back in CBMP, RF extended fwd, 3/8 L). Turn charted from source fractions; step-3 Man 'body overturns to L' omitted (unquantified). Rise charted lowering/body_rise/lowering per source; head weights not modeled. TANGO: rise omitted (no rise & fall); sway set none on 1-2 per source 'be careful not to rise or swing into 1-2'.",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "fallaway",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
+   "figureType": "hinge",
+   "source": "https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Hinge (3-step line; Lady's body opens/falls away into the hinge on 3). Man technique matches Oversway/Throwaway; Lady differs on 3 (LF back in CBMP, RF extended fwd, 3/8 L). Turn charted from source fractions; step-3 Man 'body overturns to L' omitted (unquantified). Rise charted lowering/body_rise/lowering per source; head weights not modeled. TANGO: rise omitted (no rise & fall); sway set none on 1-2 per source 'be careful not to rise or swing into 1-2'.",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "fallaway",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "hinge",
+   "source": "https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Hinge (3-step line; Lady's body opens/falls away into the hinge on 3). Man technique matches Oversway/Throwaway; Lady differs on 3 (LF back in CBMP, RF extended fwd, 3/8 L). Turn charted from source fractions; step-3 Man 'body overturns to L' omitted (unquantified). Rise charted lowering/body_rise/lowering per source; head weights not modeled. TANGO: rise omitted (no rise & fall); sway set none on 1-2 per source 'be careful not to rise or swing into 1-2'.",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "to_L",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "rise": "body_rise",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "fallaway",
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "hinge",
+   "source": "https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Hinge (3-step line; Lady's body opens/falls away into the hinge on 3). Man technique matches Oversway/Throwaway; Lady differs on 3 (LF back in CBMP, RF extended fwd, 3/8 L). Turn charted from source fractions; step-3 Man 'body overturns to L' omitted (unquantified). Rise charted lowering/body_rise/lowering per source; head weights not modeled. TANGO: rise omitted (no rise & fall); sway set none on 1-2 per source 'be careful not to rise or swing into 1-2'.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "o/e TH",
+      "sway": "none",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "i/e TH",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "fallaway",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "WF (LF), i/e T (RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "B with foot flat (RF), i/e T (LF)",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "same-foot-lunge",
+   "source": "https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Same Foot Lunge (4-step; both end extended on the SAME foot). Lady has a HEEL TURN on step 2. Man rises to full on 2 then lowers into the line (3-4); Lady dances with no rise. Turn charted from source fractions (Man 3/8+3/8 R; Lady 3/8 heel-turn then 1/2 R); step-4 'body turns to L' omitted (unquantified). Man sway 'S R S, L to R' (step 4 charted to_R, a L->R transition); Lady 'S S S slightly L'. Head weights not modeled. TANGO: rise omitted; sway none on 1-3 per source 'not to rise or swing into 1-2'. Source timings vary and hold the line; charted a faithful 4-count timing per dance (see start/finish notes). RISE IS OMITTED from this chart: the figure's rise is asymmetric (Man rises to full on 2 then lowers into the line; Lady dances with no rise, taking a heel turn on 2) and the chart's rise field is couple-level (shared), so it cannot faithfully represent the two roles separately — omitted rather than mis-shared.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on i/e of B (RF) & TH (LF)",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "half_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e of TH (RF) & i/e of T (LF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH (RF) & o/e of T (LF)",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "foxtrot",
+   "figureType": "same-foot-lunge",
+   "source": "https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Same Foot Lunge (4-step; both end extended on the SAME foot). Lady has a HEEL TURN on step 2. Man rises to full on 2 then lowers into the line (3-4); Lady dances with no rise. Turn charted from source fractions (Man 3/8+3/8 R; Lady 3/8 heel-turn then 1/2 R); step-4 'body turns to L' omitted (unquantified). Man sway 'S R S, L to R' (step 4 charted to_R, a L->R transition); Lady 'S S S slightly L'. Head weights not modeled. TANGO: rise omitted; sway none on 1-3 per source 'not to rise or swing into 1-2'. Source timings vary and hold the line; charted a faithful 4-count timing per dance (see start/finish notes). RISE IS OMITTED from this chart: the figure's rise is asymmetric (Man rises to full on 2 then lowers into the line; Lady dances with no rise, taking a heel turn on 2) and the chart's rise field is couple-level (shared), so it cannot faithfully represent the two roles separately — omitted rather than mis-shared.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on i/e of B (RF) & TH (LF)",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "half_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e of TH (RF) & i/e of T (LF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH (RF) & o/e of T (LF)",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "same-foot-lunge",
+   "source": "https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Same Foot Lunge (4-step; both end extended on the SAME foot). Lady has a HEEL TURN on step 2. Man rises to full on 2 then lowers into the line (3-4); Lady dances with no rise. Turn charted from source fractions (Man 3/8+3/8 R; Lady 3/8 heel-turn then 1/2 R); step-4 'body turns to L' omitted (unquantified). Man sway 'S R S, L to R' (step 4 charted to_R, a L->R transition); Lady 'S S S slightly L'. Head weights not modeled. TANGO: rise omitted; sway none on 1-3 per source 'not to rise or swing into 1-2'. Source timings vary and hold the line; charted a faithful 4-count timing per dance (see start/finish notes). RISE IS OMITTED from this chart: the figure's rise is asymmetric (Man rises to full on 2 then lowers into the line; Lady dances with no rise, taking a heel turn on 2) and the chart's rise field is couple-level (shared), so it cannot faithfully represent the two roles separately — omitted rather than mis-shared.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on i/e of B (RF) & TH (LF)",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "half_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e of TH (RF) & i/e of T (LF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH (RF) & o/e of T (LF)",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "same-foot-lunge",
+   "source": "https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+   "corroboration": "SECONDARY teaching source: Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, the original mirrored by idans.nl), archived at web.archive.org. One per-step chart is given for Waltz/Foxtrot/Quickstep/Tango with per-dance timing. NOT corroborated by a WDSF/ISTD technique book (open, non-syllabus figure).",
+   "note": "Same Foot Lunge (4-step; both end extended on the SAME foot). Lady has a HEEL TURN on step 2. Man rises to full on 2 then lowers into the line (3-4); Lady dances with no rise. Turn charted from source fractions (Man 3/8+3/8 R; Lady 3/8 heel-turn then 1/2 R); step-4 'body turns to L' omitted (unquantified). Man sway 'S R S, L to R' (step 4 charted to_R, a L->R transition); Lady 'S S S slightly L'. Head weights not modeled. TANGO: rise omitted; sway none on 1-3 per source 'not to rise or swing into 1-2'. Source timings vary and hold the line; charted a faithful 4-count timing per dance (see start/finish notes). RISE IS OMITTED from this chart: the figure's rise is asymmetric (Man rises to full on 2 then lowers into the line; Lady dances with no rise, taking a heel turn on 2) and the chart's rise field is couple-level (shared), so it cannot faithfully represent the two roles separately — omitted rather than mis-shared.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on i/e of B (RF) & TH (LF)",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "half_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "i/e of TH (RF) & i/e of T (LF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH (RF) & o/e of T (LF)",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
    }
   }
  ]
