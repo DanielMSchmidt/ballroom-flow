@@ -3758,6 +3758,26 @@
    "wdsfLevel": "gold"
   },
   {
+   "wdsfRef": "TB-T-41",
+   "figureType": "contra-check",
+   "name": "Contra Check",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF fwd in CBMP (knees flexed)",
+    "finish": "LF placed to side in PP (w/o weight)",
+    "timing": "SQQ",
+    "notes": [
+     "NOTE - Type of Sway: during the sway the Man and the Lady will use a translation to L with the upper part of the body.",
+     "Charted from WDSF Technique Book — Tango (2nd ed., May 2013), fig. 41, p. 163."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
+  },
+  {
    "wdsfRef": "TB-VW-7",
    "figureType": "chasse-change-step",
    "name": "Chasse Change Step",
@@ -5120,6 +5140,309 @@
    },
    "attributes": [],
    "wdsfLevel": "gold"
+  },
+  {
+   "wdsfRef": "OPEN-TWO-W",
+   "figureType": "throwaway-oversway",
+   "name": "Throwaway Oversway",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "123",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+     "idans lists timing \"123\" for this dance (\"other timings are acceptable\")."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-TWO-F",
+   "figureType": "throwaway-oversway",
+   "name": "Throwaway Oversway",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "SSS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+     "idans lists timing \"SSS\" for this dance (\"other timings are acceptable\")."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-TWO-Q",
+   "figureType": "throwaway-oversway",
+   "name": "Throwaway Oversway",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "SSS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+     "idans lists timing \"SSS\" for this dance (\"other timings are acceptable\")."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-TWO-T",
+   "figureType": "throwaway-oversway",
+   "name": "Throwaway Oversway",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Hold in Throwaway Oversway shape, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from the idans.nl / Ballroom Guide 'Advanced Ballroom Figures' reference — a SECONDARY teaching source, NOT a WDSF Technique Book. Archived: https://web.archive.org/web/20251115052417/http://idans.nl/workshop/standard/advanced/throwaway_oversway_waltz_foxtrot_quickstep_tango.html",
+     "idans lists timing \"QQS\" for this dance (\"other timings are acceptable\").",
+     "Tango omits rise & fall and is danced with Tango character."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-OVERSWAY-W",
+   "figureType": "oversway",
+   "name": "Oversway",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "123",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"1 2 3\" (\"other timings are acceptable\"); charted as \"123\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-OVERSWAY-F",
+   "figureType": "oversway",
+   "name": "Oversway",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q S\" (\"other timings are acceptable\"); charted as \"QQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-OVERSWAY-Q",
+   "figureType": "oversway",
+   "name": "Oversway",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Oversway line, R leg extended to side w/o weight (Lady L leg extended)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170711213134id_/http://ballroomguide.com/workshop/standard/advanced/oversway_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q S\" (\"other timings are acceptable\"); charted as \"QQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-HINGE-W",
+   "figureType": "hinge",
+   "name": "Hinge",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    "timing": "123",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"1 2 3\" (\"other timings are acceptable\"); charted as \"123\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-HINGE-F",
+   "figureType": "hinge",
+   "name": "Hinge",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q S\" (\"other timings are acceptable\"); charted as \"QQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-HINGE-Q",
+   "figureType": "hinge",
+   "name": "Hinge",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q S\" (\"other timings are acceptable\"); charted as \"QQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-HINGE-T",
+   "figureType": "hinge",
+   "name": "Hinge",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back, toe turned in (Lady LF fwd)",
+    "finish": "Held Hinge line, R leg extended (Lady falls away, RF extended fwd in CBMP)",
+    "timing": "QQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170623001642id_/http://ballroomguide.com/workshop/standard/advanced/hinge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q S or Q Q SS\" (\"other timings are acceptable\"); charted as \"QQS\" to give one step per count.",
+     "Tango omits rise & fall; danced with Tango character (staccato, no swing into 1-2)."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-SAMEFOOTLUNGE-W",
+   "figureType": "same-foot-lunge",
+   "name": "Same Foot Lunge",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF fwd (Lady LF back)",
+    "finish": "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    "timing": "123 1",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"1 2 3 123\" (\"other timings are acceptable\"); charted as \"123 1\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-SAMEFOOTLUNGE-F",
+   "figureType": "same-foot-lunge",
+   "name": "Same Foot Lunge",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF fwd (Lady LF back)",
+    "finish": "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    "timing": "SQQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"S Q Q SS\" (\"other timings are acceptable\"); charted as \"SQQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-SAMEFOOTLUNGE-Q",
+   "figureType": "same-foot-lunge",
+   "name": "Same Foot Lunge",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF fwd (Lady LF back)",
+    "finish": "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    "timing": "SQQS",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"S Q Q SS\" (\"other timings are acceptable\"); charted as \"SQQS\" to give one step per count."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
+  },
+  {
+   "wdsfRef": "OPEN-SAMEFOOTLUNGE-T",
+   "figureType": "same-foot-lunge",
+   "name": "Same Foot Lunge",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF fwd (Lady LF back)",
+    "finish": "Same Foot Lunge line - both extended on the same foot (Man L leg / Lady L leg extended w/o weight)",
+    "timing": "QQ&S",
+    "notes": [
+     "Open (non-syllabus) figure. Charted from Ballroom Guide 'Advanced Ballroom Figures' (ballroomguide.com, mirrored by idans.nl) - a SECONDARY teaching source, NOT a WDSF/ISTD technique book. Archived: https://web.archive.org/web/20170622202935id_/http://ballroomguide.com/workshop/standard/advanced/same_foot_lunge_waltz_foxtrot_quickstep_tango.html",
+     "Source timing for this dance: \"Q Q & S or Q Q & SS or Q Q Q QS\" (\"other timings are acceptable\"); charted as \"QQ&S\" to give one step per count.",
+     "Tango omits rise & fall; danced with Tango character (staccato, no swing into 1-2)."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "open"
   }
  ]
 }
