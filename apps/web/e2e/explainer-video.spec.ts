@@ -393,7 +393,10 @@ async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
     "9 · LEAVE A NOTE",
     "Add a lesson or reminder — it stays pinned to this exact figure.",
     async () => {
-      await page.getByTestId("reading-view").getByRole("button", { name: "My Variation" }).click();
+      await page
+        .getByTestId("reading-view")
+        .getByRole("button", { name: "My Variation", exact: true })
+        .click();
       const panel = page.getByRole("region", { name: /^annotations$/i });
       await expect(panel).toBeVisible({ timeout: 15_000 });
       await slowSelect(page, panel.getByLabel("Kind"), "lesson");

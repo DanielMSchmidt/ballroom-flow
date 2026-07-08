@@ -45,7 +45,10 @@ test.describe("@smoke annotations journey", () => {
     // lens is notation-only, owner request 2026-07-08): switch lens, then open
     // the figure by tapping its name in the reading programme.
     await page.getByRole("button", { name: /reading view/i }).click();
-    await page.getByTestId("reading-view").getByRole("button", { name: "Feather Step" }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
 
     // Scope to the per-figure Annotations panel (the family-notes panel below also
     // has a "… note" textbox, so unscoped role queries would be ambiguous).

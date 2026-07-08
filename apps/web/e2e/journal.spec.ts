@@ -50,7 +50,10 @@ test.describe("@smoke journal journey", () => {
     // Notes live on the figure detail opened from the READING lens (the editing
     // lens is notation-only): switch lens, open the figure by name, author a LESSON.
     await page.getByRole("button", { name: /reading view/i }).click();
-    await page.getByTestId("reading-view").getByRole("button", { name: "Natural Turn" }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Natural Turn", exact: true })
+      .click();
     const panel = page.getByRole("region", { name: /^annotations$/i });
     await panel.getByLabel("Kind").selectOption("lesson");
     await panel.getByRole("textbox", { name: /^note$/i }).fill("heads stay left");

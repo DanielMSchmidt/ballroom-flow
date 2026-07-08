@@ -495,7 +495,7 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     await coach.page.getByRole("button", { name: /reading view/i }).click();
     await coach.page
       .getByTestId("reading-view")
-      .getByRole("button", { name: "Feather Step" })
+      .getByRole("button", { name: "Feather Step", exact: true })
       .click();
     const coachFamily = coach.page.getByRole("region", { name: /family notes/i });
     await coachFamily.getByRole("button", { name: /this figure family/i }).click();
@@ -518,7 +518,7 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     // the reading-lens figure detail. Open it by tapping the figure name.
     await student.page
       .getByTestId("reading-view")
-      .getByRole("button", { name: "Feather Step" })
+      .getByRole("button", { name: "Feather Step", exact: true })
       .click();
     const studentFamily = student.page.getByRole("region", { name: /family notes/i });
     await expect(studentFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
