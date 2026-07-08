@@ -53,14 +53,17 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // 4b. Notate the figure (US-028 hero flow, Builder v3 ② quick-add): open its
-    //     full-screen editor. The FIRST tap on the empty Step cell places a blank
-    //     step (presence attr + toast); the SECOND tap opens the single-attribute
-    //     overlay → set DIRECTION "Forward" (the headline) + FOOTWORK "Heel-Toe"
-    //     (a slot) → Done (closes the overlay). The headline + chip show on count 1.
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    // 4b. Creating a NEW custom figure opens its full-screen step editor
+    //     IMMEDIATELY (create-navigates, §4.3) — no separate "edit steps" tap.
+    //     Notate it (US-028 hero flow, Builder v3 ② quick-add): the FIRST tap on
+    //     the empty Step cell places a blank step (presence attr + toast); the
+    //     SECOND tap opens the single-attribute overlay → set DIRECTION "Forward"
+    //     (the headline) + FOOTWORK "Heel-Toe" (a slot) → Done (closes the
+    //     overlay). The headline + chip show on count 1.
+    await expect(page.getByRole("dialog", { name: /steps · my step/i })).toBeVisible({
+      timeout: 15_000,
+    });
     await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
@@ -139,10 +142,12 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // open the figure's full-screen step editor
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    // creating the custom figure lands directly in its full-screen step editor
+    // (create-navigates, §4.3)
+    await expect(page.getByRole("dialog", { name: /steps · my step/i })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // create a custom kind "Energy". "add kind" opens the type PICKER (frame
     // 1.15); the "＋ new attribute type" footer opens the builder (frame 1.16).

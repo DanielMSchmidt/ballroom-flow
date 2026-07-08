@@ -137,11 +137,13 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByLabel("Figure name").fill("Feather Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's full-screen editor and set count-1 footwork "HT" via the
-    // Step cell's single-attribute overlay, then Save to close it.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // "Feather Step" has no WALTZ catalog entry, so this mints a custom figure —
+    // whose full-screen editor opens IMMEDIATELY (create-navigates, §4.3). Set
+    // count-1 footwork "HT" via the Step cell's single-attribute overlay.
+    await expect(page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
     await page.getByRole("button", { name: /Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
     await page.getByRole("button", { name: /^Done$/ }).click();
@@ -483,8 +485,18 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     await coach.page.getByRole("button", { name: "Add figure" }).click();
     await coach.page.getByLabel("Figure name").fill("Feather Step");
     await coach.page.getByLabel("Figure name").press("Enter");
-    await expect(coach.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    await coach.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // The custom mint opens its step editor immediately (create-navigates, §4.3).
+    // Notes live on the READING-lens detail (the editing lens is notation-only),
+    // so close it, switch lens, and reopen the figure by name.
+    await expect(coach.page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await coach.page.keyboard.press("Escape");
+    await coach.page.getByRole("button", { name: /reading view/i }).click();
+    await coach.page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step" })
+      .click();
     const coachFamily = coach.page.getByRole("region", { name: /family notes/i });
     await coachFamily.getByRole("button", { name: /this figure family/i }).click();
     await coachFamily.getByRole("radio", { name: /all dances/i }).click();
@@ -502,10 +514,12 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     // Student (co-member) opens the shared routine, opens the figure → SEES the note.
     await student.page.goto(`/routines/${docRef}`);
     await expect(student.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    // Opening an existing routine lands in READ; switch to the list view so the
-    // per-figure step button is accessible. Commenter has no Add section even here.
-    await student.page.getByRole("button", { name: /list view/i }).click();
-    await student.page.getByRole("button", { name: /steps: Feather Step/i }).click();
+    // Opening an existing routine lands in READ — exactly where notes surface:
+    // the reading-lens figure detail. Open it by tapping the figure name.
+    await student.page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step" })
+      .click();
     const studentFamily = student.page.getByRole("region", { name: /family notes/i });
     await expect(studentFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
 
@@ -546,6 +560,12 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     await owner.page.getByRole("button", { name: "Add figure" }).click();
     await owner.page.getByLabel("Figure name").fill("Feather Step");
     await owner.page.getByLabel("Figure name").press("Enter");
+    // The custom mint opens its step editor immediately (create-navigates, §4.3) —
+    // close it; this test drives the CO-EDITOR's edit first.
+    await expect(owner.page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await owner.page.keyboard.press("Escape");
     await expect(owner.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
     // Share EDITOR on the ROUTINE only — figure edit rights come via the cascade.

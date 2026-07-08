@@ -172,6 +172,10 @@ export interface RoutineStore extends RoutineReadModel {
    * attributes (a catalog figure's charted steps, or 1 for a fresh custom).
    * `beforePlacementId` inserts the new figure immediately BEFORE that placement
    * (US-027 insert-between); omitted/null appends to the end of the section.
+   * `onCreated` fires (synchronously, once the placement lands) ONLY when the add
+   * mints a NEW custom figure doc — the caller uses it to open the fresh figure's
+   * step editor immediately (§4.3 create-navigates). A catalog pick places an
+   * already-charted live reference (assembly, not creation) and never fires it.
    */
   addPlacement(
     sectionId: string,
@@ -180,6 +184,7 @@ export interface RoutineStore extends RoutineReadModel {
     counts?: number,
     beforePlacementId?: string | null,
     part?: { fromCount: number; toCount: number } | null,
+    onCreated?: (created: { figureRef: string; placementId: string }) => void,
   ): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
@@ -865,7 +870,15 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg, countsArg, beforePlacementId, part) => {
+    addPlacement: (
+      sectionId,
+      figureName,
+      figureTypeArg,
+      countsArg,
+      beforePlacementId,
+      part,
+      onCreated,
+    ) => {
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
       // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
@@ -881,8 +894,11 @@ export async function openRoutine(
             )
           : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
 
-      /** Append/insert a placement referencing `figureRef` (shared by both paths). */
-      const placeRef = (figureRef: string): void => {
+      /** Append/insert a placement referencing `figureRef` (shared by both paths).
+       *  Returns the new placement's id, or null when the section wasn't found
+       *  (the not-yet-synced empty-doc edge — nothing was placed). */
+      const placeRef = (figureRef: string): string | null => {
+        let placementId: string | null = null;
         // `sections?` guards the not-yet-synced (empty A.init) doc edge.
         routineConn.change((draft) => {
           const section = draft.sections?.find((s) => s.id === sectionId);
@@ -890,16 +906,19 @@ export async function openRoutine(
             // Insert before the anchor (insert-between) or append (#63). Backfill any
             // legacy keyless placements first so the new key sorts correctly.
             ensureSortKeys(section.placements);
+            const id = newId();
             section.placements.push({
-              id: newId(),
+              id,
               figureRef,
               // Portion window (Builder v3 ③) — only a catalog pick carries one.
               ...(part ? { part: { fromCount: part.fromCount, toCount: part.toCount } } : {}),
               sortKey: insertSortKey(section.placements, beforePlacementId),
               deletedAt: null,
             });
+            placementId = id;
           }
         });
+        return placementId;
       };
 
       // ⟳v5 (§4.3): a CATALOG pick places a LIVE REFERENCE to the global figure doc
@@ -922,7 +941,10 @@ export async function openRoutine(
       // change triggers shows the placement as loading without eagerly opening (and
       // racing the seed of) its not-yet-created DO.
       pendingFigures.add(figureRef);
-      placeRef(figureRef);
+      const placementId = placeRef(figureRef);
+      // Create-navigates (§4.3): hand the fresh refs to the caller NOW — the step
+      // editor opens on its loading state and hydrates when the seed replays.
+      if (placementId) onCreated?.({ figureRef, placementId });
 
       // A fresh custom carries no charted timeline; its authored length defaults to
       // the create flow's chosen `counts`, else a bar's worth of beats.

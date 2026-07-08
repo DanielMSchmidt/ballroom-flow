@@ -308,6 +308,13 @@ async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
       await pause(page, 800);
       await page.getByLabel("Figure name").press("Enter");
       pan.restore(90); // ease back up as the picker closes
+      // Creating a custom figure opens its step editor immediately
+      // (create-navigates, §4.3) — close it so the next scene can showcase
+      // opening a figure from its card.
+      await expect(page.getByRole("dialog", { name: /steps · my variation/i })).toBeVisible({
+        timeout: 15_000,
+      });
+      await page.keyboard.press("Escape");
       await expect(page.getByText("My Variation")).toBeVisible({ timeout: 15_000 });
     },
     { read: 2800, settle: 1300 },
@@ -361,11 +368,32 @@ async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
     { read: 2800, settle: 800 },
   );
 
-  // 8 — leave a note on the figure
+  // Close the full-screen step editor → back to the builder.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /reading view/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await pause(page, 500);
+
+  // 8 — see the whole routine (reading view)
   await step(
-    "8 · LEAVE A NOTE",
+    "8 · SEE THE WHOLE ROUTINE",
+    "Switch to the reading view to see the whole choreography laid out.",
+    async () => {
+      await page.getByRole("button", { name: /reading view/i }).click();
+      await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
+    },
+    { read: 2600, settle: 2000 },
+  );
+
+  // 9 — leave a note on the figure. Notes live on the figure detail opened from
+  // the READING lens (the editing lens is notation-only), so this scene follows
+  // the reading view: tap the figure name, then author the note.
+  await step(
+    "9 · LEAVE A NOTE",
     "Add a lesson or reminder — it stays pinned to this exact figure.",
     async () => {
+      await page.getByTestId("reading-view").getByRole("button", { name: "My Variation" }).click();
       const panel = page.getByRole("region", { name: /^annotations$/i });
       await expect(panel).toBeVisible({ timeout: 15_000 });
       await slowSelect(page, panel.getByLabel("Kind"), "lesson");
@@ -377,25 +405,9 @@ async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
     { read: 2800, settle: 1300 },
   );
 
-  // Close the full-screen step editor → back to the builder.
+  // Close the figure detail, then back to the editing view so Share sits in a
+  // known place.
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: /reading view/i })).toBeVisible({
-    timeout: 15_000,
-  });
-  await pause(page, 500);
-
-  // 9 — see the whole routine (reading view)
-  await step(
-    "9 · SEE THE WHOLE ROUTINE",
-    "Switch to the reading view to see the whole choreography laid out.",
-    async () => {
-      await page.getByRole("button", { name: /reading view/i }).click();
-      await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
-    },
-    { read: 2600, settle: 2000 },
-  );
-
-  // Back to the editing view so Share sits in a known place.
   await page.getByRole("button", { name: /list view/i }).click();
   await pause(page, 500);
 

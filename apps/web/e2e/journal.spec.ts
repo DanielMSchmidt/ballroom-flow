@@ -47,8 +47,10 @@ test.describe("@smoke journal journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Natural Turn")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's step sheet → the annotation panel; author a LESSON.
-    await page.getByRole("button", { name: /edit steps: Natural Turn/i }).click();
+    // Notes live on the figure detail opened from the READING lens (the editing
+    // lens is notation-only): switch lens, open the figure by name, author a LESSON.
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await page.getByTestId("reading-view").getByRole("button", { name: "Natural Turn" }).click();
     const panel = page.getByRole("region", { name: /^annotations$/i });
     await panel.getByLabel("Kind").selectOption("lesson");
     await panel.getByRole("textbox", { name: /^note$/i }).fill("heads stay left");

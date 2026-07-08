@@ -3,7 +3,12 @@ import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@weavesteps/domain";
-import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@weavesteps/domain";
+import {
+  buildFigureDoc,
+  buildRoutineDoc,
+  globalFigureRef,
+  libraryFiguresForDance,
+} from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
 import { reportError } from "../lib/ops";
 import { ApiError } from "../lib/rpc";
@@ -261,6 +266,39 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     // direction+footwork CORE is 6 counts × 2 roles × {direction, footwork} = 24.
     const attrs = rp?.figure?.attributes ?? [];
     expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
+  });
+
+  it("fires onCreated for a custom mint — and never for a catalog pick (create-navigates)", async () => {
+    // The Assemble screen opens the new figure's step editor immediately after a
+    // CREATE (owner request 2026-07-08). The hook is addPlacement's onCreated
+    // callback: it fires synchronously with the fresh custom figure's refs, and
+    // NOT for a catalog pick (placing an already-charted figure is assembly, not
+    // creation — no auto-navigation).
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
+
+    const onCreated = vi.fn<(created: { figureRef: string; placementId: string }) => void>();
+    store.addPlacement("s1", "My Glue Step", undefined, undefined, undefined, undefined, onCreated);
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    const created = onCreated.mock.calls[0]?.[0];
+    expect(created).toBeDefined();
+    // The refs point at the real just-placed placement/figure pair.
+    const rp = store.readPlacements().find((p) => p.placement.id === created?.placementId);
+    expect(rp?.placement.figureRef).toBe(created?.figureRef);
+
+    const preset = libraryFiguresForDance("waltz")[0];
+    if (!preset) throw new Error("waltz catalog unexpectedly empty");
+    const onCatalog = vi.fn();
+    store.addPlacement(
+      "s1",
+      preset.name,
+      preset.figureType,
+      undefined,
+      undefined,
+      undefined,
+      onCatalog,
+    );
+    expect(onCatalog).not.toHaveBeenCalled();
   });
 
   it("a catalog reference is EDITOR-READY with zero figure sockets (openFigure is a no-op)", async () => {

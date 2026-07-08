@@ -120,12 +120,12 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's full-screen editor and set a single attribute at count 1:
-    // tap the Step cell → the overlay → DIRECTION "Forward" → Save (closes overlay).
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    // Creating the custom figure opens its full-screen editor immediately
+    // (create-navigates, §4.3). Set a single attribute at count 1: tap the Step
+    // cell → the overlay → DIRECTION "Forward" → Done (closes overlay).
     const editor = page.getByRole("dialog", { name: /steps · my step/i });
+    await expect(editor).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();

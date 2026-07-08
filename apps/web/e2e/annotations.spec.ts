@@ -41,8 +41,11 @@ test.describe("@smoke annotations journey", () => {
     await page.getByLabel("Figure name").press("Enter");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's step sheet — the annotation panel lives here.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // Notes live on the figure detail opened from the READING lens (the editing
+    // lens is notation-only, owner request 2026-07-08): switch lens, then open
+    // the figure by tapping its name in the reading programme.
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await page.getByTestId("reading-view").getByRole("button", { name: "Feather Step" }).click();
 
     // Scope to the per-figure Annotations panel (the family-notes panel below also
     // has a "… note" textbox, so unscoped role queries would be ambiguous).

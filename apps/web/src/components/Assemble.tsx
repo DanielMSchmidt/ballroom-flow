@@ -975,6 +975,13 @@ export function Assemble({
                 counts,
                 addingFigureTo.beforePlacementId,
                 part,
+                // Create-navigates (§4.3): a NEW custom figure opens its step
+                // editor immediately (a catalog pick stays on the builder —
+                // the store fires this only for a true custom mint).
+                ({ figureRef, placementId }) => {
+                  setNotating(figureRef);
+                  setNotatingPlacementId(placementId);
+                },
               );
             setAddingFigureTo(null);
           }}
@@ -1090,6 +1097,9 @@ export function Assemble({
               role={canEdit ? role : "viewer"}
               dance={routine.dance}
               part={notatingPart}
+              // The prose per-count recap is an authoring aid — the reading
+              // lens hides it (the grid/chips are the reading content).
+              showStepRecap={mode === "edit"}
               attributes={notatingFigure.attributes}
               counts={notatingFigure.counts}
               legacyBars={notatingFigure.bars}
@@ -1131,45 +1141,55 @@ export function Assemble({
               />
             )}
             {/* Annotations on this figure (US-039/042): notes/lessons/practice +
-                replies, gated by role. Commenter+ may add; viewer is read-only. */}
-            <AnnotationPanel
-              role={role}
-              currentUserId={currentUserId}
-              annotations={store
-                .readAnnotations()
-                .filter((a) =>
-                  a.anchors.some(
-                    (an) =>
-                      (an.type === "figure" || an.type === "point") &&
-                      an.figureRef === notatingFigure.id,
-                  ),
-                )}
-              composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
-              figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
-              onCreate={({ kind, text }) =>
-                store.createAnnotation({
-                  kind,
-                  text,
-                  anchors: [{ type: "figure", figureRef: notatingFigure.id }],
-                })
-              }
-              onReply={(annotationId, text) => store.addReply(annotationId, text)}
-              onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
-            />
-            {/* Figure-family notes (US-040/041): "every Feather" notes from this
-                routine's members, surfaced on the matching figure; commenter+ may
-                author one (server-mediated, co-membership-gated). */}
-            <FamilyNotes
-              figureType={notatingFigure.figureType}
-              dance={routine.dance}
-              notes={familyNotes}
-              canAnnotate={can(role, "canAnnotate")}
-              onCreate={async (input) => {
-                if (!getToken) return;
-                await createFamilyNote(input, await getToken());
-                await reloadFamilyNotes();
-              }}
-            />
+                replies, gated by role. Commenter+ may add; viewer is read-only.
+                Notes surfaces belong to the READING context (owner request
+                2026-07-08): the detail opened from the editing lens is
+                notation-only, so the panels render only when the reading
+                programme opened this figure. */}
+            {mode === "read" && (
+              <>
+                <AnnotationPanel
+                  role={role}
+                  currentUserId={currentUserId}
+                  annotations={store
+                    .readAnnotations()
+                    .filter((a) =>
+                      a.anchors.some(
+                        (an) =>
+                          (an.type === "figure" || an.type === "point") &&
+                          an.figureRef === notatingFigure.id,
+                      ),
+                    )}
+                  composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
+                  figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
+                  onCreate={({ kind, text }) =>
+                    store.createAnnotation({
+                      kind,
+                      text,
+                      anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                    })
+                  }
+                  onReply={(annotationId, text) => store.addReply(annotationId, text)}
+                  onDeleteReply={(annotationId, replyId) =>
+                    store.deleteReply(annotationId, replyId)
+                  }
+                />
+                {/* Figure-family notes (US-040/041): "every Feather" notes from this
+                    routine's members, surfaced on the matching figure; commenter+ may
+                    author one (server-mediated, co-membership-gated). */}
+                <FamilyNotes
+                  figureType={notatingFigure.figureType}
+                  dance={routine.dance}
+                  notes={familyNotes}
+                  canAnnotate={can(role, "canAnnotate")}
+                  onCreate={async (input) => {
+                    if (!getToken) return;
+                    await createFamilyNote(input, await getToken());
+                    await reloadFamilyNotes();
+                  }}
+                />
+              </>
+            )}
             {/* Custom kinds + Lanes (US-043/044): Add-kind (editor only) + a lane
                 grid view for one attribute kind across all counts. */}
             <div className="flex flex-col gap-3 border-t border-line pt-3">
