@@ -480,6 +480,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
       3,
       undefined,
       undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
     );
 
     // Reorder: move "Feather" down within the section
@@ -516,7 +517,15 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 3, "p2", undefined);
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "Hover",
+      undefined,
+      3,
+      "p2",
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
   });
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
@@ -1041,6 +1050,7 @@ describe("US-027 Add a figure from the library picker", () => {
       undefined,
       undefined,
       null,
+      expect.any(Function), // onCreated — the STORE decides it never fires for a catalog pick
     );
   });
 
@@ -1060,7 +1070,15 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     // The custom form's counts stepper defaults to 3 (Builder v3 ①).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 3, undefined, undefined);
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "My Move",
+      undefined,
+      3,
+      undefined,
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
   });
 });
 
@@ -1571,5 +1589,114 @@ describe("Offline editing states (PLAN §11.2, design 1.24)", () => {
     );
     expect(screen.queryByTestId("unsynced-changes")).toBeNull();
     expect(screen.queryByText("Offline Waltz")).toBeNull(); // replaced by OfflineState
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Steps-overlay lens split + create-navigates (2026-07-08 owner request):
+//  • EDIT lens → the figure detail is notation-only: no annotation/family-notes
+//    panels (they stay on the reading-lens-opened detail), recap text present.
+//  • READING lens → the detail keeps the notes surfaces but drops the per-count
+//    text recap (the grid/chips are the reading content).
+//  • Creating a NEW custom figure opens its step editor immediately.
+// ─────────────────────────────────────────────────────────────────────────
+describe("Steps overlay — lens-dependent notes/recap + create-opens-editor", () => {
+  const overlayRoutine = (p: Placement): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("EDIT lens: the step editor hides the notes panels but keeps the per-count recap", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(overlayRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather/i }));
+    // The authoring summary (the readable per-count recap) stays in the edit lens…
+    expect(screen.getByTestId("step-detail-1")).toBeInTheDocument();
+    // …but the notes surfaces don't render while editing the choreo.
+    expect(screen.queryByRole("region", { name: /^annotations$/i })).toBeNull();
+    expect(screen.queryByRole("region", { name: /family notes/i })).toBeNull();
+  });
+
+  it("READING lens: the step editor shows the notes panels but hides the recap text", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(overlayRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    // Open the figure detail from the reading programme (tap the figure name).
+    await userEvent.click(
+      within(screen.getByTestId("reading-view")).getByRole("button", { name: /^feather$/i }),
+    );
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /family notes/i })).toBeInTheDocument();
+    // The text recap is an authoring aid — not shown when viewing.
+    expect(screen.queryByTestId("step-detail-1")).toBeNull();
+  });
+
+  it("creating a custom figure opens its step editor immediately", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    // The store invokes onCreated synchronously (the real store fires it as soon
+    // as a NEW custom figure doc is minted; a catalog pick never fires it).
+    const addPlacement = vi.fn(
+      (
+        _sectionId: string,
+        _name: string,
+        _figureType?: string,
+        _counts?: number,
+        _before?: string | null,
+        _part?: { fromCount: number; toCount: number } | null,
+        onCreated?: (created: { figureRef: string; placementId: string }) => void,
+      ) => {
+        onCreated?.({ figureRef: "fig_new", placementId: "p_new" });
+      },
+    );
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(
+          {
+            id: "rt_sample",
+            title: "Sample",
+            dance: "foxtrot",
+            ownerId: "u",
+            sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+            annotations: [],
+            schemaVersion: 1,
+            deletedAt: null,
+          },
+          [],
+          { addPlacement },
+        )}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
+    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    // The new figure's full-screen step editor opens without another tap (it
+    // shows the loading state until the figure doc hydrates).
+    expect(await screen.findByRole("dialog", { name: /steps ·/i })).toBeInTheDocument();
   });
 });

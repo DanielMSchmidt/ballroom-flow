@@ -113,6 +113,11 @@ export interface FigureTimelineProps {
    *  stays whole (edits merge back into the full timeline; §4.4). No `part` = the
    *  whole figure. The window is FIXED — the LENGTH stepper is hidden. */
   part?: PlacementPart | null;
+  /** Whether to render the per-count text recap under the grid (the authoring
+   *  summary). Default true; the Assemble reading lens turns it off — when
+   *  viewing, the grid/chips ARE the content and the prose recap is noise
+   *  (owner request 2026-07-08). */
+  showStepRecap?: boolean;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -165,6 +170,7 @@ export function FigureTimeline({
   figureName,
   onRenameFigure,
   part,
+  showStepRecap = true,
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
@@ -509,42 +515,44 @@ export function FigureTimeline({
       {/* Helper caption (frame 1.11). */}
       <p className="text-2xs italic text-ink-faint">{t.helperCaption}</p>
 
-      {/* Always-visible per-count recap (the headline word + this count's value
-          words) — the readable summary the authoring journey reads, present as soon
-          as the figure opens. */}
-      {rows.map((row) => {
-        const here = filterByRoleView(byCount.get(row.count) ?? [], view);
-        if (here.length === 0) return null;
-        const direction = here.find((a) => a.kind === "direction");
-        const slots = here.filter((a) => a.kind !== "direction");
-        return (
-          <div
-            key={`detail-${row.count}`}
-            data-testid={`step-detail-${row.count}`}
-            className="flex flex-wrap items-center gap-2"
-          >
-            <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
-              {row.label}
-            </span>
-            <span
-              data-testid={`step-headline-${row.count}`}
-              className="text-2xs font-bold text-ink"
-            >
-              {stepAction(direction?.value)}
-            </span>
-            <ul
-              aria-label={t.countAttributes(row.count)}
+      {/* Per-count recap (the headline word + this count's value words) — the
+          readable summary the authoring journey reads, present as soon as the
+          figure opens. Rendered only when the caller wants the authoring aid
+          (`showStepRecap`); the reading lens hides it. */}
+      {showStepRecap &&
+        rows.map((row) => {
+          const here = filterByRoleView(byCount.get(row.count) ?? [], view);
+          if (here.length === 0) return null;
+          const direction = here.find((a) => a.kind === "direction");
+          const slots = here.filter((a) => a.kind !== "direction");
+          return (
+            <div
+              key={`detail-${row.count}`}
+              data-testid={`step-detail-${row.count}`}
               className="flex flex-wrap items-center gap-2"
             >
-              {slots.map((a) => (
-                <li key={a.id} className="text-2xs text-ink-muted">
-                  {humanize(a.value)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+              <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
+                {row.label}
+              </span>
+              <span
+                data-testid={`step-headline-${row.count}`}
+                className="text-2xs font-bold text-ink"
+              >
+                {stepAction(direction?.value)}
+              </span>
+              <ul
+                aria-label={t.countAttributes(row.count)}
+                className="flex flex-wrap items-center gap-2"
+              >
+                {slots.map((a) => (
+                  <li key={a.id} className="text-2xs text-ink-muted">
+                    {humanize(a.value)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
 
       {/* The single-attribute overlay (frame 1.12): title = the timing, meta = the
           attribute name; body = ONLY that column's kind(s); Save confirms, Remove
