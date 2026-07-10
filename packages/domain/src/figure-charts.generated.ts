@@ -15589,19 +15589,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:basic-weave": {
       entry: {
         qualifier: "facing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:bounce-fallaway-with-weave-ending": {
@@ -15619,19 +15611,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:curved-feather": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW_against",
       },
     },
     "foxtrot:curved-feather-from-p-p": {
@@ -15639,29 +15623,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW_against",
-      },
     },
     "foxtrot:curved-three-step": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC_against",
-      },
     },
     "foxtrot:double-reverse-spin": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:fallaway-reverse-and-slip-pivot": {
@@ -15675,27 +15647,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:feather-finish": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:feather-step": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -15705,19 +15665,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:hover-corte": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
       },
     },
     "foxtrot:hover-cross": {
@@ -15735,19 +15687,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:hover-telemark-to-p-p": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "foxtrot:impetus": {
@@ -15775,19 +15719,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-telemark": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "foxtrot:natural-turn": {
@@ -15795,27 +15731,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "foxtrot:natural-twist-turn": {
       entry: {
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-weave": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -15825,19 +15749,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:open-natural-turn": {
       entry: {
         qualifier: "pointing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
       },
     },
     "foxtrot:outside-swivel": {
@@ -15875,29 +15791,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "foxtrot:reverse-wave": {
       entry: {
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:telemark-to-p-p": {
@@ -15912,10 +15816,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "foxtrot:three-step": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -15945,19 +15845,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:back-whisk": {
       entry: {
         qualifier: "backing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:backward-lock": {
@@ -15975,19 +15867,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:cross-swivel": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:double-reverse-spin": {
@@ -15995,27 +15879,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:fisht-tail": {
       entry: {
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:forward-lock": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16025,19 +15897,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:hover-corte": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
       },
     },
     "quickstep:impetus": {
@@ -16075,10 +15939,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "quickstep:natural-turn": {
       entry: {
@@ -16095,19 +15955,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "quickstep:progressive-chasse-to-l": {
       entry: {
         qualifier: "backing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:progressive-chasse-to-r": {
@@ -16161,19 +16013,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:running-finish": {
       entry: {
         qualifier: "backing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "quickstep:running-natural-turn": {
@@ -16181,19 +16025,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "quickstep:running-spin-turn": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
       },
     },
     "quickstep:six-quick-run": {
@@ -16201,19 +16037,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:telemark-to-pp": {
@@ -16229,10 +16057,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     "quickstep:tipple-chasse-to-r-along-lod": {
       entry: {
         qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16251,17 +16075,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:tipsy-to-r": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16291,10 +16107,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:wing": {
       entry: {
@@ -16310,10 +16122,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "pointing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:zig-zag": {
@@ -16341,19 +16149,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "tango:basic-reverse-turn": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:brush-tap": {
@@ -16361,19 +16161,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:chase": {
       entry: {
         qualifier: "pointing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "tango:chase-alternative-endings-method-4-progressive": {
@@ -16381,18 +16173,10 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:closed-promenade": {
       entry: {
         qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16427,29 +16211,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:four-step": {
       entry: {
         qualifier: "facing",
         direction: "DW_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:four-step-change": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW_against",
       },
     },
     "tango:mini-five-step": {
@@ -16464,10 +16236,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "tango:natural-rock-turn": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16487,10 +16255,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:open-promenade": {
       entry: {
@@ -16502,10 +16266,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:outside-swivel-method-1-after-open-finish-and": {
@@ -16533,17 +16293,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:progressive-link": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16573,19 +16325,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:promenade-link-turned-to-right": {
       entry: {
         qualifier: "pointing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
       },
     },
     "tango:quick-reverse-turn": {
@@ -16593,27 +16337,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:reverse-pivot": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:rock-on-left-foot": {
       entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "backing",
         direction: "DC",
       },
@@ -16623,17 +16355,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "tango:tango-walk": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -16652,10 +16376,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "viennese_waltz:natural-turn": {
@@ -16703,10 +16423,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:backward-lock": {
       entry: {
@@ -16733,18 +16449,10 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:cross-hesitation-from-pp": {
       entry: {
         qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16752,10 +16460,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "waltz:drag-hesitation": {
@@ -16778,10 +16482,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "waltz:hover-corte": {
@@ -16819,19 +16519,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "waltz:natural-turn": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "waltz:natural-turning-lock": {
@@ -16895,10 +16587,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:reverse-turning-lock": {
       entry: {
@@ -16915,19 +16603,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:running-finish": {
       entry: {
         qualifier: "backing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "waltz:running-spin-turn": {
@@ -16935,19 +16615,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "waltz:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "waltz:telemark-to-pp": {
@@ -16975,17 +16647,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:wing": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -16995,19 +16659,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "waltz:open-natural-turn": {
       entry: {
         qualifier: "pointing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
       },
     },
     "waltz:fallaway-natural-turn": {
@@ -17023,10 +16679,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     "waltz:running-weave-from-pp": {
       entry: {
         qualifier: "pointing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "LOD",
       },
     },
@@ -17045,10 +16697,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:contra-check": {
       exit: {
@@ -17058,10 +16706,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "tango:contra-check": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -17381,29 +17025,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:whisk": {
       entry: {
         qualifier: "facing",
         direction: "DW_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:back-whisk": {
       entry: {
         qualifier: "backing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:telemark-to-pp": {
@@ -17421,10 +17053,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
     },
     "tango:outside-spin": {
       exit: {
@@ -17436,10 +17064,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "tango:chase-alternative-endings-chase-chasse-common-steps-1-8": {
@@ -17457,27 +17081,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:chase-alternative-endings-method-2-whisk-promenade-link": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "tango:chase-alternative-endings-method-3-whisk-close-step-to-pp": {
       entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
         qualifier: "facing",
         direction: "LOD",
       },
@@ -17487,19 +17099,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
     },
     "tango:drop-oversway": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
       },
     },
     "tango:oversway-alternative-endings-method-1-transfer-weight-to-pp": {
@@ -17507,19 +17111,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-2-close-step-to-pp": {
       entry: {
         qualifier: "facing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:oversway-alternative-endings-method-3-chasse-whisk-fwd-step-to-pp": {
@@ -17527,17 +17123,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-4-chasse-whisk-promenade-link": {
       entry: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-      exit: {
         qualifier: "facing",
         direction: "wall",
       },
@@ -17547,27 +17135,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-6-natural-spin-to-pp": {
       entry: {
         qualifier: "facing",
         direction: "ALOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:hover-feather": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -17587,10 +17163,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-twist-turn-with-impetus-to-p-p": {
       entry: {
@@ -17607,19 +17179,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:heel-pivot": {
       entry: {
         qualifier: "backing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:outside-change": {
@@ -17637,19 +17201,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
     },
     "quickstep:hesitation-change": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:tipple-chasse-to-left": {
