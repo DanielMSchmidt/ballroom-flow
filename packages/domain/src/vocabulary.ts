@@ -86,8 +86,6 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   bodyActions: RegistryKind;
   sway: RegistryKind;
   turn: RegistryKind;
-  /** WDSF head-position ("Extension") column — free text, per role. */
-  head: RegistryKind;
 }
 
 // The 4 travelling dances rise applies to — every Standard dance except Tango,
@@ -400,31 +398,14 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     builtin: true,
   },
-  // NOTE (2026-07-10, owner decision alongside D33): the free-text `rotation` kind
-  // (the WDSF books' Rotation column, shoulder/hip grading prose) was REMOVED —
-  // `turn` is the canonical rotation and the prose duplicated it for the app's
-  // purposes. The verbatim transcription is retained in docs/seed/figure-charts.json
-  // for provenance (the generator no longer emits it); the reconciling seeder
-  // tombstones previously-seeded rotation attributes.
-  // The WDSF technique books' head-position column (printed "Extension"): where the
-  // head moves and which numbered head position it ends in ("Gradually back, head
-  // moves to pos. 1"). Free text — the books chart transitions as prose.
-  head: {
-    kind: "head",
-    label: "Head",
-    color: "#8a6a3f",
-    cardinality: "single",
-    valueType: "text",
-    freeText: true,
-    freeTextInput: true,
-    description:
-      "Head position and movement through the step (the WDSF Extension column — e.g. \u201cgradually back, head ends in pos. 1\u201d).",
-    // Free text (the books chart prose transitions) — no enumerated glossary values.
-    valueDefs: {},
-    // Mostly the follower's column, but the books chart Man head entries too.
-    roleAware: true,
-    builtin: true,
-  },
+  // NOTE (2026-07-10, owner decision alongside D33): the free-text `rotation` and
+  // `head` kinds (the WDSF books' Rotation and head-position "Extension" columns,
+  // verbatim prose) were REMOVED — `turn` is the canonical rotation, and the prose
+  // columns don't earn a place in the structured step model. Both verbatim
+  // transcriptions are retained in docs/seed/figure-charts.json for provenance
+  // (the generator no longer emits them); the reconciling seeder tombstones
+  // previously-seeded rotation/head attributes, and a legacy doc's leftover values
+  // degrade gracefully through the custom-kind read path.
 };
 
 // Read-side value aliases (Q-D4). Keyed by kind → { alias: canonical }. Unknown

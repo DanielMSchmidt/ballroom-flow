@@ -161,14 +161,13 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
     }
   });
 
-  it("carries the WDSF head column per role and does NOT emit rotation (removed ⟳2026-07-10)", () => {
-    // The head-position ("Extension") column is charted verbatim per role. The
-    // books' Rotation column is no longer modelled — `turn` is the canonical
-    // rotation (D33) and the prose grading duplicated it for the app's purposes;
-    // the transcription stays in the seed for provenance only.
-    const head = natural.find((a) => a.count === 2 && a.role === "follower" && a.kind === "head");
-    expect(String(head?.value)).toMatch(/pos\. 1/i);
+  it("emits neither the WDSF rotation nor head prose columns (removed ⟳2026-07-10)", () => {
+    // The books' Rotation and head-position ("Extension") prose columns are no
+    // longer modelled — `turn` is the canonical rotation (D33) and the prose
+    // doesn't earn a place in the structured step model; both transcriptions
+    // stay in the chart seed for provenance only.
     expect(natural.some((a) => a.kind === "rotation")).toBe(false);
+    expect(natural.some((a) => a.kind === "head")).toBe(false);
   });
 });
 

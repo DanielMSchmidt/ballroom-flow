@@ -19,9 +19,9 @@ const role = (r) => {
   if (r.sway && r.sway !== "none") o.sway = r.sway;
   if (r.turn && r.turn !== "none") o.turn = r.turn;
   if (Array.isArray(r.bodyActions) && r.bodyActions.length) o.bodyActions = r.bodyActions;
-  // r.rotation (the WDSF Rotation column) is deliberately NOT emitted (⟳2026-07-10):
-  // `turn` is the canonical rotation; the seed keeps the transcription as provenance.
-  if (r.head) o.head = r.head;
+  // r.rotation and r.head (the WDSF Rotation + head-position "Extension" prose
+  // columns) are deliberately NOT emitted (⟳2026-07-10): `turn` is the canonical
+  // rotation; the seed keeps both transcriptions as provenance only.
   return o;
 };
 const step = (s) => {

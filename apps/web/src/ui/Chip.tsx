@@ -73,12 +73,6 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     border: "var(--bf-kind-turn-border)",
     solid: "var(--bf-kind-turn)",
   },
-  head: {
-    tint: "var(--bf-kind-head-tint)",
-    ink: "var(--bf-kind-head-ink)",
-    border: "var(--bf-kind-head-border)",
-    solid: "var(--bf-kind-head)",
-  },
 };
 
 /**

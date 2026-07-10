@@ -95,11 +95,6 @@
   --bf-kind-turn-tint: #e3e8f2;
   --bf-kind-turn-border: #5b6b8a;
 
-  /* head (WDSF head-position "Extension" column) — bronze */
-  --bf-kind-head: #8a6a3f;
-  --bf-kind-head-ink: #5c4527;
-  --bf-kind-head-tint: #f1e9da;
-  --bf-kind-head-border: #8a6a3f;
 
   /* =============================================================
    * Figure scopes (DESIGN-PRINCIPLES #11). Three scopes, each a

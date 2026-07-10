@@ -35,8 +35,6 @@ export interface AuthoredFootwork {
   turn?: string;
   /** Body actions (`bodyActions` vocab, e.g. ["CBM"]) — role-aware, set when known. */
   bodyActions?: string[];
-  /** WDSF head-position ("Extension") column, verbatim — free text. */
-  head?: string;
 }
 
 /**
