@@ -182,7 +182,7 @@ Definitions from research/domain.md; enums verified against `vocabulary.ts` (202
 | **Direction** (step headline) | What the chart's Description column says the foot does ("LF forward", "RF to side") — minus the foot letter; the step's relative TRANSLATION in the derived-alignment model (PLAN §3.8) | `direction`: `forward`,`back`,`side`,`diagonal_forward`,`diagonal_back`,`close`,`behind`,`in_front`,`diagonal` (legacy unsplit),`in_place`. Closed enum, `required: true` (drives the "Step*" grid column), roleAware. Legacy `diag_forward`/`diag_back` alias-normalize to the split values on read (⟳2026-07-10) |
 | **Floorcraft / corners** | Placing travelling figures on long sides, turning figures at corners | Theory only — no floor model in the app (v1) |
 
-### The core registry kinds at a glance (`ATTRIBUTE_REGISTRY`, vocabulary.ts — 9 standard kinds incl. free-text `rotation`/`head`; `footPosition` removed ⟳2026-07-10)
+### The core registry kinds at a glance (`ATTRIBUTE_REGISTRY`, vocabulary.ts — 8 standard kinds incl. free-text `head`; `footPosition` + `rotation` removed ⟳2026-07-10, `turn` is the canonical rotation and the WDSF Rotation prose stays seed-only provenance)
 
 | kind | cardinality | roleAware | color | notes |
 |---|---|---|---|---|

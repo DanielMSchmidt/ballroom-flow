@@ -86,8 +86,6 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   bodyActions: RegistryKind;
   sway: RegistryKind;
   turn: RegistryKind;
-  /** WDSF Rotation column (shoulders/hips grading) — free text, per role. */
-  rotation: RegistryKind;
   /** WDSF head-position ("Extension") column — free text, per role. */
   head: RegistryKind;
 }
@@ -402,26 +400,12 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     builtin: true,
   },
-  // The WDSF technique books' Rotation column: how the shoulders/hips rotate through
-  // the step, graded Light./Dyn./Lead. Free text — the books chart it as prose
-  // ("To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)"); the
-  // classical CBM flag lives in bodyActions, this carries the full WDSF grading.
-  rotation: {
-    kind: "rotation",
-    label: "Rotation",
-    color: "#3f7a99",
-    cardinality: "single",
-    valueType: "text",
-    freeText: true,
-    freeTextInput: true,
-    description:
-      "How the shoulders and hips rotate through the step (the WDSF Rotation column — Light./Dyn./Lead. grading).",
-    // Free text (the books chart prose transitions) — no enumerated glossary values.
-    valueDefs: {},
-    // Each role rotates its own side — the books chart Man and Lady separately.
-    roleAware: true,
-    builtin: true,
-  },
+  // NOTE (2026-07-10, owner decision alongside D33): the free-text `rotation` kind
+  // (the WDSF books' Rotation column, shoulder/hip grading prose) was REMOVED —
+  // `turn` is the canonical rotation and the prose duplicated it for the app's
+  // purposes. The verbatim transcription is retained in docs/seed/figure-charts.json
+  // for provenance (the generator no longer emits it); the reconciling seeder
+  // tombstones previously-seeded rotation attributes.
   // The WDSF technique books' head-position column (printed "Extension"): where the
   // head moves and which numbered head position it ends in ("Gradually back, head
   // moves to pos. 1"). Free text — the books chart transitions as prose.

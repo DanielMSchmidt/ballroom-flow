@@ -20,7 +20,7 @@ import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
 
 /** The kind ids that have a `--bf-kind-*` token color family for column headers /
- *  chips. A deliberate SUBSET of the standard kinds (rotation/head aren't shown as
+ *  chips. A deliberate SUBSET of the standard kinds (head isn't shown as
  *  columns), so it's its own list rather than reusing ATTRIBUTE_KINDS. */
 export const STANDARD_COLUMN_KINDS: readonly AttributeKind[] = [
   "direction",
@@ -116,7 +116,6 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
     sway: "Sway",
     turn: "Turn",
     bodyActions: "Body",
-    rotation: "Rot",
     head: "Head",
   },
   de: {
@@ -125,7 +124,6 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
     sway: "Neig",
     turn: "Dreh",
     bodyActions: "Körper",
-    rotation: "Rot",
     head: "Kopf",
   },
 };
@@ -135,7 +133,7 @@ const STEP_LABEL: Record<Locale, string> = { en: "Step", de: "Schritt" };
 
 /** Technique kinds that get a column, in the design's left-to-right order
  *  (Rise · Pos · Body · Sway · Turn). */
-const ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn", "rotation", "head"];
+const ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn", "head"];
 
 /** Kinds that never get their own column (they feed the merged Step chip). */
 const STEP_KINDS = new Set(["direction", "footwork"]);
@@ -181,7 +179,7 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
  *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
  *  "Body" column alongside `position` is NOT done here — each kind is its own
  *  column so a cell maps 1:1 to a (count, kind) editor target. */
-const EDIT_ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn", "rotation", "head"];
+const EDIT_ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn", "head"];
 
 /**
  * Every column the EDIT grid should show for a figure's dance (frame 1.11:

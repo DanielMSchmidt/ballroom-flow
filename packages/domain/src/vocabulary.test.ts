@@ -155,12 +155,14 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
 
   // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
 
-  it("ships all nine standard kinds, every one builtin — footPosition removed (⟳2026-07-10)", async () => {
+  it("ships all eight standard kinds, every one builtin — footPosition + rotation removed (⟳2026-07-10)", async () => {
     // Intent: the standard tier is complete and flagged builtin (so the merge
     // and the creation UI can distinguish standard from user-defined kinds).
-    // The ballet-derived footPosition kind (first…fifth) is GONE: it had zero
-    // charted uses and duplicated what `direction` already models (the moving
-    // foot's relative placement) — the step model is direction + turn (PLAN §3).
+    // The ballet-derived footPosition kind is GONE (zero charted uses; `direction`
+    // models the moving foot's placement), and the WDSF free-text `rotation`
+    // column is GONE too (owner decision 2026-07-10: `turn` is the canonical
+    // rotation — D33; the prose transcription stays in the seed for provenance
+    // but is not modelled). The step model is direction + turn (PLAN §3/§3.8).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
     for (const k of [
       "direction",
@@ -171,12 +173,12 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
       "sway",
       "turn",
       "head",
-      "rotation",
     ]) {
       expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
       expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);
     }
     expect(ATTRIBUTE_REGISTRY.footPosition).toBeUndefined();
+    expect(ATTRIBUTE_REGISTRY.rotation).toBeUndefined();
   });
 
   it("applies rise to every Standard dance except Tango", async () => {

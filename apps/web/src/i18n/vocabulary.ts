@@ -149,12 +149,6 @@ const DE_KINDS: Record<string, KindProse> = {
       leg_line: "Beinlinie — eine gestreckte Beinlinie (z. B. eine gestreckte Fußspitze)",
     },
   },
-  rotation: {
-    label: "Rotation",
-    description:
-      "Wie Schultern und Hüften durch den Schritt rotieren (die WDSF-Rotationsspalte — Light./Dyn./Lead.).",
-    valueDefs: {},
-  },
   head: {
     label: "Kopf",
     description:

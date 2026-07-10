@@ -128,16 +128,8 @@ export function buildWdsfAttributes(input: {
             deletedAt: null,
           });
         }
-        // The WDSF books' Rotation + head ("Extension") columns, verbatim free text.
-        if (f.rotation)
-          out.push({
-            id: `${base}-rot`,
-            kind: "rotation",
-            count,
-            role,
-            value: f.rotation,
-            deletedAt: null,
-          });
+        // The WDSF books' head ("Extension") column, verbatim free text. (The books'
+        // Rotation column is NOT emitted — removed 2026-07-10, `turn` is canonical.)
         if (f.head)
           out.push({
             id: `${base}-head`,
