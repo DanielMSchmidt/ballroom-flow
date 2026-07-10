@@ -52,7 +52,7 @@ charts**. Consequences baked into the code:
 
 - `Attribute.role ∈ "leader" | "follower" | null` (`doc-types.ts:15,22-30`); `null`
   means "the couple together" (rise and position are couple-shared; direction,
-  footwork, sway, turn, bodyActions, footPosition are `roleAware` in the registry).
+  footwork, sway, turn, bodyActions are `roleAware` in the registry).
 - Role is a **view dimension, not a user attribute** (PLAN §1.5): no stored default
   role; which role's steps you see is a per-device toggle.
 - **Foot (L/R) is NEVER stored** (PLAN §2.5): feet alternate automatically with each
@@ -178,17 +178,16 @@ Definitions from research/domain.md; enums verified against `vocabulary.ts` (202
 | **Footwork** | Which part of the foot contacts the floor, in contact order. H=Heel, T=Toe, B=Ball, WF=Whole Foot, IE=Inside Edge, NFR="no foot rise" (an ISTD rise annotation → lives in the `rise` enum here, value `NFR`) | `footwork`: `HT`,`TH`,`T`,`H`,`B`,`WF`,`BF`,`IE`,`flat`,`heel turn`,`heel pull` + compound rolls `BH`,`HTH`,`THT`,`T/H/T`,`H/T`,`T/H`,`T/TH`,`TH/T`. Conventions: forward walks = HT, back walks = TH, a step "up" = T, closing/lowering step = TH (figure-steps.ts header) |
 | **Heel turn** | Closing foot drawn to the standing foot, turning on the standing heel — characteristically the **follower's** (why footwork is roleAware) | `footwork` values `heel turn`, `heel pull`; follower heel-turn sequence TH, HT, TH |
 | **Positions** (hold shapes) | Closed hold; **PP** = Promenade Position (V-shape opening the same way); **OP** = Outside Partner (stepping outside the partner's track) | `position`: `closed`,`promenade`,`counter_promenade`,`outside_partner`,`left_side`,`right_side`,`tandem`,`wing`,`CBMP` (couple-shared, not roleAware) |
-| **Foot Position** (ballet) | The five classical relationships of the feet (ISTD's occasional extra chart column) | `footPosition`: `first`,`second`,`third`,`fourth_open`,`fourth_closed`,`fifth` (roleAware) |
-| **Direction** (step headline) | What the chart's Description column says the foot does ("LF forward", "RF to side") — minus the foot letter | `direction`: `forward`,`back`,`side`,`behind`,`close`,`diagonal`,`in_place`. Closed enum, `required: true` (drives the "Step*" grid column), roleAware. Legacy `diag_forward`/`diag_back` alias-normalize to `diagonal` on read |
+| **Foot Position** (ballet) | The five classical relationships of the feet (ISTD's occasional extra chart column) | the `footPosition` kind was REMOVED ⟳2026-07-10 (D33) — zero charted uses; the moving foot's placement lives in `direction` |
+| **Direction** (step headline) | What the chart's Description column says the foot does ("LF forward", "RF to side") — minus the foot letter; the step's relative TRANSLATION in the derived-alignment model (PLAN §3.8) | `direction`: `forward`,`back`,`side`,`diagonal_forward`,`diagonal_back`,`close`,`behind`,`in_front`,`diagonal` (legacy unsplit),`in_place`. Closed enum, `required: true` (drives the "Step*" grid column), roleAware. Legacy `diag_forward`/`diag_back` alias-normalize to the split values on read (⟳2026-07-10) |
 | **Floorcraft / corners** | Placing travelling figures on long sides, turning figures at corners | Theory only — no floor model in the app (v1) |
 
-### The 8 registry kinds at a glance (`ATTRIBUTE_REGISTRY`, vocabulary.ts:99)
+### The core registry kinds at a glance (`ATTRIBUTE_REGISTRY`, vocabulary.ts — 9 standard kinds incl. free-text `rotation`/`head`; `footPosition` removed ⟳2026-07-10)
 
 | kind | cardinality | roleAware | color | notes |
 |---|---|---|---|---|
 | `direction` | single | yes | `#2f5d8f` | closed enum, `required: true` |
 | `footwork` | single | yes | `#a9742c` | `freeText: true` (lenient writes tolerate the syllabus scaffold) but `freeTextInput: false` (editor = closed picklist) |
-| `footPosition` | single | yes | `#2c8a85` | |
 | `rise` | single | no (couple-shared) | `#1f8a5b` | `appliesToDances` omits Tango; values `commence`,`body_rise`,`foot_rise`,`up`,`continue`,`lowering`,`body_lower`,`NFR` |
 | `position` | single | no (couple-shared) | `#8a5cab` | |
 | `bodyActions` | **multi** | yes | `#b07cc6` | values `CBM`,`side_leading`,`shaping`,`oversway`,`leg_line`. (PLAN §3 prose groups it with position under `#8a5cab`; the code's rendered color is `#b07cc6` — minor doc drift) |
@@ -207,13 +206,13 @@ The classic ISTD/Alex Moore technique chart (one row per step, per role) maps as
 | Step number | implicit — the ordered distinct `count`s |
 | Description / Action ("LF forward") | `direction` attribute (foot letter dropped — feet alternate) |
 | Count / Beat value ("1 2 3", "S Q Q") | `Attribute.count` (float, via `parseWdsfTiming`) |
-| Amount of Turn | `turn` attribute |
+| Amount of Turn | `turn` attribute — the canonical rotation; tokens = signed eighths, absolute alignment derives from their sum (PLAN §3.8/D33, `packages/domain/src/alignment.ts`) |
 | Rise & Fall | `rise` attribute (role `null`) |
 | Footwork | `footwork` attribute |
 | CBM / CBMP / body position | split: CBM → `bodyActions`; CBMP + holds → `position` (role `null`) |
 | Sway | `sway` attribute |
-| Alignment | per-figure `entryAlignment`/`exitAlignment` only |
-| Foot Position (occasional) | `footPosition` attribute |
+| Alignment | per-figure: `entryAlignment` authored (the start alignment); the exit DERIVED from the turn sum (`deriveExitAlignment`) — `exitAlignment` stored only for the flagged non-derivable figures (docs/seed/alignment-derivation-report.md) |
+| Foot Position (occasional) | dropped ⟳2026-07-10 — `direction` carries the placement |
 
 ---
 
