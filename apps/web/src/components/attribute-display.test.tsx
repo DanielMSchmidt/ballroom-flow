@@ -55,8 +55,11 @@ describe("attribute-display — step headline", () => {
     expect(humanizeDirection("diagonal")).toBe("diagonal");
     expect(humanizeDirection("behind")).toBe("behind");
     expect(humanizeDirection("side")).toBe("side");
-    // A legacy split-diagonal value still renders sensibly.
-    expect(humanizeDirection("diag_forward")).toBe("diagonal");
+    // The ISTD split diagonals (⟳2026-07-10) render in full.
+    expect(humanizeDirection("diagonal_forward")).toBe("diagonal forward");
+    expect(humanizeDirection("diagonal_back")).toBe("diagonal back");
+    // A legacy split-diagonal spelling still renders sensibly.
+    expect(humanizeDirection("diag_forward")).toBe("diagonal forward");
   });
 
   it("uses the direction as the headline, with an em dash when none is set", () => {

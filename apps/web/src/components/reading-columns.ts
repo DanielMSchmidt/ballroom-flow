@@ -20,12 +20,11 @@ import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
 
 /** The kind ids that have a `--bf-kind-*` token color family for column headers /
- *  chips. A deliberate SUBSET of the standard kinds (rotation/head aren't shown as
- *  columns), so it's its own list rather than reusing ATTRIBUTE_KINDS. */
+ *  chips — since the ⟳2026-07-10 prose-kind removals this is every standard kind,
+ *  kept as its own list so a future non-column kind stays expressible. */
 export const STANDARD_COLUMN_KINDS: readonly AttributeKind[] = [
   "direction",
   "footwork",
-  "footPosition",
   "rise",
   "position",
   "bodyActions",
@@ -47,26 +46,30 @@ const DIRECTION_ABBREV_EN = {
   forward: "fwd",
   back: "back",
   side: "side",
+  diagonal_forward: "diag fwd",
+  diagonal_back: "diag bk",
   behind: "beh",
   close: "close",
   in_front: "front",
   diagonal: "diag",
   in_place: "in pl",
-  // Legacy split-diagonal values (normalize to `diagonal` on read).
-  diag_forward: "diag",
-  diag_back: "diag",
+  // Legacy split-diagonal spellings (normalize to diagonal_forward/_back on read).
+  diag_forward: "diag fwd",
+  diag_back: "diag bk",
 };
 const DIRECTION_ABBREV_DE: typeof DIRECTION_ABBREV_EN = {
   forward: "vw",
   back: "rw",
   side: "seit",
+  diagonal_forward: "diag vw",
+  diagonal_back: "diag rw",
   behind: "hint",
   close: "schl",
   in_front: "vorkr",
   diagonal: "diag",
   in_place: "Platz",
-  diag_forward: "diag",
-  diag_back: "diag",
+  diag_forward: "diag vw",
+  diag_back: "diag rw",
 };
 const DIRECTION_ABBREV: Record<Locale, Record<string, string>> = {
   en: DIRECTION_ABBREV_EN,
@@ -110,22 +113,16 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
   en: {
     rise: "Rise",
     position: "Pos",
-    footPosition: "Feet",
     sway: "Sway",
     turn: "Turn",
     bodyActions: "Body",
-    rotation: "Rot",
-    head: "Head",
   },
   de: {
     rise: "Heben",
     position: "Pos",
-    footPosition: "Füße",
     sway: "Neig",
     turn: "Dreh",
     bodyActions: "Körper",
-    rotation: "Rot",
-    head: "Kopf",
   },
 };
 
@@ -133,17 +130,8 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
 const STEP_LABEL: Record<Locale, string> = { en: "Step", de: "Schritt" };
 
 /** Technique kinds that get a column, in the design's left-to-right order
- *  (Rise · Pos · Feet · Body · Sway · Turn). */
-const ORDERED_KINDS = [
-  "rise",
-  "position",
-  "footPosition",
-  "bodyActions",
-  "sway",
-  "turn",
-  "rotation",
-  "head",
-];
+ *  (Rise · Pos · Body · Sway · Turn). */
+const ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn"];
 
 /** Kinds that never get their own column (they feed the merged Step chip). */
 const STEP_KINDS = new Set(["direction", "footwork"]);
@@ -189,16 +177,7 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
  *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
  *  "Body" column alongside `position` is NOT done here — each kind is its own
  *  column so a cell maps 1:1 to a (count, kind) editor target. */
-const EDIT_ORDERED_KINDS = [
-  "rise",
-  "position",
-  "footPosition",
-  "bodyActions",
-  "sway",
-  "turn",
-  "rotation",
-  "head",
-];
+const EDIT_ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn"];
 
 /**
  * Every column the EDIT grid should show for a figure's dance (frame 1.11:

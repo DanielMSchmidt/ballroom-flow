@@ -56,7 +56,7 @@ docs/seed/figure-charts.json             (147 verified per-step BOTH-ROLE charts
    packages/domain/src/wdsf-timing.ts → buildWdsfAttributes()
        AUTHORED PATH: if authoredSteps(dance, figureType) exists AND its length
          equals parseWdsfTiming(timing).length → emit real per-count, per-role
-         direction + footwork (+ sway/turn/bodyActions/footPosition/rise/position)
+         direction + footwork (+ sway/turn/bodyActions/rise/position)
        SCAFFOLD PATH: otherwise → one free-text footwork attribute per count,
          start phrase on step 1, finish phrase on the last, blank between
                   |
@@ -176,6 +176,14 @@ sourced timing added to `docs/seed/wdsf-standard-figures.json` first.
    token form HT/TH/T/H/"heel pull"); `sway`/`turn` `"none"` is allowed in the seed
    (the generator drops it); alignments are from the **leader's perspective**, and
    a figure's exit should chain onto plausible followers' entries.
+   **Exit alignments are DERIVED since 2026-07-10 (PLAN §3.8/D33):** transcribe the
+   book's exit while charting to CHECK your turns, but store `exitAlignment` ONLY
+   when `deriveExitAlignment(entry, steps)` (packages/domain/src/alignment.ts)
+   does NOT reproduce the printed token — a stored exit that derivation reproduces
+   fails `alignment.test.ts` (drop it; the flag is the field's presence, see
+   docs/seed/alignment-derivation-report.md). `entryAlignment` (the start
+   alignment) is always stored. The old ballet `footPosition` role field was
+   removed the same day (zero uses; `direction` carries the placement).
 3. **Regenerate:**
    ```bash
    node scripts/gen-figure-charts.mjs

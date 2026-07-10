@@ -43,12 +43,6 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     border: "var(--bf-kind-footwork-border)",
     solid: "var(--bf-kind-footwork)",
   },
-  footPosition: {
-    tint: "var(--bf-kind-footPosition-tint)",
-    ink: "var(--bf-kind-footPosition-ink)",
-    border: "var(--bf-kind-footPosition-border)",
-    solid: "var(--bf-kind-footPosition)",
-  },
   rise: {
     tint: "var(--bf-kind-rise-tint)",
     ink: "var(--bf-kind-rise-ink)",
@@ -78,18 +72,6 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     ink: "var(--bf-kind-turn-ink)",
     border: "var(--bf-kind-turn-border)",
     solid: "var(--bf-kind-turn)",
-  },
-  rotation: {
-    tint: "var(--bf-kind-rotation-tint)",
-    ink: "var(--bf-kind-rotation-ink)",
-    border: "var(--bf-kind-rotation-border)",
-    solid: "var(--bf-kind-rotation)",
-  },
-  head: {
-    tint: "var(--bf-kind-head-tint)",
-    ink: "var(--bf-kind-head-ink)",
-    border: "var(--bf-kind-head-border)",
-    solid: "var(--bf-kind-head)",
   },
 };
 

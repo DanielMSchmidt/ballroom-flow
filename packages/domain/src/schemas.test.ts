@@ -86,10 +86,10 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toBe(9);
   });
 
-  it("normalizes the split diagonal → `diagonal` on read", async () => {
+  it("normalizes the legacy diag_back → `diagonal_back` on read (⟳2026-07-10)", async () => {
     // Intent: alias normalization happens at the schema boundary too.
-    // Arrange: a direction attribute with the legacy value "diag_forward".
-    // Act: parse with the read schema. Assert: normalized to "diagonal".
+    // Arrange: a direction attribute with the legacy value "diag_back".
+    // Act: parse with the read schema. Assert: normalized to the ISTD split value.
     const { parseAttributeRead } = await importDomain();
     const parsed = parseAttributeRead({
       id: "a1",
@@ -97,7 +97,7 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       count: 1,
       value: "diag_back",
     });
-    expect(parsed.value).toBe("diagonal");
+    expect(parsed.value).toBe("diagonal_back");
   });
 
   it("passes a legacy CBP value through on read (CBP is no longer recognized)", async () => {
@@ -143,20 +143,24 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toThrow();
   });
 
-  it("validates footPosition as a closed enum on write (accepts a ballet position, rejects junk)", async () => {
-    // Intent: the new `footPosition` kind is a closed enum, so the strict write
-    // check accepts an enumerated value (fourth_closed) and rejects an unknown one.
+  it("accepts the ISTD split diagonals on the closed direction enum (⟳2026-07-10)", async () => {
+    // Intent: direction is the step's relative translation — the ISTD set includes
+    // diagonal_forward/diagonal_back as first-class closed-enum members; junk that
+    // was never a direction (a removed footPosition ballet value) is rejected.
     const { parseAttributeWrite } = await importDomain();
     expect(
-      parseAttributeWrite({ id: "a1", kind: "footPosition", count: 1, value: "fourth_closed" })
+      parseAttributeWrite({ id: "a1", kind: "direction", count: 1, value: "diagonal_forward" })
         .value,
-    ).toBe("fourth_closed");
+    ).toBe("diagonal_forward");
+    expect(
+      parseAttributeWrite({ id: "a2", kind: "direction", count: 1, value: "diagonal_back" }).value,
+    ).toBe("diagonal_back");
     expect(() =>
-      parseAttributeWrite({ id: "a2", kind: "footPosition", count: 1, value: "sixth" }),
+      parseAttributeWrite({ id: "a3", kind: "direction", count: 1, value: "fourth_closed" }),
     ).toThrow();
   });
 
-  it("normalizes the split diagonal → `diagonal` on write, then accepts it", async () => {
+  it("normalizes the legacy diag_forward → `diagonal_forward` on write, then accepts it", async () => {
     // Intent: the alias normalizes before the strict enum check, so writing a
     // legacy diag_forward to the closed `direction` enum succeeds, stored canonical.
     const { parseAttributeWrite } = await importDomain();
@@ -166,7 +170,7 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       count: 1,
       value: "diag_forward",
     });
-    expect(ok.value).toBe("diagonal");
+    expect(ok.value).toBe("diagonal_forward");
   });
 
   it("rejects a kind whose appliesToDances EXCLUDES the figure's dance on write (rise omits Tango)", async () => {

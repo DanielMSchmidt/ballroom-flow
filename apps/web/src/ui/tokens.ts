@@ -15,14 +15,11 @@
 export const ATTRIBUTE_KINDS = [
   "direction",
   "footwork",
-  "footPosition",
   "rise",
   "position",
   "bodyActions",
   "sway",
   "turn",
-  "rotation",
-  "head",
 ] as const;
 export type AttributeKind = (typeof ATTRIBUTE_KINDS)[number];
 

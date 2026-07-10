@@ -161,13 +161,13 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
     }
   });
 
-  it("carries the WDSF head + rotation columns as per-role free-text attributes", () => {
-    // The books' Rotation column (shoulder/hip grading) and the head-position
-    // ("Extension") column are charted verbatim per role.
-    const rot = natural.find((a) => a.count === 1 && a.role === "leader" && a.kind === "rotation");
-    expect(String(rot?.value)).toMatch(/with shoulders/i);
-    const head = natural.find((a) => a.count === 2 && a.role === "follower" && a.kind === "head");
-    expect(String(head?.value)).toMatch(/pos\. 1/i);
+  it("emits neither the WDSF rotation nor head prose columns (removed ⟳2026-07-10)", () => {
+    // The books' Rotation and head-position ("Extension") prose columns are no
+    // longer modelled — `turn` is the canonical rotation (D33) and the prose
+    // doesn't earn a place in the structured step model; both transcriptions
+    // stay in the chart seed for provenance only.
+    expect(natural.some((a) => a.kind === "rotation")).toBe(false);
+    expect(natural.some((a) => a.kind === "head")).toBe(false);
   });
 });
 

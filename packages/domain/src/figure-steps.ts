@@ -11,6 +11,7 @@
 // heel turn = TH, HT, TH. Coverage grows as more figures are verified; un-listed figures keep
 // the start/finish scaffold rather than carrying invented footwork.
 
+import { deriveExitAlignment } from "./alignment";
 import type { DanceId } from "./dances";
 import type { Alignment } from "./doc-types";
 import { GENERATED_FIGURE_ALIGNMENTS, GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
@@ -34,12 +35,6 @@ export interface AuthoredFootwork {
   turn?: string;
   /** Body actions (`bodyActions` vocab, e.g. ["CBM"]) — role-aware, set when known. */
   bodyActions?: string[];
-  /** Foot position (`footPosition` vocab: first/second/…/fifth) — set when charted. */
-  footPosition?: string;
-  /** WDSF Rotation column, verbatim (shoulders/hips, Light./Dyn./Lead.) — free text. */
-  rotation?: string;
-  /** WDSF head-position ("Extension") column, verbatim — free text. */
-  head?: string;
 }
 
 /**
@@ -80,12 +75,24 @@ export function authoredSteps(
 
 /**
  * Figure-level entry/exit alignment (per-figure, from the leader's perspective) for a
- * charted figure, or `undefined` when the source doesn't chart it. Constant-alignment
- * figures (e.g. a Waltz closed change, which doesn't turn) carry the same entry + exit.
+ * charted figure, or `undefined` when the source doesn't chart it.
+ *
+ * The ENTRY is the figure's stored start alignment. The EXIT is DERIVED —
+ * entry ⊕ the leader's summed turns (alignment.ts) — except for the flagged
+ * non-derivable figures (foot-vs-body turn splits, `pointing` endings; see
+ * docs/seed/alignment-derivation-report.md), which keep a stored exit in the seed.
+ * Either way the value returned here is the book's printed exit (alignment.test.ts
+ * pins both paths against the frozen oracle).
  */
 export function authoredAlignment(
   dance: DanceId,
   figureType: string,
 ): { entry?: Alignment; exit?: Alignment } | undefined {
-  return GENERATED_FIGURE_ALIGNMENTS[`${dance}:${figureType}`];
+  const key = `${dance}:${figureType}`;
+  const stored = GENERATED_FIGURE_ALIGNMENTS[key];
+  if (!stored) return undefined;
+  if (stored.exit || !stored.entry) return stored;
+  const steps = GENERATED_FIGURE_STEPS[key];
+  if (!steps) return stored;
+  return { entry: stored.entry, exit: deriveExitAlignment(stored.entry, steps) };
 }

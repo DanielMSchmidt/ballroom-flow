@@ -1,8 +1,8 @@
 {
  "meta": {
   "title": "Per-step both-role figure charts (WDSF-first, researched)",
-  "note": "Real International Standard technique, charted per figure from the official WDSF Technique Books (2nd ed., May 2013) as the primary source (owner-provided copies; cell-level transcription, adversarially verified against the page images); dancecentral.info remains the source for figures the books do not contain. NO fabrication: figures without a verifiable per-step source were removed from the catalog rather than guessed. Each entry records its source. Turn amounts are recorded on the step row where the book prints them (WDSF prints 'x between N-1 and N' on row N, so alignment(N) = alignment(N-1) + turn(N)). Shared rise is taken from the Man's Rise-and-Fall column; a materially different Lady rise is recorded in the entry note. The books' Rotation and head-position ('Extension') columns are charted VERBATIM as the free-text `rotation` and `head` kinds (per role); rotation cells mentioning 'with shoulders' additionally map to bodyActions CBM. Role-asymmetric charts keep every printed step: the count grid is the union of both roles' printed beats, and a count one role does not dance simply has no entry for that role. The only WDSF column not modelled is Tango's 'Sudden Movement' (pressure). Regenerate packages/domain/src/figure-charts.generated.ts with scripts/gen-figure-charts.mjs. Further conventions: 'Com./Cont. to turn' prose carries no token and no note (implied by the following step's amount); a cell printing several amounts ('X then Y (Pivot/Swivel)') carries their SUM plus a verbatim note; 'X or Y' alternatives keep the directly-charted amount plus a verbatim note; a cell spanning several rows ('between/on/over steps N and M') is recorded once, on the span's last row; a fraction printed without L/R takes its direction from the partner's cell for the same step; body-turn-only cells become notes; placement qualifiers (without weight, part weight, brush, heel pull, toe pivot, shoulder leading) and unusual printed foot actions are echoed into the entry note; foot annotations '(LF)/(RF)' are dropped (feet are never stored).",
-  "figureCount": 216
+  "note": "Real International Standard technique, charted per figure from the official WDSF Technique Books (2nd ed., May 2013) as the primary source (owner-provided copies; cell-level transcription, adversarially verified against the page images); dancecentral.info remains the source for figures the books do not contain. NO fabrication: figures without a verifiable per-step source were removed from the catalog rather than guessed. Each entry records its source. Turn amounts are recorded on the step row where the book prints them (WDSF prints 'x between N-1 and N' on row N, so alignment(N) = alignment(N-1) + turn(N)). Shared rise is taken from the Man's Rise-and-Fall column; a materially different Lady rise is recorded in the entry note. The books' Rotation and head-position ('Extension') columns are transcribed VERBATIM into each role's `rotation`/`head` fields as PROVENANCE ONLY (owner decision 2026-07-10, with D33: `turn` is the canonical rotation and the prose columns are not modelled, so the generator emits NEITHER; do not delete these cells — the rotation prose documents the body-turn grading behind the non-derivable alignments); rotation cells mentioning 'with shoulders' additionally map to bodyActions CBM. Role-asymmetric charts keep every printed step: the count grid is the union of both roles' printed beats, and a count one role does not dance simply has no entry for that role. The only WDSF column not modelled is Tango's 'Sudden Movement' (pressure). Regenerate packages/domain/src/figure-charts.generated.ts with scripts/gen-figure-charts.mjs. Further conventions: 'Com./Cont. to turn' prose carries no token and no note (implied by the following step's amount); a cell printing several amounts ('X then Y (Pivot/Swivel)') carries their SUM plus a verbatim note; 'X or Y' alternatives keep the directly-charted amount plus a verbatim note; a cell spanning several rows ('between/on/over steps N and M') is recorded once, on the span's last row; a fraction printed without L/R takes its direction from the partner's cell for the same step; body-turn-only cells become notes; placement qualifiers (without weight, part weight, brush, heel pull, toe pivot, shoulder leading) and unusual printed foot actions are echoed into the entry note; foot annotations '(LF)/(RF)' are dropped (feet are never stored). Alignment (2026-07-10): entryAlignment is the figure's START alignment; the exit is DERIVED (entry + the leader's summed turns, packages/domain/src/alignment.ts), so exitAlignment is stored ONLY for figures the derivation cannot reproduce (foot-vs-body turn splits, pointing/promenade endings — see docs/seed/alignment-derivation-report.md); an exitAlignment that derivation reproduces exactly is redundant and must be omitted (enforced by packages/domain/src/alignment.test.ts).",
+  "figureCount": 232
  },
  "figures": [
   {
@@ -153,10 +153,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -298,10 +294,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -544,10 +536,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -627,10 +615,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW_against"
    }
   },
   {
@@ -710,10 +694,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW_against"
    }
   },
   {
@@ -791,10 +771,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC_against"
    }
   },
   {
@@ -883,10 +859,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -1054,10 +1026,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -1142,10 +1110,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -1217,10 +1181,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DC"
    }
@@ -1295,10 +1255,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -1358,10 +1314,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC_against"
    }
   },
   {
@@ -1586,10 +1538,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -1662,10 +1610,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -1960,10 +1904,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -2079,10 +2019,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -2151,10 +2087,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "LOD"
    }
   },
   {
@@ -2308,10 +2240,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -2474,10 +2402,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -2590,10 +2514,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -2678,10 +2598,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DW"
    }
   },
   {
@@ -2938,10 +2854,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "LOD"
    }
   },
   {
@@ -3131,10 +3043,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -3211,10 +3119,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -3355,10 +3259,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -3708,10 +3608,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -3785,10 +3681,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -3948,10 +3840,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -4006,10 +3894,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -4098,10 +3982,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -4228,10 +4108,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -4311,10 +4187,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -4431,10 +4303,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -4497,10 +4365,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC_against"
    }
   },
   {
@@ -4839,10 +4703,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -4985,10 +4845,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "LOD"
    }
   },
   {
@@ -5073,10 +4929,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -5527,10 +5379,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -5614,10 +5462,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
    }
   },
   {
@@ -5849,10 +5693,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -5927,10 +5767,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -6044,10 +5880,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -6124,10 +5956,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -6298,10 +6126,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -6449,10 +6273,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -6503,10 +6323,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -6858,10 +6674,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -6986,10 +6798,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -7298,10 +7106,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -7424,10 +7228,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -7503,10 +7303,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
    }
   },
   {
@@ -7628,10 +7424,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
    }
   },
   {
@@ -7678,10 +7470,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -7766,10 +7554,6 @@
    ],
    "entryAlignment": {
     "qualifier": "pointing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
     "direction": "DW"
    }
   },
@@ -8184,10 +7968,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -8275,10 +8055,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -8363,10 +8139,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DW_against"
    }
   },
   {
@@ -8628,10 +8400,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -8840,10 +8608,6 @@
    ],
    "entryAlignment": {
     "qualifier": "pointing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
     "direction": "DW"
    }
   },
@@ -9061,10 +8825,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -9321,10 +9081,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -9372,10 +9128,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -9738,10 +9490,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -9798,10 +9546,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "wall"
    }
   },
   {
@@ -9924,10 +9668,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -9959,10 +9699,6 @@
    ],
    "entryAlignment": {
     "qualifier": "backing",
-    "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
     "direction": "LOD"
    }
   },
@@ -10039,10 +9775,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -10108,10 +9840,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -10157,10 +9885,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DC"
    }
@@ -10308,10 +10032,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -10787,10 +10507,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -11096,10 +10812,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -11291,10 +11003,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -11375,10 +11083,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -11628,10 +11332,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -12008,10 +11708,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -12135,10 +11831,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -12733,10 +12425,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -12929,10 +12617,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -12995,10 +12679,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
    }
   },
   {
@@ -13161,10 +12841,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DC"
    }
   },
   {
@@ -13238,10 +12914,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -13538,10 +13210,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -13621,10 +13289,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DC"
    }
@@ -13710,10 +13374,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -13798,10 +13458,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DW"
    }
   },
   {
@@ -14101,10 +13757,6 @@
    ],
    "entryAlignment": {
     "qualifier": "pointing",
-    "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
     "direction": "LOD"
    }
   },
@@ -14434,10 +14086,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -14579,10 +14227,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DW"
    }
@@ -18111,10 +17755,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -18184,10 +17824,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -18251,10 +17887,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC_against"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -18407,10 +18039,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DW"
    }
   },
   {
@@ -18592,10 +18220,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -18808,10 +18432,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
    }
   },
   {
@@ -18880,10 +18500,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -18940,10 +18556,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "LOD"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "LOD"
    }
@@ -19040,10 +18652,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "wall"
    }
   },
   {
@@ -19123,10 +18731,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "wall"
    }
   },
   {
@@ -19170,10 +18774,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -19218,10 +18818,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -19317,10 +18913,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -19420,10 +19012,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "wall"
    }
   },
   {
@@ -19519,10 +19107,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -19617,10 +19201,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "ALOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -19670,10 +19250,6 @@
     }
    ],
    "entryAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
-   },
-   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DC"
    }
@@ -19963,10 +19539,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {
@@ -20279,10 +19851,6 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -20351,10 +19919,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "DC"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DW"
    }
   },
   {
@@ -20520,10 +20084,6 @@
    "entryAlignment": {
     "qualifier": "pointing",
     "direction": "wall"
-   },
-   "exitAlignment": {
-    "qualifier": "backing",
-    "direction": "DW"
    }
   },
   {
@@ -20598,10 +20158,6 @@
    "entryAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
-   },
-   "exitAlignment": {
-    "qualifier": "facing",
-    "direction": "DC"
    }
   },
   {

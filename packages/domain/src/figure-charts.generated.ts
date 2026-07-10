@@ -13,13 +13,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Dyn. and Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then Cont. to R with shoulders (Dyn. and Lead.)",
       },
     },
     {
@@ -31,7 +29,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.) Slighty to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -39,8 +36,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.) Slighty to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos.6",
       },
     },
     {
@@ -57,7 +52,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_R",
-        head: "Cont. Gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -68,12 +62,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        rotation: "Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        rotation: "Sightly to R with hips (Lead.)",
       },
     },
     {
@@ -96,14 +88,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and to R with hips (Lead.)",
       },
     },
   ],
@@ -115,13 +105,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -132,14 +120,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -150,13 +136,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -166,13 +150,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -184,7 +166,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -192,8 +173,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -204,7 +183,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at e/o 3",
       },
       follower: {
         direction: "back",
@@ -212,8 +190,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -329,13 +305,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -352,7 +326,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T, IE of TH",
         sway: "to_R",
         bodyActions: ["side_leading"],
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -364,7 +337,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
@@ -372,8 +344,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -383,13 +353,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -401,13 +369,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then Cont. to R with shoulders (Dyn. and Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then Cont. to R with shoulders (Dyn. and Lead.)",
       },
     },
     {
@@ -419,7 +385,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.) Slighty to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -427,8 +392,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.) Slighty to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -445,7 +408,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -457,13 +419,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
     },
     {
@@ -475,7 +435,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -483,8 +442,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -501,7 +458,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -513,13 +469,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -531,7 +485,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -539,8 +492,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -557,7 +508,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_L",
-        head: "Cont. back, head ends in pos. 6",
       },
     },
   ],
@@ -569,14 +519,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -587,15 +534,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BT",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "close",
         footwork: "HB",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Cont. back, head moves to pos. 1",
       },
     },
     {
@@ -605,7 +549,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        head: "Cont. back, head ends in pos. 1",
       },
     },
     {
@@ -631,13 +574,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -647,14 +588,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) at e/o 2",
       },
       follower: {
         direction: "back",
         footwork: "T",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To L with shoulders (Lead.) at e/o 2",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -669,7 +607,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         turn: "five_eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -680,14 +617,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "THT",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
   ],
@@ -699,13 +634,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) at the e/o 1",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) at e/o 1",
       },
     },
     {
@@ -715,15 +648,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "B",
         sway: "to_R",
-        rotation: "Slightly to L with hips (Lead.) at the e/o 2",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "Slightly to L with hips (Lead.) at e/o 2",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -739,7 +669,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -751,13 +680,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "THT",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -769,7 +696,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -777,8 +703,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -789,7 +713,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 3",
       },
       follower: {
         direction: "back",
@@ -797,8 +720,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -810,13 +731,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn. and Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn. and Lead.)",
       },
     },
     {
@@ -827,15 +746,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -850,7 +766,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -862,13 +777,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -880,7 +793,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -888,7 +800,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
     },
     {
@@ -955,14 +866,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -979,7 +887,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -989,13 +896,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "B",
         turn: "half_R",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -1011,7 +916,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Slightly back, head ends in pos. 1",
       },
     },
     {
@@ -1020,12 +924,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "in_place",
         footwork: "TB",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "in_place",
         footwork: "B",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -1036,15 +938,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T, B",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "eighth_L",
-        rotation: "To L with the hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1055,7 +954,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 7",
       },
       follower: {
         direction: "back",
@@ -1063,8 +961,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 7",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1076,14 +972,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulder(Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -1100,8 +993,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T and I/E of T (RF)",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Light.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -1111,15 +1002,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) e/o 3",
-        head: "Cont. back, head ends in pos. 6",
       },
     },
   ],
@@ -1131,14 +1019,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders(Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -1149,7 +1034,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T and I/E of T (LF)",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -1157,8 +1041,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and slightly to R with hips (Lead.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -1184,13 +1066,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -1201,15 +1081,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
       },
       follower: {
         direction: "side",
         footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
-        head: "Gradually back e/o 2, head moves to pos. 1",
       },
     },
     {
@@ -1221,7 +1098,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "diagonal",
@@ -1229,8 +1105,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Cont. back e/o 3, head ends in pos. 1",
       },
     },
   ],
@@ -1242,13 +1116,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -1260,7 +1132,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -1268,8 +1139,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and hips (Lead.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -1286,7 +1155,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Cont. back e/o 3, head moves to pos. 6",
       },
     },
   ],
@@ -1298,14 +1166,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1317,7 +1182,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "close",
@@ -1325,7 +1189,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -1352,14 +1215,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of B",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
     },
     {
@@ -1374,7 +1235,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1389,7 +1249,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1401,14 +1260,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1425,7 +1281,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -1436,14 +1291,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
     },
     {
@@ -1454,15 +1307,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1477,7 +1327,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1489,14 +1338,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1513,7 +1359,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -1540,14 +1385,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1574,13 +1416,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -1589,13 +1429,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "in_place",
         footwork: "B (RF) and H (LF)",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -1606,14 +1444,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Flat (RF) and I/E of T (LF)",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH (LF) and I/E of T (RF)",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
     },
     {
@@ -1630,7 +1466,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1645,7 +1480,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1657,14 +1491,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1681,7 +1512,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "quarter_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -1691,13 +1521,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -1707,13 +1535,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         sway: "to_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -1723,13 +1549,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then Cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -1741,7 +1565,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -1749,8 +1572,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1761,7 +1582,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Cont. slightly to L with shoulders (Light.) at e/o 3",
       },
       follower: {
         direction: "back",
@@ -1769,8 +1589,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1782,14 +1600,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation:
-          "To R with shoulders (Light.) then to L with shoulders and to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. slightly to R with shoulders (Lead.)",
       },
     },
     {
@@ -1799,12 +1614,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "B",
         turn: "eighth_R",
-        rotation: "Cont. to R with hips (Lead.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
-        rotation: "Cont. to R with hips (Lead.)",
       },
     },
     {
@@ -1814,12 +1627,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TB",
         turn: "eighth_R",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -1830,15 +1641,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T, B",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "Cont. to L with hips (Lead.)",
-        head: "Gradually back, head moving to pos. 1",
       },
     },
     {
@@ -1849,7 +1657,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 5",
       },
       follower: {
         direction: "back",
@@ -1857,8 +1664,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 5",
-        head: "Cont. gradually back, head end to pos. 1",
       },
     },
   ],
@@ -1870,13 +1675,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -1888,15 +1691,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -1908,7 +1708,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -1916,8 +1715,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -1930,14 +1727,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH with pressure on B (RF)",
         sway: "to_L",
         turn: "eighth_R",
-        rotation: "To R shoulders (Lead. and Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB (F Flat) and I/E of B (LF)",
         sway: "to_R",
         turn: "three_eighth_R",
-        rotation: "To R shoulders (Lead.) then to R with hips (Lead.)",
       },
     },
   ],
@@ -2050,14 +1845,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2074,7 +1866,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -2101,14 +1892,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2125,7 +1913,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_R",
         turn: "half_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -2137,14 +1924,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -2155,14 +1940,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -2177,7 +1960,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         sway: "to_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2192,7 +1974,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -2202,13 +1983,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -2220,7 +1999,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -2228,7 +2006,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) (Wind Up Action)",
       },
     },
     {
@@ -2251,14 +2028,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -2275,8 +2049,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Light.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -2287,7 +2059,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "half_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
@@ -2295,8 +2066,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) e/o 3",
-        head: "Cont. back, head ends in pos. 6",
       },
     },
   ],
@@ -2308,14 +2077,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -2326,7 +2092,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BT",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
@@ -2334,8 +2099,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and slightly to R with hips (Lead.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -2363,14 +2126,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -2385,7 +2146,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2400,7 +2160,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -2413,16 +2172,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation:
-          "To L with shoulders (Light.) then to L with shoulders (Dyn.) and to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation:
-          "To L with shoulders (Light.) then to L with shoulders (Dyn.) and to R with hips (Lead.)",
       },
     },
     {
@@ -2448,7 +2203,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -2456,8 +2210,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2468,7 +2220,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 4",
       },
       follower: {
         direction: "back",
@@ -2476,8 +2227,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 4",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -2490,13 +2239,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with hips (Lead.)",
       },
     },
     {
@@ -2507,7 +2254,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -2515,7 +2261,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
     },
     {
@@ -2526,14 +2271,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -2545,13 +2288,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -2561,13 +2302,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -2579,7 +2318,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -2587,8 +2325,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -2599,7 +2335,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at the e/o 3",
       },
       follower: {
         direction: "back",
@@ -2607,8 +2342,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) at e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -2620,13 +2353,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
     },
     {
@@ -2636,12 +2367,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -2666,15 +2395,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation:
-          "To R with shoulders (Light.) then to R with shoulders (Dyn.) and slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation:
-          "To R with shoulders (Light.) then to R with shoulders (Dyn.) and slightly to R with hips (Lead.)",
       },
     },
     {
@@ -2697,14 +2422,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and to R with hips (Lead.)",
       },
     },
   ],
@@ -2716,13 +2439,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
     },
     {
@@ -2735,7 +2456,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "diagonal",
         footwork: "T",
-        head: "Gradually back on 2, head moves to pos.1",
       },
     },
     {
@@ -2748,7 +2468,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "behind",
         footwork: "T",
-        head: "Con. gradually back on 3, head ends in pos.1",
       },
     },
     {
@@ -2757,12 +2476,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -2775,15 +2492,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back on 1, head ends in pos. 1",
       },
     },
     {
@@ -2793,13 +2507,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -2809,13 +2521,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
     },
   ],
@@ -2827,13 +2537,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -2844,15 +2552,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Flat F (LF), and light pressure on I/E of T (RF)",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "close",
         footwork: "Flat F (RF), and light pressure on I/E of T (LF)",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 2",
-        head: "Slightly back, head moves to pos. 6",
       },
     },
   ],
@@ -2864,14 +2569,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -2882,15 +2584,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BT",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "close",
         footwork: "HB",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Cont. back, head moves to pos. 1",
       },
     },
     {
@@ -2905,7 +2604,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        head: "Cont. back, head ends in pos. 1",
       },
     },
     {
@@ -2927,15 +2625,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH (LF), ET (RF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "Cont. to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -2947,7 +2642,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "in_front",
@@ -2955,7 +2649,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -3004,12 +2697,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "TH",
-        rotation: "To L with hips (Lead) e/o 6",
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        rotation: "To L with hips (Lead) e/o 6",
       },
     },
   ],
@@ -3021,13 +2712,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
     },
     {
@@ -3040,7 +2729,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
-        head: "Gradually back on 2, head moves to pos.1",
       },
     },
     {
@@ -3053,7 +2741,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "in_front",
         footwork: "T",
-        head: "Con. gradually back on 3, head ends in pos.1",
       },
     },
     {
@@ -3062,12 +2749,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -3079,13 +2764,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "THB",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulder (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -3095,13 +2778,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "B",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -3110,13 +2791,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "B",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "eighth_L",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -3149,12 +2828,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
     },
   ],
@@ -3209,13 +2886,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -3226,15 +2901,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
       },
       follower: {
         direction: "side",
         footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
-        head: "Gradually back e/o 2",
       },
     },
     {
@@ -3246,7 +2918,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "diagonal",
@@ -3254,8 +2925,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Cont. back b/o 3, head ends in pos. 1",
       },
     },
   ],
@@ -3267,13 +2936,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -3285,7 +2952,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -3293,8 +2959,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and hips (Lead.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -3311,7 +2975,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Cont. back b/o 3, head moves to pos. 6",
       },
     },
   ],
@@ -3324,14 +2987,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HBH",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -3343,13 +3004,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -3366,7 +3025,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3382,7 +3040,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -3393,14 +3050,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -3411,15 +3066,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HT",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BT",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -3447,13 +3099,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -3470,7 +3120,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3486,7 +3135,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -3498,13 +3146,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then with shoulders (Dyn.)",
       },
     },
     {
@@ -3521,7 +3167,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -3532,14 +3177,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
-        rotation: "To L with hips (Lead)",
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -3551,13 +3193,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -3572,7 +3212,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3586,7 +3225,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "T",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -3595,12 +3233,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -3612,13 +3248,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -3633,7 +3267,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3647,7 +3280,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -3656,12 +3288,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -3673,13 +3303,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -3696,7 +3324,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_R",
-        head: "Gradually back",
       },
     },
     {
@@ -3708,13 +3335,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "T",
         sway: "to_L",
-        head: "Cont. gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3730,8 +3355,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -3744,14 +3367,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -3763,13 +3384,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -3786,7 +3405,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -3802,7 +3420,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -3858,13 +3475,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -3887,15 +3502,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BT",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "BT",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -3906,15 +3518,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 4",
-        head: "Cont. gradually back at b/o 3, head ends in pos. 6",
       },
     },
   ],
@@ -3926,13 +3535,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
     },
     {
@@ -3944,7 +3551,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -3952,8 +3558,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Slightly back on 2, head moves to pos. 6",
       },
     },
     {
@@ -3964,7 +3568,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "back",
@@ -3972,7 +3575,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -3984,13 +3586,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then continue to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -4007,7 +3607,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -4023,7 +3622,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -4034,14 +3632,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HBH",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -4051,14 +3647,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -4070,7 +3663,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "close",
@@ -4078,8 +3670,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -4091,14 +3681,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
         turn: "eighth_R",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -4108,13 +3696,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with hips (Lead.)",
       },
     },
     {
@@ -4126,7 +3712,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -4134,8 +3719,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos.6",
       },
     },
     {
@@ -4146,7 +3729,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 10",
       },
       follower: {
         direction: "back",
@@ -4154,7 +3736,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -4225,13 +3806,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "B",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -4241,13 +3820,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "B",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -4256,12 +3833,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "B",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -4294,12 +3869,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "TH",
-        rotation: "To L with hips (Lead) e/o 6",
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        rotation: "To L with hips (Lead) e/o 6",
       },
     },
   ],
@@ -4311,14 +3884,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -4335,8 +3905,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "Slightly to L with hips (Ligh.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -4347,7 +3915,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
@@ -4355,8 +3922,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) e/o 3",
-        head: "Cont. back, head ends in pos. 6",
       },
     },
   ],
@@ -4368,14 +3933,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -4386,7 +3948,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BT",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
@@ -4394,8 +3955,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and slightly to R with hips (Lead.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -4423,13 +3982,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -4444,7 +4001,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_R",
-        head: "Gradually back, head moves in pos. 1",
       },
     },
     {
@@ -4458,7 +4014,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "T",
         turn: "eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -4470,7 +4025,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -4478,7 +4032,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
   ],
@@ -4490,13 +4043,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -4511,7 +4062,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_R",
-        head: "Gradually back, head moves in pos. 1",
       },
     },
     {
@@ -4524,7 +4074,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -4536,7 +4085,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -4544,7 +4092,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
   ],
@@ -4634,13 +4181,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -4655,7 +4200,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "T",
         bodyActions: ["side_leading"],
-        head: "Gradually back on 2, head moves to pos.1",
       },
     },
     {
@@ -4668,7 +4212,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "behind",
         footwork: "T",
-        head: "Con. gradually back on 3, head ends in pos.1",
       },
     },
     {
@@ -4677,12 +4220,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -4692,13 +4233,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To R with hips (Lead.)",
       },
     },
     {
@@ -4709,15 +4248,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -4728,15 +4264,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To R with hips (Lead.)",
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -4831,13 +4364,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
     },
     {
@@ -4847,13 +4378,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "Slightly To R with shoulders and to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and slightly to R with hips (Lead.)",
       },
     },
     {
@@ -4969,15 +4498,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos.6",
       },
     },
     {
@@ -4988,15 +4514,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
         footwork: "H flat",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
-        head: "Cont. gradually back, head changes to pos.1",
       },
     },
     {
@@ -5007,13 +4530,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HT",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
     },
     {
@@ -5046,12 +4567,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
     },
   ],
@@ -5064,8 +4583,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 1",
-        head: "Direct back, head moves to pos.1",
       },
       follower: {
         direction: "side",
@@ -5073,8 +4590,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 1",
-        head: "Direct back and leftward, head ends in pos. 1",
       },
     },
     {
@@ -5083,13 +4598,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -5111,14 +4624,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos.1",
       },
     },
   ],
@@ -5140,13 +4650,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and slightly to L with hips (Lead.) e/o 2",
       },
     },
     {
@@ -5170,14 +4678,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "WF",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
     },
   ],
@@ -5188,13 +4694,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -5228,13 +4732,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -5256,15 +4758,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
   ],
@@ -5275,13 +4774,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -5338,13 +4835,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and slightly to L with hips (Lead.) e/o 2",
       },
     },
     {
@@ -5354,14 +4849,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "I/E of BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -5375,7 +4868,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         turn: "quarter_R",
-        head: "Direct back and leftwards, head moves to pos. 1",
       },
     },
     {
@@ -5398,13 +4890,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH (RF) and I/E of B (LF)",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o of 6",
       },
       follower: {
         direction: "side",
         footwork: "BH (LF) and I/E of B (RF)",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Lead.) at the very e/o of 6",
       },
     },
   ],
@@ -5415,14 +4905,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation:
-          "To L with shoulders (Dyn.) during 9, then to R with shoulders (Lead.) at the e/o 9",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) during 9, then to R with hips (Lead.) at the e/o 9",
       },
     },
     {
@@ -5456,13 +4943,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and to L with hips (Lead.) e/o 2",
       },
     },
     {
@@ -5483,14 +4968,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
   ],
@@ -5502,14 +4984,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to R with hips (Lead.)",
       },
     },
     {
@@ -5549,7 +5029,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_L",
-        head: "Gradually back and leftwards, head ends in pos. 1",
       },
     },
   ],
@@ -5583,14 +5062,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Light.)",
       },
     },
     {
@@ -5600,14 +5077,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of BH",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "Slightly to R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "I/E of BH",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "Slightly to R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -5617,14 +5091,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
-        head: "Continue gradually back, head ends to pos. 1",
       },
     },
     {
@@ -5646,13 +5117,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -5661,13 +5130,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -5676,14 +5143,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "five_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -5693,14 +5158,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and to L with hips (Lead.)",
       },
     },
   ],
@@ -5711,13 +5174,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -5726,13 +5187,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "WF",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -5742,14 +5201,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -5758,15 +5215,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         sway: "to_R",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and slightly to L with hips (Lead.) e/o 4",
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
     {
@@ -5790,15 +5244,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
     {
@@ -5807,13 +5258,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "WF",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -5822,13 +5271,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -5851,13 +5298,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -5891,15 +5336,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
   ],
@@ -5911,15 +5353,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -5928,13 +5367,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "WF",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -5942,12 +5379,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -5969,13 +5404,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of B",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o 5",
       },
       follower: {
         direction: "side",
         footwork: "I/E of B",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.) at the very e/o 5",
       },
     },
   ],
@@ -5986,14 +5419,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back ,head moves to pos.1",
       },
     },
     {
@@ -6032,15 +5462,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "I/E of BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 4",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 4",
-        head: "Direct back and to leftward, head ends in pos. 1",
       },
     },
     {
@@ -6049,13 +5476,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -6077,14 +5502,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos.1",
       },
     },
   ],
@@ -6106,14 +5528,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Lead.)",
       },
     },
     {
@@ -6128,7 +5548,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HB",
         sway: "to_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -6138,13 +5557,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H (RF) then I/E of B (LF)",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o of 4",
       },
       follower: {
         direction: "side",
         footwork: "BH (LF) then I/E of B (RF)",
         turn: "five_eighth_R",
-        rotation: "To R with hips (Lead.) at the very e/o of 4",
       },
     },
   ],
@@ -6166,14 +5583,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Lead.)",
       },
     },
     {
@@ -6196,15 +5611,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.), then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.), then to R with shoulders (Lead.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -6226,14 +5638,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "End onto whole F (RF), I/E of B (LF)",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o of 6",
       },
       follower: {
         direction: "side",
         footwork: "BH (LF) and I/E of B (RF)",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o of 6",
       },
     },
   ],
@@ -6255,13 +5665,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to L with hips (Lead.) e/o 2",
       },
     },
     {
@@ -6270,14 +5678,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "IE",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "I/E of BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and slightly to L with hips (Lead.)",
       },
     },
     {
@@ -6289,7 +5695,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "BH",
-        head: "Gradually back, head moves to pos.1",
       },
     },
   ],
@@ -6300,13 +5705,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6315,13 +5718,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "WF",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -6331,14 +5732,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Lead.)",
-        head: "Gradually back (slightly), head moves to pos. 1",
       },
     },
     {
@@ -6347,13 +5745,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6375,15 +5771,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos.1",
       },
     },
   ],
@@ -6396,7 +5789,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) and to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -6404,7 +5796,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) and to R with hips (Lead.)",
       },
     },
     {
@@ -6414,13 +5805,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -6444,14 +5833,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH (LF) with light pressure on T (RF)",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB (Flat F) and I/E of B (LF)",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to R with hips (Lead.)",
       },
     },
     {
@@ -6461,14 +5848,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -6491,13 +5876,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6506,13 +5889,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "BH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "WF",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -6521,12 +5902,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH (LF) with light pressure on T (RF)",
         turn: "three_eighth_L",
-        rotation: "To R with hips (Lead.) at the very e/o 3",
       },
       follower: {
         direction: "forward",
         footwork: "HB (Flat F) and I/E of B (LF)",
-        rotation: "To R with hips (Lead.) at the very e/o 3",
       },
     },
     {
@@ -6536,13 +5915,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -6565,13 +5942,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) during 1, then to R with shoulders (Lead.) e/o 1",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) during 1, then to R with shoulders (Lead.) e/o 1",
       },
     },
     {
@@ -6584,7 +5959,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of BH and I/E of B (RF)",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
   ],
@@ -6595,13 +5969,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -6611,15 +5983,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "IE",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) e/o 2",
       },
       follower: {
         direction: "side",
         footwork: "I/E of BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.) e/o 2",
-        head: "Direct back and leftward, head moves to pos. 1",
       },
     },
     {
@@ -6633,7 +6002,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         turn: "eighth_L",
-        head: "Gradually back and leftward, head ends in pos. 1",
       },
     },
   ],
@@ -6644,13 +6012,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6672,13 +6038,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -6696,7 +6060,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["side_leading"],
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
     {
@@ -6732,15 +6095,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of BH",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 7",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 7",
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
     {
@@ -6750,14 +6110,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -6779,14 +6137,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
   ],
@@ -6808,13 +6163,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -6827,7 +6180,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of B",
         turn: "quarter_L",
-        head: "Direct back (small), head ends in pos. 1",
       },
     },
   ],
@@ -6848,12 +6200,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HB",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -6877,13 +6227,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6917,13 +6265,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -6945,15 +6291,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "WF",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "WF",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
   ],
@@ -7008,15 +6351,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of BH",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 3",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Dyn.) at the very e/o 3",
-        head: "Direct back and leftward, head ends in pos. 1",
       },
     },
   ],
@@ -7058,7 +6398,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        head: "Direct back, head moves to pos. 1",
       },
     },
   ],
@@ -7099,14 +6438,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -7117,14 +6454,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Gradually back and leftward, head moves to pos. 1 (Lady)",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Gradually back, head moves to pos. 1 (Lady)",
       },
     },
     {
@@ -7134,13 +6469,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back and leftward, head ends in pos. 1 (Lady)",
       },
       follower: {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back, head ends in pos. 1 (Lady)",
       },
     },
   ],
@@ -7152,14 +6485,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -7170,14 +6501,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1 (Lady)",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
         sway: "to_R",
         turn: "eighth_L",
-        head: "Gradually back and leftward, head moves to pos. 1 (Lady)",
       },
     },
     {
@@ -7187,13 +6516,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_L",
-        head: "Gradually back, head ends in pos. 1 (Lady)",
       },
       follower: {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back and leftwards, head ends in pos. 1 (Lady)",
       },
     },
   ],
@@ -7206,14 +6533,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -7230,7 +6555,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7246,7 +6570,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -7257,14 +6580,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -7309,7 +6630,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -7317,7 +6637,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -7360,7 +6679,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -7368,7 +6686,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -7412,13 +6729,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -7429,14 +6744,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_L",
-        head: "Gradually back and leftward, head moves to pos. 1 (Lady)",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1 (Lady)",
       },
     },
     {
@@ -7446,13 +6759,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back and leftwards, head ends in pos. 1 (Lady)",
       },
       follower: {
         direction: "close",
         footwork: "BH",
         sway: "to_L",
-        head: "Gradually back, head ends in pos. 1 (Lady)",
       },
     },
   ],
@@ -7465,14 +6776,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -7483,14 +6792,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Gradually back, head moves to pos. 1 (Lady)",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Gradually back and leftward, head moves to pos. 1 (Lady)",
       },
     },
     {
@@ -7500,13 +6807,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back, head ends in pos. 1 (Lady)",
       },
       follower: {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back and leftward, head ends in pos. 1 (Lady)",
       },
     },
   ],
@@ -7518,15 +6823,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation:
-          "To R with shoulders (Light.), to R with shoulders (Dyn.) and slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation:
-          "To R with shoulders (Light.), to R with shoulders (Dyn.) and slightly to R with hips (Lead.)",
       },
     },
     {
@@ -7549,13 +6850,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "TH",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
   ],
@@ -7567,13 +6866,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with hips (Lead.)",
       },
     },
     {
@@ -7586,7 +6883,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "diagonal",
         footwork: "T",
-        head: "Gradually back e/o 2, head moves to pos. 1",
       },
     },
     {
@@ -7599,7 +6895,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "behind",
         footwork: "T",
-        head: "Cont. gradually on 3, head ends in pos.1",
       },
     },
     {
@@ -7608,12 +6903,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        rotation: "Slightly to L with hips (Lead.)",
       },
     },
   ],
@@ -7638,15 +6931,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HT",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7656,13 +6946,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
     },
     {
@@ -7673,13 +6961,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HT",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -7690,15 +6976,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -7709,15 +6992,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 6",
-        head: "Cont. gradually back at b/o 6, head ends in pos. 6",
       },
     },
   ],
@@ -7729,13 +7009,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to L with hips (Lead.)",
       },
     },
     {
@@ -7749,7 +7027,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "eighth_L",
-        rotation: "Cont. to L with hips (Lead.)",
       },
     },
     {
@@ -7763,7 +7040,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "T",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7773,13 +7049,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -7791,13 +7065,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) Slightly to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) Slightly to L with shoulders (Dyn.)",
       },
     },
     {
@@ -7812,7 +7084,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "T",
         sway: "to_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7827,7 +7098,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -7839,13 +7109,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) Slightly to R with shoulders (Dyn.)",
       },
     },
     {
@@ -7860,7 +7128,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "T",
         sway: "to_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7875,7 +7142,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -7887,13 +7153,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and to L with hips (Lead.)",
       },
     },
     {
@@ -7909,7 +7173,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -7919,15 +7182,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "in_place",
         footwork: "TH",
         sway: "to_R",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -7939,14 +7199,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -7961,7 +7218,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "HB",
         turn: "half_L",
-        head: "Cont. back, head moves to pos. 1",
       },
     },
     {
@@ -7971,7 +7227,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        head: "Cont. back, head ends in pos. 1",
       },
     },
     {
@@ -7997,13 +7252,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8019,7 +7272,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -8030,15 +7282,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T (LF), Flat F (RF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of T (RF), Flat F (LF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -8050,13 +7299,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8071,7 +7318,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "T",
         bodyActions: ["side_leading"],
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8081,15 +7327,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.) b/o 3",
       },
       follower: {
         direction: "back",
         footwork: "T",
         turn: "five_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) b/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8100,13 +7343,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "THT",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) b/o 4",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) b/o 4",
       },
     },
   ],
@@ -8118,13 +7359,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8140,7 +7379,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8151,15 +7389,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of B",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -8171,13 +7406,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8189,7 +7422,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "side",
@@ -8197,8 +7429,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -8209,15 +7439,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -8229,13 +7456,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8246,15 +7471,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
       },
       follower: {
         direction: "side",
         footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
-        rotation: "To R with hips (Light.)",
-        head: "Gradually back e/o 2, head moves to pos.1",
       },
     },
     {
@@ -8271,7 +7493,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_R",
-        head: "Cont. gradually back b/o 3, head ends in pos. 1",
       },
     },
   ],
@@ -8283,13 +7504,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8301,7 +7520,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -8309,8 +7527,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and hips (Lead.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8327,7 +7543,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Cont. back b/o 3, head moves to pos. 6",
       },
     },
   ],
@@ -8339,13 +7554,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8362,7 +7575,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8378,7 +7590,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8389,14 +7600,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -8407,15 +7616,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HT",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8443,13 +7649,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8466,7 +7670,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8482,7 +7685,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8492,13 +7694,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -8515,7 +7715,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "quarter_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8531,7 +7730,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -8544,14 +7742,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -8579,7 +7775,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -8587,8 +7782,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with hips (Lead.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8616,13 +7809,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) e/o 1",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -8633,15 +7824,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -8652,15 +7840,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back at b/o 3, head ends in pos. 6",
       },
     },
   ],
@@ -8672,13 +7857,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "THT",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -8687,14 +7870,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HT",
-        rotation: "Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "close",
         footwork: "BT",
         turn: "five_eighth_R",
-        rotation: "Slightly to R with hips (Lead.)",
-        head: "Gradually back and to L side, head moves to pos. 1",
       },
     },
     {
@@ -8706,7 +7886,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "seven_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -8714,7 +7893,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -8726,13 +7904,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8747,7 +7923,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "quarter_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8761,7 +7936,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8770,12 +7944,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "side",
         footwork: "TH",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -8845,14 +8017,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -8864,13 +8034,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8887,7 +8055,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8903,7 +8070,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -8913,13 +8079,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
     },
     {
@@ -8936,7 +8100,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -8952,7 +8115,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -8965,14 +8127,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "Slightly to R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "Slightly to R with shoulders (Light.)",
       },
     },
     {
@@ -8997,15 +8157,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -9016,15 +8173,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 4",
-        head: "Cont. gradually back at b/o 4, head ends in pos. 6",
       },
     },
   ],
@@ -9036,13 +8190,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -9065,15 +8217,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -9084,15 +8233,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 4",
-        head: "Cont. gradually back at b/o 4, head ends in pos. 6",
       },
     },
   ],
@@ -9149,13 +8295,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -9172,7 +8316,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9188,7 +8331,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -9199,14 +8341,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) e/o 6",
       },
     },
     {
@@ -9216,14 +8356,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then continue to R with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -9235,7 +8372,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) e/o 6",
       },
       follower: {
         direction: "diagonal",
@@ -9243,8 +8379,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -9254,13 +8388,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 7",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 7",
       },
     },
   ],
@@ -9272,14 +8404,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -9296,8 +8425,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Light.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -9308,15 +8435,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. back, head ends in pos. 6",
       },
     },
   ],
@@ -9328,14 +8452,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -9346,7 +8467,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
@@ -9354,8 +8474,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Cont. back, head moves to pos. 6",
       },
     },
     {
@@ -9383,13 +8501,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with hips (Lead.)",
       },
     },
     {
@@ -9400,7 +8516,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -9408,8 +8523,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9419,13 +8532,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
     },
     {
@@ -9436,13 +8547,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -9453,15 +8562,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -9472,15 +8578,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.) e/o 6",
-        head: "Cont. gradually back at b/o 6, head ends in pos. 6",
       },
     },
   ],
@@ -9492,13 +8595,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.)",
       },
     },
     {
@@ -9508,14 +8609,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and slightly to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and slightly to R with hips (Lead.)",
       },
     },
     {
@@ -9539,13 +8638,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
     },
     {
@@ -9556,15 +8653,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Whole F (RF) and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9575,15 +8669,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Whole F (RF) and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -9595,13 +8686,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with hips (Lead.)",
       },
     },
     {
@@ -9612,7 +8701,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Whole F and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -9620,8 +8708,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9632,7 +8718,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Whole F and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -9640,8 +8725,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -9653,13 +8736,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -9671,15 +8752,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9691,7 +8769,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "forward",
@@ -9699,8 +8776,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -9712,13 +8787,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -9730,14 +8803,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
-        rotation: "To R with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9762,14 +8832,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "T",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with hips (Lead.)",
       },
     },
     {
@@ -9785,7 +8853,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -9796,15 +8863,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.) e/o 6",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.) e/o 6",
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -9816,14 +8880,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
     },
     {
@@ -9835,14 +8897,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) e/o 2",
       },
       follower: {
         direction: "diagonal",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) e/o 2",
       },
     },
     {
@@ -9854,15 +8914,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "forward",
         footwork: "BT",
         sway: "to_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -9873,15 +8930,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
     {
@@ -9891,13 +8945,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with shoulders (Dyn.)",
       },
     },
     {
@@ -9914,7 +8966,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9930,7 +8981,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -9942,14 +8992,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -9966,7 +9013,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -9992,14 +9038,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -10009,13 +9053,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then cont. to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10026,14 +9068,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "seven_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -10045,13 +9085,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_L",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -10076,13 +9114,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) To L with hips (Lead.)",
       },
     },
     {
@@ -10093,7 +9129,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Flat F (RF) and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -10101,8 +9136,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Slightly back, head moves to pos. 1",
       },
     },
     {
@@ -10113,7 +9146,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "Flat F (RF) and pressure on I/E of T (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -10121,8 +9153,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -10134,13 +9164,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then cont. to L with shoulders (Dyn.)",
       },
     },
     {
@@ -10152,15 +9180,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
-        head: "Slightly back, head moves to pos. 6",
       },
     },
     {
@@ -10171,7 +9196,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B (RF) and Flat (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "behind",
@@ -10179,8 +9203,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -10193,15 +9215,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TB",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back and L, head ends in pos. 1",
       },
     },
     {
@@ -10211,13 +9230,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "in_place",
         footwork: "BT",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with shoulders (Lead.)",
       },
       follower: {
         direction: "in_place",
         footwork: "BT",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) To R with hips (Lead.)",
       },
     },
     {
@@ -10242,15 +9259,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
-        head: "Direct back and leftwards, head ends in pos. 1",
       },
     },
     {
@@ -10259,13 +9273,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Ligh.), then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "Flat F",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders (Light.), then to R with hips (Lead.)",
       },
     },
     {
@@ -10290,14 +9302,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10314,7 +9324,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "quarter_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -10328,7 +9337,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10339,14 +9347,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10363,7 +9369,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -10378,7 +9383,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "BH",
         sway: "to_R",
-        head: "Gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -10391,14 +9395,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10409,14 +9411,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -10430,7 +9430,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
@@ -10438,7 +9437,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -10450,7 +9448,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -10458,7 +9455,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -10471,14 +9467,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10495,7 +9489,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -10511,7 +9504,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Continue gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10522,14 +9514,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10556,16 +9546,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B (LF), Flat F (RF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Slightly back, head ends in pos. 5",
       },
       follower: {
         direction: "in_place",
         footwork: "IE of B (RF), Flat F (LF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Direct back and L, head ends in pos. 1",
       },
     },
   ],
@@ -10579,7 +9565,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -10587,7 +9572,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -10613,14 +9597,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "I/E of B (LF), Flat F (RF)",
         sway: "to_R",
-        rotation: "To L with hips (Lead)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of B (RF), Flat F (LF)",
         sway: "to_L",
-        rotation: "To L with hips (Lead.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
   ],
@@ -10633,14 +9614,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10657,7 +9636,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -10673,7 +9651,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10684,14 +9661,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10703,7 +9678,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
@@ -10711,8 +9685,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Direct back (slightly), head ends in pos. 1",
       },
     },
     {
@@ -10742,7 +9714,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -10750,8 +9721,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head ends in pos. 1. Recover e/o 1",
       },
     },
     {
@@ -10766,7 +9735,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "HB",
         turn: "half_L",
-        head: "Gradually back, head ends in pos. 6",
       },
     },
     {
@@ -10777,14 +9745,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -10797,14 +9763,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10821,7 +9785,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -10837,7 +9800,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10848,14 +9810,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10881,8 +9841,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 2",
       },
       follower: {
         direction: "side",
@@ -10890,8 +9848,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10902,14 +9858,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -10922,14 +9876,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -10941,8 +9893,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back (slightly), head ends in pos. 2",
       },
       follower: {
         direction: "side",
@@ -10950,8 +9900,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -10962,14 +9910,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -10982,14 +9928,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -11006,7 +9950,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -11022,7 +9965,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1. Recover e/o 3",
       },
     },
     {
@@ -11034,8 +9976,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back (slightly), head ends in pos. 2",
       },
       follower: {
         direction: "forward",
@@ -11043,8 +9983,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -11055,14 +9993,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -11076,7 +10012,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
@@ -11084,7 +10019,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -11096,8 +10030,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back (slightly), head ends in pos. 5",
       },
       follower: {
         direction: "side",
@@ -11105,8 +10037,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -11118,7 +10048,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -11126,7 +10055,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
   ],
@@ -11140,7 +10068,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11148,7 +10075,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -11191,8 +10117,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Gradually back (slightly), head ends in pos. 2",
       },
       follower: {
         direction: "forward",
@@ -11200,8 +10124,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -11213,7 +10135,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -11221,7 +10142,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
   ],
@@ -11235,7 +10155,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11243,8 +10162,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -11255,14 +10172,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "in_place",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -11291,14 +10206,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -11310,14 +10223,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -11328,7 +10239,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "behind",
@@ -11336,8 +10246,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
   ],
@@ -11351,7 +10259,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11359,8 +10266,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Slightly back, head ends in pos. 1",
       },
     },
     {
@@ -11386,14 +10291,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -11419,14 +10322,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
         footwork: "HB",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -11462,14 +10363,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -11507,14 +10406,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -11550,14 +10447,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "in_front",
         footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -11597,7 +10492,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11605,8 +10499,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -11617,14 +10509,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "in_place",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -11635,14 +10525,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
   ],
@@ -11655,14 +10543,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -11679,7 +10565,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -11695,7 +10580,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -11706,14 +10590,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -11724,14 +10606,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -11743,7 +10623,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -11751,7 +10630,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -11765,7 +10643,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11773,8 +10650,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Slightly back, head ends in pos. 1",
       },
     },
     {
@@ -11785,7 +10660,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_L",
         turn: "half_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
@@ -11793,7 +10667,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -11805,14 +10678,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -11823,15 +10694,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T (RF), Flat F (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "in_place",
         footwork: "T (LF), Flat F (RF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with hips (Lead.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -11845,7 +10713,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -11853,7 +10720,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
     },
     {
@@ -11865,14 +10731,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -11883,15 +10747,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T (RF), Flat F (LF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "in_place",
         footwork: "ET (LF), Flat F (RF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with hips (Lead.) then to L with shoulders (Dyn.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -11905,7 +10766,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -11913,7 +10773,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -11961,7 +10820,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         turn: "eighth_L",
-        head: "Gradually back, head ends in pos. 1 or pos. 6",
       },
     },
     {
@@ -11972,14 +10830,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "three_eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -11992,14 +10848,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -12010,15 +10864,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -12029,15 +10880,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         sway: "to_L",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -12048,14 +10896,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
   ],
@@ -12068,14 +10914,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "TB",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
     },
     {
@@ -12098,14 +10942,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "B",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -12116,14 +10958,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -12137,7 +10977,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -12145,7 +10984,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -12173,7 +11011,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -12185,7 +11022,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "in_front",
@@ -12203,7 +11039,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
@@ -12211,7 +11046,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -12223,7 +11057,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -12231,7 +11064,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -12245,7 +11077,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -12253,7 +11084,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -12279,7 +11109,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -12287,8 +11116,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Dyn.)",
-        head: "Gradually back and leftward, head ends in pos. 1",
       },
     },
   ],
@@ -12302,7 +11129,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
@@ -12310,8 +11136,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
-        head: "Direct back (small), head ends in pos. 6",
       },
     },
     {
@@ -12321,14 +11145,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "in_place",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "back",
         footwork: "B",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L slightly with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -12339,14 +11161,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
   ],
@@ -12360,7 +11180,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -12368,8 +11187,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -12380,14 +11197,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "in_place",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -12398,14 +11213,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -12417,7 +11230,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -12425,8 +11237,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Direct back (slightly), head ends in pos. 6",
       },
     },
     {
@@ -12437,13 +11247,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "B",
         turn: "three_eighth_R",
-        rotation: "To L with hips (Lead.)",
       },
     },
     {
@@ -12455,14 +11263,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -12473,8 +11279,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H (LF), B (RF). End BH (RF)",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) then to R with shoulders (Dyn.)",
-        head: "Direct back (slightly), head ends in pos. 5",
       },
       follower: {
         direction: "forward",
@@ -12489,8 +11293,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with hips (Lead.) then to R with shoulders (Dyn.)",
-        head: "Direct back and leftward, head moves to pos. 1",
       },
     },
   ],
@@ -12504,7 +11306,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
@@ -12512,8 +11313,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -12524,14 +11323,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "in_place",
         footwork: "B",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -12542,14 +11339,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "BH",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -12561,7 +11356,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
@@ -12569,8 +11363,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Slightly back, head ends in pos. 6",
       },
     },
     {
@@ -12581,7 +11373,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "behind",
@@ -12598,14 +11389,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "full_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -12624,7 +11413,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -12646,14 +11434,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -12670,7 +11456,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -12686,7 +11471,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -12698,7 +11482,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -12706,7 +11489,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
     },
     {
@@ -12718,7 +11500,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -12726,7 +11507,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -12753,14 +11533,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -12777,7 +11555,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -12793,7 +11570,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "flat",
         sway: "to_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -12805,7 +11581,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
@@ -12813,7 +11588,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "half_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
     },
     {
@@ -12823,13 +11597,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with hips (Lead.)",
       },
     },
     {
@@ -12845,7 +11617,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B (RF), Flat F (LF)",
         sway: "to_L",
         turn: "three_eighth_L",
-        head: "Direct back and leftward, head ends in pos. 1",
       },
     },
   ],
@@ -12870,13 +11641,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
     },
     {
@@ -12897,13 +11666,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and to L with hips (Lead.) at the very e/o 3",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders and to R with hips (Lead.) at the very e/o 3",
       },
     },
   ],
@@ -12913,12 +11680,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
-        rotation: "Slightly to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        rotation: "Slightly to R with hips (Lead.) at the very e/o 1",
       },
     },
     {
@@ -12938,14 +11703,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and to L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders and to R with hips (Lead.)",
       },
     },
   ],
@@ -12956,13 +11719,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -12972,7 +11733,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "close",
@@ -12980,8 +11740,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
-        head: "Gradually back and leftward, head moves to pos. 1",
       },
     },
     {
@@ -13004,13 +11762,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -13020,13 +11776,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "B Flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -13036,14 +11790,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 4",
       },
       follower: {
         direction: "forward",
         footwork: "B Flat",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 4",
       },
     },
   ],
@@ -13055,13 +11807,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "HT",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -13069,14 +11819,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HB",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "close",
         footwork: "T",
         turn: "five_eighth_R",
-        rotation: "To R with hips (Lead.)",
-        head: "Gradually back and leftward",
       },
     },
     {
@@ -13086,14 +11833,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BHB",
         turn: "seven_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -13104,13 +11849,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -13134,14 +11877,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -13163,13 +11904,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "End whole F (RF), I/E of B (LF)",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.) at the very e/o of 5",
       },
       follower: {
         direction: "side",
         footwork: "BH (LF) and I/E of B (RF)",
         turn: "half_R",
-        rotation: "To R with hips (Lead.) at the very e/o of 5",
       },
     },
   ],
@@ -13191,13 +11930,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders and slightly to R with hips (Lead.) e/o 2",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "Slightly to R with shoulders and slightly to L with hips (Lead.) e/o 2",
       },
     },
     {
@@ -13207,14 +11944,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "I/E of BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -13228,7 +11963,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "BH",
         turn: "quarter_R",
-        head: "Direct back and leftwards, head moves to pos. 1",
       },
     },
     {
@@ -13238,14 +11972,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with hips (Lead.)",
       },
     },
     {
@@ -13291,13 +12023,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13330,12 +12060,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13345,13 +12073,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with hips (Lead.)",
       },
     },
     {
@@ -13364,7 +12090,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of B",
         turn: "three_eighth_L",
-        head: "Direct back (small), head ends in pos. 1",
       },
     },
   ],
@@ -13375,13 +12100,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13414,13 +12137,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -13436,7 +12157,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         sway: "to_L",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 5",
       },
     },
     {
@@ -13452,7 +12172,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B",
         sway: "to_R",
         bodyActions: ["side_leading"],
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
     {
@@ -13463,7 +12182,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "in_place",
@@ -13471,8 +12189,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Dyn.)",
-        head: "Direct back, head ends to pos. 1",
       },
     },
   ],
@@ -13483,13 +12199,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "BH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.), then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -13518,7 +12232,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "quarter_L",
-        head: "Direct back (small), head ends in pos. 5",
       },
     },
     {
@@ -13532,7 +12245,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "in_place",
         footwork: "Flat F (RF) and I/E of B (LF)",
         sway: "to_L",
-        head: "Direct back, head ends to pos. 1",
       },
     },
   ],
@@ -13556,13 +12268,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of B",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "I/E of B",
         turn: "eighth_R",
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -13578,7 +12288,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "B",
         sway: "to_L",
-        head: "Direct back, head ends in pos. 1",
       },
     },
     {
@@ -13587,13 +12296,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "Flat F (RF) I/E of B (LF)",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "Flat F (LF) I/E of B (RF)",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
   ],
@@ -13637,13 +12344,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13709,13 +12414,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13735,13 +12438,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "I/E of B",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "I/E of B",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
     },
   ],
@@ -13785,13 +12486,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_L",
-        rotation: "To L with hips (Lead.)",
       },
       follower: {
         direction: "behind",
         footwork: "BH",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -13825,14 +12524,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "HB",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "side",
         footwork: "B",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -13843,7 +12540,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -13851,8 +12547,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Back, head moves to pos. 1",
       },
     },
     {
@@ -13867,7 +12561,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         turn: "quarter_R",
-        head: "Cont. back, head ends in pos. 1",
       },
     },
     {
@@ -13876,13 +12569,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "Flat F (RF) I/E of B (LF)",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "Flat F (LF) I/E of B (RF)",
         turn: "quarter_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
   ],
@@ -13895,14 +12586,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "B",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -13928,13 +12617,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "THT",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -13943,14 +12630,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HT",
-        rotation: "Slightly to R with hips (Lead.),",
       },
       follower: {
         direction: "close",
         footwork: "BT",
         turn: "five_eighth_R",
-        rotation: "Slightly to R with hips (Lead.)",
-        head: "Gradually back and to L side, head moves to pos.",
       },
     },
     {
@@ -13962,7 +12646,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "seven_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
@@ -13970,7 +12653,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
   ],
@@ -13982,14 +12664,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14001,7 +12680,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "close",
@@ -14009,8 +12687,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
-        head: "Cont. gradually back, head ends to pos. 1",
       },
     },
     {
@@ -14022,14 +12698,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -14038,13 +12712,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "in_place",
         footwork: "B (RF) and H (LF)",
-        rotation: "To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         turn: "eighth_R",
-        rotation: "To R with hips (Lead.)",
       },
     },
     {
@@ -14059,7 +12731,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "T",
         turn: "quarter_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14083,13 +12754,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -14101,7 +12770,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
       },
       follower: {
         direction: "side",
@@ -14109,8 +12777,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "Slightly to L with shoulders (Light.) then to L with hips (Lead.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14121,7 +12787,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "O/E of T, BH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) at e/o 9",
       },
       follower: {
         direction: "back",
@@ -14129,8 +12794,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) at e/o 9",
-        head: "Cont. gradually back, head ends to pos. 1",
       },
     },
   ],
@@ -14142,14 +12805,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with Shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with Shoulders (Dyn.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14161,7 +12821,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "close",
@@ -14169,8 +12828,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
-        head: "Cont. gradually back, head ends to pos. 1",
       },
     },
     {
@@ -14182,14 +12839,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
     {
@@ -14198,13 +12853,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "in_place",
         footwork: "B (RF) and H (LF)",
-        rotation: "T To R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         turn: "eighth_R",
-        rotation: "TTo R with hips (Lead.)",
       },
     },
     {
@@ -14216,7 +12869,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
@@ -14224,7 +12876,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
     },
     {
@@ -14234,7 +12885,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         turn: "quarter_R",
-        head: "Cont. back e/o 6, head moves to pos. 6",
       },
     },
     {
@@ -14254,13 +12904,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -14277,7 +12925,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "quarter_R",
-        head: "Gradually back",
       },
     },
     {
@@ -14289,15 +12936,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Cont. gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14312,7 +12956,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -14322,13 +12965,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -14345,7 +12986,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Gradually back",
       },
     },
     {
@@ -14361,7 +13001,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -14371,13 +13010,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
-        rotation: "To L with hips (Lead.) e/o 8",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
-        rotation: "To L with hips (Lead.) e/o 8",
       },
     },
   ],
@@ -14389,13 +13026,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -14410,7 +13045,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "eighth_L",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14424,7 +13058,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         turn: "eighth_L",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -14436,13 +13069,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Lead.)",
       },
     },
     {
@@ -14453,15 +13084,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -14472,15 +13100,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         turn: "quarter_L",
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back, head ends in pos. 6",
       },
     },
   ],
@@ -14492,13 +13117,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with hips (Lead.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with hips (Lead.)",
       },
     },
     {
@@ -14510,15 +13133,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14530,7 +13150,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
       },
       follower: {
         direction: "forward",
@@ -14538,8 +13157,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["side_leading"],
-        rotation: "To L with hips (Lead.) e/o 3",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -14551,13 +13168,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -14573,7 +13188,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_R",
-        head: "Gradually back, head moves to pos. 1",
       },
     },
     {
@@ -14584,15 +13198,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of B",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of B",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -14605,15 +13216,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "H flat",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Dyn.)",
-        head: "Gradually back, head moves in pos. 1",
       },
     },
     {
@@ -14628,7 +13236,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         turn: "three_eighth_R",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
     {
@@ -14639,7 +13246,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "close",
@@ -14654,14 +13260,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Lead.)",
       },
     },
   ],
@@ -14673,13 +13277,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "THT",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
       follower: {
         direction: "forward",
         footwork: "HB",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.), then to R with shoulders (Dyn.)",
       },
     },
     {
@@ -14688,14 +13290,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HT",
-        rotation: "Slightly to R with hips (Lead.),",
       },
       follower: {
         direction: "close",
         footwork: "BT",
         turn: "five_eighth_R",
-        rotation: "Slightly to R with hips (Lead.),",
-        head: "Gradually back and to L side, head moves to pos. 1",
       },
     },
     {
@@ -14707,7 +13306,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_L",
         turn: "seven_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "forward",
@@ -14715,7 +13313,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         sway: "to_R",
         turn: "five_eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Dyn.)",
       },
     },
   ],
@@ -14728,14 +13325,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         sway: "to_R",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.)",
       },
       follower: {
         direction: "back",
         footwork: "T",
         sway: "to_L",
         bodyActions: ["CBM", "side_leading"],
-        rotation: "To R with shoulders (Light.)",
       },
     },
     {
@@ -14762,15 +13357,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "T",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with shoulders (Lead.)",
       },
       follower: {
         direction: "side",
         footwork: "T",
         turn: "eighth_R",
         bodyActions: ["CBM"],
-        rotation: "To R with shoulders (Light.) then to R with hips (Lead.)",
-        head: "Gradually back, head ends in pos. 1",
       },
     },
     {
@@ -14798,13 +13390,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "H flat",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Light.) then to L with shoulders (Dyn.)",
       },
     },
     {
@@ -14820,7 +13410,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "BH",
         sway: "to_R",
         turn: "three_eighth_L",
-        head: "Gradually back, head moves to pos. 6",
       },
     },
     {
@@ -14831,15 +13420,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "I/E of T (LF), Flat F (RF)",
         sway: "to_R",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
       },
       follower: {
         direction: "close",
         footwork: "I/E of T (RF), Flat F (LF)",
         sway: "to_L",
         bodyActions: ["CBM"],
-        rotation: "To L with shoulders (Dyn.)",
-        head: "Cont. gradually back, head ends in pos. 1",
       },
     },
   ],
@@ -15589,19 +14175,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:basic-weave": {
       entry: {
         qualifier: "facing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:bounce-fallaway-with-weave-ending": {
@@ -15619,19 +14197,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:curved-feather": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW_against",
       },
     },
     "foxtrot:curved-feather-from-p-p": {
@@ -15639,29 +14209,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW_against",
-      },
     },
     "foxtrot:curved-three-step": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC_against",
-      },
     },
     "foxtrot:double-reverse-spin": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:fallaway-reverse-and-slip-pivot": {
@@ -15675,27 +14233,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:feather-finish": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:feather-step": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -15705,19 +14251,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:hover-corte": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
       },
     },
     "foxtrot:hover-cross": {
@@ -15735,19 +14273,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:hover-telemark-to-p-p": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "foxtrot:impetus": {
@@ -15775,19 +14305,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-telemark": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "foxtrot:natural-turn": {
@@ -15795,27 +14317,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "foxtrot:natural-twist-turn": {
       entry: {
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-weave": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -15825,19 +14335,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:open-natural-turn": {
       entry: {
         qualifier: "pointing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
       },
     },
     "foxtrot:outside-swivel": {
@@ -15875,29 +14377,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "foxtrot:reverse-wave": {
       entry: {
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "foxtrot:telemark-to-p-p": {
@@ -15912,10 +14402,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "foxtrot:three-step": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -15945,19 +14431,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:back-whisk": {
       entry: {
         qualifier: "backing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:backward-lock": {
@@ -15975,19 +14453,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:cross-swivel": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:double-reverse-spin": {
@@ -15995,27 +14465,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:fisht-tail": {
       entry: {
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:forward-lock": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16025,19 +14483,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:hover-corte": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
       },
     },
     "quickstep:impetus": {
@@ -16075,10 +14525,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "quickstep:natural-turn": {
       entry: {
@@ -16095,19 +14541,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
     },
     "quickstep:progressive-chasse-to-l": {
       entry: {
         qualifier: "backing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:progressive-chasse-to-r": {
@@ -16161,19 +14599,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:running-finish": {
       entry: {
         qualifier: "backing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "quickstep:running-natural-turn": {
@@ -16181,19 +14611,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "quickstep:running-spin-turn": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
       },
     },
     "quickstep:six-quick-run": {
@@ -16201,19 +14623,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:telemark-to-pp": {
@@ -16229,10 +14643,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     "quickstep:tipple-chasse-to-r-along-lod": {
       entry: {
         qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16251,17 +14661,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:tipsy-to-r": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16291,10 +14693,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:wing": {
       entry: {
@@ -16310,10 +14708,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "pointing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:zig-zag": {
@@ -16341,19 +14735,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "tango:basic-reverse-turn": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:brush-tap": {
@@ -16361,19 +14747,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:chase": {
       entry: {
         qualifier: "pointing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "tango:chase-alternative-endings-method-4-progressive": {
@@ -16381,18 +14759,10 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:closed-promenade": {
       entry: {
         qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16427,29 +14797,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:four-step": {
       entry: {
         qualifier: "facing",
         direction: "DW_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:four-step-change": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW_against",
       },
     },
     "tango:mini-five-step": {
@@ -16464,10 +14822,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "tango:natural-rock-turn": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16487,10 +14841,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:open-promenade": {
       entry: {
@@ -16502,10 +14852,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:outside-swivel-method-1-after-open-finish-and": {
@@ -16533,17 +14879,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:progressive-link": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -16573,19 +14911,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:promenade-link-turned-to-right": {
       entry: {
         qualifier: "pointing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
       },
     },
     "tango:quick-reverse-turn": {
@@ -16593,27 +14923,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:reverse-pivot": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:rock-on-left-foot": {
       entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "backing",
         direction: "DC",
       },
@@ -16623,17 +14941,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "tango:tango-walk": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -16652,10 +14962,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "viennese_waltz:natural-turn": {
@@ -16703,10 +15009,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "DC_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:backward-lock": {
       entry: {
@@ -16733,18 +15035,10 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:cross-hesitation-from-pp": {
       entry: {
         qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "DW",
       },
     },
@@ -16752,10 +15046,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "waltz:drag-hesitation": {
@@ -16778,10 +15068,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "waltz:hover-corte": {
@@ -16819,19 +15105,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "waltz:natural-turn": {
       entry: {
         qualifier: "facing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "waltz:natural-turning-lock": {
@@ -16895,10 +15173,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:reverse-turning-lock": {
       entry: {
@@ -16915,19 +15189,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:running-finish": {
       entry: {
         qualifier: "backing",
         direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
       },
     },
     "waltz:running-spin-turn": {
@@ -16935,19 +15201,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
     },
     "waltz:telemark": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "waltz:telemark-to-pp": {
@@ -16975,17 +15233,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:wing": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -16995,19 +15245,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "waltz:open-natural-turn": {
       entry: {
         qualifier: "pointing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
       },
     },
     "waltz:fallaway-natural-turn": {
@@ -17023,10 +15265,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     "waltz:running-weave-from-pp": {
       entry: {
         qualifier: "pointing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
         direction: "LOD",
       },
     },
@@ -17045,10 +15283,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "backing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "waltz:contra-check": {
       exit: {
@@ -17058,10 +15292,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
     },
     "tango:contra-check": {
       entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DW",
       },
@@ -17381,29 +15611,17 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:whisk": {
       entry: {
         qualifier: "facing",
         direction: "DW_against",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:back-whisk": {
       entry: {
         qualifier: "backing",
         direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:telemark-to-pp": {
@@ -17421,10 +15639,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
     },
     "tango:outside-spin": {
       exit: {
@@ -17436,10 +15650,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
       entry: {
         qualifier: "facing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "tango:chase-alternative-endings-chase-chasse-common-steps-1-8": {
@@ -17457,27 +15667,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
     },
     "tango:chase-alternative-endings-method-2-whisk-promenade-link": {
       entry: {
         qualifier: "facing",
         direction: "LOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "tango:chase-alternative-endings-method-3-whisk-close-step-to-pp": {
       entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
         qualifier: "facing",
         direction: "LOD",
       },
@@ -17487,19 +15685,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DC",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
     },
     "tango:drop-oversway": {
       entry: {
         qualifier: "facing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
       },
     },
     "tango:oversway-alternative-endings-method-1-transfer-weight-to-pp": {
@@ -17507,19 +15697,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-2-close-step-to-pp": {
       entry: {
         qualifier: "facing",
         direction: "wall",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "tango:oversway-alternative-endings-method-3-chasse-whisk-fwd-step-to-pp": {
@@ -17527,17 +15709,9 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-4-chasse-whisk-promenade-link": {
       entry: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-      exit: {
         qualifier: "facing",
         direction: "wall",
       },
@@ -17547,27 +15721,15 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "tango:oversway-alternative-endings-method-6-natural-spin-to-pp": {
       entry: {
         qualifier: "facing",
         direction: "ALOD",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "foxtrot:hover-feather": {
       entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
         qualifier: "facing",
         direction: "DC",
       },
@@ -17587,10 +15749,6 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
     },
     "foxtrot:natural-twist-turn-with-impetus-to-p-p": {
       entry: {
@@ -17607,19 +15765,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "facing",
         direction: "DW",
       },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
     },
     "quickstep:heel-pivot": {
       entry: {
         qualifier: "backing",
         direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
       },
     },
     "quickstep:outside-change": {
@@ -17637,19 +15787,11 @@ export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; ex
         qualifier: "pointing",
         direction: "wall",
       },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
     },
     "quickstep:hesitation-change": {
       entry: {
         qualifier: "backing",
         direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
       },
     },
     "quickstep:tipple-chasse-to-left": {

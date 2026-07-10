@@ -62,14 +62,6 @@ const ABBREV: Record<string, Record<string, string>> = {
     left_angle: "LA",
     CBMP: "CBMP",
   },
-  footPosition: {
-    first: "1",
-    second: "2",
-    third: "3",
-    fourth_open: "4o",
-    fourth_closed: "4c",
-    fifth: "5",
-  },
   footwork: {
     // Canonical picker codes → tight overview codes (explicit so no fallback
     // mangles the slashed rolls). The full descriptive label lives in the edit
@@ -149,27 +141,31 @@ const DIRECTION_LABEL_EN = {
   forward: "forward",
   back: "back",
   side: "side",
+  diagonal_forward: "diagonal forward",
+  diagonal_back: "diagonal back",
   behind: "behind",
   close: "close",
   in_front: "in front",
   diagonal: "diagonal",
   in_place: "in place",
-  // Legacy split-diagonal values (normalize to `diagonal` on read; kept so an
-  // un-normalized legacy value still renders sensibly).
-  diag_forward: "diagonal",
-  diag_back: "diagonal",
+  // Legacy split-diagonal spellings (normalize to diagonal_forward/_back on
+  // read; kept so an un-normalized legacy value still renders sensibly).
+  diag_forward: "diagonal forward",
+  diag_back: "diagonal back",
 };
 const DIRECTION_LABEL_DE: typeof DIRECTION_LABEL_EN = {
   forward: "vorwärts",
   back: "rückwärts",
   side: "seitwärts",
+  diagonal_forward: "diagonal vorwärts",
+  diagonal_back: "diagonal rückwärts",
   behind: "hinterkreuzt",
   close: "schließen",
   in_front: "vorgekreuzt",
   diagonal: "diagonal",
   in_place: "am Platz",
-  diag_forward: "diagonal",
-  diag_back: "diagonal",
+  diag_forward: "diagonal vorwärts",
+  diag_back: "diagonal rückwärts",
 };
 const DIRECTION_LABEL: Record<Locale, Record<string, string>> = {
   en: DIRECTION_LABEL_EN,
@@ -188,6 +184,8 @@ const FULL_LABEL_EN: Record<string, Record<string, string>> = {
     forward: "Forward",
     back: "Back",
     side: "Side",
+    diagonal_forward: "Diagonal forward",
+    diagonal_back: "Diagonal back",
     behind: "Behind",
     close: "Close",
     in_front: "In front",
@@ -224,14 +222,6 @@ const FULL_LABEL_EN: Record<string, Record<string, string>> = {
     "T/H": "Toe / Heel",
     "T/TH": "Toe / Toe-Heel",
     "TH/T": "Toe-Heel / Toe",
-  },
-  footPosition: {
-    first: "First",
-    second: "Second",
-    third: "Third",
-    fourth_open: "Fourth open",
-    fourth_closed: "Fourth closed",
-    fifth: "Fifth",
   },
   rise: {
     commence: "Commence",
@@ -294,6 +284,8 @@ const FULL_LABEL_DE: typeof FULL_LABEL_EN = {
     forward: "Vorwärts",
     back: "Rückwärts",
     side: "Seite",
+    diagonal_forward: "Diagonal vorwärts",
+    diagonal_back: "Diagonal rückwärts",
     behind: "Hinter",
     close: "Schließen",
     in_front: "Vorgekreuzt",
@@ -330,14 +322,6 @@ const FULL_LABEL_DE: typeof FULL_LABEL_EN = {
     "T/H": "Spitze / Ferse",
     "T/TH": "Spitze / Spitze-Ferse",
     "TH/T": "Spitze-Ferse / Spitze",
-  },
-  footPosition: {
-    first: "Erste",
-    second: "Zweite",
-    third: "Dritte",
-    fourth_open: "Vierte offen",
-    fourth_closed: "Vierte geschlossen",
-    fifth: "Fünfte",
   },
   rise: {
     commence: "Beginn",

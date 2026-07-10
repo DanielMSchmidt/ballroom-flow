@@ -128,34 +128,9 @@ export function buildWdsfAttributes(input: {
             deletedAt: null,
           });
         }
-        if (f.footPosition)
-          out.push({
-            id: `${base}-fpos`,
-            kind: "footPosition",
-            count,
-            role,
-            value: f.footPosition,
-            deletedAt: null,
-          });
-        // The WDSF books' Rotation + head ("Extension") columns, verbatim free text.
-        if (f.rotation)
-          out.push({
-            id: `${base}-rot`,
-            kind: "rotation",
-            count,
-            role,
-            value: f.rotation,
-            deletedAt: null,
-          });
-        if (f.head)
-          out.push({
-            id: `${base}-head`,
-            kind: "head",
-            count,
-            role,
-            value: f.head,
-            deletedAt: null,
-          });
+        // The WDSF books' Rotation + head ("Extension") prose columns are NOT
+        // emitted (removed 2026-07-10 — `turn` is the canonical rotation; the
+        // transcriptions stay in the chart seed as provenance only).
       }
       // Shared (non-role) attributes: the couple's rise & position for this count.
       const shared = `fig-${input.figureType}-${input.dance}-s${i + 1}`;
