@@ -134,5 +134,21 @@ test.describe("@screenshots landing imagery", () => {
     await page.getByRole("button", { name: /reading view/i }).click();
     await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: shot("reading.png"), fullPage: true });
+
+    // 6. Figure READ view (PLAN §4.4, design figMode): tapping a figure on the
+    //    reading programme opens it read-only — the step grid as the content,
+    //    the notes surfaces beneath, and the pencil "Edit steps" toggle in the
+    //    header as the only route into editing.
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Natural Spin Turn", exact: true })
+      .first()
+      .click();
+    await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Edit steps", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^annotations$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.screenshot({ path: shot("figure.png") });
   });
 });

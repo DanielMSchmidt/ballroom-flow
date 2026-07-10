@@ -37,7 +37,7 @@ function Shot({ s, className }: { s: Screenshot; className?: string }): React.JS
   );
 }
 
-const FEATURES = ["create", "sections", "notate", "lanes", "reading"] as const;
+const FEATURES = ["create", "sections", "notate", "lanes", "reading", "figure"] as const;
 
 /**
  * Logged-out marketing page. Standalone (no app shell / nav). The sign-in CTA
