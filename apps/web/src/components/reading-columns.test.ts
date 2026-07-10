@@ -133,11 +133,11 @@ describe("cellPresent — a notated-but-valueless step (Builder v3 ②)", () => 
 
 describe("allColumns — every applicable kind for the EDIT grid", () => {
   it("always leads with Step then every standard technique kind for a rise dance", () => {
+    // footPosition removed ⟳2026-07-10 — no "Feet" column anymore.
     expect(allColumns("waltz").map((c) => c.label)).toEqual([
       "Step",
       "Rise",
       "Pos",
-      "Feet",
       "Body",
       "Sway",
       "Turn",

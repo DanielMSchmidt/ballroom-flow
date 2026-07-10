@@ -128,15 +128,6 @@ export function buildWdsfAttributes(input: {
             deletedAt: null,
           });
         }
-        if (f.footPosition)
-          out.push({
-            id: `${base}-fpos`,
-            kind: "footPosition",
-            count,
-            role,
-            value: f.footPosition,
-            deletedAt: null,
-          });
         // The WDSF books' Rotation + head ("Extension") columns, verbatim free text.
         if (f.rotation)
           out.push({

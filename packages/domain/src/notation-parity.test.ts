@@ -70,12 +70,15 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(direction.builtin).toBe(true);
     // A closed enum (NOT free-text): direction is a controlled vocabulary.
     expect(direction.freeText ?? false).toBe(false);
-    // One `diagonal` (the split diag_forward/diag_back collapsed) + `behind`.
+    // The ISTD split diagonals are first-class (⟳2026-07-10); the legacy unsplit
+    // `diagonal` stays for not-yet-re-verified charts; `behind` crosses behind.
     expect(direction.values).toEqual(
       expect.arrayContaining([
         "forward",
         "back",
         "side",
+        "diagonal_forward",
+        "diagonal_back",
         "behind",
         "close",
         "diagonal",
@@ -86,10 +89,10 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(direction.values).not.toContain("diag_back");
   });
 
-  it("normalizes the split diagonal to a single `diagonal` on read", () => {
-    // The split diag_forward/diag_back collapsed into one `diagonal` value.
-    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal");
-    expect(normalizeValue("direction", "diag_back")).toBe("diagonal");
+  it("normalizes the legacy diag_* spellings to the ISTD split diagonals on read", () => {
+    // ⟳2026-07-10: diag_forward/diag_back alias to the split enum members.
+    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal_forward");
+    expect(normalizeValue("direction", "diag_back")).toBe("diagonal_back");
     // A canonical value passes through unchanged; an unknown one too.
     expect(normalizeValue("direction", "forward")).toBe("forward");
     expect(normalizeValue("direction", "behind")).toBe("behind");

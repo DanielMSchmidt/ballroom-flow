@@ -73,7 +73,6 @@ export type NumberedBeatEntry =
 export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
   footwork: RegistryKind;
-  footPosition: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;

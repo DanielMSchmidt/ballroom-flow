@@ -35,8 +35,6 @@ export interface AuthoredFootwork {
   turn?: string;
   /** Body actions (`bodyActions` vocab, e.g. ["CBM"]) — role-aware, set when known. */
   bodyActions?: string[];
-  /** Foot position (`footPosition` vocab: first/second/…/fifth) — set when charted. */
-  footPosition?: string;
   /** WDSF Rotation column, verbatim (shoulders/hips, Light./Dyn./Lead.) — free text. */
   rotation?: string;
   /** WDSF head-position ("Extension") column, verbatim — free text. */

@@ -238,10 +238,10 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     for (const name of [/direction/i, /footwork/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
-    // Technique kinds appear once "More attributes" is expanded. Exact names so
-    // "Position" doesn't also match the "Foot Position" heading.
+    // Technique kinds appear once "More attributes" is expanded (footPosition
+    // removed ⟳2026-07-10 — no "Foot Position" section anymore).
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
-    for (const name of ["Turn", "Sway", "Position", "Foot Position"]) {
+    for (const name of ["Turn", "Sway", "Position"]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });

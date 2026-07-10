@@ -85,15 +85,13 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(ATTRIBUTE_REGISTRY.bodyActions.cardinality).toBe("multi");
   });
 
-  it("normalizes the split diagonal to a single `diagonal` on read", async () => {
-    // Intent: forward-compatible alias normalization (Q-D4). The split
-    // diag_forward/diag_back collapsed into one `diagonal` value; legacy docs
-    // read through without a doc migration.
-    // Arrange: import the normalize helper. Act: normalize each legacy value.
-    // Assert: both map to "diagonal".
+  it("normalizes the legacy diag_* spellings to the ISTD split diagonals on read", async () => {
+    // Intent: forward-compatible alias normalization (Q-D4, ⟳2026-07-10). The
+    // oldest split spelling (diag_forward/diag_back) maps onto the ISTD split
+    // values the enum now carries; legacy docs read through without a migration.
     const { normalizeValue } = await importDomain();
-    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal");
-    expect(normalizeValue("direction", "diag_back")).toBe("diagonal");
+    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal_forward");
+    expect(normalizeValue("direction", "diag_back")).toBe("diagonal_back");
   });
 
   it("models CBMP as a position (not a body action) and drops CBP entirely", async () => {
@@ -108,13 +106,26 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
     expect(normalizeValue("bodyActions", "CBP")).toBe("CBP"); // alias removed
   });
 
-  it("collapses the split diagonal and adds `behind` to the direction enum", async () => {
-    // D1: one `diagonal` value (the design's single diagonal); `behind` (a step
-    // crossing behind) added; the split diag_forward/diag_back are gone.
+  it("models direction as the ISTD directional set plus crossing/legacy values (⟳2026-07-10)", async () => {
+    // PLAN §3.8: direction is the step's relative TRANSLATION — the ISTD set
+    // (forward/back/side/diagonal_forward/diagonal_back/close) plus the own-foot
+    // crossing values in_front/behind (lock steps — NOT CBMP, which stays in
+    // position/bodyActions), in_place, and the legacy UNSPLIT `diagonal` kept for
+    // charts whose forward/back sense hasn't been re-verified (report §D). The
+    // legacy diag_forward/diag_back spellings are aliases, not enum members.
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    expect(ATTRIBUTE_REGISTRY.direction.values).toEqual(
-      expect.arrayContaining(["diagonal", "behind"]),
-    );
+    expect(ATTRIBUTE_REGISTRY.direction.values).toEqual([
+      "forward",
+      "back",
+      "side",
+      "diagonal_forward",
+      "diagonal_back",
+      "close",
+      "behind",
+      "in_front",
+      "diagonal",
+      "in_place",
+    ]);
     expect(ATTRIBUTE_REGISTRY.direction.values).not.toContain("diag_forward");
     expect(ATTRIBUTE_REGISTRY.direction.values).not.toContain("diag_back");
   });
@@ -144,14 +155,16 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
 
   // ── Extra edge cases (in the spirit of US-003, beyond the listed ACs) ──
 
-  it("ships all ten standard kinds, every one builtin", async () => {
+  it("ships all nine standard kinds, every one builtin — footPosition removed (⟳2026-07-10)", async () => {
     // Intent: the standard tier is complete and flagged builtin (so the merge
     // and the creation UI can distinguish standard from user-defined kinds).
+    // The ballet-derived footPosition kind (first…fifth) is GONE: it had zero
+    // charted uses and duplicated what `direction` already models (the moving
+    // foot's relative placement) — the step model is direction + turn (PLAN §3).
     const { ATTRIBUTE_REGISTRY } = await importDomain();
     for (const k of [
       "direction",
       "footwork",
-      "footPosition",
       "rise",
       "position",
       "bodyActions",
@@ -163,25 +176,7 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
       expect(ATTRIBUTE_REGISTRY[k]).toBeDefined();
       expect(ATTRIBUTE_REGISTRY[k]?.builtin).toBe(true);
     }
-  });
-
-  it("models footPosition as a closed single-select enum of the five ballet positions", async () => {
-    // Intent: the ISTD "Foot Position" column (research/domain.md §2 #10) ships as a
-    // closed enum — Fourth split open/closed — so the strict write check (US-012)
-    // rejects an un-enumerated value.
-    const { ATTRIBUTE_REGISTRY } = await importDomain();
-    const fp = ATTRIBUTE_REGISTRY.footPosition;
-    expect(fp.cardinality).toBe("single");
-    expect(fp.freeText ?? false).toBe(false);
-    expect(fp.values).toEqual([
-      "first",
-      "second",
-      "third",
-      "fourth_open",
-      "fourth_closed",
-      "fifth",
-    ]);
-    expect(fp.appliesToDances).toBeUndefined(); // applies to every dance
+    expect(ATTRIBUTE_REGISTRY.footPosition).toBeUndefined();
   });
 
   it("applies rise to every Standard dance except Tango", async () => {
@@ -298,7 +293,7 @@ describe("T5 RegistryKind is data-driven (description / valueDefs / roleAware / 
     // mirrors, footwork differs, sway/turn mirror; the hold (position) + rise are
     // shared by the couple.
     const { ATTRIBUTE_REGISTRY } = await importDomain();
-    for (const k of ["direction", "footwork", "footPosition", "sway", "turn", "bodyActions"]) {
+    for (const k of ["direction", "footwork", "sway", "turn", "bodyActions"]) {
       expect(ATTRIBUTE_REGISTRY[k]?.roleAware, `${k} should be roleAware`).toBe(true);
     }
     expect(ATTRIBUTE_REGISTRY.position.roleAware ?? false).toBe(false);

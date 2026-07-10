@@ -2,7 +2,7 @@
 //
 // One vocabulary, two postures (D7 "forward-compatible reads, strict writes"):
 //   • READ is LENIENT — a future/unknown value survives (no data loss); aliases
-//     normalize (the split diagonal diag_forward/diag_back → diagonal). This
+//     normalize (the legacy diag_forward/diag_back → diagonal_forward/_back). This
 //     keeps old clients reading new data.
 //   • WRITE is STRICT — a value written to a KNOWN enum kind must be in that
 //     kind's registry enum, and (when a dance meter is given) the count must be a

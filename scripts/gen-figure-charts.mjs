@@ -19,7 +19,6 @@ const role = (r) => {
   if (r.sway && r.sway !== "none") o.sway = r.sway;
   if (r.turn && r.turn !== "none") o.turn = r.turn;
   if (Array.isArray(r.bodyActions) && r.bodyActions.length) o.bodyActions = r.bodyActions;
-  if (r.footPosition) o.footPosition = r.footPosition;
   if (r.rotation) o.rotation = r.rotation;
   if (r.head) o.head = r.head;
   return o;

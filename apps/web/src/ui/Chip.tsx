@@ -43,12 +43,6 @@ const TONE_STYLE: Record<ChipTone, { tint: string; ink: string; border: string; 
     border: "var(--bf-kind-footwork-border)",
     solid: "var(--bf-kind-footwork)",
   },
-  footPosition: {
-    tint: "var(--bf-kind-footPosition-tint)",
-    ink: "var(--bf-kind-footPosition-ink)",
-    border: "var(--bf-kind-footPosition-border)",
-    solid: "var(--bf-kind-footPosition)",
-  },
   rise: {
     tint: "var(--bf-kind-rise-tint)",
     ink: "var(--bf-kind-rise-ink)",

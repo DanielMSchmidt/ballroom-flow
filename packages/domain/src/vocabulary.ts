@@ -81,8 +81,6 @@ export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
   /** The foot part of the step (HT/T/TH/…). Renamed from the old `step` kind. */
   footwork: RegistryKind;
-  /** The ballet-derived position of the feet relative to each other (1st–5th). */
-  footPosition: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;
@@ -101,25 +99,46 @@ const RISE_DANCES: DanceId[] = ["waltz", "viennese_waltz", "quickstep", "foxtrot
 
 /** The standard (builtin) attribute vocabulary. */
 export const ATTRIBUTE_REGISTRY: StandardRegistry = {
-  // The step's travel direction — the step headline (2026-06-28 parity spec).
-  // Foot (L/R) is never modelled: steps alternate feet automatically. A closed
-  // enum (no freeText) — direction is a controlled vocabulary.
+  // The step's travel direction — the step headline (2026-06-28 parity spec), and
+  // the step's RELATIVE TRANSLATION in the derived-alignment model (PLAN §3.8
+  // ⟳2026-07-10: a step is a relative transform — `direction` translates, `turn`
+  // rotates, absolute alignment is derived). Foot (L/R) is never modelled: steps
+  // alternate feet automatically. A closed enum (no freeText) — the ISTD
+  // directional set (forward/back/side/diagonal fwd/bk/close) plus the own-foot
+  // crossing values `in_front`/`behind` (lock steps — a cross against the dancer's
+  // OWN foot, NOT CBMP, which stays in `position`/`bodyActions`) and `in_place`.
+  // `diagonal` is the legacy UNSPLIT value carried by charts whose forward/back
+  // sense hasn't been re-verified against the printed source yet
+  // (docs/seed/alignment-derivation-report.md §D) — never split it mechanically.
   direction: {
     kind: "direction",
     label: "Direction",
     color: "#2f5d8f",
     cardinality: "single",
     valueType: "enum",
-    values: ["forward", "back", "side", "behind", "close", "in_front", "diagonal", "in_place"],
+    values: [
+      "forward",
+      "back",
+      "side",
+      "diagonal_forward",
+      "diagonal_back",
+      "close",
+      "behind",
+      "in_front",
+      "diagonal",
+      "in_place",
+    ],
     description: "Which way the step travels across the floor — the step's headline.",
     valueDefs: {
       forward: "Forward — stepping forward along your line",
       back: "Back — stepping backward",
       side: "Side — stepping to the side",
-      behind: "Behind — crossing behind the supporting foot",
+      diagonal_forward: "Diagonal forward — travelling forward on a diagonal",
+      diagonal_back: "Diagonal back — travelling backward on a diagonal",
       close: "Close — feet close together, no travel",
+      behind: "Behind — crossing behind the supporting foot",
       in_front: "In front — crossing in front of the supporting foot (e.g. lock steps)",
-      diagonal: "Diagonal — travelling on a diagonal",
+      diagonal: "Diagonal — travelling on a diagonal (legacy unsplit value)",
       in_place: "In place — a weight change with no travel",
     },
     // Direction mirrors by role (leader forward ⇄ follower back). It also drives
@@ -220,31 +239,10 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     builtin: true,
   },
-  // The ballet-derived position of the feet relative to each other (ISTD's
-  // occasional "Foot Position" column — research/domain.md §2 #10). A closed enum
-  // of the five classical positions, with Fourth split open/closed. Role-aware: the
-  // two partners are not always in the same position (one may close while the other
-  // steps side). Single-select — the feet sit in one relationship per count.
-  footPosition: {
-    kind: "footPosition",
-    label: "Foot Position",
-    color: "#2c8a85",
-    cardinality: "single",
-    valueType: "enum",
-    values: ["first", "second", "third", "fourth_open", "fourth_closed", "fifth"],
-    description: "The ballet-derived position of the feet relative to each other.",
-    valueDefs: {
-      first: "First — heels together, toes turned out",
-      second: "Second — feet apart to the side, about one foot between the heels",
-      third: "Third — heel of the front foot touching the middle of the back foot",
-      fourth_open: "Fourth (open) — one foot forward, about a foot apart, a gap between",
-      fourth_closed: "Fourth (closed) — one foot forward, in contact, no gap",
-      fifth: "Fifth — heel of the front foot touching the toe of the back foot",
-    },
-    // Foot position can differ between partners (one closes while the other opens).
-    roleAware: true,
-    builtin: true,
-  },
+  // NOTE (2026-07-10): the ballet-derived `footPosition` kind (first…fifth) was
+  // REMOVED — zero charted uses across the whole catalog, and the moving foot's
+  // relative placement is already fully carried by `direction`. The step model is
+  // direction (relative translation) + turn (relative rotation); see PLAN §3.
   rise: {
     kind: "rise",
     label: "Rise & Fall",
@@ -349,6 +347,12 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     builtin: true,
   },
+  // THE canonical rotation field (PLAN §3.8 ⟳2026-07-10): a step's relative
+  // rotation. Tokens serialize SIGNED EIGHTHS 1:1 (eighth_R = +1 … full_R = +8;
+  // L = negative); absolute alignment is DERIVED from these — the conversion and
+  // the mod-8 wheel math live in alignment.ts (turnEighths/deriveAlignments),
+  // nowhere else. The amount is what's rotated ON that step; per-step amounts sum
+  // to the figure's total rotation.
   turn: {
     kind: "turn",
     label: "Turn",
@@ -442,9 +446,11 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
 // Read-side value aliases (Q-D4). Keyed by kind → { alias: canonical }. Unknown
 // values that aren't aliases pass through untouched (forward-compatible reads).
 const VALUE_ALIASES: Record<string, Record<string, string>> = {
-  // The split diagonal (diag_forward/diag_back) collapsed into a single
-  // `diagonal` value; legacy docs/seeds read through without a doc migration.
-  direction: { diag_forward: "diagonal", diag_back: "diagonal" },
+  // The oldest split-diagonal spelling (diag_forward/diag_back) normalizes to the
+  // ISTD split values (⟳2026-07-10 — these briefly collapsed into `diagonal`, which
+  // is now itself the legacy UNSPLIT value kept only for not-yet-re-verified
+  // charts); legacy docs/seeds read through without a doc migration.
+  direction: { diag_forward: "diagonal_forward", diag_back: "diagonal_back" },
 };
 
 /**
