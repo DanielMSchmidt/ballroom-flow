@@ -1772,6 +1772,17 @@ describe("Figure detail read view — reading lens opens read-only, edit is expl
     expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
   });
 
+  it("the read view offers no fork-into-variant — forking a figure EDITS the choreo", async () => {
+    // Forking a global figure spawns a variant and re-points the placement — a
+    // routine edit — so the affordance belongs to the EDIT lens only. The test
+    // figure is scope "global", exactly the case where the fork bar renders.
+    await renderReading("editor");
+    await openFromReading();
+    expect(detail().queryByRole("button", { name: /fork into variant/i })).toBeNull();
+    await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
+    expect(detail().getByRole("button", { name: /fork into variant/i })).toBeInTheDocument();
+  });
+
   it("a COMMENTER can add a note from the read view but gets no Edit toggle", async () => {
     await renderReading("commenter");
     await openFromReading();
