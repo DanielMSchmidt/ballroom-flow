@@ -97,6 +97,25 @@ describe("US-004 Float-count timing", () => {
     expect(barsForFigure([1, 7], "waltz")).toBe(2); // 7 lands in phrase 2
     expect(barsForFigure([], "foxtrot")).toBe(1); // empty → 1
   });
+
+  it("phraseCountLabel wraps the beat number at the dance phrase (Waltz never counts past 6)", async () => {
+    // Intent: the dance-aware display label — a Waltz figure's 7th beat is
+    //   counted "1" (phrase 2), never "7"; 6 is the highest Waltz count.
+    const { phraseCountLabel } = await importDomain();
+    expect(phraseCountLabel(6, "waltz")).toBe("6");
+    expect(phraseCountLabel(7, "waltz")).toBe("1");
+    expect(phraseCountLabel(9, "waltz")).toBe("3");
+    expect(phraseCountLabel(8, "foxtrot")).toBe("8");
+    expect(phraseCountLabel(9, "foxtrot")).toBe("1");
+  });
+
+  it("phraseCountLabel keeps the sub-beat suffix on wrapped counts (Waltz 7.5 → '1&')", async () => {
+    // Intent: only the whole-beat number wraps; e/&/a suffixes ride along.
+    const { phraseCountLabel } = await importDomain();
+    expect(phraseCountLabel(7.5, "waltz")).toBe("1&");
+    expect(phraseCountLabel(8.25, "waltz")).toBe("2e");
+    expect(phraseCountLabel(2.75, "waltz")).toBe("2a"); // within-phrase: unchanged
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

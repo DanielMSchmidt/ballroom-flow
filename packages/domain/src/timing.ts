@@ -47,6 +47,21 @@ export function countLabel(count: number): string {
 }
 
 /**
+ * Dance-aware {@link countLabel}: the whole-beat number is rendered MODULO the
+ * dance's counted phrase ({@link countToPhrase}), so a Waltz never counts past
+ * 6 — count 7 reads "1", 7.5 reads "1&" (the sub-beat suffix rides along
+ * unchanged). Display-only, exactly like `numberRoutineBeats`: the underlying
+ * float counts stay continuous; only the label wraps.
+ */
+export function phraseCountLabel(count: number, dance: DanceId): string {
+  const whole = Math.floor(count);
+  const { countInPhrase } = countToPhrase(count, dance);
+  // Re-attach the original fraction to the wrapped beat number; countLabel
+  // renders the suffix. (count - whole) preserves the fraction bit-exactly.
+  return countLabel(countInPhrase + (count - whole));
+}
+
+/**
  * True when `count` lands on the 1/8-note grid — i.e. its fractional part is a
  * multiple of 1/8 (the e/&/a/i subdivision grid). Counts are floats, so we snap
  * to the nearest 1/8 and check the residual is within float tolerance. This is

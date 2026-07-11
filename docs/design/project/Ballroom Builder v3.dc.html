@@ -1550,12 +1550,13 @@ class Component extends DCLogic {
       let si=0; const rows=[];
       const mkCell=(stp, typeKey, color, insertIdx, slotCount)=>{ const a = stp ? stp.attrs.find(x=>!x.removed && x.type===typeKey) : null; const hasVal = !!(a && this.attrIsSet(a)); const present = !!(a && !hasVal); const chips = hasVal ? [{ label:this.attrDisplay(a,vRole) }] : []; return { color, tint:this.lighten(color,.84), ink:this.darken(color,.32), bd:color, isValue:hasVal, isPresent:present, isEmpty:!a, chips, onTap:(()=>this.tapCell(figure.id, insertIdx, slotCount, (stp?stp.id:null), typeKey)) }; };
       const rowFor=(stp, insertIdx, slotCount, isSub, badge)=>({ id: stp ? stp.id : ('e'+slotCount+'_'+insertIdx+(isSub?'s':'')), count: stp ? stp.count : slotCount, isSub:!!isSub, notSub:!isSub, barBadge:badge, hasBadge:!!badge, cells: cols.map(c=>mkCell(stp, c.key, c.color, insertIdx, slotCount)) });
+      const PHR=BPB===3?6:8; // counted phrase: Waltz/Viennese 1–6, 4/4 dances 1–8 — labels wrap here, never past it
       for(let i=1;i<=counts;i++){
         const bar=Math.floor((i-1)/BPB)+1;
         const badge=((i-1)%BPB===0)?('bar '+bar):'';
         const insertIdx=si; let stp=null;
         if(si<steps.length && !_isSubC(steps[si].count)){ stp=steps[si]; si++; }
-        rows.push(rowFor(stp, insertIdx, String(((i-1)%BPB)+1), false, badge));
+        rows.push(rowFor(stp, insertIdx, String(((i-1)%PHR)+1), false, badge));
         const offs={}; while(si<steps.length && _isSubC(steps[si].count)){ offs[steps[si].count]=steps[si]; si++; }
         const subInsert=si;
         ['e','&','a'].forEach(sub=>{ rows.push(rowFor(offs[sub]||null, subInsert, sub, true, '')); });

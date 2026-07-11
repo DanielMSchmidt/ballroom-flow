@@ -39,6 +39,7 @@ import {
   mergeRegistry,
   offBeatSymbol,
   type PlacementPart,
+  phraseCountLabel,
   type RegistryKind,
   resolveFigureCounts,
   windowAttributes,
@@ -129,13 +130,15 @@ const SUB_BEAT_VULGAR: Record<string, string> = { e: "¼", "&": "½", a: "¾" };
 /**
  * The attribute-overlay title for a timing (frame 1.12): a whole beat reads
  * "count N"; a sub-beat reads "the & (½ beat)" (the symbol + its fraction).
+ * The beat number wraps at the dance's phrase (phraseCountLabel) so the title
+ * agrees with the visible row label — a Waltz beat 7 opens as "count 1".
  */
-function timingTitle(count: number): string {
+function timingTitle(count: number, dance: DanceId): string {
   const t = pickMessages(timelineMessages);
-  if (Number.isInteger(count)) return t.countN(count);
+  if (Number.isInteger(count)) return t.countN(phraseCountLabel(count, dance));
   const symbol = offBeatSymbol(count) ?? "";
   const vulgar = SUB_BEAT_VULGAR[symbol];
-  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(countLabel(count));
+  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(phraseCountLabel(count, dance));
 }
 
 /** The registry kind(s) a column's overlay edits: the merged Step column edits
@@ -247,7 +250,7 @@ export function FigureTimeline({
       .filter((c) => !inGrid.has(c))
       .map((c) => ({
         count: c,
-        label: countLabel(c),
+        label: phraseCountLabel(c, gridDance),
         bar: Math.max(1, Math.ceil(Math.floor(c) / beatsPerBar)),
         beat: Math.floor(c),
         whole: Number.isInteger(c),
@@ -561,7 +564,7 @@ export function FigureTimeline({
         <Sheet
           open
           onClose={() => setOpenCell(null)}
-          title={timingTitle(openCell.count)}
+          title={timingTitle(openCell.count, gridDance)}
           meta={openCell.column.label}
         >
           <AttributeEditor

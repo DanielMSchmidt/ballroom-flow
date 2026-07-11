@@ -1082,6 +1082,46 @@ describe("US-027 Add a figure from the library picker", () => {
   });
 });
 
+describe("placement-card count sub-line wraps at the dance phrase", () => {
+  it("shows Waltz counts past 6 wrapped — steps at 1,2,7,8,9 read '1 2 1 2 3'", async () => {
+    // Intent: Waltz is counted 1–6; a figure whose steps run past the phrase
+    //   must not show raw "7 8 9" on its card (display wraps, floats untouched).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const fig: FigureDoc = {
+      ...figure("right-lunge", "Right Lunge"),
+      dance: "waltz",
+      scope: "account",
+      attributes: [1, 2, 7, 8, 9].map((c) => ({
+        id: `s${c}`,
+        kind: "direction",
+        count: c,
+        value: "fwd",
+        role: null,
+        deletedAt: null,
+      })),
+    };
+    const p = placement("p1", "right-lunge");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    expect(screen.getByText(/^1 2 1 2 3$/)).toBeInTheDocument();
+  });
+});
+
 describe("Builder v3 ③ — a portioned placement shows ONLY its window", () => {
   it("windows the placement card's timing + technique chips to [fromCount, toCount]", async () => {
     // Intent: adding "the last 3 steps of a Natural Turn" must show only those

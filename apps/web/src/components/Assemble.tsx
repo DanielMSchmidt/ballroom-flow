@@ -16,7 +16,6 @@ import {
   type Alignment,
   barsForFigure,
   can,
-  countLabel,
   DANCES,
   type DanceId,
   type FigureDoc,
@@ -25,6 +24,7 @@ import {
   type Placement,
   type PlacementPart,
   partBeatSpan,
+  phraseCountLabel,
   type RegistryKind,
   type Section,
   windowAttributes,
@@ -1862,7 +1862,9 @@ function PlacementCard({
             {label}
           </span>
           <span className="block truncate text-2xs font-semibold text-ink-faint">
-            {counts.length > 0 ? counts.map((c) => countLabel(c)).join(" ") : t.emptyAddSteps}
+            {counts.length > 0
+              ? counts.map((c) => phraseCountLabel(c, figure.dance)).join(" ")
+              : t.emptyAddSteps}
             {placement.part && ` · ${t.partSub(placement.part.fromCount, placement.part.toCount)}`}
           </span>
         </button>
@@ -2343,7 +2345,7 @@ function PlacementAttributes({
                 dimmed ? "text-[10px]" : "text-[11px]",
               )}
             >
-              {countLabel(count)}
+              {phraseCountLabel(count, dance)}
             </span>
             <div className="flex flex-wrap gap-1">{chips}</div>
           </div>

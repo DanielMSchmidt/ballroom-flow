@@ -119,6 +119,7 @@ export {
   type NumberedBeatEntry,
   numberRoutineBeats,
   offBeatSymbol,
+  phraseCountLabel,
   type RoutineBeatEntry,
   slowQuickTokens,
 } from "./timing";
