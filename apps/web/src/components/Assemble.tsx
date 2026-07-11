@@ -16,15 +16,17 @@ import {
   type Alignment,
   barsForFigure,
   can,
-  countLabel,
   DANCES,
   type DanceId,
   type FigureDoc,
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
   type PlacementPart,
+  parseGlobalFigureRef,
   partBeatSpan,
+  phraseCountLabel,
   type RegistryKind,
   type Section,
   windowAttributes,
@@ -46,6 +48,7 @@ import { useOnline } from "../lib/use-online";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import type { MineFigure } from "../store/figures";
 import { useMe } from "../store/me";
 import type {
   CopyOnWriteErrorReason,
@@ -173,6 +176,14 @@ export interface AssembleProps {
   bookmarkedFigureRefs?: ReadonlySet<string>;
   /** Bookmark a figure into the caller's library (a REFERENCE, never a copy). */
   onAddToLibrary?: (figureRef: string) => Promise<{ alreadySaved: boolean }>;
+  /**
+   * The caller's library figures (⟳v5, PLAN §4.2: a bookmark "can be placed
+   * into your other routines") — surfaced by the Add-figure picker alongside
+   * the catalog presets. Account-scope entries list as tappable rows (placed
+   * by ref via `store.placeFigure`); bookmarked CATALOG refs dedupe into the
+   * preset rows. Omitted → the picker shows the catalog only.
+   */
+  libraryFigures?: MineFigure[];
 }
 
 /**
@@ -269,6 +280,7 @@ export function Assemble({
   initialMode = "edit",
   bookmarkedFigureRefs,
   onAddToLibrary,
+  libraryFigures,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   const t = useMessages(assembleMessages);
@@ -982,6 +994,19 @@ export function Assemble({
       >
         <AddFigurePicker
           dance={routine.dance}
+          libraryFigures={libraryFigures}
+          onAddFromLibrary={(figureRef) => {
+            // Assembly of an existing library figure (⟳v5 §4.2): the placement
+            // just references the live doc — whole figure, no portion step (the
+            // figure's chart isn't bundled client-side to size a range from).
+            if (addingFigureTo)
+              store.placeFigure(
+                addingFigureTo.sectionId,
+                figureRef,
+                addingFigureTo.beforePlacementId,
+              );
+            setAddingFigureTo(null);
+          }}
           onAdd={(name, figureType, counts, part) => {
             if (addingFigureTo)
               store.addPlacement(
@@ -1147,6 +1172,13 @@ export function Assemble({
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
               figureName={notatingFigure.name}
+              // The design's variantBar.adjusted flag: the figure has an origin
+              // it was adjusted AWAY from — a spawned variant (baseFigureRef) or
+              // a legacy copy still carrying a catalog identity. A from-scratch
+              // custom has neither and must not claim to be "adjusted".
+              adjusted={
+                notatingFigure.baseFigureRef != null || figureHasLibraryOrigin(notatingFigure)
+              }
               onRenameFigure={
                 figureEditing ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
               }
@@ -1862,7 +1894,9 @@ function PlacementCard({
             {label}
           </span>
           <span className="block truncate text-2xs font-semibold text-ink-faint">
-            {counts.length > 0 ? counts.map((c) => countLabel(c)).join(" ") : t.emptyAddSteps}
+            {counts.length > 0
+              ? counts.map((c) => phraseCountLabel(c, figure.dance)).join(" ")
+              : t.emptyAddSteps}
             {placement.part && ` · ${t.partSub(placement.part.fromCount, placement.part.toCount)}`}
           </span>
         </button>
@@ -1969,20 +2003,31 @@ function PlacementCard({
 /**
  * The "Add a figure" picker (US-027 + US-032): browse the dance's library
  * presets (filterable) and tap one to place it with its canonical name +
- * figureType, OR create your own custom figure by name. A preset carries the
- * catalog's figureType (cross-routine identity); a custom omits it.
+ * figureType, place a figure from YOUR library (⟳v5 §4.2 — a bookmark "can be
+ * placed into your other routines"; the design mock rides them in the same
+ * list with the amber dot + "custom" badge), OR create your own custom figure
+ * by name. A preset carries the catalog's figureType (cross-routine identity);
+ * a custom omits it.
  */
 function AddFigurePicker({
   dance,
+  libraryFigures,
   onAdd,
+  onAddFromLibrary,
 }: {
   dance: DanceId;
+  /** The caller's library entries: account-scope figures list as tappable rows;
+   *  bookmarked CATALOG refs dedupe out (their preset row already lists them). */
+  libraryFigures?: MineFigure[];
   onAdd: (
     name: string,
     figureType?: string,
     counts?: number,
     part?: { fromCount: number; toCount: number } | null,
   ) => void;
+  /** Place an existing library figure by ref — whole figure, no portion step
+   *  (its chart isn't bundled client-side to size a range from). */
+  onAddFromLibrary?: (figureRef: string) => void;
 }) {
   const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
@@ -2004,6 +2049,17 @@ function AddFigurePicker({
   const q = filter.trim().toLowerCase();
   const presets = libraryFiguresForDance(dance).filter(
     (f) => q === "" || f.name.toLowerCase().includes(q),
+  );
+  // The user's own library figures for this dance (⟳v5 §4.2). A bookmarked
+  // CATALOG figure's ref parses as a global ref — its preset row already lists
+  // it, so it dedupes out; an untitled registry row has nothing to list by.
+  const mine = (libraryFigures ?? []).filter(
+    (f): f is MineFigure & { title: string } =>
+      f.dance === dance &&
+      f.title != null &&
+      f.title.trim() !== "" &&
+      parseGlobalFigureRef(f.docRef) == null &&
+      (q === "" || f.title.toLowerCase().includes(q)),
   );
   if (portion) {
     const whole = portion.from === 1 && portion.to === portion.total;
@@ -2096,13 +2152,42 @@ function AddFigurePicker({
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
-      {presets.length === 0 ? (
+      {presets.length === 0 && mine.length === 0 ? (
         <p className="text-2xs text-ink-faint">{t.noLibraryMatches}</p>
       ) : (
         <ul
           className="flex max-h-64 flex-col gap-1 overflow-y-auto"
           aria-label={t.libraryFiguresAria}
         >
+          {/* The user's own library figures ride in the same list (design mock:
+              amber dot + "custom" badge), listed first — they were bookmarked
+              deliberately. Tapping places the live doc by ref. */}
+          {mine.map((f) => (
+            <li key={f.docRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => onAddFromLibrary?.(f.docRef)}
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 flex-none rounded-full"
+                  style={{ background: kindVar("footwork") }}
+                />
+                <span className="min-w-0 flex-1 truncate text-left">{f.title}</span>
+                <span
+                  className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
+                  style={{
+                    background: "var(--bf-scope-custom-tint)",
+                    color: "var(--bf-scope-custom-ink)",
+                  }}
+                >
+                  {t.customPill}
+                </span>
+              </Button>
+            </li>
+          ))}
           {presets.map((f) => (
             // figureType is NOT unique within a dance (figure families repeat it —
             // e.g. foxtrot's base + "incorporating Feather Finish" Reverse Turns),
@@ -2343,7 +2428,7 @@ function PlacementAttributes({
                 dimmed ? "text-[10px]" : "text-[11px]",
               )}
             >
-              {countLabel(count)}
+              {phraseCountLabel(count, dance)}
             </span>
             <div className="flex flex-wrap gap-1">{chips}</div>
           </div>

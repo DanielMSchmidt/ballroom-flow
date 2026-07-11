@@ -39,6 +39,7 @@ import {
   mergeRegistry,
   offBeatSymbol,
   type PlacementPart,
+  phraseCountLabel,
   type RegistryKind,
   resolveFigureCounts,
   windowAttributes,
@@ -104,6 +105,11 @@ export interface FigureTimelineProps {
   /** The figure's display name — drives the "adjusted for this choreo — still X"
    *  identity reassurance beside Add to library (Builder v3 variant bar). */
   figureName?: string;
+  /** The design's variantBar.adjusted flag: the figure HAS an origin (a base /
+   *  catalog identity) it was adjusted away from. Gates the "adjusted for this
+   *  choreo — still X" chip — a from-scratch custom (no origin) must NOT show
+   *  it: nothing was ever adjusted. Default false (the chip is opt-in). */
+  adjusted?: boolean;
   /** Rename the LIVE figure doc (Builder v3 ⑤): the add-to-library naming flow
    *  writes the typed name onto the shared doc before bookmarking. */
   onRenameFigure?: (name: string) => void;
@@ -129,13 +135,15 @@ const SUB_BEAT_VULGAR: Record<string, string> = { e: "¼", "&": "½", a: "¾" };
 /**
  * The attribute-overlay title for a timing (frame 1.12): a whole beat reads
  * "count N"; a sub-beat reads "the & (½ beat)" (the symbol + its fraction).
+ * The beat number wraps at the dance's phrase (phraseCountLabel) so the title
+ * agrees with the visible row label — a Waltz beat 7 opens as "count 1".
  */
-function timingTitle(count: number): string {
+function timingTitle(count: number, dance: DanceId): string {
   const t = pickMessages(timelineMessages);
-  if (Number.isInteger(count)) return t.countN(count);
+  if (Number.isInteger(count)) return t.countN(phraseCountLabel(count, dance));
   const symbol = offBeatSymbol(count) ?? "";
   const vulgar = SUB_BEAT_VULGAR[symbol];
-  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(countLabel(count));
+  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(phraseCountLabel(count, dance));
 }
 
 /** The registry kind(s) a column's overlay edits: the merged Step column edits
@@ -168,6 +176,7 @@ export function FigureTimeline({
   isBookmarked = false,
   onAddToLibrary,
   figureName,
+  adjusted = false,
   onRenameFigure,
   part,
   showStepRecap = true,
@@ -247,7 +256,7 @@ export function FigureTimeline({
       .filter((c) => !inGrid.has(c))
       .map((c) => ({
         count: c,
-        label: countLabel(c),
+        label: phraseCountLabel(c, gridDance),
         bar: Math.max(1, Math.ceil(Math.floor(c) / beatsPerBar)),
         beat: Math.floor(c),
         whole: Number.isInteger(c),
@@ -403,8 +412,10 @@ export function FigureTimeline({
             ) : (
               <>
                 {/* Identity reassurance (Builder v3 variant bar): the figure was
-                      adjusted for this choreo but is still the same named figure. */}
-                {figureName && (
+                      adjusted for this choreo but is still the same named figure.
+                      Variants/diverged-origin figures only (`adjusted`) — a
+                      from-scratch custom was never adjusted from anything. */}
+                {adjusted && figureName && (
                   <span className="rounded-[8px] bg-surface-sunken px-2 py-1.5 text-2xs font-semibold text-ink-muted">
                     {t.adjustedStill(figureName)}
                   </span>
@@ -561,7 +572,7 @@ export function FigureTimeline({
         <Sheet
           open
           onClose={() => setOpenCell(null)}
-          title={timingTitle(openCell.count)}
+          title={timingTitle(openCell.count, gridDance)}
           meta={openCell.column.label}
         >
           <AttributeEditor

@@ -234,6 +234,9 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             }
             bookmarkedFigureRefs={bookmarkedFigureRefs}
             onAddToLibrary={onAddToLibrary}
+            // The full library list feeds the Add-figure picker (⟳v5 §4.2: a
+            // bookmark "can be placed into your other routines").
+            libraryFigures={mineQ.data ?? []}
           />
         )}
       </div>

@@ -42,6 +42,7 @@ function fakeStore(
     moveSection: () => {},
     deleteSection: () => {},
     addPlacement: () => {},
+    placeFigure: () => {},
     movePlacement: () => {},
     deletePlacement: () => {},
     addBreak: () => {},
@@ -690,6 +691,58 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
   });
 
+  it("step editor: no 'adjusted — still X' chip for a from-scratch custom (nothing was adjusted)", async () => {
+    // A custom figure has no base/origin — the identity-reassurance chip is a
+    // variant's, not a custom's. Add-to-library still shows.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: glue step/i }));
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+    expect(screen.queryByText(/adjusted for this choreo/i)).toBeNull();
+  });
+
+  it("step editor: the chip shows for a VARIANT (baseFigureRef set) that diverged from its base", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p1 = placement("p1", "var1");
+    const variant: FigureDoc = {
+      ...accountFigure("var1", "Feather Step"),
+      baseFigureRef: "global:foxtrot:feather-step",
+      attributes: [
+        { id: "x1", kind: "sway", count: 1, value: "left", role: null, deletedAt: null },
+      ],
+    };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: variant, status: "live" }])}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather step/i }));
+    expect(screen.getByText(/adjusted for this choreo — still Feather Step/i)).toBeInTheDocument();
+  });
+
   it("hides the affordance for a non-editor (viewer)", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const { routine, resolved } = seededAccount();
@@ -1054,6 +1107,81 @@ describe("US-027 Add a figure from the library picker", () => {
     );
   });
 
+  it("lists the user's library figures (dance-scoped, deduped) and places a live reference on tap", async () => {
+    // Intent: a figure the user added to their library/catalog must surface in
+    //   the choreo's add-figure search (PLAN §4.2: a bookmark "can be placed
+    //   into your other routines"). Bookmarked CATALOG figures dedupe into the
+    //   preset rows; other-dance figures stay out.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const placeFigure = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [], { placeFigure })}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+          {
+            docRef: "global:foxtrot:feather-step",
+            title: "Feather Step",
+            figureType: "feather-step",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 1,
+          },
+          {
+            docRef: "fig_other",
+            title: "Waltz Thing",
+            figureType: "waltz-thing",
+            dance: "waltz",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /waltz thing/i })).toBeNull();
+    // The bookmarked catalog figure is NOT duplicated — the preset row is it.
+    expect(screen.getAllByRole("button", { name: /^feather step$/i })).toHaveLength(1);
+    // Tapping places the existing figure by ref — whole figure, no portion step.
+    await userEvent.click(screen.getByRole("button", { name: /my lunge/i }));
+    expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
+  });
+
+  it("the picker's search filter finds library figures too", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [])}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/filter figures/i), "lunge");
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^feather step$/i })).toBeNull();
+  });
+
   it("still supports creating a custom figure by name", async () => {
     // Intent: the picker keeps a 'create your own' escape hatch (no figureType →
     //   the store slugs one). Covers US-027 custom-add alongside the library.
@@ -1079,6 +1207,46 @@ describe("US-027 Add a figure from the library picker", () => {
       undefined,
       expect.any(Function), // onCreated — create-navigates (§4.3)
     );
+  });
+});
+
+describe("placement-card count sub-line wraps at the dance phrase", () => {
+  it("shows Waltz counts past 6 wrapped — steps at 1,2,7,8,9 read '1 2 1 2 3'", async () => {
+    // Intent: Waltz is counted 1–6; a figure whose steps run past the phrase
+    //   must not show raw "7 8 9" on its card (display wraps, floats untouched).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const fig: FigureDoc = {
+      ...figure("right-lunge", "Right Lunge"),
+      dance: "waltz",
+      scope: "account",
+      attributes: [1, 2, 7, 8, 9].map((c) => ({
+        id: `s${c}`,
+        kind: "direction",
+        count: c,
+        value: "fwd",
+        role: null,
+        deletedAt: null,
+      })),
+    };
+    const p = placement("p1", "right-lunge");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    expect(screen.getByText(/^1 2 1 2 3$/)).toBeInTheDocument();
   });
 });
 

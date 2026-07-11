@@ -220,6 +220,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     moveSection: editAction((s) => s.moveSection),
     deleteSection: editAction((s) => s.deleteSection),
     addPlacement: editAction((s) => s.addPlacement),
+    placeFigure: editAction((s) => s.placeFigure),
     movePlacement: editAction((s) => s.movePlacement),
     deletePlacement: editAction((s) => s.deletePlacement),
     addBreak: editAction((s) => s.addBreak),

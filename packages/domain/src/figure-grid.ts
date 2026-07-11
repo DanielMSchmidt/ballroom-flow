@@ -13,7 +13,7 @@
 // so a Waltz bar 2 beat 1 is count 4, its "&" is 4.5 → label "4&" (countLabel).
 import { DANCES, type DanceId } from "./dances";
 import type { Attribute } from "./doc-types";
-import { countLabel } from "./timing";
+import { phraseCountLabel } from "./timing";
 
 /** The in-between subdivisions of a beat, in order: e (¼), & (½), a (¾). */
 export const SUB_BEATS = [0.25, 0.5, 0.75] as const;
@@ -23,7 +23,9 @@ export const SUB_BEATS = [0.25, 0.5, 0.75] as const;
 export interface GridSlot {
   /** The float count this slot sits on (relative to figure start, 1-indexed). */
   count: number;
-  /** Conventional ballroom label, e.g. "1", "1e", "1&", "1a", "4" (countLabel). */
+  /** Conventional ballroom label, e.g. "1", "1e", "1&", "1a", "4" — the beat
+   *  number wraps at the dance's counted phrase (phraseCountLabel): a Waltz
+   *  never labels past 6, so its 7th beat reads "1" again. */
   label: string;
   /** 1-indexed bar this slot belongs to (drives the "bar N" divider). */
   bar: number;
@@ -120,10 +122,10 @@ export function figureCountSlots(counts: number, dance: DanceId): GridSlot[] {
   const slots: GridSlot[] = [];
   for (let beat = 1; beat <= countTotal; beat++) {
     const bar = Math.ceil(beat / beatsPerBar);
-    slots.push({ count: beat, label: countLabel(beat), bar, beat, whole: true });
+    slots.push({ count: beat, label: phraseCountLabel(beat, dance), bar, beat, whole: true });
     for (const frac of SUB_BEATS) {
       const count = beat + frac;
-      slots.push({ count, label: countLabel(count), bar, beat, whole: false });
+      slots.push({ count, label: phraseCountLabel(count, dance), bar, beat, whole: false });
     }
   }
   return slots;

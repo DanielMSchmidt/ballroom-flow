@@ -76,6 +76,7 @@ export {
 } from "./fork";
 export { newId } from "./ids";
 export {
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   globalFigureRef,
   LIBRARY_FIGURES,
@@ -119,6 +120,7 @@ export {
   type NumberedBeatEntry,
   numberRoutineBeats,
   offBeatSymbol,
+  phraseCountLabel,
   type RoutineBeatEntry,
   slowQuickTokens,
 } from "./timing";

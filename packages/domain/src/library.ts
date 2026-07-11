@@ -158,6 +158,33 @@ export function libraryGroupsForFilter(filter: DanceId | "all"): LibraryGroup[] 
 const attrKey = (a: Attribute): string =>
   `${a.kind}|${a.count}|${a.role ?? ""}|${JSON.stringify(a.value)}`;
 
+/** The catalog entry a figure's (dance, figureType, name) identity resolves to,
+ *  or undefined for a from-scratch custom. */
+function libraryOriginOf(figure: {
+  dance: DanceId;
+  figureType: string;
+  name: string;
+}): LibraryFigure | undefined {
+  return LIBRARY_FIGURES.find(
+    (l) => l.dance === figure.dance && l.figureType === figure.figureType && l.name === figure.name,
+  );
+}
+
+/**
+ * True when the figure carries a catalog identity at all — the same (dance,
+ * figureType, name) lookup {@link figureMatchesLibraryOrigin} uses, WITHOUT the
+ * content comparison. Distinguishes a library-derived figure (it has an origin
+ * it can be "adjusted" away from) from a from-scratch custom (no origin —
+ * nothing was ever adjusted). Drives the editor's identity-reassurance chip.
+ */
+export function figureHasLibraryOrigin(figure: {
+  dance: DanceId;
+  figureType: string;
+  name: string;
+}): boolean {
+  return libraryOriginOf(figure) !== undefined;
+}
+
 /**
  * True when a placed figure still matches the library figure it was picked from — same
  * (dance, figureType, name) AND the same live attributes. Used to decide whether a figure is
@@ -171,9 +198,7 @@ export function figureMatchesLibraryOrigin(figure: {
   name: string;
   attributes: Attribute[];
 }): boolean {
-  const origin = LIBRARY_FIGURES.find(
-    (l) => l.dance === figure.dance && l.figureType === figure.figureType && l.name === figure.name,
-  );
+  const origin = libraryOriginOf(figure);
   if (!origin) return false;
   const live = figure.attributes
     .filter((a) => a.deletedAt == null)

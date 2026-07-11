@@ -301,6 +301,31 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(onCatalog).not.toHaveBeenCalled();
   });
 
+  it("placeFigure appends a placement referencing an EXISTING figure — assembly, not creation", async () => {
+    // ⟳v5 §4.2: a library bookmark "can be placed into your other routines".
+    // Placing an existing (account) figure by ref must not POST /api/figures —
+    // the doc already exists; the placement just points at it.
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
+    store.placeFigure("s1", "fig_mine");
+    expect(createFigure).not.toHaveBeenCalled();
+    expect(store.readPlacements().find((p) => p.placement.figureRef === "fig_mine")).toBeDefined();
+  });
+
+  it("placeFigure inserts BEFORE an anchor via sortKey (insert-between parity with addPlacement)", async () => {
+    const { store } = await openWithSection();
+    store.placeFigure("s1", "fig_a");
+    store.placeFigure("s1", "fig_b");
+    const anchor = store.readPlacements().find((p) => p.placement.figureRef === "fig_b");
+    if (!anchor) throw new Error("anchor placement missing");
+    store.placeFigure("s1", "fig_between", anchor.placement.id);
+    expect(store.readPlacements().map((p) => p.placement.figureRef)).toEqual([
+      "fig_a",
+      "fig_between",
+      "fig_b",
+    ]);
+  });
+
   it("a catalog reference is EDITOR-READY with zero figure sockets (openFigure is a no-op)", async () => {
     // Regression (screenshots/e2e CI, 2026-07-02): opening the step editor on a
     // catalog live-reference used to open a WS to the global doc and gate the

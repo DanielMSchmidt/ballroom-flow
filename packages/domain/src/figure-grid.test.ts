@@ -117,6 +117,23 @@ describe("counts-based figure length (Builder v3 ①)", () => {
     expect(resolveFigureBars({ bars: 2, attributes: [], dance: "waltz" })).toBe(2);
   });
 
+  it("wraps grid labels at the dance phrase — bar 3 of a 9-count Waltz reads 1/2/3", () => {
+    // Intent: Waltz is counted 1–6 (two-bar phrases); the grid's DISPLAY labels
+    //   must wrap after 6 while the underlying float counts stay continuous.
+    const slots = figureCountSlots(9, "waltz");
+    const bar3 = slots.filter((s) => s.bar === 3);
+    expect(bar3.filter((s) => s.whole).map((s) => s.label)).toEqual(["1", "2", "3"]);
+    expect(bar3.filter((s) => s.whole).map((s) => s.count)).toEqual([7, 8, 9]);
+    // Sub-beats wrap with their beat: 7.5 reads "1&".
+    expect(slots.find((s) => s.count === 7.5)).toMatchObject({ label: "1&", bar: 3 });
+  });
+
+  it("wraps grid labels at 8 for a 4/4 dance (Foxtrot count 9 reads '1')", () => {
+    const slots = figureCountSlots(9, "foxtrot");
+    expect(slots.find((s) => s.count === 8)?.label).toBe("8");
+    expect(slots.find((s) => s.count === 9)?.label).toBe("1");
+  });
+
   it("figureCountSlots generates one whole + e/&/a rows per count, grouped into bars", () => {
     const slots = figureCountSlots(4, "waltz");
     // 4 counts × (1 whole + 3 sub-beats) rows.

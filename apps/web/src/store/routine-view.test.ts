@@ -66,6 +66,7 @@ function fakeLive() {
     moveSection: vi.fn(),
     deleteSection: vi.fn(),
     addPlacement: vi.fn(),
+    placeFigure: vi.fn(),
     movePlacement: vi.fn(),
     deletePlacement: vi.fn(),
     addBreak: vi.fn(),

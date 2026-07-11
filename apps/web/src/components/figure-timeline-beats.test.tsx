@@ -57,6 +57,34 @@ describe("FigureTimeline — bars-driven beat-row grid", () => {
     expect(screen.queryByRole("button", { name: /^Add Step at count 7$/i })).toBeNull();
   });
 
+  it("wraps visible count labels at the Waltz phrase — beat 7 of a 9-count figure reads '1'", async () => {
+    // Intent: Waltz is counted 1–6; the grid never shows a "7". Bar 3 of a
+    //   9-count figure reads 1/2/3 again. The cell ARIA identifiers keep the
+    //   continuous count (unique names), only the visible labels wrap.
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" counts={9} />);
+    // Beats 1 and 7 both read "1"; beats 3 and 9 both read "3"; no "7"/"8"/"9".
+    expect(screen.getAllByText("1")).toHaveLength(2);
+    expect(screen.getAllByText("3")).toHaveLength(2);
+    expect(screen.queryByText("7")).toBeNull();
+    expect(screen.queryByText("8")).toBeNull();
+    // Sub-beats wrap with their beat: two "1&" rows (1.5 and 7.5).
+    expect(screen.getAllByText("1&")).toHaveLength(2);
+    // Bar grouping is untouched — bar 3 still exists.
+    expect(screen.getByText(/^bar 3$/i)).toBeInTheDocument();
+    // The unique per-cell identifiers stay continuous (beat 7 is addressable).
+    expect(screen.getByRole("button", { name: /^Add Step at count 7$/i })).toBeInTheDocument();
+  });
+
+  it("titles the attribute overlay with the wrapped count (tapping beat 7 opens 'count 1')", async () => {
+    // Intent: the single-attribute overlay's title must agree with the visible
+    //   row label (design mock: the overlay carries the slot's wrapped count).
+    const { FigureTimeline } = await load();
+    renderUi(<FigureTimeline role="editor" dance="waltz" counts={9} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Add Rise at count 7$/i }));
+    expect(screen.getByRole("heading", { name: /^count 1$/i })).toBeInTheDocument();
+  });
+
   it("the LENGTH stepper emits the next count length (controlled by the parent)", async () => {
     const { FigureTimeline } = await load();
     const onCountsChange = vi.fn();
@@ -347,6 +375,8 @@ describe("FigureTimeline — Builder v3 edit-grid parity", () => {
   });
 
   it("shows the 'adjusted — still {name}' chip beside Add to library for a diverged figure", async () => {
+    // `adjusted` is the design's variantBar.adjusted flag: the figure HAS an
+    // origin (a base / catalog identity) it was adjusted away from.
     const { FigureTimeline } = await load();
     renderUi(
       <FigureTimeline
@@ -354,10 +384,28 @@ describe("FigureTimeline — Builder v3 edit-grid parity", () => {
         dance="waltz"
         figureScope="owned"
         figureName="Natural Turn"
+        adjusted
         onAddToLibrary={vi.fn()}
       />,
     );
     expect(screen.getByText(/adjusted for this choreo — still Natural Turn/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+  });
+
+  it("hides the 'adjusted — still {name}' chip for a from-scratch custom (nothing was adjusted)", async () => {
+    // A custom figure created in this choreo has no base/origin — the identity
+    // reassurance makes no sense; the Add-to-library affordance still shows.
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Right Lunge"
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/adjusted for this choreo/i)).toBeNull();
     expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
   });
 });
