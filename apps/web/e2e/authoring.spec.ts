@@ -45,11 +45,9 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").press("Enter");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
 
-    // 4. Add a figure "My Step" to the section (US-027): mints a custom
-    //    figure doc + a placement; the card shows the figure name. NOTE: use a
-    //    NON-catalog name — a typed catalog name (e.g. "Feather Step") now resolves
-    //    to the library figure and arrives pre-filled, which would break the
-    //    empty-figure manual-notation flow this test exercises.
+    // 4. Add a figure "My Step" to the section (US-027): a typed name always
+    //    mints a custom figure doc + a placement (§4.3 — even a catalog-colliding
+    //    name stays a custom); the card shows the figure name.
     await page.getByRole("button", { name: "Add figure" }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");

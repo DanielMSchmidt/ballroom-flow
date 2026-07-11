@@ -112,8 +112,8 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     });
     await seedAuth(page, user);
 
-    // Create a routine → a section → a NON-catalog custom figure (an empty figure
-    // to notate by hand; a catalog name would arrive pre-filled and spawn a variant).
+    // Create a routine → a section → a typed custom figure (an empty figure to
+    // notate by hand; typed names always mint a custom — §4.3).
     const docRef = await createRoutineAsOwner(page, "Undo Figure Waltz");
     expect(docRef).toBeTruthy();
     await addSection(page, "Steps");

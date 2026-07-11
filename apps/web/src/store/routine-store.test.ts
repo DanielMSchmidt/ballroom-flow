@@ -400,15 +400,24 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     store.close();
   });
 
-  it("resolves a TYPED multi-word catalog name to its canonical global ref", async () => {
-    const createFigure = vi.fn(async () => {});
-    const { store } = await openWithSection(createFigure);
-    // Typed name, NO figureType — resolved by name; a name-slug ("natural_turn")
-    // can't reproduce the hyphenated catalog "natural-turn", so the name lookup must.
-    store.addPlacement("s1", "Natural Turn");
-    expect(createFigure).not.toHaveBeenCalled();
+  it("a TYPED name that collides with a catalog name still mints the user's OWN figure", async () => {
+    // Owner decision 2026-07-11 (REVERSES the earlier name-alone catalog match):
+    // the custom form always creates YOUR figure — typing "Natural Turn" must not
+    // silently place the global catalog doc. Only an explicit preset pick (which
+    // carries the canonical figureType) places a live global reference.
+    const seen: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn((meta: { figureRef: string }) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const { store } = await openWithSection(createFigure as OpenOptions["createFigure"]);
+    store.addPlacement("s1", "Natural Turn"); // typed, NO figureType
+    expect(createFigure).toHaveBeenCalledTimes(1);
     const rp = store.readPlacements()[0];
-    expect(rp?.placement.figureRef).toBe(globalFigureRef("waltz", "natural-turn"));
+    // The placement points at the freshly-minted account figure, not the catalog.
+    expect(rp?.placement.figureRef).toBe(seen[0]?.figureRef);
+    expect(rp?.placement.figureRef).not.toBe(globalFigureRef("waltz", "natural-turn"));
+    expect(rp?.placement.figureRef?.startsWith("global:")).toBe(false);
   });
 
   it("a charted catalog pick renders its entry/exit alignment (from the live reference)", async () => {

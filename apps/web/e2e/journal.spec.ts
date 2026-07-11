@@ -42,9 +42,12 @@ test.describe("@smoke journal journey", () => {
     await addSection.click();
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
+    // Place the CATALOG "Natural Turn" from the preset list (typing the name
+    // would mint a custom figure and open its editor — create-navigates, §4.3).
     await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Natural Turn");
-    await page.getByLabel("Figure name").press("Enter");
+    await page.getByRole("button", { name: "Natural Turn", exact: true }).click();
+    // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+    await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Natural Turn")).toBeVisible({ timeout: 15_000 });
 
     // Notes live on the figure detail opened from the READING lens (the editing
