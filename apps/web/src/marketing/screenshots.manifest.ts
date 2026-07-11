@@ -49,4 +49,10 @@ export const SCREENSHOTS: Screenshot[] = [
     alt: "The read-only reading view for sharing with a coach",
     caption: "Share a clean reading view with your partner and coach.",
   },
+  {
+    key: "figure",
+    file: "figure.png",
+    alt: "The read-only figure view: the step grid with notes beneath",
+    caption: "Tap a figure while reading — steps and notes, no accidental edits.",
+  },
 ];

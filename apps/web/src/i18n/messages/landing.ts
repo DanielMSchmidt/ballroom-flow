@@ -16,6 +16,7 @@ const en = {
     notate: "Annotate every step — footwork, rise & fall, sway, turn.",
     lanes: "See one technique across every step in the Lanes grid.",
     reading: "Share a clean reading view with your partner and coach.",
+    figure: "Tap a figure while reading — steps and notes, no accidental edits.",
   },
   alts: {
     hero: "A Waltz routine laid out in Weave Steps",
@@ -24,6 +25,7 @@ const en = {
     notate: "Notating a figure across technique dimensions",
     lanes: "The Lanes cross-step technique grid",
     reading: "The read-only reading view for sharing with a coach",
+    figure: "The read-only figure view: the step grid with notes beneath",
   },
 };
 
@@ -39,6 +41,8 @@ const de: typeof en = {
     notate: "Annotiere jeden Schritt — Fußarbeit, Heben & Senken, Neigung, Drehung.",
     lanes: "Sieh eine Technik über alle Schritte hinweg im Lanes-Raster.",
     reading: "Teile eine aufgeräumte Leseansicht mit Partner und Coach.",
+    figure:
+      "Tippe beim Lesen auf eine Figur — Schritte und Notizen, ohne versehentliche Änderungen.",
   },
   alts: {
     hero: "Eine Walzer-Choreo, ausgelegt in Weave Steps",
@@ -47,6 +51,7 @@ const de: typeof en = {
     notate: "Eine Figur über mehrere Technik-Dimensionen notieren",
     lanes: "Das Lanes-Raster mit einer Technik über alle Schritte",
     reading: "Die schreibgeschützte Leseansicht zum Teilen mit dem Coach",
+    figure: "Die schreibgeschützte Figurenansicht: Schritt-Raster mit Notizen darunter",
   },
 };
 

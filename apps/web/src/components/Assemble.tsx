@@ -284,6 +284,13 @@ export function Assemble({
   // whichever placement matches the shared figure id first. Stable across the
   // COW re-point (the placement id never changes), so no need to update it there.
   const [notatingPlacementId, setNotatingPlacementId] = useState<string | null>(null);
+  // The lens the open figure detail is in (design `figMode`, Builder v3: the
+  // prototype's openFigure picks it from the assemble lens). "read" = the
+  // read-only figure view — static grid + the notes surfaces, nothing editable;
+  // "edit" = the step editor (notation-only). The surface that opens the detail
+  // sets it — reading programme → "read", builder/create-navigates → "edit" —
+  // and the header's pencil toggle (editors only) flips the OPEN detail.
+  const [notatingLens, setNotatingLens] = useState<"read" | "edit">("edit");
   // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
   // figure yours".
   const [copiedToast, setCopiedToast] = useState(false);
@@ -337,6 +344,9 @@ export function Assemble({
   // merge, so we wait for real content from either source.
   const syncStateNow = store?.syncState();
   const canEdit = can(role, "canEdit") && (syncStateNow === "live" || syncStateNow === "local");
+  // The figure detail is editable only in its EDIT lens — a reading-lens-opened
+  // detail is read-only even for an editor until the explicit pencil toggle.
+  const figureEditing = canEdit && notatingLens === "edit";
   // Sharing (invite/remove) is an editor/owner capability — gated on the SHARED
   // table (principle #26); the worker still enforces it server-side (US-024).
   const canShare = can(role, "canInvite");
@@ -374,9 +384,11 @@ export function Assemble({
   // each background sync re-render. useState setters are stable, so [] is right.
   const openFigureFromReading = useCallback((figureId: string) => {
     // Opened by figure id from the reading view — no placement context, so the
-    // portion falls back to the first placement of that figure (below).
+    // portion falls back to the first placement of that figure (below). The
+    // reading programme opens the detail READ-ONLY (design figMode: 'view').
     setNotating(figureId);
     setNotatingPlacementId(null);
+    setNotatingLens("read");
   }, []);
   const openThreadFromReading = useCallback(
     (anchor: { figureRef: string; count?: number }) => setThreadAnchor(anchor),
@@ -833,8 +845,12 @@ export function Assemble({
                                 }
                                 onOpen={() => {
                                   if (placementFigure) {
+                                    // The builder opens the detail straight
+                                    // into the step editor (design figMode:
+                                    // openFigure from assembleEdit → 'edit').
                                     setNotating(placementFigure.id);
                                     setNotatingPlacementId(placement.id);
+                                    setNotatingLens("edit");
                                   }
                                 }}
                                 onDelete={() =>
@@ -981,6 +997,7 @@ export function Assemble({
                 ({ figureRef, placementId }) => {
                   setNotating(figureRef);
                   setNotatingPlacementId(placementId);
+                  setNotatingLens("edit");
                 },
               );
             setAddingFigureTo(null);
@@ -993,8 +1010,11 @@ export function Assemble({
           doc via the store and auto-saves — there is no figure-level Save; the
           safety net is the header Undo/Redo, which (§5.4, "undo follows the surface
           being edited") targets THIS figure's own doc via store.undoFigure, so a
-          mis-tap in the step grid is recoverable. A viewer sees it read-only.
-          Re-reads live so a collaborator's edit flows in. */}
+          mis-tap in the step grid is recoverable. The detail is LENS-AWARE
+          (design figMode): opened from the reading programme it is the READ-ONLY
+          figure view (notes surfaces, nothing editable) until the pencil toggle;
+          opened from the builder it is the step editor. A viewer/commenter sees
+          it read-only always. Re-reads live so a collaborator's edit flows in. */}
       <FullScreen
         open={notating !== null}
         onClose={() => {
@@ -1007,43 +1027,56 @@ export function Assemble({
         title={t.stepsTitle(notatingFigure?.name ?? t.figureFallback)}
         backLabel={t.back}
         actions={
-          // Figure-scoped undo/redo (§5.4): editor-only, and disabled until the
-          // figure's own live doc has hydrated (the same "load on open" gate the
-          // body uses — an edit/undo must never land pre-replay). Same primitives
-          // + "Undone" toast contract (incl. the soft superseded variant) as the
-          // Assemble editing toolbar's routine-level undo/redo.
+          // Figure-scoped undo/redo (§5.4): edit-lens only, and disabled until
+          // the figure's own live doc has hydrated (the same "load on open" gate
+          // the body uses — an edit/undo must never land pre-replay). Same
+          // primitives + "Undone" toast contract (incl. the soft superseded
+          // variant) as the Assemble editing toolbar's routine-level undo/redo.
+          // The trailing pencil (design figMode toggle, filled while editing)
+          // is the explicit read⇄edit switch for the OPEN detail — editors only.
           canEdit ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t.undo}
-                disabled={!notatingFigureReady}
-                onClick={() => {
-                  const ref = notatingFigure?.id ?? notating;
-                  if (!ref) return;
-                  const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
-                  if (supersededByOthers) {
-                    toast.show(t.undoneSupersededToast, { tone: "warning" });
-                  } else {
-                    toast.show(t.undoneToast);
-                  }
-                }}
+              {figureEditing && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t.undo}
+                    disabled={!notatingFigureReady}
+                    onClick={() => {
+                      const ref = notatingFigure?.id ?? notating;
+                      if (!ref) return;
+                      const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
+                      if (supersededByOthers) {
+                        toast.show(t.undoneSupersededToast, { tone: "warning" });
+                      } else {
+                        toast.show(t.undoneToast);
+                      }
+                    }}
+                  >
+                    <span aria-hidden="true">↶</span> {t.undo}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t.redo}
+                    disabled={!notatingFigureReady}
+                    onClick={() => {
+                      const ref = notatingFigure?.id ?? notating;
+                      if (ref) store.redoFigure(ref);
+                    }}
+                  >
+                    <span aria-hidden="true">↷</span> {t.redo}
+                  </Button>
+                </>
+              )}
+              <IconButton
+                label={notatingLens === "edit" ? t.viewSteps : t.editSteps}
+                variant={notatingLens === "edit" ? "filled" : "plain"}
+                onClick={() => setNotatingLens(notatingLens === "edit" ? "read" : "edit")}
               >
-                <span aria-hidden="true">↶</span> {t.undo}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t.redo}
-                disabled={!notatingFigureReady}
-                onClick={() => {
-                  const ref = notatingFigure?.id ?? notating;
-                  if (ref) store.redoFigure(ref);
-                }}
-              >
-                <span aria-hidden="true">↷</span> {t.redo}
-              </Button>
+                <EditIcon size={16} />
+              </IconButton>
             </>
           ) : undefined
         }
@@ -1094,12 +1127,12 @@ export function Assemble({
               </div>
             )}
             <FigureTimeline
-              role={canEdit ? role : "viewer"}
+              role={figureEditing ? role : "viewer"}
               dance={routine.dance}
               part={notatingPart}
-              // The prose per-count recap is an authoring aid — the reading
-              // lens hides it (the grid/chips are the reading content).
-              showStepRecap={mode === "edit"}
+              // The prose per-count recap is an authoring aid — the detail's
+              // read lens hides it (the grid/chips are the reading content).
+              showStepRecap={notatingLens === "edit"}
               attributes={notatingFigure.attributes}
               counts={notatingFigure.counts}
               legacyBars={notatingFigure.bars}
@@ -1115,7 +1148,7 @@ export function Assemble({
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
               figureName={notatingFigure.name}
               onRenameFigure={
-                canEdit ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
+                figureEditing ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
               }
               isBookmarked={
                 notatingFigure.scope === "account" &&
@@ -1124,7 +1157,8 @@ export function Assemble({
               onAddToLibrary={
                 // Diverged/custom account figures only — not a pool figure that still
                 // matches the catalog (see the placement-card note above, §2.5.1 #19).
-                canEdit &&
+                // Edit lens only: the design's variant bar renders in figMode 'edit'.
+                figureEditing &&
                 onAddToLibrary &&
                 notatingFigure.scope === "account" &&
                 !figureMatchesLibraryOrigin(notatingFigure)
@@ -1132,7 +1166,7 @@ export function Assemble({
                   : undefined
               }
             />
-            {canEdit && (
+            {figureEditing && (
               <AlignmentEditor
                 figure={notatingFigure}
                 onSet={(edge, alignment) =>
@@ -1144,9 +1178,10 @@ export function Assemble({
                 replies, gated by role. Commenter+ may add; viewer is read-only.
                 Notes surfaces belong to the READING context (owner request
                 2026-07-08): the detail opened from the editing lens is
-                notation-only, so the panels render only when the reading
-                programme opened this figure. */}
-            {mode === "read" && (
+                notation-only, so the panels render only while the detail is in
+                its READ lens (opened from the reading programme, or flipped
+                back via the pencil toggle). */}
+            {notatingLens === "read" && (
               <>
                 <AnnotationPanel
                   role={role}
@@ -1194,7 +1229,7 @@ export function Assemble({
                 grid view for one attribute kind across all counts. */}
             <div className="flex flex-col gap-3 border-t border-line pt-3">
               <div className="flex items-center gap-2">
-                {canEdit && (
+                {figureEditing && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -1213,7 +1248,7 @@ export function Assemble({
               {lanesOpen && (
                 <Lanes
                   kind={store.customKinds()[0]?.kind ?? "footwork"}
-                  role={canEdit ? role : "viewer"}
+                  role={figureEditing ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
                   roleView={roleView}

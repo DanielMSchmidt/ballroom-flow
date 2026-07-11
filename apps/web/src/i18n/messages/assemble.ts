@@ -50,6 +50,9 @@ const en = {
   // Figure step editor (FullScreen)
   addFigureSheetTitle: "Add a figure",
   stepsTitle: (figureName: string) => `Steps · ${figureName}`,
+  // The detail's read⇄edit pencil toggle (design figMode) — editors only.
+  editSteps: "Edit steps",
+  viewSteps: "View steps",
   figureFallback: "Figure",
   back: "Back",
   loadingFigure: "Loading figure…",
@@ -210,6 +213,8 @@ const de: typeof en = {
   wholeFigure: "ganze Figur",
   addFigureSheetTitle: "Figur hinzufügen",
   stepsTitle: (figureName) => `Schritte · ${figureName}`,
+  editSteps: "Schritte bearbeiten",
+  viewSteps: "Schritte ansehen",
   figureFallback: "Figur",
   back: "Zurück",
   loadingFigure: "Figur lädt …",

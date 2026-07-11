@@ -1700,3 +1700,123 @@ describe("Steps overlay — lens-dependent notes/recap + create-opens-editor", (
     expect(await screen.findByRole("dialog", { name: /steps ·/i })).toBeInTheDocument();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Figure detail read view (design `figMode`, Builder v3 — openFigure picks the
+// detail lens from the assemble lens): the READING programme opens a figure
+// READ-ONLY — comments stay (addable per role), but nothing is editable until
+// the explicit pencil toggle (editors only) flips the open detail into the
+// editing lens. The builder's placement card still opens the editor directly.
+// ─────────────────────────────────────────────────────────────────────────
+describe("Figure detail read view — reading lens opens read-only, edit is explicit", () => {
+  const detailRoutine = (p: Placement): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  const detail = () => within(screen.getByRole("dialog", { name: /steps · feather/i }));
+  const openFromReading = async () =>
+    userEvent.click(
+      within(screen.getByTestId("reading-view")).getByRole("button", { name: /^feather$/i }),
+    );
+  const renderReading = async (role: string) => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role={role}
+        initialMode="read"
+        store={fakeStore(detailRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+  };
+
+  it("an EDITOR's reading-lens detail is read-only, with an explicit Edit toggle", async () => {
+    await renderReading("editor");
+    await openFromReading();
+    // The notes surfaces are the read view's content…
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+    // …and NOTHING is editable: no cell add/edit affordances, no editing chrome.
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^undo$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^redo$/i })).toBeNull();
+    expect(detail().queryByRole("heading", { name: /^alignment$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^add kind$/i })).toBeNull();
+    // The explicit route into editing is the pencil toggle (design figMode).
+    expect(detail().getByRole("button", { name: /^edit steps$/i })).toBeInTheDocument();
+  });
+
+  it("the Edit toggle flips the OPEN detail into the editing lens (and back)", async () => {
+    await renderReading("editor");
+    await openFromReading();
+    await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
+    // Editable now: cell affordances + undo/redo + alignment + add-kind arrive…
+    expect(detail().getAllByRole("button", { name: /at count/i }).length).toBeGreaterThan(0);
+    expect(detail().getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+    expect(detail().getByRole("heading", { name: /^alignment$/i })).toBeInTheDocument();
+    // …the per-count recap (authoring aid) shows, and the notes surfaces leave
+    // (the editing lens is notation-only, §4.4).
+    expect(detail().getByTestId("step-detail-1")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /^annotations$/i })).toBeNull();
+    // The toggle flips back to viewing (design onToggleEdit).
+    await userEvent.click(detail().getByRole("button", { name: /^view steps$/i }));
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+  });
+
+  it("the read view offers no fork-into-variant — forking a figure EDITS the choreo", async () => {
+    // Forking a global figure spawns a variant and re-points the placement — a
+    // routine edit — so the affordance belongs to the EDIT lens only. The test
+    // figure is scope "global", exactly the case where the fork bar renders.
+    await renderReading("editor");
+    await openFromReading();
+    expect(detail().queryByRole("button", { name: /fork into variant/i })).toBeNull();
+    await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
+    expect(detail().getByRole("button", { name: /fork into variant/i })).toBeInTheDocument();
+  });
+
+  it("a COMMENTER can add a note from the read view but gets no Edit toggle", async () => {
+    await renderReading("commenter");
+    await openFromReading();
+    const panel = await screen.findByRole("region", { name: /^annotations$/i });
+    expect(within(panel).getByRole("textbox", { name: /^note$/i })).toBeInTheDocument();
+    expect(detail().queryByRole("button", { name: /^edit steps$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+  });
+
+  it("a VIEWER's read view is fully read-only: no compose, no Edit toggle", async () => {
+    await renderReading("viewer");
+    await openFromReading();
+    const panel = await screen.findByRole("region", { name: /^annotations$/i });
+    expect(within(panel).queryByRole("textbox", { name: /^note$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^edit steps$/i })).toBeNull();
+  });
+
+  it("the BUILDER's placement card still opens the editor directly (edit lens)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(detailRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather/i }));
+    // Immediately editable — no extra toggle tap needed from the builder…
+    expect(detail().getAllByRole("button", { name: /at count/i }).length).toBeGreaterThan(0);
+    expect(detail().getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+    // …and the pencil offers the way BACK to viewing (design shows it in both modes).
+    expect(detail().getByRole("button", { name: /^view steps$/i })).toBeInTheDocument();
+  });
+});
