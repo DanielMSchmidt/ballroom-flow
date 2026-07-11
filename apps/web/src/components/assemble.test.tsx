@@ -690,6 +690,58 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
   });
 
+  it("step editor: no 'adjusted — still X' chip for a from-scratch custom (nothing was adjusted)", async () => {
+    // A custom figure has no base/origin — the identity-reassurance chip is a
+    // variant's, not a custom's. Add-to-library still shows.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: glue step/i }));
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+    expect(screen.queryByText(/adjusted for this choreo/i)).toBeNull();
+  });
+
+  it("step editor: the chip shows for a VARIANT (baseFigureRef set) that diverged from its base", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p1 = placement("p1", "var1");
+    const variant: FigureDoc = {
+      ...accountFigure("var1", "Feather Step"),
+      baseFigureRef: "global:foxtrot:feather-step",
+      attributes: [
+        { id: "x1", kind: "sway", count: 1, value: "left", role: null, deletedAt: null },
+      ],
+    };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: variant, status: "live" }])}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather step/i }));
+    expect(screen.getByText(/adjusted for this choreo — still Feather Step/i)).toBeInTheDocument();
+  });
+
   it("hides the affordance for a non-editor (viewer)", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const { routine, resolved } = seededAccount();

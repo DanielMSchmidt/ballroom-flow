@@ -19,6 +19,7 @@ import {
   DANCES,
   type DanceId,
   type FigureDoc,
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
@@ -1147,6 +1148,13 @@ export function Assemble({
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
               figureName={notatingFigure.name}
+              // The design's variantBar.adjusted flag: the figure has an origin
+              // it was adjusted AWAY from — a spawned variant (baseFigureRef) or
+              // a legacy copy still carrying a catalog identity. A from-scratch
+              // custom has neither and must not claim to be "adjusted".
+              adjusted={
+                notatingFigure.baseFigureRef != null || figureHasLibraryOrigin(notatingFigure)
+              }
               onRenameFigure={
                 figureEditing ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
               }

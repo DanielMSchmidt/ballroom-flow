@@ -375,6 +375,8 @@ describe("FigureTimeline — Builder v3 edit-grid parity", () => {
   });
 
   it("shows the 'adjusted — still {name}' chip beside Add to library for a diverged figure", async () => {
+    // `adjusted` is the design's variantBar.adjusted flag: the figure HAS an
+    // origin (a base / catalog identity) it was adjusted away from.
     const { FigureTimeline } = await load();
     renderUi(
       <FigureTimeline
@@ -382,10 +384,28 @@ describe("FigureTimeline — Builder v3 edit-grid parity", () => {
         dance="waltz"
         figureScope="owned"
         figureName="Natural Turn"
+        adjusted
         onAddToLibrary={vi.fn()}
       />,
     );
     expect(screen.getByText(/adjusted for this choreo — still Natural Turn/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+  });
+
+  it("hides the 'adjusted — still {name}' chip for a from-scratch custom (nothing was adjusted)", async () => {
+    // A custom figure created in this choreo has no base/origin — the identity
+    // reassurance makes no sense; the Add-to-library affordance still shows.
+    const { FigureTimeline } = await load();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        figureScope="owned"
+        figureName="Right Lunge"
+        onAddToLibrary={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/adjusted for this choreo/i)).toBeNull();
     expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
   });
 });

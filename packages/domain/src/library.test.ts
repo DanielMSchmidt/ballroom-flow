@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
 import {
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   globalFigureRef,
   LIBRARY_FIGURES,
@@ -242,6 +243,29 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
         name: "My Move",
         attributes: [],
       }),
+    ).toBe(false);
+  });
+});
+
+describe("figureHasLibraryOrigin — does the figure have a catalog identity at all?", () => {
+  // The "adjusted for this choreo — still X" chip needs to tell a DIVERGED
+  // library figure (has an origin it was adjusted away from) apart from a
+  // from-scratch custom (no origin — nothing was ever "adjusted").
+  it("is true for a figure carrying a catalog (dance, figureType, name) identity", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "natural-turn", name: "Natural Turn" }),
+    ).toBe(true);
+  });
+
+  it("is false for a from-scratch custom (name/figureType not in the catalog)", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "right-lunge", name: "Right Lunge" }),
+    ).toBe(false);
+  });
+
+  it("is false when only the name matches but the figureType doesn't (a renamed custom)", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "my-move", name: "Natural Turn" }),
     ).toBe(false);
   });
 });

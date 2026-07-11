@@ -76,6 +76,7 @@ export {
 } from "./fork";
 export { newId } from "./ids";
 export {
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   globalFigureRef,
   LIBRARY_FIGURES,
