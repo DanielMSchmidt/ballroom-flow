@@ -42,6 +42,7 @@ function fakeStore(
     moveSection: () => {},
     deleteSection: () => {},
     addPlacement: () => {},
+    placeFigure: () => {},
     movePlacement: () => {},
     deletePlacement: () => {},
     addBreak: () => {},
@@ -1104,6 +1105,81 @@ describe("US-027 Add a figure from the library picker", () => {
       null,
       expect.any(Function), // onCreated — the STORE decides it never fires for a catalog pick
     );
+  });
+
+  it("lists the user's library figures (dance-scoped, deduped) and places a live reference on tap", async () => {
+    // Intent: a figure the user added to their library/catalog must surface in
+    //   the choreo's add-figure search (PLAN §4.2: a bookmark "can be placed
+    //   into your other routines"). Bookmarked CATALOG figures dedupe into the
+    //   preset rows; other-dance figures stay out.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const placeFigure = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [], { placeFigure })}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+          {
+            docRef: "global:foxtrot:feather-step",
+            title: "Feather Step",
+            figureType: "feather-step",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 1,
+          },
+          {
+            docRef: "fig_other",
+            title: "Waltz Thing",
+            figureType: "waltz-thing",
+            dance: "waltz",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /waltz thing/i })).toBeNull();
+    // The bookmarked catalog figure is NOT duplicated — the preset row is it.
+    expect(screen.getAllByRole("button", { name: /^feather step$/i })).toHaveLength(1);
+    // Tapping places the existing figure by ref — whole figure, no portion step.
+    await userEvent.click(screen.getByRole("button", { name: /my lunge/i }));
+    expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
+  });
+
+  it("the picker's search filter finds library figures too", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [])}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/filter figures/i), "lunge");
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^feather step$/i })).toBeNull();
   });
 
   it("still supports creating a custom figure by name", async () => {

@@ -186,6 +186,16 @@ export interface RoutineStore extends RoutineReadModel {
     part?: { fromCount: number; toCount: number } | null,
     onCreated?: (created: { figureRef: string; placementId: string }) => void,
   ): void;
+  /**
+   * Place an EXISTING figure by ref (⟳v5 §4.2 — a library bookmark "can be
+   * placed into your other routines"): appends a placement referencing that
+   * live doc. Assembly, not creation — no POST /api/figures, no seeding (the
+   * doc already exists; contrast {@link addPlacement}'s custom mint). Content
+   * resolves through the normal lazy figure path; co-members gain access via
+   * the routine→figure cascade once the placement edge projects (§5.1).
+   * `beforePlacementId` inserts before that anchor (insert-between).
+   */
+  placeFigure(sectionId: string, figureRef: string, beforePlacementId?: string | null): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -796,6 +806,38 @@ export async function openRoutine(
     value: RegistryKind[];
   } | null = null;
 
+  /** Append/insert a placement referencing `figureRef` — shared by addPlacement
+   *  (both its paths) and placeFigure. Returns the new placement's id, or null
+   *  when the section wasn't found (the not-yet-synced empty-doc edge — nothing
+   *  was placed). `sections?` guards that same edge. */
+  const pushPlacementRef = (
+    sectionId: string,
+    figureRef: string,
+    beforePlacementId?: string | null,
+    part?: { fromCount: number; toCount: number } | null,
+  ): string | null => {
+    let placementId: string | null = null;
+    routineConn.change((draft) => {
+      const section = draft.sections?.find((s) => s.id === sectionId);
+      if (section) {
+        // Insert before the anchor (insert-between) or append (#63). Backfill any
+        // legacy keyless placements first so the new key sorts correctly.
+        ensureSortKeys(section.placements);
+        const id = newId();
+        section.placements.push({
+          id,
+          figureRef,
+          // Portion window (Builder v3 ③) — only a catalog pick carries one.
+          ...(part ? { part: { fromCount: part.fromCount, toCount: part.toCount } } : {}),
+          sortKey: insertSortKey(section.placements, beforePlacementId),
+          deletedAt: null,
+        });
+        placementId = id;
+      }
+    });
+    return placementId;
+  };
+
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
 
@@ -894,32 +936,9 @@ export async function openRoutine(
             )
           : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
 
-      /** Append/insert a placement referencing `figureRef` (shared by both paths).
-       *  Returns the new placement's id, or null when the section wasn't found
-       *  (the not-yet-synced empty-doc edge — nothing was placed). */
-      const placeRef = (figureRef: string): string | null => {
-        let placementId: string | null = null;
-        // `sections?` guards the not-yet-synced (empty A.init) doc edge.
-        routineConn.change((draft) => {
-          const section = draft.sections?.find((s) => s.id === sectionId);
-          if (section) {
-            // Insert before the anchor (insert-between) or append (#63). Backfill any
-            // legacy keyless placements first so the new key sorts correctly.
-            ensureSortKeys(section.placements);
-            const id = newId();
-            section.placements.push({
-              id,
-              figureRef,
-              // Portion window (Builder v3 ③) — only a catalog pick carries one.
-              ...(part ? { part: { fromCount: part.fromCount, toCount: part.toCount } } : {}),
-              sortKey: insertSortKey(section.placements, beforePlacementId),
-              deletedAt: null,
-            });
-            placementId = id;
-          }
-        });
-        return placementId;
-      };
+      /** Append/insert a placement referencing `figureRef` (shared by both paths). */
+      const placeRef = (figureRef: string): string | null =>
+        pushPlacementRef(sectionId, figureRef, beforePlacementId, part);
 
       // ⟳v5 (§4.3): a CATALOG pick places a LIVE REFERENCE to the global figure doc
       // — no POST /api/figures, no account copy, no seeding. The placement points at
@@ -973,6 +992,14 @@ export async function openRoutine(
           console.warn("figure create failed; placement will retry connecting lazily", err);
           notify();
         });
+    },
+
+    placeFigure: (sectionId, figureRef, beforePlacementId) => {
+      // Assembly of an EXISTING doc (⟳v5 §4.2): the figure already lives in its
+      // own DO (an account custom/variant) or is a global catalog ref — no POST,
+      // no seeding. It resolves through the normal lazy figure path on render.
+      pushPlacementRef(sectionId, figureRef, beforePlacementId);
+      notify(); // re-render so the reference resolves + renders
     },
 
     movePlacement: (sectionId, placementId, direction) => {
