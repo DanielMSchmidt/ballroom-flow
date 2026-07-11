@@ -39,11 +39,14 @@ async function addSection(page: Page, name: string): Promise<void> {
   await page.getByLabel("Section name").press("Enter");
 }
 
-/** Place the CATALOG "Running Spin Turn" by name (a live global reference). */
+/** Place the CATALOG "Running Spin Turn" from the picker's preset list (a live
+ *  global reference). Typing the name instead would mint a CUSTOM figure —
+ *  the custom form always creates your own, even for a catalog name (§4.3). */
 async function placeRunningSpinTurn(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Add figure" }).click();
-  await page.getByLabel("Figure name").fill("Running Spin Turn");
-  await page.getByLabel("Figure name").press("Enter");
+  await page.getByRole("button", { name: "Running Spin Turn", exact: true }).click();
+  // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+  await page.getByRole("button", { name: /add to choreo/i }).click();
   await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
 }
 
@@ -138,8 +141,8 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByLabel("Figure name").fill("Feather Step");
     await page.getByLabel("Figure name").press("Enter");
 
-    // "Feather Step" has no WALTZ catalog entry, so this mints a custom figure —
-    // whose full-screen editor opens IMMEDIATELY (create-navigates, §4.3). Set
+    // A typed name always mints a custom figure (§4.3) — whose full-screen
+    // editor opens IMMEDIATELY (create-navigates). Set
     // count-1 footwork "HT" via the Step cell's single-attribute overlay.
     await expect(page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
       timeout: 15_000,
@@ -264,14 +267,11 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await seedAuth(page, "user_editor");
 
     // Create a Waltz routine + section, then place the CATALOG "Running Spin Turn"
-    // by name (a live reference — no figure DO is seeded).
+    // from the preset list (a live reference — no figure DO is seeded).
     const docRef = await createRoutineAsCoach(page, "Re-time Waltz");
     await addSection(page, "Intro");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Running Spin Turn");
-    await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
 
     // Open the figure's step editor and quick-add a step at the "&" between 5 and 6
     // (count 5&): tapping an empty Step sub-beat cell quick-adds a presence step

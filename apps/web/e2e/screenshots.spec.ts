@@ -86,8 +86,11 @@ test.describe("@screenshots landing imagery", () => {
       await expect(page.getByRole("heading", { name: section })).toBeVisible({ timeout: 15_000 });
       for (const figure of figures) {
         await page.getByRole("button", { name: "Add figure" }).last().click();
-        await page.getByLabel("Figure name").fill(figure);
-        await page.getByLabel("Figure name").press("Enter");
+        // Tap the CATALOG preset (typing the name would mint an un-charted
+        // custom figure and open its editor — create-navigates, §4.3).
+        await page.getByRole("button", { name: figure, exact: true }).click();
+        // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+        await page.getByRole("button", { name: /add to choreo/i }).click();
         await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
       }
     }

@@ -881,18 +881,19 @@ export async function openRoutine(
     ) => {
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
-      // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
-      // canonical figureType → match on (figureType, name). A *typed* name (no figureType) is
-      // matched by name alone: the catalog figureType is hyphenated and a name-slug can't
-      // reproduce it for multi-word figures, so a typed "Reverse Turn" would otherwise miss
-      // its catalog entry and land as a blank custom. Only a name with no catalog match is
-      // truly custom.
+      // Resolve the catalog preset this placement seeds from — ONLY for an explicit
+      // pick, which supplies the canonical figureType → match on (figureType, name).
+      // A *typed* name (no figureType) ALWAYS mints the user's own custom figure,
+      // even one that collides with a catalog name: the custom form says "create
+      // your own", so typing "Natural Turn" must not silently place the global
+      // catalog doc (owner decision 2026-07-11 — reverses the earlier name-alone
+      // match; §4.3). The catalog is reached by tapping its preset in the picker.
       const preset =
         figureTypeArg != null
           ? LIBRARY_FIGURES.find(
               (f) => f.dance === dance && f.figureType === figureTypeArg && f.name === name,
             )
-          : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
+          : undefined;
 
       /** Append/insert a placement referencing `figureRef` (shared by both paths).
        *  Returns the new placement's id, or null when the section wasn't found
