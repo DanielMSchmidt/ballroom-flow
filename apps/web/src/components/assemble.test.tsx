@@ -462,12 +462,14 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getAllByText(/library|custom|variant/i).length).toBeGreaterThan(0); // scope badge
     expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
 
-    // Add a figure → the picker sheet; create a custom one (no figureType).
+    // Add a figure → the picker sheet; create a custom one (no figureType) via
+    // the always-present create row → compose view.
     await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form carries a COUNTS stepper (Builder v3 ① — defaults to the
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    // The compose view carries a COUNTS stepper (Builder v3 ① — defaults to the
     // dance's beatsPerBar, 4 for this Foxtrot; §2.5.2).
     // Appended (no insert anchor) → trailing beforePlacementId is undefined.
     expect(spies.addPlacement).toHaveBeenCalledWith(
@@ -511,8 +513,9 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(spots).toHaveLength(1);
     await userEvent.click(spots[0] as HTMLElement);
 
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
@@ -1178,9 +1181,11 @@ describe("US-027 Add a figure from the library picker", () => {
     expect(screen.queryByRole("button", { name: /^feather step$/i })).toBeNull();
   });
 
-  it("still supports creating a custom figure by name", async () => {
+  it("creates a custom figure via the 'Create my own figure' row → compose view", async () => {
     // Intent: the picker keeps a 'create your own' escape hatch (no figureType →
-    //   the store slugs one). Covers US-027 custom-add alongside the library.
+    //   the store slugs one) — reached through the always-present create row,
+    //   which SWAPS the selection UI for the compose form (design add-figure
+    //   sheet: library view ⇄ compose view). Covers US-027 custom-add.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const addPlacement = vi.fn();
     renderUi(
@@ -1191,9 +1196,13 @@ describe("US-027 Add a figure from the library picker", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
+    // The compose view replaces the selection parts: no filter, no library list.
+    expect(screen.queryByLabelText(/filter figures/i)).toBeNull();
+    expect(screen.queryByRole("list", { name: /library figures/i })).toBeNull();
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form's counts stepper defaults to the dance's beatsPerBar
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    // The compose view's counts stepper defaults to the dance's beatsPerBar
     // (§2.5.2) — 4 for this Foxtrot routine.
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
@@ -1206,7 +1215,7 @@ describe("US-027 Add a figure from the library picker", () => {
     );
   });
 
-  it("defaults the custom form's counts to the dance's beatsPerBar (Waltz → 3)", async () => {
+  it("defaults the compose view's counts to the dance's beatsPerBar (Waltz → 3)", async () => {
     // Intent: a fresh custom figure defaults to one bar of ITS dance (§2.5.2) —
     //   3 counts for Waltz/Viennese, 4 for the 4/4 dances — not a hardcoded 3.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
@@ -1219,8 +1228,9 @@ describe("US-027 Add a figure from the library picker", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
       "My Move",
@@ -1230,6 +1240,26 @@ describe("US-027 Add a figure from the library picker", () => {
       undefined,
       expect.any(Function), // onCreated — create-navigates (§4.3)
     );
+  });
+
+  it("keeps the create row visible when the filter matches nothing, and cancel returns to the list", async () => {
+    // Intent: "create my own figure" is ALWAYS reachable from the picker — even
+    //   a filter with zero matches leaves the row in place (design: the create
+    //   button sits below the list, outside it). Backing out of the compose view
+    //   restores the selection UI.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(emptySectionRoutine(), [])} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/filter figures/i), "zzz no such figure");
+    expect(screen.getByText(/no figures match/i)).toBeInTheDocument();
+    const createRow = screen.getByRole("button", { name: /create my own figure/i });
+    expect(createRow).toBeInTheDocument();
+    await userEvent.click(createRow);
+    expect(screen.getByLabelText(/figure name/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    expect(screen.getByLabelText(/filter figures/i)).toBeInTheDocument();
   });
 });
 
@@ -1778,8 +1808,9 @@ describe("Steps overlay — lens-dependent notes/recap + create-opens-editor", (
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     // The new figure's full-screen step editor opens without another tap (it
     // shows the loading state until the figure doc hydrates).
     expect(await screen.findByRole("dialog", { name: /steps ·/i })).toBeInTheDocument();

@@ -64,7 +64,6 @@ import {
   Card,
   ChevronDownIcon,
   ChevronRightIcon,
-  Chip,
   cx,
   EditIcon,
   FullScreen,
@@ -1972,9 +1971,12 @@ function PlacementCard({
  * presets (filterable) and tap one to place it with its canonical name +
  * figureType, place a figure from YOUR library (⟳v5 §4.2 — a bookmark "can be
  * placed into your other routines"; the design mock rides them in the same
- * list with the amber dot + "custom" badge), OR create your own custom figure
- * by name. A preset carries the catalog's figureType (cross-routine identity);
- * a custom omits it.
+ * list with the amber dot + "custom" badge), OR create your own custom figure.
+ * The create path is an ALWAYS-PRESENT "Create my own figure" row below the
+ * list — visible even when the filter matches nothing — that swaps the
+ * selection UI for a compose view (name + length), matching the design's
+ * add-figure sheet (library view ⇄ compose view). A preset carries the
+ * catalog's figureType (cross-routine identity); a custom omits it.
  */
 function AddFigurePicker({
   dance,
@@ -1998,11 +2000,14 @@ function AddFigurePicker({
 }) {
   const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
+  // The compose view is open (design `composeFigure`): the create-my-own-figure
+  // row swapped the selection UI (filter + list) for the name/length form.
+  const [composing, setComposing] = useState(false);
   const [name, setName] = useState("");
   // The new custom figure's authored length in COUNTS (Builder v3 ①) — chosen
   // here on creation and adjustable later in the editor header. Library picks
   // keep their catalog default (their charted steps), so the stepper applies to
-  // the custom form only. Defaults to one bar of the routine's dance (§2.5.2):
+  // the compose view only. Defaults to one bar of the routine's dance (§2.5.2):
   // 3 for Waltz/Viennese, 4 for the 4/4 dances.
   const [counts, setCounts] = useState(DANCES[dance].beatsPerBar);
   // The in-flight portion pick (Builder v3 ③): which counts of the tapped
@@ -2112,6 +2117,59 @@ function AddFigurePicker({
     );
   }
 
+  if (composing) {
+    // Compose view (design `composeFigure`): the selection parts are gone —
+    // just name + length, cancel/back, and the confirm that mints the figure.
+    return (
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          // An empty name still creates (design onSaveCompose): the figure is
+          // rename-able any time in the editor header, so don't block the flow.
+          onAdd(name.trim() || t.newFigureName, undefined, counts);
+          setName("");
+        }}
+      >
+        <p className="text-sm font-bold text-ink">{t.newCustomFigureTitle}</p>
+        <Input
+          label={t.figureNameLabel}
+          placeholder={t.figureNamePlaceholder}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          // The compose view opens for exactly one purpose — naming the figure —
+          // so focus follows the user's explicit "create" tap into the field.
+          autoFocus
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+            {t.length}
+          </span>
+          <Stepper
+            label={t.countsLabel}
+            hideLabel
+            unit={t.countsUnit}
+            min={1}
+            max={32}
+            value={counts}
+            onChange={setCounts}
+          />
+        </div>
+        <p className="text-[14px] text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
+          {t.composeHint}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setComposing(false)}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" variant="primary" size="sm" className="flex-1">
+            {t.portionConfirm}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <Input
@@ -2187,40 +2245,27 @@ function AddFigurePicker({
           ))}
         </ul>
       )}
-      <form
-        className="flex flex-col gap-2 border-t border-line pt-3"
-        onSubmit={(e: FormEvent) => {
-          e.preventDefault();
-          const next = name.trim();
-          if (!next) return;
-          onAdd(next, undefined, counts);
+      {/* The always-present create route (design: an amber row BELOW the list,
+          outside it — it survives an empty filter result, so "create my own"
+          is never more than one tap away). Swaps in the compose view. */}
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        leadingIcon={<EditIcon size={14} />}
+        onClick={() => {
+          setComposing(true);
           setName("");
+          setCounts(DANCES[dance].beatsPerBar);
+        }}
+        style={{
+          background: "var(--bf-scope-custom-tint)",
+          borderColor: "var(--bf-scope-custom-border)",
+          color: "var(--bf-scope-custom-ink)",
         }}
       >
-        <Input
-          label={t.figureNameLabel}
-          placeholder={t.createYourOwnPlaceholder}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className="flex items-center justify-between">
-          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-            {t.length}
-          </span>
-          <Stepper
-            label={t.countsLabel}
-            hideLabel
-            unit={t.countsUnit}
-            min={1}
-            max={64}
-            value={counts}
-            onChange={setCounts}
-          />
-        </div>
-        <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-          {t.addCustom}
-        </Button>
-      </form>
+        {t.createMyOwnFigure}
+      </Button>
     </div>
   );
 }

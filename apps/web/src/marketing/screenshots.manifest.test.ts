@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SCREENSHOTS } from "./screenshots.manifest";
 
 describe("screenshots manifest", () => {
-  it("has the seven expected keys in order", () => {
+  it("has the nine expected keys in order", () => {
     expect(SCREENSHOTS.map((s) => s.key)).toEqual([
       "hero",
       "create",
@@ -11,6 +11,8 @@ describe("screenshots manifest", () => {
       "lanes",
       "reading",
       "figure",
+      "addfigure",
+      "composefigure",
     ]);
   });
 
