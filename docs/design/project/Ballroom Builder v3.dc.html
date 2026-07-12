@@ -1816,7 +1816,7 @@ class Component extends DCLogic {
       onLessComposeBars:()=>this.setState(s=>({composeBars:Math.max(1,(s.composeBars||3)-1)})),
       onMoreComposeBars:()=>this.setState(s=>({composeBars:Math.min(32,(s.composeBars||3)+1)})),
       onComposeNameChange:(e)=>this.setState({composeName:e.target.value}),
-      onStartCompose:()=>this.setState({composeFigure:true,composeName:'',composeBars:3}),
+      onStartCompose:()=>this.setState({composeFigure:true,composeName:'',composeBars:(libDance==='Waltz'||libDance==='Viennese Waltz')?3:4}),
       onCancelCompose:()=>this.setState({composeFigure:false,composeName:''}),
       onSaveCompose:()=>{ const name=(st.composeName||'').trim()||'New figure'; this.addEmptyFigure(st.addSheetSide,name,st.composeBars||1); },
       onCloseAddSheet:()=>this.setState({addSheetSide:null,libFilter:'',composeFigure:false,composeName:''}),

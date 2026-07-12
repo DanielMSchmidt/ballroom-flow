@@ -472,13 +472,14 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form carries a COUNTS stepper (default 3 — Builder v3 ①).
+    // The custom form carries a COUNTS stepper (Builder v3 ① — defaults to the
+    // dance's beatsPerBar, 4 for this Foxtrot; §2.5.2).
     // Appended (no insert anchor) → trailing beforePlacementId is undefined.
     expect(spies.addPlacement).toHaveBeenCalledWith(
       "s1",
       "Reverse Wave",
       undefined,
-      3,
+      4,
       undefined,
       undefined,
       expect.any(Function), // onCreated — create-navigates (§4.3)
@@ -522,7 +523,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
       "s1",
       "Hover",
       undefined,
-      3,
+      4, // the counts stepper's default — this Foxtrot's beatsPerBar (§2.5.2)
       "p2",
       undefined,
       expect.any(Function), // onCreated — create-navigates (§4.3)
@@ -1197,7 +1198,34 @@ describe("US-027 Add a figure from the library picker", () => {
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
     await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form's counts stepper defaults to 3 (Builder v3 ①).
+    // The custom form's counts stepper defaults to the dance's beatsPerBar
+    // (§2.5.2) — 4 for this Foxtrot routine.
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "My Move",
+      undefined,
+      4,
+      undefined,
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
+  });
+
+  it("defaults the custom form's counts to the dance's beatsPerBar (Waltz → 3)", async () => {
+    // Intent: a fresh custom figure defaults to one bar of ITS dance (§2.5.2) —
+    //   3 counts for Waltz/Viennese, 4 for the 4/4 dances — not a hardcoded 3.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const addPlacement = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore({ ...emptySectionRoutine(), dance: "waltz" }, [], { addPlacement })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
+    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
       "My Move",
