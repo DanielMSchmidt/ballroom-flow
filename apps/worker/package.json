@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.71",
-    "@cloudflare/workers-types": "^4.20260624.1",
+    "@cloudflare/workers-types": "^5.0.0",
     "@vitest/coverage-istanbul": "^3.2.6",
     "drizzle-kit": "^0.31.10",
     "vitest": "^3.2.6",
