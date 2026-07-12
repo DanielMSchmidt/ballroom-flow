@@ -2035,8 +2035,9 @@ function AddFigurePicker({
   // The new custom figure's authored length in COUNTS (Builder v3 ①) — chosen
   // here on creation and adjustable later in the editor header. Library picks
   // keep their catalog default (their charted steps), so the stepper applies to
-  // the custom form only.
-  const [counts, setCounts] = useState(3);
+  // the custom form only. Defaults to one bar of the routine's dance (§2.5.2):
+  // 3 for Waltz/Viennese, 4 for the 4/4 dances.
+  const [counts, setCounts] = useState(DANCES[dance].beatsPerBar);
   // The in-flight portion pick (Builder v3 ③): which counts of the tapped
   // catalog figure to dance. `to < from` never happens (taps clamp).
   const [portion, setPortion] = useState<{
