@@ -69,15 +69,8 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /^Done$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
-    // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)
-    //     direction chip in the Entry group (qualifier defaults to "facing"), then
-    //     close the sheet; the placement shows an "entry facing diag wall" chip.
-    await page
-      .getByRole("group", { name: /entry alignment/i })
-      .getByRole("button", { name: /^diag wall$/i })
-      .click();
+    // 4c. Close the sheet — the placement card shows the notated summary.
     await page.keyboard.press("Escape");
-    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
@@ -89,8 +82,6 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /list view/i }).click();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
-    // The entry-alignment chip persisted too (figure doc).
-    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.

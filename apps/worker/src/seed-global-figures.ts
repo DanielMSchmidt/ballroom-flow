@@ -14,7 +14,7 @@
 // and existing choreos are enhanced — never broken.
 //
 // A seeded global doc carries `scope: "global"` (so the DO alarm projects it as
-// `global-figure`) + the catalog's charted attributes / alignment / authored count
+// `global-figure`) + the catalog's charted attributes / authored count
 // length (§2.5.2). Placements reference these docs live (§4.3); a non-admin edit spawns a
 // variant that resolves its untouched beats live from the base (§5.2).
 import {
@@ -78,8 +78,6 @@ export async function seedGlobalFigures(
         const { changed } = await stub.reconcileSeed({
           name: f.name,
           counts,
-          ...(f.entryAlignment ? { entryAlignment: f.entryAlignment } : {}),
-          ...(f.exitAlignment ? { exitAlignment: f.exitAlignment } : {}),
           attributes,
         });
         if (changed) {
@@ -105,10 +103,6 @@ export async function seedGlobalFigures(
         source: "library",
         attributes,
         counts,
-        // Charted figure-level entry/exit alignment, where present (buildDoc drops
-        // undefined optionals, so an uncharted figure carries neither).
-        ...(f.entryAlignment ? { entryAlignment: f.entryAlignment } : {}),
-        ...(f.exitAlignment ? { exitAlignment: f.exitAlignment } : {}),
         schemaVersion: CURRENT_SCHEMA_VERSION,
         deletedAt: null,
       });
@@ -143,8 +137,6 @@ async function seedContentHash(figures: readonly LibraryFigure[]): Promise<strin
   const payload = figures.map((f) => [
     globalFigureRef(f.dance, f.figureType),
     f.name,
-    f.entryAlignment ?? null,
-    f.exitAlignment ?? null,
     f.attributes ?? [],
   ]);
   const bytes = new TextEncoder().encode(JSON.stringify(payload));

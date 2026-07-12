@@ -1,7 +1,7 @@
 // US-005 — Figure document schema (PLAN §2.2–2.5).
 //
-// A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source,
-// optional alignment), a float-count attribute timeline, an optional
+// A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source),
+// a float-count attribute timeline, an optional
 // `baseFigureRef` provenance pointer (a frozen copy carries its own attributes —
 // no overlay), and a schemaVersion. Build it from a plain FigureDoc, read it
 // back (dropping tombstoned attributes by default), and soft-delete an attribute

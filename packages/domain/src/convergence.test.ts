@@ -183,7 +183,7 @@ describe("US-009 Automerge convergence invariants", () => {
   it("keeps a concurrent edit to a MOVED placement (the object is never deleted)", async () => {
     // The splice deleted the moved placement's object and re-inserted a copy — a
     // concurrent edit to it was lost. sortKey moves it in place, so a concurrent
-    // perPlacementAlignment edit on the SAME, moved placement survives the merge.
+    // `part`-window edit on the SAME, moved placement survives the merge.
     const base = buildRoutineDoc(seedReorderRoutine());
     const k2 = keyOf(sectionById(readRoutine(base), "s2").placements[2], "p3");
 
@@ -193,24 +193,18 @@ describe("US-009 Automerge convergence invariants", () => {
         placementById(sectionById(d, "s2"), "p1").sortKey = keyBetween(k2, null);
       },
     ]);
-    // R: edit that SAME placement's alignment concurrently.
+    // R: edit that SAME placement's portion window concurrently.
     const right = await applyMutations(base, [
       (d: RoutineDoc) => {
-        placementById(sectionById(d, "s2"), "p1").perPlacementAlignment = {
-          qualifier: "facing",
-          direction: "LOD",
-        };
+        placementById(sectionById(d, "s2"), "p1").part = { fromCount: 1, toCount: 3 };
       },
     ]);
 
     const { converged } = await exchangeAndAssertConverged(left, right);
     const s2 = sectionById(readRoutine(converged), "s2");
-    // p1 moved to the end (L) AND carries R's alignment edit (no lost edit).
+    // p1 moved to the end (L) AND carries R's window edit (no lost edit).
     expect(s2.placements.map((p) => p.id)).toEqual(["p2", "p3", "p1"]);
-    expect(placementById(s2, "p1").perPlacementAlignment).toEqual({
-      qualifier: "facing",
-      direction: "LOD",
-    });
+    expect(placementById(s2, "p1").part).toEqual({ fromCount: 1, toCount: 3 });
   });
 
   it("converges two replicas moving the SAME placement (LWW on sortKey, no divergence)", async () => {

@@ -49,14 +49,7 @@ function resolveSnapshotFigure(fig: FigureDoc, snap: RoutineSnapshot): FigureDoc
   if (liveBase) return resolveVariantOverlay(liveBase, fig);
   const cat = libraryFigureByRef(fig.baseFigureRef);
   if (cat) {
-    return resolveVariantOverlay(
-      {
-        attributes: cat.attributes ?? [],
-        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
-      },
-      fig,
-    );
+    return resolveVariantOverlay({ attributes: cat.attributes ?? [] }, fig);
   }
   return fig; // base unavailable → the variant's own (owned) beats
 }
@@ -81,8 +74,6 @@ function catalogSnapshotFigure(ref: string): FigureDoc | null {
     source: "library",
     counts: defaultFigureCounts(attributes),
     attributes,
-    ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-    ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
     schemaVersion: 1,
     deletedAt: null,
   };

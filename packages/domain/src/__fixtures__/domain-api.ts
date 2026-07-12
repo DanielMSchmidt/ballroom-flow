@@ -151,7 +151,7 @@ export interface DomainApi {
   // ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02)
   ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number>;
   resolveFigure(
-    base: Pick<FigureDoc, "attributes" | "counts" | "bars" | "entryAlignment" | "exitAlignment">,
+    base: Pick<FigureDoc, "attributes" | "counts" | "bars">,
     variant: FigureDoc,
   ): FigureDoc;
   variantAttributesForEdit(

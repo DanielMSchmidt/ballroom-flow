@@ -425,12 +425,9 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     expect((variant as { attributes: { value: string }[] }).attributes[0]?.value).toBe("forward");
   });
 
-  it("variant-authored bars/alignment override the base; unauthored resolve live (§2.5.2)", async () => {
+  it("variant-authored bars override the base; unauthored resolve live (§2.5.2)", async () => {
     const { resolveFigure } = await importDomain();
-    const base = {
-      ...structuredClone(tumbleTurnBase()),
-      entryAlignment: { qualifier: "facing", direction: "DW" },
-    } as never;
+    const base = structuredClone(tumbleTurnBase()) as never;
     const bare = {
       ...structuredClone(tumbleTurnBase()),
       id: "v",
@@ -440,10 +437,6 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     } as never as Record<string, unknown>;
     delete bare.bars;
     expect(resolveFigure(base, bare as never).bars).toBe(2); // falls back to the base
-    expect(resolveFigure(base, bare as never).entryAlignment).toEqual({
-      qualifier: "facing",
-      direction: "DW",
-    });
     const authored = { ...(bare as object), bars: 3 } as never;
     expect(resolveFigure(base, authored).bars).toBe(3); // variant override wins
   });

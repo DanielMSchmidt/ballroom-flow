@@ -95,10 +95,8 @@ const RISE_DANCES: DanceId[] = ["waltz", "viennese_waltz", "quickstep", "foxtrot
 
 /** The standard (builtin) attribute vocabulary. */
 export const ATTRIBUTE_REGISTRY: StandardRegistry = {
-  // The step's travel direction — the step headline (2026-06-28 parity spec), and
-  // the step's RELATIVE TRANSLATION in the derived-alignment model (PLAN §3.8
-  // ⟳2026-07-10: a step is a relative transform — `direction` translates, `turn`
-  // rotates, absolute alignment is derived). Foot (L/R) is never modelled: steps
+  // The step's travel direction — the step headline (2026-06-28 parity spec): the
+  // moving foot's RELATIVE placement. Foot (L/R) is never modelled: steps
   // alternate feet automatically. A closed enum (no freeText) — the ISTD
   // directional set (forward/back/side/diagonal fwd/bk/close) plus the own-foot
   // crossing values `in_front`/`behind` (lock steps — a cross against the dancer's
@@ -343,12 +341,10 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     builtin: true,
   },
-  // THE canonical rotation field (PLAN §3.8 ⟳2026-07-10): a step's relative
-  // rotation. Tokens serialize SIGNED EIGHTHS 1:1 (eighth_R = +1 … full_R = +8;
-  // L = negative); absolute alignment is DERIVED from these — the conversion and
-  // the mod-8 wheel math live in alignment.ts (turnEighths/deriveAlignments),
-  // nowhere else. The amount is what's rotated ON that step; per-step amounts sum
-  // to the figure's total rotation.
+  // THE canonical rotation field: a step's relative rotation. Tokens are eighths
+  // of a full turn with an L/R suffix (eighth_R … full_R; 1 unit = ⅛ turn = 45°).
+  // The amount is what's rotated ON that step; per-step amounts sum to the
+  // figure's total rotation.
   turn: {
     kind: "turn",
     label: "Turn",

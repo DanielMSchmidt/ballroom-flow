@@ -122,15 +122,15 @@ export function ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number> 
  * Resolve a VARIANT against its live base — per-beat ownership (§2.5.1 #14–15):
  * an owned beat reads WHOLLY from the variant; an unowned beat reads WHOLLY from
  * the live base. New base values on unowned beats appear automatically; base
- * values on owned beats never leak in. `bars` and entry/exit alignment fall back
- * to the base when the variant hasn't authored its own (§2.5.2). Pure — operates
- * on plain snapshots; tombstone dropping stays the reader's concern.
+ * values on owned beats never leak in. `bars` falls back to the base when the
+ * variant hasn't authored its own (§2.5.2). Pure — operates on plain snapshots;
+ * tombstone dropping stays the reader's concern.
  *
  * A standalone figure (no `baseFigureRef`, or no base at hand) is its own
  * resolution — callers may pass it straight through.
  */
 export function resolveFigure(
-  base: Pick<FigureDoc, "attributes" | "counts" | "bars" | "entryAlignment" | "exitAlignment">,
+  base: Pick<FigureDoc, "attributes" | "counts" | "bars">,
   variant: FigureDoc,
 ): FigureDoc {
   const owned = ownedBeats(variant);
@@ -147,10 +147,6 @@ export function resolveFigure(
           ...(base.bars != null ? { bars: base.bars } : {}),
         }
       : {}),
-    ...(variant.entryAlignment || !base.entryAlignment
-      ? {}
-      : { entryAlignment: base.entryAlignment }),
-    ...(variant.exitAlignment || !base.exitAlignment ? {} : { exitAlignment: base.exitAlignment }),
   };
 }
 
@@ -204,8 +200,8 @@ export function variantAttributesForEdit(
  * overlay variant — a new account figure owning ONLY the edited beats (nothing,
  * when `editedAttributes` is omitted), with `baseFigureRef` as a LIVE link — and
  * the placement re-points to it. The base is never mutated (§2.5.1 #17). `bars`
- * and alignment are NOT copied: they resolve live from the base until the
- * variant authors its own (§2.5.2).
+ * is NOT copied: it resolves live from the base until the variant authors its
+ * own (§2.5.2).
  */
 export function spawnVariant(
   placement: Placement,

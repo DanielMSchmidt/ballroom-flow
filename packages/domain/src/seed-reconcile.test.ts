@@ -110,18 +110,16 @@ describe("reconcileSeededFigure — the seed is authoritative for seeded content
     ]);
   });
 
-  it("updates the doc-level name / counts / alignments from the seed", () => {
+  it("updates the doc-level name / counts from the seed", () => {
     const doc = buildFigureDoc(baseFigure([seededAttr("fig-test-s1-foot", "HT")]));
     const { doc: after } = reconcileSeededFigure(doc, {
       name: "Renamed Figure",
       counts: 6,
-      entryAlignment: { qualifier: "facing", direction: "DW" },
       attributes: [seededAttr("fig-test-s1-foot", "HT")],
     });
     const read = readFigure(after);
     expect(read.name).toBe("Renamed Figure");
     expect(read.counts).toBe(6);
-    expect(read.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
   });
 
   it("is idempotent: a doc already matching the seed reports changed:false", () => {

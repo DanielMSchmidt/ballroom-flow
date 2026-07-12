@@ -139,7 +139,8 @@ describe("buildWdsfAttributes — authored figures (verified footwork)", () => {
   it("carries the chart's richer rise / sway / turn / CBM attributes", () => {
     // The natural turn's real technique per the WDSF book: rise commences on count 1
     // (shared), the leader's ¼R is printed "between 1 and 2" (recorded on count 2 —
-    // alignment(N) = alignment(N-1) + turn(N)), CBM on count 1, sway right on count 2.
+    // the chart convention puts a turn on the row it is taken INTO), CBM on count 1,
+    // sway right on count 2.
     const shared = (count: number, kind: string) =>
       natural.find((a) => a.count === count && a.role === null && a.kind === kind)?.value;
     const lead = (count: number, kind: string) =>

@@ -29,11 +29,6 @@ export interface Attribute {
   deletedAt?: number | null;
 }
 
-export interface Alignment {
-  qualifier: "facing" | "backing" | "pointing";
-  direction: "LOD" | "ALOD" | "wall" | "centre" | "DW" | "DC" | "DW_against" | "DC_against";
-}
-
 /** A figure document — global library entry or account variant/custom (§2.2). */
 export interface FigureDoc {
   id: string;
@@ -43,8 +38,6 @@ export interface FigureDoc {
   dance: DanceId;
   name: string;
   source: FigureSource;
-  entryAlignment?: Alignment;
-  exitAlignment?: Alignment;
   /**
    * The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①,
    * 2026-07-07): chosen on creation and adjustable in the editor's LENGTH
@@ -100,7 +93,6 @@ export interface Placement {
    * the whole figure.
    */
   part?: { fromCount: number; toCount: number } | null;
-  perPlacementAlignment?: Alignment;
   /**
    * Fractional-index ordering key (#63, §5.3). Reads order placements by this;
    * reorder sets it between the new neighbours (no remove-and-reinsert). Optional

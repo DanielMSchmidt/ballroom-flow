@@ -12,7 +12,6 @@
 // are legible; pass a real ULID where monotonicity matters (US-001 tests do).
 // ─────────────────────────────────────────────────────────────────────────
 import type {
-  Alignment,
   Anchor,
   Annotation,
   AnnotationKind,
@@ -50,13 +49,6 @@ export function makeAttribute(overrides: Partial<Attribute> = {}): Attribute {
   };
 }
 
-export function makeAlignment(overrides: Partial<Alignment> = {}): Alignment {
-  return {
-    qualifier: overrides.qualifier ?? "facing",
-    direction: overrides.direction ?? "LOD",
-  };
-}
-
 /** A global-library figure doc (app-owned, not a copy). */
 export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
   return {
@@ -67,8 +59,6 @@ export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
     dance: overrides.dance ?? "foxtrot",
     name: overrides.name ?? "Feather",
     source: overrides.source ?? "library",
-    entryAlignment: overrides.entryAlignment,
-    exitAlignment: overrides.exitAlignment,
     attributes: overrides.attributes ?? [
       makeAttribute({ kind: "footwork", count: 1, value: "HT" }),
       makeAttribute({ kind: "footwork", count: 2, value: "T" }),
@@ -104,7 +94,6 @@ export function makePlacement(figureRef: string, overrides: Partial<Placement> =
   return {
     id: overrides.id ?? testId("plc"),
     figureRef,
-    perPlacementAlignment: overrides.perPlacementAlignment,
     deletedAt: overrides.deletedAt ?? null,
   };
 }

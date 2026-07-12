@@ -8,7 +8,6 @@
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
 import {
-  type Alignment,
   type Anchor,
   type Annotation,
   type AnnotationKind,
@@ -232,8 +231,6 @@ export interface RoutineStore extends RoutineReadModel {
    * it (owner decision 2026-07-07). Blank names are ignored.
    */
   renameFigure(figureRef: string, name: string): void;
-  /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
-  setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
   /** Routine-scoped annotations (US-039), tombstones dropped. */
   readAnnotations(): Annotation[];
   /**
@@ -321,9 +318,6 @@ export type CreateFigureFn = (figure: {
   attributes: Attribute[];
   /** The figure's authored length in counts (Builder v3 ①) — chosen on create. */
   counts?: number;
-  /** Figure-level entry/exit alignment seeded from the catalog chart, where charted. */
-  entryAlignment?: Alignment;
-  exitAlignment?: Alignment;
   /** When set, the new figure is a COW variant of this base (US-035). */
   baseFigureRef?: string;
 }) => Promise<void>;
@@ -1081,16 +1075,6 @@ export async function openRoutine(
       editFigure(figureRef, { name: next });
     },
 
-    setFigureAlignment: (figureRef, edge, alignment) => {
-      // Entry/exit alignment lives on the figure doc (US-031). Clearing deletes
-      // the key (Automerge can't store undefined).
-      const key = edge === "entry" ? "entryAlignment" : "exitAlignment";
-      figureConn(figureRef).change((draft) => {
-        if (alignment) draft[key] = alignment;
-        else delete draft[key];
-      });
-    },
-
     readAnnotations: () => readRoutineSafe().annotations,
 
     createAnnotation: (input) => {
@@ -1313,8 +1297,8 @@ export async function openRoutine(
   /**
    * Spawn a live overlay variant for a non-admin editing a GLOBAL figure (§5.2).
    * The variant owns ONLY the edited beats (`spawnVariant` → `variantAttributesForEdit`);
-   * `bars`/alignment resolve live from the base until the variant authors its own
-   * (§2.5.2), so they are forwarded only when the user actually patched `bars`.
+   * `bars` resolves live from the base until the variant authors its own
+   * (§2.5.2), so it is forwarded only when the user actually patched it.
    */
   function spawnVariantForEdit(
     figureRef: string,
@@ -1350,8 +1334,8 @@ export async function openRoutine(
       figureType: variant.figureType,
       routineId,
       attributes: variant.attributes, // ⟳v5: ONLY the owned beats, not a full copy
-      // length/alignment are NOT copied — they resolve live from the base (§2.5.2)
-      // until the variant authors its own; forward `counts` only if the user set it.
+      // length is NOT copied — it resolves live from the base (§2.5.2) until the
+      // variant authors its own; forward `counts` only if the user set it.
       ...(patch.counts != null ? { counts: patch.counts } : {}),
       baseFigureRef: variant.baseFigureRef ?? base.id,
     })
@@ -1426,9 +1410,7 @@ export async function openRoutine(
    * base connection → the routine snapshot (`figureContent`) → the bundled catalog
    * (always available for a `global:` base). Returns null when no source has it.
    */
-  const resolveBaseContent = (
-    baseRef: string,
-  ): Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment"> | null => {
+  const resolveBaseContent = (baseRef: string): Pick<FigureDoc, "attributes" | "bars"> | null => {
     const conn = figureConns.get(baseRef);
     const live = conn ? readFigureDoc(conn) : null;
     if (live) return live;
@@ -1438,8 +1420,6 @@ export async function openRoutine(
     if (cat) {
       return {
         attributes: cat.attributes ?? [],
-        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
       };
     }
     return null;
@@ -1465,8 +1445,6 @@ export async function openRoutine(
       source: "library",
       counts: defaultFigureCounts(attributes),
       attributes,
-      ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-      ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
       schemaVersion: 1,
       deletedAt: null,
     };

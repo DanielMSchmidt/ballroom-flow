@@ -1,14 +1,6 @@
 // @weavesteps/domain — pure domain logic, no I/O.
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
-export {
-  deriveAlignments,
-  deriveExitAlignment,
-  orientationOf,
-  ROOM_DIRECTIONS,
-  type RoomOrientation,
-  turnEighths,
-} from "./alignment";
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
   addAccountReply,
@@ -34,7 +26,6 @@ export {
 } from "./doc-routine";
 export type {
   AccountDoc,
-  Alignment,
   Anchor,
   Annotation,
   AnnotationKind,
