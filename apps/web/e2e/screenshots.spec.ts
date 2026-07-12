@@ -108,6 +108,21 @@ test.describe("@screenshots landing imagery", () => {
     // Full-page assemble view showing both Long + Short sections.
     await page.screenshot({ path: shot("sections.png"), fullPage: true });
 
+    // 2b. Add-figure picker (diff-only shots, not on the landing page): the
+    //     searchable library with the ALWAYS-PRESENT "Create my own figure"
+    //     row below it, then the compose view (name + length) the row swaps
+    //     the selection UI for. Escape closes the sheet without minting a
+    //     figure, so the built routine is untouched.
+    await page.getByRole("button", { name: "Add figure" }).last().click();
+    const createRow = page.getByRole("button", { name: /create my own figure/i });
+    await expect(createRow).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: shot("addfigure.png") });
+    await createRow.click();
+    await expect(page.getByLabel("Figure name")).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: shot("composefigure.png") });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: /add a figure/i })).not.toBeVisible();
+
     // 3. Notate the Natural Spin Turn across technique dimensions.
     //    "Edit steps: …" matches the aria-label on PlacementCard (canEdit → "Edit").
     await page

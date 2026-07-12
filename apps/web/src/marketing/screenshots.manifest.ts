@@ -1,6 +1,9 @@
 // Single source of truth for the landing-page gallery AND the CI diff/comment
 // script. The Playwright @screenshots journey writes a PNG per `file`; Landing
 // imports them; scripts/screenshot-diff.mjs diffs them in this order.
+// NOT every entry is on the landing page — Landing picks its keys via its own
+// FEATURES list; the rest exist purely for the PR visual diff (e.g. the
+// add-figure picker pair).
 export interface Screenshot {
   /** Stable id used by the journey + diff classification. */
   key: string;
@@ -54,5 +57,20 @@ export const SCREENSHOTS: Screenshot[] = [
     file: "figure.png",
     alt: "The read-only figure view: the step grid with notes beneath",
     caption: "Tap a figure while reading — steps and notes, no accidental edits.",
+  },
+  // Diff-only (not in Landing's FEATURES): the add-figure picker pair —
+  // the searchable library with the always-present "Create my own figure"
+  // row, and the compose view it swaps to.
+  {
+    key: "addfigure",
+    file: "addfigure.png",
+    alt: "The add-figure picker: searchable library with a Create my own figure row",
+    caption: "Search the library — or create your own figure, always one tap away.",
+  },
+  {
+    key: "composefigure",
+    file: "composefigure.png",
+    alt: "The compose view for a new custom figure: name and length",
+    caption: "Name your figure and set its length — steps come whenever you're ready.",
   },
 ];
