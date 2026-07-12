@@ -76,7 +76,7 @@ imports through small shims that defer module resolution to runtime:
 | US-028 | Figure timeline: place/edit/remove attributes | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-029 | Attribute editor (registry-derived) | component | `apps/web/src/components/attribute-editor.test.tsx` |
 | US-030 | Timeline role-view toggle | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
-| US-031 | Edit per-figure alignment | component | `apps/web/src/components/assemble.test.tsx` |
+| US-031 | ~~Edit per-figure alignment~~ *(REMOVED 2026-07-12 — entry/exit alignment dropped from the model with the top-down view; D33 reversed, PLAN §3.8/§12)* | — | Feature + tests removed (`assemble.test.tsx` US-031 describe, `e2e/figure-alignment.spec.ts`, `domain/alignment.test.ts`) |
 | US-032 | Global figure library browse | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-033 | Personal-library figures + custom figures (two-scope badge: `library`/`custom`) *(reconciled 2026-06: "account variants" retired)* | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-034 | Editing your own figure flows everywhere | worker + E2E | `apps/worker/src/figures.test.ts`, `apps/web/e2e/fork-and-figures.spec.ts` |
@@ -106,16 +106,16 @@ imports through small shims that defer module resolution to runtime:
 
 | Builder v3 *(2026-07-07, no US-id — PLAN §12 Q-V3-DEFERRED resolution)* | The five model changes: ① authored `counts` + schema v5 migration; ② presence attributes (`value: null`); ③ placement portions (`part` windows); ④ breaks as choreo-local figures + legacy-break alarm migration; ⑤ named variant on add-to-library | domain + worker + component + E2E | `packages/domain/src/migrations.test.ts` (v5 bars→counts), `packages/domain/src/figure-grid.test.ts` (`resolveFigureCounts`/`defaultFigureCounts`/`figureCountSlots`, `windowAttributes`/`partBeatSpan`), `packages/domain/src/schemas.test.ts` (null-value carve-out), `apps/worker/src/doc-do.test.ts` ("legacy break → Break-figure migration" describe + part-aware card bars), `apps/web/src/components/figure-timeline-beats.test.tsx` (LENGTH counts stepper, quick-add, naming flow), `apps/web/src/components/assemble.test.tsx` (Break mints a figure; portion confirm), `apps/web/src/components/reading-columns.test.ts` (`cellPresent`), `apps/web/src/components/reading-view.test.tsx` (windowed readout, presence present-dot), `apps/web/e2e/authoring.spec.ts` + `library.spec.ts` + `fork-and-figures.spec.ts` (quick-add, portion picker, counts journeys) |
 
-| D33 *(2026-07-10, no US-id — PLAN §3.8 derived alignment)* | Alignment derived, not stored: mod-8 room-wheel encoding, `turn` tokens as signed eighths, `deriveAlignments`/`deriveExitAlignment`, the seed-oracle round-trip (every dropped exit still derives the book's printed exit; every kept exit is genuinely non-derivable — flag honesty both ways), `authoredAlignment` derived/stored seam; footPosition + rotation + head kind removal (the WDSF prose columns stay seed-only provenance) + ISTD split-diagonal direction values | domain + component | `packages/domain/src/alignment.test.ts` (against the frozen oracle `packages/domain/src/__fixtures__/alignment-oracle.ts`; the non-derivable set catalogued in `docs/seed/alignment-derivation-report.md`), `packages/domain/src/vocabulary.test.ts` + `schemas.test.ts` + `notation-parity.test.ts` (nine-kind registry, split-diagonal enum + aliases), `apps/web/src/components/reading-columns.test.ts` + `attribute-editor.test.tsx` + `attribute-display.test.tsx` (no Feet column/section; split-diagonal labels) |
+| D33 *(2026-07-10, no US-id; **derivation REVERSED 2026-07-12** — alignment removed outright, PLAN §3.8)* | What survives of the 2026-07-10 pass: footPosition + rotation + head kind removal (the WDSF prose columns stay seed-only provenance) + ISTD split-diagonal direction values. The derivation slice (`alignment.test.ts`, the frozen oracle fixture) was deleted with the feature; `alignment-derivation-report.md` stays as historical/§D provenance. | domain + component | `packages/domain/src/vocabulary.test.ts` + `schemas.test.ts` + `notation-parity.test.ts` (nine-kind registry, split-diagonal enum + aliases), `apps/web/src/components/reading-columns.test.ts` + `attribute-editor.test.tsx` + `attribute-display.test.tsx` (no Feet column/section; split-diagonal labels) |
 
-| Figure read view *(2026-07-10, no US-id — PLAN §4.4 lens-aware detail / design `figMode`)* | The reading-lens figure detail opens READ-ONLY even for an editor (static grid, no undo/alignment/add-kind/rename/variant-bar) with the notes surfaces (compose per role); the explicit "Edit steps" pencil (editors only) flips the open detail into the step editor and back; the builder's placement card still opens the editor directly | component + E2E | `apps/web/src/components/assemble.test.tsx` ("Figure detail read view" describe ×5), `apps/web/e2e/figure-read-view.spec.ts` (@smoke journey) |
+| Figure read view *(2026-07-10, no US-id — PLAN §4.4 lens-aware detail / design `figMode`)* | The reading-lens figure detail opens READ-ONLY even for an editor (static grid, no undo/add-kind/rename/variant-bar) with the notes surfaces (compose per role); the explicit "Edit steps" pencil (editors only) flips the open detail into the step editor and back; the builder's placement card still opens the editor directly | component + E2E | `apps/web/src/components/assemble.test.tsx` ("Figure detail read view" describe ×5), `apps/web/e2e/figure-read-view.spec.ts` (@smoke journey) |
 
 **Every live story (US-001…US-054, minus the retired US-047/US-048) is covered.** No story is left untested.
 
 ## Reusable test abstractions built (signatures + locations)
 
 ### Domain (`packages/domain/src/__fixtures__/`)
-- `factories.ts` — pure POJO builders: `makeAttribute`, `makeAlignment`,
+- `factories.ts` — pure POJO builders: `makeAttribute`,
   `makeFigureDoc`, `makeVariantDoc(base, byUser)`, `makePlacement`,
   `makeSection`, `makeAnnotation`, `makeAnchor`, `makeFigureTypeAnchor`,
   `makeRoutineDoc`, `pointAnchor`, `testId`/`resetTestIds`.
@@ -178,7 +178,7 @@ tests across 3 projects.
 - `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (294 files).
 - E2E: `@smoke` Playwright runs as the CI gate (per-PR `ci.yml` + on-push `deploy.yml`); the full 3-device matrix runs nightly. **No `test.skip` remains in `apps/web/e2e/`** — `pwa-a11y.spec` (US-050/051) and the all-dances family-note slice (US-040, `fork-and-figures.spec`) were unskipped + fully scripted 2026-07-03; chromium runs **30 passed** (25 of them `@smoke`).
 
-Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into one
+Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 *(US-031 since removed)* were split into one
 `it` per acceptance criterion, and a US-009 AC-4 "convergence across a fork (cloned
 doc)" property test was added. Inline
 gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy

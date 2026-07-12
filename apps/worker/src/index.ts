@@ -449,19 +449,8 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const {
-    figureRef,
-    name,
-    dance,
-    figureType,
-    routineId,
-    attributes,
-    counts,
-    bars,
-    baseFigureRef,
-    entryAlignment,
-    exitAlignment,
-  } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId, attributes, counts, bars, baseFigureRef } =
+    parsed.data;
 
   // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
   // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
@@ -517,10 +506,6 @@ app.post("/api/figures", async (c) => {
     // wins when both arrive. Omitted → the DO falls back to the whole-beat
     // default when projecting the card count.
     ...(counts != null ? { counts } : bars != null ? { bars } : {}),
-    // Figure-level entry/exit alignment (per-figure, where the catalog charts it) —
-    // buildDoc drops undefined optionals, so an uncharted figure carries neither.
-    ...(entryAlignment ? { entryAlignment } : {}),
-    ...(exitAlignment ? { exitAlignment } : {}),
     // The client-forwarded attributes are stored RAW — a ⟳v5 variant carries only
     // its OWNED beats; overlay resolution against the live `baseFigureRef` happens
     // CLIENT-side (§5.2). The worker never resolves; it persists what it's given.

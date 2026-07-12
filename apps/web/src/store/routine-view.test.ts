@@ -74,7 +74,6 @@ function fakeLive() {
     setFigureAttributes: vi.fn(),
     setFigureCounts: vi.fn(),
     renameFigure: vi.fn(),
-    setFigureAlignment: vi.fn(),
     createAnnotation: vi.fn(),
     addReply: vi.fn(),
     deleteAnnotation: vi.fn(),

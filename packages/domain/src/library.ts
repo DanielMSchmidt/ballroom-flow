@@ -9,8 +9,7 @@
 // the cross-routine identity that later enables figure-level features;
 // notation is then entered on the timeline (US-028).
 import { type DanceId, isDanceId } from "./dances";
-import type { Alignment, Attribute } from "./doc-types";
-import { authoredAlignment } from "./figure-steps";
+import type { Attribute } from "./doc-types";
 import { LIBRARY_FIGURE_DATA } from "./library-data";
 import { buildWdsfAttributes } from "./wdsf-timing";
 
@@ -25,10 +24,6 @@ export interface LibraryFigure {
   notes?: string[];
   /** Per-step timeline parsed from the WDSF timing + start/finish actions. */
   attributes?: Attribute[];
-  /** Figure-level entry alignment (per-figure, leader's perspective), where charted. */
-  entryAlignment?: Alignment;
-  /** Figure-level exit alignment (per-figure, leader's perspective), where charted. */
-  exitAlignment?: Alignment;
 }
 
 /** A figureType family within one dance (for the grouped library browse). */
@@ -39,14 +34,11 @@ export interface LibraryGroup {
 
 /** The whole catalog. WDSF-enriched figures carry a parsed `attributes` timeline. */
 export const LIBRARY_FIGURES: readonly LibraryFigure[] = LIBRARY_FIGURE_DATA.map((d) => {
-  const align = authoredAlignment(d.dance, d.figureType);
   if (!d.timing) {
     return {
       dance: d.dance,
       figureType: d.figureType,
       name: d.name,
-      ...(align?.entry && { entryAlignment: align.entry }),
-      ...(align?.exit && { exitAlignment: align.exit }),
     };
   }
   return {
@@ -62,8 +54,6 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = LIBRARY_FIGURE_DATA.map
       start: d.start,
       finish: d.finish,
     }),
-    ...(align?.entry && { entryAlignment: align.entry }),
-    ...(align?.exit && { exitAlignment: align.exit }),
   };
 });
 

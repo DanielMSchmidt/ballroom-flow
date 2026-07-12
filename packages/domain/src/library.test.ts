@@ -37,21 +37,6 @@ describe("figure library catalog", () => {
     expect(foxtrot.some((f) => /natural spin turn/i.test(f.name))).toBe(false);
   });
 
-  it("carries the charted figure-level entry/exit alignment (Waltz natural turn)", () => {
-    // Alignments come from the WDSF technique-book charts (leader's perspective).
-    // The Natural Turn starts facing Diagonal Wall and ends facing Diagonal Centre;
-    // the closed changes carry NONE — the book charts their alignment as "depending
-    // on the previous figure".
-    const nt = LIBRARY_FIGURES.find((f) => f.dance === "waltz" && f.figureType === "natural-turn");
-    expect(nt?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
-    expect(nt?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    const rf = LIBRARY_FIGURES.find(
-      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-rf",
-    );
-    expect(rf?.entryAlignment).toBeUndefined();
-    expect(rf?.exitAlignment).toBeUndefined();
-  });
-
   it("groups a dance's figures by figureType for the library browse", () => {
     const groups = libraryGroupsForDance("waltz");
     expect(groups.length).toBeGreaterThan(0);

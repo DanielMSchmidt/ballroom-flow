@@ -16,13 +16,7 @@
 // hydrates, then from the live store (which itself falls back to the snapshot for
 // not-yet-opened figures). In read-only mode mutators + openFigure are no-ops
 // (the UI never calls them for a viewer) and nothing live is ever opened.
-import type {
-  Alignment,
-  Anchor,
-  AnnotationKind,
-  Attribute,
-  RegistryKind,
-} from "@weavesteps/domain";
+import type { Anchor, AnnotationKind, Attribute, RegistryKind } from "@weavesteps/domain";
 import type { SyncState } from "./doc-connection";
 import {
   openRoutine as defaultOpenRoutine,
@@ -228,9 +222,6 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     setFigureAttributes: editAction((s) => s.setFigureAttributes),
     setFigureCounts: editAction((s) => s.setFigureCounts),
     renameFigure: editAction((s) => s.renameFigure),
-    setFigureAlignment: editAction(
-      (s) => s.setFigureAlignment as (...a: [string, "entry" | "exit", Alignment | null]) => void,
-    ),
     createAnnotation: editAction(
       (s) =>
         s.createAnnotation as (

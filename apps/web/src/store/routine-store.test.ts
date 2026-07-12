@@ -420,19 +420,6 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(rp?.placement.figureRef?.startsWith("global:")).toBe(false);
   });
 
-  it("a charted catalog pick renders its entry/exit alignment (from the live reference)", async () => {
-    // The Waltz Natural Turn is charted (WDSF Technique Book) entering facing
-    // Diagonal Wall and ending facing Diagonal Centre. The live reference renders
-    // it straight from the bundled catalog. (The Closed Changes carry NO alignment
-    // — the book charts theirs as "depending on the previous figure".)
-    const { store } = await openWithSection();
-    store.addPlacement("s1", "Natural Turn", "natural-turn");
-    const ref = globalFigureRef("waltz", "natural-turn");
-    const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
-    expect(rp?.figure?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
-    expect(rp?.figure?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-  });
-
   it("mints a custom figure (POST, empty attributes) for a non-catalog name", async () => {
     const seen: Array<{ attributes?: unknown[]; figureRef: string }> = [];
     const createFigure = vi.fn((meta: { attributes?: unknown[]; figureRef: string }) => {
@@ -1288,68 +1275,6 @@ describe("US-017 store/ seam (multi-doc)", () => {
     const rp = store.readPlacements().find((p) => p.placement.id === "p1");
     expect(rp?.placement.figureRef).toBe(ref);
     store.close();
-  });
-
-  it("⟳v5: a spawned variant does NOT copy the base's alignment (it resolves live)", async () => {
-    // Intent (⟳v5, §2.5.2): editing a global figure's STEPS spawns a live overlay
-    //   variant. A variant resolves bars/alignment LIVE from its base until it
-    //   authors its own — so the spawn must NOT copy the base's entry/exit alignment
-    //   into the variant's POST (that would freeze it, defeating catalog flow-in).
-    const { opts, sockets } = fakeWiring();
-    const created: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
-    const createFigure = vi.fn(async (m: { entryAlignment?: unknown; exitAlignment?: unknown }) => {
-      created.push({ entryAlignment: m.entryAlignment, exitAlignment: m.exitAlignment });
-    });
-    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me", createFigure });
-
-    const routine = buildRoutineDoc({
-      id: "rt_sample",
-      title: "R",
-      dance: "waltz",
-      ownerId: "me",
-      sections: [
-        {
-          id: "s1",
-          name: "S",
-          deletedAt: null,
-          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
-        },
-      ],
-      annotations: [],
-      schemaVersion: 1,
-      deletedAt: null,
-    });
-    sockets.get("rt_sample")?.fireOpen();
-    sockets.get("rt_sample")?.load(routine);
-    sockets.get("rt_sample")?.fireCaughtUp();
-    store.readPlacements();
-
-    // A GLOBAL base figure that carries figure-level alignment (a charted catalog pick).
-    const fg = buildFigureDoc(
-      aFigure({
-        id: "fg",
-        scope: "global",
-        ownerId: "app",
-        figureType: "closed-change-on-rf",
-        dance: "waltz",
-        name: "Closed Change on RF",
-        source: "library",
-        attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
-        entryAlignment: { qualifier: "facing", direction: "DC" },
-        exitAlignment: { qualifier: "facing", direction: "DC" },
-      }) as FigureDoc,
-    );
-    sockets.get("fg")?.fireOpen();
-    sockets.get("fg")?.load(fg);
-    sockets.get("fg")?.fireCaughtUp();
-
-    // Edit the footwork on the non-owned figure → spawns a variant.
-    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
-
-    expect(createFigure).toHaveBeenCalledTimes(1);
-    // The variant's POST does NOT carry the base's alignment — it resolves live.
-    expect(created[0]?.entryAlignment).toBeUndefined();
-    expect(created[0]?.exitAlignment).toBeUndefined();
   });
 
   it("C1: onceLive defers the copy's attribute write until after the DO seed replay, preventing silent edit loss", async () => {

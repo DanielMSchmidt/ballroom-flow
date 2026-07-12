@@ -20,7 +20,7 @@
 // concurrent reconciles would otherwise both insert "new" list items with the
 // same id. Do not call it from any other seam.
 import * as A from "@automerge/automerge";
-import type { Alignment, Attribute, FigureDoc } from "./doc-types";
+import type { Attribute, FigureDoc } from "./doc-types";
 
 /** The seeder's deterministic id prefixes — the rows the seed OWNS. */
 export function isSeededAttributeId(id: string): boolean {
@@ -31,8 +31,6 @@ export interface SeedFigureContent {
   name: string;
   /** The authored beat length (§2.5.2 counts model — bars derive from it). */
   counts?: number;
-  entryAlignment?: Alignment;
-  exitAlignment?: Alignment;
   attributes: readonly Attribute[];
 }
 
@@ -50,11 +48,6 @@ function copyAttrField<K extends keyof Attribute>(
   field: K,
 ): void {
   row[field] = source[field];
-}
-
-function sameAlignment(a: Alignment | undefined, b: Alignment | undefined): boolean {
-  if (!a || !b) return a === b;
-  return a.qualifier === b.qualifier && a.direction === b.direction;
 }
 
 /**
@@ -105,27 +98,24 @@ export function reconcileSeededFigure(
 
   const nameChanged = doc.name !== seed.name;
   const countsChanged = seed.counts !== undefined && doc.counts !== seed.counts;
-  const entryChanged =
-    seed.entryAlignment !== undefined && !sameAlignment(doc.entryAlignment, seed.entryAlignment);
-  const exitChanged =
-    seed.exitAlignment !== undefined && !sameAlignment(doc.exitAlignment, seed.exitAlignment);
 
+  // NOTE (2026-07-12, entry/exit alignment removed): a doc seeded before the
+  // removal may still carry stale `entryAlignment`/`exitAlignment` keys. They are
+  // dead data — nothing reads them — and actively deleting them here would append
+  // a change to every previously-seeded doc for zero behavioral gain, so the
+  // reconcile simply ignores them.
   const changed =
     updates.length > 0 ||
     resurrect.length > 0 ||
     additions.length > 0 ||
     tombstone.length > 0 ||
     nameChanged ||
-    countsChanged ||
-    entryChanged ||
-    exitChanged;
+    countsChanged;
   if (!changed) return { doc, changed: false };
 
   const next = A.change(doc, "seed: reconcile to the current catalog", (d) => {
     if (nameChanged) d.name = seed.name;
     if (countsChanged && seed.counts !== undefined) d.counts = seed.counts;
-    if (entryChanged && seed.entryAlignment) d.entryAlignment = { ...seed.entryAlignment };
-    if (exitChanged && seed.exitAlignment) d.exitAlignment = { ...seed.exitAlignment };
     for (const u of updates) {
       const row = d.attributes[u.index];
       if (!row) continue;

@@ -11,7 +11,7 @@ import type { ReadOptions } from "./doc-types";
 /**
  * Recursively drop `undefined`-valued keys. Automerge cannot store `undefined`
  * (it throws "Cannot assign undefined value …"); our logical shapes carry
- * optional fields that are often `undefined` (e.g. an absent `entryAlignment`).
+ * optional fields that are often `undefined` (e.g. an absent `counts`).
  * Stripping them mirrors JSON semantics: an absent optional simply isn't set,
  * and reads return `undefined` for it just the same. `null` is preserved (a
  * tombstone like `deletedAt: null` is a meaningful CRDT value).

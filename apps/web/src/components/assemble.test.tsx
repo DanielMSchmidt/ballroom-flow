@@ -13,10 +13,9 @@ import { axeCheck, renderUi, screen, userEvent, within } from "../test-support/r
 // US-018 — Open & view a routine [M2, user]
 // US-026 — Add / rename / reorder / delete sections [M3, user]
 // US-027 — Add / reorder / delete figure placements [M3, user]
-// US-031 — Edit per-figure alignment [M4, user]
 //
 // PLAN §4.3, §10.2 component layer: "section rename; placement cards; viewer/
-// commenter gating; alignment chips". Assemble screen built by the frontend
+// commenter gating". Assemble screen built by the frontend
 // agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -50,7 +49,6 @@ function fakeStore(
     setFigureAttributes: () => {},
     setFigureCounts: () => {},
     renameFigure: () => {},
-    setFigureAlignment: () => {},
     readAnnotations: () => [],
     createAnnotation: () => {},
     addReply: () => {},
@@ -84,7 +82,6 @@ const figure = (id: string, name: string): FigureDoc => ({
   name,
   source: "library",
   attributes: [{ id: `${id}-a1`, kind: "rise", count: 1, value: "rise", deletedAt: null }],
-  entryAlignment: { qualifier: "facing", direction: "DW" },
   schemaVersion: 1,
   deletedAt: null,
 });
@@ -282,7 +279,7 @@ describe("US-018 Open & view a routine", () => {
     // Intent: opening a routine renders sections → placement cards from the synced docs.
     // Arrange: a sample routine — sections "Intro" (Feather) then "Body" (Three Step).
     // Act: render <Assemble> bound to it. Assert: sections in order as headings; each
-    //   placement card shows the figure name + attribute summary + alignment chip.
+    //   placement card shows the figure name + attribute summary.
     // Covers US-018 AC-1 (sections in order with placement cards).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const routine: RoutineDoc = {
@@ -322,7 +319,6 @@ describe("US-018 Open & view a routine", () => {
     // The placement card shows the figure's attributes as chips (US-018): the
     // fixture's rise value renders as a "rise" chip on both cards.
     expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
-    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
     expect(await axeCheck(container)).toHaveNoViolations(); // a11y smoke (DESIGN-PRINCIPLES)
   });
 
@@ -446,8 +442,8 @@ describe("US-027 Add / reorder / delete figure placements", () => {
   it("lets an editor add a placement, reorder within a section, and soft-delete", async () => {
     // Intent: editors sequence figures via placements (figureRef) within a section.
     // Arrange: an editor on a section with two resolved placements; mutations spied.
-    // Act/Assert: the card shows figure name + scope badge + attribute summary +
-    //   alignment chip; Add opens a dialog → addPlacement; move down → movePlacement;
+    // Act/Assert: the card shows figure name + scope badge + attribute summary;
+    //   Add opens a dialog → addPlacement; move down → movePlacement;
     //   remove → a confirm dialog → deletePlacement.
     // Covers US-027 AC-1 (add/reorder/soft-delete) + AC-3 (card content).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
@@ -465,7 +461,6 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getByText("Feather")).toBeInTheDocument();
     expect(screen.getAllByText(/library|custom|variant/i).length).toBeGreaterThan(0); // scope badge
     expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
-    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
 
     // Add a figure → the picker sheet; create a custom one (no figureType).
     await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
@@ -1465,112 +1460,6 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
   });
 });
 
-describe("US-031 Edit per-figure alignment", () => {
-  /** A routine with one placement → a Feather figure carrying entry = facing/DW. */
-  const alignedRoutine = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
-    const p = placement("p1", "feather");
-    return {
-      routine: {
-        id: "rt_sample",
-        title: "Sample",
-        dance: "foxtrot",
-        ownerId: "u",
-        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
-        annotations: [],
-        schemaVersion: 1,
-        deletedAt: null,
-      },
-      resolved: [{ placement: p, figure: figure("feather", "Feather"), status: "live" }],
-    };
-  };
-
-  it("edits a figure's entry alignment (qualifier + direction) via the store (AC-1)", async () => {
-    // Intent: an editor sets a figure's entry/exit facing-direction from the step
-    //   sheet; the change writes to the figure's doc through the store seam.
-    //   D6: alignment editor now uses chip toggles (QUALIFIER + DIRECTION rows).
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const setFigureAlignment = vi.fn();
-    const { routine, resolved } = alignedRoutine();
-    renderUi(
-      <Assemble
-        routineId="rt_sample"
-        role="editor"
-        store={fakeStore(routine, resolved, { setFigureAlignment })}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    const entryGroup = screen.getByRole("group", { name: /entry alignment/i });
-    expect(entryGroup).toBeInTheDocument();
-    // Click the "LOD" direction chip inside the entry alignment fieldset.
-    await userEvent.click(within(entryGroup).getByRole("button", { name: /^LOD$/i }));
-    expect(setFigureAlignment).toHaveBeenCalledWith("feather", "entry", {
-      qualifier: "facing",
-      direction: "LOD",
-    });
-  });
-
-  it("renders an alignment chip on the placement card (AC-2)", async () => {
-    // Intent: a figure's set alignment shows as a read-only chip on its card.
-    //   D6: chip shows qualifier + readable direction label ("entry facing diag wall").
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
-    // entryAlignment = { qualifier: "facing", direction: "DW" } → "entry facing diag wall"
-    expect(screen.getByText(/entry facing diag wall/i)).toBeInTheDocument();
-  });
-
-  it("has no separate floor / long / short / corner concept (AC-3)", async () => {
-    // Intent: per-figure alignment replaces any floor/side model.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
-    expect(screen.queryByText(/long side|short side|corner/i)).toBeNull();
-  });
-
-  it("hides alignment editing from a viewer", async () => {
-    // Intent: alignment editing is editor-only; a viewer sees chips, not selects.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    expect(screen.queryByRole("group", { name: /entry alignment/i })).toBeNull();
-  });
-
-  it("D6: shows alignment header summary chips ('facing DW → backing LOD') in the step sheet", async () => {
-    // Intent (D6 design 1.20 pin 1): when a figure has entry + exit alignment set,
-    //   the notation sheet shows a compact "facing X → backing Y" header summary.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const p = placement("p1", "feather");
-    const fig: FigureDoc = {
-      ...figure("feather", "Feather"),
-      entryAlignment: { qualifier: "facing", direction: "DW" },
-      exitAlignment: { qualifier: "backing", direction: "LOD" },
-    };
-    const routine: RoutineDoc = {
-      id: "rt_sample",
-      title: "Sample",
-      dance: "foxtrot",
-      ownerId: "u",
-      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
-      annotations: [],
-      schemaVersion: 1,
-      deletedAt: null,
-    };
-    renderUi(
-      <Assemble
-        routineId="rt_sample"
-        role="editor"
-        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // Header summary chips appear in the notation sheet (may also appear on placement card).
-    // Use getAllByText to tolerate both occurrences (placement card + header summary).
-    expect(screen.getAllByText(/facing diag wall/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/backing LOD/i).length).toBeGreaterThan(0);
-  });
-});
-
 describe("D5 'Make it mine' fork banner (read mode, design 1.19)", () => {
   const viewerRoutine = (): RoutineDoc => ({
     id: "rt_sample",
@@ -1944,7 +1833,6 @@ describe("Figure detail read view — reading lens opens read-only, edit is expl
     expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
     expect(detail().queryByRole("button", { name: /^undo$/i })).toBeNull();
     expect(detail().queryByRole("button", { name: /^redo$/i })).toBeNull();
-    expect(detail().queryByRole("heading", { name: /^alignment$/i })).toBeNull();
     expect(detail().queryByRole("button", { name: /^add kind$/i })).toBeNull();
     // The explicit route into editing is the pencil toggle (design figMode).
     expect(detail().getByRole("button", { name: /^edit steps$/i })).toBeInTheDocument();
@@ -1954,10 +1842,9 @@ describe("Figure detail read view — reading lens opens read-only, edit is expl
     await renderReading("editor");
     await openFromReading();
     await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
-    // Editable now: cell affordances + undo/redo + alignment + add-kind arrive…
+    // Editable now: cell affordances + undo/redo + add-kind arrive…
     expect(detail().getAllByRole("button", { name: /at count/i }).length).toBeGreaterThan(0);
     expect(detail().getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
-    expect(detail().getByRole("heading", { name: /^alignment$/i })).toBeInTheDocument();
     // …the per-count recap (authoring aid) shows, and the notes surfaces leave
     // (the editing lens is notation-only, §4.4).
     expect(detail().getByTestId("step-detail-1")).toBeInTheDocument();

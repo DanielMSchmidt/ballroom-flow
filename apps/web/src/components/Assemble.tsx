@@ -3,17 +3,16 @@
 // Opens a routine through the store seam (the ONLY way a component reaches
 // Automerge/the worker — CLAUDE.md §3, enforced by the store boundary test) and
 // renders its sections in order with placement cards (figure name, scope badge,
-// attribute summary, alignment chips). Reads are reactive: a synced edit from
+// attribute summary). Reads are reactive: a synced edit from
 // another client re-renders without reload (US-018 AC-2). An offline data state
 // is shown honestly rather than presenting stale content as live (AC-3).
 //
 // Editing is gated by the `role`/capability table: editors manage sections
-// (US-026) and placements (US-027), notate a figure's steps (US-028) and its
-// alignment (US-031) via the step sheet, and add figures from the library picker
+// (US-026) and placements (US-027), notate a figure's steps (US-028) via the
+// step sheet, and add figures from the library picker
 // (US-027/US-032); viewers/commenters see it all read-only.
 
 import {
-  type Alignment,
   barsForFigure,
   can,
   DANCES,
@@ -1128,29 +1127,6 @@ export function Assemble({
                 <Spinner /> <span className="text-2xs">{t.makingFigureYours}</span>
               </div>
             )}
-            {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
-                chips above the timeline when either entry or exit alignment is set. */}
-            {(notatingFigure.entryAlignment || notatingFigure.exitAlignment) && (
-              <div className="flex items-center gap-2">
-                {notatingFigure.entryAlignment && (
-                  <Chip tone="accent" asStatic>
-                    {t.qualifierLabel[notatingFigure.entryAlignment.qualifier]}{" "}
-                    {t.directionLabel[notatingFigure.entryAlignment.direction]}
-                  </Chip>
-                )}
-                {notatingFigure.entryAlignment && notatingFigure.exitAlignment && (
-                  <span aria-hidden="true" className="text-xs text-ink-faint">
-                    →
-                  </span>
-                )}
-                {notatingFigure.exitAlignment && (
-                  <Chip tone="accent" asStatic>
-                    {t.qualifierLabel[notatingFigure.exitAlignment.qualifier]}{" "}
-                    {t.directionLabel[notatingFigure.exitAlignment.direction]}
-                  </Chip>
-                )}
-              </div>
-            )}
             <FigureTimeline
               role={figureEditing ? role : "viewer"}
               dance={routine.dance}
@@ -1198,14 +1174,6 @@ export function Assemble({
                   : undefined
               }
             />
-            {figureEditing && (
-              <AlignmentEditor
-                figure={notatingFigure}
-                onSet={(edge, alignment) =>
-                  store.setFigureAlignment(notatingFigure.id, edge, alignment)
-                }
-              />
-            )}
             {/* Annotations on this figure (US-039/042): notes/lessons/practice +
                 replies, gated by role. Commenter+ may add; viewer is read-only.
                 Notes surfaces belong to the READING context (owner request
@@ -1764,7 +1732,7 @@ function EmptyState({ canEdit, onAdd }: { canEdit: boolean; onAdd: (name: string
 }
 
 /** One placement → a card (frame 1.7): scope dot + figure name + count pill +
- *  (custom) pill + drag handle; editors get reorder/remove + alignment chips. */
+ *  (custom) pill + drag handle; editors get reorder/remove. */
 function PlacementCard({
   placement,
   figure,
@@ -1995,7 +1963,6 @@ function PlacementCard({
           part={placement.part ?? null}
         />
       </button>
-      <AlignmentChips placement={placement} figure={figure} />
     </div>
   );
 }
@@ -2258,118 +2225,6 @@ function AddFigurePicker({
   );
 }
 
-const ALIGNMENT_QUALIFIERS: Alignment["qualifier"][] = ["facing", "backing", "pointing"];
-const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
-  "LOD",
-  "ALOD",
-  "wall",
-  "centre",
-  "DW",
-  "DC",
-  "DW_against",
-  "DC_against",
-];
-
-/** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
- *  facing-direction the figure starts and ends on. Editor-only. */
-function AlignmentEditor({
-  figure,
-  onSet,
-}: {
-  figure: FigureDoc;
-  onSet: (edge: "entry" | "exit", alignment: Alignment | null) => void;
-}) {
-  const t = useMessages(assembleMessages);
-  return (
-    <div className="flex flex-col gap-3 border-t border-line pt-3">
-      <h3 className="text-sm font-bold text-ink">{t.alignment}</h3>
-      <AlignmentEdge
-        label={t.entry}
-        current={figure.entryAlignment ?? null}
-        onChange={onSet}
-        edge="entry"
-      />
-      <AlignmentEdge
-        label={t.exit}
-        current={figure.exitAlignment ?? null}
-        onChange={onSet}
-        edge="exit"
-      />
-    </div>
-  );
-}
-
-/**
- * One edge (entry/exit) of the alignment editor: qualifier + direction chip rows
- * (design 1.20 — selected chip filled accent, others outlined).
- * Keeps the fieldset/aria-label structure for accessibility.
- */
-function AlignmentEdge({
-  label,
-  edge,
-  current,
-  onChange,
-}: {
-  label: string;
-  edge: "entry" | "exit";
-  current: Alignment | null;
-  onChange: (edge: "entry" | "exit", alignment: Alignment | null) => void;
-}) {
-  const t = useMessages(assembleMessages);
-  const qualifier = current?.qualifier ?? "facing";
-  const direction = current?.direction ?? "";
-  return (
-    <fieldset aria-label={t.edgeAlignmentAria(label)} className="flex flex-col gap-2">
-      {/* QUALIFIER row */}
-      <div>
-        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          {t.qualifier}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {ALIGNMENT_QUALIFIERS.map((q) => (
-            <Chip
-              key={q}
-              tone="accent"
-              // Only show selected when a direction is also set (full alignment exists).
-              selected={qualifier === q && direction !== ""}
-              onClick={() =>
-                onChange(edge, {
-                  qualifier: q,
-                  // Default to LOD if no direction yet (matches existing Select behaviour).
-                  direction: (direction || "LOD") as Alignment["direction"],
-                })
-              }
-            >
-              {t.qualifierLabel[q]}
-            </Chip>
-          ))}
-        </div>
-      </div>
-      {/* DIRECTION row */}
-      <div>
-        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          {t.direction}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Chip tone="neutral" selected={direction === ""} onClick={() => onChange(edge, null)}>
-            {t.notSet}
-          </Chip>
-          {ALIGNMENT_DIRECTIONS.map((d) => (
-            <Chip
-              key={d}
-              tone="accent"
-              selected={direction === d}
-              onClick={() => onChange(edge, { qualifier, direction: d })}
-            >
-              {t.directionLabel[d]}
-            </Chip>
-          ))}
-        </div>
-      </div>
-    </fieldset>
-  );
-}
-
 /**
  * A compact, read-only chip summary of a figure's steps for the edit-view
  * placement card (US-018) — the same per-count chips the reading view shows,
@@ -2435,46 +2290,6 @@ function PlacementAttributes({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Entry/exit + per-placement alignment as read-only chips (editing is US-031).
- * D6: shows qualifier + readable direction label, e.g. "entry facing diag wall".
- */
-function AlignmentChips({ placement, figure }: { placement: Placement; figure: FigureDoc | null }) {
-  const t = useMessages(assembleMessages);
-  const chips: Array<{ key: string; label: string }> = [];
-  if (figure?.entryAlignment) {
-    const { qualifier, direction } = figure.entryAlignment;
-    chips.push({
-      key: "entry",
-      label: t.entryChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (figure?.exitAlignment) {
-    const { qualifier, direction } = figure.exitAlignment;
-    chips.push({
-      key: "exit",
-      label: t.exitChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (placement.perPlacementAlignment) {
-    const { qualifier, direction } = placement.perPlacementAlignment;
-    chips.push({
-      key: "here",
-      label: t.hereChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (chips.length === 0) return null;
-  return (
-    <div className="mt-2 flex flex-wrap gap-1">
-      {chips.map(({ key, label }) => (
-        <Chip key={key} tone="neutral" asStatic>
-          {label}
-        </Chip>
-      ))}
     </div>
   );
 }

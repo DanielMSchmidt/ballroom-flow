@@ -20,7 +20,6 @@
 // Re-export the product document-graph types — single source of truth.
 export type { DanceId } from "../dances";
 export type {
-  Alignment,
   Anchor,
   Annotation,
   AnnotationKind,

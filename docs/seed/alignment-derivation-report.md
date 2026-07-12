@@ -1,10 +1,20 @@
 # Alignment-derivation report — the non-round-trippable figures
 
-**Generated 2026-07-10** by the alignment-derivation migration (PLAN §3.8), from
-`docs/seed/figure-charts.json` at pre-migration HEAD `662663a`, using the shipped
-implementation (`packages/domain/src/alignment.ts`) as the checker. Regenerating this
-report = re-running the classification in `alignment.test.ts` against the frozen oracle
-(`packages/domain/src/__fixtures__/alignment-oracle.ts`).
+> **HISTORICAL (2026-07-12).** Entry/exit alignment was removed from the product
+> model entirely (owner decision — the top-down floor view was dropped; D33
+> reversed, see PLAN §12). The `alignment.ts` module, the oracle fixture, and
+> `alignment.test.ts` referenced below no longer exist; the charted
+> `entryAlignment`/`exitAlignment` values remain in `docs/seed/figure-charts.json`
+> as **provenance only** (never emitted). This report is kept because §A–C document
+> the verified book exits (should alignment ever return) and **§D is still live
+> provenance** for the `direction` vocabulary's legacy unsplit `diagonal` value.
+
+**Generated 2026-07-10** by the alignment-derivation migration (PLAN §3.8 as of that
+date), from `docs/seed/figure-charts.json` at pre-migration HEAD `662663a`, using the
+then-shipped implementation (`packages/domain/src/alignment.ts`) as the checker.
+Regenerating this report = re-running the classification in `alignment.test.ts` against
+the frozen oracle (`packages/domain/src/__fixtures__/alignment-oracle.ts`) — both now
+only in git history.
 
 ## The rule this report is the exception list for
 

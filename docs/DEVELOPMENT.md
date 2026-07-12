@@ -148,8 +148,8 @@ the moment a test calls it.
 
 Automerge throws when a value is `undefined` — `RangeError: Cannot assign
 undefined value at /path` — at `A.from(...)` and inside `A.change(...)`. Our
-logical doc shapes carry optional fields (e.g. `entryAlignment`,
-`perPlacementAlignment`, `baseFigureRef`) that POJOs/fixtures often
+logical doc shapes carry optional fields (e.g. `counts`,
+`baseFigureRef`, `part`) that POJOs/fixtures often
 leave `undefined`, so feeding them straight into Automerge fails. The domain doc
 builders therefore **strip `undefined`-valued keys before `A.from`** (JSON
 drop-the-key semantics — an absent optional simply isn't set, and reads still
@@ -159,7 +159,7 @@ a meaningful tombstone value the CRDT must keep. This is centralized in
 a POJO into Automerge must go through it (or sanitize `undefined` the same way).
 
 ```ts
-// ✗ throws if section.deletedAt or an optional alignment is `undefined`
+// ✗ throws if section.deletedAt or another optional field is `undefined`
 A.from({ sections });
 // ✓ builders run stripUndefined(structuredClone(input)) first
 buildRoutineDoc(routine); // safe — undefined keys dropped, null kept

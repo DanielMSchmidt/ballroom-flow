@@ -1,9 +1,7 @@
 // Assemble screen catalog (see i18n/messages.ts for the pattern: `de: typeof en`
 // makes a missing/extra German key a compile error). Covers the Assemble screen
 // plus its pure timeline-ops helpers. Figure names from the domain library are
-// canonical syllabus names and are NEVER translated; alignment qualifiers/
-// directions are localized for DISPLAY only — the stored values stay English.
-import type { Alignment } from "@weavesteps/domain";
+// canonical syllabus names and are NEVER translated.
 
 const en = {
   // Header / editing toolbar
@@ -138,33 +136,6 @@ const en = {
   portionBack: "Back",
   portionConfirm: "Add to choreo",
   addCustom: "Add custom",
-  // Alignment editor + chips (US-031). Display labels only — stored qualifier/
-  // direction values stay English.
-  alignment: "Alignment",
-  entry: "Entry",
-  exit: "Exit",
-  edgeAlignmentAria: (label: string) => `${label} alignment`,
-  qualifier: "Qualifier",
-  direction: "Direction",
-  notSet: "— not set",
-  qualifierLabel: {
-    facing: "facing",
-    backing: "backing",
-    pointing: "pointing",
-  } satisfies Record<Alignment["qualifier"], string>,
-  directionLabel: {
-    LOD: "LOD",
-    ALOD: "against LOD",
-    wall: "wall",
-    centre: "centre",
-    DW: "diag wall",
-    DC: "diag centre",
-    DW_against: "diag wall ↩",
-    DC_against: "diag centre ↩",
-  } satisfies Record<Alignment["direction"], string>,
-  entryChip: (qualifier: string, direction: string) => `entry ${qualifier} ${direction}`,
-  exitChip: (qualifier: string, direction: string) => `exit ${qualifier} ${direction}`,
-  hereChip: (qualifier: string, direction: string) => `here ${qualifier} ${direction}`,
   // Timeline durations (timeline-ops.ts)
   durationOneBeat: "1 beat",
   durationFractionBeat: (glyph: string) => `${glyph} beat`,
@@ -294,31 +265,6 @@ const de: typeof en = {
   portionBack: "Zurück",
   portionConfirm: "Zur Choreo hinzufügen",
   addCustom: "Eigene hinzufügen",
-  alignment: "Ausrichtung",
-  entry: "Einstieg",
-  exit: "Ausstieg",
-  edgeAlignmentAria: (label) => `Ausrichtung ${label}`,
-  qualifier: "Qualifikator",
-  direction: "Richtung",
-  notSet: "— nicht gesetzt",
-  qualifierLabel: {
-    facing: "Front",
-    backing: "Rücken",
-    pointing: "zeigend",
-  } satisfies Record<Alignment["qualifier"], string>,
-  directionLabel: {
-    LOD: "Tanzrichtung",
-    ALOD: "gegen die Tanzrichtung",
-    wall: "Wand",
-    centre: "Mitte",
-    DW: "diagonal zur Wand",
-    DC: "diagonal zur Mitte",
-    DW_against: "diagonal zur Wand ↩",
-    DC_against: "diagonal zur Mitte ↩",
-  } satisfies Record<Alignment["direction"], string>,
-  entryChip: (qualifier, direction) => `Einstieg ${qualifier} ${direction}`,
-  exitChip: (qualifier, direction) => `Ausstieg ${qualifier} ${direction}`,
-  hereChip: (qualifier, direction) => `hier ${qualifier} ${direction}`,
   durationOneBeat: "1 Schlag",
   durationFractionBeat: (glyph) => `${glyph} Schlag`,
   durationWholeFractionBeats: (whole, glyph) => `${whole}${glyph} Schläge`,
