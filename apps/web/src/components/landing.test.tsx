@@ -20,11 +20,16 @@ describe("Landing", () => {
     expect(screen.getAllByRole("button", { name: /sign in/i }).length).toBeGreaterThan(0);
   });
 
-  it("renders every manifest screenshot with its alt text", async () => {
+  it("renders every landing manifest screenshot with its alt text (diff-only entries stay off)", async () => {
     const { Landing } = await import("./Landing");
     renderUi(<Landing />);
     for (const s of SCREENSHOTS) {
-      expect(screen.getByAltText(s.alt)).toBeInTheDocument();
+      if (s.diffOnly) {
+        // Tracked by the CI visual diff only — never part of the marketing page.
+        expect(screen.queryByAltText(s.alt)).toBeNull();
+      } else {
+        expect(screen.getByAltText(s.alt)).toBeInTheDocument();
+      }
     }
   });
 
