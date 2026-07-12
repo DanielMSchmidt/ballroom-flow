@@ -138,6 +138,7 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await addSection(page, "Intro");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("Feather Step");
     await page.getByLabel("Figure name").press("Enter");
 
@@ -483,6 +484,7 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
       timeout: 15_000,
     });
     await coach.page.getByRole("button", { name: "Add figure" }).click();
+    await coach.page.getByRole("button", { name: /create my own figure/i }).click();
     await coach.page.getByLabel("Figure name").fill("Feather Step");
     await coach.page.getByLabel("Figure name").press("Enter");
     // The custom mint opens its step editor immediately (create-navigates, §4.3).
@@ -558,6 +560,7 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
       timeout: 15_000,
     });
     await owner.page.getByRole("button", { name: "Add figure" }).click();
+    await owner.page.getByRole("button", { name: /create my own figure/i }).click();
     await owner.page.getByLabel("Figure name").fill("Feather Step");
     await owner.page.getByLabel("Figure name").press("Enter");
     // The custom mint opens its step editor immediately (create-navigates, §4.3) —

@@ -42,6 +42,7 @@ test.describe("@smoke figure read view (reading lens opens read-only)", () => {
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("Shadow Feather");
     await page.getByLabel("Figure name").press("Enter");
 

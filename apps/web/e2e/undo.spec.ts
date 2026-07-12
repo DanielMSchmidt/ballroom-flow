@@ -118,6 +118,7 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     expect(docRef).toBeTruthy();
     await addSection(page, "Steps");
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
 

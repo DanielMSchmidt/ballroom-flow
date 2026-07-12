@@ -45,10 +45,12 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").press("Enter");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
 
-    // 4. Add a figure "My Step" to the section (US-027): a typed name always
-    //    mints a custom figure doc + a placement (§4.3 — even a catalog-colliding
-    //    name stays a custom); the card shows the figure name.
+    // 4. Add a figure "My Step" to the section (US-027) via the picker's
+    //    always-present "Create my own figure" row → compose view: a typed name
+    //    always mints a custom figure doc + a placement (§4.3 — even a
+    //    catalog-colliding name stays a custom); the card shows the figure name.
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
 
@@ -129,6 +131,7 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
 

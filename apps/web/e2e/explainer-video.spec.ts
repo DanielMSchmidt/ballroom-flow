@@ -300,10 +300,13 @@ async function tourFlow(page: Page, step: Step, pan: Pan): Promise<void> {
     async () => {
       await page.getByRole("button", { name: "Add figure" }).first().click();
       await pause(page, 1000); // picker opens; the catalogue list is shown up top
-      // The custom-figure form ("Figure name" + "Add custom") sits at the BOTTOM
-      // of the picker, below the crop — pan down to reveal it before we type.
+      // The "Create my own figure" row sits BELOW the list, under the crop —
+      // pan down to reveal it, tap it, and the compose view (name + length)
+      // replaces the list.
       pan.reveal(90);
       await pause(page, 1200);
+      await page.getByRole("button", { name: /create my own figure/i }).click();
+      await pause(page, 900);
       await slowType(page.getByLabel("Figure name"), "My Variation");
       await pause(page, 800);
       await page.getByLabel("Figure name").press("Enter");
