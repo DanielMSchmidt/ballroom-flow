@@ -159,12 +159,20 @@ The section set is the KEP structure with this repo's gates folded in:
   and are not proposals; a WEP that changes what they describe updates them at
   `implemented`, same as PLAN.md.
 
-## 8. Index
+## 8. Index & keeping it current
 
-| WEP | Title | Areas | Status |
-|---|---|---|---|
-| [0001](0001-enhancement-proposal-process/README.md) | Adopt the enhancement-proposal process | process | implemented |
-| [0002](0002-account-doc-live-do/README.md) | Wire the account doc to a live Durable Object | worker, domain, web | provisional |
-| [0003](0003-attribute-predicate-anchors/README.md) | Attribute-predicate annotation anchors | domain, worker, web | deferred |
+**The canonical WEP index lives in [`CLAUDE.md` §1](../../CLAUDE.md)** — one table of every
+WEP with areas, status, and a one-line summary, placed where every contributor (human or
+agent) reads first, so relevant WEPs are picked up *before* execution. There is deliberately
+no second table here — one list, one place to drift.
 
-*(Keep this table current in the same PR that adds or re-statuses a WEP.)*
+Same-change maintenance duties (never a follow-up PR):
+
+- **Adding a WEP** → add its row to the CLAUDE.md index in the PR that creates the directory.
+- **Any status change** → update the WEP's front-matter (`status`, `last-updated`) **and**
+  its CLAUDE.md row together.
+- **Reality moved** — an implementing PR (or any change) alters what a WEP asserts: its
+  design details, scope, ship gate, or a premise a `provisional` WEP rests on → **update the
+  WEP body + `last-updated` in that same change**. This is the same sync rule that protects
+  PLAN.md: a WEP that disagrees with the code, with PLAN.md, or with its index summary is
+  a bug.

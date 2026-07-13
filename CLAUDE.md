@@ -43,6 +43,29 @@ write a WEP.
 > and the implementation as a bug. PLAN §8/§12 are the pre-process decision ledger (D1–D33,
 > Q-entries): citable history, closed to new entries — new decisions get WEP numbers instead.
 
+### WEP index — check before executing any task
+
+The canonical list of every WEP (the [`docs/proposals/README.md`](docs/proposals/README.md)
+process doc defers to this table). **Before executing a task, scan it and read any WEP whose
+areas or summary touch your work** — it carries the design, the ship gate, and the rejected
+alternatives you must not re-propose.
+
+| WEP | Title | Areas | Status | Summary |
+|---|---|---|---|---|
+| [0001](docs/proposals/0001-enhancement-proposal-process/README.md) | Adopt the enhancement-proposal process | process | implemented | The WEP process itself (this table, the lifecycle, the ship-gate rule). Read when changing how changes are made. |
+| [0002](docs/proposals/0002-account-doc-live-do/README.md) | Wire the account doc to a live Durable Object | worker, domain, web | provisional | Give the per-user account doc (family notes + library bookmarks) a real DO like every other document: canonical CRDT state, owner-only boundary, alarm projection into the existing D1 tables (inverting today's write direction), offline/undo for free. Today's D1 rows are the persisted truth; `doc-account.ts` helpers are the built-but-unwired home. Read before touching family notes, bookmarks, `library_entry`, or `FigureTypeNoteIndex`. |
+| [0003](docs/proposals/0003-attribute-predicate-anchors/README.md) | Attribute-predicate annotation anchors | domain, worker, web | deferred | A fourth anchor type targeting every step matching an attribute condition ("all left sways"), dynamically re-resolved on read; deferred to v1.1 because it needs a query layer + a new cross-account index. Canonical spec still in PLAN §11.1. Read before extending the annotation/anchor model. |
+
+**Maintenance duties (same-change, never a follow-up):**
+
+- **New WEP** → add its row here in the PR that creates it.
+- **Status change** (promoted, implemented, deferred, rejected, replaced) → update the row's
+  status **and** the WEP's front-matter in the same PR.
+- **Reality moved** — your change alters something a WEP asserts (design detail, scope, ship
+  gate, or it invalidates a `provisional` premise) → **update the WEP body + `last-updated`
+  in the same change**, exactly as the PLAN.md sync rule works. A WEP that disagrees with the
+  code or with PLAN.md is a bug, and stale summaries here count as drift too.
+
 > **`docs/design/` is the canonical design source — prototype there first.** Any change that
 > affects the UI **starts in Claude Design** (claude.ai/design): update the `docs/design/project/*.dc.html`
 > prototype, then recreate it pixel-for-pixel in the app. Don't design net-new UI directly in

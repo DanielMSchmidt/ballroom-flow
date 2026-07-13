@@ -16,9 +16,11 @@ superseded-by: null
 
 <!--
 Copy this directory to docs/proposals/NNNN-short-slug/ (next free number), fill in the
-front-matter, and delete the comments. A `provisional` WEP needs Summary, Motivation, and
-Proposal with a named scenario — the rest can be sketches. Promotion to `implementable`
-requires every section complete. Keep it as short as honesty allows.
+front-matter, and delete the comments. In the SAME PR, add this WEP's row (number, title,
+areas, status, one-line summary) to the canonical index in CLAUDE.md §1 — and keep both the
+row and this document in sync on every later status/design change. A `provisional` WEP needs
+Summary, Motivation, and Proposal with a named scenario — the rest can be sketches. Promotion
+to `implementable` requires every section complete. Keep it as short as honesty allows.
 -->
 
 ## Summary
