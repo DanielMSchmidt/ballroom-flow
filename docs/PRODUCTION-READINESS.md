@@ -51,6 +51,13 @@ decision before launch.
   behind it). Added a localized, reporting, recoverable boundary (`ui/ErrorBoundary.tsx`) around
   the app root.
 
+**Launch blocker fixed — snapshot IDOR (was §4 item 1)**
+- `GET /api/routines/:id/snapshot` now gates **each referenced figure and variant base** on the
+  caller's actual effective role (`resolveEffectiveRole` — ownership / global / the
+  `placement_edge` cascade), dropping any the caller isn't entitled to read. An authenticated
+  user can no longer inject a placement pointing at a figure ref they've learned and read its
+  content. Tests cover the injected-ref case plus the legitimate owner/member/global paths.
+
 **Tests / CI**
 - **Fixed a stale E2E assertion** — `pwa-a11y.spec.ts` asserted the page title matched
   `/ballroom/i`, but the app was renamed "Weave Steps"; this failed on every matrix run.
@@ -87,52 +94,66 @@ Until they're green, keep `full-e2e` as a visible-but-non-required check.
 
 ## 4. Bigger items needing an owner decision (ranked)
 
-These are not mechanical fixes — each is a strategy/scope call. Recommendation given for each.
+These are not mechanical fixes — each is a strategy/scope call. Owner disposition (2026-07-13)
+recorded inline.
 
-1. **[Launch blocker] Snapshot route reads figures with no per-figure authz (IDOR).**
-   `GET /api/routines/:id/snapshot` gates only on the caller's role on the *routine*, then reads
-   every `figureRef` in that routine's placements with no per-figure check. A user controls their
-   own routine's placements, so they can add a placement pointing at any figure docRef they've
-   learned and read its full content — bypassing cascade revocation (the WS edit path enforces
-   this per-figure; the REST snapshot path does not). *Rec: intersect the figure set with the
-   caller's real access (a server-minted `placement_edge`, or `resolveEffectiveRole` per figure).
-   Hard-gate change (touches the cascade model).*
+1. **[Launch blocker — ✅ FIXED 2026-07-13] Snapshot route read figures with no per-figure authz
+   (IDOR).** `GET /api/routines/:id/snapshot` gated only on the caller's role on the *routine*, then
+   read every `figureRef` in that routine's placements with no per-figure check — so a user could
+   inject a placement pointing at any figure docRef they'd learned and read its content, bypassing
+   cascade revocation. **Fixed:** each figure + variant base is now gated on `resolveEffectiveRole`
+   (ownership / global / `placement_edge` cascade). See §2.
 
-2. **No pre-production environment.** `development` was merged to `main` and deleted (2026-07-05),
+2. **[Owner: accept for now] No pre-production environment.** `development` was merged to `main` and
+   deleted (2026-07-05),
    but `deploy.yml`/`wrangler.toml` still map `development → staging`. Nothing pushes
    `development` anymore, so **staging receives zero deploys** (stale code + un-migrated D1) and
    every `main` merge goes straight to prod with only CI between. *Rec: pick one — repoint staging
    to deploy from `main` (recommended), recreate a `development` integration branch, or formally
    retire staging — then reconcile the ~6 docs that reference the old model.*
 
-3. **No backup / disaster recovery for the canonical data.** Each document's DO SQLite is the
-   source of truth (D1 is only an index). There is no export, off-DO backup, or point-in-time
-   recovery — if a DO's storage is lost, that routine/figure is gone and D1 can't reconstruct it.
-   *Rec: a scheduled per-DO `A.save` snapshot to R2 (also unlocks user data-export, which PLAN §7
-   currently satisfies only via in-app fork).*
+3. **[Owner: agreed — plan it] No backup / disaster recovery for the canonical data.** Each
+   document's DO SQLite is the source of truth (D1 is only an index). No export, off-DO backup, or
+   point-in-time recovery — if a DO's storage is lost, that document is gone and D1 can't
+   reconstruct it. **DR scope, by doc type:**
+   - **Routine docs + account figure docs** (variants + from-scratch customs) — *canonical &
+     irreplaceable; must be backed up.* An account figure lives only in its DO.
+   - **Global (catalog) figure docs** — *rebuildable; no backup needed.* `seedGlobalFigures` is
+     authoritative for seeded content (D30) and self-heals on every deployed env, so a lost catalog
+     DO is reconstructed from the bundled seed on the next request. Caveat: admin in-app edits to a
+     catalog cell not folded back into `docs/seed/*.json` would be lost on a rebuild — but the model
+     already treats the seed as source-of-truth over admin edits, so that's consistent, not new.
+   - **D1 index** — technically re-derivable from the docs' alarm projections, but cheap to snapshot
+     alongside as insurance.
+   *Rec: a scheduled Worker (or DO alarm) that writes each non-global DO's `A.save(doc)` blob to R2
+   keyed by docRef — the same `A.save` the sync path already produces, so nearly free; also unlocks
+   user data-export, which PLAN §7 currently satisfies only via in-app fork.*
 
-4. **Observability is wired but dark.** Sentry reporters (worker + web) and the `clerkConfigured`
-   health probe exist, but `SENTRY_DSN`/`VITE_SENTRY_DSN` are unset in every env, and prod's
-   `CLERK_SECRET_KEY` was never set (auth fails closed). The 2026-07-05 silent-401 outage produced
-   zero Sentry events *because of exactly this*. *Rec: set the DSNs + prod Clerk secret; add an
-   external uptime ping on `/api/health`.*
+4. **[Owner: resolved — Sentry is live and receiving events].** The reporters (worker + web) and
+   the `clerkConfigured` health probe work; the owner confirms Sentry is receiving events. Remaining
+   nice-to-have: an external uptime ping on `/api/health` so an outage is detected before a user
+   reports it. (Original concern — DSNs/prod Clerk secret unset — no longer applies.)
 
-5. **No rate limiting; only routines are quota-capped.** No per-IP/per-user throttle anywhere.
-   `FREE_ROUTINE_CAP=3` caps owned routines, but figures, invites, family-notes, and custom-kinds
-   are **uncapped** — each `POST /api/figures` mints a DO + D1 rows, so one account can create
-   unbounded Durable Objects. *Rec: a Cloudflare rate-limit binding on `/api/*` + a per-user figure
-   ceiling. Product call on the limits.*
+5. **[Owner: accept for now] No rate limiting; only routines are quota-capped.** No per-IP/per-user
+   throttle anywhere. `FREE_ROUTINE_CAP=3` caps owned routines, but figures, invites, family-notes,
+   and custom-kinds are **uncapped** — each `POST /api/figures` mints a DO + D1 rows, so one account
+   can create unbounded Durable Objects. *Rec (deferred): a Cloudflare rate-limit binding on
+   `/api/*` + a per-user figure ceiling.*
 
-6. **No route-level code-splitting.** `App.tsx` statically imports every screen, so the initial
-   chunk pulls the ~3 MB Automerge WASM + the full ~240-figure catalog + Clerk before a routine is
-   even opened — heavy for a mobile-first PWA. *Rec: `lazy()` the Assemble editor + FigureLibrary
-   behind `Suspense`.*
+6. **[Owner: endorsed] No route-level code-splitting.** `App.tsx` statically imports every screen,
+   so the initial chunk pulls the ~3 MB Automerge WASM + the full ~240-figure catalog + Clerk before
+   a routine is even opened — heavy for a mobile-first PWA. *Rec: `lazy()` the Assemble editor +
+   FigureLibrary behind `Suspense`.*
 
-7. **CRDT ordering: `keyBetween` throws on equal-key neighbours.** Two clients concurrently
-   appending to the same section can produce byte-identical `sortKey`s; a later move *between* them
-   calls `keyBetween(x, x)` → uncaught throw in the reorder path. Real but narrow concurrency case,
-   untested. *Rec: widen `keyForMove` to the next distinct neighbour on a bound collision, or mint
-   keys with a per-actor suffix.*
+7. **[Owner: fix proposed] CRDT ordering: `keyBetween` throws on equal-key neighbours.** Two clients
+   concurrently appending to the same section can produce byte-identical `sortKey`s; a later move
+   *between* them calls `keyBetween(x, x)` → uncaught throw in the reorder path. Real but narrow
+   concurrency case, untested. *Proposed fix: make `keyForMove` resilient to a collided bound —
+   widen outward to the nearest strictly-distinct neighbour keys (both available from the sorted
+   list it already operates on) before calling `keyBetween`; append/prepend past an all-equal run at
+   the end/start. Pure, deterministic, local to `order.ts`; no key-minting or wire change. Property
+   test: for any list with a run of equal keys, `keyForMove` to any index never throws and lands the
+   item in the requested position.*
 
 8. **Coverage/gating gaps.** Web coverage is collected but not threshold-gated; contract Zod tests
    don't run on PR (only on deploy); branch coverage (domain 65, worker 66) is the real debt toward
