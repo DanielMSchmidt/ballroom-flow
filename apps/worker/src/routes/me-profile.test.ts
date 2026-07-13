@@ -1,4 +1,5 @@
 import { env, SELF } from "cloudflare:test";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -123,7 +124,7 @@ describe("US-055 Starter routine seeded on first onboarding", () => {
 
     // The user now owns exactly one routine: the starter.
     const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
-    const body = (await list.json()) as { routines: Array<{ title: string; dance: string }> };
+    const body = zRoutineList.parse(await list.json());
     const owned = body.routines.filter(
       (r) => r.title === "Golden Waltz Basic" && r.dance === "waltz",
     );
@@ -152,7 +153,7 @@ describe("US-055 Starter routine seeded on first onboarding", () => {
     await post(); // re-onboard / profile edit
 
     const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
-    const body = (await list.json()) as { routines: Array<{ title: string }> };
+    const body = zRoutineList.parse(await list.json());
     const starters = body.routines.filter((r) => r.title === "Golden Waltz Basic");
     expect(starters).toHaveLength(1); // seeded once, not twice
   });

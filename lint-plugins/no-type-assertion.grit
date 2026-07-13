@@ -14,14 +14,8 @@ language js
 // guarantees it at runtime>` comment on one small, named, documented helper —
 // never an inline cast at a call site.
 or {
-	TsAsExpression() as $cast where {
-		not $cast <: `$expr as const`
-	},
-	TsTypeAssertionExpression() as $cast
+  TsAsExpression() as $cast where { not $cast <: `$expr as const` },
+  TsTypeAssertionExpression() as $cast
 } where {
-	register_diagnostic(
-		span = $cast,
-		message = "Type assertion is banned: it silences the compiler instead of fixing the type. Use a type guard, a Zod parse, or fix the declaration at the source (CLAUDE.md §4). `as const` is allowed.",
-		severity = "error"
-	)
+  register_diagnostic(span=$cast, message="Type assertion is banned: it silences the compiler instead of fixing the type. Use a type guard, a Zod parse, or fix the declaration at the source (CLAUDE.md §4). `as const` is allowed.", severity="error")
 }

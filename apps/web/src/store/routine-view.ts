@@ -222,16 +222,13 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     setFigureAttributes: editAction((s) => s.setFigureAttributes),
     setFigureCounts: editAction((s) => s.setFigureCounts),
     renameFigure: editAction((s) => s.renameFigure),
-    createAnnotation: editAction(
-      (s) =>
-        s.createAnnotation as (
-          ...a: [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
-        ) => void,
-    ),
+    createAnnotation: editAction<
+      [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
+    >((s) => s.createAnnotation),
     addReply: editAction((s) => s.addReply),
     deleteAnnotation: editAction((s) => s.deleteAnnotation),
     deleteReply: editAction((s) => s.deleteReply),
-    createCustomKind: editAction((s) => s.createCustomKind as (...a: [RegistryKind]) => void),
+    createCustomKind: editAction<[RegistryKind]>((s) => s.createCustomKind),
     // Undo returns the soft "superseded" hint synchronously (US-038 AC-3). The
     // editor toolbar only enables Undo once the live store is hydrated, so the
     // common path forwards to live.undo() and gets the real signal. If undo is

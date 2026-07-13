@@ -15,26 +15,33 @@ import { DocConnection, type SocketLike } from "./doc-connection";
 /** A fake socket the test drives: open/close/message all fire on demand. */
 class FakeSocket implements SocketLike {
   binaryType = "blob";
+  // Every listener is stored under the widest registered shape ((ev) => void);
+  // open/close listeners take no parameter, so firing them with a dummy event
+  // is invisible to them — this keeps addEventListener's overloads honest.
   private msg: ((ev: { data: unknown }) => void) | null = null;
-  private opened: (() => void) | null = null;
-  private closed: (() => void) | null = null;
+  private opened: ((ev: { data: unknown }) => void) | null = null;
+  private closed: ((ev: { data: unknown }) => void) | null = null;
   sent: Uint8Array[] = [];
-  addEventListener(type: string, fn: (ev: { data: unknown }) => void): void {
+  addEventListener(type: string, fn: ((ev: { data: unknown }) => void) | (() => void)): void {
     if (type === "message") this.msg = fn;
-    else if (type === "open") this.opened = fn as unknown as () => void;
-    else if (type === "close") this.closed = fn as unknown as () => void;
+    else if (type === "open") this.opened = fn;
+    else if (type === "close") this.closed = fn;
   }
   send(data: ArrayBufferView | ArrayBuffer): void {
-    this.sent.push(new Uint8Array(data as ArrayBuffer));
+    this.sent.push(
+      data instanceof ArrayBuffer
+        ? new Uint8Array(data)
+        : new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+    );
   }
   close(): void {
-    this.closed?.();
+    this.closed?.({ data: undefined });
   }
   fireOpen(): void {
-    this.opened?.();
+    this.opened?.({ data: undefined });
   }
   fireClose(): void {
-    this.closed?.();
+    this.closed?.({ data: undefined });
   }
   fireCaughtUp(): void {
     this.msg?.({ data: SYNC_CAUGHT_UP });

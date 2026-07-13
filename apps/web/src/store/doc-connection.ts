@@ -24,13 +24,25 @@ import {
 import type { DocStorage } from "./doc-storage";
 import { reconcile } from "./reconcile";
 
-/** Minimal structural view of a WebSocket (so tests can inject a fake). */
+/** Minimal structural view of a WebSocket (so tests can inject a fake).
+ *  `send` takes the ArrayBuffer-backed view lib.dom's `WebSocket.send` accepts
+ *  (its `BufferSource` excludes SharedArrayBuffer-backed views), so the global
+ *  `WebSocket` satisfies this interface as-is; {@link isBinary} re-establishes
+ *  that backing for Automerge change bytes with a real runtime check. */
 export interface SocketLike {
   binaryType: string;
-  send(data: ArrayBufferView | ArrayBuffer): void;
+  send(data: Uint8Array<ArrayBuffer>): void;
   close(): void;
   addEventListener(type: "message", fn: (ev: { data: unknown }) => void): void;
   addEventListener(type: "open" | "close", fn: () => void): void;
+}
+
+/** Automerge change/save bytes are always ArrayBuffer-backed at runtime, but
+ *  their `Uint8Array` type leaves the backing buffer wide (ArrayBufferLike);
+ *  this guard narrows it back so `SocketLike.send` (= `WebSocket.send`) takes
+ *  them — a checked narrowing, not an assertion. */
+function isBinary(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
+  return view.buffer instanceof ArrayBuffer;
 }
 
 /** Opens a socket to a URL, optionally offering WS subprotocols (the auth token
@@ -144,7 +156,7 @@ export class DocConnection<T> {
   // reload. This handles the socket-not-open case; the SNAPSHOT-diff resend on
   // (re)connect (#161) is the complementary belt-and-braces that recovers a
   // change which WAS sent into a socket that then died before it hit the wire.
-  private pendingSends: Uint8Array[] = [];
+  private pendingSends: Uint8Array<ArrayBuffer>[] = [];
   // Whether the current connection has received its catch-up SNAPSHOT frame yet.
   // Reset per socket (in `attach`); drives the reconnect-resend at SYNC_CAUGHT_UP
   // for the rare unseeded-server case (no snapshot ⇒ the server is missing ALL
@@ -416,7 +428,7 @@ export class DocConnection<T> {
     // identity of every subtree that didn't — so a one-field change hands React
     // a snapshot where only the changed subtree (and its ancestors) is new, and
     // everything else bails out of re-render. See store/reconcile.ts.
-    const value = reconcile(cached?.value, A.toJS(this.doc) as T);
+    const value = reconcile(cached?.value, A.toJS(this.doc));
     this.jsCache = { key, value };
     return value;
   }
@@ -501,7 +513,9 @@ export class DocConnection<T> {
     }
     let undelivered = false;
     for (const c of changes) {
-      const delivered = this.send(c as Uint8Array);
+      // isBinary always holds (Automerge bytes) — see its doc; a hypothetical
+      // miss degrades to the buffered/pending path, never a dropped change.
+      const delivered = isBinary(c) && this.send(c);
       if (!(delivered && this.syncState === "live")) {
         this.pendingCount += 1;
         undelivered = true;
@@ -614,7 +628,7 @@ export class DocConnection<T> {
   /** Apply one incremental CHANGE frame from a peer. Drops malformed frames. */
   private applyChangeFrame(change: Uint8Array): void {
     try {
-      const [next] = A.applyChanges(this.doc, [change as A.Change]);
+      const [next] = A.applyChanges(this.doc, [change]);
       // Heads unchanged ⇒ duplicate/no-op; skip the notify.
       if (A.getHeads(next).join() === A.getHeads(this.doc).join()) return;
       this.doc = next;
@@ -628,12 +642,12 @@ export class DocConnection<T> {
   /** Send changes the server is missing (reconnect resend, #161). Routes through
    *  `send` so a not-yet-open socket buffers them for the flush on open. */
   private resendMissing(changes: A.Change[]): void {
-    for (const c of changes) this.send(c as Uint8Array);
+    for (const c of changes) if (isBinary(c)) this.send(c);
   }
 
   /** Send one change now if possible. Returns true when it went onto a socket,
    *  false when it could only be buffered for the flush on the next open. */
-  private send(change: Uint8Array): boolean {
+  private send(change: Uint8Array<ArrayBuffer>): boolean {
     if (this.socket) {
       try {
         this.socket.send(change);

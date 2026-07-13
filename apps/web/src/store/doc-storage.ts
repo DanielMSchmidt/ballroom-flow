@@ -25,6 +25,18 @@ export interface DocStorage {
   save(key: string, value: PersistedDoc): Promise<void>;
 }
 
+/** Shape-check an IndexedDB row (structured-clone data is untyped on read). */
+function isPersistedDoc(v: unknown): v is PersistedDoc {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "bytes" in v &&
+    v.bytes instanceof Uint8Array &&
+    "pendingCount" in v &&
+    typeof v.pendingCount === "number"
+  );
+}
+
 const DB_NAME = "weavesteps-docs";
 const STORE = "docs";
 
@@ -61,9 +73,9 @@ export function openIndexedDbDocStorage(): DocStorage | null {
         return await new Promise((resolve) => {
           const req = d.transaction(STORE, "readonly").objectStore(STORE).get(key);
           req.onsuccess = () => {
-            const v = req.result as PersistedDoc | undefined;
+            const v: unknown = req.result;
             // Validate the shape defensively — a corrupt/foreign row reads as absent.
-            resolve(v && v.bytes instanceof Uint8Array ? v : null);
+            resolve(isPersistedDoc(v) ? v : null);
           };
           req.onerror = () => resolve(null);
         });

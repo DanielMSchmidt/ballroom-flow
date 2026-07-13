@@ -2,7 +2,6 @@ import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { uniqueDocName } from "../test-support/do-id";
-import type { DocNamespace } from "../test-support/doc-do-api";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
@@ -15,7 +14,7 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // a non-member 403s. The live WS sync (US-021 boundary) stays the EDIT path.
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 
 let kp: TestKeypair;
 beforeAll(async () => {
@@ -77,10 +76,10 @@ describe("GET /api/routines/:id/snapshot", () => {
       headers: member.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       routine: { title: string; sections: { placements: { figureRef: string }[] }[] };
       figures: Record<string, { name: string; attributes: { value: string }[] }>;
-    };
+    }>();
     expect(body.routine.title).toBe("Gold Waltz");
     expect(body.routine.sections[0]?.placements[0]?.figureRef).toBe(figRef);
     expect(body.figures[figRef]?.name).toBe("Natural Turn");
@@ -162,12 +161,12 @@ describe("GET /api/routines/:id/snapshot", () => {
       headers: member.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       figures: Record<
         string,
         { id: string; baseFigureRef?: string; attributes: { id: string; value: string }[] }
       >;
-    };
+    }>();
     const resolved = body.figures[variantRef];
     // The copy keeps its own identity, provenance ref, and OWN attributes (a1 → "T").
     expect(resolved?.id).toBe(variantRef);

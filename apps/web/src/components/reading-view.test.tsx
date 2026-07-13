@@ -181,7 +181,8 @@ describe("RoutineReadingView — routine-wide picked columns (Builder v3)", () =
     const present = steps.querySelectorAll("[data-present-cell]");
     expect(present.length).toBeGreaterThan(0);
     // …tinted to the Step (direction) kind, not the grey empty-slot border.
-    const dot = present[0] as HTMLElement;
+    const dot = present[0];
+    if (!(dot instanceof HTMLElement)) throw new Error("expected an HTMLElement marker");
     expect(dot.style.background).toContain("bf-kind-direction");
     // …and it's distinct from a truly empty slot (still rendered elsewhere).
     expect(container.querySelectorAll('ol [style*="bf-border-strong"]').length).toBeGreaterThan(0);
@@ -337,10 +338,10 @@ describe("RoutineReadingView — notes margin (Builder v3)", () => {
     });
     expect(screen.getByText("watch the rise")).toBeInTheDocument();
     const cell = screen.getByRole("button", { name: /notes — count 1/i });
-    const avatar = cell.querySelector("span[data-avatar]") as HTMLElement | null;
+    const avatar = cell.querySelector("span[data-avatar]");
     expect(avatar).not.toBeNull();
     expect(avatar?.textContent).toBe("N"); // initial rides inside the dot (#5)
-    const bg = avatar?.style.background;
+    const bg = avatar instanceof HTMLElement ? avatar.style.background : undefined;
     // #1f8a5b === rgb(31, 138, 91) — accept both representations.
     expect(bg === "#1f8a5b" || bg === "rgb(31, 138, 91)").toBe(true);
   });
@@ -540,7 +541,7 @@ describe("RoutineReadingView — pick-up-to-4 column chips (Builder v3)", () => 
     await userEvent.click(screen.getByRole("button", { name: "Show the Body column" })); // 5th → oldest (Step) drops
     expect(screen.getByRole("button", { name: "About Body" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "About Step" })).toBeNull();
-    const stored = JSON.parse(localStorage.getItem("bb_read_columns") ?? "[]") as string[];
+    const stored: unknown = JSON.parse(localStorage.getItem("bb_read_columns") ?? "[]");
     expect(stored).toHaveLength(4);
     expect(stored).not.toContain("step");
   });

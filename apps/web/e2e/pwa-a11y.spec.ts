@@ -30,11 +30,12 @@ test.describe("@smoke PWA install + offline app shell", () => {
     // array is NOT installable); the service worker registers and takes control.
     await page.goto("/");
     await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
-    const manifest = (await page.evaluate(async () => {
+    // Annotated (not asserted): the in-page fetch hands back untyped JSON.
+    const manifest: { name?: string; icons?: unknown[] } = await page.evaluate(async () => {
       const href = document.querySelector('link[rel="manifest"]')?.getAttribute("href");
       if (!href) throw new Error("no manifest link");
       return (await fetch(href)).json();
-    })) as { name?: string; icons?: unknown[] };
+    });
     expect(manifest.name).toBe("Weave Steps");
     expect((manifest.icons ?? []).length).toBeGreaterThanOrEqual(2);
     await serviceWorkerControls(page);

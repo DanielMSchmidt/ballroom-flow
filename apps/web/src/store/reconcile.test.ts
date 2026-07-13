@@ -72,7 +72,7 @@ describe("reconcile — structural sharing across rematerializations", () => {
 
   it("a removed key busts the parent identity", () => {
     const prev = { a: 1, b: 2 };
-    const merged = reconcile(prev, { a: 1 } as unknown as typeof prev);
+    const merged = reconcile(prev, { a: 1 });
     expect(merged).not.toBe(prev);
     expect(merged).toEqual({ a: 1 });
   });

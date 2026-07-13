@@ -2235,7 +2235,7 @@ function AddFigurePicker({
                         .map((a) => a.count),
                     ),
                   ].sort((x, y) => x - y);
-                  const total = canon.length > 0 ? (canon[canon.length - 1] as number) : 3;
+                  const total = canon[canon.length - 1] ?? 3;
                   setPortion({ name: f.name, figureType: f.figureType, total, from: 1, to: total });
                 }}
               >
@@ -2406,12 +2406,12 @@ function ThreadSheetContents({
 
   // Thread title (frame 1.14 header): "Figure Name · step N" for a per-step
   // thread; the figure name + a "whole figure" subtitle for a figure-level one.
-  const isWholeFigure = anchor.count == null;
+  // `stepCount` is read once so its null-check narrows for both uses below.
+  const stepCount = anchor.count;
+  const isWholeFigure = stepCount == null;
   const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
   const figureName = figure?.name ?? anchor.figureRef;
-  const threadTitle = isWholeFigure
-    ? figureName
-    : t.stepThreadTitle(figureName, anchor.count as number);
+  const threadTitle = stepCount == null ? figureName : t.stepThreadTitle(figureName, stepCount);
   const threadSubtitle = isWholeFigure ? t.wholeFigure : undefined;
 
   // A whole-figure thread keys on a `figure` anchor (no count); a per-step thread
@@ -2432,9 +2432,9 @@ function ThreadSheetContents({
       currentUserId={currentUserId}
       annotations={threadAnnotations}
       composeAnchor={
-        isWholeFigure
+        stepCount == null
           ? { type: "figure", figureRef: anchor.figureRef }
-          : { type: "point", figureRef: anchor.figureRef, count: anchor.count as number }
+          : { type: "point", figureRef: anchor.figureRef, count: stepCount }
       }
       threadTitle={threadTitle}
       threadSubtitle={threadSubtitle}

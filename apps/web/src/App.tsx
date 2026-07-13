@@ -1,3 +1,4 @@
+import type { Anchor } from "@weavesteps/domain";
 import { useCallback, useState } from "react";
 import { useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
@@ -97,11 +98,11 @@ function AppHome(): React.JSX.Element {
   const createRoutineEntry = useCallback(
     async (
       routineRef: string,
-      input: { kind: "note" | "lesson" | "practice"; text: string; anchors: unknown[] },
+      input: { kind: "note" | "lesson" | "practice"; text: string; anchors: Anchor[] },
     ) => {
       await createRoutineJournalEntry(
         routineRef,
-        { kind: input.kind, text: input.text, anchors: input.anchors as never },
+        { kind: input.kind, text: input.text, anchors: input.anchors },
         { getToken: () => getToken(), currentUserId },
       );
     },
@@ -174,7 +175,7 @@ function AppHome(): React.JSX.Element {
                   { value: "mine", label: t.libraryTabMine },
                 ]}
                 value={libTab}
-                onChange={(v) => setLibTab(v as "all" | "mine")}
+                onChange={setLibTab}
               />
             </div>
             <FigureLibrary

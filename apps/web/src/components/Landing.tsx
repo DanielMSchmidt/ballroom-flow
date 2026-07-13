@@ -26,11 +26,14 @@ function shot(key: string): Screenshot {
 function Shot({ s, className }: { s: Screenshot; className?: string }): React.JSX.Element {
   // Localized alt text lives in the landing catalog (keyed by the manifest's
   // stable key) so the manifest — shared with the CI pipeline — stays untouched.
+  // Widened to a string index (checked) since the manifest key is a plain string;
+  // an unknown key falls back to the manifest's own English text.
   const t = useMessages(landingMessages);
+  const alts: Record<string, string> = t.alts;
   return (
     <img
       src={imageUrl(s.file)}
-      alt={t.alts[s.key as keyof typeof t.alts] ?? s.alt}
+      alt={alts[s.key] ?? s.alt}
       loading="lazy"
       className={`w-full rounded-xl border border-border-subtle shadow-sm ${className ?? ""}`}
     />
@@ -47,6 +50,8 @@ const FEATURES = ["create", "sections", "notate", "lanes", "reading", "figure"] 
 export function Landing(): React.JSX.Element {
   const t = useMessages(landingMessages);
   const tv = useMessages(explainerMessages);
+  // Same widening as `alts` in Shot: manifest keys are plain strings.
+  const captions: Record<string, string> = t.captions;
   const hero = shot("hero");
   return (
     <div className="min-h-dvh bg-surface text-ink">
@@ -96,7 +101,7 @@ export function Landing(): React.JSX.Element {
                   <Shot s={s} />
                 </div>
                 <p className="flex-1 text-base font-medium text-ink lg:text-lg">
-                  {t.captions[s.key as keyof typeof t.captions] ?? s.caption}
+                  {captions[s.key] ?? s.caption}
                 </p>
               </div>
             );

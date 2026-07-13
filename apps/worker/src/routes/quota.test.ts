@@ -1,4 +1,5 @@
 import { env, SELF } from "cloudflare:test";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { expectIndexedQuery } from "../test-support/explain";
@@ -40,13 +41,11 @@ describe("US-025 Create a routine", () => {
       body: JSON.stringify({ dance: "foxtrot", title: "New" }),
     });
     expect(res.status).toBe(201);
-    const created = (await res.json()) as { docRef: string };
+    const created = await res.json<{ docRef: string }>();
 
     const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
     expect(list.status).toBe(200);
-    const { routines } = (await list.json()) as {
-      routines: Array<{ docRef: string; title: string; dance: string; role: string }>;
-    };
+    const { routines } = zRoutineList.parse(await list.json());
     expect(routines).toContainEqual(
       expect.objectContaining({
         docRef: created.docRef,

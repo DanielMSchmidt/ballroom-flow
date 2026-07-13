@@ -1206,10 +1206,6 @@ export class DocDO extends DurableObject<Env> {
     // field below is still runtime-guarded (`stringOrNull`), because a legacy
     // or never-seeded doc can lack any of them regardless of the static shape.
     const d: Record<string, unknown> = this.getDoc();
-    console.log(
-      "DEBUG projectToD1",
-      JSON.stringify({ meta, dKeys: Object.keys(d), figureType: d.figureType, id: d.id }),
-    );
     const str = stringOrNull;
     const docRef = meta.docRef ?? str(d.id) ?? meta.doName;
     const docFigureType = meta.figureType ?? str(d.figureType);
@@ -1281,9 +1277,19 @@ export class DocDO extends DurableObject<Env> {
 
     if (type === "routine") {
       const doc = this.loadPersisted();
-      // A doc that isn't routine-shaped despite a 'routine' registry type is a
-      // projection mismatch — report no counts rather than misread it.
-      if (!doc || !("sections" in doc)) return none;
+      if (!doc) return none;
+      if (!("sections" in doc)) {
+        // `type` says 'routine' but the persisted doc is figure-shaped — a
+        // stale doc_meta default (setMetadata's bare-key upsert binds
+        // type='routine'). ABORT the whole projection: returning "no counts"
+        // would let the mislabeled upsert run and re-type the figure's registry
+        // row to 'routine' (exactly the 2026-07-02 C2 regression). The
+        // pre-typed code aborted the same way, just accidentally — readRoutine
+        // threw on the figure shape before the upsert could fire.
+        throw new Error(
+          "projection mismatch: doc_meta.type is 'routine' but the persisted doc is figure-shaped",
+        );
+      }
       const routine = readRoutine(doc); // tombstones dropped → live placements only
       // `routine.dance` is already a `DanceId`; `?? "waltz"` covers a legacy doc.
       const beatsPerBar = DANCES[routine.dance ?? "waltz"].beatsPerBar;

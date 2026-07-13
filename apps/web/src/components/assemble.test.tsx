@@ -23,6 +23,13 @@ interface AssembleModule {
   Assemble: ComponentType<Record<string, unknown>>;
 }
 
+/** First match, asserted present (getAllByRole already throws when empty). */
+function firstOf<T>(items: T[]): T {
+  const first = items[0];
+  if (first === undefined) throw new Error("expected at least one match");
+  return first;
+}
+
 // The store seam is the component's ONLY data source (CLAUDE.md §3). We inject a
 // pre-seeded fake store — mirroring how the store itself injects its socket — so
 // the screen renders synced data without a live worker (jsdom has no WS server).
@@ -464,7 +471,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
 
     // Add a figure → the picker sheet; create a custom one (no figureType) via
     // the always-present create row → compose view.
-    await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
+    await userEvent.click(firstOf(screen.getAllByRole("button", { name: /add figure/i })));
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
@@ -511,7 +518,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     // One insert spot for the two placements (before the 2nd only — index 0 has none).
     const spots = screen.getAllByRole("button", { name: /insert figure here/i });
     expect(spots).toHaveLength(1);
-    await userEvent.click(spots[0] as HTMLElement);
+    await userEvent.click(firstOf(spots));
 
     await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
@@ -553,7 +560,7 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     // The "add break" affordance now MINTS a choreo-local Break FIGURE
     // (Builder v3 ④): a Foxtrot bar's worth of empty counts, editable like any
     // figure — legacy break placements above keep rendering as cards.
-    await userEvent.click(screen.getAllByRole("button", { name: /add break/i })[0] as HTMLElement);
+    await userEvent.click(firstOf(screen.getAllByRole("button", { name: /add break/i })));
     expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Break", undefined, 4);
 
     // The −/＋ stepper changes the beat count.
@@ -1434,7 +1441,8 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     //   taps a count, picks a value, and the edit is written to THAT figure's doc.
     // Covers US-028 AC-1 wired end-to-end through the store seam (setFigureAttributes).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const setFigureAttributes = vi.fn();
+    // Typed on the store contract so mock.calls hands the args back typed.
+    const setFigureAttributes = vi.fn<(figureRef: string, attrs: Attribute[]) => void>();
     const { routine, resolved } = oneFigureRoutine();
     renderUi(
       <Assemble
@@ -1450,7 +1458,7 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     // straight through the store, no overlay needed.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
     expect(setFigureAttributes).toHaveBeenCalled();
-    const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
+    const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) ?? ["", []];
     expect(figureRef).toBe("feather");
     expect(attrs.some((a) => a.kind === "direction" && a.value === null && a.count === 1)).toBe(
       true,

@@ -120,12 +120,13 @@ describe("US-043 Custom attribute-kind creation UI", () => {
 
   it("omits the optional fields when left blank (no empty description/valueDefs)", async () => {
     const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
-    const onCreate = vi.fn();
+    // Typed on the sheet's onCreate contract so mock.calls hands the kind back typed.
+    const onCreate = vi.fn<(kind: Record<string, unknown>) => void>();
     renderUi(<AddKindSheet open onCreate={onCreate} />);
     await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
     await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
-    const kind = onCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+    const kind = onCreate.mock.calls[0]?.[0];
     expect(kind).not.toHaveProperty("description");
     expect(kind).not.toHaveProperty("valueDefs");
     expect(kind).not.toHaveProperty("roleAware");

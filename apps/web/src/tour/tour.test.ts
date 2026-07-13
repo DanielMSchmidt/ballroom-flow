@@ -2,6 +2,7 @@
 // wiring. driver.js itself is mocked: these tests pin OUR contract (when a tour
 // runs, what it's configured with), not the library's rendering.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { asTestDouble } from "../test-support/test-double";
 
 const { drive, refresh, driverFactory } = vi.hoisted(() => {
   const drive = vi.fn();
@@ -9,12 +10,21 @@ const { drive, refresh, driverFactory } = vi.hoisted(() => {
   return {
     drive,
     refresh,
-    driverFactory: vi.fn((_config?: unknown) => ({
-      drive,
-      refresh,
-      isActive: () => true,
-      destroy: vi.fn(),
-    })),
+    // The config parameter is typed structurally on the fields these tests
+    // assert, so mock.calls hands them back typed (driver.js's own Config
+    // can't be imported here — vi.hoisted runs before module imports).
+    driverFactory: vi.fn(
+      (_config?: {
+        steps?: { element?: Element }[];
+        allowClose?: boolean;
+        onDestroyed?: () => void;
+      }) => ({
+        drive,
+        refresh,
+        isActive: () => true,
+        destroy: vi.fn(),
+      }),
+    ),
   };
 });
 vi.mock("driver.js", () => ({ driver: driverFactory }));
@@ -61,8 +71,8 @@ describe("startTour", () => {
     const d = startTour("choreos");
     expect(d).not.toBeNull();
     expect(drive).toHaveBeenCalledTimes(1);
-    const config = driverFactory.mock.calls[0]?.[0] as { steps: unknown[] };
-    expect(config.steps).toHaveLength(1);
+    const config = driverFactory.mock.calls[0]?.[0];
+    expect(config?.steps).toHaveLength(1);
   });
 
   it("anchors steps to visible [data-tour] targets", () => {
@@ -70,14 +80,14 @@ describe("startTour", () => {
     // fallback (getClientRects) is what finds the element here.
     const el = document.createElement("button");
     el.setAttribute("data-tour", "new-choreo");
-    el.getClientRects = () => [{}] as unknown as DOMRectList;
+    // Only `.length` is read off the rect list — a full DOMRectList is not
+    // constructible in jsdom, so hand back a one-element double.
+    el.getClientRects = () => asTestDouble<DOMRectList>([{}]);
     document.body.appendChild(el);
     startTour("choreos");
-    const config = driverFactory.mock.calls[0]?.[0] as {
-      steps: { element?: Element }[];
-    };
-    expect(config.steps).toHaveLength(2);
-    expect(config.steps[1]?.element).toBe(el);
+    const config = driverFactory.mock.calls[0]?.[0];
+    expect(config?.steps).toHaveLength(2);
+    expect(config?.steps?.[1]?.element).toBe(el);
   });
 
   it("returns null (and does not drive) when nothing is anchorable", () => {
@@ -93,9 +103,9 @@ describe("startTour", () => {
 
   it("keeps every skip path open (allowClose is not disabled)", () => {
     startTour("choreos");
-    const config = driverFactory.mock.calls[0]?.[0] as { allowClose?: boolean };
+    const config = driverFactory.mock.calls[0]?.[0];
     // driver.js defaults allowClose to true; we must never turn it off.
-    expect(config.allowClose).not.toBe(false);
+    expect(config?.allowClose).not.toBe(false);
   });
 });
 
@@ -130,8 +140,8 @@ describe("startTour re-anchors under late layout changes", () => {
     trigger?.();
     expect(refresh).toHaveBeenCalledTimes(1);
 
-    const config = driverFactory.mock.calls[0]?.[0] as { onDestroyed?: () => void };
-    config.onDestroyed?.();
+    const config = driverFactory.mock.calls[0]?.[0];
+    config?.onDestroyed?.();
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });

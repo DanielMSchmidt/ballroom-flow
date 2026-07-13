@@ -7,7 +7,11 @@
 // the per-document Durable Object binding (M2), typed with the REAL DocDO class
 // so `env.DOC_DO.get(...)` yields a fully-typed RPC stub in tests — the same
 // types production code sees, no mirror interfaces, no casts (CLAUDE.md §4).
-import type { D1Database, DurableObjectNamespace } from "@cloudflare/workers-types";
+//
+// NB: D1Database / DurableObjectNamespace here are the AMBIENT GLOBALS (the
+// same universe `Env`, `new Request(...)` and cloudflare:test's helpers use) —
+// importing them from the "@cloudflare/workers-types" MODULE instead creates a
+// parallel type universe whose Request/Headers/stub types don't unify.
 import type { DocDO } from "../doc-do";
 
 declare module "cloudflare:test" {
@@ -18,5 +22,8 @@ declare module "cloudflare:test" {
     /** Clerk JWT public PEM — tests inject the test keypair for networkless
      *  verify (US-019 positive auth path). Optional; a secret in prod. */
     CLERK_JWT_KEY?: string;
+    /** The raw wrangler.toml text, bound at vitest-config time so config
+     *  assertions (ops.test.ts) run against the REAL deploy manifest. */
+    WRANGLER_TOML?: string;
   }
 }

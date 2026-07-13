@@ -44,7 +44,7 @@ describe("US-024 Share screen (member list + roles)", () => {
       headers: editor.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { members: Array<{ userId: string; role: string }> };
+    const body = await res.json<{ members: Array<{ userId: string; role: string }> }>();
     expect(body.members).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ userId: "u_co", role: "commenter" }),
@@ -82,9 +82,9 @@ describe("US-024 Share screen (member list + roles)", () => {
     const before = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
       headers: editor.authHeaders(),
     });
-    const beforeBody = (await before.json()) as {
+    const beforeBody = await before.json<{
       members: Array<{ userId: string; displayName?: string }>;
-    };
+    }>();
     expect(beforeBody.members.find((m) => m.userId === "u_guest")?.displayName).toBeUndefined();
 
     // The guest loads the app → /api/me caches their Clerk-derived name.
@@ -94,9 +94,9 @@ describe("US-024 Share screen (member list + roles)", () => {
     const after = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
       headers: editor.authHeaders(),
     });
-    const afterBody = (await after.json()) as {
+    const afterBody = await after.json<{
       members: Array<{ userId: string; displayName?: string }>;
-    };
+    }>();
     expect(afterBody.members.find((m) => m.userId === "u_guest")?.displayName).toBe("Guest Dancer");
   });
 
@@ -131,9 +131,9 @@ describe("US-024 Share screen (member list + roles)", () => {
     const res = await SELF.fetch(`https://x/api/docs/${docRef}/members`, {
       headers: editor.authHeaders(),
     });
-    const body = (await res.json()) as {
+    const body = await res.json<{
       members: Array<{ userId: string; displayName?: string }>;
-    };
+    }>();
     expect(body.members.find((m) => m.userId === "u_mailonly")?.displayName).toBe(
       "dancer@example.com",
     );
