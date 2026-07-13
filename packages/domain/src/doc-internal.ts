@@ -7,40 +7,43 @@
 // drop tombstoned entities unless asked to include them.
 import * as A from "@automerge/automerge";
 import type { ReadOptions } from "./doc-types";
+import { isPlainRecord } from "./guards";
 
 /**
- * Recursively drop `undefined`-valued keys. Automerge cannot store `undefined`
- * (it throws "Cannot assign undefined value …"); our logical shapes carry
- * optional fields that are often `undefined` (e.g. an absent `counts`).
+ * Recursively drop `undefined`-valued keys, IN PLACE. Automerge cannot store
+ * `undefined` (it throws "Cannot assign undefined value …"); our logical shapes
+ * carry optional fields that are often `undefined` (e.g. an absent `counts`).
  * Stripping them mirrors JSON semantics: an absent optional simply isn't set,
  * and reads return `undefined` for it just the same. `null` is preserved (a
  * tombstone like `deletedAt: null` is a meaningful CRDT value).
+ *
+ * Mutating a fresh clone (rather than rebuilding a copy) is what keeps this
+ * honestly typed: deleting `undefined`-valued keys from a `T` leaves a `T`
+ * (those keys are the optional ones), so no return-type claim is needed.
  */
-function stripUndefined<V>(value: V): V {
+function stripUndefinedInPlace(value: unknown): void {
   if (Array.isArray(value)) {
-    return value.map((v) => stripUndefined(v)) as unknown as V;
+    for (const v of value) stripUndefinedInPlace(v);
+    return;
   }
-  if (value !== null && typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v !== undefined) out[k] = stripUndefined(v);
+  if (isPlainRecord(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) delete value[k];
+      else stripUndefinedInPlace(v);
     }
-    return out as V;
   }
-  return value;
 }
 
 /** Build an in-memory Automerge doc from a plain logical shape. */
-export function buildDoc<T extends object>(initial: T): A.Doc<T> {
+export function buildDoc<T extends Record<string, unknown>>(initial: T): A.Doc<T> {
   // Deep-clone (so a frozen fixture is never adopted by reference) and drop
-  // undefined-valued optionals, which Automerge refuses to store.
-  //
-  // `A.from` requires a `Record<string, unknown>` (index signature); our doc shapes
-  // are `interface`s, which structurally ARE plain string-keyed objects but lack an
-  // implicit index signature. Bridge that ONE mismatch here so every caller passes a
-  // typed doc and gets `A.Doc<T>` back with no cast (CLAUDE.md §4).
-  const seed = stripUndefined(structuredClone(initial)) as Record<string, unknown>;
-  return A.from(seed) as A.Doc<T>;
+  // undefined-valued optionals, which Automerge refuses to store. The doc-shape
+  // aliases in doc-types.ts satisfy `A.from`'s Record constraint directly (they
+  // are type aliases, not interfaces — see that file's header), so this needs
+  // no casts anywhere.
+  const seed = structuredClone(initial);
+  stripUndefinedInPlace(seed);
+  return A.from(seed);
 }
 
 /** A plain, mutable, detached copy of an Automerge doc's current value. */

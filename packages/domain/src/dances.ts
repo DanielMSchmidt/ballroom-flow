@@ -25,7 +25,9 @@ export type DanceId = (typeof DANCE_IDS)[number];
  * value is rejected, not silently trusted). See CLAUDE.md §4 (keep types honest).
  */
 export function isDanceId(x: unknown): x is DanceId {
-  return typeof x === "string" && (DANCE_IDS as readonly string[]).includes(x);
+  // Plain widening ASSIGNMENT (checked by the compiler), not an assertion.
+  const ids: readonly string[] = DANCE_IDS;
+  return typeof x === "string" && ids.includes(x);
 }
 
 /** Per-dance metadata driving timing, phrasing, and applicability. */

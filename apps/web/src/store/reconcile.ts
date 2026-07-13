@@ -33,12 +33,14 @@ function hasStringId(v: unknown): v is { id: string } {
 function reconcileArray(prev: unknown[], next: unknown[]): unknown[] {
   // Entity lists (every element carries a string `id`) match by id so inserts/
   // reorders keep untouched elements' identities; otherwise match by index.
-  const byId = next.every(hasStringId) && prev.every(hasStringId);
-  const prevById = byId ? new Map(prev.map((p) => [(p as { id: string }).id, p])) : null;
+  const prevById =
+    next.every(hasStringId) && prev.every(hasStringId) ? new Map(prev.map((p) => [p.id, p])) : null;
 
   let unchanged = prev.length === next.length;
   const out = next.map((item, i) => {
-    const counterpart = prevById ? prevById.get((item as { id: string }).id) : prev[i];
+    // `prevById` non-null ⇒ every `next` element passed hasStringId above; the
+    // re-check just carries that proof into this closure for the compiler.
+    const counterpart = prevById && hasStringId(item) ? prevById.get(item.id) : prev[i];
     const merged = reconcile(counterpart, item);
     if (merged !== prev[i]) unchanged = false;
     return merged;
@@ -65,14 +67,20 @@ function reconcileObject(
  * Return `next` with every subtree that deep-equals its counterpart in `prev`
  * replaced by the `prev` reference (maximal structural sharing). The result is
  * always content-identical to `next`; only identities differ.
+ *
+ * The public overload states the content-identity contract (`T` in → `T` out);
+ * the implementation is structural — reconcileArray/Object return subtrees of
+ * `prev` exactly where they deep-equal `next`, which is the guarantee the type
+ * system can't express (hence the untyped implementation signature, not a cast).
  */
-export function reconcile<T>(prev: unknown, next: T): T {
+export function reconcile<T>(prev: unknown, next: T): T;
+export function reconcile(prev: unknown, next: unknown): unknown {
   if (Object.is(prev, next)) return next;
   if (Array.isArray(prev) && Array.isArray(next)) {
-    return reconcileArray(prev, next) as T;
+    return reconcileArray(prev, next);
   }
   if (isPlainObject(prev) && isPlainObject(next)) {
-    return reconcileObject(prev, next) as T;
+    return reconcileObject(prev, next);
   }
   return next;
 }

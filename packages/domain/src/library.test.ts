@@ -5,7 +5,6 @@ import {
   figureMatchesLibraryOrigin,
   globalFigureRef,
   LIBRARY_FIGURES,
-  type LibraryFigure,
   libraryFigureByRef,
   libraryFiguresForDance,
   libraryGroupsForDance,
@@ -32,7 +31,7 @@ describe("figure library catalog", () => {
     // The Feather Step is the canonical Foxtrot opener (figureType is its slug).
     const feather = foxtrot.find((f) => /feather step/i.test(f.name));
     expect(feather).toBeTruthy();
-    expect((feather as LibraryFigure).figureType).toBe("feather-step");
+    expect(feather?.figureType).toBe("feather-step");
     // A waltz-only figure must not leak into the foxtrot list.
     expect(foxtrot.some((f) => /natural spin turn/i.test(f.name))).toBe(false);
   });
@@ -181,7 +180,7 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
     dance: "waltz" as const,
     figureType: "natural-turn",
     name: "Natural Turn",
-    attributes: (origin.attributes ?? []).map((a) => ({ ...a })) as Attribute[],
+    attributes: (origin.attributes ?? []).map((a) => ({ ...a })),
   };
 
   it("matches when the placed figure equals its catalog origin", () => {
@@ -199,13 +198,15 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
   });
 
   it("does NOT match once a new attribute is added", () => {
-    const added = {
-      ...picked,
-      attributes: [
-        ...picked.attributes,
-        { id: "extra", kind: "sway", count: 1, role: "leader", value: "left", deletedAt: null },
-      ] as Attribute[],
+    const extra: Attribute = {
+      id: "extra",
+      kind: "sway",
+      count: 1,
+      role: "leader",
+      value: "left",
+      deletedAt: null,
     };
+    const added = { ...picked, attributes: [...picked.attributes, extra] };
     expect(figureMatchesLibraryOrigin(added)).toBe(false);
   });
 
@@ -213,9 +214,7 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
     // Deleting an attribute diverges from the origin → no longer a pristine pick.
     const withDeletion = {
       ...picked,
-      attributes: picked.attributes.map((a, i) =>
-        i === 0 ? { ...a, deletedAt: 123 } : a,
-      ) as Attribute[],
+      attributes: picked.attributes.map((a, i) => (i === 0 ? { ...a, deletedAt: 123 } : a)),
     };
     expect(figureMatchesLibraryOrigin(withDeletion)).toBe(false);
   });

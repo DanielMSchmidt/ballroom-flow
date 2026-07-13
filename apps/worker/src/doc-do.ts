@@ -34,9 +34,11 @@ import {
   type EffectiveRole,
   type FigureDoc,
   isDanceId,
+  isPlainRecord,
   libraryFigureByRef,
   migrateDraft,
   newId,
+  parseAnchors,
   partBeatSpan,
   type RoutineDoc,
   readFigure,
@@ -76,6 +78,12 @@ export type DocOp =
  * on every WS connect) for a write-heavy doc that never sets metadata.
  */
 const COMPACT_THRESHOLD = 64;
+
+/** Non-empty string, else null — for reading identity fields off docs that may
+ *  predate them at runtime (typed required, but legacy docs can lack them). */
+function stringOrNull(v: unknown): string | null {
+  return typeof v === "string" && v !== "" ? v : null;
+}
 
 /** Order-independent equality of two Automerge head sets (same logical state). */
 function headsEqual(a: string[], b: string[]): boolean {
@@ -202,13 +210,13 @@ export class DocDO extends DurableObject<Env> {
    * no doc yet (fresh DO or post-eviction). If SQLite is empty this is a
    * never-before-used document, so we seed the empty routine and persist its
    * creation changes — making the cold-load path self-contained.
+   *
+   * Shape-agnostic: returns the dual-host union. Routine-only paths narrow via
+   * {@link getRoutineDoc}; shape-independent paths (sync ingest, compaction,
+   * the D1 projection's loose field reads) use this directly.
    */
-  private getDoc(): A.Doc<RoutineDoc> {
-    // The ROUTINE accessor: it materializes an empty routine on first touch and is
-    // only reached by routine-hosting paths (setMetadata/applyOp/getSnapshot). A
-    // figure DO never routes here — it reads via `loadPersisted<FigureDoc>()`. So
-    // narrowing the dual-host field to RoutineDoc here is sound by construction.
-    if (this.doc) return this.doc as A.Doc<RoutineDoc>;
+  private getDoc(): A.Doc<RoutineDoc | FigureDoc> {
+    if (this.doc) return this.doc;
 
     const persisted = this.loadPersisted();
     if (persisted) {
@@ -228,13 +236,26 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * The ROUTINE accessor: {@link getDoc} narrowed to the routine shape by a
+   * RUNTIME check — every routine doc (including the empty placeholder) carries
+   * a `sections` list; figure docs never do. Reached only by routine-hosting
+   * paths (applyChange/getSnapshot/buildChangeForTest); a figure doc arriving
+   * here is a routing bug, surfaced loudly instead of silently misread.
+   */
+  private getRoutineDoc(): A.Doc<RoutineDoc> {
+    const doc = this.getDoc();
+    if ("sections" in doc) return doc;
+    throw new Error("expected a routine doc in this DO (figure doc reached a routine-only path)");
+  }
+
+  /**
    * Load the doc from SQLite, or `null` if this DO has never been seeded (no
    * snapshot and no changes). Unlike {@link getDoc} this NEVER auto-materializes
    * a placeholder — so the connect catch-up can read a not-yet-seeded doc without
    * persisting an empty routine that would (a) trip seedDoc's no-clobber and
    * (b) push a bogus empty routine to the client.
    */
-  private loadPersisted<T = RoutineDoc>(): A.Doc<T> | null {
+  private loadPersisted(): A.Doc<RoutineDoc | FigureDoc> | null {
     const sql = this.ctx.storage.sql;
     const snapRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
@@ -246,17 +267,31 @@ export class DocDO extends DurableObject<Env> {
 
     // Start from the compacted snapshot (if the alarm has run), then replay any
     // incremental changes recorded after it. Without a snapshot, replay all
-    // changes from an empty doc (the US-014 path).
-    let doc = snapRows[0] !== undefined ? A.load<T>(new Uint8Array(snapRows[0].data)) : A.init<T>();
+    // changes from an empty doc (the US-014 path). Typed as the dual-host union
+    // — which one this DO actually hosts was fixed at seed time; figure-shaped
+    // callers narrow via {@link loadPersistedFigure}'s runtime check.
+    let doc =
+      snapRows[0] !== undefined
+        ? A.load<RoutineDoc | FigureDoc>(new Uint8Array(snapRows[0].data))
+        : A.init<RoutineDoc | FigureDoc>();
     if (changeRows.length > 0) {
-      const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
+      const changes = changeRows.map((r) => new Uint8Array(r.data));
       [doc] = A.applyChanges(doc, changes);
     }
-    // `migrateOnLoad` is doc-shape-agnostic (it only reads `schemaVersion` and runs
-    // the pure migrate ladder) but is typed to `A.Doc<RoutineDoc>` because it adopts
-    // `this.doc`. Bridge that one boundary here so a caller can request a typed view
-    // (e.g. `loadPersisted<FigureDoc>()`) cast-free at the call site.
-    return this.migrateOnLoad(doc as A.Doc<RoutineDoc>) as A.Doc<T>;
+    return this.migrateOnLoad(doc);
+  }
+
+  /**
+   * {@link loadPersisted} narrowed to the FIGURE shape by a RUNTIME check
+   * (figure docs carry `figureType`; routine docs never do). Null when nothing
+   * is persisted — or when this DO turns out to host a routine doc, which for
+   * every figure-shaped caller (figure snapshot, seed reconcile) means "not the
+   * figure you were looking for" and fails safe as missing.
+   */
+  private loadPersistedFigure(): A.Doc<FigureDoc> | null {
+    const doc = this.loadPersisted();
+    if (doc && "figureType" in doc) return doc;
+    return null;
   }
 
   /**
@@ -281,16 +316,16 @@ export class DocDO extends DurableObject<Env> {
    * compute the identical upgrade; the sortKey backfill's convergence guarantee
    * carries over unchanged.
    */
-  private migrateOnLoad(doc: A.Doc<RoutineDoc>): A.Doc<RoutineDoc> {
+  private migrateOnLoad(doc: A.Doc<RoutineDoc | FigureDoc>): A.Doc<RoutineDoc | FigureDoc> {
     // `doc.schemaVersion` is untyped-optional at RUNTIME (a pre-envelope doc, or
-    // any doc a bug seeded without one) even though `RoutineDoc` declares it
+    // any doc a bug seeded without one) even though the doc shapes declare it
     // required — mirrors `runLadder`'s "an untagged doc is treated as v1".
     const version: unknown = doc.schemaVersion;
     if (typeof version === "number" && version >= CURRENT_SCHEMA_VERSION) return doc;
 
     const migrating = A.clone(doc, { actor: MIGRATION_ACTOR });
     const migrated = A.change(migrating, { message: MIGRATION_MESSAGE }, (draft) => {
-      migrateDraft(draft as unknown as { schemaVersion: number } & Record<string, unknown>);
+      migrateDraft(draft);
     });
     const changes = A.getChanges(doc, migrated);
     if (changes.length === 0) return doc; // migrateDraft found nothing to do.
@@ -311,15 +346,12 @@ export class DocDO extends DurableObject<Env> {
 
   /**
    * Append one or more raw change blobs to the SQLite change log. An Automerge
-   * `Change` is an opaque branded `Uint8Array`, hence the casts below.
+   * `Change` is a plain `Uint8Array` alias, so its buffer is directly readable.
    */
   private persist(changes: A.Change[]): void {
     for (const change of changes) {
       // Store the raw bytes; Cloudflare's SQLite accepts an ArrayBuffer BLOB.
-      const buf = (change as Uint8Array).buffer.slice(
-        (change as Uint8Array).byteOffset,
-        (change as Uint8Array).byteOffset + (change as Uint8Array).byteLength,
-      );
+      const buf = change.buffer.slice(change.byteOffset, change.byteOffset + change.byteLength);
       this.ctx.storage.sql.exec("INSERT INTO changes (data) VALUES (?)", buf);
     }
   }
@@ -334,13 +366,13 @@ export class DocDO extends DurableObject<Env> {
    * doc). Seeding here also means a later connect finds real content and never
    * auto-materializes the empty-routine placeholder (#109).
    */
-  async seedDoc(content: Record<string, unknown>): Promise<void> {
+  async seedDoc(content: RoutineDoc | FigureDoc): Promise<void> {
     if (this.doc) return;
     const sql = this.ctx.storage.sql;
     const hasSnap = sql.exec("SELECT 1 FROM snapshot WHERE id = 0 LIMIT 1").toArray().length > 0;
     const hasChanges = sql.exec("SELECT 1 FROM changes LIMIT 1").toArray().length > 0;
     if (hasSnap || hasChanges) return; // already a real doc — don't clobber
-    const seeded = buildDoc(content) as A.Doc<RoutineDoc>;
+    const seeded = buildDoc(content);
     this.persist(A.getAllChanges(seeded));
     this.doc = seeded;
     // Push the seed to any client already connected (e.g. a collaborator who
@@ -362,10 +394,11 @@ export class DocDO extends DurableObject<Env> {
   async reconcileSeed(seed: SeedFigureContent): Promise<{ changed: boolean }> {
     // Read WITHOUT materializing: `getDoc()` would fabricate an empty ROUTINE in an
     // unseeded (or D1-vs-DO-diverged) figure DO and then persist that corruption.
-    // `loadPersisted` returns null when nothing is stored → nothing to reconcile;
-    // the seeder only reaches this method once the figure's D1 row exists, and the
-    // seedDoc path (not this one) is responsible for the initial import.
-    const before = this.loadPersisted<FigureDoc>();
+    // `loadPersistedFigure` returns null when nothing is stored (or the doc isn't
+    // figure-shaped) → nothing to reconcile; the seeder only reaches this method
+    // once the figure's D1 row exists, and the seedDoc path (not this one) is
+    // responsible for the initial import.
+    const before = this.loadPersistedFigure();
     if (!before) return { changed: false };
     const { doc: after, changed } = reconcileSeededFigure(before, seed);
     if (!changed) return { changed: false };
@@ -393,7 +426,7 @@ export class DocDO extends DurableObject<Env> {
    * sync wire.)
    */
   async applyChange(op: DocOp): Promise<Uint8Array> {
-    const before = this.getDoc();
+    const before = this.getRoutineDoc();
     const after = this.applyOp(before, op);
     const changes = A.getChanges(before, after);
     this.doc = after;
@@ -413,8 +446,10 @@ export class DocDO extends DurableObject<Env> {
     this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
     // representative payload. The FULL set is what's persisted (and, in US-015,
-    // synced) — so a future multi-change op loses nothing.
-    return changes[changes.length - 1] as Uint8Array;
+    // synced) — so a future multi-change op loses nothing. (The `??` is
+    // unreachable — `changes` is non-empty here — but keeps the index honest
+    // under noUncheckedIndexedAccess.)
+    return changes.at(-1) ?? new Uint8Array();
   }
 
   /**
@@ -440,7 +475,7 @@ export class DocDO extends DurableObject<Env> {
     // US-015 hot sync path cheap: a structural-only change pays nothing extra and
     // never arms the journal-projection alarm.
     let touchedAnnotations = false;
-    const [after] = A.applyChanges(before, [change as A.Change], {
+    const [after] = A.applyChanges(before, [change], {
       patchCallback: (patches) => {
         if (touchedAnnotations) return;
         for (const p of patches) {
@@ -454,12 +489,12 @@ export class DocDO extends DurableObject<Env> {
     this.doc = after;
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
-    this.persist([change as A.Change]);
+    this.persist([change]);
     await this.maybeScheduleCompaction();
     // Project the journal promptly only when this change touched annotations
     // (the live WS path for lesson/practice authoring). See applyChange's gate.
     if (touchedAnnotations) await this.maybeScheduleProjection();
-    this.broadcast([change as A.Change], from);
+    this.broadcast([change], from);
     return true;
   }
 
@@ -478,9 +513,9 @@ export class DocDO extends DurableObject<Env> {
           authorId: typeof op.authorId === "string" ? op.authorId : "tester",
           kind,
           text: String(op.text),
-          anchors: Array.isArray(op.anchors)
-            ? (op.anchors as Anchor[])
-            : [{ type: "figure", figureRef: "f1" }],
+          // Runtime-validated (strict-write posture, D7): a malformed anchor
+          // list falls back to the default instead of entering the doc.
+          anchors: parseAnchors(op.anchors) ?? [{ type: "figure", figureRef: "f1" }],
         });
       }
       case "addReply":
@@ -497,7 +532,7 @@ export class DocDO extends DurableObject<Env> {
 
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
-    return readRoutine(this.getDoc());
+    return readRoutine(this.getRoutineDoc());
   }
 
   /**
@@ -511,7 +546,7 @@ export class DocDO extends DurableObject<Env> {
    * caller renders it as missing.
    */
   async getFigureSnapshot(): Promise<FigureDoc | null> {
-    const doc = this.loadPersisted<FigureDoc>();
+    const doc = this.loadPersistedFigure();
     if (!doc) return null;
     return readFigure(doc);
   }
@@ -650,12 +685,16 @@ export class DocDO extends DurableObject<Env> {
    */
   private commenterChangeAllowed(change: Uint8Array, sub: string | undefined): boolean {
     if (!sub) return false; // pre-upgrade attachment (no identity) → fail closed
-    const before = this.getDoc();
+    const current = this.getDoc();
+    // Annotations only exist on routine docs, so a commenter change against a
+    // figure doc can never be legal — fail closed without attempting the read.
+    if (!("sections" in current)) return false;
+    const before: A.Doc<RoutineDoc> = current;
     let after: A.Doc<RoutineDoc>;
     try {
       // Clone first: A.applyChanges may free its input handle; the live doc must
       // stay valid for the subsequent real ingest.
-      [after] = A.applyChanges(A.clone(before), [change as A.Change]);
+      [after] = A.applyChanges(A.clone(before), [change]);
     } catch {
       return false;
     }
@@ -713,12 +752,7 @@ export class DocDO extends DurableObject<Env> {
       .toArray()[0]?.doName;
     if (!doName) return; // never connected → nothing attached
     for (const ws of this.ctx.getWebSockets()) {
-      let att: SocketAttachment | null = null;
-      try {
-        att = ws.deserializeAttachment() as SocketAttachment | null;
-      } catch {
-        // fall through to fail-closed close below
-      }
+      const att = this.socketAttachment(ws);
       if (!att?.sub) {
         try {
           ws.close(1008, "access revoked");
@@ -740,13 +774,27 @@ export class DocDO extends DurableObject<Env> {
     }
   }
 
-  /** The connection's attachment (role + verified identity), or null. */
+  /**
+   * The connection's attachment (role + verified identity), or null. The
+   * attachment crosses the hibernation-storage boundary untyped, so it is
+   * runtime-VALIDATED on the way back in (never cast): a missing, garbled, or
+   * wrong-shaped attachment — including an unknown role value — yields null,
+   * which every caller treats as fail-closed (read-only / close).
+   */
   private socketAttachment(ws: WebSocket): SocketAttachment | null {
+    let raw: unknown;
     try {
-      return (ws.deserializeAttachment() as SocketAttachment | null) ?? null;
+      raw = ws.deserializeAttachment();
     } catch {
       return null; // no/garbled attachment (e.g. a never-accepted socket) → read-only
     }
+    if (!isPlainRecord(raw)) return null;
+    const { actor, role, sub } = raw;
+    if (typeof actor !== "string") return null;
+    if (role !== "viewer" && role !== "commenter" && role !== "editor" && role !== "owner") {
+      return null;
+    }
+    return { actor, role, ...(typeof sub === "string" ? { sub } : {}) };
   }
 
   /**
@@ -795,7 +843,7 @@ export class DocDO extends DurableObject<Env> {
     if (sockets.length === 0) return;
     const failed = new Set<WebSocket>();
     for (const change of changes) {
-      const bytes = frame(SYNC_FRAME_CHANGE, change as Uint8Array);
+      const bytes = frame(SYNC_FRAME_CHANGE, change);
       for (const ws of sockets) {
         if (ws === from || failed.has(ws)) continue;
         try {
@@ -872,9 +920,9 @@ export class DocDO extends DurableObject<Env> {
     // handle — applying it to the live `this.doc` would free the DO's doc
     // (Automerge outdated-doc edge). The clone shares history, so the resulting
     // change still applies cleanly onto this.doc and advances it.
-    const base = A.clone(this.getDoc());
+    const base = A.clone(this.getRoutineDoc());
     const after = this.applyOp(base, op);
-    return (A.getChanges(base, after)[0] ?? new Uint8Array()) as Uint8Array;
+    return A.getChanges(base, after)[0] ?? new Uint8Array();
   }
 
   // ── US-016: DO alarm — compaction + D1 index projection + invite expiry ─────
@@ -988,25 +1036,13 @@ export class DocDO extends DurableObject<Env> {
   }
 
   private async migrateLegacyBreaksInner(): Promise<void> {
-    const doc = this.loadPersisted();
-    if (!doc) return;
-    const raw = doc as unknown as {
-      id?: string;
-      ownerId?: string;
-      dance?: string;
-      sections?: Array<{
-        deletedAt?: number | null;
-        placements?: Array<{
-          id: string;
-          source?: string;
-          beats?: number;
-          deletedAt?: number | null;
-        }>;
-      }>;
-    };
-    if (!Array.isArray(raw.sections)) return; // figure/account docs — nothing to do
+    const persisted = this.loadPersisted();
+    // Figure/account docs (no `sections`) — nothing to do. The isArray check
+    // stays as runtime defence for a malformed doc that carries the key.
+    if (!persisted || !("sections" in persisted) || !Array.isArray(persisted.sections)) return;
+    const doc: A.Doc<RoutineDoc> = persisted;
     const breaks: Array<{ id: string; beats: number }> = [];
-    for (const section of raw.sections) {
+    for (const section of doc.sections) {
       if (section?.deletedAt != null) continue;
       for (const p of section?.placements ?? []) {
         if (p?.source === "break" && p.deletedAt == null) {
@@ -1021,10 +1057,12 @@ export class DocDO extends DurableObject<Env> {
         "SELECT doName, docRef FROM doc_meta WHERE id = 0",
       )
       .toArray()[0];
-    const routineRef = meta?.docRef ?? raw.id ?? meta?.doName;
-    const ownerId = raw.ownerId;
+    // `doc.id`/`ownerId` are typed required, but a legacy doc can lack them at
+    // runtime — the fallbacks stay live defence, not dead code.
+    const routineRef = meta?.docRef ?? stringOrNull(doc.id) ?? meta?.doName;
+    const ownerId = stringOrNull(doc.ownerId);
     if (!routineRef || !ownerId) return; // can't attribute the minted docs yet
-    const dance = isDanceId(raw.dance) ? raw.dance : "waltz";
+    const dance = isDanceId(doc.dance) ? doc.dance : "waltz";
 
     // 1. Mint + project + seed every Break figure BEFORE touching the routine.
     const refByPlacement = new Map<string, string>();
@@ -1062,14 +1100,13 @@ export class DocDO extends DurableObject<Env> {
       migrating,
       { message: "migrate legacy breaks (Builder v3 ④)" },
       (draft) => {
-        const d = draft as unknown as typeof raw;
-        for (const section of d.sections ?? []) {
+        for (const section of draft.sections ?? []) {
           for (const p of section?.placements ?? []) {
             const ref = p && refByPlacement.get(p.id);
             if (!ref) continue;
-            (p as unknown as { figureRef?: string }).figureRef = ref;
-            delete (p as { source?: string }).source;
-            delete (p as { beats?: number }).beats;
+            p.figureRef = ref;
+            delete p.source;
+            delete p.beats;
           }
         }
       },
@@ -1164,16 +1201,16 @@ export class DocDO extends DurableObject<Env> {
     // id/ownerId/title|name/dance (+ figureType for figures), and reading the
     // doc also means a CRDT title rename actually projects. doc_meta remains an
     // explicit override (tests, special cases).
-    const d = this.getDoc() as unknown as {
-      id?: unknown;
-      scope?: unknown;
-      ownerId?: unknown;
-      title?: unknown;
-      name?: unknown;
-      dance?: unknown;
-      figureType?: unknown;
-    };
-    const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+    // The dual-host doc read as a LOOSE record: both shapes are string-keyed
+    // type aliases, so this is a plain checked widening (no cast) — and every
+    // field below is still runtime-guarded (`stringOrNull`), because a legacy
+    // or never-seeded doc can lack any of them regardless of the static shape.
+    const d: Record<string, unknown> = this.getDoc();
+    console.log(
+      "DEBUG projectToD1",
+      JSON.stringify({ meta, dKeys: Object.keys(d), figureType: d.figureType, id: d.id }),
+    );
+    const str = stringOrNull;
     const docRef = meta.docRef ?? str(d.id) ?? meta.doName;
     const docFigureType = meta.figureType ?? str(d.figureType);
     // `type` is CONFIDENT when meta declares it, or the doc's shape shows it
@@ -1244,7 +1281,9 @@ export class DocDO extends DurableObject<Env> {
 
     if (type === "routine") {
       const doc = this.loadPersisted();
-      if (!doc) return none;
+      // A doc that isn't routine-shaped despite a 'routine' registry type is a
+      // projection mismatch — report no counts rather than misread it.
+      if (!doc || !("sections" in doc)) return none;
       const routine = readRoutine(doc); // tombstones dropped → live placements only
       // `routine.dance` is already a `DanceId`; `?? "waltz"` covers a legacy doc.
       const beatsPerBar = DANCES[routine.dance ?? "waltz"].beatsPerBar;
@@ -1279,7 +1318,7 @@ export class DocDO extends DurableObject<Env> {
     }
 
     if (type === "global-figure" || type === "account-figure") {
-      const doc = this.loadPersisted<FigureDoc>();
+      const doc = this.loadPersistedFigure();
       if (!doc) return none;
       const figure = A.toJS(doc);
       // `dance` (the D1-projected column) is a plain string; fall back through it
@@ -1352,7 +1391,7 @@ export class DocDO extends DurableObject<Env> {
     const docRef = meta.docRef ?? meta.doName;
 
     const doc = this.loadPersisted();
-    if (!doc) return;
+    if (!doc || !("sections" in doc)) return; // not routine-shaped → no journal rows
     const routine = readRoutine(doc, { includeDeleted: true });
     const journalAnnotations = routine.annotations.filter(
       (a) => a.kind === "lesson" || a.kind === "practice",

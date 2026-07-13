@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   FEATHER_FOXTROT,
+  type FigureDoc,
   importDomain,
   makeAttribute,
   makePlacement,
   makeSection,
   SAMPLE_ROUTINE,
 } from "./__fixtures__";
+import { asInvalid } from "./__fixtures__/invalid";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-005 — Routine + figure document schemas [M1, system/developer]
@@ -88,7 +90,7 @@ describe("US-005 Routine + figure document schemas", () => {
     // the whole snapshot fan-out.
     const { buildFigureDoc, readFigure } = await importDomain();
     const { attributes: _a, ...noAttrs } = FEATHER_FOXTROT;
-    const doc = buildFigureDoc(noAttrs as unknown as typeof FEATHER_FOXTROT);
+    const doc = buildFigureDoc(asInvalid<FigureDoc>(noAttrs));
     expect(() => readFigure(doc)).not.toThrow();
     expect(readFigure(doc).attributes).toEqual([]);
   });

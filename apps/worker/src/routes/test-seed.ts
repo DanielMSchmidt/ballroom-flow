@@ -4,80 +4,17 @@
 // see wrangler.toml [env.e2e]) — never in dev/staging/prod, where the flag is
 // unset and the routes 404. They mirror the seedDb shape used by the worker
 // unit tests, but write to the live D1 binding via drizzle.
-import { CURRENT_SCHEMA_VERSION } from "@weavesteps/domain";
+import { zSeedBody } from "@weavesteps/contract";
+import { CURRENT_SCHEMA_VERSION, isDanceId, parseAttributeRead } from "@weavesteps/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { documentRegistry, membership, users } from "../db/schema";
 import type { Env } from "../index";
 import { seedGlobalFigures } from "../seed-global-figures";
 
-interface SeedBody {
-  users?: {
-    id: string;
-    displayName: string;
-    identityColor: string;
-    plan?: "free" | "pro";
-    /** D31 admin seam — lets an E2E journey stand up an admin (global-figure editor). */
-    isAdmin?: boolean;
-    routineCapOverride?: number | null;
-  }[];
-  /** ⟳v5 — stand up the REAL global figure docs from the bundled catalog (the same
-   *  additive seeder the admin route runs) so a journey can place live catalog
-   *  references. */
-  seedGlobalFigures?: boolean;
-  docs?: {
-    docRef: string;
-    type: string;
-    ownerId: string;
-    doName?: string;
-    title?: string | null;
-    dance?: string | null;
-    figureType?: string | null;
-    /** When type==="routine" and sections are present, the routine DO is server-seeded. */
-    sections?: {
-      id: string;
-      name: string;
-      placements: { id: string; figureRef: string }[];
-    }[];
-  }[];
-  memberships?: {
-    id?: string;
-    docRef: string;
-    userId: string;
-    role: "viewer" | "commenter" | "editor";
-  }[];
-  invites?: {
-    id: string;
-    docRef: string;
-    role: "viewer" | "commenter" | "editor";
-    expiresAt: number;
-    redeemedAt?: number | null;
-  }[];
-  /** Seed figure docs: D1 registry row + figure DO CRDT content. */
-  figures?: {
-    docRef: string;
-    scope: "global" | "account";
-    ownerId: string;
-    name: string;
-    dance: string;
-    figureType: string;
-    attributes?: unknown[];
-  }[];
-  /** Direct placement_edge rows (routine→figure) for the access cascade. */
-  placementEdges?: { routineRef: string; figureRef: string }[];
-  /** Direct journal_entry rows (T6) — the routine-scoped projection, for tests
-   *  that want entries without driving the DO alarm. */
-  journalEntries?: {
-    entryId: string;
-    routineRef: string;
-    authorId: string;
-    kind: "lesson" | "practice";
-    text: string;
-    anchors?: unknown[];
-    createdAt?: number;
-    deletedAt?: number | null;
-  }[];
-}
+// The seed body's shape + runtime validator live in @weavesteps/contract
+// (`zSeedBody`) — parsed at the route below, so a malformed seed fails loudly
+// instead of being silently cast and corrupting a journey's fixtures.
 
 export const testSeed = new Hono<{ Bindings: Env }>();
 
@@ -107,7 +44,7 @@ testSeed.post("/api/test/reset", async (c) => {
 
 /** Insert index rows (users / docs / memberships / invites). Idempotent upserts. */
 testSeed.post("/api/test/seed", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as SeedBody;
+  const body = zSeedBody.parse(await c.req.json().catch(() => ({})));
   const d = drizzle(c.env.DB);
   const now = Date.now();
   let seeded = 0;
@@ -154,7 +91,7 @@ testSeed.post("/api/test/seed", async (c) => {
       await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(doc.docRef)).seedDoc({
         id: doc.docRef,
         title: doc.title ?? "",
-        dance: doc.dance ?? "waltz",
+        dance: isDanceId(doc.dance) ? doc.dance : "waltz",
         ownerId: doc.ownerId,
         sections: doc.sections.map((s) => ({
           id: s.id,
@@ -215,10 +152,12 @@ testSeed.post("/api/test/seed", async (c) => {
       scope: f.scope,
       ownerId: f.ownerId,
       figureType: f.figureType,
-      dance: f.dance,
+      dance: isDanceId(f.dance) ? f.dance : "waltz",
       name: f.name,
       source: f.scope === "global" ? "library" : "custom",
-      attributes: f.attributes ?? [],
+      // Lenient-read parse (throws on structurally-invalid seed attributes —
+      // a bad fixture should fail at seed time, not corrupt the journey).
+      attributes: (f.attributes ?? []).map((a) => parseAttributeRead(a)),
       schemaVersion: CURRENT_SCHEMA_VERSION,
       deletedAt: null,
     });

@@ -32,11 +32,11 @@ describe("US-002 Dance metadata registry", () => {
     // Assert: Waltz/Viennese = 3 beats/bar & 6 phrase beats; rest = 4 & 8.
     // Covers AC-2 (beatsPerBar/phraseBeats), and the §10.2 single-source rule.
     const { DANCES } = await importDomain();
-    for (const id of ["waltz", "viennese_waltz"] as DanceId[]) {
+    for (const id of ["waltz", "viennese_waltz"] as const) {
       expect(DANCES[id].beatsPerBar).toBe(3);
       expect(DANCES[id].phraseBeats).toBe(6);
     }
-    for (const id of ["quickstep", "foxtrot", "tango"] as DanceId[]) {
+    for (const id of ["quickstep", "foxtrot", "tango"] as const) {
       expect(DANCES[id].beatsPerBar).toBe(4);
       expect(DANCES[id].phraseBeats).toBe(8);
     }

@@ -24,7 +24,11 @@ export async function withOfflineCache<T>(key: string, fetcher: () => Promise<T>
     if (offline) {
       try {
         const raw = window.localStorage.getItem(key);
-        if (raw != null) return JSON.parse(raw) as T;
+        if (raw != null) {
+          // Round-trip of the JSON this function serialized as a `T` above.
+          const cached: T = JSON.parse(raw);
+          return cached;
+        }
       } catch {
         // Corrupt/unreadable cache — fall through to the real error.
       }

@@ -9,6 +9,14 @@ import {
   SAMPLE_ROUTINE,
   SAMPLE_STUDENT,
 } from "./__fixtures__";
+import { isPlainRecord } from "./guards";
+
+/** Change-log length of an opaquely-typed (shim `DocHandle`) Automerge doc —
+ *  narrowed at runtime instead of asserted (CLAUDE.md §4). */
+function historyLength(doc: unknown): number {
+  if (!isPlainRecord(doc)) throw new Error("expected an in-memory Automerge doc");
+  return A.getHistory(doc).length;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-007 — Choreo fork (clone) + US-008 — Copy-on-write (auto-variant)
@@ -46,10 +54,8 @@ describe("US-007 Choreo fork (clone)", () => {
     const origin = buildRoutineDoc(SAMPLE_ROUTINE);
     const fork = cloneRoutine(origin, { byUser: SAMPLE_STUDENT });
     // The product builders return in-memory Automerge docs; A.getHistory reads
-    // the change log (the shim types them opaquely, hence the cast).
-    expect(A.getHistory(fork as A.Doc<unknown>).length).toBeGreaterThanOrEqual(
-      A.getHistory(origin as A.Doc<unknown>).length,
-    );
+    // the change log (the shim types them opaquely, hence the runtime narrowing).
+    expect(historyLength(fork)).toBeGreaterThanOrEqual(historyLength(origin));
   });
 
   it("is frozen: a later edit to the origin does NOT appear in the clone", async () => {
@@ -235,31 +241,30 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     extra?: Partial<{ role: "leader" | "follower" | null; deletedAt: number | null }>,
   ) => ({ id, kind, count, role: extra?.role ?? null, value, deletedAt: extra?.deletedAt ?? null });
 
-  const tumbleTurnBase = () =>
-    ({
-      id: "gfig_slowfox_tumble-turn",
-      scope: "global",
-      ownerId: "app",
-      figureType: "tumble-turn",
-      dance: "foxtrot",
-      name: "Tumble Turn",
-      source: "library",
-      bars: 2,
-      attributes: [
-        attr("b1", "direction", 1, "forward"),
-        attr("b2", "footwork", 1, "HT"),
-        attr("b3", "direction", 2, "side"),
-        attr("b4", "direction", 4, "back"),
-        attr("b5", "footwork", 4, "TH"),
-        attr("b6", "direction", 5, "close"),
-      ],
-      schemaVersion: 1,
-      deletedAt: null,
-    }) as const;
+  const tumbleTurnBase = (): FigureDoc => ({
+    id: "gfig_slowfox_tumble-turn",
+    scope: "global",
+    ownerId: "app",
+    figureType: "tumble-turn",
+    dance: "foxtrot",
+    name: "Tumble Turn",
+    source: "library",
+    bars: 2,
+    attributes: [
+      attr("b1", "direction", 1, "forward"),
+      attr("b2", "footwork", 1, "HT"),
+      attr("b3", "direction", 2, "side"),
+      attr("b4", "direction", 4, "back"),
+      attr("b5", "footwork", 4, "TH"),
+      attr("b6", "direction", 5, "close"),
+    ],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
 
   it("spawnVariant owns nothing until touched — it resolves to exactly the base", async () => {
     const { resolveFigure, spawnVariant } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never;
+    const base = structuredClone(tumbleTurnBase());
     const placement = { id: "p1", figureRef: "gfig_slowfox_tumble-turn", deletedAt: null };
     const { variant, placement: rePointed } = spawnVariant(placement, base, "u_me");
     expect(variant.attributes).toEqual([]); // owns no beats
@@ -280,9 +285,7 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
 
   it("the Passing Tumble Turn: base additions reach untouched beats only (§5.2)", async () => {
     const { resolveFigure, spawnVariant } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never as {
-      attributes: ReturnType<typeof attr>[];
-    };
+    const base = structuredClone(tumbleTurnBase());
     // The dancer re-choreographs beats 4–5 (the passing ending).
     const edited = [
       attr("b1", "direction", 1, "forward"),
@@ -293,7 +296,7 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
       attr("v3", "direction", 5, "forward"),
     ];
     const placement = { id: "p1", figureRef: "gfig", deletedAt: null };
-    const { variant } = spawnVariant(placement, base as never, "u_me", edited);
+    const { variant } = spawnVariant(placement, base, "u_me", edited);
     // The variant owns ONLY beats 4 and 5 (beats 1/2 unchanged → unowned).
     expect([...(await importDomain()).ownedBeats(variant)].sort()).toEqual([4, 5]);
 
@@ -304,7 +307,7 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
       attr("n3", "sway", 4, "to_R"),
       attr("n4", "sway", 5, "none"),
     );
-    const resolved = resolveFigure(base as never, variant);
+    const resolved = resolveFigure(base, variant);
     const at = (beat: number) =>
       resolved.attributes
         .filter((a: { count: number }) => Math.floor(a.count) === beat)
@@ -320,31 +323,27 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
 
   it("a base edit never rewrites an owned beat; a variant edit never touches the base (#17)", async () => {
     const { spawnVariant } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never as {
-      attributes: { id: string }[];
-    };
+    const base = structuredClone(tumbleTurnBase());
     const before = JSON.stringify(base);
     const edited = [attr("v1", "direction", 4, "forward")];
-    spawnVariant({ id: "p1", figureRef: "g", deletedAt: null }, base as never, "u_me", edited);
+    spawnVariant({ id: "p1", figureRef: "g", deletedAt: null }, base, "u_me", edited);
     expect(JSON.stringify(base)).toBe(before); // base untouched by the spawn
   });
 
   it("clearing a base-charted beat = copy-down + tombstone, so it reads empty (#16)", async () => {
     const { resolveFigure, variantAttributesForEdit } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never as {
-      attributes: ReturnType<typeof attr>[];
-    };
+    const base = structuredClone(tumbleTurnBase());
     // The edit clears beat 5 entirely (removes "b6") and keeps the rest.
     const edited = base.attributes.filter((a) => Math.floor(a.count) !== 5);
-    const owned = variantAttributesForEdit(base as never, edited, { now: 123 });
+    const owned = variantAttributesForEdit(base, edited, { now: 123 });
     // Beat 5 is owned via a TOMBSTONED copy-down of the base's value.
     const beat5 = owned.filter((a: { count: number }) => Math.floor(a.count) === 5);
     expect(beat5).toHaveLength(1);
     expect(beat5[0]?.deletedAt).toBe(123);
     expect(beat5[0]?.id).not.toBe("b6"); // fresh id — never the base's
     // Resolution shows nothing live on beat 5, even after a base edit there.
-    const variant = { ...structuredClone(tumbleTurnBase()), attributes: owned } as never;
-    const resolved = resolveFigure(base as never, variant);
+    const variant: FigureDoc = { ...structuredClone(tumbleTurnBase()), attributes: owned };
+    const resolved = resolveFigure(base, variant);
     const liveBeat5 = resolved.attributes.filter(
       (a: { count: number; deletedAt?: number | null }) =>
         Math.floor(a.count) === 5 && a.deletedAt == null,
@@ -354,12 +353,10 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
 
   it("an unchanged full-timeline edit yields NO owned beats (stays fully live)", async () => {
     const { variantAttributesForEdit } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never as {
-      attributes: ReturnType<typeof attr>[];
-    };
+    const base = structuredClone(tumbleTurnBase());
     // Same content, different ids — the comparison is by MEANING (#20).
     const edited = base.attributes.map((a) => ({ ...a, id: `re-${a.id}` }));
-    expect(variantAttributesForEdit(base as never, edited)).toEqual([]);
+    expect(variantAttributesForEdit(base, edited)).toEqual([]);
   });
 
   it("§9 back-compat: a legacy full copy owning EVERY beat resolves to exactly its own content", async () => {
@@ -369,12 +366,10 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     // current content (zero behavior change for existing data). Only a base value on
     // a beat the copy never used would appear.
     const { resolveFigure } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never as {
-      attributes: ReturnType<typeof attr>[];
-    };
+    const base = structuredClone(tumbleTurnBase());
     // The legacy copy: its OWN full timeline (different ids + a diverged beat-4 value),
     // owning beats 1,2,4,5 — every beat the base charts.
-    const legacyCopy = {
+    const legacyCopy: FigureDoc = {
       ...structuredClone(tumbleTurnBase()),
       id: "fig_legacy",
       scope: "account",
@@ -389,10 +384,10 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
         attr("c5", "footwork", 4, "T"),
         attr("c6", "direction", 5, "close"),
       ],
-    } as never;
+    };
     // The catalog later gains a NEW KIND on beats the copy already OWNS — must NOT leak.
     base.attributes.push(attr("n1", "sway", 1, "to_L"), attr("n4", "sway", 4, "to_R"));
-    const resolved = resolveFigure(base as never, legacyCopy);
+    const resolved = resolveFigure(base, legacyCopy);
     // Exactly the copy's own attributes — no base values on any owned beat.
     expect(resolved.attributes.map((a: { id: string }) => a.id).sort()).toEqual([
       "c1",
@@ -406,7 +401,7 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
 
   it("copyFigureForFork keeps a variant a VARIANT (live base link) under a new owner", async () => {
     const { copyFigureForFork } = await importDomain();
-    const variant = {
+    const variant: FigureDoc = {
       ...structuredClone(tumbleTurnBase()),
       id: "fig_variant",
       scope: "account",
@@ -414,30 +409,31 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
       source: "custom",
       baseFigureRef: "gfig_slowfox_tumble-turn",
       attributes: [attr("v1", "direction", 4, "forward")],
-    } as never;
+    };
     const copy = copyFigureForFork(variant, "u_forker");
     expect(copy.id).not.toBe("fig_variant");
     expect(copy.ownerId).toBe("u_forker");
     expect(copy.baseFigureRef).toBe("gfig_slowfox_tumble-turn"); // catalog flow-in continues
     expect(copy.attributes).toEqual([attr("v1", "direction", 4, "forward")]);
-    // Deep copy: mutating the copy's attributes never touches the origin's.
-    (copy.attributes[0] as { value: string }).value = "back";
-    expect((variant as { attributes: { value: string }[] }).attributes[0]?.value).toBe("forward");
+    // Deep copy: mutating the copy's (single) attribute never touches the origin's.
+    for (const a of copy.attributes) a.value = "back";
+    expect(variant.attributes[0]?.value).toBe("forward");
   });
 
   it("variant-authored bars override the base; unauthored resolve live (§2.5.2)", async () => {
     const { resolveFigure } = await importDomain();
-    const base = structuredClone(tumbleTurnBase()) as never;
-    const bare = {
-      ...structuredClone(tumbleTurnBase()),
+    const base = structuredClone(tumbleTurnBase());
+    // A bare variant that never authored `bars` (drop the base fixture's key).
+    const { bars: _bars, ...noBars } = structuredClone(tumbleTurnBase());
+    const bare: FigureDoc = {
+      ...noBars,
       id: "v",
       scope: "account",
       baseFigureRef: "g",
       attributes: [],
-    } as never as Record<string, unknown>;
-    delete bare.bars;
-    expect(resolveFigure(base, bare as never).bars).toBe(2); // falls back to the base
-    const authored = { ...(bare as object), bars: 3 } as never;
+    };
+    expect(resolveFigure(base, bare).bars).toBe(2); // falls back to the base
+    const authored: FigureDoc = { ...bare, bars: 3 };
     expect(resolveFigure(base, authored).bars).toBe(3); // variant override wins
   });
 });

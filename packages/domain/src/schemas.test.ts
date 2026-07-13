@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { importDomain } from "./__fixtures__";
+import { isPlainRecord } from "./guards";
+
+/** The first issue's `params` bag — domain-rule ZodErrors carry a stable
+ *  `code` (+ the offending data) there. Runtime-narrowed, no casts. */
+function firstIssueParams(e: unknown): Record<string, unknown> | undefined {
+  const issue = e instanceof z.ZodError ? e.issues[0] : undefined;
+  return isPlainRecord(issue) && isPlainRecord(issue.params) ? issue.params : undefined;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-012 — Zod schemas (lenient read / strict write) [M1, system/developer]
@@ -184,12 +192,10 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as {
-        params?: { code?: string; kind?: string; dance?: string };
-      };
-      expect(issue.params?.code).toBe("dance_not_applicable");
-      expect(issue.params?.kind).toBe("rise");
-      expect(issue.params?.dance).toBe("tango");
+      const params = firstIssueParams(e);
+      expect(params?.code).toBe("dance_not_applicable");
+      expect(params?.kind).toBe("rise");
+      expect(params?.dance).toBe("tango");
     }
   });
 
@@ -244,9 +250,9 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string; kind?: string } };
-      expect(issue.params?.code).toBe("unknown_value");
-      expect(issue.params?.kind).toBe("position");
+      const params = firstIssueParams(e);
+      expect(params?.code).toBe("unknown_value");
+      expect(params?.kind).toBe("position");
     }
 
     // (c) off-grid count → ZodError with params.code "count_off_grid"
@@ -255,8 +261,7 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string } };
-      expect(issue.params?.code).toBe("count_off_grid");
+      expect(firstIssueParams(e)?.code).toBe("count_off_grid");
     }
   });
 });

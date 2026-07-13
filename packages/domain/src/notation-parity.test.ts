@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 
@@ -120,11 +121,14 @@ describe("migration v2 — step → footwork retag", () => {
         { id: "a2", kind: "rise", count: 1, value: "commence" },
       ],
     };
-    const migrated = migrate(figure) as typeof figure;
+    const migrated = migrate(figure);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // value preserved verbatim (lossless); other kinds untouched
-    expect(migrated.attributes[0]).toMatchObject({ kind: "footwork", value: "HT" });
-    expect(migrated.attributes[1]).toMatchObject({ kind: "rise" });
+    const attributes = z
+      .array(z.object({ kind: z.string(), value: z.string() }))
+      .parse(migrated.attributes);
+    expect(attributes[0]).toMatchObject({ kind: "footwork", value: "HT" });
+    expect(attributes[1]).toMatchObject({ kind: "rise" });
   });
 
   it("leaves a routine doc's content untouched apart from the version bump + sortKeys", () => {
@@ -138,10 +142,14 @@ describe("migration v2 — step → footwork retag", () => {
         { id: "s2", name: "Body", placements: [] },
       ],
     };
-    const migrated = migrate(routine) as unknown as {
-      schemaVersion: number;
-      sections: Array<{ id: string; name: string; sortKey?: string }>;
-    };
+    const migrated = z
+      .object({
+        schemaVersion: z.number(),
+        sections: z.array(
+          z.object({ id: z.string(), name: z.string(), sortKey: z.string().optional() }),
+        ),
+      })
+      .parse(migrate(routine));
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.sections.map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(migrated.sections.map((s) => s.name)).toEqual(["Intro", "Body"]);

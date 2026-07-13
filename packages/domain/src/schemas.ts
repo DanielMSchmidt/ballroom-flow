@@ -13,10 +13,44 @@
 // so adding a registry value or a dance automatically widens what writes accept —
 // the schema is data, not a hand-maintained enum.
 import { z } from "zod";
-import type { DanceId } from "./dances";
-import type { Attribute } from "./doc-types";
+import { type DanceId, isDanceId } from "./dances";
+import type { Anchor, Attribute } from "./doc-types";
 import { isOnEighthGrid } from "./timing";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
+
+/**
+ * Runtime validator for the {@link Anchor} union — the honest way to accept an
+ * anchor arriving UNTYPED (an RPC op payload, a JSON body): `zAnchor.parse(x)`
+ * yields a compiler-checked `Anchor` backed by a runtime check, where an
+ * `x as Anchor` would just silence the compiler (CLAUDE.md §4). The explicit
+ * `z.ZodType<Anchor>` annotation pins this schema to the domain type — if the
+ * union gains a member, this fails to compile until the schema follows.
+ */
+/**
+ * Parse an UNTYPED value as an anchor list (lenient read posture): returns the
+ * validated anchors, or `null` when the value is not a valid anchor array —
+ * the caller picks its own fallback. Exists so RPC/JSON consumers (e.g. the
+ * worker's DocOp path) get runtime-validated anchors without importing zod.
+ */
+export function parseAnchors(input: unknown): Anchor[] | null {
+  const result = z.array(zAnchor).safeParse(input);
+  return result.success ? result.data : null;
+}
+
+export const zAnchor: z.ZodType<Anchor> = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("point"),
+    figureRef: z.string(),
+    count: z.number(),
+    role: z.enum(["leader", "follower"]).nullish(),
+  }),
+  z.object({ type: z.literal("figure"), figureRef: z.string() }),
+  z.object({
+    type: z.literal("figureType"),
+    figureType: z.string(),
+    danceScope: z.union([z.custom<DanceId>(isDanceId), z.literal("all")]),
+  }),
+]);
 
 /** The structural shape shared by read + write (value validity differs). */
 const baseAttribute = z.object({
