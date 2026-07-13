@@ -98,6 +98,11 @@
       "groupName": "vite",
       "matchUpdateTypes": ["major", "minor"],
       "automerge": false
+    },
+    {
+      "description": "Hold TypeScript on the 5.x line: 7.x is the native (Go) compiler preview, which drops the `typescript.sys` JS compiler API that @remotion/bundler (the explainer-video build) depends on — the v7 auto-major (#199) broke it. `tsc` itself works on 7, but tooling that uses TypeScript's JS API does not. Revisit once Remotion (and the rest of the toolchain) supports the native compiler.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ]
 }
