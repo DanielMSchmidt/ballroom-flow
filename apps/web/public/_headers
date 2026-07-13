@@ -1,0 +1,11 @@
+# Security response headers for the static SPA assets (Cloudflare Workers Assets
+# reads this file from the deployed bundle root). The worker sets the same
+# headers on its /api/* + WS surface (apps/worker/src/index.ts); this covers the
+# HTML/JS/CSS the assets binding serves directly, which the worker never sees
+# (run_worker_first is scoped to /api/*). No Content-Security-Policy yet — a CSP
+# must be validated against Clerk / Sentry / the Automerge WASM loader first and
+# is a separate, owner-gated change; these three are safe, standard hardening.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

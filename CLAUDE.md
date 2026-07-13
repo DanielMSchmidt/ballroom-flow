@@ -118,7 +118,7 @@ A **graph of Automerge documents**, one per Durable Object; **D1 is a pure index
 
 - **`packages/domain/`** — pure TS, in-memory Automerge, no I/O. Document schemas, `resolve(base, overlay)` variant resolution, fork/clone + copy-on-write, ATTRIBUTE_REGISTRY, float-count timing, history-based per-user undo, Zod, migrations. Fully unit/property-testable.
 - **`packages/contract/`** — Zod schemas + Hono RPC `typeof app` types shared across web & worker.
-- **`apps/worker/`** — Hono routes (list/search/invite/quota/export), Clerk middleware, and the **per-document SQLite-backed Durable Object** (Automerge host + storage adapter + WebSocket sync + permission boundary + alarm).
+- **`apps/worker/`** — Hono routes (list/search/invite/quota/figures/fork/journal/library/profile), Clerk middleware, and the **per-document SQLite-backed Durable Object** (Automerge host + storage adapter + WebSocket sync + permission boundary + alarm).
 - **`apps/web/`** — React PWA. **Components never touch Automerge or the RPC client directly — only through `apps/web/src/store/`** (the typed reactive seam) and `apps/web/src/ui` (design system).
 
 ---

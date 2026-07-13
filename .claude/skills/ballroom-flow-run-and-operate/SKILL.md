@@ -136,10 +136,12 @@ deployed production auth fails closed. Staging is live and sign-in works.
 
 ## 4. D1 migrations (`apps/worker/migrations/`)
 
-**15 migrations exist as of 2026-07-02, HEAD `c9622c9`** (`0001_d1_index.sql` …
-`0014_admin.sql` — the D31 `isAdmin`/`routineCapOverride` columns — and
-`0015_library_entry.sql` — the per-user library-bookmark projection).
-Ignore DEVELOPMENT.md's "migrations dir is empty until M2" — stale.
+**17 migrations exist as of 2026-07-13** (`0001_d1_index.sql` …
+`0014_admin.sql` — the D31 `isAdmin`/`routineCapOverride` columns —
+`0015_library_entry.sql` — the per-user library-bookmark projection —
+`0016_app_meta.sql`, and `0017_drop_account_figure_base_idx.sql` — dropping the
+"one derivative per base" index so a user can own many variants of one base).
+DEVELOPMENT.md's "migrations dir is empty until M2" was stale and has been fixed.
 
 Where they get applied (three places, same files):
 

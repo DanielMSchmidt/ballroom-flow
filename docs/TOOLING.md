@@ -32,10 +32,10 @@ test cases.
 ### Added (this pass)
 | Area | What | Where |
 |---|---|---|
-| **Worker layer** | `isolatedStorage: false` (M0.5 SQLite-DO finding) + unique-DO-id convention documented; per-suite D1 migrations seam (`readD1Migrations` → `TEST_MIGRATIONS` binding); coverage (istanbul, ≥90% staged) | `apps/worker/vitest.config.ts` |
+| **Worker layer** | `isolatedStorage: false` (M0.5 SQLite-DO finding) + unique-DO-id convention documented; per-suite D1 migrations seam (`readD1Migrations` → `TEST_MIGRATIONS` binding); coverage (istanbul, ≥88% lines — **armed**) | `apps/worker/vitest.config.ts` |
 | **EXPLAIN seam** | `expectIndexedQuery()` contract + mechanism doc; body left for the test engineer | `apps/worker/src/test-support/explain.ts` |
 | **Test-binding types** | `TEST_MIGRATIONS` typed on `cloudflare:test` `ProvidedEnv` | `apps/worker/src/test-support/env.d.ts` |
-| **Domain layer** | coverage (istanbul, ≥95% staged) + `coverage` script | `packages/domain/vitest.config.ts` |
+| **Domain layer** | coverage (istanbul, ≥90% lines — **armed**) + `coverage` script | `packages/domain/vitest.config.ts` |
 | **Component layer** | jsdom + `@testing-library/react` + `vitest-axe`; setup file (matchers, cleanup, canvas stub) | `apps/web/vitest.config.ts`, `apps/web/vitest.setup.ts` |
 | **E2E layer** | Playwright config — 3 projects (`chromium-desktop`, `mobile-chrome`, `mobile-safari`), `vite preview` webServer, `retries:1`, trace-on-retry; `@smoke` tag convention | `apps/web/playwright.config.ts`, `apps/web/e2e/` |
 | **Local dev** | `pnpm dev` runs web + worker together via `concurrently` | root `package.json` |
@@ -52,18 +52,21 @@ New dev dependencies:
   `@testing-library/jest-dom`, `@testing-library/user-event`, `vitest-axe`,
   `axe-core`, `jsdom`, `@vitest/coverage-istanbul`, `@types/node`
 
+### Coverage thresholds — ARMED (was deferred; landed with the M1/M2 suites)
+- **Coverage thresholds are armed and gate every PR** — domain ≥90% lines
+  (`packages/domain/vitest.config.ts`), worker ≥88% lines
+  (`apps/worker/vitest.config.ts`); ratcheting toward 95/90 (PLAN.md §10.3). Web
+  coverage is collected but **not yet threshold-gated** — see the readiness
+  backlog. (This section previously said the thresholds were commented out until
+  tests existed; the suites have long since landed.)
+- **EXPLAIN QUERY PLAN helper** — implemented (`expectIndexedQuery`,
+  `apps/worker/src/test-support/explain.ts`); the US-049 suites run it as a
+  no-SCAN gate. (PLAN.md §7, §10.3.)
+
 ### Intentionally deferred (with milestone pointers)
-- **Coverage thresholds are configured but commented out** in the domain
-  (≥95%) and worker (≥90%) Vitest configs. A coverage gate on **zero** product
-  code fails an empty suite, so the threshold numbers are present and the test
-  engineer uncomments them once the M1/M2 suites land. (PLAN.md §10.3.)
-- **EXPLAIN QUERY PLAN helper body** — the seam + contract + mechanism are set
-  up (`expectIndexedQuery`); the implementation is the test engineer's, built on
-  their per-suite D1 fixture. (PLAN.md §7, §10.3.)
-- **`applyD1Migrations()` invocation** — the harness reads migrations and
-  exposes them as `env.TEST_MIGRATIONS`; *calling* `applyD1Migrations` in a
-  per-suite `beforeAll` belongs to the test engineer's fixtures (`seedDb`).
-  Migrations dir is empty until **M2**.
+- **`applyD1Migrations()`** — invoked in per-suite fixtures (`seedDb`); the
+  migrations dir now carries the full ladder (17 migrations as of 2026-07-13),
+  no longer empty.
 - **Lighthouse-CI** — stubbed in `nightly.yml`; budgets authored in **M9**
   (PLAN.md §7 perf NFRs).
 - **Sentry + Analytics Engine** — shipped in **M8** as dependency-free envelope

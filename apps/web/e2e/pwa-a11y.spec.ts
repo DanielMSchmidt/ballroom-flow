@@ -92,7 +92,7 @@ test.describe("accessibility: keyboard navigation + targets (real browser)", () 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seedAuth(page, "user_solo");
     await page.goto("/");
-    await expect(page).toHaveTitle(/ballroom/i);
+    await expect(page).toHaveTitle(/weave steps/i);
     const fast = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--bf-motion-fast").trim(),
     );

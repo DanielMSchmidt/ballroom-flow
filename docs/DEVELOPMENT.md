@@ -7,7 +7,7 @@ the test-harness rationale is in [TOOLING.md](TOOLING.md).
 ## Prerequisites
 
 - **Node 22** (`.nvmrc`) — `nvm use`.
-- **pnpm 10** — `corepack enable` then `corepack prepare pnpm@10 --activate`.
+- **pnpm 11** — `corepack enable` then `corepack prepare pnpm@11 --activate` (the exact version is pinned via `packageManager` in the root `package.json`).
 
 ## Install
 
@@ -79,8 +79,9 @@ Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 | **E2E smoke only** | `pnpm test:e2e:smoke` | Playwright, `@smoke`-tagged tests |
 
 Watch mode: `pnpm --filter <pkg> test:watch`. Coverage: `pnpm coverage` (root)
-or per package — istanbul; thresholds (domain ≥95%, worker/DO ≥90%) are present
-but commented out until tests exist (see TOOLING.md).
+or per package — istanbul; thresholds are **armed and gate every PR** (domain
+≥90% lines, worker/DO ≥88% lines; ratcheting toward 95/90 — see PLAN §10.3 and
+TOOLING.md).
 
 ### E2E (Playwright)
 

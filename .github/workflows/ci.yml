@@ -5,9 +5,13 @@ name: CI
 # "PR fast gate" from PLAN.md §10.3:
 #   typecheck + lint → unit/property → contract+drift → worker/DO/D1 (incl.
 #   EXPLAIN) → component + axe → E2E smoke.
-# The full Playwright matrix + Lighthouse-CI run nightly (nightly.yml), not here.
+# The full Playwright device matrix then runs as `full-e2e` — but ONLY after the
+# fast gate passes (`needs: fast-gate`), so a broken PR fails fast/cheap and the
+# expensive cross-browser matrix runs only when the fast checks are green. (This
+# replaced the old scheduled nightly.yml, whose failures were silent for days.)
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   fast-gate:
@@ -51,10 +55,44 @@ jobs:
 
       # 5. E2E smoke — one fast Playwright pass against a REAL worker (wrangler
       #    dev, booted by the webServer in apps/web/e2e/serve.sh). The @smoke
-      #    authoring journey gates here; chromium only on PRs for speed, the full
-      #    3-device matrix runs nightly. No --pass-with-no-tests: a real journey
-      #    failure FAILS the PR gate (#191).
+      #    authoring journey gates here; chromium only, for speed. The full
+      #    3-device matrix runs in `full-e2e` below once this gate is green. No
+      #    --pass-with-no-tests: a real journey failure FAILS the PR gate (#191).
       - name: Install Playwright (chromium)
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: E2E smoke (chromium)
         run: pnpm --filter web exec playwright test --project=chromium-desktop --grep @smoke
+
+  # Full Playwright device matrix (chromium-desktop + mobile-chrome +
+  # mobile-safari) — the "full" gate from PLAN.md §10.3. Runs ONLY after
+  # `fast-gate` succeeds (`needs`), so the expensive cross-browser pass is spent
+  # only on PRs whose fast checks are already green. Replaces the scheduled
+  # nightly: results now block the PR visibly instead of failing silently on a
+  # cron nobody watches.
+  full-e2e:
+    needs: fast-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: Install Playwright browsers (chromium + webkit)
+        run: pnpm --filter web exec playwright install --with-deps chromium webkit
+      # All three device projects against a real worker (wrangler dev via
+      # apps/web/e2e/serve.sh). No --pass-with-no-tests: any journey failure
+      # fails the PR.
+      - name: E2E (full matrix)
+        run: pnpm --filter web exec playwright test
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

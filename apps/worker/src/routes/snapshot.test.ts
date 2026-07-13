@@ -39,6 +39,10 @@ describe("GET /api/routines/:id/snapshot", () => {
       memberships: [
         { id: `mem_${routineRef}`, docRef: routineRef, userId: "u_snap_m", role: "viewer" },
       ],
+      // The placement_edge is what production mints when a figure is added to a
+      // routine (linkPlacement); it's the row the read-access cascade reads, so a
+      // routine member can read the figures the routine legitimately references.
+      placementEdges: [{ routineRef, figureRef: figRef }],
     });
     // Seed the routine DO with a section referencing the figure…
     await docs.get(docs.idFromName(routineRef)).seedDoc({
@@ -103,10 +107,18 @@ describe("GET /api/routines/:id/snapshot", () => {
     });
     await seedDb({
       users: [{ id: "u_var_m", displayName: "V", identityColor: "#111", plan: "free" }],
-      docs: [{ docRef: routineRef, type: "routine", ownerId: "u_var_m", doName: routineRef }],
+      docs: [
+        { docRef: routineRef, type: "routine", ownerId: "u_var_m", doName: routineRef },
+        // The base is a world-readable global catalog doc — resolves to `viewer`
+        // for any signed-in user (the snapshot's per-figure access gate).
+        { docRef: baseRef, type: "global-figure", ownerId: "app", doName: baseRef },
+      ],
       memberships: [
         { id: `mem_${routineRef}`, docRef: routineRef, userId: "u_var_m", role: "editor" },
       ],
+      // The account variant is reachable via the routine's placement edge (as in
+      // production — linkPlacement mints it when the figure is added).
+      placementEdges: [{ routineRef, figureRef: variantRef }],
     });
     await docs.get(docs.idFromName(routineRef)).seedDoc({
       id: routineRef,
@@ -173,6 +185,111 @@ describe("GET /api/routines/:id/snapshot", () => {
     expect(resolved?.id).toBe(variantRef);
     expect(resolved?.baseFigureRef).toBe(baseRef);
     expect(resolved?.attributes.find((a) => a.id === "a1")?.value).toBe("T");
+  });
+
+  it("does NOT leak a figure the caller can't read, even when their own routine references it", async () => {
+    // Security (per-figure authz): a routine's placements are caller-controlled
+    // CRDT content, so a caller can add a placement pointing at ANY figure docRef
+    // they've learned. The snapshot must gate each referenced figure on the caller's
+    // OWN access — never trust the routine's ref list — or it leaks any figure whose
+    // ref an authenticated user can obtain (defeating cascade revocation).
+    const attackerRoutine = uniqueDocName("rt_attacker");
+    const victimFigure = uniqueDocName("fig_victim");
+    const okFigure = uniqueDocName("fig_ok");
+    const attacker = await authedContext({
+      keypair: kp,
+      userId: "u_attacker",
+      docRef: attackerRoutine,
+      role: "editor",
+    });
+    await seedDb({
+      users: [
+        { id: "u_attacker", displayName: "A", identityColor: "#111", plan: "free" },
+        { id: "u_victim", displayName: "Vic", identityColor: "#222", plan: "free" },
+      ],
+      // The attacker owns their routine. victimFigure is a PRIVATE account figure
+      // owned by someone else — the attacker has no membership, no ownership, and
+      // (crucially) NO placement_edge for it. okFigure is one the attacker legitimately
+      // owns/references (edge minted), so the snapshot still returns the real ones.
+      docs: [
+        {
+          docRef: attackerRoutine,
+          type: "routine",
+          ownerId: "u_attacker",
+          doName: attackerRoutine,
+        },
+        { docRef: victimFigure, type: "account-figure", ownerId: "u_victim", doName: victimFigure },
+        { docRef: okFigure, type: "account-figure", ownerId: "u_attacker", doName: okFigure },
+      ],
+      memberships: [
+        {
+          id: `mem_${attackerRoutine}`,
+          docRef: attackerRoutine,
+          userId: "u_attacker",
+          role: "editor",
+        },
+      ],
+      placementEdges: [{ routineRef: attackerRoutine, figureRef: okFigure }],
+    });
+    await docs.get(docs.idFromName(attackerRoutine)).seedDoc({
+      id: attackerRoutine,
+      title: "Mine",
+      dance: "waltz",
+      ownerId: "u_attacker",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          // The attacker has injected the victim's private figure ref alongside a
+          // legitimate one.
+          placements: [
+            { id: "p1", figureRef: okFigure, deletedAt: null },
+            { id: "p2", figureRef: victimFigure, deletedAt: null },
+          ],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await docs.get(docs.idFromName(okFigure)).seedDoc({
+      id: okFigure,
+      scope: "account",
+      ownerId: "u_attacker",
+      figureType: "natural-turn",
+      dance: "waltz",
+      name: "Mine",
+      source: "custom",
+      attributes: [
+        { id: "a1", kind: "direction", count: 1, role: null, value: "forward", deletedAt: null },
+      ],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await docs.get(docs.idFromName(victimFigure)).seedDoc({
+      id: victimFigure,
+      scope: "account",
+      ownerId: "u_victim",
+      figureType: "whisk",
+      dance: "waltz",
+      name: "Victim Secret",
+      source: "custom",
+      attributes: [
+        { id: "a1", kind: "direction", count: 1, role: null, value: "side", deletedAt: null },
+      ],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+
+    const res = await SELF.fetch(`https://x/api/routines/${attackerRoutine}/snapshot`, {
+      headers: attacker.authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { figures: Record<string, { name: string }> };
+    // The legitimately-referenced figure is present…
+    expect(body.figures[okFigure]?.name).toBe("Mine");
+    // …but the victim's private figure is NOT leaked, despite the injected placement.
+    expect(body.figures[victimFigure]).toBeUndefined();
   });
 
   it("forbids a non-member (403)", async () => {

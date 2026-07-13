@@ -24,6 +24,11 @@ const en = {
   back: "Back",
   loading: "Loading",
   working: "Working",
+  errorTitle: "Something went wrong",
+  errorDescription:
+    "This screen hit an unexpected error. Any changes saved on this device are safe. Try again, or reload the app.",
+  errorRetry: "Try again",
+  errorReload: "Reload the app",
 };
 
 const de: typeof en = {
@@ -48,6 +53,11 @@ const de: typeof en = {
   back: "Zurück",
   loading: "Lädt",
   working: "Wird ausgeführt",
+  errorTitle: "Etwas ist schiefgelaufen",
+  errorDescription:
+    "Auf diesem Bildschirm ist ein unerwarteter Fehler aufgetreten. Auf diesem Gerät gespeicherte Änderungen sind sicher. Versuche es erneut oder lade die App neu.",
+  errorRetry: "Erneut versuchen",
+  errorReload: "App neu laden",
 };
 
 export const uiMessages = { en, de };
