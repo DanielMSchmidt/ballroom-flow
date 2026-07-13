@@ -29,7 +29,8 @@ describe("ErrorBoundary", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(onError).toHaveBeenCalledOnce();
-    expect((onError.mock.calls[0]?.[0] as Error).message).toBe("kaboom");
+    const firstError = onError.mock.calls[0]?.[0] as Error;
+    expect(firstError.message).toBe("kaboom");
     spy.mockRestore();
   });
 
