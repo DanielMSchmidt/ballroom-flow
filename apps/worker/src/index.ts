@@ -885,9 +885,23 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes (a
   // variant carries only its owned beats). A never-seeded/empty figure is omitted →
   // the client renders it missing.
+  //
+  // PER-FIGURE AUTHORIZATION (security): a routine's placements are caller-controlled
+  // CRDT content — a caller can add a placement referencing ANY figure docRef they've
+  // learned (nothing at the WS/CRDT layer validates the ref against access). So the
+  // routine's role does NOT imply the right to read every ref it lists; without a
+  // per-figure gate this REST path leaks any figure whose ref an authenticated user
+  // can obtain, bypassing the cascade-revocation the WS figure-doc boundary enforces.
+  // Gate each ref on the caller's ACTUAL effective role — ownership, global (world-
+  // readable), or the placement_edge cascade (a routine they're a member of that
+  // legitimately references it) — the same resolver the DO boundary uses, and drop
+  // the ones they can't read (rendered missing). Every legitimately-referenced figure
+  // has a server-minted placement_edge (POST /api/figures, fork, break-migration), so
+  // this never drops a figure a member is entitled to.
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
       const fig = await readFigureSnapshot(doc(ref));
       if (!fig?.figureType) return;
       figures[ref] = fig;
@@ -903,9 +917,13 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   for (const fig of Object.values(figures)) {
     if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
   }
+  // Bases are gated the same way (a base is typically a world-readable global
+  // catalog doc; the gate returns `viewer` for those, so legitimate bases are never
+  // dropped, while an unreadable base a caller isn't entitled to is omitted).
   const bases: Record<string, FigureDoc> = {};
   await Promise.all(
     [...baseRefs].map(async (ref) => {
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
       const base = await readFigureSnapshot(doc(ref));
       if (!base?.figureType) return;
       bases[ref] = base;
