@@ -2,17 +2,23 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import topLevelAwait from "vite-plugin-top-level-await";
-import wasm from "vite-plugin-wasm";
 
 export default defineConfig({
+  // Resolve Automerge to its SLIM build, which does NOT auto-initialize the WASM
+  // via a top-level await. The full build's top-level await was hoisted by
+  // vite-plugin-top-level-await into the ENTRY chunk (blocking first paint on the
+  // 2.75 MB WASM), which is what prevented code-splitting it off the initial load.
+  // With slim, the store initializes the WASM explicitly + lazily (store/automerge-
+  // init.ts, awaited by openRoutine) so it loads only on routine-open. This also
+  // removes the need for vite-plugin-wasm / vite-plugin-top-level-await entirely
+  // (the WASM is fetched via an `?url` asset + initializeWasm, not a bare import).
+  resolve: {
+    // EXACT match only (anchored regex) — a bare `@automerge/automerge` resolves to
+    // slim, while `@automerge/automerge/slim` and `.../automerge.wasm?url` (the init
+    // module's own imports) must pass through unrewritten.
+    alias: [{ find: /^@automerge\/automerge$/, replacement: "@automerge/automerge/slim" }],
+  },
   plugins: [
-    // Automerge ships its core as WASM (imported via the ESM-integration
-    // proposal Vite/Rollup can't bundle natively). US-025 is the first screen to
-    // mount the routine editor (Assemble → store → @automerge/automerge) in the
-    // production bundle, so the web build now needs these plugins.
-    wasm(),
-    topLevelAwait(),
     react(),
     tailwindcss(),
     VitePWA({
