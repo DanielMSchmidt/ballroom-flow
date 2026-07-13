@@ -84,7 +84,10 @@ export const zCreateFigure = z.object({
   /** LEGACY pre-v5 length in whole bars — accepted for old clients; new writes
    *  send `counts`. */
   bars: z.number().int().min(1).optional(),
-  attributes: z.array(zAttribute).default([]),
+  // A real figure has ≤64 beats × a handful of kinds × 2 roles; the cap is a
+  // defensive storage-growth bound (an authenticated caller can otherwise persist
+  // an arbitrarily large timeline into the figure DO), well above any genuine use.
+  attributes: z.array(zAttribute).max(2000).default([]),
   /** Set when this figure is a v5 VARIANT of a base (⟳v5, §5.2): its `attributes`
    *  are ONLY the OWNED beats and `baseFigureRef` is a LIVE link the CLIENT resolves
    *  the untouched beats against. Omitted for a fresh custom figure. (A pre-v5 frozen
@@ -135,7 +138,7 @@ export type IssueInvite = z.infer<typeof zIssueInvite>;
  * parse this schema instead of hand-narrowing an untrusted `as {…}` body.
  */
 export const zProfileBody = z.object({
-  displayName: z.string().trim().min(1),
+  displayName: z.string().trim().min(1).max(80, "Keep the name under 80 characters"),
   identityColor: z
     .string()
     .trim()
@@ -153,9 +156,12 @@ export type FigureRefBody = z.infer<typeof zFigureRefBody>;
  */
 export const zFamilyNoteBody = z.object({
   kind: z.enum(["note", "lesson", "practice"]),
-  text: z.string().trim().min(1),
-  figureType: z.string().min(1),
-  danceScope: z.string().min(1),
+  text: z.string().trim().min(1).max(4000, "Keep the note under 4000 characters"),
+  figureType: z.string().trim().min(1).max(120),
+  // A figureType note scopes to one dance or the whole family ("all", PLAN §2.6).
+  // Constrained to that set so a garbage scope — which would silently never match
+  // any routine's dance in the journal join — can't be persisted as dead data.
+  danceScope: z.enum([...DANCE_IDS, "all"]),
 });
 export type FamilyNoteBody = z.infer<typeof zFamilyNoteBody>;
 

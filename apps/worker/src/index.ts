@@ -98,14 +98,48 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// The request URL WITHOUT its query string — for error reporting. `c.req.url`
+// carries the raw query (e.g. `/api/search?q=<user text>`), which is user content
+// / potential PII; we never forward it to a third party (Sentry). Origin + path
+// only.
+function safeReportUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    u.search = "";
+    return u.toString();
+  } catch {
+    return rawUrl.split("?")[0] ?? rawUrl;
+  }
+}
+
+// Defense-in-depth response headers on every worker response (the /api/* + WS
+// surface). The SPA HTML is served by the assets binding, NOT the worker, so its
+// headers live in apps/web/public/_headers; these cover what the worker itself
+// returns. No Content-Security-Policy here — a CSP has to be validated against
+// Clerk / Sentry / the Automerge WASM loader and is a separate, owner-gated
+// change; these three are safe, non-breaking, standard hardening.
+app.use("*", async (c, next) => {
+  await next();
+  // A 101 WebSocket-upgrade response carries immutable headers — never touch it.
+  if (c.res.status === 101) return;
+  try {
+    c.res.headers.set("X-Content-Type-Options", "nosniff");
+    c.res.headers.set("X-Frame-Options", "DENY");
+    c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  } catch {
+    // Some responses expose immutable headers (streamed/cached) — skip them.
+  }
+});
+
 // US-049 AC-1: unhandled route errors are reported to Sentry (fire-and-forget —
 // waitUntil so the 500 isn't held up) and the client gets a structured 500.
 app.onError((err, c) => {
+  const url = safeReportUrl(c.req.url);
   try {
-    c.executionCtx.waitUntil(reportError(c.env, err, { url: c.req.url, method: c.req.method }));
+    c.executionCtx.waitUntil(reportError(c.env, err, { url, method: c.req.method }));
   } catch {
     // No execution context (some test harnesses): report best-effort instead.
-    void reportError(c.env, err, { url: c.req.url, method: c.req.method });
+    void reportError(c.env, err, { url, method: c.req.method });
   }
   console.error("unhandled route error", err);
   return c.json({ error: "internal" }, 500);
