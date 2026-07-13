@@ -226,9 +226,8 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.count).toBe(2);
   });
 
@@ -248,9 +247,8 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2e$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.count).toBe(2.25);
   });
 

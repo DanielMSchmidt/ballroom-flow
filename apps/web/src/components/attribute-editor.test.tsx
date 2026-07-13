@@ -66,9 +66,8 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork" && a.count === 2,
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "footwork" && a.count === 2);
     expect(added?.value).toBe("HT");
   });
 
@@ -146,9 +145,8 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const onChange = vi.fn();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /^forward$/i }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "direction",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "direction");
     expect(added?.role).toBeNull();
   });
 
@@ -164,9 +162,8 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const follower = screen.getByRole("group", { name: /follower/i });
     // Picking a direction inside the Follower rail writes role="follower".
     await userEvent.click(within(follower).getByRole("button", { name: /^back$/i }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "direction",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "direction");
     expect(added?.role).toBe("follower");
   });
 
@@ -358,9 +355,8 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
     // A footwork value is still pickable from the closed set.
     await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.value).toBe("HT");
   });
 
