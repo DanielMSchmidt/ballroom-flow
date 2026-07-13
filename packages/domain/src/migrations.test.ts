@@ -413,7 +413,7 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
       dance: "foxtrot",
       attributes: [],
       bars: 30,
-    }) as Record<string, unknown>;
+    });
     expect(migrated.counts).toBe(64);
   });
 });

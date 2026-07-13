@@ -284,7 +284,7 @@ describe("GET /api/routines/:id/snapshot", () => {
       headers: attacker.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { figures: Record<string, { name: string }> };
+    const body = await res.json<{ figures: Record<string, { name: string }> }>();
     // The legitimately-referenced figure is present…
     expect(body.figures[okFigure]?.name).toBe("Mine");
     // …but the victim's private figure is NOT leaked, despite the injected placement.
