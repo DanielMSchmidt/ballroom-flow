@@ -15,9 +15,15 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 
 ## 1. Source of truth & document map
 
+Two layers, split KEP-style (since 2026-07-13, WEP-0001): **`docs/PLAN.md` describes the
+current state** (the merged, always-true spec); **`docs/proposals/` is the change process**
+(numbered WEPs with a lifecycle). To know what is true, read PLAN.md; to change what is true,
+write a WEP.
+
 | Document | What it is | Read it when… |
 |---|---|---|
-| **[`docs/PLAN.md`](docs/PLAN.md)** | **The single source of truth.** Domain model, controlled vocabularies, features-by-screen, collaboration/fork/permissions/undo, architecture, NFRs, **locked technical decisions** (§8), milestone roadmap (§9), testing strategy (§10). | **Always, first.** Any ambiguity is resolved here. |
+| **[`docs/PLAN.md`](docs/PLAN.md)** | **The single source of truth for current state.** Domain model, controlled vocabularies, features-by-screen, collaboration/fork/permissions/undo, architecture, NFRs, **locked technical decisions** (§8), milestone roadmap (§9), testing strategy (§10). | **Always, first.** Any ambiguity about what is true *now* is resolved here. |
+| **[`docs/proposals/`](docs/proposals/README.md)** | **The change process — Weave Enhancement Proposals (WEPs).** KEP-style numbered proposals with metadata, statuses (`provisional → implementable → implemented`, or `deferred/rejected/withdrawn/replaced`), rejected-alternatives record, and a Playwright **ship gate** per proposal. Supersedes `docs/superpowers/specs|plans` for new work. | Proposing/scoping any substantive change (model, architecture, locked decision, process, new dependency, multi-PR feature); checking what's proposed, parked, or rejected. |
 | [`docs/TEST-MAP.md`](docs/TEST-MAP.md) | Feature/story-key → test-file × layer coverage matrix; flagged gaps. (The old `USER-STORIES.md` backlog was removed 2026-07-02 — `US-…` ids survive only as stable keys in this map, in test names, and in PLAN.md; PLAN.md §9 is the roadmap/status.) | Finding which tests cover a feature, or what's not yet asserted. |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | How to install, run locally, run each test layer, manage env/secrets, and **the test-harness conventions you must follow**. | Setting up; running things; writing tests. |
 | [`docs/TOOLING.md`](docs/TOOLING.md) | What dev/test tooling exists, why, and what's deferred (Sentry/Analytics → M8, Lighthouse → M9). | Touching CI, configs, or test infra. |
@@ -28,11 +34,14 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 | [`PROVISIONING.md`](PROVISIONING.md) | Accounts & secrets (Clerk, Cloudflare) needed to run/deploy. | Running the real app or deploying. |
 | [`OPS.md`](OPS.md) | Operator runbook for live-app actions against remote D1 (e.g. granting a user a higher routine cap without payment). | Performing a manual ops action (quota grants, admin seams). |
 
-> **`docs/PLAN.md` is the canonical, living source of truth — keep it that way.** When a
-> decision is made or changes (an attribute model, a locked decision, a roadmap shift),
-> **refine `PLAN.md` in the same change** so it never drifts from the code. Treat a divergence
-> between `PLAN.md` and the implementation as a bug. The plan is meant to be continuously
-> refined, not frozen.
+> **`docs/PLAN.md` is the canonical, living source of truth for current state — keep it that
+> way.** Substantive decisions are *made* through a WEP ([`docs/proposals/README.md`](docs/proposals/README.md)
+> says when one is required — data shape, boundaries, sync, permissions, locked decisions,
+> process, dependencies, multi-PR features; bug fixes and design-parity UI need none). When a
+> WEP is implemented — or any smaller change moves what PLAN asserts — **refine `PLAN.md` in
+> the same change** so it never drifts from the code. Treat a divergence between `PLAN.md`
+> and the implementation as a bug. PLAN §8/§12 are the pre-process decision ledger (D1–D33,
+> Q-entries): citable history, closed to new entries — new decisions get WEP numbers instead.
 
 > **`docs/design/` is the canonical design source — prototype there first.** Any change that
 > affects the UI **starts in Claude Design** (claude.ai/design): update the `docs/design/project/*.dc.html`
@@ -44,13 +53,14 @@ choreography**, built on an **Automerge CRDT document graph** on Cloudflare. See
 
 ## 2. By task — where to look
 
-- **Implementing a feature** → `PLAN.md` §9 (roadmap + the active milestone) for scope → `TEST-MAP.md` for the covering tests → write/unskip tests first, make them pass (TDD, §4) → check `PLAN.md` for the precise rule.
+- **Proposing a substantive change** (model, architecture, sync/permissions, a locked decision, a new dependency, any multi-PR feature, process) → **write a WEP first**: copy `docs/proposals/0000-template/`, argue it through a named concrete scenario, get it to `implementable` before implementation PRs. Check the [WEP index](docs/proposals/README.md) first — it may already be proposed, deferred, or rejected.
+- **Implementing a feature** → its WEP (design + ship gate) and `PLAN.md` §9 for scope → `TEST-MAP.md` for the covering tests → write/unskip tests first, make them pass (TDD, §4) → check `PLAN.md` for the precise rule. Marking the WEP `implemented` and updating `PLAN.md` happen in the same change that turns its ship-gate journey green.
 - **Domain logic** (`packages/domain`: doc schemas, variant/overlay resolution, fork, undo, registry, timing) → `PLAN.md` §2/§3/§5 + the matching `*.test.ts`.
 - **Worker / Durable Object / sync / permissions / D1** → `PLAN.md` §6 + `SPIKE-FINDINGS.md` + `DEVELOPMENT.md` (harness conventions) + the skipped `apps/worker/src/**/*.test.ts`.
 - **UI / components / screens** → **prototype the change in Claude Design first** (update `docs/design/project/*.dc.html`), then `DESIGN-SYSTEM.md` (use the primitives in `apps/web/src/ui`) + the `docs/design/` bundle (the canonical visual source — recreate it pixel-for-pixel) + `PLAN.md` §4.
 - **Tests / fixtures / E2E** → `TEST-MAP.md` + `DEVELOPMENT.md` (§ harness) + existing fixtures in `packages/domain/src/__fixtures__`, `apps/worker/src/test-support`, `apps/web/e2e/support`.
 - **Tooling / CI / config** → `TOOLING.md` (and don't break the layered CI gate).
-- **A locked decision feels wrong** → `PLAN.md` §8 + §12 (open/resolved questions). Decisions are cheap to revisit *before* code exists; surface it rather than silently diverging.
+- **A locked decision feels wrong** → `PLAN.md` §8 + §12 for the history and the rejected alternatives, then **raise a WEP** that argues against the scenario which motivated the original decision (`docs/proposals/README.md` §6). Decisions are cheap to revisit *before* code exists; never silently diverge — reversals happen here (D12, D33), but always explicitly and on the record.
 
 ### Skill library (`.claude/skills/`)
 
@@ -92,6 +102,7 @@ A **graph of Automerge documents**, one per Durable Object; **D1 is a pure index
 
 ## 4. Conventions that bite (read before writing code)
 
+- **Substantive changes start as a WEP** ([`docs/proposals/`](docs/proposals/README.md)) — implementation PRs for one cite it (`WEP-NNNN`) and are judged against its ship gate. No WEP needed for bug fixes, behavior-preserving refactors, design-parity UI, or sourced seed-data corrections.
 - **TDD, RED→GREEN→REFACTOR.** The whole backlog already has **skipped** tests. To implement a story: unskip its tests (see the story's "unskip when done" block), watch them fail, make them pass, refactor. Don't write implementation before a failing test.
 - **The suite must stay green.** Skipped tests must not break collection. **Never top-level-import a not-yet-built product export** — it throws at module load even when skipped. Use `import type` (erased) or a dynamic `await import(...)` *inside* the test body. The typed shim `importDomain()` in `packages/domain/src/__fixtures__/domain-api.ts` is the pattern for domain symbols.
 - **Durable Object tests:** `isolatedStorage: false` (SQLite-backed DOs break isolated-storage teardown — M0.5 finding), so **every test must use a unique DO id** (`do-id.ts` helper). Details in `DEVELOPMENT.md`.
@@ -126,8 +137,8 @@ pnpm coverage         # coverage — thresholds ARMED: domain ≥90, worker ≥8
 
 - **Done:** M1 domain core; M2 DO sync (per-doc DO, hibernatable WS, alarm compaction, D1 index); M3 auth + permissions + quota + create/build loop — US-001…030 (the relevant ones), plus the Clerk auth chain end-to-end (verify → fail-closed DO boundary → figure-doc projection → WS-token plumbing). **Staging is live and sign-in works** (`weave-steps-staging.danielmschmidt.workers.dev`).
 - **Delivery model (adopted 2026-06-26):** remaining work ships as **end-to-end-testable features**, gated on their Playwright journey (`apps/web/e2e/*.spec.ts`). `@smoke` E2E on every PR, full matrix nightly. A feature is "done" only when its journey is green on PR (NOT just unit tests — the M1–M3 stack shipped with zero verified browser journeys, the gap that prompted this).
-- **Now (2026-07-02):** the **v5 migration milestone** — `PLAN.md` §9 — converts the figure layer to the live-figure/overlay-variant model (PLAN v5.0, §5.2) and lands the review hardening (undo soundness, figures-route authorization, non-destructive projections, post-connect role enforcement, bounded catch-up).
-- **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves.
+- **Now (2026-07-13):** the M0–M9 roadmap is **closed end-to-end** — the v5 live-figure migration completed 2026-07-02, the remaining boxes (M8 ops, M9 PWA/a11y) closed 2026-07-03, offline editing shipped 2026-07-05, and the Builder-v3 model changes landed 2026-07-07 (PLAN §9 close-outs). **What's next is scoped through the [WEP index](docs/proposals/README.md)** — currently WEP-0002 (account-doc live-DO wiring, the one recorded v1 engineering gap; provisional) and WEP-0003 (attribute-predicate anchors; deferred). New feature work starts as a WEP.
+- **A large tracked follow-up tail** (security comments, perf, a11y, sortKey convergence, reconnect) lives in the task board — fold each into the feature whose journey it serves; anything that grows past one PR gets a WEP.
 
 ---
 
