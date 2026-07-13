@@ -1,6 +1,6 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import * as A from "@automerge/automerge";
-import { SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
+import { SYNC_FRAME_SNAPSHOT, SYNC_PING, SYNC_PONG } from "@weavesteps/contract";
 import {
   CURRENT_SCHEMA_VERSION,
   type DanceId,
@@ -1007,5 +1007,28 @@ describe("legacy break → Break-figure migration (Builder v3 ④, alarm-driven)
     await stub.runAlarmForTest();
     const again = await stub.getSnapshot();
     expect(again.sections[0]?.placements.find((p) => p.id === "p2")?.figureRef).toBe(breakRef);
+  });
+});
+
+describe("WEP-0006 heartbeat auto-response (zombie-socket detection)", () => {
+  it("registers the ping→pong pair so the runtime answers heartbeats without waking a hibernating DO", async () => {
+    // Intent: the client's idle SYNC_PING must be answered even while the DO
+    //   hibernates — setWebSocketAutoResponse is the platform primitive that
+    //   replies runtime-level, never invoking webSocketMessage and never waking
+    //   the DO (the D23 hibernation economics stay intact).
+    // Assert via the DO's own state: the pair is registered at construction.
+    //   (vitest-pool-workers can't drive a full WS delivery cycle — SPIKE sharp
+    //   edge #3 — so real wire delivery is owned by the E2E layer, where the
+    //   shortened heartbeat exercises ping→pong continuously in every journey.)
+    const realDocs = env.DOC_DO;
+    const id = realDocs.idFromName(uniqueDocName("routine"));
+    const pair = await runInDurableObject(
+      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
+      (_instance, state) => {
+        const p = state.getWebSocketAutoResponse();
+        return p ? { request: p.request, response: p.response } : null;
+      },
+    );
+    expect(pair).toEqual({ request: SYNC_PING, response: SYNC_PONG });
   });
 });

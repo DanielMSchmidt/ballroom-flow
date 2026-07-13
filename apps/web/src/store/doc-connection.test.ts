@@ -1,5 +1,5 @@
 import * as A from "@automerge/automerge";
-import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
+import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT, SYNC_PING, SYNC_PONG } from "@weavesteps/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DocConnection, type SocketLike } from "./doc-connection";
 
@@ -22,12 +22,18 @@ class FakeSocket implements SocketLike {
   private opened: ((ev: { data: unknown }) => void) | null = null;
   private closed: ((ev: { data: unknown }) => void) | null = null;
   sent: Uint8Array[] = [];
+  /** TEXT frames sent by the client (the WEP-0006 heartbeat pings). */
+  sentText: string[] = [];
   addEventListener(type: string, fn: ((ev: { data: unknown }) => void) | (() => void)): void {
     if (type === "message") this.msg = fn;
     else if (type === "open") this.opened = fn;
     else if (type === "close") this.closed = fn;
   }
-  send(data: ArrayBufferView | ArrayBuffer): void {
+  send(data: string | ArrayBufferView | ArrayBuffer): void {
+    if (typeof data === "string") {
+      this.sentText.push(data);
+      return;
+    }
     this.sent.push(
       data instanceof ArrayBuffer
         ? new Uint8Array(data)
@@ -45,6 +51,10 @@ class FakeSocket implements SocketLike {
   }
   fireCaughtUp(): void {
     this.msg?.({ data: SYNC_CAUGHT_UP });
+  }
+  /** Deliver the DO's heartbeat pong (WEP-0006). */
+  firePong(): void {
+    this.msg?.({ data: SYNC_PONG });
   }
   /** Deliver the DO's on-connect catch-up: ONE tagged SNAPSHOT frame (D10). */
   fireSnapshot(doc: A.Doc<unknown>): void {
@@ -172,6 +182,164 @@ describe("DocConnection reconnect", () => {
     vi.advanceTimersByTime(10_000);
     expect(sockets).toHaveLength(1);
     conn.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// WEP-0006 — heartbeat zombie-socket detection. A half-open socket (TCP thinks
+// it's up, nothing is delivered, navigator.onLine stays true — the practice-
+// room dead spot) is detected by an idle PING that must be answered within a
+// deadline; a miss drops the socket into the normal warm-reconnect machinery
+// instead of waiting minutes for the browser's own close event.
+// ─────────────────────────────────────────────────────────────────────────
+describe("DocConnection heartbeat (WEP-0006 zombie-socket detection)", () => {
+  const HB = { intervalMs: 1000, deadlineMs: 500 };
+  const pings = (s: FakeSocket): number => s.sentText.filter((t) => t === SYNC_PING).length;
+
+  it("pings after an idle interval and keeps the socket when the pong arrives", () => {
+    const { factory, sockets } = recordingFactory();
+    const conn = new DocConnection(A.init(), "ws://x/docs/d/connect", factory, {
+      reconnect: { delays: [1000] },
+      heartbeat: HB,
+    });
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireCaughtUp();
+    expect(pings(sock(sockets, 0))).toBe(0); // no ping before the idle interval
+
+    vi.advanceTimersByTime(1000);
+    expect(pings(sock(sockets, 0))).toBe(1);
+    sock(sockets, 0).firePong(); // answered within the deadline
+
+    vi.advanceTimersByTime(600); // past where the deadline would have fired
+    expect(conn.state()).toBe("live");
+    expect(sockets).toHaveLength(1); // the healthy socket was kept
+    conn.close();
+  });
+
+  it("any inbound frame counts as liveness — a busy connection is never pinged", () => {
+    const { factory, sockets } = recordingFactory();
+    const conn = new DocConnection(A.init(), "ws://x/docs/d/connect", factory, {
+      reconnect: { delays: [1000] },
+      heartbeat: HB,
+    });
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireCaughtUp();
+
+    // 600ms in, ANY inbound frame arrives → the idle clock restarts.
+    vi.advanceTimersByTime(600);
+    sock(sockets, 0).firePong(); // unsolicited inbound traffic = proof of life
+    vi.advanceTimersByTime(600); // 1200ms since open, only 600ms since traffic
+    expect(pings(sock(sockets, 0))).toBe(0);
+
+    vi.advanceTimersByTime(400); // now a full idle interval since the last frame
+    expect(pings(sock(sockets, 0))).toBe(1);
+    conn.close();
+  });
+
+  it("drops a zombie on a missed pong deadline and warm-reconnects to live", () => {
+    const { factory, sockets } = recordingFactory();
+    const conn = new DocConnection(A.init(), "ws://x/docs/d/connect", factory, {
+      reconnect: { delays: [1000], maxColdAttempts: 4 },
+      heartbeat: HB,
+    });
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireCaughtUp();
+    expect(conn.state()).toBe("live");
+
+    // The socket goes zombie: the ping is sent but NOTHING ever answers.
+    vi.advanceTimersByTime(1000);
+    expect(pings(sock(sockets, 0))).toBe(1);
+    vi.advanceTimersByTime(500); // deadline missed → the zombie is dropped
+    expect(conn.state()).toBe("connecting"); // honest: not live anymore
+
+    // The warm-reconnect machinery takes over: fresh socket after the backoff,
+    // and a re-hydration brings it back to live.
+    vi.advanceTimersByTime(1000);
+    expect(sockets).toHaveLength(2);
+    sock(sockets, 1).fireOpen();
+    sock(sockets, 1).fireCaughtUp();
+    expect(conn.state()).toBe("live");
+    conn.close();
+  });
+
+  it("with §11.2 persistence a zombie drop lands in editable 'local', and the gap edit replays on reconnect", async () => {
+    interface List {
+      items: string[];
+      [k: string]: unknown;
+    }
+    const flush = async (): Promise<void> => {
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    };
+    const map = new Map<string, import("./doc-storage").PersistedDoc>();
+    const storage: import("./doc-storage").DocStorage = {
+      load: (key) => Promise.resolve(map.get(key) ?? null),
+      save: (key, value) => {
+        map.set(key, value);
+        return Promise.resolve();
+      },
+    };
+    const { factory, sockets } = recordingFactory();
+    // ONE server doc for both snapshots (a fresh A.from with the same actor id
+    // would be a different doc with colliding seqs — not how a real DO behaves).
+    const server = A.from<List>({ items: ["base"] }, "bbbb0000bbbb0000");
+    const conn = new DocConnection<List>(A.init<List>("cccc0000cccc0000"), "ws://x/d", factory, {
+      reconnect: { delays: [1000], maxColdAttempts: 4 },
+      heartbeat: HB,
+      storage,
+      storageKey: "doc-hb",
+    });
+    await flush();
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireSnapshot(server);
+    sock(sockets, 0).fireCaughtUp();
+    expect(conn.state()).toBe("live");
+
+    // Zombie: ping unanswered → dropped; hydrated + persisted → editable "local".
+    vi.advanceTimersByTime(1500);
+    expect(conn.state()).toBe("local");
+    conn.change((d) => {
+      d.items.push("edited-in-the-gap");
+    });
+    expect(conn.pendingSyncCount()).toBe(1);
+
+    // Reconnect: the edit made against the zombie window is resent (#161 diff).
+    vi.advanceTimersByTime(1000);
+    sock(sockets, 1).fireOpen();
+    sock(sockets, 1).fireSnapshot(server);
+    expect(sock(sockets, 1).sent.length).toBeGreaterThanOrEqual(1);
+    sock(sockets, 1).fireCaughtUp();
+    expect(conn.state()).toBe("live");
+    expect(conn.pendingSyncCount()).toBe(0);
+    conn.close();
+  });
+
+  it("heartbeat: false disables the probe entirely", () => {
+    const { factory, sockets } = recordingFactory();
+    const conn = new DocConnection(A.init(), "ws://x/docs/d/connect", factory, {
+      reconnect: { delays: [1000] },
+      heartbeat: false,
+    });
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireCaughtUp();
+    vi.advanceTimersByTime(120_000);
+    expect(sock(sockets, 0).sentText).toHaveLength(0);
+    expect(conn.state()).toBe("live");
+    expect(sockets).toHaveLength(1);
+    conn.close();
+  });
+
+  it("close() cancels the heartbeat timers", () => {
+    const { factory, sockets } = recordingFactory();
+    const conn = new DocConnection(A.init(), "ws://x/docs/d/connect", factory, {
+      reconnect: { delays: [1000] },
+      heartbeat: HB,
+    });
+    sock(sockets, 0).fireOpen();
+    sock(sockets, 0).fireCaughtUp();
+    conn.close();
+    vi.advanceTimersByTime(10_000);
+    expect(sock(sockets, 0).sentText).toHaveLength(0); // no ping after dispose
+    expect(sockets).toHaveLength(1); // and no zombie-drop reconnect either
   });
 });
 

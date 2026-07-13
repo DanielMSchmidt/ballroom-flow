@@ -19,6 +19,8 @@ import {
   SYNC_CAUGHT_UP,
   SYNC_FRAME_CHANGE,
   SYNC_FRAME_SNAPSHOT,
+  SYNC_PING,
+  SYNC_PONG,
   SYNC_SUBPROTOCOL_V1,
 } from "@weavesteps/contract";
 import type { DocStorage } from "./doc-storage";
@@ -28,10 +30,12 @@ import { reconcile } from "./reconcile";
  *  `send` takes the ArrayBuffer-backed view lib.dom's `WebSocket.send` accepts
  *  (its `BufferSource` excludes SharedArrayBuffer-backed views), so the global
  *  `WebSocket` satisfies this interface as-is; {@link isBinary} re-establishes
- *  that backing for Automerge change bytes with a real runtime check. */
+ *  that backing for Automerge change bytes with a real runtime check. A `string`
+ *  is also allowed for the TEXT heartbeat ping (WEP-0006); sync changes stay
+ *  binary. */
 export interface SocketLike {
   binaryType: string;
-  send(data: Uint8Array<ArrayBuffer>): void;
+  send(data: string | Uint8Array<ArrayBuffer>): void;
   close(): void;
   addEventListener(type: "message", fn: (ev: { data: unknown }) => void): void;
   addEventListener(type: "open" | "close", fn: () => void): void;
@@ -83,12 +87,31 @@ export interface ReconnectPolicy {
   maxColdAttempts?: number;
 }
 
+/**
+ * Heartbeat policy (WEP-0006): while the socket is idle, send a SYNC_PING every
+ * `intervalMs` and expect the DO's auto-response SYNC_PONG within `deadlineMs`.
+ * ANY inbound frame counts as proof of life (a busy connection is never pinged).
+ * A missed deadline means the socket is a half-open ZOMBIE — TCP thinks it's up
+ * but nothing is delivered (an access-point reboot that never flips
+ * `navigator.onLine`) — so the client drops it into the normal warm-reconnect
+ * machinery instead of waiting minutes for the browser's own close event.
+ */
+export interface HeartbeatPolicy {
+  /** Idle time (ms) before a ping is sent. */
+  intervalMs: number;
+  /** How long (ms) after a ping to wait for life before declaring a zombie. */
+  deadlineMs: number;
+}
+
 /** Injectable timers so reconnect/backoff is deterministic under test. */
 export interface DocConnectionOptions {
   /** Fresh-token provider attached as the `ballroom.auth` subprotocol (#189). */
   getToken?: TokenProvider;
   /** Auto-reconnect policy (default: a capped exponential backoff). */
   reconnect?: ReconnectPolicy;
+  /** Zombie-socket heartbeat (WEP-0006; default {@link DEFAULT_HEARTBEAT}).
+   *  `false` disables the probe (online-only unit tests that fast-forward time). */
+  heartbeat?: HeartbeatPolicy | false;
   /** Schedule a delayed callback (default: global setTimeout). */
   schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   /** Cancel a scheduled callback (default: global clearTimeout). */
@@ -114,6 +137,15 @@ export interface DocConnectionOptions {
 const DEFAULT_RECONNECT: Required<ReconnectPolicy> = {
   delays: [1000, 2000, 5000, 10000],
   maxColdAttempts: 4,
+};
+
+/** WEP-0006 defaults: a dead-but-open socket can impersonate "live" for at most
+ *  ~intervalMs + deadlineMs (~30 s) — versus the OS TCP timeout (minutes). One
+ *  tiny TEXT frame per idle interval; answered runtime-level, never waking the
+ *  DO, so the D23 hibernation economics are untouched. */
+export const DEFAULT_HEARTBEAT: HeartbeatPolicy = {
+  intervalMs: 25_000,
+  deadlineMs: 5_000,
 };
 
 /**
@@ -148,6 +180,11 @@ export class DocConnection<T> {
   private attempt = 0;
   /** Pending reconnect timer handle, so close()/reconnectNow() can cancel it. */
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Heartbeat (WEP-0006) ──────────────────────────────────────────────────
+  /** Armed while the socket is idle; fires → send a ping. */
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Armed after a ping; fires with no inbound frame → the socket is a zombie. */
+  private pongDeadline: ReturnType<typeof setTimeout> | null = null;
   // Outgoing changes produced before the socket is open (e.g. while the #189
   // token resolves, during the CONNECTING window, or while reconnecting) are
   // buffered here and flushed once it opens — otherwise a brand-new doc's seed
@@ -167,6 +204,8 @@ export class DocConnection<T> {
   private readonly openSocket: SocketFactory;
   private readonly getToken?: TokenProvider;
   private readonly reconnectPolicy: Required<ReconnectPolicy>;
+  /** Heartbeat policy; `null` = disabled (WEP-0006). */
+  private readonly heartbeat: HeartbeatPolicy | null;
   private readonly schedule: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   private readonly cancel: (handle: ReturnType<typeof setTimeout>) => void;
   // ── Offline editing (PLAN §11.2) ─────────────────────────────────────────
@@ -214,6 +253,7 @@ export class DocConnection<T> {
       delays: opts.reconnect?.delays ?? DEFAULT_RECONNECT.delays,
       maxColdAttempts: opts.reconnect?.maxColdAttempts ?? DEFAULT_RECONNECT.maxColdAttempts,
     };
+    this.heartbeat = opts.heartbeat === false ? null : (opts.heartbeat ?? DEFAULT_HEARTBEAT);
     this.schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
     this.cancel = opts.cancel ?? ((h) => clearTimeout(h));
     this.storage = opts.storageKey ? (opts.storage ?? null) : null;
@@ -301,6 +341,7 @@ export class DocConnection<T> {
     socket.addEventListener("open", () => {
       this.everOpened = true;
       this.coldFailures = 0; // a successful open clears the cold-failure streak
+      this.armHeartbeat(); // start the idle clock (WEP-0006)
       this.flush();
     });
     socket.addEventListener("close", () => {
@@ -319,6 +360,7 @@ export class DocConnection<T> {
    * persistently rejected/unreachable connection), unless the owner disposed us.
    */
   private onSocketClosed(): void {
+    this.clearHeartbeat(); // no socket, nothing to probe (WEP-0006)
     if (this.disposed) {
       this.setState("closed");
       return;
@@ -386,6 +428,77 @@ export class DocConnection<T> {
       this.reconnectTimer = null;
       this.connect();
     }, delay);
+  }
+
+  // ── Heartbeat (WEP-0006) — zombie-socket detection ───────────────────────
+
+  /** (Re)start the idle clock: after `intervalMs` with no inbound frame, ping. */
+  private armHeartbeat(): void {
+    if (!this.heartbeat) return;
+    if (this.heartbeatTimer != null) this.cancel(this.heartbeatTimer);
+    this.heartbeatTimer = this.schedule(() => {
+      this.heartbeatTimer = null;
+      this.sendPing();
+    }, this.heartbeat.intervalMs);
+  }
+
+  /** The idle interval elapsed: probe the socket and arm the pong deadline. */
+  private sendPing(): void {
+    if (!this.heartbeat || this.disposed || !this.socket) return;
+    try {
+      this.socket.send(SYNC_PING);
+    } catch {
+      // A socket that can't even accept the probe is already dead.
+      this.onZombie();
+      return;
+    }
+    this.pongDeadline = this.schedule(() => {
+      this.pongDeadline = null;
+      this.onZombie();
+    }, this.heartbeat.deadlineMs);
+  }
+
+  /** Any inbound frame: the socket is alive — clear the deadline, restart idle. */
+  private noteAlive(): void {
+    if (!this.heartbeat) return;
+    if (this.pongDeadline != null) {
+      this.cancel(this.pongDeadline);
+      this.pongDeadline = null;
+    }
+    this.armHeartbeat();
+  }
+
+  /** Cancel both heartbeat timers (socket gone, or owner teardown). */
+  private clearHeartbeat(): void {
+    if (this.heartbeatTimer != null) {
+      this.cancel(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    if (this.pongDeadline != null) {
+      this.cancel(this.pongDeadline);
+      this.pongDeadline = null;
+    }
+  }
+
+  /**
+   * The pong deadline passed with silence: the socket is a half-open zombie —
+   * TCP believes it's up, nothing is delivered, and `navigator.onLine` may well
+   * still read true (the practice-room dead spot: an AP reboot that never fires
+   * the `offline` event). Drop it the same way the §11.2 send-time zombie guard
+   * does: null the handle FIRST (the socket's own close event, which can be
+   * minutes away on a dead pipe, is stale-guarded in `attach`), close it
+   * best-effort, and drive the warm-drop reconnect machinery NOW.
+   */
+  private onZombie(): void {
+    this.clearHeartbeat();
+    const zombie = this.socket;
+    this.socket = null;
+    try {
+      zombie?.close();
+    } catch {
+      // already closing/closed — nothing to do
+    }
+    this.onSocketClosed();
   }
 
   /**
@@ -546,6 +659,12 @@ export class DocConnection<T> {
    * merge, or one CHANGE to apply. Malformed / unknown-tag frames are dropped.
    */
   private receive(data: unknown): void {
+    // ANY inbound frame is proof the socket is alive: clear a pending pong
+    // deadline and restart the idle clock (WEP-0006). A busy connection is
+    // never pinged at all.
+    this.noteAlive();
+    // The heartbeat pong carries no payload — its arrival WAS the information.
+    if (data === SYNC_PONG) return;
     // The DO's catch-up-complete marker (a TEXT frame): the catch-up is done, so
     // this connection is HYDRATED → go "live" (#202).
     if (data === SYNC_CAUGHT_UP) {
@@ -727,6 +846,7 @@ export class DocConnection<T> {
    */
   close(): void {
     this.disposed = true;
+    this.clearHeartbeat();
     if (this.reconnectTimer != null) {
       this.cancel(this.reconnectTimer);
       this.reconnectTimer = null;
