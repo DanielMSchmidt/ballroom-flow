@@ -26,6 +26,56 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A request that hit its deadline without the server answering — the network
+ * black hole (sent, no reply, no RST) that a spotty connection produces and
+ * that a bare `fetch` would wait on forever. Callers treat it like any other
+ * network throw (it is one, just bounded); it exists as a class so the message
+ * carries the deadline and retry logic can recognize it as transient.
+ */
+export class ApiTimeoutError extends Error {
+  constructor(method: string, path: string, timeoutMs: number) {
+    super(`${method} ${path} timed out after ${timeoutMs}ms`);
+    this.name = "ApiTimeoutError";
+  }
+}
+
+/** Per-request resilience knobs; production callers use the defaults. */
+export interface RequestOptions {
+  /** Abort the request after this many ms (default {@link DEFAULT_TIMEOUT_MS}). */
+  timeoutMs?: number;
+  /**
+   * Backoff delays (ms) between transient-failure retries — GETs only; one
+   * retry per entry, jittered. `[]` disables retry. Mutations ignore this:
+   * a re-sent POST/DELETE that DID reach the server is a double-write.
+   */
+  retryDelaysMs?: number[];
+}
+
+/** Generous enough for a slow mobile uplink, short enough that the UI's
+ *  error/offline affordances take over instead of an indefinite spinner. */
+const DEFAULT_TIMEOUT_MS = 15_000;
+/** Two quick retries — rides out a dropped packet or a DO cold start without
+ *  meaningfully delaying the honest failure state when the network is truly gone. */
+const DEFAULT_RETRY_DELAYS_MS = [500, 1500];
+/** Gateway-class statuses: the edge answered but the worker/DO didn't — the only
+ *  response statuses worth a retry. A 500 is a server bug, not a blip. */
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+
+const browserOnline = (): boolean => (typeof navigator === "undefined" ? true : navigator.onLine);
+
+/**
+ * Default TanStack Query retry predicate (wired app-wide in `main.tsx`).
+ * The library default is status-blind — it re-fired 401/402/403 product
+ * refusals three times before surfacing them (the "retry storm" ChoreoFlow
+ * once re-rendered under). Refusals fail fast; ambiguous failures (network,
+ * 5xx) get a bounded second chance on top of the rpc-layer transient retry.
+ */
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+  return failureCount < 2;
+}
+
 /** Parse a response body as JSON, tolerating an empty/non-JSON body (→ null). */
 async function readBody(res: Response): Promise<unknown> {
   return res.json().catch(() => null);
@@ -83,44 +133,113 @@ function reportApiFailure(
   }
 }
 
-/** `fetch` that reports network throws and non-2xx classes via {@link reportApiFailure},
- *  then rethrows/returns exactly what the caller saw before reporting existed. */
-async function reportingFetch(
+/** One `fetch` attempt under a deadline. On the deadline firing, the request is
+ *  aborted and an {@link ApiTimeoutError} thrown; any other throw passes through. */
+async function fetchWithTimeout(
+  method: string,
+  path: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(path, { ...init, signal: controller.signal });
+  } catch (thrown) {
+    if (controller.signal.aborted) throw new ApiTimeoutError(method, path, timeoutMs);
+    throw thrown;
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+
+/** Jittered pause between retry attempts (±25% spread so concurrent callers
+ *  hitting the same blip don't re-fire in lockstep). */
+function retryPause(baseMs: number): Promise<void> {
+  const ms = baseMs * (0.75 + Math.random() * 0.5);
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * `fetch` with the resilience policy (spotty networks, 2026-07-13):
+ * every attempt runs under a timeout, and — for GETs only — a TRANSIENT
+ * failure (network throw, timeout, 502/503/504 gateway answer) is retried
+ * per `retryDelaysMs` before surfacing. Retries are skipped while the
+ * browser reports offline: failing fast into the offline UI state is more
+ * honest than burning the backoff against a network that isn't there.
+ * Reporting fires only on the FINAL outcome ({@link reportApiFailure}), so a
+ * healed blip is silent; what the caller ultimately sees (return / throw) is
+ * exactly what a bare fetch would have shown them.
+ */
+async function resilientFetch(
   method: string,
   path: string,
   token: string | null,
   init: RequestInit,
+  opts?: RequestOptions,
 ): Promise<Response> {
-  let res: Response;
-  try {
-    res = await fetch(path, init);
-  } catch (thrown) {
-    reportApiFailure(method, path, { thrown }, token != null);
-    throw thrown;
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const delays = method === "GET" ? (opts?.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS) : [];
+  for (let attempt = 0; ; attempt += 1) {
+    const delay = delays[attempt];
+    const mayRetry = delay !== undefined && browserOnline();
+    try {
+      const res = await fetchWithTimeout(method, path, init, timeoutMs);
+      if (!res.ok && TRANSIENT_STATUSES.has(res.status) && mayRetry) {
+        await retryPause(delay);
+        continue;
+      }
+      if (!res.ok) reportApiFailure(method, path, { status: res.status }, token != null);
+      return res;
+    } catch (thrown) {
+      if (mayRetry) {
+        await retryPause(delay);
+        continue;
+      }
+      reportApiFailure(method, path, { thrown }, token != null);
+      throw thrown;
+    }
   }
-  if (!res.ok) reportApiFailure(method, path, { status: res.status }, token != null);
-  return res;
 }
 
-export async function apiGet<T>(path: string, token: string | null): Promise<T> {
-  const res = await reportingFetch("GET", path, token, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+export async function apiGet<T>(
+  path: string,
+  token: string | null,
+  opts?: RequestOptions,
+): Promise<T> {
+  const res = await resilientFetch(
+    "GET",
+    path,
+    token,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    opts,
+  );
   if (!res.ok) throw new ApiError(res.status, await readBody(res), `GET ${path} -> ${res.status}`);
   return readJson<T>(res);
 }
 
 /** Typed POST. Throws an {@link ApiError} (carrying status + parsed body) on non-2xx
  *  so callers can branch on e.g. a 402 quota upsell payload (#176). */
-export async function apiPost<T>(path: string, token: string | null, body: unknown): Promise<T> {
-  const res = await reportingFetch("POST", path, token, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+export async function apiPost<T>(
+  path: string,
+  token: string | null,
+  body: unknown,
+  opts?: RequestOptions,
+): Promise<T> {
+  const res = await resilientFetch(
+    "POST",
+    path,
+    token,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    opts,
+  );
   if (!res.ok) throw new ApiError(res.status, await readBody(res), `POST ${path} -> ${res.status}`);
   return readJson<T>(res);
 }
@@ -128,15 +247,26 @@ export async function apiPost<T>(path: string, token: string | null, body: unkno
 /** Typed DELETE. Throws an {@link ApiError} on non-2xx. `body`, when given, is
  *  JSON-encoded and sent as the DELETE payload (e.g. un-bookmark: a figureRef can
  *  contain `/`/`:`, so it rides in the body rather than a path param). */
-export async function apiDelete<T>(path: string, token: string | null, body?: unknown): Promise<T> {
-  const res = await reportingFetch("DELETE", path, token, {
-    method: "DELETE",
-    headers: {
-      ...(body !== undefined ? { "content-type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+export async function apiDelete<T>(
+  path: string,
+  token: string | null,
+  body?: unknown,
+  opts?: RequestOptions,
+): Promise<T> {
+  const res = await resilientFetch(
+    "DELETE",
+    path,
+    token,
+    {
+      method: "DELETE",
+      headers: {
+        ...(body !== undefined ? { "content-type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+    opts,
+  );
   if (!res.ok)
     throw new ApiError(res.status, await readBody(res), `DELETE ${path} -> ${res.status}`);
   return readJson<T>(res);

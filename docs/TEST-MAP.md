@@ -110,6 +110,8 @@ imports through small shims that defer module resolution to runtime:
 
 | Figure read view *(2026-07-10, no US-id — PLAN §4.4 lens-aware detail / design `figMode`)* | The reading-lens figure detail opens READ-ONLY even for an editor (static grid, no undo/add-kind/rename/variant-bar) with the notes surfaces (compose per role); the explicit "Edit steps" pencil (editors only) flips the open detail into the step editor and back; the builder's placement card still opens the editor directly | component + E2E | `apps/web/src/components/assemble.test.tsx` ("Figure detail read view" describe ×5), `apps/web/e2e/figure-read-view.spec.ts` (@smoke journey) |
 
+| REST resilience *(2026-07-13, no US-id — PLAN §7 Connectivity)* | Spotty-network hardening of the fetch seam: per-request timeout (`ApiTimeoutError`, no indefinite hang), GET-only transient retry (network throw / timeout / 502-503-504; jittered backoff; never mutations; skipped while offline; Sentry reports only the final failure), and the status-aware TanStack Query retry default (`shouldRetryQuery`: 4xx refusals fail fast) | unit (jsdom) | `apps/web/src/lib/rpc.test.ts` ("transient-failure retry", "request timeout", "shouldRetryQuery" describes) |
+
 **Every live story (US-001…US-054, minus the retired US-047/US-048) is covered.** No story is left untested.
 
 ## Reusable test abstractions built (signatures + locations)
