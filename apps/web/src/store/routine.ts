@@ -45,6 +45,7 @@ import {
 } from "@weavesteps/domain";
 import { reportError } from "../lib/ops";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
+import { ensureWasm } from "./automerge-init";
 import {
   connectUrl,
   DocConnection,
@@ -496,6 +497,11 @@ export async function openRoutine(
   routineId: string,
   opts: OpenOptions = {},
 ): Promise<RoutineStore> {
+  // Initialize the Automerge WASM before the first A.* call (slim build does not
+  // auto-init — see automerge-init.ts). This is the single live/Automerge entry
+  // point, so gating it here keeps the 2.75 MB WASM off the initial load and lets
+  // it load lazily on routine-open. No-op under vitest (full Automerge auto-inits).
+  await ensureWasm();
   const baseUrl =
     opts.baseUrl ?? (typeof location !== "undefined" ? location.origin : "http://localhost");
   const openSocket = opts.openSocket ?? defaultSocketFactory;
