@@ -4,8 +4,9 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AppAuthProvider } from "./auth/app-auth";
 import { isE2E } from "./lib/e2e-auth";
-import { initErrorReporting } from "./lib/ops";
+import { initErrorReporting, reportError } from "./lib/ops";
 import { initStaleBundleReload } from "./lib/stale-bundle";
+import { ErrorBoundary, ErrorFallback } from "./ui";
 // driver.js base styles for the first-visit UI tours; themed to the --bf-*
 // tokens by the `.bf-tour` overrides in styles/index.css. CSS stays imported
 // only at the app root (components are CSS-import-free — DESIGN-SYSTEM §7).
@@ -49,11 +50,20 @@ if (!isE2E() && !publishableKey) {
 } else {
   root.render(
     <StrictMode>
-      <AppAuthProvider publishableKey={publishableKey ?? ""}>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </AppAuthProvider>
+      <ErrorBoundary
+        onError={(error) => reportError(error, { key: `render:${error.message}` })}
+        fallback={(_error, reset) => (
+          <div style={{ padding: 24 }}>
+            <ErrorFallback reset={reset} />
+          </div>
+        )}
+      >
+        <AppAuthProvider publishableKey={publishableKey ?? ""}>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </AppAuthProvider>
+      </ErrorBoundary>
     </StrictMode>,
   );
 }

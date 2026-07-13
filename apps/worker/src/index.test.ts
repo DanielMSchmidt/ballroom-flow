@@ -31,6 +31,13 @@ it("health endpoint responds with the deploy build id (null when unset)", async 
   });
 });
 
+it("sets defense-in-depth security headers on worker responses", async () => {
+  const res = await SELF.fetch("https://example.com/api/health");
+  expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(res.headers.get("X-Frame-Options")).toBe("DENY");
+  expect(res.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+});
+
 // US-017 Phase 1 / US-021 — the public WS connect route forwards an authorized
 // upgrade to the doc's DO. Fail-closed (US-021): the client must present a valid
 // token AND be a member of the doc; the route forwards the Authorization header

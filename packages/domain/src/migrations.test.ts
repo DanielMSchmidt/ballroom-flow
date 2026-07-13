@@ -402,4 +402,18 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
     expect(migrated.counts).toBe(5);
     expect("bars" in migrated).toBe(false);
   });
+
+  it("clamps a huge legacy bars value to the 64-count ceiling (§2.5.2 invariant)", async () => {
+    const { migrate } = await importDomain();
+    // 30 bars × 4 beats = 120 counts pre-clamp — must not exceed the authored
+    // 1–64 bound the create schema and the LENGTH stepper both enforce.
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "long-figure",
+      dance: "foxtrot",
+      attributes: [],
+      bars: 30,
+    }) as Record<string, unknown>;
+    expect(migrated.counts).toBe(64);
+  });
 });

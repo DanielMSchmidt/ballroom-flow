@@ -123,7 +123,10 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     const dance = isDanceId(doc.dance) ? doc.dance : undefined;
     const meter = dance ? DANCES[dance] : undefined;
     if (!meter) return { ...doc }; // not a figure doc we can meter — leave as-is
-    const counts = Math.max(1, Math.floor(bars)) * meter.beatsPerBar;
+    // Clamp to the authored 1–64 ceiling the create schema + LENGTH stepper both
+    // enforce (§2.5.2) — a legacy figure with an out-of-range `bars` must not
+    // migrate to a counts value the rest of the system treats as impossible.
+    const counts = Math.min(64, Math.max(1, Math.floor(bars)) * meter.beatsPerBar);
     return { ...rest, counts };
   },
 };

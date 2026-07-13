@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   zCreateFigure,
+  zFamilyNoteBody,
   zJournalList,
+  zProfileBody,
   zRegistryKind,
   zRoutineList,
   zSaveToLibrary,
@@ -115,6 +117,40 @@ describe("zSaveToLibrary (⟳v5 — bookmark, not a copy)", () => {
     expect(zSaveToLibrary.safeParse({ dance: "waltz" }).success).toBe(false);
     expect(zSaveToLibrary.safeParse({}).success).toBe(false);
     expect(zSaveToLibrary.safeParse({ figureRef: "" }).success).toBe(false);
+  });
+});
+
+describe("write-body length/enum bounds (storage-growth + data-quality hardening)", () => {
+  it("zProfileBody caps displayName length (prevents an unbounded name that fans out to every member list)", () => {
+    expect(zProfileBody.safeParse({ displayName: "a", identityColor: "#111" }).success).toBe(true);
+    expect(
+      zProfileBody.safeParse({ displayName: "x".repeat(81), identityColor: "#111" }).success,
+    ).toBe(false);
+  });
+
+  it("zFamilyNoteBody caps text length and constrains danceScope to a dance or 'all'", () => {
+    const base = { kind: "note" as const, text: "keep the head left", figureType: "feather" };
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "waltz" }).success).toBe(true);
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "all" }).success).toBe(true);
+    // A garbage danceScope is dead data (never matches a routine's dance) — reject it.
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "cha_cha" }).success).toBe(false);
+    // Unbounded note text would bloat D1 + every journal card.
+    expect(
+      zFamilyNoteBody.safeParse({ ...base, danceScope: "waltz", text: "x".repeat(4001) }).success,
+    ).toBe(false);
+  });
+
+  it("zCreateFigure bounds the attributes array (an over-long timeline is not a real figure)", () => {
+    const base = {
+      figureRef: "fig_1",
+      name: "Natural Turn",
+      dance: "waltz",
+      figureType: "natural-turn",
+      routineId: "rt_1",
+    };
+    const attr = (i: number) => ({ id: `a${i}`, kind: "footwork", count: 1, value: "HT" });
+    const many = Array.from({ length: 2001 }, (_, i) => attr(i));
+    expect(zCreateFigure.safeParse({ ...base, attributes: many }).success).toBe(false);
   });
 });
 

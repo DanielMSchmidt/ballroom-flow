@@ -31,6 +31,17 @@ export default defineWorkersConfig(async () => {
   return {
     test: {
       include: ["src/**/*.test.ts"],
+      // Every worker test boots real workerd + a SQLite-backed DO + D1; some also
+      // trigger DO-heavy work (onboarding seeds the starter routine, forks copy
+      // figures). Under CI contention the collect/boot phase alone can take
+      // minutes, so the vitest 5s default flakes real-but-slow tests (me-profile
+      // onboarding, and the templates/fork tests that already carry an inline
+      // `, 15_000`). Give the whole suite justified headroom — a genuinely hung
+      // test still fails, just later — instead of scattering per-test bumps.
+      testTimeout: 15_000,
+      // beforeAll runs applyMigrations (+ seed) against the shared D1; give hooks
+      // more room again since they gate an entire suite.
+      hookTimeout: 30_000,
       poolOptions: {
         workers: {
           isolatedStorage: false,

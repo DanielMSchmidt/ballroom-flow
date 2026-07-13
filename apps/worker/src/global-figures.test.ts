@@ -380,8 +380,22 @@ describe("snapshot fans out variant BASES (⟳v5, §5.2)", () => {
     });
     await seedDb({
       users: [{ id: uid, displayName: "S", identityColor: "#111", plan: "free" }],
-      docs: [{ docRef: rt, type: "routine", ownerId: uid, doName: rt, dance: "waltz" }],
+      docs: [
+        { docRef: rt, type: "routine", ownerId: uid, doName: rt, dance: "waltz" },
+        // The base is a world-readable global catalog doc (registry row → the
+        // snapshot's per-figure access gate resolves it to `viewer`).
+        {
+          docRef: globalRef,
+          type: "global-figure",
+          ownerId: "app",
+          doName: globalRef,
+          dance: "waltz",
+        },
+      ],
       memberships: [{ id: "m_snap", docRef: rt, userId: uid, role: "editor" }],
+      // The account variant is reachable via the routine's placement edge (as in
+      // production — linkPlacement mints it when the figure is added).
+      placementEdges: [{ routineRef: rt, figureRef: variantRef }],
     });
 
     const token = await makeTestJWT(kp, { sub: uid });

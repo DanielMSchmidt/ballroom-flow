@@ -209,3 +209,79 @@ describe("order — keyForMove", () => {
     expect(keyForMove(items, 0, 3)).toBeNull();
   });
 });
+
+describe("order — keyForMove across an EQUAL-key run (concurrent-append convergence)", () => {
+  // Two clients that concurrently append to the same list deterministically mint
+  // byte-identical sortKeys (that determinism is what makes the append converge),
+  // so a run of equal keys is a legitimate state — sortByOrder renders it by
+  // tie-breaking on id. A move that straddled such a run used to feed an equal
+  // pair to keyBetween → uncaught throw. keyForMove now widens past the run.
+  const applyMove = (items: Ordered[], from: number, to: number) => {
+    const key = keyForMove(items, from, to);
+    if (key == null) return { key, ids: items.map((i) => i.id) };
+    const src = items[from];
+    const next = items.map((i) => (i === src ? { ...src, sortKey: key } : i));
+    return { key, ids: sortByOrder(next).map((i) => i.id) };
+  };
+
+  // Sorted order (id tiebreak): a, m1, m2, m3, z — the middle three share key "V".
+  const runList = (): Ordered[] => [
+    { id: "a", sortKey: "A" },
+    { id: "m1", sortKey: "V" },
+    { id: "m2", sortKey: "V" },
+    { id: "m3", sortKey: "V" },
+    { id: "z", sortKey: "z" },
+  ];
+
+  it("does NOT throw moving an item DOWN into an equal-key run (regression)", () => {
+    expect(() => keyForMove(runList(), 0, 2)).not.toThrow();
+    const { key, ids } = applyMove(runList(), 0, 2);
+    expect(key).not.toBeNull();
+    // Moving down → 'a' lands just after the run, before z.
+    expect(ids.indexOf("a")).toBeGreaterThan(ids.indexOf("m3"));
+    expect(ids.indexOf("a")).toBeLessThan(ids.indexOf("z"));
+  });
+
+  it("does NOT throw moving an item UP into an equal-key run (regression)", () => {
+    expect(() => keyForMove(runList(), 4, 2)).not.toThrow();
+    const { key, ids } = applyMove(runList(), 4, 2);
+    expect(key).not.toBeNull();
+    // Moving up → 'z' lands just before the run, after a.
+    expect(ids.indexOf("z")).toBeLessThan(ids.indexOf("m1"));
+    expect(ids.indexOf("z")).toBeGreaterThan(ids.indexOf("a"));
+  });
+
+  it("does NOT throw when the ENTIRE list is one equal-key run", () => {
+    const all: Ordered[] = ["a", "b", "c", "d"].map((id) => ({ id, sortKey: "V" }));
+    expect(() => keyForMove(all, 0, 3)).not.toThrow();
+    expect(() => keyForMove(all, 3, 0)).not.toThrow();
+    expect(applyMove(all, 0, 3).ids.at(-1)).toBe("a"); // appended past the run
+    expect(applyMove(all, 3, 0).ids[0]).toBe("d"); // prepended before the run
+  });
+
+  it("property: never throws for any list with equal-key runs and any valid move", () => {
+    fc.assert(
+      fc.property(
+        // Keys drawn from a tiny pool so equal-key runs are common after sorting.
+        fc.array(fc.constantFrom("A", "V", "z"), { minLength: 2, maxLength: 8 }),
+        fc.integer({ min: 0, max: 7 }),
+        fc.integer({ min: 0, max: 7 }),
+        (keys, i, j) => {
+          const sorted = sortByOrder(keys.map((k, idx) => ({ id: `i${idx}`, sortKey: k })));
+          const from = i % sorted.length;
+          const to = j % sorted.length;
+          expect(() => keyForMove(sorted, from, to)).not.toThrow();
+          const key = keyForMove(sorted, from, to);
+          if (key != null) {
+            const src = sorted[from];
+            const next = sorted.map((it) => (it === src ? { ...it, sortKey: key } : it));
+            // Applying the move yields a valid total order with every id preserved.
+            const out = sortByOrder(next).map((it) => it.id);
+            expect(new Set(out).size).toBe(sorted.length);
+          }
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+});

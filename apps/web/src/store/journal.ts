@@ -11,7 +11,12 @@ import { LIBRARY_FIGURES } from "@weavesteps/domain";
 import { getLocale, pickMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import { apiGet } from "../lib/rpc";
-import { openRoutineView } from "./routine-view";
+// NOTE: `openRoutineView` (→ routine.ts → @automerge/automerge) is imported
+// DYNAMICALLY inside createRoutineJournalEntry, not statically — it is the only
+// use of the Automerge store here, and a static import would pull the ~2.75 MB
+// Automerge WASM into the initial chunk via the journal wiring on the app entry.
+// Deferring it (alongside the lazy Assemble editor, ChoreoFlow.tsx) keeps Automerge
+// off the first paint; it loads only when a routine journal entry is actually saved.
 
 /** One journal entry as the worker returns it (anchors carry a resolved label). */
 export type JournalEntry = ContractJournalEntry;
@@ -94,6 +99,7 @@ export async function createRoutineJournalEntry(
     timeoutMs?: number;
   },
 ): Promise<void> {
+  const { openRoutineView } = await import("./routine-view");
   const store = openRoutineView(routineRef, {
     editable: true,
     getToken: opts.getToken,

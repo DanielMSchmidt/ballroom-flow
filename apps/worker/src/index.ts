@@ -98,14 +98,48 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// The request URL WITHOUT its query string — for error reporting. `c.req.url`
+// carries the raw query (e.g. `/api/search?q=<user text>`), which is user content
+// / potential PII; we never forward it to a third party (Sentry). Origin + path
+// only.
+function safeReportUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    u.search = "";
+    return u.toString();
+  } catch {
+    return rawUrl.split("?")[0] ?? rawUrl;
+  }
+}
+
+// Defense-in-depth response headers on every worker response (the /api/* + WS
+// surface). The SPA HTML is served by the assets binding, NOT the worker, so its
+// headers live in apps/web/public/_headers; these cover what the worker itself
+// returns. No Content-Security-Policy here — a CSP has to be validated against
+// Clerk / Sentry / the Automerge WASM loader and is a separate, owner-gated
+// change; these three are safe, non-breaking, standard hardening.
+app.use("*", async (c, next) => {
+  await next();
+  // A 101 WebSocket-upgrade response carries immutable headers — never touch it.
+  if (c.res.status === 101) return;
+  try {
+    c.res.headers.set("X-Content-Type-Options", "nosniff");
+    c.res.headers.set("X-Frame-Options", "DENY");
+    c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  } catch {
+    // Some responses expose immutable headers (streamed/cached) — skip them.
+  }
+});
+
 // US-049 AC-1: unhandled route errors are reported to Sentry (fire-and-forget —
 // waitUntil so the 500 isn't held up) and the client gets a structured 500.
 app.onError((err, c) => {
+  const url = safeReportUrl(c.req.url);
   try {
-    c.executionCtx.waitUntil(reportError(c.env, err, { url: c.req.url, method: c.req.method }));
+    c.executionCtx.waitUntil(reportError(c.env, err, { url, method: c.req.method }));
   } catch {
     // No execution context (some test harnesses): report best-effort instead.
-    void reportError(c.env, err, { url: c.req.url, method: c.req.method });
+    void reportError(c.env, err, { url, method: c.req.method });
   }
   console.error("unhandled route error", err);
   return c.json({ error: "internal" }, 500);
@@ -851,9 +885,23 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes (a
   // variant carries only its owned beats). A never-seeded/empty figure is omitted →
   // the client renders it missing.
+  //
+  // PER-FIGURE AUTHORIZATION (security): a routine's placements are caller-controlled
+  // CRDT content — a caller can add a placement referencing ANY figure docRef they've
+  // learned (nothing at the WS/CRDT layer validates the ref against access). So the
+  // routine's role does NOT imply the right to read every ref it lists; without a
+  // per-figure gate this REST path leaks any figure whose ref an authenticated user
+  // can obtain, bypassing the cascade-revocation the WS figure-doc boundary enforces.
+  // Gate each ref on the caller's ACTUAL effective role — ownership, global (world-
+  // readable), or the placement_edge cascade (a routine they're a member of that
+  // legitimately references it) — the same resolver the DO boundary uses, and drop
+  // the ones they can't read (rendered missing). Every legitimately-referenced figure
+  // has a server-minted placement_edge (POST /api/figures, fork, break-migration), so
+  // this never drops a figure a member is entitled to.
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
       const fig = await readFigureSnapshot(doc(ref));
       if (!fig?.figureType) return;
       figures[ref] = fig;
@@ -869,9 +917,13 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   for (const fig of Object.values(figures)) {
     if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
   }
+  // Bases are gated the same way (a base is typically a world-readable global
+  // catalog doc; the gate returns `viewer` for those, so legitimate bases are never
+  // dropped, while an unreadable base a caller isn't entitled to is omitted).
   const bases: Record<string, FigureDoc> = {};
   await Promise.all(
     [...baseRefs].map(async (ref) => {
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
       const base = await readFigureSnapshot(doc(ref));
       if (!base?.figureType) return;
       bases[ref] = base;
