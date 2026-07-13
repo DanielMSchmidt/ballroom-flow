@@ -43,6 +43,33 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Keep the Automerge core (~2.75 MB WASM + its JS glue) and the store
+        // modules that pull it in their OWN async chunk, so it loads only when a
+        // routine is opened — the lazy Assemble editor (ChoreoFlow.tsx) and the
+        // journal's dynamic routine-view import (store/journal.ts) are its only
+        // reachers. Without this, rollup HOISTS the shared store code into the
+        // entry chunk (the journal dynamic-import originates there, making the
+        // entry the common ancestor), which drags the WASM back onto the initial
+        // load. The SW still precaches this chunk for the offline editor; the win
+        // is keeping it off the first paint of the choreo list (mobile-first NFR).
+        // doc-storage.ts is deliberately EXCLUDED — it carries no Automerge and is
+        // reached statically from the entry via the offline cache (store/offline.ts).
+        manualChunks(id) {
+          if (id.includes("@automerge/automerge")) return "automerge";
+          const automergeStore = [
+            "routine.ts",
+            "routine-view.ts",
+            "routine-snapshot.ts",
+            "doc-connection.ts",
+          ];
+          if (automergeStore.some((f) => id.endsWith(`/store/${f}`))) return "automerge";
+        },
+      },
+    },
+  },
   // Local dev: proxy API calls to `wrangler dev` (default port 8787).
   server: {
     proxy: {

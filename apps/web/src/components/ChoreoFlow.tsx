@@ -9,7 +9,7 @@
 //
 // US-045/US-046: on mount, fetch templates + wire header search + fork.
 import type { RoutineListItem, SearchResult } from "@weavesteps/contract";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
@@ -28,8 +28,18 @@ import {
 import { search } from "../store/search";
 import { forkTemplate, listTemplates } from "../store/templates";
 import { AccessDenied, Button, Spinner, useToast } from "../ui";
-import { Assemble, type MembershipRole } from "./Assemble";
+import type { MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
+
+// Code-split the routine editor: Assemble is the ONLY screen that pulls the
+// Automerge store (routine.ts → doc-connection.ts → @automerge/automerge), whose
+// ~2.75 MB WASM + JS glue otherwise sit in the initial chunk even though they're
+// needed only once a routine is OPEN. Lazy-loading it here (the sole render site)
+// defers that payload off the first paint of the choreo list — the mobile-first
+// win — and it loads on routine-open behind the Suspense fallback below. (The
+// journal's routine-authoring path is the other Automerge entry point; it
+// dynamic-imports routine-view for the same reason — see store/journal.ts.)
+const Assemble = lazy(() => import("./Assemble").then((m) => ({ default: m.Assemble })));
 
 /** Resolve the viewer's editing role for an open routine from their list. */
 function roleForOpen(
@@ -214,30 +224,41 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             <Spinner /> <span className="text-2xs">{t.loading}</span>
           </div>
         ) : (
-          <Assemble
-            // Key per routine so each open is a fresh mount — the read/edit
-            // landing (initialMode) is applied on mount, and switching routines
-            // (e.g. fork → new copy) doesn't carry the previous lens over.
-            key={openRoutineId}
-            routineId={openRoutineId}
-            role={roleForOpen(items, openRoutineId)}
-            initialMode={initialMode}
-            currentUserId={me.data?.sub}
-            getToken={() => getToken()}
-            onBack={() => navigate("/")}
-            forking={fork.isPending}
-            onFork={() =>
-              // Fork → a new owned, frozen copy; deep-link to it once created.
-              fork.mutate(openRoutineId, {
-                onSuccess: (res) => navigate(`/routines/${res.docRef}`),
-              })
+          // Suspense fallback covers the one-time async load of the lazy Assemble
+          // chunk (+ the Automerge WASM it pulls) on routine-open — a brief spinner,
+          // matching the access-checking state above, never a blank frame.
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2 p-6 text-ink-faint" role="status">
+                <Spinner /> <span className="text-2xs">{t.loading}</span>
+              </div>
             }
-            bookmarkedFigureRefs={bookmarkedFigureRefs}
-            onAddToLibrary={onAddToLibrary}
-            // The full library list feeds the Add-figure picker (⟳v5 §4.2: a
-            // bookmark "can be placed into your other routines").
-            libraryFigures={mineQ.data ?? []}
-          />
+          >
+            <Assemble
+              // Key per routine so each open is a fresh mount — the read/edit
+              // landing (initialMode) is applied on mount, and switching routines
+              // (e.g. fork → new copy) doesn't carry the previous lens over.
+              key={openRoutineId}
+              routineId={openRoutineId}
+              role={roleForOpen(items, openRoutineId)}
+              initialMode={initialMode}
+              currentUserId={me.data?.sub}
+              getToken={() => getToken()}
+              onBack={() => navigate("/")}
+              forking={fork.isPending}
+              onFork={() =>
+                // Fork → a new owned, frozen copy; deep-link to it once created.
+                fork.mutate(openRoutineId, {
+                  onSuccess: (res) => navigate(`/routines/${res.docRef}`),
+                })
+              }
+              bookmarkedFigureRefs={bookmarkedFigureRefs}
+              onAddToLibrary={onAddToLibrary}
+              // The full library list feeds the Add-figure picker (⟳v5 §4.2: a
+              // bookmark "can be placed into your other routines").
+              libraryFigures={mineQ.data ?? []}
+            />
+          </Suspense>
         )}
       </div>
     );
