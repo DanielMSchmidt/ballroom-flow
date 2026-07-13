@@ -76,7 +76,7 @@
       "groupName": "tailwind"
     },
     {
-      "description": "Vitest + its coverage provider + the workers pool must stay on one major line (vitest 4 breaks pool-workers). Group them and gate non-patch bumps behind dashboard approval.",
+      "description": "Vitest + its coverage provider + the workers pool must stay on one major line (vitest 4 breaks pool-workers). Group non-patch bumps into one reviewed PR — no auto-merge, since this pairing has broken before.",
       "matchPackageNames": [
         "vitest",
         "@vitest/coverage-istanbul",
@@ -84,11 +84,10 @@
       ],
       "groupName": "vitest",
       "matchUpdateTypes": ["major", "minor"],
-      "dependencyDashboardApproval": true,
       "automerge": false
     },
     {
-      "description": "Pin the deliberately-paired Vite toolchain: vite 6 + plugin-react 4 + vite-plugin-pwa 1 (plugin-react 6 / vite 8 break the build). Group them; major/minor bumps need explicit dashboard approval, patches still flow.",
+      "description": "The deliberately-paired Vite toolchain: vite 6 + plugin-react 4 + vite-plugin-pwa 1 (plugin-react 6 / vite 8 have broken the build before). Group non-patch bumps into one reviewed PR — no auto-merge; patches still flow via the patch group.",
       "matchPackageNames": [
         "vite",
         "@vitejs/plugin-react",
@@ -96,7 +95,6 @@
       ],
       "groupName": "vite",
       "matchUpdateTypes": ["major", "minor"],
-      "dependencyDashboardApproval": true,
       "automerge": false
     }
   ]
