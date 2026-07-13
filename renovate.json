@@ -3,33 +3,101 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard",
-    ":semanticCommits"
+    ":semanticCommits",
+    "group:monorepos",
+    "group:recommended"
   ],
-  "lockFileMaintenance": { "enabled": true },
-  "prConcurrentLimit": 5,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "prConcurrentLimit": 6,
   "packageRules": [
     {
-      "description": "Group non-major updates into a single PR to cut noise.",
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "non-major dependencies"
-    },
-    {
-      "description": "Auto-merge devDependency minor/patch once CI is green.",
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "description": "Low-risk: batch every patch (plus pins/digests) into one PR and auto-merge once CI is green.",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "groupName": "all patch dependencies",
       "automerge": true
     },
     {
-      "description": "Pin the deliberately-paired toolchains: vitest 3 + pool-workers 0.8 (vitest 4 breaks pool-workers), and vite 6 + plugin-react 4 (plugin-react 6/vite 8 break the build). Major/minor bumps need explicit dashboard approval; patches still flow.",
+      "description": "Dev-only minor bumps are low-risk — batch and auto-merge once CI is green.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "dev dependencies (minor)",
+      "automerge": true
+    },
+    {
+      "description": "@types/* are type-only definitions — group them and auto-merge non-major.",
+      "matchPackageNames": ["@types/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "type definitions",
+      "automerge": true
+    },
+    {
+      "description": "React runtime + its type defs must move in lockstep.",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "react"
+    },
+    {
+      "description": "Clerk client + backend share a release train.",
+      "matchPackageNames": ["@clerk/**"],
+      "groupName": "clerk"
+    },
+    {
+      "description": "Drizzle ORM + kit are versioned together.",
+      "matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+      "groupName": "drizzle"
+    },
+    {
+      "description": "Automerge CRDT packages move as one across the workspace.",
+      "matchPackageNames": ["@automerge/**"],
+      "groupName": "automerge"
+    },
+    {
+      "description": "Cloudflare runtime tooling (wrangler + workers-types) tracks the same platform version.",
+      "matchPackageNames": ["wrangler", "@cloudflare/workers-types"],
+      "groupName": "cloudflare tooling"
+    },
+    {
+      "description": "Fontsource families are independent low-risk assets — batch them.",
+      "matchPackageNames": ["@fontsource/**"],
+      "groupName": "fontsource",
+      "automerge": true
+    },
+    {
+      "description": "Tailwind core + its Vite plugin release together.",
+      "matchPackageNames": ["tailwindcss", "@tailwindcss/vite"],
+      "groupName": "tailwind"
+    },
+    {
+      "description": "Vitest + its coverage provider + the workers pool must stay on one major line (vitest 4 breaks pool-workers). Group them and gate non-patch bumps behind dashboard approval.",
       "matchPackageNames": [
         "vitest",
-        "@cloudflare/vitest-pool-workers",
+        "@vitest/coverage-istanbul",
+        "@cloudflare/vitest-pool-workers"
+      ],
+      "groupName": "vitest",
+      "matchUpdateTypes": ["major", "minor"],
+      "dependencyDashboardApproval": true,
+      "automerge": false
+    },
+    {
+      "description": "Pin the deliberately-paired Vite toolchain: vite 6 + plugin-react 4 + vite-plugin-pwa 1 (plugin-react 6 / vite 8 break the build). Group them; major/minor bumps need explicit dashboard approval, patches still flow.",
+      "matchPackageNames": [
         "vite",
         "@vitejs/plugin-react",
         "vite-plugin-pwa"
       ],
+      "groupName": "vite",
       "matchUpdateTypes": ["major", "minor"],
-      "dependencyDashboardApproval": true
+      "dependencyDashboardApproval": true,
+      "automerge": false
     }
   ]
 }
