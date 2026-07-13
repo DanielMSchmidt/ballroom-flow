@@ -71,13 +71,14 @@ packages/domain/    pure TS domain logic (Automerge doc schemas, overlay, fork, 
 packages/contract/  Zod schemas + Hono RPC types shared by web & worker
 apps/worker/        Hono Worker + per-document Durable Object + D1 index
 apps/web/           React PWA: design system (src/ui), store seam, screens
-docs/               PLAN.md (source of truth) + design, tooling, testing, stories
+docs/               PLAN.md (current-state spec) + proposals/ (WEP change process) + design, tooling, testing
 research/           deep-dive research behind the plan's decisions
 ```
 
 ## Where to read more
 
-- **[`docs/PLAN.md`](docs/PLAN.md)** — the single source of truth (domain model, architecture, milestones, locked decisions).
+- **[`docs/PLAN.md`](docs/PLAN.md)** — the single source of truth for current state (domain model, architecture, milestones, locked decisions).
+- **[`docs/proposals/`](docs/proposals/README.md)** — the change process: KEP-style **Weave Enhancement Proposals** (WEPs) with statuses, ship gates, and the rejected-alternatives record.
 - **[`CLAUDE.md`](CLAUDE.md)** — the working guide that routes contributors (human or agent) to the right doc for their task.
 
-> **Status:** Foundations laid (M0 done; design, backlog, test harness, design system, and a full skipped-test scaffold in place). Building starts at **M1 — domain core**.
+> **Status:** the **M0–M9 v1 roadmap is complete end-to-end** (PLAN §9 close-outs, 2026-07-03; v5 live-figure migration 2026-07-02; offline editing 2026-07-05; Builder-v3 model changes 2026-07-07) and staging is live. New work is scoped through the [WEP index](docs/proposals/README.md).
