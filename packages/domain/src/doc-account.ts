@@ -174,6 +174,11 @@ export function addFamilyNote(
     figureType: string;
     danceScope: DanceId | "all";
     tags?: string[];
+    /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+     *  matching figure. Only valid with a concrete danceScope (counts don't
+     *  align across dances); absent = the whole figure, the v1 shape. */
+    count?: number;
+    role?: Role;
   },
 ): A.Doc<AccountDoc> {
   return mutate(doc, (draft) => {
@@ -183,7 +188,15 @@ export function addFamilyNote(
       kind: input.kind,
       text: input.text,
       tags: input.tags ?? [],
-      anchors: [{ type: "figureType", figureType: input.figureType, danceScope: input.danceScope }],
+      anchors: [
+        {
+          type: "figureType",
+          figureType: input.figureType,
+          danceScope: input.danceScope,
+          ...(input.count != null ? { count: input.count } : {}),
+          ...(input.role != null ? { role: input.role } : {}),
+        },
+      ],
       replies: [],
       createdAt: Date.now(),
       deletedAt: null,

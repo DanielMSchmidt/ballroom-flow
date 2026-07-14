@@ -47,6 +47,7 @@ import {
   newId,
   parseAnchors,
   partBeatSpan,
+  type Role,
   type RoutineDoc,
   readAccount,
   readFigure,
@@ -100,6 +101,10 @@ export type AccountOp =
       figureType: string;
       danceScope: DanceId | "all";
       tags?: string[];
+      /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+       *  matching figure. Only valid with a concrete danceScope. */
+      count?: number;
+      role?: Role;
     }
   | { op: "addAccountReply"; annotationId: string; authorId: string; text: string }
   | { op: "deleteFamilyNote"; annotationId: string }
@@ -546,9 +551,11 @@ export class DocDO extends DurableObject<Env> {
    * auto-materialized (which would fabricate an empty routine). Persists +
    * broadcasts like {@link applyChange}; the alarm projects the result back to
    * `library_entry`/`figure_type_note_index`. Returns the created note id for
-   * `addFamilyNote` (server-minted) so the shim can echo the v1 response shape.
+   * `addFamilyNote` (server-minted) so the shim can echo the v1 response shape,
+   * and `changed` — whether the edit advanced the doc — so the save-to-library
+   * shim can derive `{ alreadySaved }` (an idempotent re-add is a no-op).
    */
-  async applyAccountEdit(op: AccountOp): Promise<{ id: string | null }> {
+  async applyAccountEdit(op: AccountOp): Promise<{ id: string | null; changed: boolean }> {
     const before = this.loadPersistedAccount();
     if (!before) {
       throw new Error("applyAccountEdit: account doc not seeded (ensureAccountDoc must run first)");
@@ -559,7 +566,7 @@ export class DocDO extends DurableObject<Env> {
     const after = this.applyAccountOp(before, op);
     const changes = A.getChanges(before, after);
     this.doc = after;
-    if (changes.length === 0) return { id: null };
+    if (changes.length === 0) return { id: null, changed: false };
     this.persist(changes);
     await this.maybeScheduleCompaction();
     // Family notes + library bookmarks both project to D1 on the alarm.
@@ -571,7 +578,7 @@ export class DocDO extends DurableObject<Env> {
             .annotations.map((a) => a.id)
             .find((id) => !idsBefore.has(id)) ?? null)
         : null;
-    return { id: created };
+    return { id: created, changed: true };
   }
 
   /** Map a high-level account op onto a domain mutation. Unknown ops are a no-op. */
@@ -585,6 +592,8 @@ export class DocDO extends DurableObject<Env> {
           figureType: op.figureType,
           danceScope: op.danceScope,
           tags: op.tags,
+          ...(op.count != null ? { count: op.count } : {}),
+          ...(op.role != null ? { role: op.role } : {}),
         });
       case "addAccountReply":
         return addAccountReply(doc, op.annotationId, { authorId: op.authorId, text: op.text });
@@ -1650,7 +1659,7 @@ export class DocDO extends DurableObject<Env> {
     const notes: FamilyNoteProjection[] = [];
     for (const a of account.annotations) {
       const anchor = a.anchors.find((an) => an.type === "figureType");
-      if (!anchor || anchor.type !== "figureType") continue;
+      if (anchor?.type !== "figureType") continue;
       notes.push({
         noteId: a.id,
         authorId: userId,

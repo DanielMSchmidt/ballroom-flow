@@ -426,6 +426,17 @@ async function mineDocRefs(headers: Record<string, string>): Promise<string[]> {
   return figures.map((f) => f.docRef);
 }
 
+/**
+ * WEP-0002 phase 3: save/un-save now write THROUGH the user's account DO, and the
+ * DO alarm is the single writer of the `library_entry` D1 projection `/mine` reads.
+ * Drive that alarm so a test can assert the projected rows synchronously (in prod
+ * the alarm fires shortly after the edit off the request path).
+ */
+async function runAccountAlarm(userId: string): Promise<void> {
+  const stub = env.DOC_DO.get(env.DOC_DO.idFromName(`account:${userId}`));
+  await stub.runAlarmForTest();
+}
+
 describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, legacy triple)", () => {
   it("bookmarks the catalog figure itself — no copy is minted", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_save", docRef: "x", role: null });
@@ -437,6 +448,8 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
     expect(res.status).toBe(200);
     const body = await res.json<{ alreadySaved: boolean }>();
     expect(body.alreadySaved).toBe(false);
+    // The bookmark now lands in the account doc; the alarm projects library_entry.
+    await runAccountAlarm("u_save");
 
     // NO account-figure doc/registry row was created for this bookmark.
     const row = await env.DB.prepare("SELECT docRef FROM document_registry WHERE forkedFromRef = ?")
@@ -520,6 +533,9 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
     });
     await saveToLibrary(a.authHeaders(), NAT_TURN);
     await saveToLibrary(b.authHeaders(), NAT_TURN);
+    // Each user's account-doc alarm projects their own library_entry row.
+    await runAccountAlarm("u_a");
+    await runAccountAlarm("u_b");
 
     // ONE shared figureRef, TWO independent LibraryEntry rows (one per user). D1
     // is SHARED across the whole worker test run (isolatedStorage: false, per
@@ -551,6 +567,7 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
     ]);
     expect(r1.status).toBe(200);
     expect(r2.status).toBe(200);
+    await runAccountAlarm("u_race");
 
     const cnt = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM library_entry WHERE userId = 'u_race' AND figureRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
@@ -694,10 +711,12 @@ describe("v5 library un-bookmark — DELETE /api/figures/save-to-library", () =>
       }),
     });
     await saveToLibrary(ctx.authHeaders(), { figureRef });
+    await runAccountAlarm("u_un");
     expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
 
     const del = await unsaveFromLibrary(ctx.authHeaders(), figureRef);
     expect(del.status).toBe(200);
+    await runAccountAlarm("u_un");
     expect(await mineDocRefs(ctx.authHeaders())).not.toContain(figureRef);
 
     // The figure doc's registry row + its routine placement edge survive —
@@ -727,8 +746,11 @@ describe("v5 library un-bookmark — DELETE /api/figures/save-to-library", () =>
     });
     await saveToLibrary(a.authHeaders(), NAT_TURN);
     await saveToLibrary(b.authHeaders(), NAT_TURN);
+    await runAccountAlarm("u_del_a");
+    await runAccountAlarm("u_del_b");
 
     await unsaveFromLibrary(a.authHeaders(), NAT_TURN_REF);
+    await runAccountAlarm("u_del_a");
     expect(await mineDocRefs(a.authHeaders())).not.toContain(NAT_TURN_REF);
     expect(await mineDocRefs(b.authHeaders())).toContain(NAT_TURN_REF);
   });

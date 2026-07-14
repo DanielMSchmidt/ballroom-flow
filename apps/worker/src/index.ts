@@ -25,11 +25,10 @@ import { Hono } from "hono";
 import { authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
-import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
+import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
-import { bookmarkFigure, unbookmarkFigure } from "./db/library";
 import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import {
@@ -602,8 +601,15 @@ app.post("/api/figures/save-to-library", async (c) => {
     if (role == null) return c.json({ error: "forbidden" }, 403);
   }
 
-  const { alreadySaved } = await bookmarkFigure(c.env.DB, user.sub, figureRef);
-  return c.json({ alreadySaved }, 200);
+  // WEP-0002: write THROUGH the account DO — the canonical bookmark set lives in
+  // the account doc's `libraryFigureRefs`; the DO alarm is the single writer of
+  // the `library_entry` D1 projection. A re-add is an idempotent no-op, so the
+  // v1 `{ alreadySaved }` shape is derived from whether the edit changed the doc.
+  await ensureAccountDoc(c.env, user.sub);
+  const r = await c.env.DOC_DO.get(
+    c.env.DOC_DO.idFromName(accountDocRef(user.sub)),
+  ).applyAccountEdit({ op: "addLibraryRef", figureRef });
+  return c.json({ alreadySaved: !r.changed }, 200);
 });
 
 // DELETE /api/figures/save-to-library — un-bookmark (⟳v5). Body-based (not a
@@ -618,7 +624,14 @@ app.delete("/api/figures/save-to-library", async (c) => {
   const parsed = zFigureRefBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "invalid_request" }, 400);
   const { figureRef } = parsed.data;
-  await unbookmarkFigure(c.env.DB, user.sub, figureRef);
+  // WEP-0002: un-bookmark THROUGH the account DO (the alarm tombstones the
+  // `library_entry` row). Idempotent — removing an absent ref is a no-op — so
+  // this still 200s regardless of whether the doc changed.
+  await ensureAccountDoc(c.env, user.sub);
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(accountDocRef(user.sub))).applyAccountEdit({
+    op: "removeLibraryRef",
+    figureRef,
+  });
   return c.json({ ok: true }, 200);
 });
 
@@ -698,20 +711,27 @@ app.post("/api/account/family-notes", async (c) => {
   // rejected them with danceScope "all" (counts don't align across dances).
   const { kind, text, figureType, danceScope, count, role } = parsed.data;
 
-  const noteId = newId();
-  await insertFamilyNote(c.env.DB, {
-    noteId,
+  // WEP-0002: author THROUGH the account DO — the note lands in the account doc's
+  // annotations (server-minted id), and the DO alarm is the single writer of the
+  // `figure_type_note_index` D1 projection co-members read (US-041). Response
+  // shape is unchanged from the direct-insert path; `id` is now the DO-minted id.
+  await ensureAccountDoc(c.env, user.sub);
+  const r = await c.env.DOC_DO.get(
+    c.env.DOC_DO.idFromName(accountDocRef(user.sub)),
+  ).applyAccountEdit({
+    op: "addFamilyNote",
     authorId: user.sub,
-    figureType,
-    danceScope,
     kind,
     text,
+    figureType,
+    danceScope,
     ...(count != null ? { count } : {}),
     ...(role != null ? { role } : {}),
   });
+  if (r.id == null) return c.json({ error: "family_note_failed" }, 500);
   return c.json(
     {
-      id: noteId,
+      id: r.id,
       authorId: user.sub,
       figureType,
       danceScope,
