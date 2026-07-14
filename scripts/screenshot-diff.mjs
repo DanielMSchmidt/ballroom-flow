@@ -3,10 +3,23 @@
 // images are rendered fresh in CI into the workspace and are NOT committed back
 // to the PR branch (see the `screenshots` job in .github/workflows/ci.yml) — so
 // there is no bot commit and no `[skip ci]`, and the expensive CI gates always
-// run on the PR's real HEAD. The full-resolution "after" and "diff" PNGs are
-// staged into ARTIFACT_DIR for upload as a workflow artifact; the comment inlines
-// the committed "before" (raw.githubusercontent at the base SHA) and links the
-// artifact for the rest. Pure fns are exported for tests; main() is the CLI.
+// run on the PR's real HEAD.
+//
+// To show the "after" inline (a comment can only embed an image it can fetch by
+// URL — GitHub strips data: URIs), CI uploads those PNGs as assets on a dedicated
+// `ci-screenshots` prerelease and the comment inlines their stable
+// `releases/download/...` URLs. That hosts the images WITHOUT any commit — no bot
+// commit, no throwaway asset branch. The "before" column stays a raw.githubusercontent
+// URL at the base SHA (it is committed). The same PNGs are also staged into
+// ARTIFACT_DIR as a durable run artifact. When the release-asset env is absent
+// (a local run), the comment falls back to before-only + an artifact link.
+// (pixelmatch in classify still runs — its pixel count decides changed-vs-unchanged
+// per row — but the count itself is no longer surfaced in the comment.)
+//
+// The staged filenames are the exact release-asset names (ASSET_PREFIX + key +
+// ".after.png"), so the upload step can dumb-upload each file under its basename
+// and the URL the comment computes matches. Pure fns are exported for tests;
+// main() is the CLI.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -32,21 +45,11 @@ export function classify(baseBuf, headBuf) {
   return { status: diffPixels > 0 ? "changed" : "unchanged", diffPixels };
 }
 
-/** Render a pixelmatch diff PNG buffer for two same-size images, else null. */
-export function renderDiff(baseBuf, headBuf) {
-  if (!baseBuf || !headBuf) return null;
-  const a = PNG.sync.read(baseBuf);
-  const b = PNG.sync.read(headBuf);
-  if (a.width !== b.width || a.height !== b.height) return null;
-  const out = new PNG({ width: a.width, height: a.height });
-  pixelmatch(a.data, b.data, out.data, a.width, a.height, { threshold: 0.1 });
-  return PNG.sync.write(out);
-}
-
 const raw = (ctx, sha, file) =>
   `https://raw.githubusercontent.com/${ctx.owner}/${ctx.repo}/${sha}/${ctx.basePath}/${file}`;
 
-const fmt = (n) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "resized");
+/** Release-asset name for a row's "after" PNG (also its staged filename). */
+export const assetName = (prefix, key, kind) => `${prefix}${key}.${kind}.png`;
 
 /** Build the markdown comment body. */
 export function renderComment(rows, ctx) {
@@ -60,41 +63,59 @@ export function renderComment(rows, ctx) {
     return lines.join("\n");
   }
 
-  // The head images are rendered by CI and NOT committed, so there is no raw URL
-  // for "after". Point reviewers at the uploaded artifact for the full-res
-  // after/diff PNGs; the "before" column below still inlines (it is committed).
+  // "after" inlines only when CI has published it as a release asset (its stable
+  // download URL). Without that env (a local run), fall back to before-only.
+  const inline = Boolean(ctx.assetUrlBase && ctx.assetPrefix);
+  const img = (src) => `<img width="300" src="${src}">`;
+  const before = (r) => img(raw(ctx, ctx.baseSha, r.file));
+  const assetImg = (r, kind) =>
+    img(`${ctx.assetUrlBase}/${assetName(ctx.assetPrefix, r.key, kind)}`);
+
   const artifact = ctx.artifactUrl
     ? `[\`screenshots\` artifact](${ctx.artifactUrl})`
     : "`screenshots` artifact";
   lines.push(
-    `Rendered by CI from this PR's code — **not committed**. Full-resolution _after_ and _diff_ images are in the ${artifact} on this run.`,
+    inline
+      ? `Rendered by CI from this PR's code — **not committed**. The _after_ images below are hosted as assets on the \`ci-screenshots\` prerelease; full-resolution copies are also in the ${artifact} on this run.`
+      : `Rendered by CI from this PR's code — **not committed**. Full-resolution _after_ images are in the ${artifact} on this run.`,
     "",
   );
 
   if (changed.length) {
-    lines.push(
-      "### Changed",
-      "",
-      "| Screenshot | Before (base) | Δ pixels |",
-      "| --- | --- | --- |",
-    );
-    for (const r of changed) {
-      lines.push(
-        `| \`${r.key}\` | <img width="320" src="${raw(ctx, ctx.baseSha, r.file)}"> | ${fmt(r.diffPixels)} |`,
-      );
+    lines.push("### Changed", "");
+    if (inline) {
+      lines.push("| Screenshot | Before (base) | After |", "| --- | --- | --- |");
+      for (const r of changed) {
+        lines.push(`| \`${r.key}\` | ${before(r)} | ${assetImg(r, "after")} |`);
+      }
+    } else {
+      lines.push("| Screenshot | Before (base) |", "| --- | --- |");
+      for (const r of changed) {
+        lines.push(`| \`${r.key}\` | ${before(r)} |`);
+      }
     }
     lines.push("");
   }
   if (added.length) {
-    lines.push(
-      "### New",
-      "",
-      ...added.map((r) => `- \`${r.key}\` (\`${r.file}\`) — see artifact`),
-      "",
-    );
+    lines.push("### New", "");
+    if (inline) {
+      lines.push("| Screenshot | After |", "| --- | --- |");
+      for (const r of added)
+        lines.push(`| \`${r.key}\` (\`${r.file}\`) | ${assetImg(r, "after")} |`);
+    } else {
+      lines.push(...added.map((r) => `- \`${r.key}\` (\`${r.file}\`) — see artifact`));
+    }
+    lines.push("");
   }
   if (removed.length) {
-    lines.push("### Removed", "", ...removed.map((r) => `- \`${r.key}\` (\`${r.file}\`)`), "");
+    lines.push("### Removed", "");
+    if (inline) {
+      lines.push("| Screenshot | Before (base) |", "| --- | --- |");
+      for (const r of removed) lines.push(`| \`${r.key}\` (\`${r.file}\`) | ${before(r)} |`);
+    } else {
+      lines.push(...removed.map((r) => `- \`${r.key}\` (\`${r.file}\`)`));
+    }
+    lines.push("");
   }
   return lines.join("\n");
 }
@@ -123,6 +144,13 @@ async function main() {
   if (!baseSha || !owner || !repo) {
     throw new Error("usage: screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]");
   }
+  // Release-asset hosting for the "after"/"diff" PNGs (set by CI). ASSET_PREFIX
+  // namespaces assets per PR + head SHA so pushes never collide and camo can't
+  // serve a stale cached image; ASSET_URL_BASE is the `releases/download/<tag>`
+  // prefix. Absent locally → before-only comment, plain artifact filenames.
+  const assetUrlBase = process.env.SCREENSHOT_ASSET_URL_BASE ?? "";
+  const assetPrefix = process.env.SCREENSHOT_ASSET_PREFIX ?? "";
+
   const here = path.dirname(fileURLToPath(import.meta.url));
   const manifestUrl = pathToFileURL(
     path.resolve(here, "../apps/web/src/marketing/screenshots.manifest.ts"),
@@ -142,17 +170,24 @@ async function main() {
       headBuf = null;
     }
     const { status, diffPixels } = classify(baseBuf, headBuf);
-    // Stage the fresh "after" (and a rendered "diff") into the artifact dir so
-    // reviewers can download the full-resolution images the comment can't inline.
+    // Stage the fresh "after" into the artifact dir under its exact release-asset
+    // name, so the CI upload step can dumb-upload each file by basename and the URL
+    // the comment computes matches 1:1.
     if ((status === "changed" || status === "new") && headBuf) {
-      writeFileSync(path.join(ARTIFACT_DIR, `${key}.after.png`), headBuf);
-      const diff = renderDiff(baseBuf, headBuf);
-      if (diff) writeFileSync(path.join(ARTIFACT_DIR, `${key}.diff.png`), diff);
+      writeFileSync(path.join(ARTIFACT_DIR, assetName(assetPrefix, key, "after")), headBuf);
     }
     return { key, file, status, diffPixels };
   });
 
-  const ctx = { owner, repo, baseSha, basePath: SCREENSHOT_DIR, artifactUrl };
+  const ctx = {
+    owner,
+    repo,
+    baseSha,
+    basePath: SCREENSHOT_DIR,
+    artifactUrl,
+    assetUrlBase,
+    assetPrefix,
+  };
   writeFileSync("screenshot-comment.md", renderComment(rows, ctx));
   const anyChange = rows.some((r) => r.status !== "unchanged");
   console.log(`changed=${anyChange}`);
