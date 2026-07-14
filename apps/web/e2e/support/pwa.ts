@@ -1,21 +1,37 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+/**
+ * Guard an offline-RELOAD journey against a Playwright/WebKit limitation.
+ *
+ * Playwright's WebKit build throws "WebKit encountered an internal error" on ANY
+ * navigation while `context.setOffline(true)` — verified in CI for BOTH
+ * `page.reload()` (Page.reload) and `page.goto()` (Page.navigate), at both `load`
+ * and `commit` wait conditions. It is the *navigation-while-offline* that WebKit
+ * can't emulate, not offline itself: the "access revoked while offline" journey,
+ * which goes offline but never navigates, passes on WebKit. This is a test-harness
+ * limitation of Playwright's patched WebKit, NOT a product bug — real Safari
+ * reloads an installed PWA offline fine. So these journeys run on chromium-desktop
+ * + mobile-chrome (both real engines in the matrix) and are skipped on WebKit.
+ *
+ * Call at the top of any test whose body performs {@link reloadOffline}.
+ */
+export function skipOfflineReloadOnWebkit(browserName: string): void {
+  test.skip(
+    browserName === "webkit",
+    "Playwright/WebKit throws 'WebKit encountered an internal error' on any navigation while offline (page.reload + page.goto); offline-reload is covered on chromium-desktop + mobile-chrome",
+  );
+}
 
 /**
  * Reload a page that is currently OFFLINE and served from the service-worker
- * precache.
- *
- * WebKit (mobile-safari project) throws "WebKit encountered an internal error"
- * from `page.reload()` on an offline, SW-served navigation — and it does so at the
- * reload command itself, not the wait condition (switching `waitUntil` from `load`
- * to `commit` did not help; the error just moved to "waiting until commit"). The
- * `Page.reload` CDP path is what WebKit chokes on offline. Re-navigating to the
- * SAME URL uses the `Page.navigate` path instead, which WebKit services from the
- * SW cache without the internal error — an equivalent reload for these journeys.
- * We wait only for COMMIT; every caller then uses web-first assertions
- * (`toBeVisible`, `toContainText`) that auto-wait for the actual content, so no
- * coverage is lost. Chromium/mobile-chrome take this same path with no change in
- * behaviour (verified locally).
+ * precache. Only reached on non-WebKit engines (see
+ * {@link skipOfflineReloadOnWebkit}); on those, a plain reload works. Callers
+ * follow with web-first assertions that auto-wait for the real content.
  */
 export async function reloadOffline(page: Page): Promise<void> {
-  await page.goto(page.url(), { waitUntil: "commit" });
+  await page.reload();
+  // A defensive nudge: web-first assertions in the caller do the real waiting,
+  // but block here until the document has at least committed so a caller's first
+  // query doesn't race an in-flight navigation.
+  await expect(page.locator("body")).toBeVisible();
 }

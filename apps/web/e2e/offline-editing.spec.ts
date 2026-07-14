@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 import { mintTestJWT } from "./support/jwt";
-import { reloadOffline } from "./support/pwa";
+import { reloadOffline, skipOfflineReloadOnWebkit } from "./support/pwa";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -85,7 +85,9 @@ async function setUpSharedRoutine(
 test.describe("@smoke offline editing (PLAN §11.2)", () => {
   test("offline edits survive a reload and converge on reconnect, exactly once", async ({
     browser,
+    browserName,
   }) => {
+    skipOfflineReloadOnWebkit(browserName);
     // Intent: the §11.2 core journey. The student edits a hydrated routine while
     //   OFFLINE; the edit is visibly pending, survives an offline reload (local
     //   persistence), and on reconnect both clients converge — the offline edit
@@ -166,7 +168,9 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
 
   test("the installed app OPENS offline to the last-known choreo list, not a spinner", async ({
     browser,
+    browserName,
   }) => {
+    skipOfflineReloadOnWebkit(browserName);
     // Intent (§11.2 — offline app open): launching the installed PWA in
     //   airplane mode must land on the normal choreo list served from the
     //   on-device cache (the reported bug: an endless boot spinner). A user

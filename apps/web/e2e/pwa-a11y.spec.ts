@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
-import { reloadOffline } from "./support/pwa";
+import { reloadOffline, skipOfflineReloadOnWebkit } from "./support/pwa";
 
 // ─────────────────────────────────────────────────────────────────────────
 // PWA install/offline shell + accessibility/cross-browser (PLAN §10.2 E2E:
@@ -45,7 +45,9 @@ test.describe("@smoke PWA install + offline app shell", () => {
   test("loads the app shell offline with a clear 'you're offline' state", async ({
     page,
     context,
+    browserName,
   }) => {
+    skipOfflineReloadOnWebkit(browserName);
     // Intent: online-first — the shell loads offline; the UI shows an explicit
     // offline state instead of failing quietly (US-050 AC-2).
     // Steps/asserts:
