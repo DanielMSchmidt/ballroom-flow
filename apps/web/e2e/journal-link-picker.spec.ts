@@ -86,8 +86,13 @@ async function openPickerOnWhisk(
   page: import("@playwright/test").Page,
   entryText: string,
 ): Promise<void> {
-  const rail = page.getByRole("navigation", { name: /primary navigation/i });
-  await rail.getByRole("button", { name: "Journal" }).click();
+  // Viewport-agnostic nav: the desktop side rail ("Primary navigation") is
+  // `lg:`-only and the mobile bottom nav ("Tab bar") is `lg:hidden` — exactly
+  // one is in the accessibility tree per project, so matching either name
+  // works on all three Playwright projects (the rail-only locator timed out
+  // on mobile-chrome/mobile-safari in the full matrix).
+  const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
+  await nav.getByRole("button", { name: "Journal" }).click();
   // Exact name: the header's icon button is "New entry"; the empty-state CTA is
   // "+ New entry" — a bare /New entry/i regex matches BOTH when the journal is
   // empty (strict-mode violation, the run's one flake).
