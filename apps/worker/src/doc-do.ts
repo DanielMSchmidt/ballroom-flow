@@ -58,8 +58,10 @@ import {
   softDeleteAnnotation,
 } from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
+import { type FamilyNoteProjection, projectFamilyNotes } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
+import { projectLibraryEntries } from "./db/library";
 import { resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import type { Env } from "./index";
@@ -560,10 +562,8 @@ export class DocDO extends DurableObject<Env> {
     if (changes.length === 0) return { id: null };
     this.persist(changes);
     await this.maybeScheduleCompaction();
-    // NOTE: alarm projection to library_entry / figure_type_note_index lands with
-    // `projectAccountToD1` in the next increment; not armed here until that path
-    // exists, so this edit stays DO-local for now (the REST shims that consume it
-    // arrive in the same change as the projection).
+    // Family notes + library bookmarks both project to D1 on the alarm.
+    await this.maybeScheduleProjection();
     this.broadcast(changes, null);
     const created =
       op.op === "addFamilyNote"
@@ -611,13 +611,15 @@ export class DocDO extends DurableObject<Env> {
     // stream — O(patches), NOT a full-doc JSON serialization. This keeps the
     // US-015 hot sync path cheap: a structural-only change pays nothing extra and
     // never arms the journal-projection alarm.
-    let touchedAnnotations = false;
+    let touchedProjectable = false;
     const [after] = A.applyChanges(before, [change], {
       patchCallback: (patches) => {
-        if (touchedAnnotations) return;
+        if (touchedProjectable) return;
         for (const p of patches) {
-          if (p.path[0] === "annotations") {
-            touchedAnnotations = true;
+          // `annotations` → journal (routine) / family-note (account) projections;
+          // `libraryFigureRefs` → the account library_entry projection (WEP-0002).
+          if (p.path[0] === "annotations" || p.path[0] === "libraryFigureRefs") {
+            touchedProjectable = true;
             return;
           }
         }
@@ -628,9 +630,9 @@ export class DocDO extends DurableObject<Env> {
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change]);
     await this.maybeScheduleCompaction();
-    // Project the journal promptly only when this change touched annotations
-    // (the live WS path for lesson/practice authoring). See applyChange's gate.
-    if (touchedAnnotations) await this.maybeScheduleProjection();
+    // Project promptly only when this change touched projected state (the live WS
+    // path for lesson/practice authoring, account family notes, or bookmarks).
+    if (touchedProjectable) await this.maybeScheduleProjection();
     this.broadcast([change], from);
     return true;
   }
@@ -1143,6 +1145,11 @@ export class DocDO extends DurableObject<Env> {
       console.error("doc-do alarm: journal projection failed", err);
     }
     try {
+      await this.projectAccountToD1();
+    } catch (err) {
+      console.error("doc-do alarm: account projection failed", err);
+    }
+    try {
       await this.expireInvites();
     } catch (err) {
       console.error("doc-do alarm: invite expiry failed", err);
@@ -1612,6 +1619,51 @@ export class DocDO extends DurableObject<Env> {
       deletedAt: a.deletedAt ?? null,
     }));
     await projectJournalEntries(this.env.DB, docRef, rows);
+  }
+
+  /**
+   * Project a per-user ACCOUNT doc to its D1 indexes (WEP-0002 — the write
+   * direction inverted: D1 becomes a pure alarm-written projection of the doc,
+   * like journal_entry). Non-destructive, idempotent, tombstone-aware:
+   * `library_entry` mirrors the live `libraryFigureRefs` set (refs that left it
+   * are tombstoned), and `figure_type_note_index` upserts one row per figureType
+   * annotation keyed on the reused ULID noteId (a tombstoned note carries its
+   * `deletedAt` through). Only fires for account docs; other types early-return.
+   */
+  private async projectAccountToD1(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; type: string | null }>(
+        "SELECT doName, type FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    if (!meta?.doName || meta.type !== "account") return;
+
+    const doc = this.loadPersistedAccount();
+    if (!doc) return;
+    const account = readAccount(doc, { includeDeleted: true });
+    const userId = account.ownerId;
+
+    // Library bookmarks — the live set; refs that left it are tombstoned.
+    await projectLibraryEntries(this.env.DB, userId, account.libraryFigureRefs ?? []);
+
+    // Family notes — one row per figureType annotation, tombstones carried.
+    const notes: FamilyNoteProjection[] = [];
+    for (const a of account.annotations) {
+      const anchor = a.anchors.find((an) => an.type === "figureType");
+      if (!anchor || anchor.type !== "figureType") continue;
+      notes.push({
+        noteId: a.id,
+        authorId: userId,
+        figureType: anchor.figureType,
+        danceScope: anchor.danceScope,
+        kind: a.kind,
+        text: a.text,
+        count: anchor.count ?? null,
+        role: anchor.role ?? null,
+        deletedAt: a.deletedAt ?? null,
+      });
+    }
+    await projectFamilyNotes(this.env.DB, notes);
   }
 
   /** Look up figure display names (document_registry.title) for the given refs. */

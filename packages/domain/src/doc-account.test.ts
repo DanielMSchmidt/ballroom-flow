@@ -267,4 +267,49 @@ describe("importAccountDoc (WEP-0002 — seed the live account DO from D1 rows)"
     expect(read.libraryFigureRefs).toEqual(["fig_a", "fig_b"]);
     expect(read.annotations).toHaveLength(1);
   });
+
+  it("carries WEP-0004 timed-note count/role onto the anchor (present → set, absent → untimed)", () => {
+    const doc = readAccount(
+      buildAccountDoc(
+        importAccountDoc(
+          rows({
+            familyNotes: [
+              {
+                noteId: "n_timed",
+                kind: "practice",
+                text: "timed",
+                figureType: "feather",
+                danceScope: "waltz",
+                count: 3,
+                role: "leader",
+                createdAt: 1,
+              },
+              {
+                noteId: "n_untimed",
+                kind: "practice",
+                text: "untimed",
+                figureType: "feather",
+                danceScope: "all",
+                createdAt: 2,
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    expect(doc.annotations[0]?.anchors[0]).toEqual({
+      type: "figureType",
+      figureType: "feather",
+      danceScope: "waltz",
+      count: 3,
+      role: "leader",
+    });
+    // No count/role keys at all on the untimed note (not `undefined` — Automerge
+    // can't store undefined; their absence IS the untimed whole-figure shape).
+    expect(doc.annotations[1]?.anchors[0]).toEqual({
+      type: "figureType",
+      figureType: "feather",
+      danceScope: "all",
+    });
+  });
 });

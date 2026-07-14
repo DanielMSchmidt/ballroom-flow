@@ -59,6 +59,62 @@ export async function familyNotesForMembers(
   return res.results ?? [];
 }
 
+/** One projected family-note row (WEP-0002): the account doc's figureType
+ *  annotation, tombstone carried, projected to `figure_type_note_index`. */
+export interface FamilyNoteProjection {
+  noteId: string;
+  authorId: string;
+  figureType: string;
+  danceScope: string;
+  kind: string;
+  text: string;
+  count: number | null;
+  role: string | null;
+  deletedAt: number | null;
+}
+
+/**
+ * Project the account doc's `figureType` annotations to `figure_type_note_index`
+ * (WEP-0002 — the alarm-written inversion of insertFamilyNote's direct write).
+ * Stable-key upsert on the reused ULID `noteId`, so this is idempotent and never
+ * a wipe-and-rewrite; a tombstoned annotation carries its `deletedAt` through, so
+ * a delete projects as a tombstone (never a hard removal). Non-destructive: rows
+ * for notes still present in the doc are upserted in place.
+ */
+export async function projectFamilyNotes(
+  db: D1Database,
+  notes: FamilyNoteProjection[],
+): Promise<void> {
+  if (notes.length === 0) return;
+  const now = Date.now();
+  const stmts = notes.map((n) =>
+    db
+      .prepare(
+        `INSERT INTO figure_type_note_index (noteId, accountDocRef, authorId, figureType, danceScope, kind, text, count, role, updatedAt, deletedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(noteId) DO UPDATE SET
+           accountDocRef = excluded.accountDocRef, authorId = excluded.authorId,
+           figureType = excluded.figureType, danceScope = excluded.danceScope,
+           kind = excluded.kind, text = excluded.text, count = excluded.count,
+           role = excluded.role, updatedAt = excluded.updatedAt, deletedAt = excluded.deletedAt`,
+      )
+      .bind(
+        n.noteId,
+        `account:${n.authorId}`,
+        n.authorId,
+        n.figureType,
+        n.danceScope,
+        n.kind,
+        n.text,
+        n.count,
+        n.role,
+        now,
+        n.deletedAt,
+      ),
+  );
+  await db.batch(stmts);
+}
+
 /** Persist a family note (server-mediated; accountDocRef = `account:<authorId>`). */
 export async function insertFamilyNote(db: D1Database, note: FamilyNoteInput): Promise<void> {
   await db

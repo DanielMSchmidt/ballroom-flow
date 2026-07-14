@@ -24,7 +24,14 @@
 import type * as A from "@automerge/automerge";
 import type { DanceId } from "./dances";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
-import type { AccountDoc, Annotation, AnnotationKind, FigureDoc, ReadOptions } from "./doc-types";
+import type {
+  AccountDoc,
+  Annotation,
+  AnnotationKind,
+  FigureDoc,
+  ReadOptions,
+  Role,
+} from "./doc-types";
 import { matchesFigureType } from "./figuretype";
 import { newId } from "./ids";
 import { CURRENT_SCHEMA_VERSION } from "./migrations";
@@ -42,6 +49,10 @@ export type AccountFamilyNoteRow = {
   text: string;
   figureType: string;
   danceScope: DanceId | "all";
+  /** WEP-0004 timed-note fields (migration 0018): carried so a timed family note
+   *  survives the import instead of flattening to the untimed v1 shape. */
+  count?: number | null;
+  role?: Role | null;
   /** The row's timestamp (v1 index tracks only `updatedAt`); carried so the build is deterministic. */
   createdAt: number;
   /** Tombstone carried through faithfully — a deleted row imports as a tombstoned annotation. */
@@ -81,7 +92,17 @@ export function importAccountDoc(rows: AccountImportRows): AccountDoc {
     kind: row.kind,
     text: row.text,
     tags: [],
-    anchors: [{ type: "figureType", figureType: row.figureType, danceScope: row.danceScope }],
+    anchors: [
+      {
+        type: "figureType",
+        figureType: row.figureType,
+        danceScope: row.danceScope,
+        // Only include the timed fields when present — Automerge can't store
+        // `undefined`, and their absence IS the untimed whole-figure shape.
+        ...(row.count != null ? { count: row.count } : {}),
+        ...(row.role != null ? { role: row.role } : {}),
+      },
+    ],
     replies: [],
     createdAt: row.createdAt,
     deletedAt: row.deletedAt ?? null,

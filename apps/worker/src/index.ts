@@ -22,7 +22,7 @@ import {
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
-import { authenticate } from "./auth";
+import { authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
@@ -44,6 +44,7 @@ import {
 } from "./db/routines";
 import { userNameCache, users } from "./db/schema";
 import type { DocDO } from "./doc-do";
+import { accountDocRef, ensureAccountDoc } from "./ensure-account-doc";
 import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
 import { reportError, writeMetric } from "./ops";
@@ -1126,6 +1127,19 @@ app.get("/api/docs/:id/connect", async (c) => {
     ? offered.find((p) => p !== AUTH_SUBPROTOCOL && p !== SYNC_SUBPROTOCOL_V1)
     : undefined;
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  // WEP-0002: an account doc is minted on its owner's FIRST connect. Ensure it
+  // exists (seeded + registered) BEFORE forwarding, so the owner boundary resolves
+  // (resolveEffectiveRole needs the registry row) and the first connect finds real
+  // content. Gated on the authenticated user OWNING this ref — a forged connect to
+  // someone else's, or a junk, `account:*` ref never mints a doc; it just 403s at
+  // the DO boundary.
+  if (id.startsWith("account:") && token) {
+    const user = await authenticateToken(`Bearer ${token}`, c.env);
+    if (user && id === accountDocRef(user.sub)) {
+      await ensureAccountDoc(c.env, user.sub);
+    }
+  }
 
   const res = await stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
 
