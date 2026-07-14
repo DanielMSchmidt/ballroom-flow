@@ -23,7 +23,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { authenticate } from "./auth";
-import { routineCapFor } from "./db/admin";
+import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
@@ -102,6 +102,12 @@ const app = new Hono<{ Bindings: Env }>();
 // carries the raw query (e.g. `/api/search?q=<user text>`), which is user content
 // / potential PII; we never forward it to a third party (Sentry). Origin + path
 // only.
+// A JSON object with string keys — the shape a request body narrows to before we
+// read fields off it. Type guard (never a cast) so field access stays `unknown`.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
 function safeReportUrl(rawUrl: string): string {
   try {
     const u = new URL(rawUrl);
@@ -1025,6 +1031,50 @@ app.get("/api/search", async (c) => {
     dance: r.dance,
   }));
   return c.json({ results });
+});
+
+// POST /api/admin/docs/:id/restore — OPS disaster-recovery: rewind ONE document
+// to a past point using Cloudflare's Durable Object Point-in-Time Recovery
+// (PITR). Cloudflare retains ~30 days of the DO's SQLite history automatically,
+// so this is a pure RESTORE — no backup job of ours. ADMIN-ONLY (users.isAdmin):
+// this is destructive (changes after the recovery point are discarded) and
+// operates on ANY document by ref, so it is gated on the platform-admin flag,
+// NOT on document membership — a doc owner must not be able to rewind their own
+// (or a shared) doc through this seam. Runbook: OPS.md.
+//
+// PRODUCTION-ONLY behaviour: the bookmark API is a real-Cloudflare capability
+// (miniflare has no PITR), so only this route's auth gate + validation are
+// unit-tested; the rewind itself is verified against a deployed DO. The DO
+// restart (phase 2) intentionally aborts the session, so the phase-2 RPC
+// rejects by design — we swallow that and report the recovery point.
+//
+// Body: { at: <ISO 8601 string> } or { timestamp: <epoch ms> }. The time must be
+// in the past; Cloudflare clamps/rejects times outside the retention window.
+app.post("/api/admin/docs/:id/restore", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
+
+  const docRef = c.req.param("id");
+  const body: unknown = await c.req.json().catch(() => null);
+  // Narrow via a type guard (not a cast): `{ at }` and `{ timestamp }` fields read
+  // as `unknown`, then typeof-checked below — no claim the compiler can't verify.
+  const at = isRecord(body) ? body.at : undefined;
+  const ts = isRecord(body) ? body.timestamp : undefined;
+  const timestamp =
+    typeof ts === "number" ? ts : typeof at === "string" ? Date.parse(at) : Number.NaN;
+  if (!Number.isFinite(timestamp)) {
+    return c.json({ error: "provide { at: ISO-8601 } or { timestamp: epoch-ms }" }, 400);
+  }
+  if (timestamp > Date.now()) return c.json({ error: "recovery point must be in the past" }, 400);
+
+  const stub = c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef));
+  // Phase 1: resolve + arm the bookmark (returns cleanly so we can report it).
+  const { bookmark } = await stub.prepareRestore(timestamp);
+  // Phase 2: restart the DO to apply it. abort() rejects this RPC by design, so a
+  // rejection here means the restart is underway — expected, not an error.
+  await stub.commitRestore().catch(() => {});
+  return c.json({ ok: true, docRef, restoredTo: new Date(timestamp).toISOString(), bookmark }, 200);
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a
