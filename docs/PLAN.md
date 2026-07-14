@@ -709,8 +709,8 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 
 ### ★ Remaining open *(carried forward as WEPs where work is scoped)*
 - ✅ **Q-D3** → count fractions are the conventional **`e`=.25, `&`=.5, `a`=.75** ("1 e & a"); `i`-subdivisions `ia`=.125/`ai`=.375. (Earlier draft had `e`/`a` swapped — corrected.)
-- **Deferrable, not blocking:** **Q-M1/2/3** — media (v1.1); **Q-SC1/2** — Latin/American target versions. *(No WEP yet — raise one when picked up.)*
-- **Scoped as WEPs (2026-07-13):** the account-doc live-DO wiring (the recorded v1 gap, §9 close-out) → **[WEP-0002](proposals/0002-account-doc-live-do/README.md)** (provisional); attribute-predicate anchors (§11.1) → **[WEP-0003](proposals/0003-attribute-predicate-anchors/README.md)** (deferred).
+- **Deferrable, not blocking:** **Q-SC1/2** — Latin/American target versions. *(No WEP yet — raise one when picked up.)*
+- **Scoped as WEPs (2026-07-13):** the account-doc live-DO wiring (the recorded v1 gap, §9 close-out) → **[WEP-0002](proposals/0002-account-doc-live-do/README.md)** (provisional); attribute-predicate anchors (§11.1) → **[WEP-0003](proposals/0003-attribute-predicate-anchors/README.md)** (deferred); **Q-M1/2/3** — media (§13) → **[WEP-0005](proposals/0005-annotation-media-embeds/README.md)** (provisional, 2026-07-14).
 - **Settled infra:** Clerk boundary clean (D9); profile-less members get a **per-choreo distinct default identity colour** (`buildMemberColorMap`) rather than tolerating collisions.
 
 *No open items block the build — the product model, storage foundation, and notation are settled; vocabulary values refine with testers (Q-D4/Q-LIBSEED).*
@@ -718,7 +718,7 @@ Vitest projects: `domain` (Node + fast-check + in-memory Automerge), `worker` (`
 ---
 
 ## 13. Appendix: Media (v1.1)
-Not in v1. Annotations carry `media[]`; UI "coming soon". When built: R2 presigned PUT URLs (browser→R2), client-side compression, object key in metadata; upload inline while online (iOS Safari lacks Background Sync → in-app retry queue). Q-M1/2/3 cover types/caps/entities.
+Not in v1. Annotations carry `media[]`; UI "coming soon". When built: R2 presigned PUT URLs (browser→R2), client-side compression, object key in metadata; upload inline while online (iOS Safari lacks Background Sync → in-app retry queue). Q-M1/2/3 cover types/caps/entities. **Scoped as [WEP-0005](proposals/0005-annotation-media-embeds/README.md) (provisional, 2026-07-14)** — the WEP is the working spec (inline-in-text embeds, compact-on-timeline, the Q-M1/2/3 resolutions); this appendix stays as the pre-process sketch until the WEP is implemented and rewrites it to as-built.
 
 ---
 
