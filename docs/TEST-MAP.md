@@ -49,7 +49,7 @@ imports through small shims that defer module resolution to runtime:
 | US-001 | ULID id generation | domain | `packages/domain/src/ids.test.ts` |
 | US-002 | Dance metadata registry | domain | `packages/domain/src/dances.test.ts` |
 | US-003 | ATTRIBUTE_REGISTRY + merge | domain | `packages/domain/src/vocabulary.test.ts` |
-| US-004 | Float-count timing | domain | `packages/domain/src/timing.test.ts` |
+| US-004 | Float-count timing (incl. US-004a continuous routine numbering — length-driven since 2026-07-14: a placement advances the counter by its figure's beat length / portion span, not its step count) | domain + component | `packages/domain/src/timing.test.ts`, `apps/web/src/components/reading-view.test.tsx` ("continuous beat numbering + breaks" describe) |
 | US-005 | Routine + figure doc schemas | domain | `packages/domain/src/doc-schemas.test.ts` |
 | US-006 | ~~Overlay resolution~~ *(retired + removed 2026-06-30)* | — | `packages/domain/src/overlay.test.ts` **does not exist and was never created**. `resolve()` does not exist. The `Overlay` type, `overlay?` field on `FigureDoc`, and the overlay retag branch in `migrations.ts` are all deleted. Old docs carrying a stray `overlay` key are stripped by v2→v3 migration (proven in `migrations.test.ts`). *(Reconciled 2026-06)* |
 | US-007 | Choreo fork (clone) | domain | `packages/domain/src/fork.test.ts` |

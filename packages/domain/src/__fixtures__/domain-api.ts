@@ -53,9 +53,10 @@ export interface RegistryKind {
   builtin: boolean;
 }
 
-/** One entry in a routine's ordered beat stream (US-004a continuous numbering). */
+/** One entry in a routine's ordered beat stream (US-004a continuous numbering).
+ *  A figure carries block-local counts + its length in whole beats. */
 export type RoutineBeatEntry =
-  | { kind: "figure"; counts: number[] }
+  | { kind: "figure"; counts: number[]; beats?: number }
   | { kind: "break"; beats: number };
 
 /** A numbered entry aligned 1:1 with the {@link RoutineBeatEntry} input. */

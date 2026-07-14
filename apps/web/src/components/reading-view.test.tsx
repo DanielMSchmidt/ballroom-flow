@@ -270,7 +270,7 @@ describe("RoutineReadingView — notes margin (Builder v3)", () => {
         },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: /notes — count 1/i }));
+    await userEvent.click(screen.getByRole("button", { name: /notes — count 2/i }));
     expect(onOpenThread).toHaveBeenCalledWith({ figureRef: "f1", count: 2 });
   });
 
@@ -307,11 +307,11 @@ describe("RoutineReadingView — notes margin (Builder v3)", () => {
     ));
     const { unmount } = renderWithAnnotations({ canComment: true, onOpenThread: vi.fn() });
     // A commenter sees the ＋ chip inside the margin cells.
-    expect(screen.getByRole("button", { name: /notes — count 1/i }).textContent).toContain("＋");
+    expect(screen.getByRole("button", { name: /notes — count 2/i }).textContent).toContain("＋");
     unmount();
     renderWithAnnotations({ canComment: false, onOpenThread: vi.fn() });
     // A pure viewer's margin carries no add affordance.
-    expect(screen.getByRole("button", { name: /notes — count 1/i }).textContent).not.toContain(
+    expect(screen.getByRole("button", { name: /notes — count 2/i }).textContent).not.toContain(
       "＋",
     );
   });
@@ -337,7 +337,7 @@ describe("RoutineReadingView — notes margin (Builder v3)", () => {
       ],
     });
     expect(screen.getByText("watch the rise")).toBeInTheDocument();
-    const cell = screen.getByRole("button", { name: /notes — count 1/i });
+    const cell = screen.getByRole("button", { name: /notes — count 2/i });
     const avatar = cell.querySelector("span[data-avatar]");
     expect(avatar).not.toBeNull();
     expect(avatar?.textContent).toBe("N"); // initial rides inside the dot (#5)
@@ -429,6 +429,116 @@ describe("RoutineReadingView — continuous beat numbering + breaks (US-004a)", 
     // The figure took beats 1–3, so the break occupies beats 4–6 (one Waltz bar).
     expect(brk).toHaveTextContent(/beats 4–6/);
     expect(brk).toHaveTextContent(/1 bar/);
+  });
+
+  // ── Length-driven progression (2026-07-14 fix): a placement advances the
+  // counter by its figure's authored length (a portion: its window span), never
+  // by how many steps it carries — a held beat still occupies its time. ──
+
+  it("starts the next figure after the previous figure's LENGTH (a held beat still counts)", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // f1 is 3 beats long but steps only on 1 and 3 (beat 2 is a hold) — the
+    // steps read their real beats "1 3", and f2 still starts on 4.
+    const f1 = figure({
+      id: "f1",
+      name: "Hesitation",
+      counts: 3,
+      attributes: [attr(1, "direction", "forward"), attr(3, "direction", "close")],
+    });
+    const f2 = threeStep("f2", "Reverse Turn");
+    renderRoutine(
+      [
+        {
+          id: "s1",
+          name: "1st Long Side",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+      ],
+      [
+        { placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" },
+        { placement: { id: "p2", figureRef: "f2" }, figure: f2, status: "live" },
+      ],
+    );
+    // Header timing subs carry the joined beat tokens.
+    expect(screen.getByText("1 3")).toBeInTheDocument();
+    expect(screen.getByText("4 5 6")).toBeInTheDocument();
+  });
+
+  it("a step-less Break FIGURE advances the counter by its counts (PLAN §2.3)", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const brk = figure({ id: "fb", name: "Break", counts: 3, attributes: [] });
+    const f2 = threeStep("f2", "Natural Turn");
+    renderRoutine(
+      [
+        {
+          id: "s1",
+          name: "1st Long Side",
+          placements: [
+            { id: "p1", figureRef: "fb" },
+            { id: "p2", figureRef: "f2" },
+          ],
+        },
+      ],
+      [
+        { placement: { id: "p1", figureRef: "fb" }, figure: brk, status: "live" },
+        { placement: { id: "p2", figureRef: "f2" }, figure: f2, status: "live" },
+      ],
+    );
+    // The Break occupies beats 1–3 even with no steps; the figure reads 4 5 6.
+    expect(screen.getByText("4 5 6")).toBeInTheDocument();
+  });
+
+  it("advances a portioned placement by its WINDOW span, numbered from the block start", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const f1 = threeStep("f1", "Natural Turn"); // beats 1–3
+    // p2 dances counts 4–6 of a 6-count figure, stepping only on 4 and 6 (5 is
+    // a hold): the window spans beats 4–6, its steps read "4 6", and the next
+    // placement starts on 1 (wrapping the Waltz phrase after 6 beats).
+    const f2 = figure({
+      id: "f2",
+      name: "Reverse Turn",
+      counts: 6,
+      attributes: [attr(4, "direction", "back"), attr(6, "direction", "close")],
+    });
+    const f3 = threeStep("f3", "Whisk");
+    renderRoutine(
+      [
+        {
+          id: "s1",
+          name: "1st Long Side",
+          placements: [
+            { id: "p1", figureRef: "f1" },
+            { id: "p2", figureRef: "f2", part: { fromCount: 4, toCount: 6 } },
+            { id: "p3", figureRef: "f3" },
+          ],
+        },
+      ],
+      [
+        { placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" },
+        {
+          placement: { id: "p2", figureRef: "f2", part: { fromCount: 4, toCount: 6 } },
+          figure: f2,
+          status: "live",
+        },
+        { placement: { id: "p3", figureRef: "f3" }, figure: f3, status: "live" },
+      ],
+    );
+    // The windowed steps read their block beats (4 and 6, the hold on 5 unnumbered)…
+    const second = screen.getByRole("list", { name: /reverse turn steps/i });
+    expect(second).toHaveTextContent(/4/);
+    expect(second).toHaveTextContent(/6/);
+    // …and the figure AFTER the window starts a fresh phrase — both f1 and f3
+    // read "1 2 3" (f3 wrapped after 3 + 3 window beats fill the Waltz phrase).
+    expect(screen.getAllByText("1 2 3")).toHaveLength(2);
   });
 });
 
