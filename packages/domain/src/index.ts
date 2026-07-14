@@ -97,6 +97,13 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
+export {
+  type BothWriteTargets,
+  bothWriteTargets,
+  deriveFollowerValue,
+  isBothConsistent,
+  splitSharedForRole,
+} from "./role-write";
 export { parseAnchors, parseAttributeRead, parseAttributeWrite, zAnchor } from "./schemas";
 export {
   isSeededAttributeId,

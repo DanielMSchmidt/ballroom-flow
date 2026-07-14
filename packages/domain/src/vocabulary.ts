@@ -71,6 +71,20 @@ export interface RegistryKind {
    * is `direction`) — so `direction` carries `required:true` to match that UI.
    */
   required?: boolean;
+  /**
+   * How a BOTH-lens write derives the follower's value from the leader's
+   * (WEP-0005): "mirror" looks the value up in `mirror` (identity when absent —
+   * side steps are their own image); "leaderOnly" never derives (footwork —
+   * heel/toe work is authored per role, a guessed value would be fabrication);
+   * "copy" (the default, incl. custom kinds) stores one shared value for both.
+   */
+  bothWrite?: "copy" | "mirror" | "leaderOnly";
+  /**
+   * The role mirror for `bothWrite: "mirror"` kinds: only the asymmetric pairs
+   * (forward↔back); values not listed mirror to themselves. Must be an
+   * involution — role-write.test.ts property-checks map(map(v)) === v.
+   */
+  mirror?: Record<string, string>;
   /** true for standard kinds shipped here; false for user-defined kinds. */
   builtin: boolean;
 }
@@ -139,6 +153,19 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     // the merged "Step*" column, the one slot the notate grid marks required.
     roleAware: true,
     required: true,
+    // WEP-0005: a Both-lens write mirrors the follower's direction. Only the
+    // asymmetric pairs are listed; side/close/in_place mirror to themselves, and
+    // legacy `diagonal` deliberately so — its forward/back sense is unverified
+    // (alignment-derivation-report §D), so it must never be split mechanically.
+    bothWrite: "mirror",
+    mirror: {
+      forward: "back",
+      back: "forward",
+      diagonal_forward: "diagonal_back",
+      diagonal_back: "diagonal_forward",
+      behind: "in_front",
+      in_front: "behind",
+    },
     builtin: true,
   },
   // The foot part of the step (renamed from the old `step` kind). A CLOSED PICKLIST
@@ -231,6 +258,10 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     },
     // Footwork genuinely differs by role (e.g. heel turns are the follower's).
     roleAware: true,
+    // WEP-0005: never derivable — leader TH pairs with follower "H flat" in the
+    // Back Feather, not with any mechanical transform. A Both-lens write stores
+    // the leader's footwork only; the follower's is authored separately.
+    bothWrite: "leaderOnly",
     builtin: true,
   },
   // NOTE (2026-07-10): the ballet-derived `footPosition` kind (first…fifth) was
@@ -339,6 +370,11 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     },
     // Sway mirrors between partners, so it reads differently per role.
     roleAware: true,
+    // WEP-0005: partners face each other, so the same physical lean is the
+    // opposite named side per dancer (leader to_R ↔ follower to_L in the WDSF
+    // charts). "none" mirrors to itself via the identity fallback.
+    bothWrite: "mirror",
+    mirror: { to_L: "to_R", to_R: "to_L" },
     builtin: true,
   },
   // THE canonical rotation field: a step's relative rotation. Tokens are eighths
