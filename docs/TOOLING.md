@@ -160,11 +160,17 @@ upserts a sticky **before/after** comment; otherwise it discards the jittered re
 downloads its own managed Chromium in CI.
 
 > The screenshot pipeline used to work this same way but was moved off auto-commit on
-> 2026-07-14 (the `screenshots` job in `ci.yml` now renders + pixel-diffs into an artifact,
-> committing nothing). `video.yml` still auto-commits with `[skip ci]`, so it retains the
-> footgun that motivated that change: the bot commit becomes the PR HEAD with no CI on it,
-> so on a red PR the HEAD can show no failing checks. Left as-is because an MP4 can't be
-> inlined in a PR comment (the artifact approach needs a different shape); revisit if it bites.
+> 2026-07-14 (the `screenshots` job in `ci.yml` renders + pixel-diffs, committing nothing).
+> It inlines the **before / after / diff** images in the PR comment by hosting the fresh
+> after/diff PNGs as assets on a dedicated `ci-screenshots` prerelease — a release tag points
+> at an existing commit, so this adds no history and never touches the PR HEAD — and linking
+> their stable `releases/download/…` URLs (GitHub strips `data:` URIs, so a comment can only
+> embed an image it can fetch by URL; the committed "before" stays a raw.githubusercontent URL).
+> Stale per-PR assets are pruned on each push and on PR close (`screenshot-cleanup.yml`).
+> `video.yml` still auto-commits with `[skip ci]`, so it retains the footgun that motivated the
+> move off auto-commit: the bot commit becomes the PR HEAD with no CI on it, so on a red PR the
+> HEAD can show no failing checks. An MP4 can't be inlined in a comment, but the same
+> release-asset trick could host a poster/preview; left as-is for now — revisit if it bites.
 
 **Notes.** Remotion is a **build-only** dependency — the app embeds the rendered MP4 via a
 plain `<video>` (poster + controls, `preload="none"`), so nothing heavy ships in the client

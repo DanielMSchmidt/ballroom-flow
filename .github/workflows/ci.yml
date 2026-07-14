@@ -16,19 +16,28 @@ on:
 jobs:
   # Landing-page screenshot comparison. Renders the marketing screenshots fresh
   # from THIS PR's code, pixel-diffs them against the base branch's committed
-  # images, uploads the after/diff PNGs as an artifact, and upserts a before/after
-  # PR comment. It NEVER commits the rendered images back to the PR branch — that
-  # is the deliberate change from the old screenshots.yml, whose bot commit carried
-  # `[skip ci]` and became the PR HEAD with no CI on it (a red PR could then show
-  # no failing checks on its HEAD). With no bot commit there is exactly one commit
-  # per push, so fast-gate/full-e2e below always run on the PR's real HEAD.
+  # images, and upserts a before/after/diff PR comment. It NEVER commits the
+  # rendered images back to the PR branch — that is the deliberate change from the
+  # old screenshots.yml, whose bot commit carried `[skip ci]` and became the PR HEAD
+  # with no CI on it (a red PR could then show no failing checks on its HEAD). With
+  # no bot commit there is exactly one commit per push, so fast-gate/full-e2e below
+  # always run on the PR's real HEAD.
+  #
+  # To inline the "after"/"diff" in the comment (a comment can only embed images it
+  # can fetch by URL), the PNGs are published as assets on a dedicated
+  # `ci-screenshots` prerelease and the comment links their `releases/download/...`
+  # URLs — hosting them WITHOUT any commit (a release tag points at an existing
+  # commit; it adds no history and never touches the PR). `contents: write` is
+  # needed to create the release + upload assets. The same PNGs are also kept as a
+  # run artifact. Stale per-PR assets are pruned each push here, and on PR close by
+  # screenshot-cleanup.yml.
   # Informational only: this job does not gate the merge and runs independently of
   # fast-gate. Path-filtered at the step level so doc-only PRs skip the heavy work.
   screenshots:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +80,12 @@ jobs:
         run: pnpm --filter web screenshots
       - name: Build diff + comment
         if: steps.changes.outputs.relevant == 'true'
+        env:
+          # Namespace assets per PR + head SHA: pushes never collide and the changing
+          # URL defeats GitHub's camo image cache. Uses the PR head SHA (the code that
+          # was rendered), not github.sha (the merge commit).
+          SCREENSHOT_ASSET_PREFIX: "pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-"
+          SCREENSHOT_ASSET_URL_BASE: "${{ github.server_url }}/${{ github.repository }}/releases/download/ci-screenshots"
         run: |
           node scripts/screenshot-diff.mjs \
             "${{ steps.base.outputs.sha }}" \
@@ -85,6 +100,64 @@ jobs:
           path: screenshot-artifacts/
           if-no-files-found: ignore
           retention-days: 14
+      # Host the fresh after/diff PNGs so the comment can inline them, WITHOUT a
+      # commit: upload them as assets on the `ci-screenshots` prerelease. The staged
+      # filenames already ARE the asset names (SCREENSHOT_ASSET_PREFIX + key +
+      # kind), so we upload each file under its basename and the URLs the comment
+      # computed match. Runs before the comment upsert so the images exist when the
+      # comment first renders (else camo may cache a 404). Stale assets from this
+      # PR's earlier pushes are deleted first.
+      - name: Publish screenshot images as release assets
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const dir = 'screenshot-artifacts';
+            const files = fs.existsSync(dir)
+              ? fs.readdirSync(dir).filter((f) => f.endsWith('.png'))
+              : [];
+            if (files.length === 0) return;
+            const { owner, repo } = context.repo;
+            const tag = 'ci-screenshots';
+            // Get-or-create the holding prerelease. A release tag points at an
+            // existing commit — it adds no history and never touches the PR.
+            let release;
+            try {
+              release = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              try {
+                release = (await github.rest.repos.createRelease({
+                  owner, repo, tag_name: tag, name: 'CI screenshots',
+                  body: 'Holding release for PR screenshot-diff assets. Managed by CI; safe to ignore.',
+                  prerelease: true,
+                })).data;
+              } catch (ce) {
+                // Concurrent job won the create race (422 already_exists) — re-fetch.
+                if (ce.status !== 422) throw ce;
+                release = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data;
+              }
+            }
+            // Prune stale assets from this PR's earlier pushes (different head SHA).
+            // Paginate: many PRs share this one release, so >100 assets is possible.
+            const prefix = `pr-${context.payload.pull_request.number}-`;
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              owner, repo, release_id: release.id, per_page: 100,
+            });
+            for (const a of assets) {
+              if (a.name.startsWith(prefix)) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: a.id });
+              }
+            }
+            for (const name of files) {
+              await github.rest.repos.uploadReleaseAsset({
+                owner, repo, release_id: release.id, name,
+                data: fs.readFileSync(path.join(dir, name)),
+                headers: { 'content-type': 'image/png' },
+              });
+            }
       - name: Upsert PR comment
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/github-script@v7

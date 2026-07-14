@@ -68,7 +68,13 @@ describe("renderComment", () => {
     basePath: "apps/web/src/marketing/screenshots",
     artifactUrl: "https://gh/actions/runs/1",
   };
-  it("inlines the committed BASE image, links the artifact, and keeps the marker", () => {
+  // With release-asset env, after/diff inline from stable download URLs.
+  const assetCtx = {
+    ...ctx,
+    assetUrlBase: "https://github.com/o/r/releases/download/ci-screenshots",
+    assetPrefix: "pr-7-SHA-",
+  };
+  it("inlines the committed BASE image, links the artifact, and keeps the marker (no asset env)", () => {
     const md = renderComment(
       [{ key: "hero", file: "hero.png", status: "changed", diffPixels: 1234 }],
       ctx,
@@ -78,22 +84,53 @@ describe("renderComment", () => {
     expect(md).toContain(
       "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
     );
-    // "After" is rendered but NOT committed — no head raw URL, and the artifact is linked.
+    // Without release assets there is no after URL, and the artifact is linked.
     expect(md).not.toContain("/HEAD/");
+    expect(md).not.toContain("releases/download");
     expect(md).toContain("https://gh/actions/runs/1");
     // Pixel delta is surfaced (formatted with a thousands separator).
     expect(md).toContain("1,234");
   });
+  it("inlines before, after, and diff from release-asset URLs when the env is set", () => {
+    const md = renderComment(
+      [{ key: "hero", file: "hero.png", status: "changed", diffPixels: 1234 }],
+      assetCtx,
+    );
+    expect(md).toContain(
+      "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
+    );
+    // after + diff inline from the prerelease's asset download URLs.
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
+    );
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.diff.png",
+    );
+    expect(md).toContain("1,234");
+  });
+  it("inlines the after image for a NEW screenshot (no before) under release assets", () => {
+    const md = renderComment(
+      [{ key: "hero", file: "hero.png", status: "new", diffPixels: 0 }],
+      assetCtx,
+    );
+    expect(md).toContain("### New");
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
+    );
+    // A brand-new screenshot has no base, so no before/diff image.
+    expect(md).not.toContain("raw.githubusercontent.com");
+    expect(md).not.toContain(".diff.png");
+  });
   it("renders resized diffPixels (Infinity) as a label, not a number", () => {
     const md = renderComment(
       [{ key: "hero", file: "hero.png", status: "changed", diffPixels: Number.POSITIVE_INFINITY }],
-      ctx,
+      assetCtx,
     );
     expect(md).toContain("resized");
     expect(md).not.toContain("Infinity");
   });
   it("reports no changes when all unchanged", () => {
-    const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], ctx);
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], assetCtx);
     expect(md).toContain("No screenshot changes");
   });
 });

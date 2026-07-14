@@ -211,16 +211,25 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 ### Screenshot comparison (`.github/workflows/ci.yml`, the `screenshots` job)
 
 Renders the landing-page marketing screenshots fresh from the PR's code, pixel-diffs
-them against the base branch's committed images, uploads the after/diff PNGs as a
-workflow **artifact**, and upserts a before/after PR comment. **It does NOT commit the
-rendered images back to the PR branch** — that is the deliberate change (2026-07-14) from
-the old standalone `screenshots.yml`, whose bot commit carried `[skip ci]` and became the
-PR HEAD with no CI on it, so a red PR could show no failing checks on its HEAD. With no
-bot commit there is exactly one commit per push and the fast-gate/full-e2e always run on
-the PR's real HEAD. The committed landing PNGs (`apps/web/src/marketing/screenshots/`,
-bundled into the SPA by `Landing.tsx`) are now updated by hand: regenerate locally with
-`pnpm --filter web screenshots` and commit when you intentionally change that UI; the PR
-comment surfaces any drift.
+them against the base branch's committed images, and upserts a **before / after / diff** PR
+comment with all three inline. **It does NOT commit the rendered images back to the PR
+branch** — that is the deliberate change (2026-07-14) from the old standalone
+`screenshots.yml`, whose bot commit carried `[skip ci]` and became the PR HEAD with no CI on
+it, so a red PR could show no failing checks on its HEAD. With no bot commit there is exactly
+one commit per push and the fast-gate/full-e2e always run on the PR's real HEAD. The committed
+landing PNGs (`apps/web/src/marketing/screenshots/`, bundled into the SPA by `Landing.tsx`)
+are updated by hand: regenerate locally with `pnpm --filter web screenshots` and commit when
+you intentionally change that UI; the PR comment surfaces any drift.
+
+To inline the after/diff **without a commit** (a comment can only embed an image it can fetch
+by URL — GitHub strips `data:` URIs), the job hosts those PNGs as assets on a dedicated
+`ci-screenshots` **prerelease** and links their `releases/download/…` URLs. A release tag
+points at an existing commit, so this adds no git history and never touches the PR HEAD — the
+no-bot-commit guarantee holds. It needs `contents: write` (release create + asset upload).
+Assets are namespaced `pr-<n>-<headSha>-<key>.{after,diff}.png` (the head SHA busts GitHub's
+camo image cache); stale per-PR assets are pruned on each push and, on PR close, by
+`.github/workflows/screenshot-cleanup.yml`. The "before" column stays a `raw.githubusercontent`
+URL at the base SHA (it is committed).
 
 - **Trigger:** part of `ci.yml` (`pull_request` + `workflow_dispatch`). The heavy steps
   are step-level path-filtered (a `git diff` against the merge-base for `apps/web/**`,
@@ -233,15 +242,19 @@ comment surfaces any drift.
   `apps/web/src/marketing/screenshots/` into the workspace.
 - **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]`
   pixel-diffs (pixelmatch, threshold 0.1) the freshly-rendered images against the PR base's
-  committed ones, stages `<key>.after.png`/`<key>.diff.png` into `screenshot-artifacts/`,
-  and writes `screenshot-comment.md` (inlines the committed **before** via
-  `raw.githubusercontent`; links the artifact for after/diff), upserted under the
-  `<!-- screenshot-bot -->` marker.
+  committed ones and writes `screenshot-comment.md`, upserted under the `<!-- screenshot-bot -->`
+  marker. It stages the after/diff PNGs into `screenshot-artifacts/` under their exact
+  release-asset names (`$SCREENSHOT_ASSET_PREFIX<key>.{after,diff}.png`) so the workflow's
+  upload step can dumb-upload each by basename; the two env vars `SCREENSHOT_ASSET_PREFIX` +
+  `SCREENSHOT_ASSET_URL_BASE` (set by CI) also tell the script the `releases/download/…` URLs
+  to inline. Absent those env vars (a local run) it falls back to a before-only comment with an
+  artifact link. The staged PNGs are also uploaded as the `screenshots` run artifact (a durable
+  full-res copy, independent of release-asset pruning).
 
 > **Note:** `.github/workflows/video.yml` still uses the old auto-commit + `[skip ci]`
 > bot-push pattern for the explainer MP4, so it still carries the same HEAD-with-no-CI
-> footgun. It was left as-is here (an MP4 can't be inlined in a PR comment, so the
-> artifact approach needs a different shape); revisit if it bites.
+> footgun. Left as-is (an MP4 can't be inlined in a comment, though the same release-asset
+> trick could host a poster/preview); revisit if it bites.
 
 **`scripts/screenshot-diff.mjs` is CI-only** — its `main()` needs PR context (base SHA,
 repo coordinates) and git history. Don't run it locally expecting useful output; the pure
