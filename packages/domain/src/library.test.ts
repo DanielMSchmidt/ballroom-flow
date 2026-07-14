@@ -3,6 +3,7 @@ import type { Attribute } from "./doc-types";
 import {
   figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
+  figureTypeHasCatalogFamily,
   globalFigureRef,
   LIBRARY_FIGURES,
   libraryFigureByRef,
@@ -251,5 +252,23 @@ describe("figureHasLibraryOrigin — does the figure have a catalog identity at 
     expect(
       figureHasLibraryOrigin({ dance: "waltz", figureType: "my-move", name: "Natural Turn" }),
     ).toBe(false);
+  });
+});
+
+describe("figureTypeHasCatalogFamily — does a shared syllabus family exist for this figureType?", () => {
+  // A journal note can be pinned to a figure FAMILY (a `figureType` note) only when
+  // that figureType names a real catalog family — otherwise there is nothing to
+  // pin to. A from-scratch custom figure's slugged figureType has no family, so the
+  // link picker must not offer the family-scope options for it (the note falls
+  // through to a this-choreo annotation). Family matching (figuretype.ts) is purely
+  // figureType-based, so membership is a figureType-only question.
+  it("is true for a figureType present in the catalog (family-note-eligible)", () => {
+    expect(figureTypeHasCatalogFamily("natural-turn")).toBe(true);
+    expect(figureTypeHasCatalogFamily("feather-step")).toBe(true);
+  });
+
+  it("is false for a from-scratch custom slug that names no catalog family", () => {
+    expect(figureTypeHasCatalogFamily("my-signature-lunge")).toBe(false);
+    expect(figureTypeHasCatalogFamily("")).toBe(false);
   });
 });

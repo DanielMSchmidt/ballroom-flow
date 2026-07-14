@@ -59,6 +59,7 @@ export async function loadRoutineFigureOptions(
     figureType: string;
     counts: number[];
     attributes: Attribute[];
+    hasFamily: boolean;
   }[]
 > {
   const { routine, figures, bases } = await apiGet<{
@@ -73,7 +74,7 @@ export async function loadRoutineFigureOptions(
   // resolveFigure lives in the domain package next to the Automerge machinery —
   // import it lazily so this module keeps Automerge off the app's first paint
   // (see the module-header NOTE; same pattern as createRoutineJournalEntry).
-  const { resolveFigure } = await import("@weavesteps/domain");
+  const { resolveFigure, figureTypeHasCatalogFamily } = await import("@weavesteps/domain");
   const seen = new Set<string>();
   const out: {
     figureRef: string;
@@ -81,6 +82,7 @@ export async function loadRoutineFigureOptions(
     figureType: string;
     counts: number[];
     attributes: Attribute[];
+    hasFamily: boolean;
   }[] = [];
   for (const section of routine.sections ?? []) {
     for (const p of section.placements ?? []) {
@@ -99,6 +101,11 @@ export async function loadRoutineFigureOptions(
         figureType: resolved.figureType,
         counts,
         attributes,
+        // A custom (from-scratch) figure carries a slugged figureType that names
+        // no catalog family — a family note has nothing to pin to. The picker
+        // gates its family-scope options on this so the note falls through to a
+        // this-choreo annotation (never invents a private one-figure "family").
+        hasFamily: figureTypeHasCatalogFamily(resolved.figureType),
       });
     }
   }

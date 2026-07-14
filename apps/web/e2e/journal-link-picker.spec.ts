@@ -81,6 +81,51 @@ async function seedTwoWaltzRoutines(
   return { WHISK, RT_A, RT_B };
 }
 
+/** Seed one Waltz routine placing a from-scratch CUSTOM figure (a non-catalog
+ *  figureType — no family). Refs are unique per run (same reused-DO trap). */
+async function seedCustomFigureRoutine(
+  page: import("@playwright/test").Page,
+): Promise<{ CUSTOM: string; RT: string }> {
+  const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+  const CUSTOM = `fig_wep4_custom_${run}`;
+  const RT = `rt_wep4_custom_${run}`;
+  await resetDb(page);
+  await seedDb(page, {
+    users: [{ id: USER, displayName: "Dani", identityColor: "#1f8a5b" }],
+    figures: [
+      {
+        docRef: CUSTOM,
+        scope: "account",
+        ownerId: USER,
+        // A slugged figureType that names no catalog family → hasFamily is false.
+        figureType: "my-signature-move",
+        dance: "waltz",
+        name: "My Signature Move",
+        attributes: [
+          { id: "cat1", kind: "footwork", count: 1, role: null, value: "flat" },
+          { id: "cat2", kind: "footwork", count: 2, role: null, value: "toe" },
+        ],
+      },
+    ],
+    docs: [
+      {
+        docRef: RT,
+        type: "routine",
+        ownerId: USER,
+        title: "Waltz C",
+        dance: "waltz",
+        sections: [
+          { id: "sec_c", name: "Intro", placements: [{ id: "pl_c1", figureRef: CUSTOM }] },
+        ],
+      },
+    ],
+    memberships: [{ docRef: RT, userId: USER, role: "editor" }],
+    placementEdges: [{ routineRef: RT, figureRef: CUSTOM }],
+  });
+  await seedAuth(page, USER);
+  return { CUSTOM, RT };
+}
+
 /** Drive the shared front of the picker: new entry → link → Waltz A → Whisk. */
 async function openPickerOnWhisk(
   page: import("@playwright/test").Page,
@@ -192,5 +237,47 @@ test.describe("@smoke WEP-0004 choreo-first journal links", () => {
       timeout: 15_000,
     });
     await expect(page.getByText("note on the whole whisk")).toBeHidden();
+  });
+
+  test("a CUSTOM figure offers no family scope — the note falls through to this choreo", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const { RT } = await seedCustomFigureRoutine(page);
+    await page.goto("/");
+
+    // Open the picker on the custom figure (choreo → figure → whole figure).
+    const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
+    await nav.getByRole("button", { name: "Journal" }).click();
+    await page.getByRole("button", { name: "New entry", exact: true }).click();
+    await page.getByLabel("entry text").fill("keep the frame quiet here");
+    await page.getByText(/link to a step, figure or attribute/i).click();
+    await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Waltz C/ }).click();
+    await page.getByRole("button", { name: /^My Signature Move/ }).click();
+    await page.getByText("The entire figure").click();
+
+    // A custom figure has no catalog family: BOTH family scopes drop, leaving only
+    // "This choreo only" — even for a whole-figure placement (a library figure
+    // would show all three here).
+    await expect(page.getByText("This choreo only")).toBeVisible();
+    await expect(page.getByText("Every dance")).toBeHidden();
+    await expect(page.getByText("All Waltz choreos")).toBeHidden();
+    await page.getByText("This choreo only").click();
+    await expect(page.getByText("↳ My Signature Move · whole figure")).toBeVisible();
+    await page.getByRole("button", { name: /^done$/i }).click();
+
+    // Falls through to a routine annotation on the custom figure (never a family note).
+    const journalEntries = page.getByRole("list", { name: /journal entries/i });
+    await expect(journalEntries.getByText("keep the frame quiet here")).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.goto(`/routines/${RT}`);
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "My Signature Move", exact: true })
+      .click();
+    const panel = page.getByRole("region", { name: /^annotations$/i });
+    await expect(panel.getByText("keep the frame quiet here")).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -70,6 +70,7 @@ export { newId } from "./ids";
 export {
   figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
+  figureTypeHasCatalogFamily,
   globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,

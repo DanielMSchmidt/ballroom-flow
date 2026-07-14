@@ -176,6 +176,20 @@ export function figureHasLibraryOrigin(figure: {
 }
 
 /**
+ * True when `figureType` names a real catalog family — i.e. a `figureType` family
+ * note authored against it would have siblings to surface on. Family matching is
+ * purely figureType-based ({@link matchesFigureType} in figuretype.ts), so this is
+ * a figureType-only membership check. A from-scratch custom figure carries a
+ * slugged figureType that names no catalog family (nothing shares it), so the
+ * journal link picker gates the family-scope options behind this: with no family
+ * there is nothing to pin a family note to, and the note falls through to a
+ * this-choreo annotation.
+ */
+export function figureTypeHasCatalogFamily(figureType: string): boolean {
+  return figureType !== "" && LIBRARY_FIGURES.some((f) => f.figureType === figureType);
+}
+
+/**
  * True when a placed figure still matches the library figure it was picked from — same
  * (dance, figureType, name) AND the same live attributes. Used to decide whether a figure is
  * an unchanged library pick (so the UI does NOT badge it "custom") versus one the dancer has
