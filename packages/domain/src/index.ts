@@ -3,10 +3,13 @@
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
+  type AccountFamilyNoteRow,
+  type AccountImportRows,
   addAccountReply,
   addFamilyNote,
   addLibraryRef,
   buildAccountDoc,
+  importAccountDoc,
   readAccount,
   removeLibraryRef,
   resolveFamilyNotesFor,

@@ -27,10 +27,73 @@ import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
 import type { AccountDoc, Annotation, AnnotationKind, FigureDoc, ReadOptions } from "./doc-types";
 import { matchesFigureType } from "./figuretype";
 import { newId } from "./ids";
+import { CURRENT_SCHEMA_VERSION } from "./migrations";
 
 /** Build an in-memory Automerge account doc from its logical shape. */
 export function buildAccountDoc(account: AccountDoc): A.Doc<AccountDoc> {
   return buildDoc(account);
+}
+
+/** One persisted `figure_type_note_index` row, projected back to import an account doc. */
+export type AccountFamilyNoteRow = {
+  /** The ULID `noteId` — REUSED as the annotation id so identities survive the import. */
+  noteId: string;
+  kind: AnnotationKind;
+  text: string;
+  figureType: string;
+  danceScope: DanceId | "all";
+  /** The row's timestamp (v1 index tracks only `updatedAt`); carried so the build is deterministic. */
+  createdAt: number;
+  /** Tombstone carried through faithfully — a deleted row imports as a tombstoned annotation. */
+  deletedAt?: number | null;
+};
+
+/** The user's live D1 rows that seed a first `ensureAccountDoc` import (WEP-0002). */
+export type AccountImportRows = {
+  userId: string;
+  /** Live `library_entry` refs (caller pre-filters `deletedAt IS NULL`); deduped, order preserved. */
+  libraryFigureRefs: string[];
+  /** `figure_type_note_index` rows authored by the user (tombstoned rows may be included). */
+  familyNotes: AccountFamilyNoteRow[];
+};
+
+/**
+ * Build the initial `AccountDoc` for `ensureAccountDoc` from a user's existing D1
+ * projection rows (WEP-0002). PURE and DETERMINISTIC — no `Date.now()`, no ULID
+ * minting: family-note `noteId`s are REUSED as annotation ids so identities survive
+ * the D1→doc inversion, and timestamps come from the rows. Tombstone-safe: a
+ * tombstoned row imports as a tombstoned annotation (never dropped, never
+ * hard-removed), so the alarm can project it back faithfully. Stamps
+ * `CURRENT_SCHEMA_VERSION`.
+ */
+export function importAccountDoc(rows: AccountImportRows): AccountDoc {
+  const seenRefs = new Set<string>();
+  const libraryFigureRefs: string[] = [];
+  for (const ref of rows.libraryFigureRefs) {
+    if (!seenRefs.has(ref)) {
+      seenRefs.add(ref);
+      libraryFigureRefs.push(ref);
+    }
+  }
+  const annotations: Annotation[] = rows.familyNotes.map((row) => ({
+    id: row.noteId, // REUSED — identity survives the D1→doc inversion.
+    authorId: rows.userId,
+    kind: row.kind,
+    text: row.text,
+    tags: [],
+    anchors: [{ type: "figureType", figureType: row.figureType, danceScope: row.danceScope }],
+    replies: [],
+    createdAt: row.createdAt,
+    deletedAt: row.deletedAt ?? null,
+  }));
+  return {
+    id: `account:${rows.userId}`,
+    ownerId: rows.userId,
+    annotations,
+    libraryFigureRefs,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    deletedAt: null,
+  };
 }
 
 /** Read an account doc as a plain POJO; tombstoned notes/replies dropped by default. */
