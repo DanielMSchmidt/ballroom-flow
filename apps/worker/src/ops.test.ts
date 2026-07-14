@@ -1,5 +1,5 @@
-import { env, fetchMock } from "cloudflare:test";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { env } from "cloudflare:test";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { expectIndexedQuery } from "./test-support/explain";
 import { applyMigrations } from "./test-support/seed";
 
@@ -52,37 +52,28 @@ describe("US-049 EXPLAIN QUERY PLAN gate — every index/registry/membership/quo
 });
 
 describe("US-049 Observability wiring (Sentry + Analytics Engine) + Smart Placement", () => {
-  beforeAll(() => {
-    fetchMock.activate();
-    fetchMock.disableNetConnect();
-  });
-  afterAll(() => {
-    fetchMock.assertNoPendingInterceptors();
-    fetchMock.deactivate();
+  // vitest-pool-workers 4.x removed the `fetchMock` export from `cloudflare:test`
+  // (undici MockAgent); the supported replacement is spying on `globalThis.fetch`
+  // (Cloudflare "Migrate from Vitest 3 to Vitest 4" guide). reportError() calls
+  // the global `fetch`, so a spy fully intercepts the outbound Sentry POST — no
+  // real network — and lets us assert the URL/method/body directly.
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("reports a thrown error to Sentry and a metric to Analytics Engine", async () => {
     // Intent: errors→Sentry (envelope API, dependency-free), product metrics→
-    //   Analytics Engine. Arrange: intercept the Sentry ingest host with
-    //   fetchMock and capture writeDataPoint on a fake AE binding. Act: run the
-    //   ops seam (the same functions app.onError + the /api/* metric middleware
-    //   call). Assert: the Sentry envelope POST happened and writeDataPoint was
-    //   called with the metric.
+    //   Analytics Engine. Arrange: intercept the Sentry ingest host by spying on
+    //   globalThis.fetch and capture writeDataPoint on a fake AE binding. Act: run
+    //   the ops seam (the same functions app.onError + the /api/* metric
+    //   middleware call). Assert: the Sentry envelope POST happened and
+    //   writeDataPoint was called with the metric.
     // Covers US-049 AC-1 (Sentry + Analytics Engine).
     const { reportError, writeMetric } = await import("./ops");
 
-    let envelopeBody = "";
-    fetchMock
-      .get("https://o123.ingest.sentry.io")
-      .intercept({
-        method: "POST",
-        path: "/api/456/envelope/",
-        body: (body) => {
-          envelopeBody = String(body);
-          return true;
-        },
-      })
-      .reply(200, "{}");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     await reportError(
       { SENTRY_DSN: "https://pubkey@o123.ingest.sentry.io/456" },
@@ -92,7 +83,16 @@ describe("US-049 Observability wiring (Sentry + Analytics Engine) + Smart Placem
         method: "GET",
       },
     );
+
+    // Exactly one outbound request, to the Sentry envelope endpoint, via POST.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const call = fetchSpy.mock.calls[0];
+    if (!call) throw new Error("expected exactly one fetch call");
+    const [url, init] = call;
+    expect(String(url)).toBe("https://o123.ingest.sentry.io/api/456/envelope/");
+    expect(init?.method).toBe("POST");
     // The envelope carries the exception (type + message) and the request context.
+    const envelopeBody = String(init?.body);
     expect(envelopeBody).toContain('"type":"Error"');
     expect(envelopeBody).toContain("boom");
     expect(envelopeBody).toContain("/api/explodes");

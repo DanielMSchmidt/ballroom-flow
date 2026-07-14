@@ -12,8 +12,7 @@
 // stay quiet; each class reports at most once per isolate so a broken deploy
 // can't flood the project.
 // ─────────────────────────────────────────────────────────────────────────
-import { fetchMock } from "cloudflare:test";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   generateTestKeypair,
   makeExpiredJWT,
@@ -56,17 +55,18 @@ function waitUntilCollector(): {
 }
 
 describe("authenticateToken — verification-failure reporting (US-049 / 2026-07-05 incident)", () => {
-  beforeAll(() => {
-    fetchMock.activate();
-    fetchMock.disableNetConnect();
-  });
-  afterAll(() => {
-    fetchMock.assertNoPendingInterceptors();
-    fetchMock.deactivate();
-  });
+  // vitest-pool-workers 4.x removed the `fetchMock` export from `cloudflare:test`
+  // (undici MockAgent); the supported replacement is spying on `globalThis.fetch`
+  // (Cloudflare "Migrate from Vitest 3 to Vitest 4" guide). reportError() (via
+  // authenticateToken's waitUntil) calls the global `fetch`, so a spy fully
+  // intercepts the outbound Sentry envelope POST — no real network — and the
+  // call count is a direct, stronger substitute for assertNoPendingInterceptors.
   beforeEach(async () => {
     const { resetAuthFailureReportingForTest } = await import("./index");
     resetAuthFailureReportingForTest();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("reports a token signed by the WRONG key (config-mismatch class) to Sentry, with its reason", async () => {
@@ -76,18 +76,9 @@ describe("authenticateToken — verification-failure reporting (US-049 / 2026-07
     //   Sentry event naming the verification reason, and still fail closed.
     const { authenticateToken } = await import("./index");
 
-    let envelopeBody = "";
-    fetchMock
-      .get("https://o123.ingest.sentry.io")
-      .intercept({
-        method: "POST",
-        path: "/api/456/envelope/",
-        body: (body) => {
-          envelopeBody = String(body);
-          return true;
-        },
-      })
-      .reply(200, "{}");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     const foreign = await foreignKeypair();
     const token = await makeTestJWT(foreign, { sub: "user_evil_twin_instance" });
@@ -98,6 +89,12 @@ describe("authenticateToken — verification-failure reporting (US-049 / 2026-07
     expect(pending.length).toBe(1); // the report rode waitUntil (not dropped I/O)
     await Promise.all(pending);
 
+    // Exactly one outbound report, to the Sentry envelope endpoint, naming the reason.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const call = fetchSpy.mock.calls[0];
+    if (!call) throw new Error("expected exactly one fetch call");
+    expect(String(call[0])).toBe("https://o123.ingest.sentry.io/api/456/envelope/");
+    const envelopeBody = String(call[1]?.body);
     expect(envelopeBody).toContain("AuthVerificationError");
     expect(envelopeBody).toContain("token-invalid-signature");
   });
@@ -107,10 +104,9 @@ describe("authenticateToken — verification-failure reporting (US-049 / 2026-07
     //   class per isolate is enough signal and protects the Sentry quota.
     const { authenticateToken } = await import("./index");
 
-    fetchMock
-      .get("https://o123.ingest.sentry.io")
-      .intercept({ method: "POST", path: "/api/456/envelope/" })
-      .reply(200, "{}");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     const foreign = await foreignKeypair();
     const { waitUntil, pending } = waitUntilCollector();
@@ -121,15 +117,17 @@ describe("authenticateToken — verification-failure reporting (US-049 / 2026-07
     );
     await Promise.all(pending);
     expect(pending.length).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-    // Same class again: no second report is even scheduled (disableNetConnect
-    // would reject the fetch; the collector staying at 1 proves none happened).
+    // Same class again: no second report is even scheduled — the collector
+    // staying at 1 and fetch staying at one call prove none happened.
     await authenticateToken(
       `Bearer ${await makeTestJWT(foreign, { sub: "u2" })}`,
       AUTH_ENV,
       waitUntil,
     );
     expect(pending.length).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT report an expired token — a benign user state, not a config failure", async () => {
