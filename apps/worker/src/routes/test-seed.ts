@@ -21,6 +21,23 @@ export const testSeed = new Hono<{ Bindings: Env }>();
 /** Wipe the index tables (deterministic per-run reset). */
 testSeed.post("/api/test/reset", async (c) => {
   const d = drizzle(c.env.DB);
+  // Reset the MUTABLE per-document DOs before wiping the index (we read their
+  // refs from it). The E2E harness runs one shared `wrangler dev` worker for the
+  // whole Playwright matrix; deleting the D1 index alone is NOT a clean slate,
+  // because a SQLite-backed DO keeps its CRDT storage across the worker and
+  // `seedDoc` is no-clobber. A journey that mutated a fixed-docRef routine or
+  // account-figure (copy-on-write re-points a placement; save-to-library forks a
+  // copy) would otherwise leak that mutation into the next project's run of the
+  // same journey — a deterministic cross-project flake (mobile-chrome/-safari
+  // failing what chromium-desktop already ran). We reset only `routine` and
+  // `account-figure` docs; `global-figure` (catalog) DOs are seed-authoritative
+  // and left intact so the shared catalog survives the reset.
+  const mutable = await c.env.DB.prepare(
+    "SELECT docRef FROM document_registry WHERE type IN ('routine', 'account-figure')",
+  ).all<{ docRef: string }>();
+  for (const row of mutable.results ?? []) {
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(row.docRef)).resetForTest();
+  }
   // `invite` is created by migration 0001 but typed in drizzle only once US-023
   // lands; clear it via raw SQL so this endpoint is independent of that merge.
   await c.env.DB.prepare("DELETE FROM invite").run();
@@ -36,6 +53,18 @@ testSeed.post("/api/test/reset", async (c) => {
   await c.env.DB.prepare("DELETE FROM journal_entry").run();
   // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
   await c.env.DB.prepare("DELETE FROM placement_edge").run();
+  // library_entry (T5 save-to-library projection): keyed per (userId, figureRef),
+  // so a reused seed user who saved a catalog figure in an earlier journey/project
+  // stays "already saved" — bookmarkFigure then returns the idempotent path and the
+  // UI toasts "already in My figures" instead of "saved to My figures", failing the
+  // library journey on the 2nd+ project. Same reused-seed-user leak as the indexes
+  // above; raw SQL to stay independent of the drizzle schema merge timeline.
+  await c.env.DB.prepare("DELETE FROM library_entry").run();
+  // account_custom_kind (per-user custom annotation kinds) + user_name_cache (per-
+  // user display-name projection): same reused-seed-user accumulation — clear them
+  // so the custom-kind and profile journeys start from a clean per-user slate.
+  await c.env.DB.prepare("DELETE FROM account_custom_kind").run();
+  await c.env.DB.prepare("DELETE FROM user_name_cache").run();
   await d.delete(membership);
   await d.delete(documentRegistry);
   await d.delete(users);

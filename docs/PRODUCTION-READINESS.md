@@ -99,6 +99,19 @@ webkit/mobile-specific issues. They predate this PR entirely. **Repairing them n
 browser-equipped session** (the review sandbox has a mismatched Playwright browser revision).
 Until they're green, keep `full-e2e` as a visible-but-non-required check.
 
+**Update 2026-07-14 — root-caused and largely repaired** (not test-drift after all). The
+cross-browser failures were **cross-project state leakage on the shared E2E worker**: the full
+matrix runs chromium-desktop → mobile-chrome → mobile-safari against ONE `wrangler dev`, and
+`/api/test/reset` cleared only the D1 index — not the SQLite-backed Durable Objects (and
+`seedDoc` is no-clobber) — nor the `library_entry` / `account_custom_kind` / `user_name_cache`
+per-user projections. So a journey that mutated a fixed-docRef doc (copy-on-write re-points a
+routine placement) or saved a catalog figure leaked that state into the *next project's* run of
+the same journey, which passed on desktop and failed on mobile. Fixes: `resetForTest()` DO
+method + reset those DOs and the three missed tables. The remaining `mobile-safari` offline
+failures were a **WebKit `page.reload()`-while-offline internal error**, fixed with a
+`reloadOffline()` helper (`waitUntil: "commit"`). Verified locally by reproducing the
+desktop→mobile-chrome ordering (was deterministic, now green).
+
 ## 4. Bigger items needing an owner decision (ranked)
 
 These are not mechanical fixes — each is a strategy/scope call. Owner disposition (2026-07-13)

@@ -899,6 +899,31 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * E2E-ONLY (reached solely from the gated `/api/test/reset` route): wipe this
+   * document's persisted CRDT storage so a shared E2E worker's DO starts clean
+   * between journeys.
+   *
+   * The E2E harness runs ONE `wrangler dev` worker for the whole Playwright
+   * matrix, and `/api/test/reset` only clears the D1 index — but a SQLite-backed
+   * DO keeps its CRDT storage across that worker, and `seedDoc` is no-clobber. So
+   * a journey that MUTATED a fixed-docRef doc (copy-on-write re-points a routine
+   * placement; save-to-library creates an account-figure copy) leaked that
+   * mutation into the next project's run of the same journey, where the re-seed
+   * was silently ignored — a deterministic cross-project flake. Clearing the
+   * change log, snapshot, and D1-projection meta here, and dropping the in-memory
+   * doc, makes the next `seedDoc` re-seed from scratch. Storage-version marker is
+   * intentionally kept (it is generation metadata, not document content).
+   */
+  async resetForTest(): Promise<void> {
+    const sql = this.ctx.storage.sql;
+    sql.exec("DELETE FROM changes");
+    sql.exec("DELETE FROM snapshot");
+    sql.exec("DELETE FROM doc_meta");
+    this.doc = null;
+    await this.ctx.storage.deleteAlarm();
+  }
+
+  /**
    * Test-only: number of rows in the SQLite change log. Lets a test assert
    * persistence is genuinely incremental (one row per change) rather than a
    * full-doc rewrite, without reaching into the DO's protected storage handle.

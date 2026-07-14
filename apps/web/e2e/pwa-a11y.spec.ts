@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
+import { reloadOffline } from "./support/pwa";
 
 // ─────────────────────────────────────────────────────────────────────────
 // PWA install/offline shell + accessibility/cross-browser (PLAN §10.2 E2E:
@@ -57,7 +58,7 @@ test.describe("@smoke PWA install + offline app shell", () => {
     await serviceWorkerControls(page);
 
     await context.setOffline(true);
-    await page.reload();
+    await reloadOffline(page);
     await expect(page.getByTestId("offline-banner")).toBeVisible();
     await expect(page.getByTestId("offline-banner")).toHaveText(/offline/i);
     await context.setOffline(false);

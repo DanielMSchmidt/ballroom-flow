@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 import { mintTestJWT } from "./support/jwt";
+import { reloadOffline } from "./support/pwa";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
     await expect(coach.page.locator("[data-testid='section-list']")).toContainText("Online Coda");
 
     // ── Offline RELOAD: the edit must survive from local persistence ─────────
-    await student.page.reload();
+    await reloadOffline(student.page);
     await student.page.getByRole("button", { name: /list view/i }).click();
     await expect(student.page.locator("[data-testid='section-list']")).toContainText(
       "Offline Solo",
@@ -184,7 +185,7 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
 
     // The offline LAUNCH: reload with no network → the list renders from cache.
     await solo.context.setOffline(true);
-    await solo.page.reload();
+    await reloadOffline(solo.page);
     await expect(solo.page.getByText("Cached Waltz")).toBeVisible({ timeout: 15_000 });
     await expect(solo.page.getByTestId("offline-banner")).toBeVisible();
     // Creation stays gated; opening the cached choreo still works (§11.2 reads).
