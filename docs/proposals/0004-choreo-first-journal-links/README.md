@@ -2,7 +2,7 @@
 title: Choreo-first journal links with grid placement and scope-last anchoring
 wep: 0004
 owning-areas: [web, domain, contract, worker]
-status: implementable
+status: implemented
 authors: ["@danielmschmidt"]
 approver: owner
 created: 2026-07-14
@@ -190,7 +190,8 @@ TDD unskip/write-first, per layer:
 
 ## Ship Gate
 
-`apps/web/e2e/journal-link-picker.spec.ts` — green on the implementing PR:
+**Green 2026-07-14** (chromium-desktop, `@smoke`) on the implementing PR —
+`apps/web/e2e/journal-link-picker.spec.ts`:
 
 1. Seed two Waltz routines sharing a Whisk. From the journal entry editor, walk
    choreo → type-ahead ("wh") → Whisk → grid count 3 → "every Whisk in my Waltz

@@ -203,6 +203,13 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
 - **Journal tab** (US-039/040/041/042 cross-routine view): `apps/web/e2e/journal.spec.ts`
   (`@smoke`); `GET /api/journal` UNIONs `journal_entry` D1 index + `FigureTypeNoteIndex`
   account rows; DO alarm projects lesson/practice annotations to `journal_entry`.
+- **Choreo-first journal links + timed figureType anchors (WEP-0004, 2026-07-14)**:
+  ship gate `apps/web/e2e/journal-link-picker.spec.ts` (`@smoke`). Layers: domain
+  `anchor-schema.test.ts` (zAnchor timed arm + the no-cross-dance invariant) and
+  `figuretype-notes.test.ts` (figureTypeNoteCount pinning/soft fallback); contract
+  `index.test.ts` (zFamilyNoteBody count/role); worker `figuretype-visibility.test.ts`
+  (timed round-trip + 400 on "all"+count, migration 0018); component
+  `journal.test.tsx` (choreo-first picker: type-ahead, grid, gated scopes).
 - **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
   `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
   server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.
