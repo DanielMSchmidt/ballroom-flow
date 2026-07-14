@@ -392,6 +392,27 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * E2E-ONLY: wipe this DO's persisted content so the next {@link seedDoc}
+   * re-seeds from scratch. The Playwright harness shares ONE worker + D1 across
+   * all three device projects serially; `/api/test/reset` clears D1, but a DO's
+   * SQLite persists independently and `seedDoc` is no-clobber — so without this a
+   * doc mutated in one project's run leaks into the next. The sharp case: this
+   * test's copy-on-write edit re-points a routine placement at a fresh figure
+   * copy, and on the next run `resetDb` orphans that copy (its D1 row is gone)
+   * while the no-clobber `seedDoc` leaves the stale placement in place → the
+   * placement card hangs forever on "Loading figure…". Gated on the E2E flag so
+   * it can never run in dev/staging/prod even if reachable.
+   */
+  async resetForTest(): Promise<void> {
+    if (this.env.E2E_TEST_ROUTES !== "1") return;
+    const sql = this.ctx.storage.sql;
+    sql.exec("DELETE FROM changes");
+    sql.exec("DELETE FROM snapshot");
+    sql.exec("DELETE FROM doc_meta");
+    this.doc = null;
+  }
+
+  /**
    * D30 ⟳ (seed-authoritative): reconcile an ALREADY-IMPORTED global figure doc to
    * the current bundled catalog. Seeded attributes (deterministic `fig-`/`wdsf-`
    * ids) are updated/added/tombstoned to match the seed; user-added (ULID)
