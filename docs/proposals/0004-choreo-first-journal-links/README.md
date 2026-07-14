@@ -169,6 +169,14 @@ contract re-export):**
   scopes `role` (Both → `role` absent).
 - Step 4 offers scopes gated by the placement: whole figure → 3 options; count →
   2 options (this dance / this choreo). Copy mirrors the scenario labels above.
+  The two **family** scopes (`figureType` notes: *all <dance> choreos* / *every
+  dance*) are additionally gated on the figure belonging to a real catalog
+  family. A **custom (from-scratch) figure** carries a slugged `figureType` that
+  names no family (`figureTypeHasCatalogFamily(figureType)` is false — nothing
+  shares it, family matching being purely figureType-based, §figuretype.ts), so
+  both family rows drop and only *this choreo only* remains: the note **falls
+  through** to a routine (`figure`/`point`) annotation. The store computes the
+  `hasFamily` flag on each `RoutineFigureOption`; the picker gates on it.
 - Components keep touching data only through `apps/web/src/store/` loaders
   injected as props (locked seam).
 
@@ -199,6 +207,10 @@ TDD unskip/write-first, per layer:
    *other* Waltz routine.
 2. Same flow with "Entire figure" → "only this choreo"; assert the note appears
    on that figure instance and *not* in the sibling routine.
+3. A routine placing a **custom** figure (a non-catalog `figureType`): walk
+   choreo → figure → "Entire figure"; assert the scope step offers **only**
+   "This choreo only" (no "All <dance> choreos", no "Every dance"), and the saved
+   note falls through to a routine annotation on that custom figure.
 
 Marking `implemented` additionally updates PLAN §4.6 (picker flow + anchor
 shape) and `docs/TEST-MAP.md` in the same change.

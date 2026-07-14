@@ -87,6 +87,7 @@ const whiskFigures = [
     name: "Whisk",
     figureType: "whisk",
     counts: [1, 2, 3],
+    hasFamily: true,
     attributes: [
       { id: "a1", kind: "footwork", count: 1, role: null, value: "HT", deletedAt: null },
       { id: "a2", kind: "rise", count: 2, role: null, value: "body rise", deletedAt: null },
@@ -105,7 +106,23 @@ const whiskFigures = [
     name: "Chassé",
     figureType: "chasse",
     counts: [1, 2],
+    hasFamily: true,
     attributes: [],
+  },
+];
+
+// A from-scratch custom figure: its slugged figureType names no catalog family,
+// so the scope step must not offer the family (figureType) options.
+const customFigures = [
+  {
+    figureRef: "cf1",
+    name: "My Signature Move",
+    figureType: "my-signature-move",
+    counts: [1, 2],
+    hasFamily: false,
+    attributes: [
+      { id: "c1", kind: "footwork", count: 1, role: null, value: "flat", deletedAt: null },
+    ],
   },
 ];
 const goldWaltz = [{ docRef: "rt1", title: "Gold Waltz", dance: "waltz" }];
@@ -255,6 +272,79 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
       text: "whisk more cross",
     });
     expect(createFamilyEntry.mock.calls[0]?.[0]).not.toHaveProperty("count");
+  });
+
+  it("a CUSTOM figure offers no family scope — only this-choreo (the note falls through)", async () => {
+    // A from-scratch custom figure has no catalog family, so there is nothing to
+    // pin a family (figureType) note to. The scope step must drop both family
+    // rows and offer only "This choreo only" — even for a whole-figure placement,
+    // which for a library figure would show all three scopes.
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => customFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "keep the frame quiet here");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
+    await userEvent.click(await screen.findByText("The entire figure"));
+    // No family scopes — the choreo-wide (a real DanceId) and cross-dance rows are gone.
+    expect(await screen.findByText("This choreo only")).toBeInTheDocument();
+    expect(screen.queryByText("Every dance")).toBeNull();
+    expect(screen.queryByText("All Waltz choreos")).toBeNull();
+    // Falls through to a routine annotation (a whole-figure anchor), never a family note.
+    await userEvent.click(screen.getByText("This choreo only"));
+    await userEvent.click(await screen.findByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+    expect(createRoutineEntry.mock.calls[0]?.[0]).toBe("rt1");
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "figure", figureRef: "cf1" }],
+      text: "keep the frame quiet here",
+    });
+  });
+
+  it("a CUSTOM figure with a picked count offers only this-choreo (no this-dance family row)", async () => {
+    // A timed placement on a library figure offers "this dance" (a family note);
+    // on a custom figure that family row must also drop, leaving only this-choreo,
+    // which saves a point anchor via createRoutineEntry.
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => customFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "settle on the second beat");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^count 2/i }));
+    expect(await screen.findByText("This choreo only")).toBeInTheDocument();
+    expect(screen.queryByText("All Waltz choreos")).toBeNull();
+    expect(screen.queryByText("Every dance")).toBeNull();
+    await userEvent.click(screen.getByText("This choreo only"));
+    await userEvent.click(await screen.findByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "point", figureRef: "cf1", count: 2 }],
+    });
   });
 
   it("this-choreo-only with a count builds a point anchor and saves via createRoutineEntry", async () => {

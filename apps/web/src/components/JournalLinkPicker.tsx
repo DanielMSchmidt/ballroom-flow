@@ -33,6 +33,11 @@ export interface RoutineFigureOption {
   figureType: string;
   counts: number[];
   attributes: Attribute[];
+  /** Whether this figure's `figureType` names a real catalog family. A custom
+   *  (from-scratch) figure has none, so the scope step hides the family options
+   *  (`figureType` notes) and only offers "this choreo" — the note falls through
+   *  to a routine annotation (there is no family to add it to). */
+  hasFamily: boolean;
 }
 
 /**
@@ -239,7 +244,11 @@ export function JournalLinkPicker({
             {t.backShort}
           </Button>
           <List aria-label={t.linkScope}>
-            {danceScopeAvailable && (
+            {/* Family (figureType) scopes only exist when the figure belongs to a
+                real catalog family. A custom figure has none — nothing to add a
+                family note to — so both rows drop and the note falls through to
+                "this choreo only" (a routine annotation). */}
+            {figure.hasFamily && danceScopeAvailable && (
               <ListRow
                 title={t.allDanceChoreos(danceLabel(routine.dance, locale))}
                 subtitle={t.allDanceChoreosHint}
@@ -247,7 +256,7 @@ export function JournalLinkPicker({
               />
             )}
             {/* A timed note never spans dances — the row simply isn't offered. */}
-            {!timed && (
+            {figure.hasFamily && !timed && (
               <ListRow
                 title={t.everyDance}
                 subtitle={t.everyDanceHint}

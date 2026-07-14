@@ -210,7 +210,10 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
   `figuretype-notes.test.ts` (figureTypeNoteCount pinning/soft fallback); contract
   `index.test.ts` (zFamilyNoteBody count/role); worker `figuretype-visibility.test.ts`
   (timed round-trip + 400 on "all"+count, migration 0018); component
-  `journal.test.tsx` (choreo-first picker: type-ahead, grid, gated scopes).
+  `journal.test.tsx` (choreo-first picker: type-ahead, grid, gated scopes — incl.
+  a **custom figure** offering no family scope, the note falling through to a
+  routine annotation). Custom-figure family gating: domain `library.test.ts`
+  (`figureTypeHasCatalogFamily`) + the ship gate's custom-figure case.
 - **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
   `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
   server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.
