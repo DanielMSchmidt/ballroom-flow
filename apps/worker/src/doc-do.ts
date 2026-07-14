@@ -1152,6 +1152,47 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * OPS / disaster-recovery — phase 1 of a Point-in-Time Recovery (PITR).
+   *
+   * Cloudflare retains ~30 days of SQLite history for a SQLite-backed Durable
+   * Object AUTOMATICALLY — there is no backup job of ours to run; recovery is a
+   * pure RESTORE. This resolves the storage bookmark closest to `timestamp` and
+   * arms it to be restored on this DO's NEXT session (restart). It does NOT
+   * rewind anything yet — call {@link commitRestore} to trigger the restart that
+   * applies it. Returning the bookmark first (before any abort) lets the ops
+   * route report exactly which point it recovered to.
+   *
+   * Our entire persistence layer — the `changes` log, the `snapshot` blob, the
+   * D1-projection `doc_meta` — lives in this same SQLite database, so PITR
+   * rewinds all of it together; the next cold-load rebuilds the doc from the
+   * recovered history with no CRDT-level surgery. Works identically for a
+   * routine doc or a figure doc (one DocDO class hosts both).
+   *
+   * PRODUCTION-ONLY: the bookmark API is a real-Cloudflare capability; miniflare
+   * does not implement PITR, so this path is exercised against a deployed DO,
+   * not in unit tests (only the admin auth gate at the route is unit-tested).
+   */
+  async prepareRestore(timestamp: number): Promise<{ bookmark: string }> {
+    const bookmark = await this.ctx.storage.getBookmarkForTime(timestamp);
+    await this.ctx.storage.onNextSessionRestoreBookmark(bookmark);
+    return { bookmark };
+  }
+
+  /**
+   * OPS / disaster-recovery — phase 2: restart THIS DO so the bookmark armed by
+   * {@link prepareRestore} is applied. `abort()` tears down the session (and any
+   * live sockets), which is the point: clients must reconnect against the rewound
+   * history. The abort rejects the in-flight RPC by design, so the ops route
+   * treats a post-prepare rejection here as "restart underway", not a failure.
+   *
+   * DESTRUCTIVE: changes recorded after the recovery point are discarded — that
+   * is what a recovery is. Reachable ONLY through the admin-gated ops route.
+   */
+  async commitRestore(): Promise<void> {
+    this.ctx.abort("pitr-restore");
+  }
+
+  /**
    * Schedule a compaction alarm once the change log grows past the threshold —
    * so a write-heavy doc that never sets metadata still gets compacted (Staff
    * review #125: edits must trigger compaction, not just `setMetadata`). The

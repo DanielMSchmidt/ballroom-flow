@@ -55,7 +55,7 @@ export {
   SUB_BEATS,
   windowAttributes,
 } from "./figure-grid";
-export { matchesFigureType } from "./figuretype";
+export { figureTypeNoteCount, matchesFigureType } from "./figuretype";
 export {
   cloneRoutine,
   copyFigureForFork,
@@ -97,6 +97,13 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
+export {
+  type BothWriteTargets,
+  bothWriteTargets,
+  deriveFollowerValue,
+  isBothConsistent,
+  splitSharedForRole,
+} from "./role-write";
 export { parseAnchors, parseAttributeRead, parseAttributeWrite, zAnchor } from "./schemas";
 export {
   isSeededAttributeId,

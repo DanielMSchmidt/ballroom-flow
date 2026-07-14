@@ -100,3 +100,37 @@ describe("US-011 figureType annotation resolution", () => {
     expect(matchesFigureType(pointAnchor, FEATHER_FOXTROT)).toBe(false);
   });
 });
+
+describe("WEP-0004 figureTypeNoteCount — count pinning with soft fallback", () => {
+  // The fixture Feathers carry attributes on counts 1..3 (no authored length),
+  // so their resolved length is 3 — count 3 pins, count 5 falls back.
+
+  it("pins a timed dance-scoped note to its count when the figure covers it", async () => {
+    // Intent: the rushed Whisk — a count-3 note surfaces PINNED on a matching
+    // 3-count figure of the family in that dance.
+    const { figureTypeNoteCount } = await importDomain();
+    const anchor = makeFigureTypeAnchor("feather", "foxtrot", { count: 3 });
+    expect(figureTypeNoteCount(anchor, FEATHER_FOXTROT)).toBe(3);
+  });
+
+  it("degrades to figure grain (null) when the figure is shorter than the count", async () => {
+    // Intent: a family sibling whose variant lacks the count still SHOWS the
+    // note, just un-pinned — never hidden (WEP-0004 soft fallback).
+    const { figureTypeNoteCount, matchesFigureType } = await importDomain();
+    const anchor = makeFigureTypeAnchor("feather", "foxtrot", { count: 5 });
+    expect(figureTypeNoteCount(anchor, FEATHER_FOXTROT)).toBeNull();
+    expect(matchesFigureType(anchor, FEATHER_FOXTROT)).toBe(true); // still surfaces
+  });
+
+  it("returns null for an untimed anchor and for a non-matching figure", async () => {
+    // Intent: pinning is strictly additive — untimed notes keep figure-grain
+    // surfacing; a timed note never pins onto a figure it doesn't match.
+    const { figureTypeNoteCount } = await importDomain();
+    expect(figureTypeNoteCount(makeFigureTypeAnchor("feather", "foxtrot"), FEATHER_FOXTROT)).toBe(
+      null,
+    );
+    expect(
+      figureTypeNoteCount(makeFigureTypeAnchor("feather", "waltz", { count: 2 }), FEATHER_FOXTROT),
+    ).toBeNull();
+  });
+});

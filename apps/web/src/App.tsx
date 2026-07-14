@@ -90,6 +90,8 @@ function AppHome(): React.JSX.Element {
       danceScope: string;
       kind: "note" | "lesson" | "practice";
       text: string;
+      count?: number;
+      role?: "leader" | "follower";
     }) => {
       await createFamilyNote(input, await getToken());
     },

@@ -7,6 +7,16 @@ import { type AttributeKind, isAttributeKind } from "../ui";
 /** The leader/follower view lens. */
 export type RoleView = "leader" | "follower";
 
+/** The EDIT lens (WEP-0008): reading stays two-way, editing adds "both" — the
+ *  lens is the WRITE SCOPE (Both derives the follower; single roles write
+ *  role-tagged values). */
+export type EditRoleView = RoleView | "both";
+
+/** The read projection of an edit lens: "both" reads as the leader's chart
+ *  (the verbatim side of a Both write); read-only surfaces never show a
+ *  third lens. */
+export const asReadView = (view: EditRoleView): RoleView => (view === "both" ? "leader" : view);
+
 /** Visible in a lens when both-role (role=null, always) or the selected role. */
 export const filterByRoleView = (attrs: Attribute[], view: RoleView): Attribute[] =>
   attrs.filter((a) => a.role == null || a.role === view);

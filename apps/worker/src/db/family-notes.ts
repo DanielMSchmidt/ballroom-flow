@@ -6,7 +6,9 @@
 // worker route gates the read on co-membership and the client matches each row
 // to the figures actually in the routine (resolveFamilyNotesFor).
 
-/** One family-note index row (carries content in v1 — see migration 0005). */
+/** One family-note index row (carries content in v1 — see migration 0005).
+ *  `count`/`role` are the WEP-0004 TIMED-note fields (migration 0018):
+ *  NULL = the untimed v1 whole-figure note. */
 export interface FamilyNoteRow {
   noteId: string;
   accountDocRef: string;
@@ -15,6 +17,8 @@ export interface FamilyNoteRow {
   danceScope: string;
   kind: string;
   text: string;
+  count: number | null;
+  role: string | null;
 }
 
 /** Fields needed to persist a family note. */
@@ -25,6 +29,11 @@ export interface FamilyNoteInput {
   danceScope: string;
   kind: string;
   text: string;
+  /** WEP-0004: pin to one count (requires a concrete danceScope — the REST
+   *  boundary enforces it via zFamilyNoteBody). Omitted = whole figure. */
+  count?: number;
+  /** WEP-0004: narrow to one side; omitted/null = both. */
+  role?: string | null;
 }
 
 /**
@@ -40,7 +49,7 @@ export async function familyNotesForMembers(
   if (authorIds.length === 0) return [];
   const placeholders = authorIds.map(() => "?").join(",");
   const sql =
-    `SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text FROM figure_type_note_index ` +
+    `SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text, count, role FROM figure_type_note_index ` +
     `WHERE deletedAt IS NULL AND (danceScope = ? OR danceScope = 'all') ` +
     `AND authorId IN (${placeholders})`;
   const res = await db
@@ -54,8 +63,8 @@ export async function familyNotesForMembers(
 export async function insertFamilyNote(db: D1Database, note: FamilyNoteInput): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO figure_type_note_index (noteId, accountDocRef, authorId, figureType, danceScope, kind, text, updatedAt, deletedAt) ` +
-        `VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+      `INSERT INTO figure_type_note_index (noteId, accountDocRef, authorId, figureType, danceScope, kind, text, count, role, updatedAt, deletedAt) ` +
+        `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
     .bind(
       note.noteId,
@@ -65,6 +74,8 @@ export async function insertFamilyNote(db: D1Database, note: FamilyNoteInput): P
       note.danceScope,
       note.kind,
       note.text,
+      note.count ?? null,
+      note.role ?? null,
       Date.now(),
     )
     .run();

@@ -76,6 +76,7 @@ imports through small shims that defer module resolution to runtime:
 | US-028 | Figure timeline: place/edit/remove attributes | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-029 | Attribute editor (registry-derived) | component | `apps/web/src/components/attribute-editor.test.tsx` |
 | US-030 | Timeline role-view toggle | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
+| WEP-0008 | Role-scoped step editing (Both write mode: mirrored direction/sway, leader-only footwork, shared copy kinds; split-on-single-role-edit; diverged cells lock under Both) | domain + component + E2E | `packages/domain/src/role-write.test.ts`, `apps/web/src/components/attribute-editor.test.tsx` ("WEP-0008" describes ×2), `apps/web/e2e/role-steps.spec.ts` (@smoke ship gate) |
 | US-031 | ~~Edit per-figure alignment~~ *(REMOVED 2026-07-12 — entry/exit alignment dropped from the model with the top-down view; D33 reversed, PLAN §3.8/§12)* | — | Feature + tests removed (`assemble.test.tsx` US-031 describe, `e2e/figure-alignment.spec.ts`, `domain/alignment.test.ts`) |
 | US-032 | Global figure library browse | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-033 | Personal-library figures + custom figures (two-scope badge: `library`/`custom`) *(reconciled 2026-06: "account variants" retired)* | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
@@ -203,6 +204,13 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
 - **Journal tab** (US-039/040/041/042 cross-routine view): `apps/web/e2e/journal.spec.ts`
   (`@smoke`); `GET /api/journal` UNIONs `journal_entry` D1 index + `FigureTypeNoteIndex`
   account rows; DO alarm projects lesson/practice annotations to `journal_entry`.
+- **Choreo-first journal links + timed figureType anchors (WEP-0004, 2026-07-14)**:
+  ship gate `apps/web/e2e/journal-link-picker.spec.ts` (`@smoke`). Layers: domain
+  `anchor-schema.test.ts` (zAnchor timed arm + the no-cross-dance invariant) and
+  `figuretype-notes.test.ts` (figureTypeNoteCount pinning/soft fallback); contract
+  `index.test.ts` (zFamilyNoteBody count/role); worker `figuretype-visibility.test.ts`
+  (timed round-trip + 400 on "all"+count, migration 0018); component
+  `journal.test.tsx` (choreo-first picker: type-ahead, grid, gated scopes).
 - **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
   `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
   server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.

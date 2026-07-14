@@ -25,12 +25,15 @@ export interface JournalEntryEditorProps {
   onBack: () => void;
   /** Called after a successful save so the list refreshes + the editor closes. */
   onSaved: () => void;
-  /** Author an account-scoped figureType lesson/practice (createFamilyNote). */
+  /** Author an account-scoped figureType lesson/practice (createFamilyNote).
+   *  WEP-0004: a TIMED link passes count/role through (never with "all"). */
   createFamilyEntry: (input: {
     figureType: string;
     danceScope: string;
     kind: AnnotationKind;
     text: string;
+    count?: number;
+    role?: "leader" | "follower";
   }) => Promise<void>;
   /** Author a routine-scoped lesson/practice (createAnnotation on the routine). */
   createRoutineEntry: (
@@ -86,6 +89,9 @@ export function JournalEntryEditor({
             danceScope: acct.danceScope,
             kind,
             text: text.trim(),
+            // WEP-0004: a timed link carries its pinned count (+ optional side).
+            ...(acct.count != null ? { count: acct.count } : {}),
+            ...(acct.role ? { role: acct.role } : {}),
           });
         }
       }

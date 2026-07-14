@@ -7,7 +7,9 @@
 import type { Anchor, AnnotationKind } from "@weavesteps/domain";
 import { apiGet, apiPost } from "../lib/rpc";
 
-/** A family note as the worker returns it (content + a figureType anchor to match). */
+/** A family note as the worker returns it (content + a figureType anchor to match).
+ *  A TIMED note (WEP-0004) additionally carries the count it pins to and the
+ *  side it narrows to; absent = the untimed v1 whole-figure note. */
 export interface FamilyNote {
   id: string;
   authorId: string;
@@ -15,6 +17,8 @@ export interface FamilyNote {
   text: string;
   figureType: string;
   danceScope: string;
+  count?: number;
+  role?: "leader" | "follower";
   anchors: Anchor[];
 }
 
@@ -31,9 +35,18 @@ export async function loadFamilyNotes(
   return notes;
 }
 
-/** Author a figure-family note (US-040). Returns the created note. */
+/** Author a figure-family note (US-040; WEP-0004 adds the optional timed
+ *  fields — the worker rejects count/role with danceScope "all"). Returns the
+ *  created note. */
 export async function createFamilyNote(
-  input: { figureType: string; danceScope: string; kind: AnnotationKind; text: string },
+  input: {
+    figureType: string;
+    danceScope: string;
+    kind: AnnotationKind;
+    text: string;
+    count?: number;
+    role?: "leader" | "follower";
+  },
   token: string | null,
   baseUrl = "",
 ): Promise<FamilyNote> {

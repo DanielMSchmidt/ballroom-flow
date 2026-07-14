@@ -83,6 +83,48 @@ describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
     expect((await stub.getSnapshot()).title).toBe("Server Seeded");
   });
 
+  it("resetForTest wipes DO storage so a re-seed is no longer no-clobber-blocked (E2E reset)", async () => {
+    // Intent: the E2E `/api/test/reset` route relies on this to give each journey
+    // a clean fixed-docRef DO on the shared worker. Without it, a journey that
+    // mutated a doc leaks that state into the next project's run (seedDoc is
+    // no-clobber, so the re-seed is silently ignored) — the deterministic
+    // cross-project flake. Assert: after resetForTest the change log is empty AND
+    // a re-seed with DIFFERENT content now takes (survives a forced cold-load).
+    const { stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: "rt_reset",
+      title: "First",
+      dance: "waltz",
+      ownerId: "u_reset",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    expect((await stub.getSnapshot()).title).toBe("First");
+    expect(await stub.debugChangeRowCount()).toBeGreaterThan(0);
+
+    await stub.resetForTest();
+    expect(await stub.debugChangeRowCount()).toBe(0); // storage wiped
+
+    // The re-seed now takes (no-clobber no longer blocks) — the property the E2E
+    // reset depends on. Different content proves it's a fresh seed, not the old one.
+    await stub.seedDoc({
+      id: "rt_reset",
+      title: "Second",
+      dance: "foxtrot",
+      ownerId: "u_reset",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.reloadForTest(); // force the SQLite cold-load path
+    const after = await stub.getSnapshot();
+    expect(after.title).toBe("Second");
+    expect(after.dance).toBe("foxtrot");
+  });
+
   it("a connect to a not-yet-seeded doc does not poison/block a later seedDoc", async () => {
     // ROBUSTNESS — the collaborator seed race. If a client connects to a doc's DO
     // BEFORE the create route's seedDoc runs (user B receives a synced placement
