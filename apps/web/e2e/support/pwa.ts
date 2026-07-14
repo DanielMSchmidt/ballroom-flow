@@ -5,15 +5,17 @@ import type { Page } from "@playwright/test";
  * precache.
  *
  * WebKit (mobile-safari project) throws "WebKit encountered an internal error"
- * when Playwright's default `page.reload()` waits for the `"load"` event on an
- * offline, SW-served navigation — offline, WebKit never fires a reliable `load`,
- * so the wait surfaces the browser's internal navigation error and the test
- * flakes (it failed on both the first attempt and the retry in CI, chromium
- * passed). Waiting only for the navigation to COMMIT sidesteps that: the document
- * is served from cache and committed, and every caller immediately follows with
- * web-first assertions (`toBeVisible`, `toContainText`) that auto-wait for the
- * actual content — so no coverage is lost, only the brittle `load`-event wait.
+ * from `page.reload()` on an offline, SW-served navigation — and it does so at the
+ * reload command itself, not the wait condition (switching `waitUntil` from `load`
+ * to `commit` did not help; the error just moved to "waiting until commit"). The
+ * `Page.reload` CDP path is what WebKit chokes on offline. Re-navigating to the
+ * SAME URL uses the `Page.navigate` path instead, which WebKit services from the
+ * SW cache without the internal error — an equivalent reload for these journeys.
+ * We wait only for COMMIT; every caller then uses web-first assertions
+ * (`toBeVisible`, `toContainText`) that auto-wait for the actual content, so no
+ * coverage is lost. Chromium/mobile-chrome take this same path with no change in
+ * behaviour (verified locally).
  */
 export async function reloadOffline(page: Page): Promise<void> {
-  await page.reload({ waitUntil: "commit" });
+  await page.goto(page.url(), { waitUntil: "commit" });
 }
