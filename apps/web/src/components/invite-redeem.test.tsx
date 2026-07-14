@@ -10,15 +10,16 @@ import { InviteRedeem } from "./InviteRedeem";
 // explaining what happened before they continue.
 // ─────────────────────────────────────────────────────────────────────────
 
-const h = vi.hoisted(() => ({
-  isError: false,
-  result: {
-    docRef: "rt9",
-    role: "editor" as "editor" | "commenter" | "viewer",
-    requestedRole: "editor" as "editor" | "commenter" | "viewer",
-    downgraded: false,
-  },
-}));
+const h = vi.hoisted(() => {
+  // Annotated (not asserted) so tests can reassign role/requestedRole per case.
+  const result: {
+    docRef: string;
+    role: "editor" | "commenter" | "viewer";
+    requestedRole: "editor" | "commenter" | "viewer";
+    downgraded: boolean;
+  } = { docRef: "rt9", role: "editor", requestedRole: "editor", downgraded: false };
+  return { isError: false, result };
+});
 
 // Replace the store seam: drive onSuccess synchronously with a controllable
 // redeem result (no network, no real React Query mutation). `h.isError` flips

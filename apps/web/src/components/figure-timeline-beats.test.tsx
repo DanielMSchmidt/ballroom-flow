@@ -147,7 +147,7 @@ describe("FigureTimeline — portion window (Builder v3 ③, §4.3/§4.4)", () =
 
   it("keeps out-of-window content when editing inside the window (merge-back, no tombstoning)", async () => {
     const { FigureTimeline } = await load();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <FigureTimeline
         role="editor"
@@ -163,7 +163,7 @@ describe("FigureTimeline — portion window (Builder v3 ③, §4.3/§4.4)", () =
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 5$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    const next = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const next = onChange.mock.calls.at(-1)?.[0] ?? [];
     // The edit at count 5 lands…
     expect(next.find((a) => a.kind === "footwork" && a.count === 5)).toBeTruthy();
     // …and the count-1 content OUTSIDE the window is preserved untouched (not cleared),
@@ -210,7 +210,7 @@ describe("FigureTimeline — the per-count recap (always visible)", () => {
 describe("FigureTimeline — placing a step via a cell overlay", () => {
   it("opens the single-attribute overlay on a PRESENT Step cell and places the value at that count", async () => {
     const { FigureTimeline } = await load();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     // A blank step already placed at count 2 (Builder v3 ② quick-add put it there);
     // tapping the present cell opens the focused overlay → pick footwork "Heel-Toe".
     renderUi(
@@ -226,14 +226,14 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.count).toBe(2);
   });
 
   it("places a value on a sub-beat cell (¼ off-beat) at that fractional count", async () => {
     const { FigureTimeline } = await load();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <FigureTimeline
         role="editor"
@@ -247,7 +247,7 @@ describe("FigureTimeline — placing a step via a cell overlay", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2e$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.count).toBe(2.25);
   });
@@ -411,12 +411,12 @@ describe("FigureTimeline — Builder v3 edit-grid parity", () => {
 describe("FigureTimeline — presence quick-add (Builder v3 ②)", () => {
   it("tapping an empty Step cell places a blank step (presence direction attr) without opening the editor", async () => {
     const { FigureTimeline } = await load();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 1$/i }));
     // The blank step lands instantly as a value-less direction attribute…
     expect(onChange).toHaveBeenCalledTimes(1);
-    const next = onChange.mock.calls[0]?.[0] as Array<{ kind: string; value: unknown }>;
+    const next = onChange.mock.calls[0]?.[0] ?? [];
     expect(next).toHaveLength(1);
     expect(next[0]).toMatchObject({ kind: "direction", value: null, count: 1 });
     // …no editor sheet opens…
@@ -427,7 +427,7 @@ describe("FigureTimeline — presence quick-add (Builder v3 ②)", () => {
 
   it("tapping an empty closed-enum cell (Rise) still opens the single-attribute editor", async () => {
     const { FigureTimeline } = await load();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<FigureTimeline role="editor" dance="waltz" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /^Add Rise at count 1$/i }));
     expect(onChange).not.toHaveBeenCalled();

@@ -14,9 +14,7 @@
 import type {
   Anchor,
   Annotation,
-  AnnotationKind,
   Attribute,
-  AttributeKind,
   DanceId,
   FigureDoc,
   FigureType,
@@ -41,7 +39,7 @@ export function resetTestIds(): void {
 export function makeAttribute(overrides: Partial<Attribute> = {}): Attribute {
   return {
     id: overrides.id ?? testId("attr"),
-    kind: overrides.kind ?? ("footwork" as AttributeKind),
+    kind: overrides.kind ?? "footwork",
     count: overrides.count ?? 1,
     role: overrides.role ?? null,
     value: "value" in overrides ? overrides.value : "HT",
@@ -124,7 +122,7 @@ export function makeAnnotation(overrides: Partial<Annotation> = {}): Annotation 
   return {
     id: overrides.id ?? testId("ann"),
     authorId: overrides.authorId ?? "user_author",
-    kind: overrides.kind ?? ("note" as AnnotationKind),
+    kind: overrides.kind ?? "note",
     text: overrides.text ?? "keep the head left",
     tags: overrides.tags ?? [],
     anchors: overrides.anchors ?? [makeAnchor()],

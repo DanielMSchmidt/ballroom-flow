@@ -18,7 +18,7 @@ describe("ErrorBoundary", () => {
   });
 
   it("catches a render throw, reports it, and shows the recoverable fallback", () => {
-    const onError = vi.fn();
+    const onError = vi.fn<(error: Error, info: React.ErrorInfo) => void>();
     // React logs the caught error to console.error — silence it for a clean run.
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     renderUi(
@@ -29,8 +29,8 @@ describe("ErrorBoundary", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(onError).toHaveBeenCalledOnce();
-    const firstError = onError.mock.calls[0]?.[0] as Error;
-    expect(firstError.message).toBe("kaboom");
+    const firstError = onError.mock.calls[0]?.[0];
+    expect(firstError?.message).toBe("kaboom");
     spy.mockRestore();
   });
 

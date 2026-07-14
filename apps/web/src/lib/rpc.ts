@@ -32,6 +32,18 @@ async function readBody(res: Response): Promise<unknown> {
 }
 
 /**
+ * Read a 2xx body under the caller's declared response type. This is the ONE
+ * fetch→type boundary for the REST surface: `Response.json()` is `any` in
+ * lib.dom, and what actually guarantees the shape at runtime is the worker
+ * contract (`@weavesteps/contract` schemas validate on the server side of the
+ * same route) — the type system can't see across the wire, so the caller's `T`
+ * is that contract's claim, stated here once instead of asserted per call site.
+ */
+async function readJson<T>(res: Response): Promise<T> {
+  return res.json();
+}
+
+/**
  * Report an UNEXPECTED API failure (US-049 web half, 2026-07-05 incident):
  * 5xx (the server broke), a 401 that carried a session token (a signed-in user
  * rejected — the Clerk config-mismatch signature that broke production create),
@@ -95,7 +107,7 @@ export async function apiGet<T>(path: string, token: string | null): Promise<T> 
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new ApiError(res.status, await readBody(res), `GET ${path} -> ${res.status}`);
-  return (await res.json()) as T;
+  return readJson<T>(res);
 }
 
 /** Typed POST. Throws an {@link ApiError} (carrying status + parsed body) on non-2xx
@@ -110,7 +122,7 @@ export async function apiPost<T>(path: string, token: string | null, body: unkno
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new ApiError(res.status, await readBody(res), `POST ${path} -> ${res.status}`);
-  return (await res.json()) as T;
+  return readJson<T>(res);
 }
 
 /** Typed DELETE. Throws an {@link ApiError} on non-2xx. `body`, when given, is
@@ -127,5 +139,5 @@ export async function apiDelete<T>(path: string, token: string | null, body?: un
   });
   if (!res.ok)
     throw new ApiError(res.status, await readBody(res), `DELETE ${path} -> ${res.status}`);
-  return (await res.json()) as T;
+  return readJson<T>(res);
 }

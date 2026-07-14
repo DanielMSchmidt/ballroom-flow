@@ -65,6 +65,7 @@ export {
   spawnVariant,
   variantAttributesForEdit,
 } from "./fork";
+export { isPlainRecord, isRecord, stringIdOf } from "./guards";
 export { newId } from "./ids";
 export {
   figureHasLibraryOrigin,
@@ -96,7 +97,7 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
-export { parseAttributeRead, parseAttributeWrite } from "./schemas";
+export { parseAnchors, parseAttributeRead, parseAttributeWrite, zAnchor } from "./schemas";
 export {
   isSeededAttributeId,
   reconcileSeededFigure,

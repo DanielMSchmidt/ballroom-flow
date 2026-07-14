@@ -273,7 +273,7 @@ export function AnnotationPanel({
           <select
             aria-label={t.kindSelect}
             value={kind}
-            onChange={onSelectValue<AnnotationKind>(setKind)}
+            onChange={onSelectValue(KINDS, setKind)}
             className="w-full appearance-none rounded-md border border-border-strong bg-surface-sunken px-3.5 text-sm text-ink min-h-[var(--bf-touch-target)] outline-none"
           >
             {KINDS.map((k) => (

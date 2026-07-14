@@ -51,7 +51,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <FigureTimeline
         role="editor"
@@ -66,7 +66,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "footwork" && a.count === 2);
     expect(added?.value).toBe("HT");
   });
@@ -79,7 +79,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor count={2} role="editor" value={[footworkBall(2)]} onChange={onChange} />,
     );
@@ -142,10 +142,10 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /^forward$/i }));
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "direction");
     expect(added?.role).toBeNull();
   });
@@ -154,7 +154,7 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("radio", { name: /per role/i }));
     // Two rails appear.
@@ -162,7 +162,7 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const follower = screen.getByRole("group", { name: /follower/i });
     // Picking a direction inside the Follower rail writes role="follower".
     await userEvent.click(within(follower).getByRole("button", { name: /^back$/i }));
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "direction");
     expect(added?.role).toBe("follower");
   });
@@ -189,7 +189,7 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor
         count={1}
@@ -269,7 +269,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
       "../components/AttributeEditor",
     );
     // SINGLE (position): start with "closed"; picking "promenade" replaces it.
-    const onSingle = vi.fn();
+    const onSingle = vi.fn<(attrs: Attribute[]) => void>();
     const single = renderUi(
       <AttributeEditor
         count={1}
@@ -282,7 +282,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     // position is a technique kind — reveal it first.
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
-    const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
+    const afterSingle = onSingle.mock.calls.at(-1)?.[0] ?? [];
     expect(afterSingle.filter((a) => a.kind === "position")).toHaveLength(1);
     expect(afterSingle.find((a) => a.kind === "position")?.value).toBe("promenade");
     single.unmount();
@@ -297,7 +297,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
       values: ["L", "R"],
       builtin: false,
     };
-    const onMulti = vi.fn();
+    const onMulti = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor
         count={1}
@@ -310,7 +310,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^R$/ }));
-    const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
+    const afterMulti = onMulti.mock.calls.at(-1)?.[0] ?? [];
     expect(
       afterMulti
         .filter((a) => a.kind === "hands")
@@ -349,13 +349,13 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     // No free-text add for footwork.
     expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
     // A footwork value is still pickable from the closed set.
     await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
-    const lastAttrs = onChange.mock.calls.at(-1)?.[0] as Attribute[];
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
     const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.value).toBe("HT");
   });
@@ -550,7 +550,7 @@ describe("US-044 Lanes (one kind across all counts)", () => {
     // Assert: a cell per count; editing updates the underlying attribute (onChange).
     // Covers US-044 AC-1 (one kind across counts) + AC-2 (same attributes).
     const { Lanes } = await importComponent<LanesModule>("../components/Lanes");
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     const sway = (c: number, v: string): Attribute => ({
       id: `sway-${c}`,
       kind: "sway",

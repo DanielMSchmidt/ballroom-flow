@@ -25,8 +25,9 @@ export interface ErrorContext {
 export interface ReporterDeps {
   /** Sentry DSN; absent → the reporter is a no-op (dev/test/E2E builds). */
   dsn?: string;
-  /** Injectable for tests; defaults to global fetch. */
-  fetchFn?: typeof fetch;
+  /** Injectable for tests; defaults to global fetch. Typed on the narrow
+   *  surface the reporter uses so a test fake needn't mirror all of `fetch`. */
+  fetchFn?: (url: string, init?: RequestInit) => Promise<Response>;
   /** Baked release id (the deploy's git SHA) — lets Sentry group by deploy. */
   release?: string;
 }
@@ -118,13 +119,18 @@ export function wireGlobalErrorHandlers(
   report: (error: unknown, ctx?: ErrorContext) => void,
   target: ErrorEventTarget = window,
 ): void {
+  // Best-effort `.message` off an unknown thrown value (Error or Error-like).
+  const messageOf = (x: unknown): unknown =>
+    typeof x === "object" && x !== null && "message" in x ? x.message : undefined;
   target.addEventListener("error", (e) => {
-    const err = (e as ErrorEvent).error ?? (e as ErrorEvent).message;
-    report(err, { key: `uncaught:${String((err as Error)?.message ?? err)}` });
+    // The listener is typed on the narrow Event surface; probe the ErrorEvent
+    // fields structurally so a bare Event still reports (as before).
+    const err = ("error" in e ? e.error : undefined) ?? ("message" in e ? e.message : undefined);
+    report(err, { key: `uncaught:${String(messageOf(err) ?? err)}` });
   });
   target.addEventListener("unhandledrejection", (e) => {
-    const reason = (e as Event & { reason?: unknown }).reason;
-    report(reason, { key: `unhandled:${String((reason as Error)?.message ?? reason)}` });
+    const reason = "reason" in e ? e.reason : undefined;
+    report(reason, { key: `unhandled:${String(messageOf(reason) ?? reason)}` });
   });
 }
 

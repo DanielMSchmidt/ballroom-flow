@@ -43,9 +43,9 @@ const keyOf = (e: { sortKey?: string } | undefined, what: string): string =>
 // for a figure's attribute set); the M1 version swaps in real buildFigureDoc.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface CountsDoc {
+type CountsDoc = {
   counts: Record<string, number>;
-}
+};
 
 describe("US-009 Automerge convergence invariants", () => {
   it("converges regardless of edit order (commutative) — property", async () => {

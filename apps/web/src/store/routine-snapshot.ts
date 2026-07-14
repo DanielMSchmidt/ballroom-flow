@@ -237,9 +237,12 @@ export function openRoutineSnapshot(
           // reference points directly at the global doc (present in `figures`), so it
           // resolves to itself. A ref absent from the snapshot that IS a `global:`
           // catalog ref still renders from the bundle (pre-filled, §4.3).
-          const figure = raw
-            ? resolveSnapshotFigure(raw, snap as RoutineSnapshot)
-            : (catalogSnapshotFigure(placement.figureRef) ?? null);
+          // `raw` non-null ⇒ it came out of `snap.figures`, so `snap` is non-null;
+          // the && just states that for the compiler.
+          const figure =
+            raw && snap
+              ? resolveSnapshotFigure(raw, snap)
+              : (catalogSnapshotFigure(placement.figureRef) ?? null);
           // present → live; absent → genuinely missing (deleted / no access). Before
           // the first snapshot lands the whole view reads "connecting" (syncState).
           const status: FigureLoadStatus = figure ? "live" : snap ? "missing" : "loading";

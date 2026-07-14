@@ -29,6 +29,32 @@ test cases.
 - CI (`ci.yml`) PR gate + deploy (`deploy.yml`); `PROVISIONING.md`.
 - `.gitignore` already listed `coverage/`, `playwright-report/`, `test-results/`.
 
+### Type-honesty enforcement (added 2026-07-13)
+
+CLAUDE.md §4's "keep types honest" rule is machine-enforced; the whole stack
+runs from `pnpm lint` (so lefthook pre-commit and the CI lint step inherit it):
+
+- **`lint-plugins/no-type-assertion.grit`** — a Biome GritQL lint plugin
+  (`plugins` in `biome.json`) that makes every `expr as Type` and legacy
+  `<Type>expr` assertion a lint **error**. `expr as const` stays legal (a
+  const assertion can't lie about the runtime shape). Import/export renames
+  (`import { a as b }`) are structurally excluded (AST node match, not text).
+- **`biome.json` rules** — `suspicious/noExplicitAny: error` (pre-existing),
+  `style/noNonNullAssertion: error` (`x!`), `suspicious/noTsIgnore: error`
+  (`@ts-ignore`).
+- **`scripts/check-type-suppressions.mjs`** — zero-dependency gate for what
+  Biome can't express: bans `@ts-expect-error` / `@ts-nocheck` everywhere, and
+  confines `biome-ignore lint/plugin:` suppressions to the allowlisted
+  compiler-bypass helpers (`packages/domain/src/__fixtures__/invalid.ts`,
+  `apps/web/src/test-support/test-double.ts`, `apps/worker/src/test-support/test-peek.ts`) — the sanctioned pattern for
+  deliberately-invalid negative-test inputs and jsdom-incomplete test doubles.
+
+The escape hatch for a genuine boundary (external lib's wrong types, a
+validated parse) is a small named helper with a `biome-ignore lint/plugin:`
+line whose comment states why the compiler can't know and what guarantees the
+claim at runtime — and the helper's file must be added to the check script's
+allowlist, which keeps every new bypass review-visible.
+
 ### Added (this pass)
 | Area | What | Where |
 |---|---|---|

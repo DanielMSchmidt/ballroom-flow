@@ -122,7 +122,7 @@ describe("US-049 Observability wiring (Sentry + Analytics Engine) + Smart Placem
     // REAL wrangler.toml (bound as WRANGLER_TOML at vitest-config time), so the
     // deployed config can't silently drop them.
     // Covers US-049 AC-3 (Smart Placement + envs).
-    const toml = (env as { WRANGLER_TOML?: string }).WRANGLER_TOML ?? "";
+    const toml = env.WRANGLER_TOML ?? "";
     expect(toml).toMatch(/\[placement\]\s*\nmode = "smart"/);
     expect(toml).toContain("[env.staging]");
     expect(toml).toContain("[env.production]");

@@ -27,6 +27,7 @@
 // fresh-doc call site stamps `CURRENT_SCHEMA_VERSION` (never a literal `1`).
 
 import { DANCES, isDanceId } from "./dances";
+import { isPlainRecord } from "./guards";
 import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
@@ -56,9 +57,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // unchanged but for the version bump.
   1: (doc) => {
     const retag = (a: unknown): unknown =>
-      a && typeof a === "object" && (a as { kind?: unknown }).kind === "step"
-        ? { ...(a as object), kind: "footwork" }
-        : a;
+      isPlainRecord(a) && a.kind === "step" ? { ...a, kind: "footwork" } : a;
     // Only touch keys that already exist — NEVER spread back an absent key as
     // `undefined` (Automerge cannot store `undefined`; doing so corrupts routine
     // docs and broke template forks).
@@ -92,17 +91,17 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     if (!Array.isArray(doc.sections)) return { ...doc };
     const sectionKeys = sequentialKeys(doc.sections.length);
     const sections = doc.sections.map((section, i) => {
-      if (!section || typeof section !== "object") return section;
-      const s = section as Record<string, unknown>;
-      const out: Record<string, unknown> = { ...s };
-      if (Array.isArray(s.placements)) {
-        const placementKeys = sequentialKeys(s.placements.length);
-        out.placements = (s.placements as unknown[]).map((p, j) => {
-          if (!p || typeof p !== "object" || "sortKey" in (p as object)) return p;
-          return { ...(p as object), sortKey: placementKeys[j] };
+      if (!isPlainRecord(section)) return section;
+      const out: Record<string, unknown> = { ...section };
+      const placements: unknown = section.placements;
+      if (Array.isArray(placements)) {
+        const placementKeys = sequentialKeys(placements.length);
+        out.placements = placements.map((p: unknown, j) => {
+          if (!isPlainRecord(p) || "sortKey" in p) return p;
+          return { ...p, sortKey: placementKeys[j] };
         });
       }
-      if (!("sortKey" in s)) out.sortKey = sectionKeys[i];
+      if (!("sortKey" in section)) out.sortKey = sectionKeys[i];
       return out;
     });
     return { ...doc, sections };
@@ -148,12 +147,17 @@ export function runLadder(
   ladder: Record<number, MigrationStep>,
   target: number,
 ): VersionedDoc {
-  const input = doc as VersionedDoc;
-  let current: VersionedDoc = input;
-  const startVersion = typeof input.schemaVersion === "number" ? input.schemaVersion : 1;
+  if (!isPlainRecord(doc)) {
+    throw new Error("cannot migrate a non-object document");
+  }
+  const startVersion = typeof doc.schemaVersion === "number" ? doc.schemaVersion : 1;
+  // Normalizing the envelope up front (untagged ⇒ v1) is what keeps this
+  // cast-free: `{ ...doc, schemaVersion }` IS a VersionedDoc by construction.
+  let current: VersionedDoc = { ...doc, schemaVersion: startVersion };
 
   // A doc already at — or NEWER than — `target` skips the loop and is returned
-  // unchanged: an older client must not hard-fail on a doc from a newer schema
+  // value-unchanged (as the normalized shallow copy above): an older client
+  // must not hard-fail on a doc from a newer schema
   // (forward-compat, pairs with US-012 lenient read), and re-migrating a current
   // doc is a no-op.
   for (let version = startVersion; version < target; version++) {
@@ -205,13 +209,16 @@ export function migrate(doc: unknown): VersionedDoc {
 export type { MigrationStep };
 
 /**
- * A live, mutable document — same shape as {@link VersionedDoc}, but a caller
- * passes an Automerge DRAFT (the object inside an `A.change` callback), not a
- * detached plain object. Kept as a structural type (no `@automerge/automerge`
- * import here) — a draft behaves like a plain object for reads/writes/deletes,
- * which is all this file needs.
+ * A live, mutable document — a caller passes an Automerge DRAFT (the object
+ * inside an `A.change` callback), not a detached plain object. Kept as a
+ * structural type (no `@automerge/automerge` import here) — a draft behaves
+ * like a plain object for reads/writes/deletes, which is all this file needs.
+ * The envelope is NOT required statically: a pre-envelope doc has no
+ * `schemaVersion` at runtime and is treated as v1 (same leniency as
+ * {@link runLadder}), so demanding it in the type would just force casts at
+ * every call site that migrates an untyped draft.
  */
-type MutableVersionedDoc = { schemaVersion: number } & Record<string, unknown>;
+type MutableVersionedDoc = Record<string, unknown>;
 
 /**
  * Bring an Automerge DRAFT up to `CURRENT_SCHEMA_VERSION`, mutating it in
@@ -244,7 +251,9 @@ export function migrateDraft(draft: MutableVersionedDoc): void {
   const from = typeof draft.schemaVersion === "number" ? draft.schemaVersion : 1;
   if (from >= CURRENT_SCHEMA_VERSION) return; // already current — untouched.
 
-  const before = JSON.parse(JSON.stringify(draft)) as VersionedDoc;
+  const parsed: unknown = JSON.parse(JSON.stringify(draft));
+  if (!isPlainRecord(parsed)) return; // unreachable: a draft serializes to an object
+  const before = parsed;
   const after = migrate(before);
 
   // Drop any key the ladder removed (e.g. the v2→v3 `overlay` strip). NEVER

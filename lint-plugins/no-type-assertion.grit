@@ -1,0 +1,21 @@
+language js
+
+// Ban type assertions — `expr as Type` and the legacy `<Type>expr` form.
+// A cast is a claim the compiler can't check: it silences the type error
+// instead of fixing it, and nothing catches it when reality diverges
+// (CLAUDE.md §4 "Keep types honest"). Fix the declaration, narrow with a
+// type guard (`x is T`), or validate with a Zod parse at the boundary.
+//
+// `expr as const` stays legal: a const assertion narrows to what the value
+// already is — it can never lie about the runtime shape.
+//
+// The escape hatch for a boundary the type system genuinely can't express is
+// a `// biome-ignore lint/plugin: <why the compiler can't know this + what
+// guarantees it at runtime>` comment on one small, named, documented helper —
+// never an inline cast at a call site.
+or {
+  TsAsExpression() as $cast where { not $cast <: `$expr as const` },
+  TsTypeAssertionExpression() as $cast
+} where {
+  register_diagnostic(span=$cast, message="Type assertion is banned: it silences the compiler instead of fixing the type. Use a type guard, a Zod parse, or fix the declaration at the source (CLAUDE.md §4). `as const` is allowed.", severity="error")
+}

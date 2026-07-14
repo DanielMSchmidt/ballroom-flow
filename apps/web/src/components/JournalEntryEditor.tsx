@@ -69,11 +69,10 @@ export function JournalEntryEditor({
       // routine anchor on the (single) chosen routine. Otherwise the entry is an
       // account figureType note (the first figureType link).
       const routineLinks = links.filter((l) => l.home === "routine");
-      if (routineLinks.length > 0) {
-        const routineRef = routineLinks[0]?.routineRef as string;
-        const sameRoutine = routineLinks.filter(
-          (l) => l.home === "routine" && l.routineRef === routineRef,
-        );
+      const [firstRoutine] = routineLinks;
+      if (firstRoutine) {
+        const routineRef = firstRoutine.routineRef;
+        const sameRoutine = routineLinks.filter((l) => l.routineRef === routineRef);
         await createRoutineEntry(routineRef, {
           kind,
           text: text.trim(),

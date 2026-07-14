@@ -441,8 +441,7 @@ export interface OpenOptions {
   storage?: DocStorage | null;
 }
 
-const defaultSocketFactory: SocketFactory = (url, protocols) =>
-  new WebSocket(url, protocols) as unknown as ReturnType<SocketFactory>;
+const defaultSocketFactory: SocketFactory = (url, protocols) => new WebSocket(url, protocols);
 
 /** A valid Automerge actor id (even-length hex string), unique per tab (#70). */
 function randomActorId(): string {
@@ -729,14 +728,16 @@ export async function openRoutine(
     const doc = routineConn.current();
     const key = A.getHeads(doc).join("/");
     if (routineJsCache && routineJsCache.key === key) return routineJsCache.value;
-    const js = A.toJS(doc) as Partial<RoutineDoc>;
+    // Widened: an as-yet-unsynced doc is still the empty A.init, so every field
+    // may be absent — the checks below are what earn the full RoutineDoc back.
+    const js: Partial<RoutineDoc> = A.toJS(doc);
     let value: RoutineDoc;
     if (!Array.isArray(js.sections)) {
       // Not yet synced from the DO — return the empty sentinel, but preserve any
       // customKinds that have been locally embedded (e.g. via createCustomKind
       // called before the DO's catch-up replay arrives).
       const fallback = emptyRoutine(routineId);
-      if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds as RegistryKind[];
+      if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds;
       value = fallback;
     } else {
       // Structural sharing (reconcile): when the doc DID change, every subtree
@@ -765,8 +766,9 @@ export async function openRoutine(
   const sameResolvedPlacements = (a: ResolvedPlacement[], b: ResolvedPlacement[]): boolean => {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      const x = a[i] as ResolvedPlacement;
-      const y = b[i] as ResolvedPlacement;
+      const x = a[i];
+      const y = b[i];
+      if (x === undefined || y === undefined) return false; // unreachable: i < length
       if (
         x.placement !== y.placement ||
         x.figure !== y.figure ||

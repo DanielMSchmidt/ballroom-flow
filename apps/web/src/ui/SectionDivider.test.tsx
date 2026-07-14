@@ -12,7 +12,7 @@ describe("SectionDivider", () => {
     const { container } = renderUi(<SectionDivider label="1st Long Side" />);
     const rule = container.querySelector('[aria-hidden="true"]');
     expect(rule).not.toBeNull();
-    expect(rule as HTMLElement).toHaveStyle({ background: "var(--bf-hairline)" });
+    expect(rule).toHaveStyle({ background: "var(--bf-hairline)" });
   });
 
   it("forwards a className", () => {

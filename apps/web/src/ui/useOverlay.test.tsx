@@ -32,7 +32,7 @@ afterEach(() => {
 describe("useOverlay", () => {
   it("does not steal focus back into the panel when the parent re-renders with a new onClose", () => {
     const { rerender, getByTestId } = render(<Overlay open bump={0} />);
-    const field = getByTestId("field") as HTMLInputElement;
+    const field = getByTestId("field");
 
     // Simulate the user focusing the SECOND input inside the open overlay.
     field.focus();

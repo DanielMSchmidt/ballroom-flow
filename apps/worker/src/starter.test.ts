@@ -10,9 +10,10 @@ import type { Env } from "./index";
 import { seedStarterRoutine } from "./starter";
 import { applyMigrations } from "./test-support/seed";
 
-// The cloudflare:test `env` is typed as ProvidedEnv (DOC_DO untyped). Cast to
-// the worker's Env so seedStarterRoutine receives the right type.
-const typedEnv = env as unknown as Env;
+// The cloudflare:test env structurally satisfies the worker's Env (DB + DOC_DO
+// are typed on ProvidedEnv via test-support/db-env.d.ts; the rest is optional),
+// so this is a plain checked assignment — no cast.
+const typedEnv: Env = env;
 
 // Headroom over vitest's 5s default, NOT a blind bump (the b419e0a/ad22e16/29d5cbd
 // convention) — two independently measured pressures stack on this template-fork:
@@ -84,21 +85,17 @@ describe("seedStarterRoutine", () => {
 
     // The fork's DO is seeded with the section + 6 placements.
     const stub = typedEnv.DOC_DO.get(typedEnv.DOC_DO.idFromName(routineId));
-    const placements = await runInDurableObject(
-      stub as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (instance) => {
-        const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
-        const rows = doState.storage.sql
-          .exec("SELECT data FROM changes ORDER BY seq")
-          .toArray() as Array<{ data: ArrayBuffer }>;
-        if (rows.length === 0) return -1;
-        let doc = A.init<Record<string, unknown>>();
-        const changes = rows.map((r) => new Uint8Array(r.data) as A.Change);
-        [doc] = A.applyChanges(doc, changes);
-        const plain = A.toJS(doc) as { sections?: Array<{ placements?: unknown[] }> };
-        return plain.sections?.[0]?.placements?.length ?? -1;
-      },
-    );
+    const placements = await runInDurableObject(stub, async (_instance, state) => {
+      const rows = state.storage.sql
+        .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq")
+        .toArray();
+      if (rows.length === 0) return -1;
+      let doc = A.init<{ sections?: Array<{ placements?: unknown[] }> }>();
+      const changes = rows.map((r) => new Uint8Array(r.data));
+      [doc] = A.applyChanges(doc, changes);
+      const plain = A.toJS(doc);
+      return plain.sections?.[0]?.placements?.length ?? -1;
+    });
     expect(placements).toBe(6);
   });
 

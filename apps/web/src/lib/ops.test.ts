@@ -10,11 +10,11 @@ const DSN = "https://webkey@o123.ingest.sentry.io/789";
 
 function capture() {
   const calls: { url: string; body: string }[] = [];
-  const fetchFn = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-    calls.push({ url: String(url), body: String(init?.body ?? "") });
+  const fetchFn = vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, body: String(init?.body ?? "") });
     return new Response("{}");
   });
-  return { calls, fetchFn: fetchFn as unknown as typeof fetch };
+  return { calls, fetchFn };
 }
 
 describe("createErrorReporter (US-049 web half)", () => {
@@ -49,7 +49,7 @@ describe("createErrorReporter (US-049 web half)", () => {
   it("never throws — a rejecting fetch is swallowed (observability must not take the app down)", () => {
     const fetchFn = vi.fn(async () => {
       throw new Error("offline");
-    }) as unknown as typeof fetch;
+    });
     const r = createErrorReporter({ dsn: DSN, fetchFn });
     expect(() => r.report(new Error("boom"))).not.toThrow();
   });
@@ -63,10 +63,14 @@ describe("createErrorReporter (US-049 web half)", () => {
     wireGlobalErrorHandlers((error) => void reported.push(error), target);
 
     handlers.get("error")?.(new ErrorEvent("error", { error: new Error("sync crash") }));
-    const rejection = new Event("unhandledrejection") as Event & { reason?: unknown };
-    rejection.reason = new Error("async crash");
+    const rejection = Object.assign(new Event("unhandledrejection"), {
+      reason: new Error("async crash"),
+    });
     handlers.get("unhandledrejection")?.(rejection);
 
-    expect(reported.map((e) => (e as Error).message)).toEqual(["sync crash", "async crash"]);
+    expect(reported.map((e) => (e instanceof Error ? e.message : e))).toEqual([
+      "sync crash",
+      "async crash",
+    ]);
   });
 });

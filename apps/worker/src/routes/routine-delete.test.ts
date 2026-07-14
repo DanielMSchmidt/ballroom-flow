@@ -1,4 +1,5 @@
 import { SELF } from "cloudflare:test";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -22,7 +23,7 @@ beforeAll(async () => {
 async function listDocRefs(headers: Record<string, string>): Promise<string[]> {
   const res = await SELF.fetch("https://x/api/routines", { headers });
   expect(res.status).toBe(200);
-  const body = (await res.json()) as { routines: Array<{ docRef: string }> };
+  const body = zRoutineList.parse(await res.json());
   return body.routines.map((r) => r.docRef);
 }
 

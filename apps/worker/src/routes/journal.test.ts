@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
+import { zJournalList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { DocStub } from "../test-support/doc-do-api";
 import { generateTestKeypair, makeTestJWT, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
@@ -14,10 +14,7 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // Runs in real workerd (D1 + per-document DO + the fail-closed auth boundary).
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as {
-  idFromName(name: string): DurableObjectId;
-  get(id: DurableObjectId): DocStub;
-};
+const docs = env.DOC_DO;
 
 let kp: TestKeypair;
 beforeAll(async () => {
@@ -103,17 +100,8 @@ describe("T6 GET /api/journal", () => {
     const token = await makeTestJWT(kp, { sub: "owner1" });
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      entries: Array<{
-        kind: string;
-        text: string;
-        displayName: string | null;
-        identityColor: string | null;
-        anchors: Array<{ type: string; label?: string }>;
-        createdAt: number;
-      }>;
-    };
-    const kinds = body.entries.map((e) => e.kind);
+    const body = zJournalList.parse(await res.json());
+    const kinds: string[] = body.entries.map((e) => e.kind);
     expect(kinds).toContain("lesson");
     expect(kinds).toContain("practice");
     expect(kinds).not.toContain("note"); // a plain note is NOT a journal entry
@@ -169,9 +157,7 @@ describe("T6 GET /api/journal", () => {
     const token = await makeTestJWT(kp, { sub: "owner_cat" });
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      entries: Array<{ text: string; anchors: Array<{ label?: string }> }>;
-    };
+    const body = zJournalList.parse(await res.json());
     const lesson = body.entries.find((e) => e.text === "rise later through 2-3");
     expect(lesson?.anchors[0]?.label).toBe("Natural Turn"); // from the bundle, not D1
   });
@@ -205,9 +191,7 @@ describe("T6 GET /api/journal", () => {
     const asStudent = await SELF.fetch("https://x/api/journal", {
       headers: authHeaders(studentTok),
     });
-    const studentBody = (await asStudent.json()) as {
-      entries: Array<{ routineRef: string; authorId: string }>;
-    };
+    const studentBody = zJournalList.parse(await asStudent.json());
     expect(
       studentBody.entries.some((e) => e.routineRef === routineRef && e.authorId === "coach2"),
     ).toBe(true);
@@ -217,9 +201,7 @@ describe("T6 GET /api/journal", () => {
     const asStranger = await SELF.fetch("https://x/api/journal", {
       headers: authHeaders(strangerTok),
     });
-    const strangerBody = (await asStranger.json()) as {
-      entries: Array<{ routineRef: string }>;
-    };
+    const strangerBody = zJournalList.parse(await asStranger.json());
     expect(strangerBody.entries.some((e) => e.routineRef === routineRef)).toBe(false);
   });
 
@@ -255,9 +237,9 @@ describe("T6 GET /api/journal", () => {
     await stub.runAlarmForTest();
 
     const token = await makeTestJWT(kp, { sub: "owner3" });
-    const before = (await (
-      await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) })
-    ).json()) as { entries: Array<{ id: string; text: string }> };
+    const before = zJournalList.parse(
+      await (await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) })).json(),
+    );
     const entry = before.entries.find((e) => e.text === "to be deleted");
     expect(entry).toBeDefined();
 
@@ -265,9 +247,9 @@ describe("T6 GET /api/journal", () => {
     if (entry) await stub.applyChange({ op: "deleteAnnotation", id: entry.id });
     await stub.runAlarmForTest();
 
-    const after = (await (
-      await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) })
-    ).json()) as { entries: Array<{ text: string }> };
+    const after = zJournalList.parse(
+      await (await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) })).json(),
+    );
     expect(after.entries.some((e) => e.text === "to be deleted")).toBe(false);
   });
 
@@ -303,9 +285,7 @@ describe("T6 GET /api/journal", () => {
     expect(created.status).toBe(201);
 
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) });
-    const body = (await res.json()) as {
-      entries: Array<{ text: string; source: string; anchors: Array<{ label?: string }> }>;
-    };
+    const body = zJournalList.parse(await res.json());
     const accountEntry = body.entries.find((e) => e.text === "whisk more cross less turn");
     expect(accountEntry?.source).toBe("account");
     expect(accountEntry?.anchors[0]?.label).toContain("Whisk");
@@ -373,7 +353,7 @@ describe("T6 GET /api/journal", () => {
 
     const studentTok = await makeTestJWT(kp, { sub: "student5" });
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(studentTok) });
-    const body = (await res.json()) as { entries: Array<{ text: string }> };
+    const body = zJournalList.parse(await res.json());
     expect(body.entries.some((e) => e.text === "whisk5 cross more")).toBe(true); // family present in shared routine
     expect(body.entries.some((e) => e.text === "absent5 note")).toBe(false); // family absent → not surfaced
   });

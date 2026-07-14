@@ -29,7 +29,7 @@ const AUTH_ENV = { CLERK_JWT_KEY: TEST_JWT_PUBLIC_KEY_PEM, SENTRY_DSN };
 /** A keypair the worker does NOT trust — tokens it signs are exactly the
  *  wrong-Clerk-instance signature of the 2026-07-05 production incident. */
 async function foreignKeypair(): Promise<TestKeypair> {
-  const kp = (await crypto.subtle.generateKey(
+  const kp = await crypto.subtle.generateKey(
     {
       name: "RSASSA-PKCS1-v1_5",
       hash: "SHA-256",
@@ -38,7 +38,10 @@ async function foreignKeypair(): Promise<TestKeypair> {
     },
     true,
     ["sign", "verify"],
-  )) as CryptoKeyPair;
+  );
+  // generateKey is typed CryptoKey | CryptoKeyPair; an RSA algorithm always
+  // yields a pair — narrow with a runtime check instead of asserting.
+  if (!("privateKey" in kp)) throw new Error("expected generateKey to return an RSA keypair");
   return { privateKey: kp.privateKey, publicKey: kp.publicKey, publicKeyPem: "", kid: "foreign" };
 }
 

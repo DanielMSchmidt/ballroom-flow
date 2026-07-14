@@ -13,9 +13,9 @@ import { importDomain, loadAutomerge } from "./__fixtures__";
 // stand-in; M1 swaps in real figure/routine docs.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface CountsDoc {
+type CountsDoc = {
   counts: Record<string, number>;
-}
+};
 
 // Automerge actor ids MUST be hex strings (a non-hex id throws). `undoLastChange`
 // filters the change log by the user's Automerge actor id; the app-user → actor

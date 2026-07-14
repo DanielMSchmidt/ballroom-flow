@@ -210,9 +210,21 @@ export function localizedRegistry(locale: Locale): StandardRegistry {
   if (locale === "en") return ATTRIBUTE_REGISTRY;
   let reg = cache.get(locale);
   if (!reg) {
-    reg = Object.fromEntries(
-      Object.entries(ATTRIBUTE_REGISTRY).map(([id, kind]) => [id, localizeKind(kind, locale)]),
-    ) as StandardRegistry;
+    const l = (kind: RegistryKind): RegistryKind => localizeKind(kind, locale);
+    // The entries spread localizes EVERY kind (incl. any future additions beyond
+    // the named seven); re-stating the named keys after it is what proves the
+    // StandardRegistry shape to the compiler (Object.fromEntries only knows a
+    // string index). `l` is pure, so the double call is content-identical.
+    reg = {
+      ...Object.fromEntries(Object.entries(ATTRIBUTE_REGISTRY).map(([id, kind]) => [id, l(kind)])),
+      direction: l(ATTRIBUTE_REGISTRY.direction),
+      footwork: l(ATTRIBUTE_REGISTRY.footwork),
+      rise: l(ATTRIBUTE_REGISTRY.rise),
+      position: l(ATTRIBUTE_REGISTRY.position),
+      bodyActions: l(ATTRIBUTE_REGISTRY.bodyActions),
+      sway: l(ATTRIBUTE_REGISTRY.sway),
+      turn: l(ATTRIBUTE_REGISTRY.turn),
+    };
     cache.set(locale, reg);
   }
   return reg;

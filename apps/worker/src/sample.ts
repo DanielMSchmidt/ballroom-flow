@@ -45,9 +45,7 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
       dance: figure.dance,
       figureType: figure.figureType,
     });
-    await env.DOC_DO.get(env.DOC_DO.idFromName(figure.id)).seedDoc(
-      figure as unknown as Record<string, unknown>,
-    );
+    await env.DOC_DO.get(env.DOC_DO.idFromName(figure.id)).seedDoc(figure);
     await linkPlacement(env.DB, routine.id, figure.id);
   }
 
@@ -89,7 +87,7 @@ export async function seedSampleRoutine(env: Env): Promise<string> {
     templateOf: routine.id,
     schemaVersion: CURRENT_SCHEMA_VERSION,
     deletedAt: null,
-  } as unknown as Record<string, unknown>);
+  });
 
   return routine.id;
 }

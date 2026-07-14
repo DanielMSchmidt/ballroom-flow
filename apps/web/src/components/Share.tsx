@@ -229,7 +229,7 @@ export function ShareView({
                     label: t.inviteRoleLabels[value],
                   }))}
                   value={inviteRole}
-                  onChange={onSelectValue<Member["role"]>(setInviteRole)}
+                  onChange={onSelectValue(INVITE_ROLE_OPTIONS, setInviteRole)}
                 />
                 <Button
                   variant="primary"

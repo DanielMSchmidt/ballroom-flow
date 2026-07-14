@@ -89,7 +89,7 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       headers: student.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { notes: Array<{ authorId: string; figureType: string }> };
+    const body = await res.json<{ notes: Array<{ authorId: string; figureType: string }> }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ authorId: "coach", figureType: "feather" }),
@@ -144,9 +144,9 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       headers: ctx.authHeaders(),
     });
     expect(got.status).toBe(200);
-    const body = (await got.json()) as {
+    const body = await got.json<{
       notes: Array<{ figureType: string; text: string; kind: string }>;
-    };
+    }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ figureType: "natural_turn", text: "rise later", kind: "lesson" }),
@@ -188,9 +188,9 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       headers: ctx.authHeaders(),
     });
     expect(got.status).toBe(200);
-    const body = (await got.json()) as {
+    const body = await got.json<{
       notes: Array<{ figureType: string; text: string; authorId: string }>;
-    };
+    }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

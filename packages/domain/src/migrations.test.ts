@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { importDomain } from "./__fixtures__";
 import { type MigrationStep, runLadder } from "./migrations";
 
@@ -36,8 +37,9 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       kind: "figure",
       attributes: [{ id: "a1", kind: "step", count: 1, value: "FUTURE_VALUE" }],
     };
-    const migrated = migrate(old) as unknown as { attributes: Array<{ value: unknown }> };
-    expect(migrated.attributes[0]?.value).toBe("FUTURE_VALUE");
+    const migrated = migrate(old);
+    const attributes = z.array(z.object({ value: z.string() })).parse(migrated.attributes);
+    expect(attributes[0]?.value).toBe("FUTURE_VALUE");
   });
 
   it("is a no-op when the doc is already at the current version", async () => {
@@ -63,7 +65,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       dance: "foxtrot",
       attributes: [],
     };
-    expect((migrate(fig) as { figureType?: string }).figureType).toBe("feather");
+    expect(migrate(fig).figureType).toBe("feather");
   });
 
   it("runs the ladder in order across multiple versions (synthetic ladder)", () => {
@@ -73,7 +75,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       1: (d) => ({ ...d, steppedFrom1: true }),
       2: (d) => ({ ...d, steppedFrom2: true }),
     };
-    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3) as Record<string, unknown>;
+    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3);
     expect(result.schemaVersion).toBe(3);
     expect(result.steppedFrom1).toBe(true);
     expect(result.steppedFrom2).toBe(true);
@@ -106,7 +108,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
   it("treats an untagged doc as v1", () => {
     // Intent: a doc with no schemaVersion is migrated from the earliest version.
     const ladder: Record<number, MigrationStep> = { 1: (d) => ({ ...d, upgraded: true }) };
-    const result = runLadder({ kind: "figure" }, ladder, 2) as Record<string, unknown>;
+    const result = runLadder({ kind: "figure" }, ladder, 2);
     expect(result.schemaVersion).toBe(2);
     expect(result.upgraded).toBe(true);
   });
@@ -130,15 +132,23 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
         { id: "s2", name: "Body", placements: [] },
       ],
     };
-    const migrated = migrate(routine) as unknown as {
-      schemaVersion: number;
-      sections: Array<{ id: string; sortKey?: string; placements: Array<{ sortKey?: string }> }>;
-    };
+    const migrated = z
+      .object({
+        schemaVersion: z.number(),
+        sections: z.array(
+          z.object({
+            id: z.string(),
+            sortKey: z.string().optional(),
+            placements: z.array(z.object({ sortKey: z.string().optional() })),
+          }),
+        ),
+      })
+      .parse(migrate(routine));
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // Sections keyed in array order (ascending).
     const sk = migrated.sections.map((s) => s.sortKey);
     expect(sk.every((k) => typeof k === "string")).toBe(true);
-    expect((sk[0] as string) < (sk[1] as string)).toBe(true);
+    expect(String(sk[0]) < String(sk[1])).toBe(true);
     // Placements within s1 keyed in array order (ascending).
     const pk = (migrated.sections[0]?.placements ?? []).map((p) => p.sortKey);
     expect(pk.every((k) => typeof k === "string")).toBe(true);
@@ -163,7 +173,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     // v3→v4 step with the version bump alone — no spurious keys.
     const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
     const figure = { schemaVersion: 2, figureType: "feather", dance: "foxtrot", attributes: [] };
-    const migrated = migrate(figure) as Record<string, unknown>;
+    const migrated = migrate(figure);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect("sections" in migrated).toBe(false);
     expect("sortKey" in migrated).toBe(false);
@@ -175,7 +185,9 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       schemaVersion: 2,
       sections: [{ id: "s1", name: "A", sortKey: "PRESET", placements: [] }],
     };
-    const migrated = migrate(routine) as unknown as { sections: Array<{ sortKey?: string }> };
+    const migrated = z
+      .object({ sections: z.array(z.object({ sortKey: z.string().optional() })) })
+      .parse(migrate(routine));
     expect(migrated.sections[0]?.sortKey).toBe("PRESET");
   });
 
@@ -201,7 +213,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
         rename: "My Natural Turn",
       },
     };
-    const migrated = migrate(oldFigure) as Record<string, unknown>;
+    const migrated = migrate(oldFigure);
 
     // Migrated to current version.
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -217,7 +229,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     // Identity fields and attributes survive intact.
     expect(migrated.figureType).toBe("natural-turn");
     expect(migrated.dance).toBe("waltz");
-    expect((migrated.attributes as Array<{ id: string }>)[0]?.id).toBe("a1");
+    expect(z.array(z.object({ id: z.string() })).parse(migrated.attributes)[0]?.id).toBe("a1");
   });
 
   it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
@@ -232,7 +244,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       attributes: [],
       overlay: { overrides: {}, tombstones: [], additions: [] },
     };
-    const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
+    const migrated = migrate(v2DocWithOverlay);
 
     // migrate() runs to CURRENT: the overlay strip happens at the v2→v3 step.
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -259,7 +271,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       dance: "waltz",
       attributes: [{ id: "a1", kind: "step", count: 1, value: "H" }],
     });
-    const draft = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    const draft = shape();
     migrateDraft(draft);
     expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrate(shape())).toEqual(draft);
@@ -278,7 +290,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       deleteProperty() {
         throw new Error("migrateDraft deleted a key on an already-current draft");
       },
-    }) as unknown as { schemaVersion: number } & Record<string, unknown>;
+    });
     expect(() => migrateDraft(guarded)).not.toThrow();
     expect(target).toEqual({
       schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -298,7 +310,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       figureType: "feather",
       dance: "foxtrot",
       attributes,
-    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    };
     migrateDraft(draft);
     expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(draft.attributes).toBe(attributes); // untouched — same reference
@@ -312,7 +324,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       dance: "foxtrot",
       attributes: [],
       overlay: { overrides: {}, tombstones: [], additions: [] },
-    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    };
     migrateDraft(draft);
     expect("overlay" in draft).toBe(false);
     for (const v of Object.values(draft)) expect(v).not.toBeUndefined();
@@ -327,8 +339,8 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
         { id: "s2", name: "B", placements: [] },
       ],
     });
-    const d1 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
-    const d2 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    const d1 = shape();
+    const d2 = shape();
     migrateDraft(d1);
     migrateDraft(d2);
     expect(d1).toEqual(d2);
@@ -351,7 +363,7 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
       attributes: [],
       bars: 2,
     };
-    const migrated = migrate(v4Figure) as Record<string, unknown>;
+    const migrated = migrate(v4Figure);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.counts).toBe(6); // 2 bars × 3 beats
     expect("bars" in migrated).toBe(false);
@@ -365,14 +377,14 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
       dance: "quickstep",
       attributes: [],
       bars: 3,
-    }) as Record<string, unknown>;
+    });
     expect(migrated.counts).toBe(12);
   });
 
   it("leaves a routine doc untouched but for the version bump", async () => {
     const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
     const routine = { schemaVersion: 4, sections: [], annotations: [] };
-    const migrated = migrate(routine) as Record<string, unknown>;
+    const migrated = migrate(routine);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect("counts" in migrated).toBe(false);
   });
@@ -386,7 +398,7 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
       attributes: [],
       bars: 2,
       counts: 5, // authored by a newer client pre-migration
-    }) as Record<string, unknown>;
+    });
     expect(migrated.counts).toBe(5);
     expect("bars" in migrated).toBe(false);
   });
@@ -401,7 +413,7 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
       dance: "foxtrot",
       attributes: [],
       bars: 30,
-    }) as Record<string, unknown>;
+    });
     expect(migrated.counts).toBe(64);
   });
 });

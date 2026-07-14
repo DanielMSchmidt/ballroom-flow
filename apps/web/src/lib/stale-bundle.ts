@@ -103,8 +103,14 @@ export function initStaleBundleReload(): void {
     fetchServerBuildId: async () => {
       const res = await fetch("/api/health");
       if (!res.ok) return null;
-      const body = (await res.json()) as { buildId?: string | null };
-      return body.buildId ?? null;
+      const body: unknown = await res.json();
+      // Narrow the untrusted health payload — anything else reads as "unknown".
+      return typeof body === "object" &&
+        body !== null &&
+        "buildId" in body &&
+        typeof body.buildId === "string"
+        ? body.buildId
+        : null;
     },
     reload: () => window.location.reload(),
     updateServiceWorker: async () => {

@@ -215,9 +215,9 @@ describe("US-032/033 Figure library browse (global + account variants)", () => {
     });
     const res = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       figures: { docRef: string; usedInCount: number; baseFigureRef: string | null }[];
-    };
+    }>();
     const v = body.figures.find((f) => f.docRef === "var1");
     expect(v?.usedInCount).toBe(2);
     expect(v?.baseFigureRef).toBe("fg_base");

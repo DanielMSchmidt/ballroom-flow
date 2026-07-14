@@ -1,4 +1,5 @@
 import { verifyToken } from "@clerk/backend";
+import { isPlainRecord } from "@weavesteps/domain";
 import type { Context } from "hono";
 import type { Env } from "../index";
 import { reportError } from "../ops";
@@ -114,7 +115,9 @@ export async function authenticateToken(
       secretKey: env.CLERK_SECRET_KEY,
       jwtKey: env.CLERK_JWT_KEY,
     });
-    const claims = payload as unknown as Record<string, unknown>;
+    // Clerk's JwtPayload carries custom claims untyped; read it as a plain
+    // record via a RUNTIME guard (a verified JWT payload is always an object).
+    const claims: Record<string, unknown> = isPlainRecord(payload) ? payload : {};
     return {
       sub: payload.sub,
       name: displayNameFromClaims(claims),
@@ -124,7 +127,7 @@ export async function authenticateToken(
     // US-049 (2026-07-05 incident): a swallowed verification error made a
     // production-wide auth outage invisible. Config-class failures report to
     // Sentry (fail-open — reportError never throws); the 401 stays unchanged.
-    const reason = (e as { reason?: unknown }).reason;
+    const reason = isPlainRecord(e) ? e.reason : undefined;
     const failureClass = typeof reason === "string" ? reason : "unknown";
     if (!BENIGN_VERIFY_REASONS.has(failureClass) && !reportedVerifyFailures.has(failureClass)) {
       reportedVerifyFailures.add(failureClass);

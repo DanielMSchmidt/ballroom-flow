@@ -50,7 +50,7 @@ export function renderUi(ui: ReactElement, opts: RenderUiOptions = {}): RenderRe
 
 /** Run axe over a container and return the results (assert with toHaveNoViolations). */
 export async function axeCheck(container: HTMLElement): Promise<AxeResults> {
-  return axe(container) as Promise<AxeResults>;
+  return axe(container);
 }
 
 export * from "@testing-library/react";

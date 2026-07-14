@@ -314,3 +314,98 @@ export const zJournalEntry = z.object({
 export const zJournalList = z.object({ entries: z.array(zJournalEntry) });
 export type JournalEntry = z.infer<typeof zJournalEntry>;
 export type JournalList = z.infer<typeof zJournalList>;
+
+/**
+ * E2E fixtures seed body (POST /api/test/seed — mounted ONLY under
+ * E2E_TEST_ROUTES). Runtime-validated at the route so a malformed seed fails
+ * LOUDLY at seed time instead of silently corrupting a journey's fixtures
+ * (the honest replacement for the old `as SeedBody` cast; CLAUDE.md §4).
+ */
+export const zSeedBody = z.object({
+  users: z
+    .array(
+      z.object({
+        id: z.string(),
+        displayName: z.string(),
+        identityColor: z.string(),
+        plan: z.enum(["free", "pro"]).optional(),
+        /** D31 admin seam — lets an E2E journey stand up an admin (global-figure editor). */
+        isAdmin: z.boolean().optional(),
+        routineCapOverride: z.number().nullish(),
+      }),
+    )
+    .optional(),
+  seedGlobalFigures: z.boolean().optional(),
+  docs: z
+    .array(
+      z.object({
+        docRef: z.string(),
+        type: z.string(),
+        ownerId: z.string(),
+        doName: z.string().optional(),
+        title: z.string().nullish(),
+        dance: z.string().nullish(),
+        figureType: z.string().nullish(),
+        sections: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              placements: z.array(z.object({ id: z.string(), figureRef: z.string() })),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  memberships: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        docRef: z.string(),
+        userId: z.string(),
+        role: z.enum(["viewer", "commenter", "editor"]),
+      }),
+    )
+    .optional(),
+  invites: z
+    .array(
+      z.object({
+        id: z.string(),
+        docRef: z.string(),
+        role: z.enum(["viewer", "commenter", "editor"]),
+        expiresAt: z.number(),
+        redeemedAt: z.number().nullish(),
+      }),
+    )
+    .optional(),
+  figures: z
+    .array(
+      z.object({
+        docRef: z.string(),
+        scope: z.enum(["global", "account"]),
+        ownerId: z.string(),
+        name: z.string(),
+        dance: z.string(),
+        figureType: z.string(),
+        attributes: z.array(zAttribute).optional(),
+      }),
+    )
+    .optional(),
+  placementEdges: z.array(z.object({ routineRef: z.string(), figureRef: z.string() })).optional(),
+  journalEntries: z
+    .array(
+      z.object({
+        entryId: z.string(),
+        routineRef: z.string(),
+        authorId: z.string(),
+        kind: z.enum(["lesson", "practice"]),
+        text: z.string(),
+        anchors: z.array(z.unknown()).optional(),
+        createdAt: z.number().optional(),
+        deletedAt: z.number().nullish(),
+      }),
+    )
+    .optional(),
+});
+export type SeedBody = z.infer<typeof zSeedBody>;

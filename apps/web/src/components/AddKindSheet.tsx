@@ -70,6 +70,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
   const editing = initial != null;
   // Stored values ("single"/"enum"/…) are locale-independent; only the labels
   // the user sees are translated.
+  const CARDINALITIES = ["single", "multi"] as const;
   const cardinalityOptions = [
     { value: "single", label: t.cardinalitySingle },
     { value: "multi", label: t.cardinalityMulti },
@@ -297,7 +298,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
           label={t.cardinalityField}
           options={cardinalityOptions}
           value={cardinality}
-          onChange={onSelectValue<"single" | "multi">(setCardinality)}
+          onChange={onSelectValue(CARDINALITIES, setCardinality)}
         />
         <Select
           label={t.valueTypeField}

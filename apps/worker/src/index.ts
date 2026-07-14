@@ -981,11 +981,17 @@ app.get("/api/search", async (c) => {
     // Map to the contract-valid types ("global-figure" / "account-figure") here so
     // the web client's zSearchResults.parse never sees the raw "figure" value and
     // silently empties the results list via a ZodError that .catch swallows.
-    type: (r.type === "figure"
-      ? r.ownerId === "app"
-        ? "global-figure"
-        : "account-figure"
-      : r.type) as "routine" | "global-figure" | "account-figure",
+    // The registry column is a plain TEXT, so the union is established by a
+    // RUNTIME check (never asserted): an unexpected stored value falls back to
+    // "routine" rather than leaking an invalid type to the client.
+    type:
+      r.type === "figure"
+        ? r.ownerId === "app"
+          ? "global-figure"
+          : "account-figure"
+        : r.type === "global-figure" || r.type === "account-figure"
+          ? r.type
+          : "routine",
     title: r.title ?? "",
     dance: r.dance,
   }));

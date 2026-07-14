@@ -2,7 +2,6 @@ import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
-import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
 
@@ -12,8 +11,8 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 // worker only exposes the stateless variant-creation route + the shared figure
 // DO. These tests prove the worker primitives the store composes.
 
-const docs = env.DOC_DO as unknown as DocNamespace;
-function freshDoc(prefix: string): { name: string; stub: DocStub } {
+const docs = env.DOC_DO;
+function freshDoc(prefix: string) {
   const name = uniqueDocName(prefix);
   return { name, stub: docs.get(docs.idFromName(name)) };
 }

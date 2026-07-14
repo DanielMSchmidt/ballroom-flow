@@ -6,14 +6,16 @@ import type { LibraryFigure } from "@weavesteps/domain";
 import { globalFigureRef } from "@weavesteps/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { resolveEffectiveRole } from "./db/membership";
-import type { DocNamespace } from "./test-support/doc-do-api";
+import { readFigureSnapshot } from "./figure-snapshot";
+import type { Env } from "./index";
 import { generateTestKeypair, makeTestJWT, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
+import { asTestPeek } from "./test-support/test-peek";
 
-const docs = env.DOC_DO as unknown as DocNamespace;
-// The seeder takes the worker Env; cast the test env (same bindings) to it.
-// biome-ignore lint/suspicious/noExplicitAny: the test env structurally satisfies Env.
-const seedEnv = env as any;
+const docs = env.DOC_DO;
+// The seeder takes the worker Env; the test env structurally satisfies it
+// (db-env.d.ts types DB/DOC_DO on ProvidedEnv; every other Env field is optional).
+const seedEnv: Env = env;
 
 let kp: TestKeypair;
 beforeAll(async () => {
@@ -58,12 +60,9 @@ describe("seedGlobalFigures — additive, idempotent import (D30)", () => {
     });
 
     // DO content: scope global + the charted attributes.
-    const fig = (await docs.get(docs.idFromName(ref)).getFigureSnapshot()) as {
-      scope?: string;
-      attributes?: unknown[];
-    } | null;
+    const fig = await readFigureSnapshot(docs.get(docs.idFromName(ref)));
     expect(fig?.scope).toBe("global");
-    expect(fig?.attributes?.length).toBe(2);
+    expect(fig?.attributes.length).toBe(2);
 
     // Re-run with the SAME content: nothing created, nothing rewritten (D30 ⟳:
     // the reconcile is a no-op when the doc already matches the seed).
@@ -161,10 +160,7 @@ describe("seedGlobalFigures — additive, idempotent import (D30)", () => {
     expect(run.created).toBe(0);
     expect(run.updated).toBe(1);
 
-    const fig = (await stub.getFigureSnapshot()) as {
-      name?: string;
-      attributes?: Array<{ id: string; value?: unknown; deletedAt?: number | null }>;
-    } | null;
+    const fig = await readFigureSnapshot(stub);
     expect(fig?.name).toBe("Reconcile Figure (Book)");
     const byId = new Map((fig?.attributes ?? []).map((a) => [a.id, a]));
     expect(byId.get("fig-reconcile-s1-foot")?.value).toBe("H flat"); // corrected
@@ -298,10 +294,8 @@ describe("ensureGlobalFigures — hash-guarded self-healing seed (D30 ⟳)", () 
     const third = await ensureGlobalFigures(seedEnv, { figures: mk("H flat") });
     expect(third.ran).toBe(true);
     expect(third.result?.updated).toBe(1);
-    const fig = (await docs.get(docs.idFromName(ref)).getFigureSnapshot()) as {
-      attributes?: Array<{ id: string; value?: unknown }>;
-    } | null;
-    expect(fig?.attributes?.find((a) => a.id === "fig-ensure-s1-foot")?.value).toBe("H flat");
+    const fig = await readFigureSnapshot(docs.get(docs.idFromName(ref)));
+    expect(fig?.attributes.find((a) => a.id === "fig-ensure-s1-foot")?.value).toBe("H flat");
   });
 
   it("does not persist the hash when figures errored, so the next check retries", async () => {
@@ -315,7 +309,9 @@ describe("ensureGlobalFigures — hash-guarded self-healing seed (D30 ⟳)", () 
     // createGlobalFigureRow's D1 `.bind(undefined)` rejects. (The previous
     // bad-dance fixture stopped erroring when Builder v3 ① switched the seeder
     // from defaultFigureBars(attrs, dance) to the dance-free defaultFigureCounts.)
-    const bad = [{ ...mk("HT")[0], name: undefined as unknown as string }] as LibraryFigure[];
+    // asTestPeek: deliberately MALFORMED input (name: undefined is intentionally
+    // NOT a LibraryFigure) — the assertions below on skipped/no-hash are the point.
+    const bad = [asTestPeek<LibraryFigure>({ ...mk("HT")[0], name: undefined })];
     const run = await ensureGlobalFigures(seedEnv, { figures: bad });
     expect(run.ran).toBe(true);
     expect((run.result?.skipped ?? 0) > 0).toBe(true);
@@ -407,10 +403,10 @@ describe("snapshot fans out variant BASES (⟳v5, §5.2)", () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       figures: Record<string, { baseFigureRef?: string }>;
       bases: Record<string, { attributes: unknown[] }>;
-    };
+    }>();
     // The variant is present, still carrying its live base link + only its owned beat.
     expect(body.figures[variantRef]?.baseFigureRef).toBe(globalRef);
     // The base is fanned out so the client can resolve beat 1 live.

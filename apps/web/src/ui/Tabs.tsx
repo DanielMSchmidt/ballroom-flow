@@ -1,14 +1,14 @@
 import { cx } from "./cx";
 
-export interface TabItem {
-  value: string;
+export interface TabItem<T extends string = string> {
+  value: T;
   label: string;
 }
 
-export interface TabsProps {
-  items: TabItem[];
-  value: string;
-  onChange: (value: string) => void;
+export interface TabsProps<T extends string = string> {
+  items: TabItem<T>[];
+  value: T;
+  onChange: (value: T) => void;
   /** Accessible label for the tablist. */
   label: string;
   className?: string;
@@ -18,9 +18,11 @@ export interface TabsProps {
  * Tabs — segmented in-page filter (e.g. journal: all / lessons /
  * practice / by-figure). Implements the ARIA tabs pattern with
  * roving focus via arrow keys (#7, #8). Visual state is carried by
- * fill + weight, not color alone (#5).
+ * fill + weight, not color alone (#5). Generic over the tab-value
+ * union so `onChange` hands callers their own type back — no
+ * re-narrowing of a plain string at the call site.
  */
-export function Tabs({ items, value, onChange, label, className }: TabsProps) {
+export function Tabs<T extends string>({ items, value, onChange, label, className }: TabsProps<T>) {
   function onKeyDown(e: React.KeyboardEvent, idx: number) {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();

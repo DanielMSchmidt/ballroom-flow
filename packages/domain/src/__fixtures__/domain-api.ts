@@ -21,6 +21,7 @@
 // Types reference the TEST-OWNED structural shapes (./types) — see that file's
 // header for why those are test-owned rather than imported from product code.
 // ─────────────────────────────────────────────────────────────────────────
+import type { Doc as AmDoc } from "@automerge/automerge";
 import type {
   Anchor,
   Attribute,
@@ -168,12 +169,13 @@ export interface DomainApi {
   ): { variant: FigureDoc; placement: Placement };
   copyFigureForFork(figure: FigureDoc, byUser: string): FigureDoc;
 
-  // US-010 undo.ts
-  undoLastChange<T>(doc: T, actorId: string): T;
-  redoLastChange<T>(doc: T, actorId: string): T;
+  // US-010 undo.ts — `AmDoc<T>` is Automerge's readonly view of T, matching the
+  // real exports (which operate on live docs, not detached POJOs).
+  undoLastChange<T>(doc: AmDoc<T>, actorId: string): AmDoc<T>;
+  redoLastChange<T>(doc: AmDoc<T>, actorId: string): AmDoc<T>;
   // US-038 AC-3 — soft "superseded" hint: did another actor build on (causally
   // depend on) my next undo target? Advisory only; undo still always proceeds.
-  wasSupersededByOthers<T>(doc: T, actorId: string): boolean;
+  wasSupersededByOthers<T>(doc: AmDoc<T>, actorId: string): boolean;
 
   // US-011 figureType note matching
   matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean;
@@ -187,21 +189,22 @@ export interface DomainApi {
   migrate(doc: unknown): { schemaVersion: number } & Record<string, unknown>;
   // v5 milestone step 1 (PLAN §7) — the DO-load-path draft-mutating counterpart
   // of `migrate`, called inside an Automerge `A.change`.
-  migrateDraft(draft: { schemaVersion: number } & Record<string, unknown>): void;
+  migrateDraft(draft: Record<string, unknown>): void;
 
   // US-020 (re-exported permission helpers, used by the worker layer too)
   capabilitiesFor?(role: MembershipRole): { canEdit: boolean; canAnnotate: boolean };
 }
 
-const DOMAIN_PKG = "@weavesteps/domain";
-
 /**
- * Dynamically load the M1 domain module, typed as `DomainApi`. The specifier is
- * a runtime variable so the type-checker uses the `DomainApi` cast (below)
- * rather than resolving the real — currently empty — module shape. Replace with
- * a direct typed import once M1 exports exist.
+ * Dynamically load the domain module, typed as `DomainApi`. M1 has long since
+ * landed, so the real module satisfies the contract interface directly — the
+ * assignment below is CHECKED by the compiler (no cast): if the domain's public
+ * surface drifts from this contract, `pnpm typecheck` fails right here rather
+ * than in some far-away destructure. The import stays dynamic (inside the
+ * function body) so skipped suites never pay module-load cost — the
+ * `importDomain()` convention from CLAUDE.md §4 is unchanged for callers.
  */
 export async function importDomain(): Promise<DomainApi> {
-  const mod = (await import(DOMAIN_PKG)) as unknown as DomainApi;
+  const mod: DomainApi = await import("@weavesteps/domain");
   return mod;
 }

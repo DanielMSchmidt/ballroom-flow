@@ -43,8 +43,15 @@ export function readE2ESession(): E2ESession | null {
   try {
     const raw = window.localStorage.getItem(E2E_SESSION_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<E2ESession>;
-    if (typeof parsed.sub === "string" && typeof parsed.token === "string") {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "sub" in parsed &&
+      typeof parsed.sub === "string" &&
+      "token" in parsed &&
+      typeof parsed.token === "string"
+    ) {
       return { sub: parsed.sub, token: parsed.token };
     }
   } catch {

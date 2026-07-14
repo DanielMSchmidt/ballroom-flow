@@ -1,9 +1,9 @@
 import { env, runInDurableObject, SELF } from "cloudflare:test";
 import * as A from "@automerge/automerge";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { uniqueDocName } from "../test-support/do-id";
-import type { DocNamespace } from "../test-support/doc-do-api";
 import { expectIndexedQuery } from "../test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
@@ -28,7 +28,7 @@ async function seedOwnedRoutine(userId: string): Promise<string> {
 
 describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
   let kp2: TestKeypair;
-  const docs2 = env.DOC_DO as unknown as DocNamespace;
+  const docs2 = env.DOC_DO;
 
   beforeAll(async () => {
     await applyMigrations();
@@ -76,25 +76,18 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
     // and crashes on figure docs). Instead, use runInDurableObject to read the raw Automerge
     // doc content directly from the DO's SQLite change log and decode it.
     const stub = docs2.get(docs2.idFromName(figureRef));
-    const attrCount = await runInDurableObject(
-      stub as unknown as DurableObjectStub<import("../doc-do").DocDO>,
-      async (instance) => {
-        // Access ctx via a type assertion — ctx is protected on DurableObject but
-        // accessible at runtime; the cast is safe in this test-only context.
-        const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
-        const rows = doState.storage.sql
-          .exec("SELECT data FROM changes ORDER BY seq")
-          .toArray() as Array<{ data: ArrayBuffer }>;
-        if (rows.length === 0) return 0;
-        // Replay changes to reconstruct the Automerge doc and count attributes.
-        let doc = A.init<Record<string, unknown>>();
-        const changes = rows.map((r) => new Uint8Array(r.data) as A.Change);
-        [doc] = A.applyChanges(doc, changes);
-        const plain = A.toJS(doc) as Record<string, unknown>;
-        const attrs = plain.attributes as Array<unknown> | undefined;
-        return attrs?.length ?? 0;
-      },
-    );
+    const attrCount = await runInDurableObject(stub, async (_instance, state) => {
+      const rows = state.storage.sql
+        .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq")
+        .toArray();
+      if (rows.length === 0) return 0;
+      // Replay changes to reconstruct the Automerge doc and count attributes.
+      let doc = A.init<Record<string, unknown>>();
+      const changes = rows.map((r) => new Uint8Array(r.data));
+      [doc] = A.applyChanges(doc, changes);
+      const attrs = A.toJS(doc).attributes;
+      return Array.isArray(attrs) ? attrs.length : 0;
+    });
     expect(attrCount).toBe(1);
   });
 
@@ -179,7 +172,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
 // test PEM, so the minted tokens verify networklessly.
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 let kp: TestKeypair;
 
 beforeAll(async () => {
@@ -375,7 +368,7 @@ describe("#187 figure-doc projection", () => {
     });
     // The figure is NOT a routine: the routine list (and thus the quota count) excludes it.
     const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
-    const { routines } = (await list.json()) as { routines: Array<{ docRef: string }> };
+    const { routines } = zRoutineList.parse(await list.json());
     expect(routines.some((r) => r.docRef === figureRef)).toBe(false);
   });
 
@@ -429,7 +422,7 @@ async function unsaveFromLibrary(
 
 async function mineDocRefs(headers: Record<string, string>): Promise<string[]> {
   const res = await SELF.fetch("https://x/api/figures/mine", { headers });
-  const { figures } = (await res.json()) as { figures: Array<{ docRef: string }> };
+  const { figures } = await res.json<{ figures: Array<{ docRef: string }> }>();
   return figures.map((f) => f.docRef);
 }
 
@@ -442,7 +435,7 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
 
     const res = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { alreadySaved: boolean };
+    const body = await res.json<{ alreadySaved: boolean }>();
     expect(body.alreadySaved).toBe(false);
 
     // NO account-figure doc/registry row was created for this bookmark.
@@ -461,9 +454,9 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
 
     // It surfaces in "mine" resolved from the bundled catalog (no D1 registry row).
     const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
-    const { figures } = (await mine.json()) as {
+    const { figures } = await mine.json<{
       figures: Array<{ docRef: string; title: string | null; baseFigureRef: string | null }>;
-    };
+    }>();
     const saved = figures.find((f) => f.docRef === NAT_TURN_REF);
     expect(saved).toMatchObject({
       docRef: NAT_TURN_REF,

@@ -4,10 +4,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { resolveEffectiveRole } from "./db/membership";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
-import type { DocNamespace } from "./test-support/doc-do-api";
 import { expectIndexedQuery } from "./test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
+import { asTestPeek } from "./test-support/test-peek";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-020 — Per-document membership & roles [M3, system]
@@ -27,8 +27,16 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 // MANDATORY isolatedStorage:false → unique DO ids (uniqueDocName).
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 let kp: TestKeypair;
+
+/** Copy change bytes into a standalone ArrayBuffer: a `Uint8Array`'s `.buffer`
+ *  is typed `ArrayBufferLike`, but `webSocketMessage` takes a real ArrayBuffer. */
+function asFrame(bytes: Uint8Array): ArrayBuffer {
+  const buf = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buf).set(bytes);
+  return buf;
+}
 
 beforeAll(async () => {
   await applyMigrations();
@@ -286,24 +294,23 @@ describe("US-021 Permission boundary at the DO connection", () => {
       users: [{ id: "u_vw", displayName: "Vw", identityColor: "#333", plan: "free" }],
       docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
     });
-    await runInDurableObject(
-      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (inst) => {
-        const bytes = await inst.buildChangeForTest({ op: "addSection", name: "ViewerEdit" });
-        const rows0 = await inst.debugChangeRowCount();
-        const wsAs = (role: string) =>
-          ({ deserializeAttachment: () => ({ actor: "x", role }) }) as unknown as WebSocket;
+    await runInDurableObject(docs.get(id), async (inst) => {
+      const bytes = await inst.buildChangeForTest({ op: "addSection", name: "ViewerEdit" });
+      const rows0 = await inst.debugChangeRowCount();
+      // asTestPeek: a structural WebSocket double carrying only the attachment
+      // the socket's role gate reads.
+      const wsAs = (role: string) =>
+        asTestPeek<WebSocket>({ deserializeAttachment: () => ({ actor: "x", role }) });
 
-        // Viewer frame → dropped (no new persisted change).
-        await inst.webSocketMessage(wsAs("viewer"), bytes.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows0);
+      // Viewer frame → dropped (no new persisted change).
+      await inst.webSocketMessage(wsAs("viewer"), asFrame(bytes));
+      expect(await inst.debugChangeRowCount()).toBe(rows0);
 
-        // The SAME bytes from an editor → applied (proves the bytes were valid;
-        // the viewer drop was the role gate, not a malformed/duplicate frame).
-        await inst.webSocketMessage(wsAs("editor"), bytes.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
-      },
-    );
+      // The SAME bytes from an editor → applied (proves the bytes were valid;
+      // the viewer drop was the role gate, not a malformed/duplicate frame).
+      await inst.webSocketMessage(wsAs("editor"), asFrame(bytes));
+      expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+    });
   });
 
   it("admits a commenter's annotation write but drops their structural write (US-039/#117)", async () => {
@@ -318,35 +325,33 @@ describe("US-021 Permission boundary at the DO connection", () => {
       users: [{ id: "u_co", displayName: "Co", identityColor: "#333", plan: "free" }],
       docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
     });
-    await runInDurableObject(
-      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (inst) => {
-        const wsAs = (role: string, sub = "u_co") =>
-          ({ deserializeAttachment: () => ({ actor: "x", role, sub }) }) as unknown as WebSocket;
+    await runInDurableObject(docs.get(id), async (inst) => {
+      // asTestPeek: structural WebSocket double (attachment only), as above.
+      const wsAs = (role: string, sub = "u_co") =>
+        asTestPeek<WebSocket>({ deserializeAttachment: () => ({ actor: "x", role, sub }) });
 
-        // A commenter's ANNOTATION change (authored as THEMSELVES) → applied.
-        const anno = await inst.buildChangeForTest({
-          op: "addAnnotation",
-          text: "rise earlier",
-          authorId: "u_co",
-        });
-        const rows0 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter"), anno.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
+      // A commenter's ANNOTATION change (authored as THEMSELVES) → applied.
+      const anno = await inst.buildChangeForTest({
+        op: "addAnnotation",
+        text: "rise earlier",
+        authorId: "u_co",
+      });
+      const rows0 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter"), asFrame(anno));
+      expect(await inst.debugChangeRowCount()).toBe(rows0 + 1);
 
-        // A commenter's STRUCTURAL change → dropped (touches sections, not just annotations).
-        const struct = await inst.buildChangeForTest({ op: "addSection", name: "Sneaky" });
-        const rows1 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter"), struct.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows1);
+      // A commenter's STRUCTURAL change → dropped (touches sections, not just annotations).
+      const struct = await inst.buildChangeForTest({ op: "addSection", name: "Sneaky" });
+      const rows1 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter"), asFrame(struct));
+      expect(await inst.debugChangeRowCount()).toBe(rows1);
 
-        // A viewer's annotation change → dropped (viewer can't annotate).
-        const anno2 = await inst.buildChangeForTest({ op: "addAnnotation", text: "no" });
-        const rows2 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("viewer"), anno2.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows2);
-      },
-    );
+      // A viewer's annotation change → dropped (viewer can't annotate).
+      const anno2 = await inst.buildChangeForTest({ op: "addAnnotation", text: "no" });
+      const rows2 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("viewer"), asFrame(anno2));
+      expect(await inst.debugChangeRowCount()).toBe(rows2);
+    });
   });
 
   it("enforces annotation AUTHORSHIP for commenters (§5.1 hardening, 2026-07-02 S2)", async () => {
@@ -361,58 +366,57 @@ describe("US-021 Permission boundary at the DO connection", () => {
       users: [{ id: "u_com", displayName: "Co", identityColor: "#333", plan: "free" }],
       docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
     });
-    await runInDurableObject(
-      docs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (inst) => {
-        const wsAs = (role: string, sub: string) =>
-          ({ deserializeAttachment: () => ({ actor: "x", role, sub }) }) as unknown as WebSocket;
+    await runInDurableObject(docs.get(id), async (inst) => {
+      // asTestPeek: structural WebSocket double (attachment only), as above.
+      const wsAs = (role: string, sub: string) =>
+        asTestPeek<WebSocket>({ deserializeAttachment: () => ({ actor: "x", role, sub }) });
 
-        // The OWNER authors an annotation (applied via the editor path).
-        const ownerAnno = await inst.buildChangeForTest({
-          op: "addAnnotation",
-          text: "owner note",
-          authorId: "u_owner",
-        });
-        await inst.webSocketMessage(wsAs("editor", "u_owner"), ownerAnno.buffer as ArrayBuffer);
-        const snap = await inst.getSnapshot();
-        const target = snap.annotations.find((a) => a.text === "owner note");
-        expect(target).toBeDefined();
-        const targetId = (target as { id: string }).id;
+      // The OWNER authors an annotation (applied via the editor path).
+      const ownerAnno = await inst.buildChangeForTest({
+        op: "addAnnotation",
+        text: "owner note",
+        authorId: "u_owner",
+      });
+      await inst.webSocketMessage(wsAs("editor", "u_owner"), asFrame(ownerAnno));
+      const snap = await inst.getSnapshot();
+      const target = snap.annotations.find((a) => a.text === "owner note");
+      expect(target).toBeDefined();
+      if (!target) throw new Error("expected the owner's annotation to be applied");
+      const targetId = target.id;
 
-        // A commenter TOMBSTONING the owner's annotation → dropped.
-        const kill = await inst.buildChangeForTest({ op: "deleteAnnotation", id: targetId });
-        const rows0 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter", "u_com"), kill.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows0);
+      // A commenter TOMBSTONING the owner's annotation → dropped.
+      const kill = await inst.buildChangeForTest({ op: "deleteAnnotation", id: targetId });
+      const rows0 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(kill));
+      expect(await inst.debugChangeRowCount()).toBe(rows0);
 
-        // A commenter FORGING authorship (creating an annotation "as" the owner) → dropped.
-        const forged = await inst.buildChangeForTest({
-          op: "addAnnotation",
-          text: "forged",
-          authorId: "u_owner",
-        });
-        const rows1 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter", "u_com"), forged.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows1);
+      // A commenter FORGING authorship (creating an annotation "as" the owner) → dropped.
+      const forged = await inst.buildChangeForTest({
+        op: "addAnnotation",
+        text: "forged",
+        authorId: "u_owner",
+      });
+      const rows1 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(forged));
+      expect(await inst.debugChangeRowCount()).toBe(rows1);
 
-        // A commenter REPLYING (as themselves) to the owner's annotation → applied.
-        const reply = await inst.buildChangeForTest({
-          op: "addReply",
-          annotationId: targetId,
-          text: "makes sense",
-          authorId: "u_com",
-        });
-        const rows2 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter", "u_com"), reply.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows2 + 1);
+      // A commenter REPLYING (as themselves) to the owner's annotation → applied.
+      const reply = await inst.buildChangeForTest({
+        op: "addReply",
+        annotationId: targetId,
+        text: "makes sense",
+        authorId: "u_com",
+      });
+      const rows2 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(reply));
+      expect(await inst.debugChangeRowCount()).toBe(rows2 + 1);
 
-        // The SAME tombstone bytes from the AUTHOR (commenter role) → applied —
-        // authorship, not role, was the gate.
-        const rows3 = await inst.debugChangeRowCount();
-        await inst.webSocketMessage(wsAs("commenter", "u_owner"), kill.buffer as ArrayBuffer);
-        expect(await inst.debugChangeRowCount()).toBe(rows3 + 1);
-      },
-    );
+      // The SAME tombstone bytes from the AUTHOR (commenter role) → applied —
+      // authorship, not role, was the gate.
+      const rows3 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_owner"), asFrame(kill));
+      expect(await inst.debugChangeRowCount()).toBe(rows3 + 1);
+    });
   });
 
   it("revocation reaches OPEN sockets: refreshConnectedRoles closes a removed member (§5.1, 2026-07-02 S1)", async () => {
@@ -445,7 +449,8 @@ describe("US-021 Permission boundary at the DO connection", () => {
     const connect = async (headers: Record<string, string>) => {
       const res = await tryConnect(docRef, headers);
       expect(res.status).toBe(101);
-      const ws = res.webSocket as WebSocket;
+      const ws = res.webSocket;
+      if (!ws) throw new Error("expected a 101 upgrade to carry a client WebSocket");
       ws.accept();
       return ws;
     };
@@ -461,10 +466,7 @@ describe("US-021 Permission boundary at the DO connection", () => {
     )
       .bind(Date.now(), docRef)
       .run();
-    const stub = docs.get(docs.idFromName(docRef)) as unknown as {
-      refreshConnectedRoles(): Promise<void>;
-    };
-    await stub.refreshConnectedRoles();
+    await docs.get(docs.idFromName(docRef)).refreshConnectedRoles();
     // Let the close event propagate to the client side.
     await new Promise((r) => setTimeout(r, 50));
 

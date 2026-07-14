@@ -13,11 +13,18 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mutable mock state for @clerk/clerk-react — each test shapes Clerk's answer.
-const clerkAuth = {
+// Annotated (not asserted) so tests can reassign userId/getToken per case.
+const clerkAuth: {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  userId: string | null;
+  getToken: () => Promise<string | null>;
+  signOut: () => Promise<void>;
+} = {
   isLoaded: false,
   isSignedIn: false,
-  userId: null as string | null,
-  getToken: async () => null as string | null,
+  userId: null,
+  getToken: async () => null,
   signOut: async () => {},
 };
 vi.mock("@clerk/clerk-react", () => ({
