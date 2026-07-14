@@ -2,7 +2,7 @@
 title: Role-scoped step editing with a Both write mode
 wep: 0005
 owning-areas: [domain, web]
-status: implementable
+status: implemented
 authors: [danielmschmidt]
 approver: owner
 created: 2026-07-14
@@ -122,8 +122,10 @@ kinds) defaults to `"copy"`.
 
 **Web:**
 - `role-view.ts`: `RoleView` stays `"leader" | "follower"` (read lens). New
-  `EditRoleView = RoleView | "both"`. `filterByRoleView` unchanged; new
-  `filterByEditView` shows the leader-verbatim projection under Both.
+  `EditRoleView = RoleView | "both"`. `filterByRoleView` unchanged; the new
+  `asReadView(lens)` coerces an edit lens to its read projection, so under Both
+  every display surface filters by the leader-verbatim side
+  (`filterByRoleView(attrs, asReadView(lens))`).
 - `reading-columns-role.ts`: `bb_role` persists the edit lens too; read surfaces coerce a
   stored `"both"` to `"leader"`.
 - `FigureTimeline`: the edit-mode toggle renders Leader | Follower | Both (read mode
