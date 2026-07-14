@@ -1,8 +1,8 @@
 ---
 title: Choreo-first journal links with grid placement and scope-last anchoring
 wep: 0004
-owning-areas: [web, domain, contract]
-status: provisional
+owning-areas: [web, domain, contract, worker]
+status: implementable
 authors: ["@danielmschmidt"]
 approver: owner
 created: 2026-07-14
@@ -117,9 +117,10 @@ figure" selected, the scope step would have offered three options, adding
 
 ## Design Details
 
-*(Sketch — to be completed for `implementable`. The UI surface additionally
-requires a `docs/design/` prototype per process §6 before implementation; the
-prototype is a promotion prerequisite for this WEP.)*
+*(Promoted to `implementable` 2026-07-14 — owner approval on PR #228's merge +
+"move on with implementation". The UI prototype lives in the design bundle:
+`docs/design/project/Ballroom Builder v3.dc.html`, link-picker section — the
+choreo-first step machine with the place-step grid and gated scope step.)*
 
 **Anchor shape (packages/domain/src/doc-types.ts + Zod in schemas.ts +
 contract re-export):**
@@ -142,8 +143,11 @@ contract re-export):**
   figure in the dance, pinned to `count` where the resolved figure has that
   count; where a variant is shorter, it degrades to figure-level surfacing
   (soft fallback, never hidden).
-- **D1 / FigureTypeNoteIndex:** unchanged — index rows are content-free keyed by
-  family; `count`/`role` are note content, not index keys. Co-member visibility
+- **D1 / FigureTypeNoteIndex:** in v1 the index rows *carry the note content*
+  (migration 0005 — `kind`, `text` live on the row until WEP-0002 moves the
+  account doc to a live DO), so a timed note needs two **additive nullable
+  columns** (`count REAL`, `role TEXT`; migration 0016). They are content, not
+  query keys — no new index, existing queries unchanged. Co-member visibility
   (D29, Q-FIGNOTE-VIS option 2) is untouched.
 - **Save routing (unchanged):** `figure`/`point` anchors → `createAnnotation` on
   the routine doc; `figureType` anchors (timed or not) → the account doc's family

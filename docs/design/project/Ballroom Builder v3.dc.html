@@ -893,20 +893,34 @@
           <span onClick="{{ onCloseLp }}" style="cursor:pointer;display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a958c" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></span>
         </div>
 
-        <!-- Type step: 3 cards -->
-        <sc-if value="{{ lpIsType }}" hint-placeholder-val="{{ true }}">
+        <!-- Place step (WEP-0004): the figure-detail grid — entire figure, or one
+             count row, with a Both/Leader/Follower role lens. -->
+        <sc-if value="{{ lpIsPlace }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;flex-direction:column;gap:9px">
-            <div onClick="{{ onLpPlace }}" style="display:flex;align-items:center;gap:13px;border:1.5px solid #dbe5f0;border-radius:13px;padding:14px 15px;cursor:pointer">
-              <span style="width:38px;height:38px;border-radius:10px;background:#eef4fb;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg></span>
-              <div><div style="font:700 13px 'Inconsolata';color:#1c1c1e">Specific place</div><div style="font:500 12px var(--note-font);color:#9a958c">e.g. step 2 of Natural Turn · 1st Long Side</div></div>
+            <div style="display:flex;gap:6px">
+              <sc-for list="{{ lpRoles }}" as="r" hint-placeholder-count="3">
+                <sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><span onClick="{{ r.onPick }}" style="cursor:pointer;border:1.5px solid var(--accent);border-radius:8px;padding:7px 12px;font:700 11px 'Inconsolata';color:#fff;background:var(--accent)">{{ r.label }}</span></sc-if>
+                <sc-if value="{{ r.on }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.onPick }}" style="cursor:pointer;border:1.5px solid #ddd6ca;border-radius:8px;padding:7px 12px;font:600 11px 'Inconsolata';color:#5a554c;background:#f7f5f0">{{ r.label }}</span></sc-if>
+              </sc-for>
             </div>
-            <div onClick="{{ onLpFigure }}" style="display:flex;align-items:center;gap:13px;border:1.5px solid #dbe5f0;border-radius:13px;padding:14px 15px;cursor:pointer">
-              <span style="width:38px;height:38px;border-radius:10px;background:#eef4fb;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14"></path></svg></span>
-              <div><div style="font:700 13px 'Inconsolata';color:#1c1c1e">A figure</div><div style="font:500 12px var(--note-font);color:#9a958c">e.g. all Whisks, all Natural Turns</div></div>
+            <div onClick="{{ onLpWhole }}" style="display:flex;align-items:center;gap:11px;border:1.5px solid var(--accent);border-radius:11px;padding:12px 13px;cursor:pointer;background:#eef4fb">
+              <span style="flex:1;font:700 12px 'Inconsolata';color:#1c1c1e">The entire figure</span>
+              <span style="font:500 10px 'Inconsolata';color:#8a857b">note applies to the whole {{ lpFigName }}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d0cac2" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
             </div>
-            <div onClick="{{ onLpAttr }}" style="display:flex;align-items:center;gap:13px;border:1.5px solid #dbe5f0;border-radius:13px;padding:14px 15px;cursor:pointer">
-              <span style="width:38px;height:38px;border-radius:10px;background:#eef4fb;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h4M4 12h8M4 18h16M12 6h8"></path></svg></span>
-              <div><div style="font:700 13px 'Inconsolata';color:#1c1c1e">An attribute</div><div style="font:500 12px var(--note-font);color:#9a958c">e.g. all CBMPs, all left turns, all left sways</div></div>
+            <div class="scrl" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ lpPlaceRows }}" as="row" hint-placeholder-count="3">
+                <div onClick="{{ row.onPick }}" style="display:flex;align-items:center;gap:9px;border:1.5px solid #e1dcd2;border-radius:11px;padding:10px 12px;cursor:pointer">
+                  <span style="width:26px;flex:0 0 auto;font:700 13px 'Inconsolata';color:#1c1c1e;text-align:center">{{ row.count }}</span>
+                  <div style="flex:1;display:flex;flex-wrap:wrap;gap:4px">
+                    <sc-for list="{{ row.chips }}" as="chip" hint-placeholder-count="3">
+                      <span style="border:1.5px solid {{ chip.bd }};border-radius:6px;padding:3px 7px;font:700 10px 'Inconsolata';color:{{ chip.ink }};background:{{ chip.tint }}">{{ chip.label }}</span>
+                    </sc-for>
+                  </div>
+                  <span style="font:500 10px 'Inconsolata';color:#8a857b">{{ row.step }}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d0cac2" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+                </div>
+              </sc-for>
             </div>
           </div>
         </sc-if>
@@ -1460,13 +1474,13 @@ class Component extends DCLogic {
     });
     this.toast('Saved to journal');
   }
-  addLink(){ this.setState({ linkPicker:{ step:'type', sideId:null, figId:null, attrCat:null } }); }
+  /* WEP-0004: choreo-first linking — the picker opens on the choreo list. */
+  addLink(){ this.setState({ linkPicker:{ step:'choreo', choreoId:null, figId:null, pending:null, query:'', role:'both' } }); }
   lpBack(){
-    const back = { side:'type','figure-place':'side',step:'figure-place','figure-all':'type','figure-grain':'figure-all','attr-cat':'type','attr-val':'attr-cat' };
+    const back = { figure:'choreo', place:'figure', scope:'place' };
     this.setState(s => {
       const cur = s.linkPicker.step;
-      let prev = back[cur] || 'type';
-      if(cur === 'scope') prev = (s.linkPicker.pending && s.linkPicker.pending.type === 'figure') ? 'figure-grain' : 'attr-val';
+      const prev = back[cur] || 'choreo';
       return { linkPicker:{ ...s.linkPicker, step:prev } };
     });
   }
@@ -1774,17 +1788,19 @@ class Component extends DCLogic {
       onNewEntry:() => this.newEntry(),
 
       eAuthor, eTitle, draftText, eLinks,
-      // link picker
-      ...(()=>{ const lp=st.linkPicker; if(!lp) return {lpOpen:false,lpIsType:false,lpItems:[],lpTitle:'',lpCanBack:false,onLpBack:()=>{},onCloseLp:()=>{},onLpPlace:()=>{},onLpFigure:()=>{},onLpAttr:()=>{}}; const s=lp.step; const goStep=(step,extra={})=>()=>this.setState(p=>({linkPicker:{...p.linkPicker,step,...extra}})); const isType=s==='type'; let items=[]; let title='Link to…'; let canBack=s!=='type';
-        if(s==='side'){title='Pick a section';items=st.routine.sides.map(sd=>({label:sd.name,sub:sd.figures.length+' fig'+(sd.figures.length!==1?'s':''),onPick:goStep('figure-place',{sideId:sd.id})}));}
-        else if(s==='figure-place'){const sd=st.routine.sides.find(x=>x.id===lp.sideId);title=sd?sd.name:'Pick a figure';items=(sd?sd.figures:[]).map(f=>({label:f.name,sub:f.steps.length+' steps',onPick:goStep('step',{figId:f.id})}));}
-        else if(s==='step'){const {figure:fig,side:sd}=this.findFigure(lp.figId);title=fig?fig.name:'Pick a step';items=(fig?fig.steps:[]).map((stp,i)=>({label:'Step '+(i+1),sub:'count '+stp.count,onPick:()=>this.lpAddLink({type:'place',fig:fig.name,step:i+1,side:sd?sd.name:''})}));}
-        else if(s==='figure-all'){title='Pick a figure';const q=(lp.query||'').toLowerCase();const seen={};const figs=[];for(const sd of st.routine.sides)for(const f of sd.figures)if(f.source!=='break'&&!seen[f.name]){seen[f.name]=1;figs.push(f);}items=figs.filter(f=>!q||f.name.toLowerCase().includes(q)).map(f=>({label:f.name,sub:'',onPick:goStep('figure-grain',{figId:f.id,pending:{type:'figure',name:f.name}})}));}
-        else if(s==='figure-grain'){const {figure:fig}=this.findFigure(lp.figId);title=fig?fig.name:'Where on the figure?';items=[{label:'The entire figure',sub:'note applies to the whole figure',onPick:goStep('scope',{pending:{...lp.pending,grain:'whole'}})}].concat((fig?fig.steps:[]).map((stp,i)=>({label:'On count '+stp.count,sub:'step '+(i+1),onPick:goStep('scope',{pending:{...lp.pending,count:stp.count,step:i+1}})})));}
-        else if(s==='attr-cat'){title='Pick an attribute';items=[{k:'body',label:'Body position',color:'#8a5cab'},{k:'rise',label:'Rise & fall',color:'#1f8a5b'},{k:'foot',label:'Footwork',color:'#a9742c'},{k:'sway',label:'Sway',color:'#c0563f'},{k:'turn',label:'Turn',color:'#5b6b8a'}].map(c=>({label:c.label,sub:'',color:c.color,onPick:goStep('attr-val',{attrCat:c.k})}));}
-        else if(s==='attr-val'){const cats={body:{l:'Body position',opts:['CBMP','CBP','Closed','Promenade','Wing']},rise:{l:'Rise & fall',opts:['lowering','body rise','foot rise','continue','up']},foot:{l:'Footwork',opts:['HT','T','TH','heel pull']},sway:{l:'Sway',opts:['to L','to R','none']},turn:{l:'Turn',opts:['¼ L','¼ R','⅜ L','⅜ R','½ L','½ R']}};const cat=cats[lp.attrCat]||{l:'',opts:[]};title=cat.l;items=cat.opts.map(v=>({label:v,sub:'',onPick:goStep('scope',{pending:{type:'attr',cat:lp.attrCat,value:v}})}));}
-        else if(s==='scope'){const dance=openChoreo?openChoreo.dance:'Waltz';title='Apply to…';items=[{label:'This choreo only',sub:openChoreo?openChoreo.title:'',onPick:()=>this.lpAddLink({...lp.pending,scope:'choreo'})},{label:'All '+dance+' choreos',sub:'same dance',onPick:()=>this.lpAddLink({...lp.pending,scope:'dance',dance})},{label:'Every dance',sub:'wherever this appears',onPick:()=>this.lpAddLink({...lp.pending,scope:'all'})}];}
-        return {lpOpen:true,lpIsType:isType,lpIsList:!isType,lpItems:items,lpTitle:title,lpCanBack:canBack,onLpBack:()=>this.lpBack(),onCloseLp:()=>this.setState({linkPicker:null}),onLpPlace:goStep('side'),onLpFigure:goStep('figure-all'),onLpAttr:goStep('attr-cat'),lpShowSearch:(s==='figure-all'),lpQuery:(lp.query||''),onLpQuery:(e)=>this.setState(p=>({linkPicker:{...p.linkPicker,query:e.target.value}}))};})(),
+      // link picker — WEP-0004 choreo-first flow: choreo → figure (type-ahead,
+      // choreo-scoped) → place (the figure-detail grid: entire figure or one
+      // count, with a Both/Leader/Follower role lens) → scope LAST. A timed
+      // (count) link scopes to this dance or this choreo, never "every dance"
+      // (counts don't align across dances).
+      ...(()=>{ const lp=st.linkPicker; if(!lp) return {lpOpen:false,lpIsList:false,lpIsPlace:false,lpItems:[],lpTitle:'',lpCanBack:false,lpShowSearch:false,lpQuery:'',lpFigName:'',lpPlaceRows:[],lpRoles:[],onLpWhole:()=>{},onLpBack:()=>{},onCloseLp:()=>{},onLpQuery:()=>{}}; const s=lp.step; const goStep=(step,extra={})=>()=>this.setState(p=>({linkPicker:{...p.linkPicker,step,...extra}})); let items=[]; let title='Link to…'; const canBack=s!=='choreo'; let isPlace=false; let placeRows=[]; let figName='';
+        const lpChoreo=st.choreos.find(c=>c.id===lp.choreoId)||openChoreo;
+        if(s==='choreo'){title='Which choreo?';items=st.choreos.map(c=>({label:c.title,sub:c.dance,onPick:goStep('figure',{choreoId:c.id,query:''})}));}
+        else if(s==='figure'){title='Pick a figure';const q=(lp.query||'').toLowerCase();const seen={};const figs=[];for(const sd of st.routine.sides)for(const f of sd.figures)if(f.source!=='break'&&!seen[f.name]){seen[f.name]=1;figs.push(f);}items=figs.filter(f=>!q||f.name.toLowerCase().includes(q)).map(f=>({label:f.name,sub:f.steps.length+' steps',onPick:goStep('place',{figId:f.id})}));}
+        else if(s==='place'){const {figure:fig}=this.findFigure(lp.figId);isPlace=true;figName=fig?fig.name:'';title=fig?('Where on the '+fig.name+'?'):'Where on the figure?';const vRole=lp.role||'both';placeRows=(fig?fig.steps:[]).map((stp,i)=>({count:stp.count,step:'step '+(i+1),chips:stp.attrs.filter(a=>!a.removed&&this.attrIsSet(a)&&(vRole==='both'||!a.role||a.role===vRole)).map(a=>{const c=(this.allTypes().find(t=>t.key===a.type)||{}).color||'#9a958c';return {label:this.attrDisplay(a,vRole),tint:this.lighten(c,.84),ink:this.darken(c,.32),bd:c};}),onPick:goStep('scope',{pending:{type:'place',fig:fig?fig.name:'',count:stp.count,step:i+1,role:vRole}})}));}
+        else if(s==='scope'){const dance=lpChoreo?lpChoreo.dance:'Waltz';const timed=!!(lp.pending&&lp.pending.type==='place');title='Apply to…';items=[{label:'This choreo only',sub:lpChoreo?lpChoreo.title:'',onPick:()=>this.lpAddLink({...lp.pending,scope:'choreo'})},{label:'All '+dance+' choreos',sub:'same dance',onPick:()=>this.lpAddLink({...lp.pending,scope:'dance',dance})}].concat(timed?[]:[{label:'Every dance',sub:'wherever this figure exists',onPick:()=>this.lpAddLink({...lp.pending,scope:'all'})}]);}
+        const roles=['both','leader','follower'].map(r=>({label:r==='both'?'Both':(r==='leader'?'Leader':'Follower'),on:(lp.role||'both')===r,onPick:()=>this.setState(p=>({linkPicker:{...p.linkPicker,role:r}}))}));
+        return {lpOpen:true,lpIsList:!isPlace,lpIsPlace:isPlace,lpItems:items,lpTitle:title,lpCanBack:canBack,lpFigName:figName,lpPlaceRows:placeRows,lpRoles:roles,onLpWhole:goStep('scope',{pending:{type:'figure',name:figName,grain:'whole'}}),onLpBack:()=>this.lpBack(),onCloseLp:()=>this.setState({linkPicker:null}),lpShowSearch:(s==='figure'),lpQuery:(lp.query||''),onLpQuery:(e)=>this.setState(p=>({linkPicker:{...p.linkPicker,query:e.target.value}}))};})(),
       onDraftChange:(e) => this.setState(s => ({ draft:{ ...s.draft, text:e.target.value } })),
       onAddLink:() => this.addLink(),
       onSaveEntry:() => this.saveEntry(),
