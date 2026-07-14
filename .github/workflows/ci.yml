@@ -16,8 +16,7 @@ on:
 jobs:
   # Landing-page screenshot comparison. Renders the marketing screenshots fresh
   # from THIS PR's code, pixel-diffs them against the base branch's committed
-  # images, and upserts a before/after PR comment (plus a Δ pixel count per row).
-  # It NEVER commits the rendered images back to the PR branch — that is the
+  # images, and upserts a before/after PR comment. It NEVER commits the rendered images back to the PR branch — that is the
   # deliberate change from the old screenshots.yml, whose bot commit carried
   # `[skip ci]` and became the PR HEAD with no CI on it (a red PR could then show no
   # failing checks on its HEAD). With no bot commit there is exactly one commit per

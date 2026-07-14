@@ -212,7 +212,7 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 
 Renders the landing-page marketing screenshots fresh from the PR's code, pixel-diffs
 them against the base branch's committed images, and upserts a **before / after** PR
-comment (plus a Δ pixel count per row) with both inline. **It does NOT commit the rendered images back to the PR
+comment with both inline. **It does NOT commit the rendered images back to the PR
 branch** — that is the deliberate change (2026-07-14) from the old standalone
 `screenshots.yml`, whose bot commit carried `[skip ci]` and became the PR HEAD with no CI on
 it, so a red PR could show no failing checks on its HEAD. With no bot commit there is exactly

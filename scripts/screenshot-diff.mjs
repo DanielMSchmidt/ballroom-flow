@@ -12,8 +12,9 @@
 // commit, no throwaway asset branch. The "before" column stays a raw.githubusercontent
 // URL at the base SHA (it is committed). The same PNGs are also staged into
 // ARTIFACT_DIR as a durable run artifact. When the release-asset env is absent
-// (a local run), the comment falls back to before-only + an artifact link. The Δ
-// pixel count (from pixelmatch in classify) still quantifies the change per row.
+// (a local run), the comment falls back to before-only + an artifact link.
+// (pixelmatch in classify still runs — its pixel count decides changed-vs-unchanged
+// per row — but the count itself is no longer surfaced in the comment.)
 //
 // The staged filenames are the exact release-asset names (ASSET_PREFIX + key +
 // ".after.png"), so the upload step can dumb-upload each file under its basename
@@ -47,8 +48,6 @@ export function classify(baseBuf, headBuf) {
 const raw = (ctx, sha, file) =>
   `https://raw.githubusercontent.com/${ctx.owner}/${ctx.repo}/${sha}/${ctx.basePath}/${file}`;
 
-const fmt = (n) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "resized");
-
 /** Release-asset name for a row's "after" PNG (also its staged filename). */
 export const assetName = (prefix, key, kind) => `${prefix}${key}.${kind}.png`;
 
@@ -64,8 +63,8 @@ export function renderComment(rows, ctx) {
     return lines.join("\n");
   }
 
-  // "after"/"diff" inline only when CI has published them as release assets (their
-  // stable download URLs). Without that env (a local run), fall back to before-only.
+  // "after" inlines only when CI has published it as a release asset (its stable
+  // download URL). Without that env (a local run), fall back to before-only.
   const inline = Boolean(ctx.assetUrlBase && ctx.assetPrefix);
   const img = (src) => `<img width="300" src="${src}">`;
   const before = (r) => img(raw(ctx, ctx.baseSha, r.file));
@@ -85,16 +84,14 @@ export function renderComment(rows, ctx) {
   if (changed.length) {
     lines.push("### Changed", "");
     if (inline) {
-      lines.push("| Screenshot | Before (base) | After | Δ pixels |", "| --- | --- | --- | --- |");
+      lines.push("| Screenshot | Before (base) | After |", "| --- | --- | --- |");
       for (const r of changed) {
-        lines.push(
-          `| \`${r.key}\` | ${before(r)} | ${assetImg(r, "after")} | ${fmt(r.diffPixels)} |`,
-        );
+        lines.push(`| \`${r.key}\` | ${before(r)} | ${assetImg(r, "after")} |`);
       }
     } else {
-      lines.push("| Screenshot | Before (base) | Δ pixels |", "| --- | --- | --- |");
+      lines.push("| Screenshot | Before (base) |", "| --- | --- |");
       for (const r of changed) {
-        lines.push(`| \`${r.key}\` | ${before(r)} | ${fmt(r.diffPixels)} |`);
+        lines.push(`| \`${r.key}\` | ${before(r)} |`);
       }
     }
     lines.push("");

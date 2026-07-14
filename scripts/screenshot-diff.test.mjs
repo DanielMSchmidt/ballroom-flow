@@ -68,17 +68,14 @@ describe("renderComment", () => {
     basePath: "apps/web/src/marketing/screenshots",
     artifactUrl: "https://gh/actions/runs/1",
   };
-  // With release-asset env, after/diff inline from stable download URLs.
+  // With release-asset env, "after" inlines from a stable download URL.
   const assetCtx = {
     ...ctx,
     assetUrlBase: "https://github.com/o/r/releases/download/ci-screenshots",
     assetPrefix: "pr-7-SHA-",
   };
   it("inlines the committed BASE image, links the artifact, and keeps the marker (no asset env)", () => {
-    const md = renderComment(
-      [{ key: "hero", file: "hero.png", status: "changed", diffPixels: 1234 }],
-      ctx,
-    );
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], ctx);
     expect(md).toContain("<!-- screenshot-bot -->");
     // "Before" is committed, so it inlines from the base SHA.
     expect(md).toContain(
@@ -88,29 +85,21 @@ describe("renderComment", () => {
     expect(md).not.toContain("/HEAD/");
     expect(md).not.toContain("releases/download");
     expect(md).toContain("https://gh/actions/runs/1");
-    // Pixel delta is surfaced (formatted with a thousands separator).
-    expect(md).toContain("1,234");
   });
-  it("inlines before and after from release-asset URLs when the env is set (no diff)", () => {
-    const md = renderComment(
-      [{ key: "hero", file: "hero.png", status: "changed", diffPixels: 1234 }],
-      assetCtx,
-    );
+  it("inlines before and after from release-asset URLs when the env is set (no diff, no Δ)", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], assetCtx);
     expect(md).toContain(
       "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
     );
-    // "after" inlines from the prerelease's asset download URL; no diff image.
+    // "after" inlines from the prerelease's asset download URL; no diff image or Δ column.
     expect(md).toContain(
       "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
     );
     expect(md).not.toContain(".diff.png");
-    expect(md).toContain("1,234");
+    expect(md).not.toContain("Δ pixels");
   });
   it("inlines the after image for a NEW screenshot (no before) under release assets", () => {
-    const md = renderComment(
-      [{ key: "hero", file: "hero.png", status: "new", diffPixels: 0 }],
-      assetCtx,
-    );
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "new" }], assetCtx);
     expect(md).toContain("### New");
     expect(md).toContain(
       "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
@@ -118,14 +107,6 @@ describe("renderComment", () => {
     // A brand-new screenshot has no base, so no before/diff image.
     expect(md).not.toContain("raw.githubusercontent.com");
     expect(md).not.toContain(".diff.png");
-  });
-  it("renders resized diffPixels (Infinity) as a label, not a number", () => {
-    const md = renderComment(
-      [{ key: "hero", file: "hero.png", status: "changed", diffPixels: Number.POSITIVE_INFINITY }],
-      assetCtx,
-    );
-    expect(md).toContain("resized");
-    expect(md).not.toContain("Infinity");
   });
   it("reports no changes when all unchanged", () => {
     const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], assetCtx);
