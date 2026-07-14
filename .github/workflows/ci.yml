@@ -158,9 +158,26 @@ jobs:
   # only on PRs whose fast checks are already green. Replaces the scheduled
   # nightly: results now block the PR visibly instead of failing silently on a
   # cron nobody watches.
+  #
+  # The three device projects run as a MATRIX on parallel runners. The
+  # `workers: 1` serialization in playwright.config.ts exists because all
+  # journeys share one local D1 behind apps/web/e2e/serve.sh — but each runner
+  # boots its own serve.sh (own D1 at apps/worker/.wrangler/e2e-state), so the
+  # per-runner invariant holds while the projects run concurrently. Same tests,
+  # same projects, ~half the wall time. Each leg installs only its own browser.
   full-e2e:
     needs: fast-gate
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: mobile-chrome
+            browser: chromium
+          - project: mobile-safari
+            browser: webkit
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -170,18 +187,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
-      - name: Install Playwright browsers (chromium + webkit)
-        run: pnpm --filter web exec playwright install --with-deps chromium webkit
-      # All three device projects against a real worker (wrangler dev via
+      - name: Install Playwright browser (${{ matrix.browser }})
+        run: pnpm --filter web exec playwright install --with-deps ${{ matrix.browser }}
+      # One device project per runner against a real worker (wrangler dev via
       # apps/web/e2e/serve.sh). No --pass-with-no-tests: any journey failure
       # fails the PR.
-      - name: E2E (full matrix)
-        run: pnpm --filter web exec playwright test
+      #
+      # Exclude the @video (explainer-video.spec.ts) and @screenshots
+      # (screenshots.spec.ts) artifact recorders. They are chromium-only
+      # GENERATORS, not assertion gates, and already run in their own dedicated
+      # jobs (video.yml's `video:generate` and the `screenshots` job above, both
+      # `--grep @video/@screenshots --project=chromium-desktop`). @video also
+      # launches its OWN chromium internally, so it never exercised webkit — and
+      # on the webkit leg (which now installs only webkit) chromium is absent, so
+      # it can't run at all. Excluding them loses zero real coverage and trims
+      # matrix time.
+      - name: E2E (${{ matrix.project }})
+        run: pnpm --filter web exec playwright test --project=${{ matrix.project }} --grep-invert "@video|@screenshots"
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: apps/web/playwright-report/
           if-no-files-found: ignore
           retention-days: 7
