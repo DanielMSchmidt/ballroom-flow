@@ -143,12 +143,14 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await page.getByLabel("Figure name").press("Enter");
 
     // A typed name always mints a custom figure (§4.3) — whose full-screen
-    // editor opens IMMEDIATELY (create-navigates). Set
-    // count-1 footwork "HT" via the Step cell's single-attribute overlay.
+    // editor opens IMMEDIATELY (create-navigates). Set count-1 footwork "HT" via
+    // the Step cell overlay. Builder v3 ② made an empty Step cell TWO-TAP: the
+    // first tap quick-adds a blank presence step, the second opens the overlay.
     await expect(page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
     await page.getByRole("button", { name: /^Done$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
@@ -421,10 +423,14 @@ test.describe("cross-dance figureType notes (US-040)", () => {
     // 1. Foxtrot routine: author the two family notes from the figure editor.
     await gotoRoutine(page, "rt_fox_notes");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    // Opening an existing routine lands in READ; switch to the list (edit) view
-    // where the per-figure "edit steps" affordance lives.
-    await page.getByRole("button", { name: /list view/i }).click();
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // The family-notes compose surface lives in the READ lens of the figure
+    // detail (PLAN §4.4, 2026-07-10 — notes are reading-context only). Opening an
+    // existing routine already lands in Reading view, so tap the figure name
+    // there to open its read-only detail (as figure-read-view.spec does).
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
     const foxFamily = page.getByRole("region", { name: /family notes/i });
     await foxFamily.getByRole("button", { name: /this figure family/i }).click();
     await foxFamily.getByRole("radio", { name: /all dances/i }).click();
@@ -445,8 +451,10 @@ test.describe("cross-dance figureType notes (US-040)", () => {
     //    the foxtrot-only one does not (AC-2).
     await gotoRoutine(page, "rt_waltz_notes");
     await expect(page.getByText("Waltz Feather")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: /list view/i }).click();
-    await page.getByRole("button", { name: /edit steps: Waltz Feather/i }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Waltz Feather", exact: true })
+      .click();
     const waltzFamily = page.getByRole("region", { name: /family notes/i });
     await expect(waltzFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
     await expect(waltzFamily.getByText("foxtrot only: lower earlier")).not.toBeVisible();

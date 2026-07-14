@@ -23,7 +23,11 @@ test.describe("@smoke journal journey", () => {
     await seedAuth(page, user);
     await page.goto("/");
 
-    const rail = page.getByRole("navigation", { name: /primary navigation/i });
+    // The nav is a labelled <nav> that swaps by viewport: the desktop side rail
+    // ("Primary navigation") vs the mobile bottom bar ("Tab bar"). Only one is in
+    // the a11y tree at a time (the other is display:hidden), so matching EITHER
+    // label keeps the journey viewport-agnostic (was desktop-only → mobile red).
+    const rail = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
 
     // Journal tab starts on the designed empty state (frame 3.2).
     await rail.getByRole("button", { name: "Journal" }).click();

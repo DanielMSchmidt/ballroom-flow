@@ -50,7 +50,7 @@ class ZombifiableSocket implements SocketLike {
     this.listeners[type].push(fn);
   }
 
-  send(data: string | ArrayBufferView | ArrayBuffer): void {
+  send(data: string | Uint8Array<ArrayBuffer>): void {
     if (this.zombie) return; // swallowed by the dead pipe
     this.real.send(data);
   }

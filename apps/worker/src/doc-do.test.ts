@@ -1022,13 +1022,10 @@ describe("WEP-0006 heartbeat auto-response (zombie-socket detection)", () => {
     //   shortened heartbeat exercises ping→pong continuously in every journey.)
     const realDocs = env.DOC_DO;
     const id = realDocs.idFromName(uniqueDocName("routine"));
-    const pair = await runInDurableObject(
-      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      (_instance, state) => {
-        const p = state.getWebSocketAutoResponse();
-        return p ? { request: p.request, response: p.response } : null;
-      },
-    );
+    const pair = await runInDurableObject(realDocs.get(id), (_instance, state) => {
+      const p = state.getWebSocketAutoResponse();
+      return p ? { request: p.request, response: p.response } : null;
+    });
     expect(pair).toEqual({ request: SYNC_PING, response: SYNC_PONG });
   });
 });
