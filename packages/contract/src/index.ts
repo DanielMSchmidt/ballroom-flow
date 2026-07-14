@@ -235,6 +235,22 @@ export const SYNC_SUBPROTOCOL_V1 = "ballroom.sync.v1";
  */
 export const SYNC_RESYNC_CLOSE_CODE = 4001;
 
+/**
+ * WS heartbeat (WEP-0006): the client sends {@link SYNC_PING} as a TEXT frame
+ * while the connection is idle; the DO answers {@link SYNC_PONG} via a
+ * runtime-level auto-response (`setWebSocketAutoResponse`) that never wakes a
+ * hibernating DO and never reaches `webSocketMessage`. A missed pong deadline
+ * means the socket is a half-open ZOMBIE (TCP thinks it's up, nothing is
+ * delivered — e.g. an access-point reboot that never flips `navigator.onLine`);
+ * the client drops it into the normal warm-reconnect machinery instead of
+ * waiting minutes for the OS to notice. TEXT frames keep the D10 asymmetry
+ * unambiguous (client→server BINARY stays raw Automerge change bytes), and an
+ * old worker simply ignores the ping (its `webSocketMessage` drops TEXT), so
+ * the probe is skew-safe in both directions.
+ */
+export const SYNC_PING = "ballroom:sync:ping";
+export const SYNC_PONG = "ballroom:sync:pong";
+
 /** A merged-registry attribute kind (US-003/US-043), shared shape. */
 export const zRegistryKind = z.object({
   kind: z.string().min(1),

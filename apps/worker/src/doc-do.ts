@@ -17,6 +17,8 @@ import {
   SYNC_CAUGHT_UP,
   SYNC_FRAME_CHANGE,
   SYNC_FRAME_SNAPSHOT,
+  SYNC_PING,
+  SYNC_PONG,
   SYNC_RESYNC_CLOSE_CODE,
 } from "@weavesteps/contract";
 import {
@@ -203,6 +205,12 @@ export class DocDO extends DurableObject<Env> {
       "INSERT OR IGNORE INTO storage_meta (id, storageVersion) VALUES (0, ?)",
       STORAGE_VERSION,
     );
+    // Heartbeat (WEP-0006): answer the client's idle SYNC_PING with SYNC_PONG at
+    // the RUNTIME level — the reply is sent without invoking webSocketMessage and
+    // WITHOUT waking a hibernating DO, so zombie-socket detection costs zero DO
+    // compute and the D23 hibernation economics are untouched. Applies to every
+    // socket this DO accepts (routine and figure docs alike).
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(SYNC_PING, SYNC_PONG));
   }
 
   /**

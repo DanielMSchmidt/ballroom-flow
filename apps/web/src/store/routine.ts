@@ -49,12 +49,14 @@ import { ensureWasm } from "./automerge-init";
 import {
   connectUrl,
   DocConnection,
+  type HeartbeatPolicy,
   type ReconnectPolicy,
   type SocketFactory,
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
 import { type DocStorage, defaultDocStorage } from "./doc-storage";
+import { e2eHeartbeat, e2eZombifiableSocketFactory } from "./e2e-socket";
 import { reconcile } from "./reconcile";
 
 /**
@@ -415,6 +417,12 @@ export interface OpenOptions {
    */
   reconnect?: ReconnectPolicy;
   /**
+   * Zombie-socket heartbeat for every doc connection (WEP-0006). Defaults to
+   * the DocConnection policy (25 s idle ping / 5 s pong deadline) — shortened
+   * automatically in E2E builds; `false` disables the probe.
+   */
+  heartbeat?: HeartbeatPolicy | false;
+  /**
    * How long (ms) to wait for a figure connection to hydrate before surfacing it
    * as `error` (retryable), so a figure never hangs on a skeleton forever. 0
    * disables the timeout (the default — the production screen sets a real value;
@@ -441,7 +449,11 @@ export interface OpenOptions {
   storage?: DocStorage | null;
 }
 
-const defaultSocketFactory: SocketFactory = (url, protocols) => new WebSocket(url, protocols);
+// In an E2E build the factory is wrapped by the zombie seam (WEP-0006 ship
+// gate); in every real build `e2eZombifiableSocketFactory` is a pass-through.
+const defaultSocketFactory: SocketFactory = e2eZombifiableSocketFactory(
+  (url, protocols) => new WebSocket(url, protocols),
+);
 
 /** A valid Automerge actor id (even-length hex string), unique per tab (#70). */
 function randomActorId(): string {
@@ -522,6 +534,10 @@ export async function openRoutine(
   // access preflight, so a figure whose own connection IS open resolves to an
   // honest loading / missing / error status rather than a blank "unknown figure".
   const reconnect = opts.reconnect;
+  // Heartbeat (WEP-0006): explicit option wins; E2E builds shorten the probe so
+  // journeys exercise ping→pong continuously; otherwise the DocConnection
+  // default applies (undefined here).
+  const heartbeat = opts.heartbeat ?? e2eHeartbeat();
   const hydrationTimeoutMs = opts.hydrationTimeoutMs ?? 0;
   const schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
   const cancel = opts.cancel ?? ((h) => clearTimeout(h));
@@ -573,7 +589,7 @@ export async function openRoutine(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
     openSocket,
-    { getToken, reconnect, schedule, cancel, storage, storageKey: routineId },
+    { getToken, reconnect, heartbeat, schedule, cancel, storage, storageKey: routineId },
   );
 
   // Figures the client just minted (addPlacement) but whose server-side create
@@ -659,7 +675,7 @@ export async function openRoutine(
         connectUrl(baseUrl, figureRef),
         openSocket,
         // A FRESH token at each (re)open (#189); persisted per figureRef (§11.2).
-        { getToken, reconnect, schedule, cancel, storage, storageKey: figureRef },
+        { getToken, reconnect, heartbeat, schedule, cancel, storage, storageKey: figureRef },
       );
       const c = conn;
       conn.onAdvance(() => {

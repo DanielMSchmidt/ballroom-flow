@@ -49,7 +49,8 @@ class FakeSocket implements SocketLike {
     else if (type === "open") this.open = fn;
     else if (type === "close") this.closed = fn;
   }
-  send(data: ArrayBufferView | ArrayBuffer): void {
+  send(data: string | ArrayBufferView | ArrayBuffer): void {
+    if (typeof data === "string") return; // heartbeat ping (WEP-0004) — ignored here
     this.sent.push(
       data instanceof ArrayBuffer
         ? new Uint8Array(data)

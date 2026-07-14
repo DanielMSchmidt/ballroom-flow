@@ -5,6 +5,7 @@ import { App } from "./App";
 import { AppAuthProvider } from "./auth/app-auth";
 import { isE2E } from "./lib/e2e-auth";
 import { initErrorReporting, reportError } from "./lib/ops";
+import { shouldRetryQuery } from "./lib/rpc";
 import { initStaleBundleReload } from "./lib/stale-bundle";
 import { ErrorBoundary, ErrorFallback } from "./ui";
 // driver.js base styles for the first-visit UI tours; themed to the --bf-*
@@ -33,7 +34,12 @@ if (isE2E()) document.documentElement.classList.add("bf-e2e");
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root element not found");
 const root = createRoot(rootEl);
-const queryClient = new QueryClient();
+// Status-aware query retry (spotty-network hardening, 2026-07-13): the library
+// default re-fires 401/402/403 product refusals three times before surfacing
+// them. Refusals fail fast; ambiguous failures keep a bounded retry.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: shouldRetryQuery } },
+});
 
 if (!isE2E() && !publishableKey) {
   // Graceful first-run state when Clerk isn't configured yet. (An E2E build needs
