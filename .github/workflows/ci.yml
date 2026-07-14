@@ -192,8 +192,18 @@ jobs:
       # One device project per runner against a real worker (wrangler dev via
       # apps/web/e2e/serve.sh). No --pass-with-no-tests: any journey failure
       # fails the PR.
+      #
+      # Exclude the @video (explainer-video.spec.ts) and @screenshots
+      # (screenshots.spec.ts) artifact recorders. They are chromium-only
+      # GENERATORS, not assertion gates, and already run in their own dedicated
+      # jobs (video.yml's `video:generate` and the `screenshots` job above, both
+      # `--grep @video/@screenshots --project=chromium-desktop`). @video also
+      # launches its OWN chromium internally, so it never exercised webkit — and
+      # on the webkit leg (which now installs only webkit) chromium is absent, so
+      # it can't run at all. Excluding them loses zero real coverage and trims
+      # matrix time.
       - name: E2E (${{ matrix.project }})
-        run: pnpm --filter web exec playwright test --project=${{ matrix.project }}
+        run: pnpm --filter web exec playwright test --project=${{ matrix.project }} --grep-invert "@video|@screenshots"
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
