@@ -36,6 +36,7 @@ import {
   type DanceId,
   figureCountSlots,
   type GridSlot,
+  isBothConsistent,
   mergeRegistry,
   offBeatSymbol,
   type PlacementPart,
@@ -60,7 +61,7 @@ import {
   isColumnKind,
   type ReadingColumn,
 } from "./reading-columns";
-import { displayValue, filterByRoleView, type RoleView } from "./role-view";
+import { asReadView, displayValue, type EditRoleView, filterByRoleView } from "./role-view";
 
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
@@ -77,13 +78,13 @@ export interface FigureTimelineProps {
   legacyBars?: number;
   /** Emits the next count length when the header LENGTH stepper is used (editor only). */
   onCountsChange?: (next: number) => void;
-  /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
-  initialView?: "leader" | "follower";
+  /** The role lens (US-030/WEP-0005); the WRITE SCOPE while editing. Uncontrolled default. */
+  initialView?: EditRoleView;
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
    *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
-  roleView?: RoleView;
+  roleView?: EditRoleView;
   /** Emits the next role lens when the toggle is used (controlled mode). */
-  onRoleViewChange?: (next: RoleView) => void;
+  onRoleViewChange?: (next: EditRoleView) => void;
   /** User-defined kinds to merge into the attribute registry (US-043). */
   customKinds?: RegistryKind[];
   /** Emits the figure's next full attribute set after an edit. */
@@ -192,9 +193,9 @@ export function FigureTimeline({
   const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
   // `bb_role`) when provided; otherwise local UI state seeded from initialView.
-  const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
+  const [localView, setLocalView] = useState<EditRoleView>(roleView ?? initialView ?? "leader");
   const view = roleView ?? localView;
-  const setView = (next: RoleView): void => {
+  const setView = (next: EditRoleView): void => {
     onRoleViewChange?.(next);
     if (roleView === undefined) setLocalView(next);
   };
@@ -204,6 +205,11 @@ export function FigureTimeline({
   const [libraryName, setLibraryName] = useState<string | null>(null);
   const isGlobal = figureScope === "global";
   const editable = role === "editor";
+  // WEP-0005: "both" is an EDIT-ONLY lens (the write scope) — a stored "both"
+  // reads as the leader's chart, and the grid always DISPLAYS the read
+  // projection (under Both that's the verbatim leader side of its writes).
+  const lens: EditRoleView = editable ? view : asReadView(view);
+  const displayView = asReadView(lens);
 
   const byCount = useMemo(() => {
     const map = new Map<number, Attribute[]>();
@@ -302,6 +308,9 @@ export function FigureTimeline({
     if (here.length === 0) {
       const kind = quickAddKind(col);
       if (kind) {
+        // WEP-0005: the quick-added presence inherits the lens as its WRITE
+        // SCOPE — under a single role it must not leak into the partner's
+        // chart; a presence has no value to mirror, so Both stays shared.
         onCountChange(count, [
           ...(byCount.get(count) ?? []),
           {
@@ -309,7 +318,7 @@ export function FigureTimeline({
             kind,
             count,
             value: null,
-            role: null,
+            role: lens === "both" ? null : lens,
             deletedAt: null,
           },
         ]);
@@ -355,15 +364,19 @@ export function FigureTimeline({
           <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
             {t.stepsFor}
           </span>
-          <SegmentedToggle<RoleView>
+          {/* WEP-0005: editing offers the third "Both" lens (the write scope);
+              reading keeps the two-way Leader/Follower lens. */}
+          <SegmentedToggle<EditRoleView>
             ariaLabel={t.stepsFor}
-            value={view}
+            value={lens}
             onChange={setView}
             options={[
               { value: "leader", label: t.leader },
               { value: "follower", label: t.follower },
+              ...(editable ? [{ value: "both" as const, label: t.both }] : []),
             ]}
           />
+          {lens === "both" && <span className="text-2xs italic text-ink-faint">{t.bothHint}</span>}
         </div>
         {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2): an OWNED
             (account) figure only — a global figure's bookmark affordance lives on
@@ -486,7 +499,8 @@ export function FigureTimeline({
           <tbody>
             {rows.map((row, i) => {
               const newBar = i === 0 || rows[i - 1]?.bar !== row.bar;
-              const here = filterByRoleView(byCount.get(row.count) ?? [], view);
+              const allHere = byCount.get(row.count) ?? [];
+              const here = filterByRoleView(allHere, displayView);
               return (
                 <BarRowGroup
                   key={row.count}
@@ -501,20 +515,34 @@ export function FigureTimeline({
                     >
                       <CountCell label={row.label} offBeat={!row.whole} />
                     </th>
-                    {columns.map((col) => (
-                      <td key={col.id} className="px-0.5 align-middle">
-                        <GridCell
-                          column={col}
-                          count={row.count}
-                          label={cellValue(here, col)}
-                          present={columnKinds(col).some((k) => here.some((a) => a.kind === k))}
-                          offBeat={!row.whole}
-                          editable={editable}
-                          color={colorByKind.get(col.kind)}
-                          onOpen={() => onCellTap(row.count, col)}
-                        />
-                      </td>
-                    ))}
+                    {columns.map((col) => {
+                      // WEP-0005: under Both, a hand-diverged (kind, count) is
+                      // LOCKED — Both may only edit derivation-consistent state.
+                      const locked =
+                        editable &&
+                        lens === "both" &&
+                        columnKinds(col).some((k) => {
+                          const kd = registry[k];
+                          return kd != null && !isBothConsistent(kd, allHere);
+                        });
+                      return (
+                        <td key={col.id} className="px-0.5 align-middle">
+                          <GridCell
+                            column={col}
+                            count={row.count}
+                            label={cellValue(here, col)}
+                            present={columnKinds(col).some((k) => here.some((a) => a.kind === k))}
+                            offBeat={!row.whole}
+                            editable={editable}
+                            locked={locked}
+                            color={colorByKind.get(col.kind)}
+                            onOpen={() =>
+                              locked ? toast.show(t.divergedLockedToast) : onCellTap(row.count, col)
+                            }
+                          />
+                        </td>
+                      );
+                    })}
                   </tr>
                 </BarRowGroup>
               );
@@ -532,7 +560,7 @@ export function FigureTimeline({
           (`showStepRecap`); the reading lens hides it. */}
       {showStepRecap &&
         rows.map((row) => {
-          const here = filterByRoleView(byCount.get(row.count) ?? [], view);
+          const here = filterByRoleView(byCount.get(row.count) ?? [], displayView);
           if (here.length === 0) return null;
           const direction = here.find((a) => a.kind === "direction");
           const slots = here.filter((a) => a.kind !== "direction");
@@ -580,7 +608,7 @@ export function FigureTimeline({
             count={openCell.count}
             role={role}
             dance={dance}
-            view={view}
+            view={lens}
             customKinds={customKinds}
             onlyKinds={columnKinds(openCell.column)}
             value={byCount.get(openCell.count) ?? []}
@@ -674,6 +702,7 @@ function GridCell({
   present,
   offBeat,
   editable,
+  locked = false,
   color,
   onOpen,
 }: {
@@ -684,13 +713,17 @@ function GridCell({
   present: boolean;
   offBeat: boolean;
   editable: boolean;
+  /** WEP-0005: diverged under the Both lens — shown but not editable there. */
+  locked?: boolean;
   color?: string;
   onOpen: () => void;
 }) {
   const t = useMessages(timelineMessages);
-  const cellLabel = present
-    ? t.editCell(column.label, countLabel(count))
-    : t.addCell(column.label, countLabel(count));
+  const cellLabel = locked
+    ? t.lockedCell(column.label, countLabel(count))
+    : present
+      ? t.editCell(column.label, countLabel(count))
+      : t.addCell(column.label, countLabel(count));
   const ringColor = color ?? columnColor(column);
   const content = label ? (
     <AttrChip kind={column.kind} label={label} color={color} dimmed={offBeat} />
@@ -727,11 +760,17 @@ function GridCell({
     <button
       type="button"
       aria-label={cellLabel}
+      aria-disabled={locked || undefined}
       onClick={onOpen}
-      className={cx(base, "cursor-pointer")}
+      className={cx(base, locked ? "cursor-not-allowed opacity-70" : "cursor-pointer")}
       style={fillStyle}
     >
       {content}
+      {locked && (
+        <span aria-hidden="true" className="ml-0.5 text-[10px] leading-none">
+          🔒
+        </span>
+      )}
     </button>
   );
 }

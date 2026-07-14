@@ -8,6 +8,12 @@ const en = {
   stepsFor: "Steps for",
   leader: "Leader",
   follower: "Follower",
+  // WEP-0005: the edit-only third lens — one edit writes both roles.
+  both: "Both",
+  bothHint: "writes both — follower direction & sway mirrored · footwork stays the leader's",
+  lockedCell: (column: string, count: string) =>
+    `${column} at count ${count} — leader and follower differ (locked under Both)`,
+  divergedLockedToast: "Leader & follower differ here — switch to a single role to edit",
   // Counts ⇄ slow/quick timing lens (Tango/Foxtrot/Quickstep).
   timingLens: "Timing notation",
   countsLens: "Counts (1 & 2)",
@@ -76,6 +82,13 @@ const de: typeof en = {
   stepsFor: "Schritte für",
   leader: "Leader",
   follower: "Follower",
+  both: "Beide",
+  bothHint:
+    "schreibt beide — Richtung & Sway der Follower-Seite gespiegelt · Fußarbeit bleibt beim Leader",
+  lockedCell: (column, count) =>
+    `${column} bei Zählzeit ${count} — Leader und Follower unterscheiden sich (unter „Beide" gesperrt)`,
+  divergedLockedToast:
+    "Leader & Follower unterscheiden sich hier — zum Bearbeiten eine einzelne Rolle wählen",
   timingLens: "Timing-Notation",
   countsLens: "Zählzeiten (1 & 2)",
   slowQuickLens: "Langsam & schnell (S Q)",

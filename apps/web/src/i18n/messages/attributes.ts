@@ -10,9 +10,13 @@
 const en = {
   // AttributeEditor (frame 1.12)
   attributesForCount: (n: number) => `Attributes for count ${n}`,
-  rolesLegend: "Roles",
-  rolesSameForBoth: "Same for both",
-  rolesPerRole: "Per role",
+  // WEP-0005 scope banner — the STEPS FOR lens is the write scope.
+  writingForBoth: "Writing for · Both",
+  writingForBothNote: "follower gets the mirrored direction & sway · footwork stays the leader's",
+  writingForLeader: "Writing for · Leader",
+  writingForLeaderNote: "only the leader's steps change — switch the lens for the follower",
+  writingForFollower: "Writing for · Follower",
+  writingForFollowerNote: "only the follower's steps change — switch the lens for the leader",
   moreAttributes: "More attributes",
   fewerAttributes: "Fewer attributes",
   remove: "Remove",
@@ -105,9 +109,15 @@ const en = {
 const de: typeof en = {
   // AttributeEditor (frame 1.12)
   attributesForCount: (n) => `Attribute für Zählzeit ${n}`,
-  rolesLegend: "Rollen",
-  rolesSameForBoth: "Gleich für beide",
-  rolesPerRole: "Pro Rolle",
+  writingForBoth: "Schreiben für · Beide",
+  writingForBothNote:
+    "Richtung & Sway der Follower-Seite werden gespiegelt · Fußarbeit bleibt beim Leader",
+  writingForLeader: "Schreiben für · Leader",
+  writingForLeaderNote:
+    "nur die Leader-Schritte ändern sich — für den Follower die Ansicht wechseln",
+  writingForFollower: "Schreiben für · Follower",
+  writingForFollowerNote:
+    "nur die Follower-Schritte ändern sich — für den Leader die Ansicht wechseln",
   moreAttributes: "Mehr Attribute",
   fewerAttributes: "Weniger Attribute",
   remove: "Entfernen",
