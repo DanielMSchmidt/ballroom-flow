@@ -21,8 +21,8 @@ const shot = (name: string) => path.join(OUT, name);
  *  tour <video> to attach proves the routines query has settled (so we shoot the
  *  real empty state, not the loading spinner). We then HIDE that video: its
  *  poster is a GPU-scaled bitmap that jitters a few sub-pixels run-to-run, which
- *  the screenshot bot's byte-level commit gate treats as a change and re-commits
- *  every run — and it isn't the subject of the "create" shot anyway. */
+ *  shows up as noise in the CI screenshot pixel-diff (and would churn the committed
+ *  landing asset) — and it isn't the subject of the "create" shot anyway. */
 async function settleEmptyStateForCreateShot(page: Page): Promise<void> {
   const video = page.locator("video").first();
   await video.waitFor({ state: "attached", timeout: 15_000 });

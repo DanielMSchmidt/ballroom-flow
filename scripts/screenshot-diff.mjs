@@ -1,8 +1,14 @@
-// Pixel-diff the committed marketing screenshots against the PR base branch and
-// build a sticky before/after PR-comment body. Pure fns are exported for tests;
-// main() is the CLI used by .github/workflows/screenshots.yml.
+// Pixel-diff the CI-rendered marketing screenshots against the PR base branch's
+// COMMITTED images and build a sticky before/after PR-comment body. The head
+// images are rendered fresh in CI into the workspace and are NOT committed back
+// to the PR branch (see the `screenshots` job in .github/workflows/ci.yml) — so
+// there is no bot commit and no `[skip ci]`, and the expensive CI gates always
+// run on the PR's real HEAD. The full-resolution "after" and "diff" PNGs are
+// staged into ARTIFACT_DIR for upload as a workflow artifact; the comment inlines
+// the committed "before" (raw.githubusercontent at the base SHA) and links the
+// artifact for the rest. Pure fns are exported for tests; main() is the CLI.
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import pixelmatch from "pixelmatch";
@@ -10,6 +16,7 @@ import { PNG } from "pngjs";
 
 const MARKER = "<!-- screenshot-bot -->";
 const SCREENSHOT_DIR = "apps/web/src/marketing/screenshots";
+const ARTIFACT_DIR = "screenshot-artifacts";
 
 /** Compare two PNG buffers (or nulls). Threshold tolerates AA noise. */
 export function classify(baseBuf, headBuf) {
@@ -25,8 +32,21 @@ export function classify(baseBuf, headBuf) {
   return { status: diffPixels > 0 ? "changed" : "unchanged", diffPixels };
 }
 
+/** Render a pixelmatch diff PNG buffer for two same-size images, else null. */
+export function renderDiff(baseBuf, headBuf) {
+  if (!baseBuf || !headBuf) return null;
+  const a = PNG.sync.read(baseBuf);
+  const b = PNG.sync.read(headBuf);
+  if (a.width !== b.width || a.height !== b.height) return null;
+  const out = new PNG({ width: a.width, height: a.height });
+  pixelmatch(a.data, b.data, out.data, a.width, a.height, { threshold: 0.1 });
+  return PNG.sync.write(out);
+}
+
 const raw = (ctx, sha, file) =>
   `https://raw.githubusercontent.com/${ctx.owner}/${ctx.repo}/${sha}/${ctx.basePath}/${file}`;
+
+const fmt = (n) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "resized");
 
 /** Build the markdown comment body. */
 export function renderComment(rows, ctx) {
@@ -40,20 +60,38 @@ export function renderComment(rows, ctx) {
     return lines.join("\n");
   }
 
+  // The head images are rendered by CI and NOT committed, so there is no raw URL
+  // for "after". Point reviewers at the uploaded artifact for the full-res
+  // after/diff PNGs; the "before" column below still inlines (it is committed).
+  const artifact = ctx.artifactUrl
+    ? `[\`screenshots\` artifact](${ctx.artifactUrl})`
+    : "`screenshots` artifact";
+  lines.push(
+    `Rendered by CI from this PR's code — **not committed**. Full-resolution _after_ and _diff_ images are in the ${artifact} on this run.`,
+    "",
+  );
+
   if (changed.length) {
-    lines.push("### Changed", "", "| Screenshot | Before | After |", "| --- | --- | --- |");
+    lines.push(
+      "### Changed",
+      "",
+      "| Screenshot | Before (base) | Δ pixels |",
+      "| --- | --- | --- |",
+    );
     for (const r of changed) {
       lines.push(
-        `| \`${r.key}\` | <img width="320" src="${raw(ctx, ctx.baseSha, r.file)}"> | <img width="320" src="${raw(ctx, ctx.headSha, r.file)}"> |`,
+        `| \`${r.key}\` | <img width="320" src="${raw(ctx, ctx.baseSha, r.file)}"> | ${fmt(r.diffPixels)} |`,
       );
     }
     lines.push("");
   }
   if (added.length) {
-    lines.push("### New", "", "| Screenshot | Image |", "| --- | --- |");
-    for (const r of added)
-      lines.push(`| \`${r.key}\` | <img width="320" src="${raw(ctx, ctx.headSha, r.file)}"> |`);
-    lines.push("");
+    lines.push(
+      "### New",
+      "",
+      ...added.map((r) => `- \`${r.key}\` (\`${r.file}\`) — see artifact`),
+      "",
+    );
   }
   if (removed.length) {
     lines.push("### Removed", "", ...removed.map((r) => `- \`${r.key}\` (\`${r.file}\`)`), "");
@@ -80,10 +118,10 @@ function gitShow(ref, file) {
 }
 
 async function main() {
-  // Args: base SHA, owner, repo, head SHA.
-  const [baseSha, owner, repo, headSha] = process.argv.slice(2);
-  if (!baseSha || !owner || !repo || !headSha) {
-    throw new Error("usage: screenshot-diff.mjs <baseSha> <owner> <repo> <headSha>");
+  // Args: base SHA, owner, repo, [artifact URL].
+  const [baseSha, owner, repo, artifactUrl] = process.argv.slice(2);
+  if (!baseSha || !owner || !repo) {
+    throw new Error("usage: screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]");
   }
   const here = path.dirname(fileURLToPath(import.meta.url));
   const manifestUrl = pathToFileURL(
@@ -93,6 +131,7 @@ async function main() {
   const manifestSrc = readFileSync(new URL(manifestUrl), "utf8");
   const entries = parseManifestEntries(manifestSrc);
 
+  mkdirSync(ARTIFACT_DIR, { recursive: true });
   const rows = entries.map(({ key, file }) => {
     const rel = `${SCREENSHOT_DIR}/${file}`;
     const baseBuf = gitShow(baseSha, rel);
@@ -102,10 +141,18 @@ async function main() {
     } catch {
       headBuf = null;
     }
-    return { key, file, status: classify(baseBuf, headBuf).status };
+    const { status, diffPixels } = classify(baseBuf, headBuf);
+    // Stage the fresh "after" (and a rendered "diff") into the artifact dir so
+    // reviewers can download the full-resolution images the comment can't inline.
+    if ((status === "changed" || status === "new") && headBuf) {
+      writeFileSync(path.join(ARTIFACT_DIR, `${key}.after.png`), headBuf);
+      const diff = renderDiff(baseBuf, headBuf);
+      if (diff) writeFileSync(path.join(ARTIFACT_DIR, `${key}.diff.png`), diff);
+    }
+    return { key, file, status, diffPixels };
   });
 
-  const ctx = { owner, repo, baseSha, headSha, basePath: SCREENSHOT_DIR };
+  const ctx = { owner, repo, baseSha, basePath: SCREENSHOT_DIR, artifactUrl };
   writeFileSync("screenshot-comment.md", renderComment(rows, ctx));
   const anyChange = rows.some((r) => r.status !== "unchanged");
   console.log(`changed=${anyChange}`);

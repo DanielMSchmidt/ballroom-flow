@@ -14,6 +14,95 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Landing-page screenshot comparison. Renders the marketing screenshots fresh
+  # from THIS PR's code, pixel-diffs them against the base branch's committed
+  # images, uploads the after/diff PNGs as an artifact, and upserts a before/after
+  # PR comment. It NEVER commits the rendered images back to the PR branch — that
+  # is the deliberate change from the old screenshots.yml, whose bot commit carried
+  # `[skip ci]` and became the PR HEAD with no CI on it (a red PR could then show
+  # no failing checks on its HEAD). With no bot commit there is exactly one commit
+  # per push, so fast-gate/full-e2e below always run on the PR's real HEAD.
+  # Informational only: this job does not gate the merge and runs independently of
+  # fast-gate. Path-filtered at the step level so doc-only PRs skip the heavy work.
+  screenshots:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Resolve the fork point so the diff reflects only THIS PR's changes. The
+      # base branch isn't fetched by the head-ref checkout, so fetch it explicitly.
+      - name: Resolve PR base
+        id: base
+        run: |
+          git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
+          echo "sha=$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" >> "$GITHUB_OUTPUT"
+      - name: Detect screenshot-relevant changes
+        id: changes
+        run: |
+          if git diff --name-only "${{ steps.base.outputs.sha }}" HEAD \
+             | grep -qE '^(apps/web/|apps/worker/|packages/|scripts/screenshot-diff\.mjs)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.changes.outputs.relevant == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.relevant == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.relevant == 'true'
+      # Build the SPA + worker so the E2E harness (wrangler dev) can serve the app.
+      - run: pnpm -r build
+        if: steps.changes.outputs.relevant == 'true'
+      - name: Install Playwright (chromium)
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      # Render into the workspace only — NOT committed (see the job comment above).
+      - name: Render screenshots
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm --filter web screenshots
+      - name: Build diff + comment
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          node scripts/screenshot-diff.mjs \
+            "${{ steps.base.outputs.sha }}" \
+            "${{ github.repository_owner }}" \
+            "${{ github.event.repository.name }}" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Upload screenshot artifact (after + diff images)
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshot-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upsert PR comment
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('screenshot-comment.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const marker = '<!-- screenshot-bot -->';
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
   fast-gate:
     runs-on: ubuntu-latest
     steps:

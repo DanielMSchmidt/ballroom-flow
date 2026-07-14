@@ -249,13 +249,15 @@ numbers, not the warning. Lighthouse perf budgets are deferred to M9 (nightly.ym
 
 ### 2.8 Screenshot diff — pixelmatch, CI-only
 
-`scripts/screenshot-diff.mjs` pixel-diffs the committed marketing screenshots
-(`apps/web/src/marketing/screenshots/`) against the PR base branch and posts a sticky
-before/after PR comment (marker `<!-- screenshot-bot -->`). `pixelmatch` with
-`threshold: 0.1` tolerates anti-aliasing noise; size mismatch counts as changed.
+`scripts/screenshot-diff.mjs` pixel-diffs the CI-rendered marketing screenshots
+(`apps/web/src/marketing/screenshots/`, generated into the workspace — **not committed**)
+against the PR base branch's committed images and posts a sticky before/after PR comment
+(marker `<!-- screenshot-bot -->`), inlining the committed "before" and linking an
+artifact for the "after"/"diff" PNGs it stages into `screenshot-artifacts/`. `pixelmatch`
+with `threshold: 0.1` tolerates anti-aliasing noise; size mismatch counts as changed.
 
-- **Do not run `main()` locally** — it needs PR context (base/head SHAs); it's driven by
-  `.github/workflows/screenshots.yml` (root script `pnpm screenshots:diff`).
+- **Do not run `main()` locally** — it needs PR context (base SHA); it's driven by the
+  `screenshots` job in `.github/workflows/ci.yml` (root script `pnpm screenshots:diff`).
 - Known wart: `scripts/screenshot-diff.test.mjs` is a vitest test wired into **no runner** —
   `node --test` on it fails with `ERR_MODULE_NOT_FOUND vitest`. That failure is the wiring
   gap, not a code bug.
