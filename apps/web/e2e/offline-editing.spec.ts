@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 import { mintTestJWT } from "./support/jwt";
+import { installOfflineControl } from "./support/offline";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -85,27 +86,25 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
   test("offline edits survive a reload and converge on reconnect, exactly once", async ({
     browser,
   }) => {
-    // DISABLED on mobile-safari (2026-07-14): the offline `page.reload()` at the
-    // heart of this journey throws "WebKit encountered an internal error" in the
-    // Playwright/WebKit offline emulation (harness limitation, not a product bug).
-    // Can't reproduce/verify without WebKit here; deferred. Covered on
-    // chromium-desktop + mobile-chrome.
-    test.skip(
-      test.info().project.name === "mobile-safari",
-      "WebKit offline page.reload() harness limitation — deferred (2026-07-14)",
-    );
     // Intent: the §11.2 core journey. The student edits a hydrated routine while
     //   OFFLINE; the edit is visibly pending, survives an offline reload (local
     //   persistence), and on reconnect both clients converge — the offline edit
     //   reaches the coach, the coach's online edit reaches the student, and the
     //   idempotent replay applies the offline edit exactly once.
+    //
+    // On mobile-safari, `context.setOffline` + reload throws in WebKit (see
+    // installOfflineControl); there we isolate only the sync socket instead,
+    // which faithfully exercises this journey's CRDT-resend + IndexedDB claims.
+    const isWebKit = test.info().project.name === "mobile-safari";
     const [coach, student] = await openTwoUsers(browser, COACH, STUDENT);
+    // Install BEFORE the student connects so its socket is routable/droppable.
+    const studentNet = await installOfflineControl(student.context, isWebKit);
     await setUpSharedRoutine(coach, student, "Offline Waltz");
     // Prime the SW precache so the offline reload below can serve the app shell.
     await serviceWorkerControls(student.page);
 
     // ── The student disconnects and keeps editing ────────────────────────────
-    await student.context.setOffline(true);
+    await studentNet.goOffline();
     await addSection(student.page, "Offline Solo");
     await expect(student.page.locator("[data-testid='section-list']")).toContainText(
       "Offline Solo",
@@ -127,7 +126,7 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
     await expect(student.page.getByTestId("pending-sync")).toBeVisible();
 
     // ── Reconnect: replay + converge, zero lost edits, exactly once ──────────
-    await student.context.setOffline(false);
+    await studentNet.goOnline();
     await expectConverged(
       [coach.page, student.page],
       "[data-testid='section-list']",
@@ -175,14 +174,18 @@ test.describe("@smoke offline editing (PLAN §11.2)", () => {
   test("the installed app OPENS offline to the last-known choreo list, not a spinner", async ({
     browser,
   }) => {
-    // DISABLED on mobile-safari (2026-07-14): the offline `page.reload()` (the
-    // "offline launch") throws "WebKit encountered an internal error" in the
-    // Playwright/WebKit offline emulation (harness limitation, not a product bug).
-    // Can't reproduce/verify without WebKit here; deferred. Covered on
-    // chromium-desktop + mobile-chrome.
+    // EXCLUDED on mobile-safari: the offline app-launch asserts the SERVICE
+    // WORKER serves the cached choreo list with ZERO network — a genuine offline
+    // reload. In WebKit, `context.setOffline(true)` + any navigation throws
+    // "WebKit encountered an internal error" (a reproduced Playwright/WebKit
+    // limitation, even when a controlling SW would serve wholly from cache).
+    // Unlike offline-editing #1 (which isolates only the sync WS and stays
+    // faithful), the SW-serves-offline claim can't be exercised on WebKit — a
+    // live-network stand-in would go green without testing it. Kept honest as a
+    // skip; covered on chromium-desktop + mobile-chrome.
     test.skip(
       test.info().project.name === "mobile-safari",
-      "WebKit offline page.reload() harness limitation — deferred (2026-07-14)",
+      "WebKit cannot navigate offline (Playwright limitation) — SW-cache serving is untestable here",
     );
     // Intent (§11.2 — offline app open): launching the installed PWA in
     //   airplane mode must land on the normal choreo list served from the
