@@ -208,26 +208,40 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 
 ## 6. Screenshot pipeline & nightly matrix
 
-### Screenshot bot (`.github/workflows/screenshots.yml`)
+### Screenshot comparison (`.github/workflows/ci.yml`, the `screenshots` job)
 
-Regenerates the committed landing-page marketing screenshots on PRs into `development`
-or `main` (both listed since 2026-07-07 — the workflow was dead while pinned to the
-deleted `development` branch), auto-commits them to the PR branch, and upserts a
-before/after comment.
+Renders the landing-page marketing screenshots fresh from the PR's code, pixel-diffs
+them against the base branch's committed images, uploads the after/diff PNGs as a
+workflow **artifact**, and upserts a before/after PR comment. **It does NOT commit the
+rendered images back to the PR branch** — that is the deliberate change (2026-07-14) from
+the old standalone `screenshots.yml`, whose bot commit carried `[skip ci]` and became the
+PR HEAD with no CI on it, so a red PR could show no failing checks on its HEAD. With no
+bot commit there is exactly one commit per push and the fast-gate/full-e2e always run on
+the PR's real HEAD. The committed landing PNGs (`apps/web/src/marketing/screenshots/`,
+bundled into the SPA by `Landing.tsx`) are now updated by hand: regenerate locally with
+`pnpm --filter web screenshots` and commit when you intentionally change that UI; the PR
+comment surfaces any drift.
 
-- **Trigger:** `pull_request` path-filtered to `apps/web/**`, `apps/worker/**`,
-  `packages/**`, the workflow itself, and `scripts/screenshot-diff.mjs`; plus
-  `workflow_dispatch`. Excluded from the smoke critical path.
+- **Trigger:** part of `ci.yml` (`pull_request` + `workflow_dispatch`). The heavy steps
+  are step-level path-filtered (a `git diff` against the merge-base for `apps/web/**`,
+  `apps/worker/**`, `packages/**`, `scripts/screenshot-diff.mjs`), so doc-only PRs skip
+  them. Informational: the job never gates the merge and runs independently of fast-gate.
 - **Journey:** `pnpm --filter web screenshots` =
   `playwright test --grep @screenshots --project=chromium-desktop` — a deterministic
   E2E journey (`apps/web/e2e/screenshots.spec.ts`, tagged `@screenshots`, deliberately
   NOT `@smoke`) that drives the real app via the e2e harness and captures
-  `apps/web/src/marketing/screenshots/`.
-- **Loop guard:** skips when HEAD's author is `screenshot-bot` or the subject contains
-  `[skip ci]` (the bot commits as `chore(screenshots): regenerate landing imagery [skip ci]`).
-- **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> <headSha>`
-  pixel-diffs (pixelmatch, threshold 0.1) against the PR base and writes
-  `screenshot-comment.md`, upserted under the `<!-- screenshot-bot -->` marker.
+  `apps/web/src/marketing/screenshots/` into the workspace.
+- **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]`
+  pixel-diffs (pixelmatch, threshold 0.1) the freshly-rendered images against the PR base's
+  committed ones, stages `<key>.after.png`/`<key>.diff.png` into `screenshot-artifacts/`,
+  and writes `screenshot-comment.md` (inlines the committed **before** via
+  `raw.githubusercontent`; links the artifact for after/diff), upserted under the
+  `<!-- screenshot-bot -->` marker.
+
+> **Note:** `.github/workflows/video.yml` still uses the old auto-commit + `[skip ci]`
+> bot-push pattern for the explainer MP4, so it still carries the same HEAD-with-no-CI
+> footgun. It was left as-is here (an MP4 can't be inlined in a PR comment, so the
+> artifact approach needs a different shape); revisit if it bites.
 
 **`scripts/screenshot-diff.mjs` is CI-only** — its `main()` needs PR context (base SHA,
 repo coordinates) and git history. Don't run it locally expecting useful output; the pure

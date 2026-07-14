@@ -189,7 +189,8 @@ same toolchain as §1, so "works locally, fails in CI" is almost never a version
 Related workflows: `deploy.yml` re-runs lint/typecheck/build/`pnpm -r test`/chromium
 smoke, then `wrangler d1 migrations apply DB --env <env> --remote` + `wrangler deploy
 --env <env>` (skips gracefully without `CLOUDFLARE_API_TOKEN`); `nightly.yml` runs
-the full 3-device E2E matrix; `screenshots.yml` is a path-filtered PR screenshot bot.
+the full 3-device E2E matrix; the `screenshots` job in `ci.yml` renders + pixel-diffs the
+landing screenshots and posts an artifact-backed before/after PR comment (no auto-commit).
 Operating deploys → **ballroom-flow-run-and-operate**.
 
 ---
@@ -202,8 +203,8 @@ Operating deploys → **ballroom-flow-run-and-operate**.
 one, `git diff --stat` must be empty unless you changed the inputs. Details →
 **ballroom-flow-figure-data-pipeline**.
 
-`scripts/screenshot-diff.mjs` is CI-only (needs PR context; used by
-`screenshots.yml`). `scripts/screenshot-diff.test.mjs` is a vitest test wired into
+`scripts/screenshot-diff.mjs` is CI-only (needs PR context; used by the `screenshots`
+job in `ci.yml`). `scripts/screenshot-diff.test.mjs` is a vitest test wired into
 **no runner** — `node --test` on it fails with `ERR_MODULE_NOT_FOUND vitest`; that
 is a known orphan, not your breakage.
 

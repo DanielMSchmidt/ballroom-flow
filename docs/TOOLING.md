@@ -148,7 +148,7 @@ clip filenames the recorder writes, and the on-screen copy — shared by the rec
 composition so they can't disagree (mirrors `screenshots.manifest.ts`). The final asset's
 metadata lives in `apps/web/src/marketing/video/explainer.manifest.ts`.
 
-**CI bot** (`.github/workflows/video.yml`, mirrors the screenshot bot): on PRs that touch the
+**CI bot** (`.github/workflows/video.yml`): on PRs that touch the
 UI / worker / pipeline (path-filtered) — plus manual dispatch — CI runs `pnpm video:generate`,
 then decides whether the running app **meaningfully** changed the tour. Because the MP4 is
 non-deterministic (h264 encode + the recorded journey's timing/cursor jitter), a byte compare
@@ -158,6 +158,13 @@ treats it as changed only when the differing fraction exceeds `VIDEO_DIFF_THRESH
 (`video-bot`, `[skip ci]` — both the message and a guard step stop the self-trigger loop) and
 upserts a sticky **before/after** comment; otherwise it discards the jittered render. Remotion
 downloads its own managed Chromium in CI.
+
+> The screenshot pipeline used to work this same way but was moved off auto-commit on
+> 2026-07-14 (the `screenshots` job in `ci.yml` now renders + pixel-diffs into an artifact,
+> committing nothing). `video.yml` still auto-commits with `[skip ci]`, so it retains the
+> footgun that motivated that change: the bot commit becomes the PR HEAD with no CI on it,
+> so on a red PR the HEAD can show no failing checks. Left as-is because an MP4 can't be
+> inlined in a PR comment (the artifact approach needs a different shape); revisit if it bites.
 
 **Notes.** Remotion is a **build-only** dependency — the app embeds the rendered MP4 via a
 plain `<video>` (poster + controls, `preload="none"`), so nothing heavy ships in the client
