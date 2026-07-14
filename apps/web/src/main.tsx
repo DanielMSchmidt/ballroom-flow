@@ -7,6 +7,7 @@ import { isE2E } from "./lib/e2e-auth";
 import { initErrorReporting, reportError } from "./lib/ops";
 import { shouldRetryQuery } from "./lib/rpc";
 import { initStaleBundleReload } from "./lib/stale-bundle";
+import { initSwUpdateReload } from "./lib/sw-update";
 import { ErrorBoundary, ErrorFallback } from "./ui";
 // driver.js base styles for the first-visit UI tours; themed to the --bf-*
 // tokens by the `.bf-tour` overrides in styles/index.css. CSS stays imported
@@ -21,9 +22,17 @@ const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 // before anything renders so even a boot crash reports.
 initErrorReporting();
 
-// Stale-bundle reload nudge: when this (deployed) tab becomes visible after a
-// newer deploy, reload it onto the current bundle — the mechanism the sync-wire
-// and REST compat stories rely on. No-op in dev/test/E2E (no VITE_BUILD_ID).
+// Rollout-skew reload machinery (PLAN §7), two layers:
+// 1. SW-driven (fast path): register the service worker (replacing the
+//    plugin's injected registerSW.js — vite.config.ts sets injectRegister:
+//    false), keep checking sw.js for a new deploy while the tab is open, and
+//    reload when an updated worker takes control — immediately when hidden or
+//    pre-interaction (the cold-open-stale case), else on the next visibility
+//    change. See lib/sw-update.ts for the 2026-07-14 motivating incident.
+initSwUpdateReload();
+// 2. Build-id handshake (fallback): compare VITE_BUILD_ID against /api/health
+//    on visibility-return and reload on mismatch — catches a broken/stale
+//    service worker the SW path can't see. No-op in dev/test/E2E (no build id).
 initStaleBundleReload();
 
 // Deterministic E2E (#191): disable animations so journeys never race a sheet/

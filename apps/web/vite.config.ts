@@ -22,8 +22,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // Registration happens in src/lib/sw-update.ts (wired from main.tsx), not
+      // via an injected registerSW.js — the app drives periodic update checks
+      // and the update-takeover reload itself (PLAN §7 rollout skew). With
+      // injectRegister off, the plugin no longer auto-enables the autoUpdate
+      // worker behaviors, so skipWaiting/clientsClaim are set explicitly below:
+      // a new SW takes control as soon as it's installed.
       registerType: "autoUpdate",
+      injectRegister: false,
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         // The Automerge core WASM (~3 MB) is part of the installable editor
         // shell, so allow it past Workbox's 2 MiB default precache cap.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

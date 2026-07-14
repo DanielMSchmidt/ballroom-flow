@@ -115,6 +115,8 @@ imports through small shims that defer module resolution to runtime:
 
 | WEP-0006 *(2026-07-13 — WS heartbeat, PLAN §8 D10)* | Zombie-socket detection: idle `SYNC_PING` → DO auto-response `SYNC_PONG` (no DO wake); any inbound frame counts as life; a missed pong deadline drops the socket into the warm-reconnect machinery ("live" can lie for ~30 s max); §11.2 interplay (drop lands in editable `local`, gap edits replay via the #161 resend) | store + worker/DO + E2E | `apps/web/src/store/doc-connection.test.ts` ("heartbeat" describe ×6), `apps/worker/src/doc-do.test.ts` ("WEP-0006 heartbeat auto-response"), `apps/web/e2e/zombie-socket.spec.ts` (@smoke ship-gate journey: E2E socket seam manufactures the half-open state, convergence on a second live client proves the replay) |
 
+| Rollout-skew reload *(2026-07-05 build-id fallback; 2026-07-14 SW fast path — PLAN §7 Version evolution)* | A tab running a pre-deploy bundle reloads onto the current one: the SW-driven path (periodic/visible/online `sw.js` re-checks with a burst throttle; reload when an updated SW **takes control** (`controllerchange` with a prior controller; first-install claims ignored) — immediate while hidden or pre-interaction, deferred to the next visibility change after interaction, at most once) and the `/api/health` build-id fallback (visible-again check, SW nudge first, sessionStorage reload-loop guard, no-op without a build id) | unit (jsdom) | `apps/web/src/lib/sw-update.test.ts` (reload policy ×5, check scheduling ×3), `apps/web/src/lib/stale-bundle.test.ts` (×8) |
+
 **Every live story (US-001…US-054, minus the retired US-047/US-048) is covered.** No story is left untested.
 
 ## Reusable test abstractions built (signatures + locations)
