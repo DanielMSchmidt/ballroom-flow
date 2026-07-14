@@ -51,6 +51,12 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             CLERK_JWT_KEY: TEST_JWT_PUBLIC_KEY_PEM,
             WRANGLER_TOML: wranglerToml,
+            // The unit tests exercise the same boundary as the E2E wrangler run
+            // (wrangler.toml [env.e2e] — the fixed CLERK_JWT_KEY above mirrors it),
+            // so bind E2E_TEST_ROUTES=1 here too. It gates the E2E-only seams —
+            // the DO's `resetForTest()` wipe guard (doc-do.ts) and the `/api/test/*`
+            // route mount (index.ts) — which the DO/reset tests drive directly.
+            E2E_TEST_ROUTES: "1",
           },
         },
         wrangler: { configPath: "./wrangler.toml" },
