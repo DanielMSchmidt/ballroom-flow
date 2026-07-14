@@ -8,7 +8,7 @@ import { zSeedBody } from "@weavesteps/contract";
 import { CURRENT_SCHEMA_VERSION, isDanceId, parseAttributeRead } from "@weavesteps/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
-import { documentRegistry, membership, users } from "../db/schema";
+import { documentRegistry, libraryEntry, membership, users } from "../db/schema";
 import type { Env } from "../index";
 import { seedGlobalFigures } from "../seed-global-figures";
 
@@ -21,6 +21,20 @@ export const testSeed = new Hono<{ Bindings: Env }>();
 /** Wipe the index tables (deterministic per-run reset). */
 testSeed.post("/api/test/reset", async (c) => {
   const d = drizzle(c.env.DB);
+  // Wipe each registered doc's Durable Object storage BEFORE clearing D1. A DO's
+  // SQLite persists independently of D1 and `seedDoc` is no-clobber, so a doc
+  // mutated in one journey/project (e.g. a copy-on-write edit that re-points a
+  // routine placement) would otherwise leak into the next run — the stale
+  // placement points at a now-orphaned figure copy and the card hangs on
+  // "Loading figure…". document_registry lists every seeded/created docRef
+  // (routines, figures, and COW copies alike), so this generically resets them
+  // all. Reading it here, before the DELETE below, is intentional.
+  const registered = await c.env.DB.prepare("SELECT docRef FROM document_registry").all<{
+    docRef: string;
+  }>();
+  for (const { docRef } of registered.results ?? []) {
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).resetForTest();
+  }
   // `invite` is created by migration 0001 but typed in drizzle only once US-023
   // lands; clear it via raw SQL so this endpoint is independent of that merge.
   await c.env.DB.prepare("DELETE FROM invite").run();
@@ -36,6 +50,13 @@ testSeed.post("/api/test/reset", async (c) => {
   await c.env.DB.prepare("DELETE FROM journal_entry").run();
   // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
   await c.env.DB.prepare("DELETE FROM placement_edge").run();
+  // Save-to-library bookmarks (T5). `alreadySaved` is decided purely by a
+  // `library_entry` row keyed on (userId, figureRef) — NOT by documentRegistry —
+  // so without this a figure saved by one journey/project leaks into the next:
+  // the next save returns `alreadySaved: true` ("Already in My figures") instead
+  // of "Saved to My figures". Because all three Playwright projects share one D1
+  // serially, chromium-desktop (first) would pass while mobile-chrome/-safari fail.
+  await d.delete(libraryEntry);
   await d.delete(membership);
   await d.delete(documentRegistry);
   await d.delete(users);

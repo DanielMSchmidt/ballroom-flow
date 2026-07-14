@@ -178,17 +178,6 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
   test("@smoke editing a GLOBAL figure auto-creates your frozen copy; original untouched (US-035)", async ({
     page,
   }) => {
-    // DISABLED on mobile viewports (2026-07-14): the seeded global figure
-    // intermittently stays on "Loading figure…" and never resolves within 15s
-    // (reproduced ~2/3 on mobile-chrome). Root cause is a client figure-hydration
-    // timing race in the lazy read view (eagerFigures:false, store/routine.ts
-    // figureStatus → the lazy-mode snapshot fallback for a seeded non-catalog
-    // global figure): a real sync-layer race, not a quick test fix. Deferred.
-    // Covered on chromium-desktop.
-    test.skip(
-      test.info().project.name !== "chromium-desktop",
-      "Mobile figure-hydration race ('Loading figure…' never resolves) — deferred (2026-07-14)",
-    );
     // Intent: editing a global (catalog) figure silently spawns a live overlay
     // VARIANT (owning only the edited beats — ⟳v5, §5.2), re-points the placement,
     // and shows "Made this figure yours". The base global figure is untouched —

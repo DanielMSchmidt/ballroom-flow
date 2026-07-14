@@ -45,15 +45,20 @@ test.describe("@smoke PWA install + offline app shell", () => {
     page,
     context,
   }) => {
-    // DISABLED on mobile-safari (2026-07-14): `page.reload()` while offline throws
-    // "WebKit encountered an internal error" in the Playwright/WebKit offline
-    // emulation — a harness limitation, not a product bug (chromium reloads fine).
-    // Can't reproduce/verify without a WebKit browser here; deferred for a proper
-    // fix (an offline-reload helper that tolerates the WebKit quirk). Still covered
-    // on chromium-desktop + mobile-chrome.
+    // EXCLUDED on mobile-safari: this test asserts the SERVICE WORKER serves the
+    // shell from cache with ZERO network, which requires a genuine offline reload.
+    // In WebKit, `context.setOffline(true)` + any navigation throws "WebKit
+    // encountered an internal error" — a reproduced Playwright/WebKit limitation
+    // (a standalone repro throws even when a controlling SW would serve the page
+    // wholly from cache; goto fails the same way as reload). Unlike the sync-layer
+    // offline journeys (offline-editing #1, which isolates only the WS via
+    // installOfflineControl), the SW-serves-offline claim CANNOT be faithfully
+    // exercised on WebKit — any stand-in (live network + faked navigator.onLine)
+    // would go green without testing it. Kept honest as a skip; covered on
+    // chromium-desktop + mobile-chrome.
     test.skip(
       test.info().project.name === "mobile-safari",
-      "WebKit offline page.reload() harness limitation — deferred (2026-07-14)",
+      "WebKit cannot navigate offline (Playwright limitation) — SW-cache serving is untestable here",
     );
     // Intent: online-first — the shell loads offline; the UI shows an explicit
     // offline state instead of failing quietly (US-050 AC-2).
