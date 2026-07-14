@@ -1,6 +1,6 @@
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
-import { classify, parseManifestEntries, renderComment, renderDiff } from "./screenshot-diff.mjs";
+import { classify, parseManifestEntries, renderComment } from "./screenshot-diff.mjs";
 
 function png(color) {
   const p = new PNG({ width: 4, height: 4 });
@@ -91,7 +91,7 @@ describe("renderComment", () => {
     // Pixel delta is surfaced (formatted with a thousands separator).
     expect(md).toContain("1,234");
   });
-  it("inlines before, after, and diff from release-asset URLs when the env is set", () => {
+  it("inlines before and after from release-asset URLs when the env is set (no diff)", () => {
     const md = renderComment(
       [{ key: "hero", file: "hero.png", status: "changed", diffPixels: 1234 }],
       assetCtx,
@@ -99,13 +99,11 @@ describe("renderComment", () => {
     expect(md).toContain(
       "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
     );
-    // after + diff inline from the prerelease's asset download URLs.
+    // "after" inlines from the prerelease's asset download URL; no diff image.
     expect(md).toContain(
       "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
     );
-    expect(md).toContain(
-      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.diff.png",
-    );
+    expect(md).not.toContain(".diff.png");
     expect(md).toContain("1,234");
   });
   it("inlines the after image for a NEW screenshot (no before) under release assets", () => {
@@ -132,18 +130,5 @@ describe("renderComment", () => {
   it("reports no changes when all unchanged", () => {
     const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], assetCtx);
     expect(md).toContain("No screenshot changes");
-  });
-});
-
-describe("renderDiff", () => {
-  it("returns a PNG buffer for two same-size images that differ", () => {
-    const out = renderDiff(png([0, 0, 0]), png([255, 255, 255]));
-    expect(Buffer.isBuffer(out)).toBe(true);
-    // A valid PNG buffer starts with the 8-byte PNG signature.
-    expect(out.subarray(1, 4).toString("ascii")).toBe("PNG");
-  });
-  it("returns null when either side is missing", () => {
-    expect(renderDiff(null, png([0, 0, 0]))).toBeNull();
-    expect(renderDiff(png([0, 0, 0]), null)).toBeNull();
   });
 });

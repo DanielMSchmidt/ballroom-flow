@@ -16,21 +16,20 @@ on:
 jobs:
   # Landing-page screenshot comparison. Renders the marketing screenshots fresh
   # from THIS PR's code, pixel-diffs them against the base branch's committed
-  # images, and upserts a before/after/diff PR comment. It NEVER commits the
-  # rendered images back to the PR branch — that is the deliberate change from the
-  # old screenshots.yml, whose bot commit carried `[skip ci]` and became the PR HEAD
-  # with no CI on it (a red PR could then show no failing checks on its HEAD). With
-  # no bot commit there is exactly one commit per push, so fast-gate/full-e2e below
-  # always run on the PR's real HEAD.
+  # images, and upserts a before/after PR comment (plus a Δ pixel count per row).
+  # It NEVER commits the rendered images back to the PR branch — that is the
+  # deliberate change from the old screenshots.yml, whose bot commit carried
+  # `[skip ci]` and became the PR HEAD with no CI on it (a red PR could then show no
+  # failing checks on its HEAD). With no bot commit there is exactly one commit per
+  # push, so fast-gate/full-e2e below always run on the PR's real HEAD.
   #
-  # To inline the "after"/"diff" in the comment (a comment can only embed images it
-  # can fetch by URL), the PNGs are published as assets on a dedicated
-  # `ci-screenshots` prerelease and the comment links their `releases/download/...`
-  # URLs — hosting them WITHOUT any commit (a release tag points at an existing
-  # commit; it adds no history and never touches the PR). `contents: write` is
-  # needed to create the release + upload assets. The same PNGs are also kept as a
-  # run artifact. Stale per-PR assets are pruned each push here, and on PR close by
-  # screenshot-cleanup.yml.
+  # To inline the "after" in the comment (a comment can only embed images it can
+  # fetch by URL), the PNGs are published as assets on a dedicated `ci-screenshots`
+  # prerelease and the comment links their `releases/download/...` URLs — hosting
+  # them WITHOUT any commit (a release tag points at an existing commit; it adds no
+  # history and never touches the PR). `contents: write` is needed to create the
+  # release + upload assets. The same PNGs are also kept as a run artifact. Stale
+  # per-PR assets are pruned each push here, and on PR close by screenshot-cleanup.yml.
   # Informational only: this job does not gate the merge and runs independently of
   # fast-gate. Path-filtered at the step level so doc-only PRs skip the heavy work.
   screenshots:
@@ -92,7 +91,7 @@ jobs:
             "${{ github.repository_owner }}" \
             "${{ github.event.repository.name }}" \
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-      - name: Upload screenshot artifact (after + diff images)
+      - name: Upload screenshot artifact (after images)
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -100,13 +99,13 @@ jobs:
           path: screenshot-artifacts/
           if-no-files-found: ignore
           retention-days: 14
-      # Host the fresh after/diff PNGs so the comment can inline them, WITHOUT a
-      # commit: upload them as assets on the `ci-screenshots` prerelease. The staged
+      # Host the fresh after PNGs so the comment can inline them, WITHOUT a commit:
+      # upload them as assets on the `ci-screenshots` prerelease. The staged
       # filenames already ARE the asset names (SCREENSHOT_ASSET_PREFIX + key +
-      # kind), so we upload each file under its basename and the URLs the comment
-      # computed match. Runs before the comment upsert so the images exist when the
-      # comment first renders (else camo may cache a 404). Stale assets from this
-      # PR's earlier pushes are deleted first.
+      # ".after.png"), so we upload each file under its basename and the URLs the
+      # comment computed match. Runs before the comment upsert so the images exist
+      # when the comment first renders (else camo may cache a 404). Stale assets from
+      # this PR's earlier pushes are deleted first.
       - name: Publish screenshot images as release assets
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/github-script@v7

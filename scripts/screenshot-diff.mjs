@@ -1,23 +1,24 @@
 // Pixel-diff the CI-rendered marketing screenshots against the PR base branch's
-// COMMITTED images and build a sticky before/after/diff PR-comment body. The head
+// COMMITTED images and build a sticky before/after PR-comment body. The head
 // images are rendered fresh in CI into the workspace and are NOT committed back
 // to the PR branch (see the `screenshots` job in .github/workflows/ci.yml) — so
 // there is no bot commit and no `[skip ci]`, and the expensive CI gates always
 // run on the PR's real HEAD.
 //
-// To show the "after" and "diff" inline (a comment can only embed an image it can
-// fetch by URL — GitHub strips data: URIs), CI uploads those PNGs as assets on a
-// dedicated `ci-screenshots` prerelease and the comment inlines their stable
+// To show the "after" inline (a comment can only embed an image it can fetch by
+// URL — GitHub strips data: URIs), CI uploads those PNGs as assets on a dedicated
+// `ci-screenshots` prerelease and the comment inlines their stable
 // `releases/download/...` URLs. That hosts the images WITHOUT any commit — no bot
 // commit, no throwaway asset branch. The "before" column stays a raw.githubusercontent
 // URL at the base SHA (it is committed). The same PNGs are also staged into
 // ARTIFACT_DIR as a durable run artifact. When the release-asset env is absent
-// (a local run), the comment falls back to before-only + an artifact link.
+// (a local run), the comment falls back to before-only + an artifact link. The Δ
+// pixel count (from pixelmatch in classify) still quantifies the change per row.
 //
 // The staged filenames are the exact release-asset names (ASSET_PREFIX + key +
-// ".after.png"/".diff.png"), so the upload step can dumb-upload each file under its
-// basename and the URLs the comment computes match. Pure fns are exported for
-// tests; main() is the CLI.
+// ".after.png"), so the upload step can dumb-upload each file under its basename
+// and the URL the comment computes matches. Pure fns are exported for tests;
+// main() is the CLI.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -43,23 +44,12 @@ export function classify(baseBuf, headBuf) {
   return { status: diffPixels > 0 ? "changed" : "unchanged", diffPixels };
 }
 
-/** Render a pixelmatch diff PNG buffer for two same-size images, else null. */
-export function renderDiff(baseBuf, headBuf) {
-  if (!baseBuf || !headBuf) return null;
-  const a = PNG.sync.read(baseBuf);
-  const b = PNG.sync.read(headBuf);
-  if (a.width !== b.width || a.height !== b.height) return null;
-  const out = new PNG({ width: a.width, height: a.height });
-  pixelmatch(a.data, b.data, out.data, a.width, a.height, { threshold: 0.1 });
-  return PNG.sync.write(out);
-}
-
 const raw = (ctx, sha, file) =>
   `https://raw.githubusercontent.com/${ctx.owner}/${ctx.repo}/${sha}/${ctx.basePath}/${file}`;
 
 const fmt = (n) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "resized");
 
-/** Release-asset name for a row's "after"/"diff" PNG (also its staged filename). */
+/** Release-asset name for a row's "after" PNG (also its staged filename). */
 export const assetName = (prefix, key, kind) => `${prefix}${key}.${kind}.png`;
 
 /** Build the markdown comment body. */
@@ -87,21 +77,18 @@ export function renderComment(rows, ctx) {
     : "`screenshots` artifact";
   lines.push(
     inline
-      ? `Rendered by CI from this PR's code — **not committed**. The _after_ and _diff_ images below are hosted as assets on the \`ci-screenshots\` prerelease; full-resolution copies are also in the ${artifact} on this run.`
-      : `Rendered by CI from this PR's code — **not committed**. Full-resolution _after_ and _diff_ images are in the ${artifact} on this run.`,
+      ? `Rendered by CI from this PR's code — **not committed**. The _after_ images below are hosted as assets on the \`ci-screenshots\` prerelease; full-resolution copies are also in the ${artifact} on this run.`
+      : `Rendered by CI from this PR's code — **not committed**. Full-resolution _after_ images are in the ${artifact} on this run.`,
     "",
   );
 
   if (changed.length) {
     lines.push("### Changed", "");
     if (inline) {
-      lines.push(
-        "| Screenshot | Before (base) | After | Diff | Δ pixels |",
-        "| --- | --- | --- | --- | --- |",
-      );
+      lines.push("| Screenshot | Before (base) | After | Δ pixels |", "| --- | --- | --- | --- |");
       for (const r of changed) {
         lines.push(
-          `| \`${r.key}\` | ${before(r)} | ${assetImg(r, "after")} | ${assetImg(r, "diff")} | ${fmt(r.diffPixels)} |`,
+          `| \`${r.key}\` | ${before(r)} | ${assetImg(r, "after")} | ${fmt(r.diffPixels)} |`,
         );
       }
     } else {
@@ -186,13 +173,11 @@ async function main() {
       headBuf = null;
     }
     const { status, diffPixels } = classify(baseBuf, headBuf);
-    // Stage the fresh "after" (and a rendered "diff") into the artifact dir under
-    // their exact release-asset names, so the CI upload step can dumb-upload each
-    // file by basename and the URLs the comment computes match 1:1.
+    // Stage the fresh "after" into the artifact dir under its exact release-asset
+    // name, so the CI upload step can dumb-upload each file by basename and the URL
+    // the comment computes matches 1:1.
     if ((status === "changed" || status === "new") && headBuf) {
       writeFileSync(path.join(ARTIFACT_DIR, assetName(assetPrefix, key, "after")), headBuf);
-      const diff = renderDiff(baseBuf, headBuf);
-      if (diff) writeFileSync(path.join(ARTIFACT_DIR, assetName(assetPrefix, key, "diff")), diff);
     }
     return { key, file, status, diffPixels };
   });

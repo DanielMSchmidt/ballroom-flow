@@ -161,11 +161,11 @@ downloads its own managed Chromium in CI.
 
 > The screenshot pipeline used to work this same way but was moved off auto-commit on
 > 2026-07-14 (the `screenshots` job in `ci.yml` renders + pixel-diffs, committing nothing).
-> It inlines the **before / after / diff** images in the PR comment by hosting the fresh
-> after/diff PNGs as assets on a dedicated `ci-screenshots` prerelease — a release tag points
-> at an existing commit, so this adds no history and never touches the PR HEAD — and linking
-> their stable `releases/download/…` URLs (GitHub strips `data:` URIs, so a comment can only
-> embed an image it can fetch by URL; the committed "before" stays a raw.githubusercontent URL).
+> It inlines the **before / after** images in the PR comment (plus a Δ pixel count per row) by
+> hosting the fresh after PNGs as assets on a dedicated `ci-screenshots` prerelease — a release
+> tag points at an existing commit, so this adds no history and never touches the PR HEAD — and
+> linking their stable `releases/download/…` URLs (GitHub strips `data:` URIs, so a comment can
+> only embed an image it can fetch by URL; the committed "before" stays a raw.githubusercontent URL).
 > Stale per-PR assets are pruned on each push and on PR close (`screenshot-cleanup.yml`).
 > `video.yml` still auto-commits with `[skip ci]`, so it retains the footgun that motivated the
 > move off auto-commit: the bot commit becomes the PR HEAD with no CI on it, so on a red PR the

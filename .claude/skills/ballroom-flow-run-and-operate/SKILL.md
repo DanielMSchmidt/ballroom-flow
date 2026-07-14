@@ -211,8 +211,8 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 ### Screenshot comparison (`.github/workflows/ci.yml`, the `screenshots` job)
 
 Renders the landing-page marketing screenshots fresh from the PR's code, pixel-diffs
-them against the base branch's committed images, and upserts a **before / after / diff** PR
-comment with all three inline. **It does NOT commit the rendered images back to the PR
+them against the base branch's committed images, and upserts a **before / after** PR
+comment (plus a Δ pixel count per row) with both inline. **It does NOT commit the rendered images back to the PR
 branch** — that is the deliberate change (2026-07-14) from the old standalone
 `screenshots.yml`, whose bot commit carried `[skip ci]` and became the PR HEAD with no CI on
 it, so a red PR could show no failing checks on its HEAD. With no bot commit there is exactly
@@ -221,13 +221,13 @@ landing PNGs (`apps/web/src/marketing/screenshots/`, bundled into the SPA by `La
 are updated by hand: regenerate locally with `pnpm --filter web screenshots` and commit when
 you intentionally change that UI; the PR comment surfaces any drift.
 
-To inline the after/diff **without a commit** (a comment can only embed an image it can fetch
+To inline the after image **without a commit** (a comment can only embed an image it can fetch
 by URL — GitHub strips `data:` URIs), the job hosts those PNGs as assets on a dedicated
 `ci-screenshots` **prerelease** and links their `releases/download/…` URLs. A release tag
 points at an existing commit, so this adds no git history and never touches the PR HEAD — the
 no-bot-commit guarantee holds. It needs `contents: write` (release create + asset upload).
-Assets are namespaced `pr-<n>-<headSha>-<key>.{after,diff}.png` (the head SHA busts GitHub's
-camo image cache); stale per-PR assets are pruned on each push and, on PR close, by
+Assets are namespaced `pr-<n>-<headSha>-<key>.after.png` (the head SHA busts GitHub's camo
+image cache); stale per-PR assets are pruned on each push and, on PR close, by
 `.github/workflows/screenshot-cleanup.yml`. The "before" column stays a `raw.githubusercontent`
 URL at the base SHA (it is committed).
 
@@ -243,8 +243,8 @@ URL at the base SHA (it is committed).
 - **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]`
   pixel-diffs (pixelmatch, threshold 0.1) the freshly-rendered images against the PR base's
   committed ones and writes `screenshot-comment.md`, upserted under the `<!-- screenshot-bot -->`
-  marker. It stages the after/diff PNGs into `screenshot-artifacts/` under their exact
-  release-asset names (`$SCREENSHOT_ASSET_PREFIX<key>.{after,diff}.png`) so the workflow's
+  marker. It stages the after PNGs into `screenshot-artifacts/` under their exact
+  release-asset names (`$SCREENSHOT_ASSET_PREFIX<key>.after.png`) so the workflow's
   upload step can dumb-upload each by basename; the two env vars `SCREENSHOT_ASSET_PREFIX` +
   `SCREENSHOT_ASSET_URL_BASE` (set by CI) also tell the script the `releases/download/…` URLs
   to inline. Absent those env vars (a local run) it falls back to a before-only comment with an
