@@ -46,7 +46,7 @@ import { buildMemberColorMap, type ColorableMember } from "../lib/identity-color
 import { useOnline } from "../lib/use-online";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
-import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import { type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import type { MineFigure } from "../store/figures";
 import { useMe } from "../store/me";
 import type {
@@ -57,6 +57,7 @@ import type {
 } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
+import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   AttrChip,
@@ -460,14 +461,14 @@ export function Assemble({
     [membersQ.data, me.data, currentUserId],
   );
 
-  // Family notes (US-040/041) come from the worker (co-member visibility gate),
-  // not the routine doc — load them for this routine + reload after authoring one.
+  // Family notes (US-040/041): CO-MEMBER notes (about-others) come from the worker
+  // (co-member visibility gate) unchanged — load them + reload after authoring one.
   // No-ops without a token (tests / open boundary) → an empty list.
-  const [familyNotes, setFamilyNotes] = useState<FamilyNote[]>([]);
+  const [coMemberNotes, setCoMemberNotes] = useState<FamilyNote[]>([]);
   const reloadFamilyNotes = useCallback(async () => {
     if (!getToken) return;
     try {
-      setFamilyNotes(await loadFamilyNotes(routineId, await getToken()));
+      setCoMemberNotes(await loadFamilyNotes(routineId, await getToken()));
     } catch {
       // Surfacing family notes is best-effort; a failure must not block authoring.
     }
@@ -475,6 +476,38 @@ export function Assemble({
   useEffect(() => {
     void reloadFamilyNotes();
   }, [reloadFamilyNotes]);
+  // WEP-0002: the user's OWN family notes read live from the account doc (instant +
+  // offline), so a note the user just authored appears immediately — before the
+  // alarm projects it into the co-member REST read. The account doc opens LAZILY
+  // here (the compose surface). Merge own ∪ co-member, deduped by note id (the
+  // account doc reuses the D1 noteId, so a note appears once once both agree).
+  const account = useAccount();
+  const ownNotes = useOwnFamilyNotes(account.store);
+  const familyNotes = useMemo<FamilyNote[]>(() => {
+    const seen = new Set(coMemberNotes.map((n) => n.id));
+    const ownAsFamily: FamilyNote[] = ownNotes
+      .filter((n) => !seen.has(n.id))
+      .map((n) => ({
+        id: n.id,
+        authorId: currentUserId ?? "",
+        kind: n.kind,
+        text: n.text,
+        figureType: n.figureType,
+        danceScope: n.danceScope,
+        anchors: [
+          {
+            type: "figureType" as const,
+            figureType: n.figureType,
+            danceScope: n.danceScope,
+            ...(n.count != null ? { count: n.count } : {}),
+            ...(n.role != null ? { role: n.role } : {}),
+          },
+        ],
+        ...(n.count != null ? { count: n.count } : {}),
+        ...(n.role != null ? { role: n.role } : {}),
+      }));
+    return [...coMemberNotes, ...ownAsFamily];
+  }, [coMemberNotes, ownNotes, currentUserId]);
 
   // Read/edit split: opening a figure's step editor connects THAT figure's own
   // live WS (lazy figures) so its notation converges while open; until then it
@@ -1217,10 +1250,19 @@ export function Assemble({
                   figure={notatingFigure}
                   notes={familyNotes}
                   canAnnotate={can(role, "canAnnotate")}
-                  onCreate={async (input) => {
-                    if (!getToken) return;
-                    await createFamilyNote(input, await getToken());
-                    await reloadFamilyNotes();
+                  onCreate={(input) => {
+                    // WEP-0002: author through the account-doc seam — the note is a
+                    // CRDT edit (instant, offline-capable, undoable) that the alarm
+                    // projects into the D1 index for co-member reads. `danceScope`
+                    // is "all" or a DanceId (never count/role from this surface).
+                    account.store.createFamilyNote({
+                      figureType: input.figureType,
+                      danceScope: input.danceScope === "all" ? "all" : routine.dance,
+                      kind: input.kind,
+                      text: input.text,
+                    });
+                    // Re-pull co-member notes so the projection catches up (best-effort).
+                    void reloadFamilyNotes();
                   }}
                 />
               </>

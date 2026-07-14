@@ -15,7 +15,7 @@ import { useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
-import { useBookmarkFigure, useMineFigures } from "../store/figures";
+import { useMineFigures } from "../store/figures";
 import { useMe } from "../store/me";
 import { usePendingLocalChanges } from "../store/offline";
 import {
@@ -27,6 +27,7 @@ import {
 } from "../store/routines";
 import { search } from "../store/search";
 import { forkTemplate, listTemplates } from "../store/templates";
+import { useAccount, useLibraryRefs } from "../store/use-account";
 import { AccessDenied, Button, Spinner, useToast } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
@@ -78,18 +79,34 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   const pendingLocal = usePendingLocalChanges(openRoutineId ?? "", access.state);
 
   // The viewer's library bookmarks (⟳v5, §4.2/§5.2): fetched only when a routine
-  // is open, and reduced to a figureRef set so Assemble can O(1)-test "is this
-  // placed figure already in my library" for the "add to my library" ↔ "in your
-  // library" affordance (PlacementCard / FigureTimeline).
+  // is open. `/api/figures/mine` supplies figure METADATA (title/type/dance/usage)
+  // for the Add-figure picker; WEP-0002 makes the account doc the source of truth
+  // for WHICH refs are bookmarked, so bookmark state is instant + offline.
   const mineQ = useMineFigures({ enabled: Boolean(openRoutineId) });
-  const bookmarkedFigureRefs = useMemo(
-    () => new Set((mineQ.data ?? []).map((f) => f.docRef)),
-    [mineQ.data],
-  );
-  const bookmark = useBookmarkFigure();
+  // WEP-0002: open the account doc LAZILY (only when a routine is open — the
+  // "add to my library" surface lives in Assemble) and read the bookmark set live.
+  const account = useAccount();
+  const libraryRefs = useLibraryRefs(account.store);
+  // The figureRef set Assemble O(1)-tests for "already in my library" — the UNION
+  // of the live account-doc refs (instant, incl. a just-added bookmark before the
+  // alarm projects) and the /mine list (covers a signed-out/idle account store).
+  const bookmarkedFigureRefs = useMemo(() => {
+    const refs = new Set(libraryRefs);
+    for (const f of mineQ.data ?? []) refs.add(f.docRef);
+    return refs;
+  }, [libraryRefs, mineQ.data]);
+  // Bookmark through the seam (instant + offline; the worker alarm projects it to
+  // library_entry for /mine). The account store is open only for a signed-in user
+  // with a resolved id — a no-op otherwise (the affordance only renders then).
+  // `alreadySaved` is derived from the live doc state (idempotent add) so the
+  // toast reads correctly without a server round-trip.
   const onAddToLibrary = useCallback(
-    (figureRef: string) => bookmark.mutateAsync(figureRef),
-    [bookmark],
+    async (figureRef: string): Promise<{ alreadySaved: boolean }> => {
+      const alreadySaved = account.store.readLibraryRefs().includes(figureRef);
+      account.store.addBookmark(figureRef);
+      return { alreadySaved };
+    },
+    [account.store],
   );
 
   // US-045: template list (app-owned sample routines).

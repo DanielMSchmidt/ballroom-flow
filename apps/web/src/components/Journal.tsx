@@ -4,6 +4,7 @@
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
 import type { Anchor, AnnotationKind } from "@weavesteps/domain";
+import { isDanceId } from "@weavesteps/domain";
 import { useCallback, useEffect, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -14,6 +15,7 @@ import {
   type JournalFilter,
   relativeDate,
 } from "../store/journal";
+import { useAccount } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
@@ -59,6 +61,41 @@ export function Journal(props: JournalProps): React.JSX.Element {
   // First-visit tour — held while the entry editor covers the tab.
   useFirstVisitTour("journal", !composing);
 
+  // WEP-0002: the Journal is an account-doc AUTHORING surface, so it opens the
+  // account doc LAZILY here (D10) and authors figureType family notes through the
+  // seam — a CRDT edit that persists offline + replays on reconnect + is undoable,
+  // and that the alarm projects into the D1 index the journal list reads back. The
+  // REST `createFamilyEntry` prop stays as the transitional fallback (the worker
+  // keeps the route as a shim) for a signed-out/idle account store.
+  const account = useAccount();
+  const createFamilyEntry = useCallback(
+    async (input: {
+      figureType: string;
+      danceScope: string;
+      kind: AnnotationKind;
+      text: string;
+      count?: number;
+      role?: "leader" | "follower";
+    }) => {
+      // The account store is open only for a signed-in user with a resolved id;
+      // fall back to the REST prop otherwise (tests / signed-out compose).
+      if (!account.isOpen) {
+        await props.createFamilyEntry(input);
+        return;
+      }
+      account.store.createFamilyNote({
+        figureType: input.figureType,
+        danceScope:
+          input.danceScope === "all" || !isDanceId(input.danceScope) ? "all" : input.danceScope,
+        kind: input.kind,
+        text: input.text,
+        ...(input.count != null ? { count: input.count } : {}),
+        ...(input.role != null ? { role: input.role } : {}),
+      });
+    },
+    [account, props],
+  );
+
   const refresh = useCallback(() => {
     setError(false);
     setEntries(null);
@@ -77,7 +114,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
           setComposing(false);
           refresh();
         }}
-        createFamilyEntry={props.createFamilyEntry}
+        createFamilyEntry={createFamilyEntry}
         createRoutineEntry={(routineRef, input) =>
           props.createRoutineEntry(routineRef, { ...input, anchors: input.anchors })
         }
