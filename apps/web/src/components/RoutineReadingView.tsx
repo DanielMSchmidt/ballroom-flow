@@ -23,10 +23,10 @@ import {
   type NumberedBeatEntry,
   numberRoutineBeats,
   type PlacementPart,
+  partBeatSpan,
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
-  resolveFigureBars,
   resolveFigureCounts,
   slowQuickTokens,
   windowAttributes,
@@ -313,8 +313,11 @@ function figureCounts(
 }
 
 /** Number the whole routine's beats once (US-004a), returning a placement-id →
- *  numbered-entry map. Threads a single counter across every section/placement in
- *  order; a null (loading/missing) figure contributes no beats (best effort). */
+ *  numbered-entry map. Threads a single counter across every section/placement
+ *  in order; each placement advances it by its LENGTH — the figure's authored
+ *  counts, a portion window's beat span — never by how many steps it carries
+ *  (a held Slow still occupies its beats). A null (loading/missing) figure
+ *  contributes no beats (best effort). */
 function numberRoutineBeats_forRoutine(
   sections: RoutineDoc["sections"],
   resolved: Map<string, ResolvedPlacement>,
@@ -325,35 +328,41 @@ function numberRoutineBeats_forRoutine(
   const beatsPerBar = DANCES[dance].beatsPerBar;
   const ids: string[] = [];
   const entries: RoutineBeatEntry[] = [];
-  // For the slow/quick lens, each figure's tokens come from its OWN step
-  // durations (bounded by its authored length), not the continuous counter —
-  // so we remember each figure entry's end count (bars × beatsPerBar + 1).
-  const figureEndByIndex = new Map<number, number>();
   for (const section of sections) {
     for (const pl of section.placements) {
-      const index = ids.length;
       ids.push(pl.id);
       if (pl.source === "break") {
         entries.push({ kind: "break", beats: pl.beats ?? beatsPerBar });
-      } else {
-        const fig = resolved.get(pl.id)?.figure ?? null;
-        entries.push({ kind: "figure", counts: fig ? figureCounts(fig, roleView, pl.part) : [] });
-        if (fig) figureEndByIndex.set(index, resolveFigureBars(fig) * beatsPerBar + 1);
+        continue;
       }
+      const fig = resolved.get(pl.id)?.figure ?? null;
+      if (!fig) {
+        entries.push({ kind: "figure", counts: [] });
+        continue;
+      }
+      const part = pl.part ?? null;
+      // Block-local counts: a portion window rebases so its first beat is 1
+      // (same `from` rounding as windowAttributes/partBeatSpan).
+      const from = part ? Math.max(1, Math.ceil(part.fromCount)) : 1;
+      const counts = figureCounts(fig, roleView, part).map((c) => c - (from - 1));
+      entries.push({
+        kind: "figure",
+        counts,
+        beats: part ? partBeatSpan(part) : resolveFigureCounts(fig),
+      });
     }
   }
   const numbered = numberRoutineBeats(entries, dance);
   if (timingView === "slowquick") {
     // Replace each figure's numeric tokens with slow/quick syllables. Breaks
-    // keep their continuous beat span (a break has no rhythm to notate).
+    // keep their continuous beat span (a break has no rhythm to notate). Each
+    // figure's tokens come from its OWN step durations, bounded by the block's
+    // length (`beats` + 1 is the boundary the last step runs to).
     for (let i = 0; i < numbered.length; i++) {
       const entry = numbered[i];
       const source = entries[i];
       if (entry?.kind === "figure" && source?.kind === "figure") {
-        entry.tokens = slowQuickTokens(
-          source.counts,
-          figureEndByIndex.get(i) ?? source.counts.length + 1,
-        );
+        entry.tokens = slowQuickTokens(source.counts, (source.beats ?? source.counts.length) + 1);
       }
     }
   }

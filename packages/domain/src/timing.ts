@@ -154,9 +154,13 @@ export function slowQuickTokens(counts: number[], endCount: number): string[] {
 }
 
 /** One entry in a routine's ordered beat stream: a figure (its distinct sorted
- *  counts) or a break (its whole-beat duration). */
+ *  BLOCK-LOCAL counts — a portioned placement rebases its window so the first
+ *  windowed beat is count 1 — plus its length in whole beats) or a break (its
+ *  whole-beat duration). `beats` is the figure's authored length
+ *  (`resolveFigureCounts`; a portion window: its `partBeatSpan`) — when absent,
+ *  the block falls back to the last whole beat a step covers. */
 export type RoutineBeatEntry =
-  | { kind: "figure"; counts: number[] }
+  | { kind: "figure"; counts: number[]; beats?: number }
   | { kind: "break"; beats: number };
 
 /** A numbered entry aligned 1:1 with the {@link RoutineBeatEntry} input. */
@@ -177,10 +181,16 @@ export type NumberedBeatEntry =
  * A single running whole-beat counter threads through every entry in order; the
  * displayed number wraps at the dance's phrase length (Waltz/Viennese 6, others
  * 8), so a figure starting a phrase reads "1" and one starting the second bar
- * reads "4" (Waltz) / "5" (4/4). Only WHOLE beats advance the counter — an
- * off-beat renders as its symbol (&/e/a) and consumes no number. A break occupies
- * its `beats` whole beats (advancing the counter) and reports the phrase span it
- * covers (e.g. "beats 4–6") plus its bar count.
+ * reads "4" (Waltz) / "5" (4/4). Each entry advances the counter by its LENGTH
+ * in beats — a figure's `beats` (falling back to the last whole beat a step
+ * covers), a break's `beats` — never by how many steps it carries, so a held
+ * Slow still occupies its beats and the next figure starts after them
+ * (⟳2026-07-14; previously each whole-beat step advanced the counter by one,
+ * mis-starting everything after a figure whose steps don't fill its length).
+ * Within a figure a step is numbered by its own whole-beat offset from the
+ * block start — a Feather (steps 1, 3, 4) reads "1 3 4" — and an off-beat
+ * renders as its symbol (&/e/a) alone, consuming no number. A break reports
+ * the phrase span it covers (e.g. "beats 4–6") plus its bar count.
  *
  * Pure and display-only: the underlying float counts are untouched (the edit view
  * keeps per-figure LOCAL counts). Output is aligned 1:1 with `entries`.
@@ -201,13 +211,23 @@ export function numberRoutineBeats(
       const span = beats === 1 ? `beat ${startBeat}` : `beats ${startBeat}–${endBeat}`;
       return { kind: "break", beats, bars, startBeat, endBeat, span };
     }
+    const startBeat = beat; // the block's start — every step numbers from here
     const tokens = entry.counts.map((count) => {
       const symbol = offBeatSymbol(count);
       if (symbol !== null) return symbol; // off-beat: symbol only, no number consumed
-      const label = String((beat % phraseBeats) + 1);
-      beat += 1;
-      return label;
+      return String(((startBeat + Math.floor(count) - 1) % phraseBeats) + 1);
     });
+    beat += figureBeatSpan(entry);
     return { kind: "figure", tokens };
   });
+}
+
+/** The whole beats a figure entry occupies: its authored `beats` when given
+ *  (≥1), else the last whole beat any of its steps covers (an off-beat rides
+ *  within its beat), else 0 — an unloaded/empty figure contributes no time. */
+function figureBeatSpan(entry: { counts: number[]; beats?: number }): number {
+  if (typeof entry.beats === "number" && entry.beats >= 1) return Math.floor(entry.beats);
+  let last = 0;
+  for (const count of entry.counts) last = Math.max(last, Math.floor(count));
+  return last;
 }
