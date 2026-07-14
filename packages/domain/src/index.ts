@@ -55,7 +55,7 @@ export {
   SUB_BEATS,
   windowAttributes,
 } from "./figure-grid";
-export { matchesFigureType } from "./figuretype";
+export { figureTypeNoteCount, matchesFigureType } from "./figuretype";
 export {
   cloneRoutine,
   copyFigureForFork,

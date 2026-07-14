@@ -140,6 +140,26 @@ describe("write-body length/enum bounds (storage-growth + data-quality hardening
     ).toBe(false);
   });
 
+  it("zFamilyNoteBody accepts a timed dance-scoped note but rejects count/role with 'all' (WEP-0004)", () => {
+    // A count pins the note to one moment of every matching figure IN ONE DANCE;
+    // counts don't align across dances, so "all" + count/role is invalid.
+    const base = { kind: "note" as const, text: "settle before the chassé", figureType: "whisk" };
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "waltz", count: 3 }).success).toBe(
+      true,
+    );
+    expect(
+      zFamilyNoteBody.safeParse({ ...base, danceScope: "waltz", count: 3, role: "leader" }).success,
+    ).toBe(true);
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "all", count: 3 }).success).toBe(false);
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "all", role: "leader" }).success).toBe(
+      false,
+    );
+    // A non-positive count is not a timing position (the grid starts at 1).
+    expect(zFamilyNoteBody.safeParse({ ...base, danceScope: "waltz", count: 0 }).success).toBe(
+      false,
+    );
+  });
+
   it("zCreateFigure bounds the attributes array (an over-long timeline is not a real figure)", () => {
     const base = {
       figureRef: "fig_1",

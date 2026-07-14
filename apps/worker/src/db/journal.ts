@@ -88,11 +88,16 @@ function humanize(slug: string): string {
     .join(" ");
 }
 
-/** The chip label for a figureType anchor: "all Whisks · all Waltz" / "· all dances". */
-export function figureTypeLabel(figureType: string, danceScope: string): string {
+/** The chip label for a figureType anchor: "all Whisks · all Waltz" / "· all
+ *  dances"; a TIMED note (WEP-0004) appends its pinned count ("· count 3"). */
+export function figureTypeLabel(
+  figureType: string,
+  danceScope: string,
+  count?: number | null,
+): string {
   const family = `all ${humanize(figureType)}s`;
   const scope = danceScope === "all" ? "all dances" : `all ${humanize(danceScope)}`;
-  return `${family} · ${scope}`;
+  return count != null ? `${family} · ${scope} · count ${count}` : `${family} · ${scope}`;
 }
 
 /** Parse a stored anchors JSON blob defensively (bad/empty → []). */
@@ -125,6 +130,9 @@ interface AccountNoteRow {
   text: string;
   figureType: string;
   danceScope: string;
+  /** WEP-0004 timed-note fields (migration 0018); NULL = untimed v1 note. */
+  count: number | null;
+  role: string | null;
   createdAt: number;
   displayName: string | null;
   identityColor: string | null;
@@ -182,7 +190,8 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
   const ownNotes = await bindAll<AccountNoteRow>(
     db,
     `SELECT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
-            f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
+            f.figureType, f.danceScope, f.count, f.role, f.updatedAt AS createdAt,
+            u.displayName, u.identityColor
      FROM figure_type_note_index f
      LEFT JOIN users u ON u.id = f.authorId
      WHERE f.deletedAt IS NULL AND f.kind IN ('lesson','practice') AND f.authorId = ?`,
@@ -191,7 +200,8 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
   const sharedNotes = await bindAll<AccountNoteRow>(
     db,
     `SELECT DISTINCT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
-            f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
+            f.figureType, f.danceScope, f.count, f.role, f.updatedAt AS createdAt,
+            u.displayName, u.identityColor
      FROM figure_type_note_index f
      JOIN membership ma ON ma.userId = f.authorId AND ma.deletedAt IS NULL
      JOIN membership me ON me.docRef = ma.docRef AND me.userId = ? AND me.deletedAt IS NULL
@@ -231,7 +241,11 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
           type: "figureType",
           figureType: r.figureType,
           danceScope: r.danceScope,
-          label: figureTypeLabel(r.figureType, r.danceScope),
+          // WEP-0004: a timed note carries its count/role so the client can pin
+          // it; keys stay absent on the untimed v1 corpus.
+          ...(r.count != null ? { count: r.count } : {}),
+          ...(r.role != null ? { role: r.role } : {}),
+          label: figureTypeLabel(r.figureType, r.danceScope, r.count),
         },
       ],
       createdAt: r.createdAt,

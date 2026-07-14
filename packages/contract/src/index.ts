@@ -154,15 +154,29 @@ export type FigureRefBody = z.infer<typeof zFigureRefBody>;
  * Account-scoped figure-family note write (T6): a lesson/practice/note attached
  * to a figureType within a dance scope. Replaces a hand-narrowed untrusted body.
  */
-export const zFamilyNoteBody = z.object({
-  kind: z.enum(["note", "lesson", "practice"]),
-  text: z.string().trim().min(1).max(4000, "Keep the note under 4000 characters"),
-  figureType: z.string().trim().min(1).max(120),
-  // A figureType note scopes to one dance or the whole family ("all", PLAN §2.6).
-  // Constrained to that set so a garbage scope — which would silently never match
-  // any routine's dance in the journal join — can't be persisted as dead data.
-  danceScope: z.enum([...DANCE_IDS, "all"]),
-});
+export const zFamilyNoteBody = z
+  .object({
+    kind: z.enum(["note", "lesson", "practice"]),
+    text: z.string().trim().min(1).max(4000, "Keep the note under 4000 characters"),
+    figureType: z.string().trim().min(1).max(120),
+    // A figureType note scopes to one dance or the whole family ("all", PLAN §2.6).
+    // Constrained to that set so a garbage scope — which would silently never match
+    // any routine's dance in the journal join — can't be persisted as dead data.
+    danceScope: z.enum([...DANCE_IDS, "all"]),
+    // WEP-0004: a TIMED family note — pin to one count (the timing grid starts
+    // at 1) and optionally one side. Additive; absent = the v1 whole-figure note.
+    count: z.number().positive().optional(),
+    role: z.enum(["leader", "follower"]).nullish(),
+  })
+  .superRefine((body, ctx) => {
+    // Counts don't align across dances — a timed/roled note needs a concrete dance.
+    if (body.danceScope === "all" && (body.count != null || body.role != null)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a timed figure-family note cannot span all dances",
+      });
+    }
+  });
 export type FamilyNoteBody = z.infer<typeof zFamilyNoteBody>;
 
 /**
@@ -303,6 +317,8 @@ export const zJournalAnchor = z.object({
   count: z.number().optional(),
   figureType: z.string().optional(),
   danceScope: z.string().optional(),
+  /** WEP-0004: the side a timed figureType note narrows to (absent = both). */
+  role: z.enum(["leader", "follower"]).nullish(),
   /** Pre-resolved display label for the link chip (server-side, no client refetch). */
   label: z.string().optional(),
 });

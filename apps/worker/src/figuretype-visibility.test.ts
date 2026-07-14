@@ -202,6 +202,77 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
     );
   });
 
+  it("round-trips a TIMED family note (count + role) and rejects 'all'-scope timing (WEP-0004)", async () => {
+    // Intent: the rushed Whisk — "count 3 of every Whisk in my Waltz choreos"
+    //   persists count/role (migration 0018 columns) and the co-member read
+    //   returns them on the note AND its figureType anchor, so the client can
+    //   pin the note in the grid. The invariant (no cross-dance timing) is
+    //   enforced at the REST boundary: danceScope "all" + count → 400.
+    const docRef = "rt_timed_note";
+    await seedDb({
+      users: [{ id: "timed_author", displayName: "T", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "timed_author", doName: docRef, dance: "waltz" }],
+      memberships: [{ id: "m_t1", docRef, userId: "timed_author", role: "editor" }],
+    });
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "timed_author",
+      docRef,
+      role: "editor",
+    });
+    const created = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "practice",
+        text: "settle before the chassé",
+        figureType: "whisk",
+        danceScope: "waltz",
+        count: 3,
+        role: "leader",
+      }),
+    });
+    expect(created.status).toBe(201);
+
+    const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
+      headers: ctx.authHeaders(),
+    });
+    expect(got.status).toBe(200);
+    const body = await got.json<{
+      notes: Array<{
+        figureType: string;
+        count?: number | null;
+        role?: string | null;
+        anchors: Array<Record<string, unknown>>;
+      }>;
+    }>();
+    const note = body.notes.find((n) => n.figureType === "whisk");
+    expect(note).toBeDefined();
+    expect(note?.count).toBe(3);
+    expect(note?.role).toBe("leader");
+    expect(note?.anchors[0]).toMatchObject({
+      type: "figureType",
+      figureType: "whisk",
+      danceScope: "waltz",
+      count: 3,
+      role: "leader",
+    });
+
+    // The boundary invariant: a timed note cannot span all dances.
+    const rejected = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "practice",
+        text: "x",
+        figureType: "whisk",
+        danceScope: "all",
+        count: 3,
+      }),
+    });
+    expect(rejected.status).toBe(400);
+  });
+
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {
     // Intent: the co-member family-note discovery query is indexed (NFR).
     // Arrange: the EXACT SQL the route runs — familyNotesForMembers filters by

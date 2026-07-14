@@ -178,12 +178,14 @@ export interface DomainApi {
   // depend on) my next undo target? Advisory only; undo still always proceeds.
   wasSupersededByOthers<T>(doc: AmDoc<T>, actorId: string): boolean;
 
-  // US-011 figureType note matching
+  // US-011 figureType note matching (+ WEP-0004 timed-note count pinning)
   matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean;
+  figureTypeNoteCount(anchor: Anchor, figure: FigureDoc): number | null;
 
   // US-012 schemas.ts
   parseAttributeRead(input: unknown): Attribute;
   parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): Attribute;
+  parseAnchors(input: unknown): Anchor[] | null;
 
   // US-013 migration ladder
   CURRENT_SCHEMA_VERSION: number;

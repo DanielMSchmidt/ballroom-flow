@@ -114,8 +114,20 @@ export function makeAnchor(overrides: Partial<Extract<Anchor, { type: "point" }>
   };
 }
 
-export function makeFigureTypeAnchor(figureType: FigureType, danceScope: DanceId | "all"): Anchor {
-  return { type: "figureType", figureType, danceScope };
+export function makeFigureTypeAnchor(
+  figureType: FigureType,
+  danceScope: DanceId | "all",
+  opts: { count?: number; role?: Role } = {},
+): Anchor {
+  // Conditional spread: an Automerge doc can't store `undefined`, so absent
+  // opts must stay ABSENT keys (WEP-0004 timed anchors are additive).
+  return {
+    type: "figureType",
+    figureType,
+    danceScope,
+    ...(opts.count != null ? { count: opts.count } : {}),
+    ...(opts.role != null ? { role: opts.role } : {}),
+  };
 }
 
 export function makeAnnotation(overrides: Partial<Annotation> = {}): Annotation {

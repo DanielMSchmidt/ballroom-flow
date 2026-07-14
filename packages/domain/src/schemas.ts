@@ -37,20 +37,39 @@ export function parseAnchors(input: unknown): Anchor[] | null {
   return result.success ? result.data : null;
 }
 
-export const zAnchor: z.ZodType<Anchor> = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("point"),
-    figureRef: z.string(),
-    count: z.number(),
-    role: z.enum(["leader", "follower"]).nullish(),
-  }),
-  z.object({ type: z.literal("figure"), figureRef: z.string() }),
-  z.object({
-    type: z.literal("figureType"),
-    figureType: z.string(),
-    danceScope: z.union([z.custom<DanceId>(isDanceId), z.literal("all")]),
-  }),
-]);
+export const zAnchor: z.ZodType<Anchor> = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("point"),
+      figureRef: z.string(),
+      count: z.number(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+    z.object({ type: z.literal("figure"), figureRef: z.string() }),
+    z.object({
+      type: z.literal("figureType"),
+      figureType: z.string(),
+      danceScope: z.union([z.custom<DanceId>(isDanceId), z.literal("all")]),
+      // WEP-0004: a timed family note. Optional + additive — the whole v1
+      // corpus keeps parsing. The superRefine below carries the invariant.
+      count: z.number().optional(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+  ])
+  .superRefine((anchor, ctx) => {
+    // Counts don't align across dances (a Waltz Whisk's 1-2-3 vs its Quickstep
+    // sibling's S-Q-Q), so a pinned/roled family note requires a concrete dance.
+    if (
+      anchor.type === "figureType" &&
+      anchor.danceScope === "all" &&
+      (anchor.count != null || anchor.role != null)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a timed figureType anchor cannot span all dances",
+      });
+    }
+  });
 
 /** The structural shape shared by read + write (value validity differs). */
 const baseAttribute = z.object({

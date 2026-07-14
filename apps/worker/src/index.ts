@@ -651,7 +651,10 @@ app.get("/api/routines/:id/family-notes", async (c) => {
   ];
   const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
   // Shape each row as an Annotation-like note (with a figureType anchor) so the
-  // client can match it to the routine's figures (resolveFamilyNotesFor).
+  // client can match it to the routine's figures (resolveFamilyNotesFor). A
+  // TIMED note (WEP-0004) carries count/role on the note AND its anchor so the
+  // client can pin it in the figure grid; keys are conditionally spread — an
+  // untimed row keeps the exact v1 shape.
   const notes = rows.map((r) => ({
     id: r.noteId,
     authorId: r.authorId,
@@ -659,7 +662,17 @@ app.get("/api/routines/:id/family-notes", async (c) => {
     text: r.text,
     figureType: r.figureType,
     danceScope: r.danceScope,
-    anchors: [{ type: "figureType", figureType: r.figureType, danceScope: r.danceScope }],
+    ...(r.count != null ? { count: r.count } : {}),
+    ...(r.role != null ? { role: r.role } : {}),
+    anchors: [
+      {
+        type: "figureType",
+        figureType: r.figureType,
+        danceScope: r.danceScope,
+        ...(r.count != null ? { count: r.count } : {}),
+        ...(r.role != null ? { role: r.role } : {}),
+      },
+    ],
   }));
   return c.json({ notes });
 });
@@ -674,7 +687,9 @@ app.post("/api/account/family-notes", async (c) => {
 
   const parsed = zFamilyNoteBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "invalid_family_note" }, 400);
-  const { kind, text, figureType, danceScope } = parsed.data;
+  // count/role are the WEP-0004 timed-note fields; zFamilyNoteBody has already
+  // rejected them with danceScope "all" (counts don't align across dances).
+  const { kind, text, figureType, danceScope, count, role } = parsed.data;
 
   const noteId = newId();
   await insertFamilyNote(c.env.DB, {
@@ -684,8 +699,22 @@ app.post("/api/account/family-notes", async (c) => {
     danceScope,
     kind,
     text,
+    ...(count != null ? { count } : {}),
+    ...(role != null ? { role } : {}),
   });
-  return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
+  return c.json(
+    {
+      id: noteId,
+      authorId: user.sub,
+      figureType,
+      danceScope,
+      kind,
+      text,
+      ...(count != null ? { count } : {}),
+      ...(role != null ? { role } : {}),
+    },
+    201,
+  );
 });
 
 // GET /api/journal — the signed-in user's cross-routine Journal (T6, PLAN §2.6/

@@ -123,7 +123,17 @@ export type AnnotationKind = "note" | "lesson" | "practice";
 export type Anchor =
   | { type: "point"; figureRef: string; count: number; role?: Role }
   | { type: "figure"; figureRef: string }
-  | { type: "figureType"; figureType: FigureType; danceScope: DanceId | "all" };
+  | {
+      type: "figureType";
+      figureType: FigureType;
+      danceScope: DanceId | "all";
+      /** WEP-0004: pin the note to one count of every matching figure. Only
+       *  valid with a CONCRETE danceScope — counts don't align across dances
+       *  (zAnchor enforces this; absent = the whole figure, the v1 shape). */
+      count?: number;
+      /** WEP-0004: narrow a timed note to one side (absent/null = both). */
+      role?: Role;
+    };
 
 export type Reply = {
   id: string;
