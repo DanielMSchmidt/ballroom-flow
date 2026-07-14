@@ -1,36 +1,44 @@
-// T6 — the Journal link picker (frames 3.4 / 3.5 / 3.7). A bottom-sheet,
-// multi-step chooser (TYPE → FIGURE/SCOPE) that produces a JournalLink for the
-// entry editor. Per the LOCKED full-parity decision, the routine-scoped paths
-// ("Specific place", "This choreo only") are NOT disabled: they let the user pick
-// one of THEIR routines and the figure within it, yielding a point/figure anchor
-// the editor saves via createAnnotation. The "An attribute" row is the deferred
-// v1.1 predicate anchor — visibly disabled. Data arrives via injected loaders
-// (the store seam); the component holds no I/O of its own.
-import { type Anchor, countLabel, isDanceId } from "@weavesteps/domain";
+// WEP-0004 — the Journal link picker, rebuilt CHOREO-FIRST. One linear
+// bottom-sheet flow: pick a choreo → pick a figure FROM that choreo (type-ahead
+// filter) → place the note via the figure's attribute grid (entire figure, or
+// one count, with a Both/Leader/Follower role lens) → choose the sharing scope
+// LAST. Scope options are gated by the placement: a whole-figure note may span
+// every dance the family exists in; a TIMED (count) note scopes to this dance
+// or this choreo only — never across dances (counts don't align: a Waltz
+// Whisk's 1-2-3 vs its Quickstep sibling's S-Q-Q).
+//
+// The produced JournalLink decides the save path in the entry editor:
+// routine → createAnnotation on `routineRef` (figure/point anchor); account →
+// createFamilyNote (figureType anchor, optionally timed). Data arrives via
+// injected loaders (the store seam); the component holds no I/O of its own.
+import { type Anchor, type Attribute, countLabel, isDanceId, type Role } from "@weavesteps/domain";
 import { useEffect, useState } from "react";
 import { danceName, type Locale, useLocale, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
-import { type FigureFamilyOption, figureFamilies } from "../store/journal";
-import { Button, Input, List, ListRow, Sheet, Spinner } from "../ui";
+import { AttrChip, Button, Input, List, ListRow, SegmentedToggle, Sheet, Spinner } from "../ui";
+import { displayValue } from "./role-view";
 
-/** One of the user's routines (the routine chooser). */
+/** One of the user's routines (the choreo chooser). */
 export interface RoutineOption {
   docRef: string;
   title: string;
   dance: string;
 }
-/** A figure placed in a routine (resolved from its snapshot). */
+/** A figure placed in a routine, resolved from its snapshot (a variant resolves
+ *  against its live base) — distinct sorted counts + the live attributes the
+ *  placement grid renders. */
 export interface RoutineFigureOption {
   figureRef: string;
   name: string;
   figureType: string;
-  /** The figure's distinct sorted counts, for the "On count N" grain (US-004a). */
   counts: number[];
+  attributes: Attribute[];
 }
 
 /**
  * A built link the editor stores. `home` decides the save path:
- * routine → createAnnotation on `routineRef`; account → createFamilyNote.
+ * routine → createAnnotation on `routineRef`; account → createFamilyNote
+ * (WEP-0004: optionally TIMED — count/role ride along, never with "all").
  */
 export type JournalLink =
   | { home: "routine"; routineRef: string; routineTitle: string; anchor: Anchor; label: string }
@@ -38,6 +46,8 @@ export type JournalLink =
       home: "account";
       figureType: string;
       danceScope: string;
+      count?: number;
+      role?: "leader" | "follower";
       anchor: Anchor;
       label: string;
     };
@@ -46,17 +56,17 @@ export interface JournalLinkPickerProps {
   open: boolean;
   onClose: () => void;
   onPick: (link: JournalLink) => void;
-  /** The user's routines (for the routine chooser). */
+  /** The user's routines (for the choreo chooser). */
   loadRoutineOptions: () => Promise<RoutineOption[]>;
-  /** A routine's figures (for the figure-in-routine chooser). */
+  /** A routine's figures (for the figure-in-choreo chooser + placement grid). */
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
-  /** The figure-family catalog (defaults to the library catalog). */
-  families?: FigureFamilyOption[];
 }
 
-type Step = "type" | "family" | "scope" | "routine" | "figureInRoutine" | "figureGrain";
-/** Which routine-scoped anchor we're building once a routine+figure is chosen. */
-type RoutineIntent = "point" | "figure";
+type Step = "choreo" | "figure" | "place" | "scope";
+/** WHERE on the figure the note lands (the place step's outcome). */
+type Placement = { kind: "whole" } | { kind: "count"; count: number };
+/** The place step's role lens; "both" = no role stored (the null convention). */
+type RoleLens = "both" | "leader" | "follower";
 
 function titleCase(s: string): string {
   return s
@@ -79,208 +89,176 @@ export function JournalLinkPicker({
   onPick,
   loadRoutineOptions,
   loadRoutineFigures,
-  families,
 }: JournalLinkPickerProps): React.JSX.Element | null {
   const t = useMessages(journalMessages);
   const locale = useLocale();
-  const familyList = families ?? figureFamilies();
-  const [step, setStep] = useState<Step>("type");
-  const [family, setFamily] = useState<FigureFamilyOption | null>(null);
-  const [routineIntent, setRoutineIntent] = useState<RoutineIntent>("figure");
+  const [step, setStep] = useState<Step>("choreo");
   const [routine, setRoutine] = useState<RoutineOption | null>(null);
-  const [pickedFigure, setPickedFigure] = useState<RoutineFigureOption | null>(null);
+  const [figure, setFigure] = useState<RoutineFigureOption | null>(null);
+  const [placement, setPlacement] = useState<Placement>({ kind: "whole" });
+  const [roleLens, setRoleLens] = useState<RoleLens>("both");
 
   // Reset to the first step whenever the sheet (re)opens.
   useEffect(() => {
     if (open) {
-      setStep("type");
-      setFamily(null);
+      setStep("choreo");
       setRoutine(null);
-      setPickedFigure(null);
+      setFigure(null);
+      setPlacement({ kind: "whole" });
+      setRoleLens("both");
     }
   }, [open]);
 
   if (!open) return null;
 
   const titles: Record<Step, string> = {
-    type: t.titleType,
-    family: t.titleFamily,
+    choreo: t.titleChoreo,
+    figure: routine ? t.titleFigureIn(routine.title || t.untitled) : t.titleChoreo,
+    place: figure ? t.titleGrain(figure.name) : t.titleGrainFallback,
     scope: t.titleScope,
-    routine: t.titleRoutine,
-    figureInRoutine: routine ? t.titleFigureIn(routine.title) : t.titleFamily,
-    figureGrain: pickedFigure ? t.titleGrain(pickedFigure.name) : t.titleGrainFallback,
-  };
-
-  /** Finalize a figureType (account) link from the chosen family + dance scope. */
-  const pickFigureType = (danceScope: string): void => {
-    if (!family) return;
-    const scopeLabel =
-      danceScope === "all" ? t.allDances : t.scopeAllDance(danceLabel(danceScope, locale));
-    onPick({
-      home: "account",
-      figureType: family.figureType,
-      danceScope,
-      anchor: {
-        type: "figureType",
-        figureType: family.figureType,
-        danceScope: isDanceId(danceScope) || danceScope === "all" ? danceScope : "all",
-      },
-      label: `${t.allOfType(titleCase(family.figureType))} · ${scopeLabel}`,
-    });
-    onClose();
-  };
-
-  /** After a figure in a routine is chosen, ask WHERE on it — the whole figure or
-   *  a specific count (US-004a grain step). */
-  const pickRoutineFigure = (fig: RoutineFigureOption): void => {
-    setPickedFigure(fig);
-    setStep("figureGrain");
-  };
-
-  /** Finalize a routine-scoped link from the chosen figure + grain. "whole" →
-   *  a figure anchor ("Whisk · whole figure"); a count → a point anchor
-   *  ("Whisk · count 2"). */
-  const finalizeGrain = (grain: "whole" | number): void => {
-    if (!routine || !pickedFigure) return;
-    const anchor: Anchor =
-      grain === "whole"
-        ? { type: "figure", figureRef: pickedFigure.figureRef }
-        : { type: "point", figureRef: pickedFigure.figureRef, count: grain };
-    const label =
-      grain === "whole"
-        ? t.wholeFigureChip(pickedFigure.name)
-        : t.countChip(pickedFigure.name, countLabel(grain));
-    onPick({
-      home: "routine",
-      routineRef: routine.docRef,
-      routineTitle: routine.title,
-      anchor,
-      label,
-    });
-    onClose();
   };
 
   const back = (): void => {
-    if (step === "family" || step === "routine") setStep("type");
-    else if (step === "scope") setStep("family");
-    else if (step === "figureInRoutine") setStep(routineIntent === "point" ? "routine" : "scope");
-    else if (step === "figureGrain") setStep("figureInRoutine");
+    if (step === "figure") setStep("choreo");
+    else if (step === "place") setStep("figure");
+    else if (step === "scope") setStep("place");
   };
+
+  /** The stored role for the current lens (Both → absent, the null convention). */
+  const lensRole = (): Role | undefined => (roleLens === "both" ? undefined : roleLens);
+
+  /** The " · Leader" chip suffix for a role-narrowed link. */
+  const roleSuffix = (): string => {
+    if (roleLens === "both") return "";
+    return t.roleChipSuffix(roleLens === "leader" ? t.roleLeader : t.roleFollower);
+  };
+
+  /** Finalize the link once the scope is chosen (the flow's last step). */
+  const finalize = (scope: "choreo" | "dance" | "all"): void => {
+    if (!routine || !figure) return;
+    const role = lensRole();
+    const timed = placement.kind === "count";
+    if (scope === "choreo") {
+      const anchor: Anchor =
+        placement.kind === "whole"
+          ? { type: "figure", figureRef: figure.figureRef }
+          : {
+              type: "point",
+              figureRef: figure.figureRef,
+              count: placement.count,
+              ...(role ? { role } : {}),
+            };
+      const label =
+        placement.kind === "whole"
+          ? t.wholeFigureChip(figure.name)
+          : `${t.countChip(figure.name, countLabel(placement.count))}${roleSuffix()}`;
+      onPick({
+        home: "routine",
+        routineRef: routine.docRef,
+        routineTitle: routine.title,
+        anchor,
+        label,
+      });
+    } else {
+      // Account (figureType) link. The "dance" scope keeps the routine's dance;
+      // a timed anchor never carries "all" (the scope row isn't offered, and
+      // zAnchor/zFamilyNoteBody reject it anyway).
+      const danceScope = scope === "all" ? "all" : routine.dance;
+      const anchorScope = isDanceId(danceScope) || danceScope === "all" ? danceScope : "all";
+      const family = t.allOfType(titleCase(figure.figureType));
+      const scopeLabel =
+        scope === "all" ? t.allDances : t.scopeAllDance(danceLabel(routine.dance, locale));
+      const timing =
+        placement.kind === "count" ? ` · ${t.onCount(countLabel(placement.count))}` : "";
+      onPick({
+        home: "account",
+        figureType: figure.figureType,
+        danceScope,
+        ...(placement.kind === "count" ? { count: placement.count } : {}),
+        ...(timed && role ? { role } : {}),
+        anchor: {
+          type: "figureType",
+          figureType: figure.figureType,
+          danceScope: anchorScope,
+          ...(placement.kind === "count" ? { count: placement.count } : {}),
+          ...(timed && role ? { role } : {}),
+        },
+        label: `${family} · ${scopeLabel}${timing}${timed ? roleSuffix() : ""}`,
+      });
+    }
+    onClose();
+  };
+
+  const timed = placement.kind === "count";
+  // The dance-wide scope is only offered when the routine's dance is a real
+  // DanceId (a legacy/garbage dance could never match the worker's enum).
+  const danceScopeAvailable = routine ? isDanceId(routine.dance) : false;
 
   return (
     <Sheet open={open} onClose={onClose} title={titles[step]}>
-      {step === "type" && (
-        <List aria-label={t.linkTypeList}>
-          <ListRow
-            title={t.specificPlace}
-            subtitle={t.specificPlaceHint}
-            onClick={() => {
-              setRoutineIntent("point");
-              setStep("routine");
-            }}
-          />
-          <ListRow title={t.aFigure} subtitle={t.aFigureHint} onClick={() => setStep("family")} />
-          <ListRow
-            title={t.anAttribute}
-            subtitle={t.anAttributeHint}
-            trailing={<span className="text-2xs text-ink-faint">{t.comingLater}</span>}
-            showChevron={false}
-            disabled
-          />
-        </List>
-      )}
-
-      {step === "family" && (
-        <div className="flex flex-col gap-2">
-          <Button variant="ghost" size="sm" onClick={back}>
-            {t.backShort}
-          </Button>
-          <List aria-label={t.figureFamilies} className="max-h-[60dvh] overflow-y-auto">
-            {familyList.map((f) => (
-              <ListRow
-                key={f.figureType}
-                title={f.name}
-                subtitle={danceLabel(f.dance, locale)}
-                onClick={() => {
-                  setFamily(f);
-                  setStep("scope");
-                }}
-              />
-            ))}
-          </List>
-        </div>
-      )}
-
-      {step === "scope" && family && (
-        <div className="flex flex-col gap-2">
-          <Button variant="ghost" size="sm" onClick={back}>
-            {t.backShort}
-          </Button>
-          <p className="text-2xs text-ink-muted" style={{ fontFamily: "var(--bf-font-note)" }}>
-            {t.linking(t.allOfType(titleCase(family.figureType)))}
-          </p>
-          <List aria-label={t.linkScope}>
-            <ListRow
-              title={t.thisChoreoOnly}
-              subtitle={t.thisChoreoOnlyHint}
-              onClick={() => {
-                setRoutineIntent("figure");
-                setStep("routine");
-              }}
-            />
-            <ListRow
-              title={t.allDanceChoreos(danceLabel(family.dance, locale))}
-              subtitle={t.allDanceChoreosHint}
-              onClick={() => pickFigureType(family.dance)}
-            />
-            <ListRow
-              title={t.everyDance}
-              subtitle={t.everyDanceHint}
-              onClick={() => pickFigureType("all")}
-            />
-          </List>
-        </div>
-      )}
-
-      {step === "routine" && (
+      {step === "choreo" && (
         <RoutineChooser
           loadRoutineOptions={loadRoutineOptions}
-          onBack={back}
           onPick={(r) => {
             setRoutine(r);
-            setStep("figureInRoutine");
+            setStep("figure");
           }}
         />
       )}
 
-      {step === "figureInRoutine" && routine && (
+      {step === "figure" && routine && (
         <FigureInRoutineChooser
           routineRef={routine.docRef}
-          familyType={routineIntent === "figure" ? (family?.figureType ?? null) : null}
           loadRoutineFigures={loadRoutineFigures}
           onBack={back}
-          onPick={pickRoutineFigure}
+          onPick={(f) => {
+            setFigure(f);
+            setPlacement({ kind: "whole" });
+            setRoleLens("both");
+            setStep("place");
+          }}
         />
       )}
 
-      {step === "figureGrain" && pickedFigure && (
+      {step === "place" && figure && (
+        <PlacementGrid
+          figure={figure}
+          roleLens={roleLens}
+          onRoleLens={setRoleLens}
+          onBack={back}
+          onPick={(p) => {
+            setPlacement(p);
+            setStep("scope");
+          }}
+        />
+      )}
+
+      {step === "scope" && routine && figure && (
         <div className="flex flex-col gap-2">
           <Button variant="ghost" size="sm" onClick={back}>
             {t.backShort}
           </Button>
-          <List aria-label={t.figureGrainList}>
-            <ListRow
-              title={t.entireFigure}
-              subtitle={t.entireFigureHint}
-              onClick={() => finalizeGrain("whole")}
-            />
-            {pickedFigure.counts.map((count) => (
+          <List aria-label={t.linkScope}>
+            {danceScopeAvailable && (
               <ListRow
-                key={count}
-                title={t.onCount(countLabel(count))}
-                onClick={() => finalizeGrain(count)}
+                title={t.allDanceChoreos(danceLabel(routine.dance, locale))}
+                subtitle={t.allDanceChoreosHint}
+                onClick={() => finalize("dance")}
               />
-            ))}
+            )}
+            {/* A timed note never spans dances — the row simply isn't offered. */}
+            {!timed && (
+              <ListRow
+                title={t.everyDance}
+                subtitle={t.everyDanceHint}
+                onClick={() => finalize("all")}
+              />
+            )}
+            <ListRow
+              title={t.thisChoreoOnly}
+              subtitle={t.thisChoreoOnlyHint(routine.title || t.untitled)}
+              onClick={() => finalize("choreo")}
+            />
           </List>
         </div>
       )}
@@ -290,11 +268,9 @@ export function JournalLinkPicker({
 
 function RoutineChooser({
   loadRoutineOptions,
-  onBack,
   onPick,
 }: {
   loadRoutineOptions: () => Promise<RoutineOption[]>;
-  onBack: () => void;
   onPick: (r: RoutineOption) => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
@@ -312,9 +288,6 @@ function RoutineChooser({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        {t.backShort}
-      </Button>
       {routines === null ? (
         <Spinner size={20} label={t.loadingChoreos} />
       ) : routines.length === 0 ? (
@@ -337,13 +310,11 @@ function RoutineChooser({
 
 function FigureInRoutineChooser({
   routineRef,
-  familyType,
   loadRoutineFigures,
   onBack,
   onPick,
 }: {
   routineRef: string;
-  familyType: string | null;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
   onBack: () => void;
   onPick: (f: RoutineFigureOption) => void;
@@ -361,18 +332,12 @@ function FigureInRoutineChooser({
     };
   }, [routineRef, loadRoutineFigures]);
 
-  // For the "A figure · this choreo" path, surface the matching family first;
-  // fall back to the whole routine when none match (so the user is never stuck).
-  const list = (() => {
-    if (!figures) return null;
-    const scoped = (() => {
-      if (!familyType) return figures;
-      const matching = figures.filter((f) => f.figureType === familyType);
-      return matching.length > 0 ? matching : figures;
-    })();
-    const q = query.trim().toLowerCase();
-    return q ? scoped.filter((f) => f.name.toLowerCase().includes(q)) : scoped;
-  })();
+  const q = query.trim().toLowerCase();
+  const list = figures
+    ? q
+      ? figures.filter((f) => f.name.toLowerCase().includes(q))
+      : figures
+    : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -406,6 +371,84 @@ function FigureInRoutineChooser({
           ))}
         </List>
       )}
+    </div>
+  );
+}
+
+/**
+ * The place step (WEP-0004): a read-only rendering of the figure's attribute
+ * grid, mirroring the detail view — one row per count with that count's value
+ * chips (kind-tinted, role-lens filtered) — plus an "entire figure" row on top
+ * and a Both/Leader/Follower lens. Tapping a row picks that count.
+ */
+function PlacementGrid({
+  figure,
+  roleLens,
+  onRoleLens,
+  onBack,
+  onPick,
+}: {
+  figure: RoutineFigureOption;
+  roleLens: RoleLens;
+  onRoleLens: (lens: RoleLens) => void;
+  onBack: () => void;
+  onPick: (p: Placement) => void;
+}): React.JSX.Element {
+  const t = useMessages(journalMessages);
+  // Rows stay stable across lenses (every count of the figure); the LENS only
+  // filters which chips render — both-role (null) values always show.
+  const visible =
+    roleLens === "both"
+      ? figure.attributes
+      : figure.attributes.filter((a) => a.role == null || a.role === roleLens);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button variant="ghost" size="sm" onClick={onBack}>
+        {t.backShort}
+      </Button>
+      <SegmentedToggle
+        ariaLabel={t.stepsFor}
+        options={[
+          { value: "both", label: t.roleBoth },
+          { value: "leader", label: t.roleLeader },
+          { value: "follower", label: t.roleFollower },
+        ]}
+        value={roleLens}
+        onChange={onRoleLens}
+      />
+      <List aria-label={t.figureGrainList} className="max-h-[55dvh] overflow-y-auto">
+        <ListRow
+          title={t.entireFigure}
+          subtitle={t.entireFigureHint}
+          onClick={() => onPick({ kind: "whole" })}
+        />
+        {figure.counts.map((count) => {
+          const here = visible.filter((a) => a.count === count);
+          const values = here.map((a) => displayValue(a.value)).join(", ");
+          return (
+            <button
+              key={count}
+              type="button"
+              aria-label={t.countRowLabel(countLabel(count), values)}
+              onClick={() => onPick({ kind: "count", count })}
+              className="flex min-h-[var(--bf-touch-target)] w-full items-center gap-2 rounded-lg border border-border-default bg-surface px-3 py-2 text-left shadow-sm"
+            >
+              <span className="w-7 flex-none text-center text-sm font-bold text-ink">
+                {countLabel(count)}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-wrap gap-1">
+                {here.map((a) => (
+                  <AttrChip key={a.id} kind={a.kind} label={displayValue(a.value)} />
+                ))}
+              </span>
+              <span aria-hidden="true" className="text-ink-faint">
+                ›
+              </span>
+            </button>
+          );
+        })}
+      </List>
     </div>
   );
 }

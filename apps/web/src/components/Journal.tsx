@@ -27,6 +27,8 @@ export interface JournalProps {
     danceScope: string;
     kind: AnnotationKind;
     text: string;
+    count?: number;
+    role?: "leader" | "follower";
   }) => Promise<void>;
   createRoutineEntry: (
     routineRef: string,

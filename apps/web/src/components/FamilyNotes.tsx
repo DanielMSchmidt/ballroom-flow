@@ -7,7 +7,14 @@
 // Styling: uses the `../ui` primitives (Button, Chip) for 44px targets and the
 // shared scale; kind + dance scope render as text so colour is never the only
 // signal (#5). Keeps the accessible region/textbox/button names the tests assert.
-import type { Anchor, AnnotationKind, DanceId } from "@weavesteps/domain";
+import {
+  type Anchor,
+  type AnnotationKind,
+  countLabel,
+  type DanceId,
+  type FigureDoc,
+  figureTypeNoteCount,
+} from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -20,6 +27,9 @@ export interface FamilyNotesProps {
   figureType: string;
   /** The dance of the figure — scopes which notes apply + the "this dance" value. */
   dance: DanceId;
+  /** The resolved figure in context (WEP-0004): a TIMED note pins to its count
+   *  only when this figure covers it (figureTypeNoteCount's soft fallback). */
+  figure?: FigureDoc;
   /** All family notes loaded for the routine (members' notes). */
   notes: FamilyNote[];
   /** Whether the viewer may author a family note (commenter+). */
@@ -36,6 +46,7 @@ export interface FamilyNotesProps {
 export function FamilyNotes({
   figureType,
   dance,
+  figure,
   notes,
   canAnnotate,
   onCreate,
@@ -66,18 +77,29 @@ export function FamilyNotes({
     <section aria-label={t.familyNotes} className="flex flex-col gap-2 border-t border-line pt-3">
       <h3 className="text-sm font-medium text-ink-secondary">{t.notesOnEvery(figureType)}</h3>
       <ul aria-label={t.familyNotesList} className="flex flex-col gap-1.5">
-        {matching.map((n) => (
-          <li key={n.id} className="flex items-center gap-1.5 text-sm">
-            {/* kind + scope as text so colour is never the only signal (#5). */}
-            <Chip tone="neutral" asStatic data-kind={n.kind}>
-              {t.kindLabel(n.kind)}
-            </Chip>
-            <span className="text-ink">{n.text}</span>
-            <span className="text-2xs text-ink-faint">
-              {n.danceScope === "all" ? t.allDances : n.danceScope}
-            </span>
-          </li>
-        ))}
+        {matching.map((n) => {
+          // WEP-0004: a TIMED note pins to its count when this figure covers it;
+          // a shorter variant degrades to whole-figure display (never hidden).
+          const anchor = n.anchors[0];
+          const pinned = figure && anchor ? figureTypeNoteCount(anchor, figure) : (n.count ?? null);
+          return (
+            <li key={n.id} className="flex items-center gap-1.5 text-sm">
+              {/* kind + scope as text so colour is never the only signal (#5). */}
+              <Chip tone="neutral" asStatic data-kind={n.kind}>
+                {t.kindLabel(n.kind)}
+              </Chip>
+              <span className="text-ink">{n.text}</span>
+              {pinned != null && (
+                <Chip tone="neutral" asStatic>
+                  {t.onCount(countLabel(pinned))}
+                </Chip>
+              )}
+              <span className="text-2xs text-ink-faint">
+                {n.danceScope === "all" ? t.allDances : n.danceScope}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       {canAnnotate && (

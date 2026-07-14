@@ -1,12 +1,6 @@
 // T6 — pure journal list helpers (no I/O). Filters + by-figure grouping.
 import { describe, expect, it } from "vitest";
-import {
-  applyJournalFilter,
-  chipLabel,
-  figureFamilies,
-  type JournalEntry,
-  relativeDate,
-} from "./journal";
+import { applyJournalFilter, chipLabel, type JournalEntry, relativeDate } from "./journal";
 
 const entry = (over: Partial<JournalEntry>): JournalEntry => ({
   id: "e",
@@ -74,6 +68,11 @@ describe("chipLabel", () => {
   it("falls back to a generic step label for a point anchor with no label", () => {
     expect(chipLabel({ type: "point", figureRef: "f", count: 1 })).toBe("step 2");
   });
+  it("appends the pinned count to an unlabelled TIMED figureType anchor (WEP-0004)", () => {
+    expect(
+      chipLabel({ type: "figureType", figureType: "whisk", danceScope: "waltz", count: 3 }),
+    ).toBe("whisk · count 3");
+  });
 });
 
 describe("relativeDate", () => {
@@ -86,14 +85,5 @@ describe("relativeDate", () => {
   });
 });
 
-describe("figureFamilies", () => {
-  it("returns distinct families from the catalog with a count", () => {
-    const families = figureFamilies();
-    expect(families.length).toBeGreaterThan(3);
-    // No duplicate figureType.
-    const types = families.map((f) => f.figureType);
-    expect(new Set(types).size).toBe(types.length);
-    expect(families[0]).toHaveProperty("name");
-    expect(families[0]).toHaveProperty("dance");
-  });
-});
+// (The `figureFamilies` catalog helper was removed by WEP-0004 — every journal
+// link now starts from one of the user's choreos, so there is no catalog step.)

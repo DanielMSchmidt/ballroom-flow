@@ -1214,6 +1214,7 @@ export function Assemble({
                 <FamilyNotes
                   figureType={notatingFigure.figureType}
                   dance={routine.dance}
+                  figure={notatingFigure}
                   notes={familyNotes}
                   canAnnotate={can(role, "canAnnotate")}
                   onCreate={async (input) => {

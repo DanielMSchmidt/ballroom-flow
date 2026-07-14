@@ -6,8 +6,7 @@
 // worker owns visibility (the user + co-members on shared routines). Components
 // reach this ONLY through the store — never lib/rpc directly (the §3 boundary).
 import type { JournalEntry as ContractJournalEntry } from "@weavesteps/contract";
-import type { Anchor, AnnotationKind } from "@weavesteps/domain";
-import { LIBRARY_FIGURES } from "@weavesteps/domain";
+import type { Anchor, AnnotationKind, Attribute, FigureDoc } from "@weavesteps/domain";
 import { getLocale, pickMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import { apiGet } from "../lib/rpc";
@@ -45,28 +44,44 @@ export async function loadRoutineOptions(
 }
 
 /** A routine's placed figures as link-picker options (from its REST snapshot).
- *  Each carries its distinct sorted counts so the picker can offer an
- *  "On count N" grain (T6 / US-004a). */
+ *  Each carries its distinct sorted counts AND its live resolved attributes so
+ *  the picker's placement grid renders the figure like the detail view does
+ *  (WEP-0004): a v5 VARIANT resolves against its live base (`resolveFigure`),
+ *  exactly as the reading view renders it. */
 export async function loadRoutineFigureOptions(
   routineId: string,
   token: string | null,
   baseUrl = "",
-): Promise<{ figureRef: string; name: string; figureType: string; counts: number[] }[]> {
-  const { routine, figures } = await apiGet<{
+): Promise<
+  {
+    figureRef: string;
+    name: string;
+    figureType: string;
+    counts: number[];
+    attributes: Attribute[];
+  }[]
+> {
+  const { routine, figures, bases } = await apiGet<{
     routine: {
       sections?: { placements?: { figureRef?: string; deletedAt?: number | null }[] }[];
     };
-    figures: Record<
-      string,
-      {
-        name: string;
-        figureType: string;
-        attributes?: { count: number; deletedAt?: number | null }[];
-      }
-    >;
+    // The snapshot serializes whole FigureDoc objects (worker index.ts) — plus
+    // each variant's live base, keyed by ref.
+    figures: Record<string, FigureDoc>;
+    bases?: Record<string, FigureDoc>;
   }>(`${baseUrl}/api/routines/${encodeURIComponent(routineId)}/snapshot`, token);
+  // resolveFigure lives in the domain package next to the Automerge machinery —
+  // import it lazily so this module keeps Automerge off the app's first paint
+  // (see the module-header NOTE; same pattern as createRoutineJournalEntry).
+  const { resolveFigure } = await import("@weavesteps/domain");
   const seen = new Set<string>();
-  const out: { figureRef: string; name: string; figureType: string; counts: number[] }[] = [];
+  const out: {
+    figureRef: string;
+    name: string;
+    figureType: string;
+    counts: number[];
+    attributes: Attribute[];
+  }[] = [];
   for (const section of routine.sections ?? []) {
     for (const p of section.placements ?? []) {
       // A break placement carries no figureRef — skip it (US-004a).
@@ -74,10 +89,17 @@ export async function loadRoutineFigureOptions(
       seen.add(p.figureRef);
       const fig = figures[p.figureRef];
       if (!fig) continue;
-      const counts = [
-        ...new Set((fig.attributes ?? []).filter((a) => a.deletedAt == null).map((a) => a.count)),
-      ].sort((a, b) => a - b);
-      out.push({ figureRef: p.figureRef, name: fig.name, figureType: fig.figureType, counts });
+      const base = fig.baseFigureRef ? bases?.[fig.baseFigureRef] : undefined;
+      const resolved = base ? resolveFigure(base, fig) : fig;
+      const attributes = resolved.attributes.filter((a) => a.deletedAt == null);
+      const counts = [...new Set(attributes.map((a) => a.count))].sort((a, b) => a - b);
+      out.push({
+        figureRef: p.figureRef,
+        name: resolved.name,
+        figureType: resolved.figureType,
+        counts,
+        attributes,
+      });
     }
   }
   return out;
@@ -180,13 +202,15 @@ export function applyJournalFilter(entries: JournalEntry[], filter: JournalFilte
   return entries;
 }
 
-/** The display label for a link chip (the server pre-resolves `label`; fallback otherwise). */
+/** The display label for a link chip (the server pre-resolves `label`; fallback
+ *  otherwise). A TIMED figureType anchor (WEP-0004) appends its pinned count. */
 export function chipLabel(anchor: JournalAnchor): string {
   const t = pickMessages(journalMessages);
   if (anchor.label) return anchor.label;
   if (anchor.type === "point") return t.stepChip((anchor.count ?? 0) + 1);
   if (anchor.type === "figure") return anchor.figureRef ?? t.thisFigureChip;
-  return anchor.figureType ?? t.figureChip;
+  const family = anchor.figureType ?? t.figureChip;
+  return anchor.count != null ? `${family} · ${t.onCount(String(anchor.count))}` : family;
 }
 
 /**
@@ -210,36 +234,5 @@ export function relativeDate(createdAt: number, now: number = Date.now()): strin
   return new Date(createdAt).toLocaleDateString(dateLocale, { day: "numeric", month: "short" });
 }
 
-/** A figure family for the link picker FIGURE step (distinct across the catalog). */
-export interface FigureFamilyOption {
-  figureType: string;
-  name: string;
-  dance: string;
-  /** How many figures share this family (the "N steps" hint in the design). */
-  count: number;
-}
-
-/**
- * The distinct figure families from the library catalog (first-seen name/dance),
- * for the link picker's FIGURE step. Stable order = catalog order.
- */
-export function figureFamilies(): FigureFamilyOption[] {
-  const out: FigureFamilyOption[] = [];
-  const byType = new Map<string, FigureFamilyOption>();
-  for (const f of LIBRARY_FIGURES) {
-    const existing = byType.get(f.figureType);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      const opt: FigureFamilyOption = {
-        figureType: f.figureType,
-        name: f.name,
-        dance: f.dance,
-        count: 1,
-      };
-      byType.set(f.figureType, opt);
-      out.push(opt);
-    }
-  }
-  return out;
-}
+// (The catalog-family picker path — `figureFamilies()` — was removed by
+// WEP-0004: every journal link now starts from one of the user's choreos.)
