@@ -89,7 +89,7 @@ import { RoutineReadingView } from "./RoutineReadingView";
 import { cellValue, isOffBeatCount, usedColumns } from "./reading-columns";
 import { useStoredRoleView } from "./reading-columns-role";
 import { supportsSlowQuick, useStoredTimingView } from "./reading-timing";
-import { filterByRoleView, type RoleView } from "./role-view";
+import { asReadView, filterByRoleView, type RoleView } from "./role-view";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -568,7 +568,7 @@ export function Assemble({
                 <SegmentedToggle
                   ariaLabel={roleT.stepsFor}
                   tone="muted"
-                  value={roleView}
+                  value={asReadView(roleView)}
                   onChange={setRoleView}
                   options={[
                     { value: "leader", label: "L", ariaLabel: roleT.leader },
@@ -765,7 +765,7 @@ export function Assemble({
               memberColors={memberColorMap}
               memberNames={memberNameMap}
               customKinds={store.customKinds()}
-              roleView={roleView}
+              roleView={asReadView(roleView)}
               timingView={effectiveTimingView}
               onOpenFigure={openFigureFromReading}
               onOpenThread={openThreadFromReading}
@@ -844,7 +844,7 @@ export function Assemble({
                                 placement={placement}
                                 figure={placementFigure}
                                 dance={routine.dance}
-                                roleView={roleView}
+                                roleView={asReadView(roleView)}
                                 status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                                 canEdit={canEdit}
                                 isFirst={pIndex === 0}
@@ -1251,7 +1251,7 @@ export function Assemble({
                   role={figureEditing ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
-                  roleView={roleView}
+                  roleView={asReadView(roleView)}
                   onRoleViewChange={setRoleView}
                   customKinds={store.customKinds()}
                   onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
