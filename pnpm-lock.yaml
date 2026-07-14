@@ -36,8 +36,8 @@ importers:
         specifier: ^4.0.485
         version: 4.0.489(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       typescript:
-        specifier: ~5.9.0
-        version: 5.9.3
+        specifier: ~6.0.0
+        version: 6.0.3
 
   apps/web:
     dependencies:
@@ -4623,8 +4623,8 @@ packages:
     resolution: {integrity: sha512-phPGCwqr2+Qo0fwniCE8e4pKnGu/yFb5nD5Y8bf0EEeiI5GklnACYA9GFy/DrAeRrKHXvHn+1SUsOWgJp6RO+g==}
     engines: {node: '>= 0.4'}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -9145,7 +9145,7 @@ snapshots:
       type-fest: 0.16.0
       unique-string: 2.0.0
 
-  terser-webpack-plugin@5.6.1(esbuild@0.28.1)(postcss@8.5.18)(webpack@5.105.0(postcss@8.5.18)):
+  terser-webpack-plugin@5.6.1(esbuild@0.28.1)(postcss@8.5.18)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.18)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
@@ -9251,7 +9251,7 @@ snapshots:
       possible-typed-array-names: 1.1.0
       reflect.getprototypeof: 1.0.10
 
-  typescript@5.9.3: {}
+  typescript@6.0.3: {}
 
   ufo@1.6.4: {}
 
@@ -9468,7 +9468,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
-      terser-webpack-plugin: 5.6.1(esbuild@0.28.1)(postcss@8.5.18)(webpack@5.105.0(postcss@8.5.18))
+      terser-webpack-plugin: 5.6.1(esbuild@0.28.1)(postcss@8.5.18)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.18))
       watchpack: 2.5.2
       webpack-sources: 3.5.1
     transitivePeerDependencies:
