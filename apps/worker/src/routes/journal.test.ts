@@ -26,6 +26,16 @@ function authHeaders(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+/**
+ * WEP-0002 phase 3: POST /api/account/family-notes authors into the user's
+ * account DO; its alarm is the single writer of the `figure_type_note_index`
+ * projection the account arm of the journal reads. Drive that alarm so the
+ * projected row is visible synchronously.
+ */
+async function runAccountAlarm(userId: string): Promise<void> {
+  await docs.get(docs.idFromName(`account:${userId}`)).runAlarmForTest();
+}
+
 /** Seed a routine + figure, then drive its DO to add a lesson, a practice, and a
  *  plain note; run the alarm so the journal index is populated. Returns the doc id. */
 async function seedRoutineWithEntries(opts: {
@@ -283,6 +293,8 @@ describe("T6 GET /api/journal", () => {
       }),
     });
     expect(created.status).toBe(201);
+    // owner4's account-doc alarm projects the family note into figure_type_note_index.
+    await runAccountAlarm("owner4");
 
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(token) });
     const body = zJournalList.parse(await res.json());
@@ -350,6 +362,8 @@ describe("T6 GET /api/journal", () => {
         danceScope: "all",
       }),
     });
+    // Both notes are coach5's — one account-doc alarm projects both rows.
+    await runAccountAlarm("coach5");
 
     const studentTok = await makeTestJWT(kp, { sub: "student5" });
     const res = await SELF.fetch("https://x/api/journal", { headers: authHeaders(studentTok) });

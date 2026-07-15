@@ -1,4 +1,5 @@
 import type { Anchor } from "@weavesteps/domain";
+import { globalFigureRef } from "@weavesteps/domain";
 import { useCallback, useState } from "react";
 import { useAppAuth } from "./auth/app-auth";
 import { ChoreoFlow } from "./components/ChoreoFlow";
@@ -21,6 +22,7 @@ import {
   loadRoutineOptions,
 } from "./store/journal";
 import { useMe } from "./store/me";
+import { useAccount } from "./store/use-account";
 import { Styleguide } from "./styleguide/Styleguide";
 import {
   AppShell,
@@ -168,25 +170,12 @@ function AppHome(): React.JSX.Element {
         ) : openRoutineId || tab === "choreo" ? (
           <ChoreoFlow openRoutineId={openRoutineId} />
         ) : tab === "library" ? (
-          <>
-            <div data-tour="library-tabs">
-              <Tabs
-                label={t.libraryViewLabel}
-                items={[
-                  { value: "all", label: t.libraryTabCatalog },
-                  { value: "mine", label: t.libraryTabMine },
-                ]}
-                value={libTab}
-                onChange={setLibTab}
-              />
-            </div>
-            <FigureLibrary
-              tab={libTab}
-              loadMine={loadMine}
-              onSaveToLibrary={onSaveToLibrary}
-              onViewMine={() => setLibTab("mine")}
-            />
-          </>
+          <LibraryScreen
+            libTab={libTab}
+            setLibTab={setLibTab}
+            loadMine={loadMine}
+            onSaveToLibraryRest={onSaveToLibrary}
+          />
         ) : tab === "journal" ? (
           <Journal
             loadEntries={loadJournalEntries}
@@ -206,6 +195,63 @@ function AppHome(): React.JSX.Element {
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * The Library tab (WEP-0002). Rendered ONLY while the library tab is active, so
+ * the account doc it opens (via `useAccount`) stays LAZY (D10 — no eager socket
+ * per session). The catalog "↟ save" writes a bookmark through the account-doc
+ * seam (instant + offline; the worker alarm projects it into `library_entry`),
+ * resolving the catalog `(dance, figureType, name)` triple to a `globalFigureRef`
+ * client-side. `loadMine` (REST `/api/figures/mine`) still supplies the "My
+ * figures" metadata list. Falls back to the REST save when the account store is
+ * idle (signed-out / id not yet resolved — the worker keeps the shim).
+ */
+function LibraryScreen({
+  libTab,
+  setLibTab,
+  loadMine,
+  onSaveToLibraryRest,
+}: {
+  libTab: "all" | "mine";
+  setLibTab: (v: "all" | "mine") => void;
+  loadMine: () => Promise<import("./store/figures").MineFigure[]>;
+  onSaveToLibraryRest: (input: SaveLibraryInput) => Promise<{ alreadySaved: boolean }>;
+}): React.JSX.Element {
+  const t = useMessages(appMessages);
+  const account = useAccount();
+  const onSaveToLibrary = useCallback(
+    async (input: SaveLibraryInput): Promise<{ alreadySaved: boolean }> => {
+      // Idle account store (signed-out / id unresolved) → the REST shim.
+      if (!account.isOpen) return onSaveToLibraryRest(input);
+      const figureRef = globalFigureRef(input.dance, input.figureType);
+      const alreadySaved = account.store.readLibraryRefs().includes(figureRef);
+      account.store.addBookmark(figureRef); // instant + offline; idempotent
+      return { alreadySaved };
+    },
+    [account, onSaveToLibraryRest],
+  );
+  return (
+    <>
+      <div data-tour="library-tabs">
+        <Tabs
+          label={t.libraryViewLabel}
+          items={[
+            { value: "all", label: t.libraryTabCatalog },
+            { value: "mine", label: t.libraryTabMine },
+          ]}
+          value={libTab}
+          onChange={setLibTab}
+        />
+      </div>
+      <FigureLibrary
+        tab={libTab}
+        loadMine={loadMine}
+        onSaveToLibrary={onSaveToLibrary}
+        onViewMine={() => setLibTab("mine")}
+      />
+    </>
   );
 }
 

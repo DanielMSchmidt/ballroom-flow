@@ -24,6 +24,19 @@ beforeAll(async () => {
   kp = await generateTestKeypair();
 });
 
+/**
+ * WEP-0002 phase 3: POST /api/account/family-notes now authors the note in the
+ * author's account DO; the DO alarm is the single writer of the
+ * `figure_type_note_index` projection the co-member GET reads. Drive that alarm
+ * (for the AUTHOR's account doc) so the projected row is visible synchronously —
+ * the co-member visibility guarantee still holds end to end (author writes →
+ * alarm projects → co-member reads).
+ */
+async function runAccountAlarm(userId: string): Promise<void> {
+  const stub = env.DOC_DO.get(env.DOC_DO.idFromName(`account:${userId}`));
+  await stub.runAlarmForTest();
+}
+
 /** Seed: coach authors a "feather/all" family note; coach+student co-own a
  *  Foxtrot routine referencing a Feather; stranger is NOT a member.
  *  Seeds ONCE — D1 is shared across the run (isolatedStorage:false), so the
@@ -139,6 +152,8 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       }),
     });
     expect(created.status).toBe(201);
+    // The note lives in author1's account doc; its alarm projects figure_type_note_index.
+    await runAccountAlarm("author1");
 
     const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
       headers: ctx.authHeaders(),
@@ -183,6 +198,7 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       }),
     });
     expect(created.status).toBe(201);
+    await runAccountAlarm("solo_owner");
 
     const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
       headers: ctx.authHeaders(),
@@ -233,6 +249,7 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       }),
     });
     expect(created.status).toBe(201);
+    await runAccountAlarm("timed_author");
 
     const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
       headers: ctx.authHeaders(),

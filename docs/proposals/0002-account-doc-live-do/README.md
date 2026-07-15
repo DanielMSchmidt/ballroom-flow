@@ -4,9 +4,9 @@ wep: 0002
 owning-areas: [worker, domain, web]
 authors: ["@danielmschmidt"]
 approver: owner
-status: implementable
+status: implemented
 created: 2026-07-13
-last-updated: 2026-07-13
+last-updated: 2026-07-15
 see-also: ["PLAN §2.7", "PLAN §9 (2026-07-03 close-out)", "PLAN §11.2", "packages/domain/src/doc-account.ts"]
 replaces: null
 superseded-by: null

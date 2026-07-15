@@ -22,9 +22,13 @@ import {
   SYNC_RESYNC_CLOSE_CODE,
 } from "@weavesteps/contract";
 import {
+  type AccountDoc,
   type Anchor,
   type AnnotationKind,
+  addAccountReply,
   addAnnotation,
+  addFamilyNote,
+  addLibraryRef,
   addReply,
   addSection,
   barsForFigure,
@@ -33,6 +37,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   can,
   DANCES,
+  type DanceId,
   type EffectiveRole,
   type FigureDoc,
   isDanceId,
@@ -42,16 +47,22 @@ import {
   newId,
   parseAnchors,
   partBeatSpan,
+  type Role,
   type RoutineDoc,
+  readAccount,
   readFigure,
   readRoutine,
   reconcileSeededFigure,
+  removeLibraryRef,
   type SeedFigureContent,
+  softDeleteAccountAnnotation,
   softDeleteAnnotation,
 } from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
+import { type FamilyNoteProjection, projectFamilyNotes } from "./db/family-notes";
 import { createFigureRows } from "./db/figures";
 import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
+import { projectLibraryEntries } from "./db/library";
 import { resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import type { Env } from "./index";
@@ -73,6 +84,32 @@ export type DocOp =
   | ({ op: "addAnnotation"; text: string } & Record<string, unknown>)
   | ({ op: "addReply"; annotationId: string; text: string } & Record<string, unknown>)
   | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
+
+/**
+ * High-level edits on the per-user ACCOUNT doc (WEP-0002) — family notes +
+ * library bookmarks. Applied server-side via {@link DocDO.applyAccountEdit} on
+ * the REST-shim (online) path; the offline path authors the same domain edit
+ * against the store's local doc and syncs raw changes. Ids are server-minted
+ * here (a user is present on the REST path); the store path uses client ULIDs.
+ */
+export type AccountOp =
+  | {
+      op: "addFamilyNote";
+      authorId: string;
+      kind: AnnotationKind;
+      text: string;
+      figureType: string;
+      danceScope: DanceId | "all";
+      tags?: string[];
+      /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+       *  matching figure. Only valid with a concrete danceScope. */
+      count?: number;
+      role?: Role;
+    }
+  | { op: "addAccountReply"; annotationId: string; authorId: string; text: string }
+  | { op: "deleteFamilyNote"; annotationId: string }
+  | { op: "addLibraryRef"; figureRef: string }
+  | { op: "removeLibraryRef"; figureRef: string };
 
 /**
  * Compact once the incremental change log grows past this many rows. Bounds both
@@ -171,7 +208,7 @@ export class DocDO extends DurableObject<Env> {
    *  at seed time), so the field is honestly typed as either. Routine-shaped access
    *  goes through {@link getDoc} (the routine accessor); figure reads use
    *  `loadPersisted<FigureDoc>()`. */
-  private doc: A.Doc<RoutineDoc | FigureDoc> | null = null;
+  private doc: A.Doc<RoutineDoc | FigureDoc | AccountDoc> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -223,7 +260,7 @@ export class DocDO extends DurableObject<Env> {
    * {@link getRoutineDoc}; shape-independent paths (sync ingest, compaction,
    * the D1 projection's loose field reads) use this directly.
    */
-  private getDoc(): A.Doc<RoutineDoc | FigureDoc> {
+  private getDoc(): A.Doc<RoutineDoc | FigureDoc | AccountDoc> {
     if (this.doc) return this.doc;
 
     const persisted = this.loadPersisted();
@@ -263,7 +300,7 @@ export class DocDO extends DurableObject<Env> {
    * persisting an empty routine that would (a) trip seedDoc's no-clobber and
    * (b) push a bogus empty routine to the client.
    */
-  private loadPersisted(): A.Doc<RoutineDoc | FigureDoc> | null {
+  private loadPersisted(): A.Doc<RoutineDoc | FigureDoc | AccountDoc> | null {
     const sql = this.ctx.storage.sql;
     const snapRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
@@ -280,8 +317,8 @@ export class DocDO extends DurableObject<Env> {
     // callers narrow via {@link loadPersistedFigure}'s runtime check.
     let doc =
       snapRows[0] !== undefined
-        ? A.load<RoutineDoc | FigureDoc>(new Uint8Array(snapRows[0].data))
-        : A.init<RoutineDoc | FigureDoc>();
+        ? A.load<RoutineDoc | FigureDoc | AccountDoc>(new Uint8Array(snapRows[0].data))
+        : A.init<RoutineDoc | FigureDoc | AccountDoc>();
     if (changeRows.length > 0) {
       const changes = changeRows.map((r) => new Uint8Array(r.data));
       [doc] = A.applyChanges(doc, changes);
@@ -299,6 +336,19 @@ export class DocDO extends DurableObject<Env> {
   private loadPersistedFigure(): A.Doc<FigureDoc> | null {
     const doc = this.loadPersisted();
     if (doc && "figureType" in doc) return doc;
+    return null;
+  }
+
+  /**
+   * {@link loadPersisted} narrowed to the ACCOUNT shape by a RUNTIME check
+   * (WEP-0002): an account doc carries neither `sections` (routine) nor
+   * `figureType` (figure). Null when nothing is persisted or this DO hosts a
+   * different shape — a `loadPersisted` that never auto-materializes, so an
+   * account read/edit never fabricates the empty-routine placeholder.
+   */
+  private loadPersistedAccount(): A.Doc<AccountDoc> | null {
+    const doc = this.loadPersisted();
+    if (doc && !("sections" in doc) && !("figureType" in doc)) return doc;
     return null;
   }
 
@@ -324,7 +374,9 @@ export class DocDO extends DurableObject<Env> {
    * compute the identical upgrade; the sortKey backfill's convergence guarantee
    * carries over unchanged.
    */
-  private migrateOnLoad(doc: A.Doc<RoutineDoc | FigureDoc>): A.Doc<RoutineDoc | FigureDoc> {
+  private migrateOnLoad(
+    doc: A.Doc<RoutineDoc | FigureDoc | AccountDoc>,
+  ): A.Doc<RoutineDoc | FigureDoc | AccountDoc> {
     // `doc.schemaVersion` is untyped-optional at RUNTIME (a pre-envelope doc, or
     // any doc a bug seeded without one) even though the doc shapes declare it
     // required — mirrors `runLadder`'s "an untagged doc is treated as v1".
@@ -374,7 +426,7 @@ export class DocDO extends DurableObject<Env> {
    * doc). Seeding here also means a later connect finds real content and never
    * auto-materializes the empty-routine placeholder (#109).
    */
-  async seedDoc(content: RoutineDoc | FigureDoc): Promise<void> {
+  async seedDoc(content: RoutineDoc | FigureDoc | AccountDoc): Promise<void> {
     if (this.doc) return;
     const sql = this.ctx.storage.sql;
     const hasSnap = sql.exec("SELECT 1 FROM snapshot WHERE id = 0 LIMIT 1").toArray().length > 0;
@@ -433,7 +485,7 @@ export class DocDO extends DurableObject<Env> {
     if (!changed) return { changed: false };
     const changes = A.getChanges(before, after);
     // `this.doc` holds this figure DO's FigureDoc — assignable to the dual-host
-    // field with no cast now that the field is `A.Doc<RoutineDoc | FigureDoc>`.
+    // field with no cast now that the field is `A.Doc<RoutineDoc | FigureDoc | AccountDoc>`.
     this.doc = after;
     this.persist(changes);
     await this.maybeScheduleCompaction();
@@ -492,6 +544,71 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * Apply a high-level edit to this per-user ACCOUNT doc (WEP-0002), the
+   * REST-shim (online) write path for family notes + library bookmarks. The DO
+   * must already be seeded (ensureAccountDoc runs first, mint+seed before touch),
+   * so a null persisted account doc here is a routing bug — surfaced loudly, never
+   * auto-materialized (which would fabricate an empty routine). Persists +
+   * broadcasts like {@link applyChange}; the alarm projects the result back to
+   * `library_entry`/`figure_type_note_index`. Returns the created note id for
+   * `addFamilyNote` (server-minted) so the shim can echo the v1 response shape,
+   * and `changed` — whether the edit advanced the doc — so the save-to-library
+   * shim can derive `{ alreadySaved }` (an idempotent re-add is a no-op).
+   */
+  async applyAccountEdit(op: AccountOp): Promise<{ id: string | null; changed: boolean }> {
+    const before = this.loadPersistedAccount();
+    if (!before) {
+      throw new Error("applyAccountEdit: account doc not seeded (ensureAccountDoc must run first)");
+    }
+    const idsBefore = new Set(
+      readAccount(before, { includeDeleted: true }).annotations.map((a) => a.id),
+    );
+    const after = this.applyAccountOp(before, op);
+    const changes = A.getChanges(before, after);
+    this.doc = after;
+    if (changes.length === 0) return { id: null, changed: false };
+    this.persist(changes);
+    await this.maybeScheduleCompaction();
+    // Family notes + library bookmarks both project to D1 on the alarm.
+    await this.maybeScheduleProjection();
+    this.broadcast(changes, null);
+    const created =
+      op.op === "addFamilyNote"
+        ? (readAccount(after, { includeDeleted: true })
+            .annotations.map((a) => a.id)
+            .find((id) => !idsBefore.has(id)) ?? null)
+        : null;
+    return { id: created, changed: true };
+  }
+
+  /** Map a high-level account op onto a domain mutation. Unknown ops are a no-op. */
+  private applyAccountOp(doc: A.Doc<AccountDoc>, op: AccountOp): A.Doc<AccountDoc> {
+    switch (op.op) {
+      case "addFamilyNote":
+        return addFamilyNote(doc, {
+          authorId: op.authorId,
+          kind: op.kind,
+          text: op.text,
+          figureType: op.figureType,
+          danceScope: op.danceScope,
+          tags: op.tags,
+          ...(op.count != null ? { count: op.count } : {}),
+          ...(op.role != null ? { role: op.role } : {}),
+        });
+      case "addAccountReply":
+        return addAccountReply(doc, op.annotationId, { authorId: op.authorId, text: op.text });
+      case "deleteFamilyNote":
+        return softDeleteAccountAnnotation(doc, op.annotationId);
+      case "addLibraryRef":
+        return addLibraryRef(doc, op.figureRef);
+      case "removeLibraryRef":
+        return removeLibraryRef(doc, op.figureRef);
+      default:
+        return doc;
+    }
+  }
+
+  /**
    * Apply one incoming change to the in-memory doc; persist + relay it only if
    * it advanced the doc (new change). `from` is the socket the change arrived on
    * (excluded from the broadcast); null for RPC/relay-to-all.
@@ -503,13 +620,15 @@ export class DocDO extends DurableObject<Env> {
     // stream — O(patches), NOT a full-doc JSON serialization. This keeps the
     // US-015 hot sync path cheap: a structural-only change pays nothing extra and
     // never arms the journal-projection alarm.
-    let touchedAnnotations = false;
+    let touchedProjectable = false;
     const [after] = A.applyChanges(before, [change], {
       patchCallback: (patches) => {
-        if (touchedAnnotations) return;
+        if (touchedProjectable) return;
         for (const p of patches) {
-          if (p.path[0] === "annotations") {
-            touchedAnnotations = true;
+          // `annotations` → journal (routine) / family-note (account) projections;
+          // `libraryFigureRefs` → the account library_entry projection (WEP-0002).
+          if (p.path[0] === "annotations" || p.path[0] === "libraryFigureRefs") {
+            touchedProjectable = true;
             return;
           }
         }
@@ -520,9 +639,9 @@ export class DocDO extends DurableObject<Env> {
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
     this.persist([change]);
     await this.maybeScheduleCompaction();
-    // Project the journal promptly only when this change touched annotations
-    // (the live WS path for lesson/practice authoring). See applyChange's gate.
-    if (touchedAnnotations) await this.maybeScheduleProjection();
+    // Project promptly only when this change touched projected state (the live WS
+    // path for lesson/practice authoring, account family notes, or bookmarks).
+    if (touchedProjectable) await this.maybeScheduleProjection();
     this.broadcast([change], from);
     return true;
   }
@@ -562,6 +681,17 @@ export class DocDO extends DurableObject<Env> {
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
     return readRoutine(this.getRoutineDoc());
+  }
+
+  /**
+   * Read this doc as an ACCOUNT snapshot (WEP-0002; tombstoned notes dropped),
+   * or null when this DO hosts a different shape or nothing is persisted. Uses
+   * `loadPersistedAccount` (never `getDoc`), so a read never auto-materializes the
+   * empty-routine placeholder.
+   */
+  async getAccountSnapshot(): Promise<AccountDoc | null> {
+    const doc = this.loadPersistedAccount();
+    return doc ? readAccount(doc) : null;
   }
 
   /**
@@ -1022,6 +1152,11 @@ export class DocDO extends DurableObject<Env> {
       await this.projectJournalToD1();
     } catch (err) {
       console.error("doc-do alarm: journal projection failed", err);
+    }
+    try {
+      await this.projectAccountToD1();
+    } catch (err) {
+      console.error("doc-do alarm: account projection failed", err);
     }
     try {
       await this.expireInvites();
@@ -1493,6 +1628,51 @@ export class DocDO extends DurableObject<Env> {
       deletedAt: a.deletedAt ?? null,
     }));
     await projectJournalEntries(this.env.DB, docRef, rows);
+  }
+
+  /**
+   * Project a per-user ACCOUNT doc to its D1 indexes (WEP-0002 — the write
+   * direction inverted: D1 becomes a pure alarm-written projection of the doc,
+   * like journal_entry). Non-destructive, idempotent, tombstone-aware:
+   * `library_entry` mirrors the live `libraryFigureRefs` set (refs that left it
+   * are tombstoned), and `figure_type_note_index` upserts one row per figureType
+   * annotation keyed on the reused ULID noteId (a tombstoned note carries its
+   * `deletedAt` through). Only fires for account docs; other types early-return.
+   */
+  private async projectAccountToD1(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; type: string | null }>(
+        "SELECT doName, type FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    if (!meta?.doName || meta.type !== "account") return;
+
+    const doc = this.loadPersistedAccount();
+    if (!doc) return;
+    const account = readAccount(doc, { includeDeleted: true });
+    const userId = account.ownerId;
+
+    // Library bookmarks — the live set; refs that left it are tombstoned.
+    await projectLibraryEntries(this.env.DB, userId, account.libraryFigureRefs ?? []);
+
+    // Family notes — one row per figureType annotation, tombstones carried.
+    const notes: FamilyNoteProjection[] = [];
+    for (const a of account.annotations) {
+      const anchor = a.anchors.find((an) => an.type === "figureType");
+      if (anchor?.type !== "figureType") continue;
+      notes.push({
+        noteId: a.id,
+        authorId: userId,
+        figureType: anchor.figureType,
+        danceScope: anchor.danceScope,
+        kind: a.kind,
+        text: a.text,
+        count: anchor.count ?? null,
+        role: anchor.role ?? null,
+        deletedAt: a.deletedAt ?? null,
+      });
+    }
+    await projectFamilyNotes(this.env.DB, notes);
   }
 
   /** Look up figure display names (document_registry.title) for the given refs. */

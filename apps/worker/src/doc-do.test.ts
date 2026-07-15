@@ -4,6 +4,7 @@ import { SYNC_FRAME_SNAPSHOT, SYNC_PING, SYNC_PONG } from "@weavesteps/contract"
 import {
   CURRENT_SCHEMA_VERSION,
   type DanceId,
+  importAccountDoc,
   isPlainRecord,
   type RoutineDoc,
   readRoutine,
@@ -1069,5 +1070,89 @@ describe("WEP-0006 heartbeat auto-response (zombie-socket detection)", () => {
       return p ? { request: p.request, response: p.response } : null;
     });
     expect(pair).toEqual({ request: SYNC_PING, response: SYNC_PONG });
+  });
+});
+
+describe("WEP-0002 account doc — the DO hosts + edits the per-user account doc", () => {
+  const freshAccount = () => {
+    const uid = uniqueDocName("acctuser");
+    const docRef = `account:${uid}`;
+    return { uid, docRef, stub: env.DOC_DO.get(env.DOC_DO.idFromName(docRef)) };
+  };
+
+  it("seeds from D1 import rows and round-trips library + family-note edits (survives cold reload)", async () => {
+    const { uid, stub } = freshAccount();
+    await stub.seedDoc(
+      importAccountDoc({
+        userId: uid,
+        libraryFigureRefs: ["global:waltz:natural_turn"],
+        familyNotes: [],
+      }),
+    );
+
+    // Library bookmark add/remove via the account-edit RPC.
+    await stub.applyAccountEdit({ op: "addLibraryRef", figureRef: "fig_a" });
+    expect((await stub.getAccountSnapshot())?.libraryFigureRefs).toEqual([
+      "global:waltz:natural_turn",
+      "fig_a",
+    ]);
+    await stub.applyAccountEdit({ op: "removeLibraryRef", figureRef: "global:waltz:natural_turn" });
+    expect((await stub.getAccountSnapshot())?.libraryFigureRefs).toEqual(["fig_a"]);
+
+    // Family-note create returns the server-minted id; the snapshot carries it.
+    const { id } = await stub.applyAccountEdit({
+      op: "addFamilyNote",
+      authorId: uid,
+      kind: "practice",
+      text: "head left on every Feather",
+      figureType: "feather",
+      danceScope: "all",
+    });
+    if (!id) throw new Error("addFamilyNote must return the created note id");
+    const withNote = await stub.getAccountSnapshot();
+    expect(withNote?.annotations.map((a) => a.id)).toEqual([id]);
+    expect(withNote?.annotations[0]?.anchors).toEqual([
+      { type: "figureType", figureType: "feather", danceScope: "all" },
+    ]);
+
+    // Soft-delete drops it from the read; the library survives a forced cold-load.
+    await stub.applyAccountEdit({ op: "deleteFamilyNote", annotationId: id });
+    await stub.reloadForTest();
+    const after = await stub.getAccountSnapshot();
+    expect(after?.annotations).toEqual([]);
+    expect(after?.libraryFigureRefs).toEqual(["fig_a"]);
+  });
+
+  it("boundary: the owner connects (101); a different authenticated user is rejected 403 pre-upgrade", async () => {
+    const { uid, docRef, stub } = freshAccount();
+    await seedDb({
+      users: [
+        { id: uid, displayName: "Owner", identityColor: "#111", plan: "free" },
+        { id: "u_intruder", displayName: "Intruder", identityColor: "#222", plan: "free" },
+      ],
+      // Owner-only: no membership rows exist for account docs; the owner is
+      // resolved from registry.ownerId (the simplest boundary in the system).
+      docs: [{ docRef, type: "account", ownerId: uid, doName: docRef }],
+      memberships: [],
+    });
+
+    const owner = await authedContext({ keypair: kp, userId: uid, docRef, role: null });
+    const ownerRes = await stub.fetch(
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": docRef, ...owner.authHeaders() },
+      }),
+    );
+    expect(ownerRes.status).toBe(101);
+    ownerRes.webSocket?.accept();
+
+    // Valid JWT, but no membership, not the owner, and the figure→routine cascade
+    // is inert for an account ref → null role → 403 BEFORE the WS upgrade.
+    const intruder = await authedContext({ keypair: kp, userId: "u_intruder", docRef, role: null });
+    const intruderRes = await stub.fetch(
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": docRef, ...intruder.authHeaders() },
+      }),
+    );
+    expect(intruderRes.status).toBe(403);
   });
 });

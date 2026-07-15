@@ -10,27 +10,113 @@
 // `figuretype.ts` — and IS the live runtime path: the worker returns family-note
 // rows, the store hands them here to match against the routine's figures.
 //
-// STORAGE NOTE: in v1 a family note's content lives in the worker's D1 index row
-// (figure_type_note_index; server-mediated — single-author reference data, no
-// concurrent edit) and a library bookmark's in `library_entry` (migration 0015)
-// the same way. This account-doc CRDT (buildAccountDoc + the addFamilyNote/
-// addAccountReply/addLibraryRef/removeLibraryRef/softDelete… mutators) is built +
-// tested as the intended home once account docs get offline/concurrent edit, but
-// is NOT yet wired into a live DO. It is kept deliberately so that migration is a
-// store-seam swap, not a rebuild.
+// STORAGE NOTE (as-built, WEP-0002 — 2026-07-15): the account doc IS now wired to
+// a live per-user Durable Object (`account:<userId>`). This CRDT — buildAccountDoc
+// + the addFamilyNote/addAccountReply/addLibraryRef/removeLibraryRef/softDelete…
+// mutators — is the LIVE WRITE PATH: family notes and library bookmarks are edits
+// to that doc (offline-capable + undoable via the §11.2 machinery). The D1 tables
+// `figure_type_note_index` (family-note content) and `library_entry` (bookmarks,
+// migration 0015) are now ALARM-WRITTEN PROJECTIONS of this doc — non-destructive,
+// idempotent, tombstone-aware — so D1 is a pure index again (rows re-derivable from
+// the doc), exactly like journal_entry. `importAccountDoc` (below) builds the doc
+// from those rows on first touch (reusing each ULID noteId so identities survive).
 //
 // Whether ANOTHER user may see one of these notes (the option-2 co-membership
 // gate) is the worker's concern (US-041), never this module's.
 import type * as A from "@automerge/automerge";
 import type { DanceId } from "./dances";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
-import type { AccountDoc, Annotation, AnnotationKind, FigureDoc, ReadOptions } from "./doc-types";
+import type {
+  AccountDoc,
+  Annotation,
+  AnnotationKind,
+  FigureDoc,
+  ReadOptions,
+  Role,
+} from "./doc-types";
 import { matchesFigureType } from "./figuretype";
 import { newId } from "./ids";
+import { CURRENT_SCHEMA_VERSION } from "./migrations";
 
 /** Build an in-memory Automerge account doc from its logical shape. */
 export function buildAccountDoc(account: AccountDoc): A.Doc<AccountDoc> {
   return buildDoc(account);
+}
+
+/** One persisted `figure_type_note_index` row, projected back to import an account doc. */
+export type AccountFamilyNoteRow = {
+  /** The ULID `noteId` — REUSED as the annotation id so identities survive the import. */
+  noteId: string;
+  kind: AnnotationKind;
+  text: string;
+  figureType: string;
+  danceScope: DanceId | "all";
+  /** WEP-0004 timed-note fields (migration 0018): carried so a timed family note
+   *  survives the import instead of flattening to the untimed v1 shape. */
+  count?: number | null;
+  role?: Role | null;
+  /** The row's timestamp (v1 index tracks only `updatedAt`); carried so the build is deterministic. */
+  createdAt: number;
+  /** Tombstone carried through faithfully — a deleted row imports as a tombstoned annotation. */
+  deletedAt?: number | null;
+};
+
+/** The user's live D1 rows that seed a first `ensureAccountDoc` import (WEP-0002). */
+export type AccountImportRows = {
+  userId: string;
+  /** Live `library_entry` refs (caller pre-filters `deletedAt IS NULL`); deduped, order preserved. */
+  libraryFigureRefs: string[];
+  /** `figure_type_note_index` rows authored by the user (tombstoned rows may be included). */
+  familyNotes: AccountFamilyNoteRow[];
+};
+
+/**
+ * Build the initial `AccountDoc` for `ensureAccountDoc` from a user's existing D1
+ * projection rows (WEP-0002). PURE and DETERMINISTIC — no `Date.now()`, no ULID
+ * minting: family-note `noteId`s are REUSED as annotation ids so identities survive
+ * the D1→doc inversion, and timestamps come from the rows. Tombstone-safe: a
+ * tombstoned row imports as a tombstoned annotation (never dropped, never
+ * hard-removed), so the alarm can project it back faithfully. Stamps
+ * `CURRENT_SCHEMA_VERSION`.
+ */
+export function importAccountDoc(rows: AccountImportRows): AccountDoc {
+  const seenRefs = new Set<string>();
+  const libraryFigureRefs: string[] = [];
+  for (const ref of rows.libraryFigureRefs) {
+    if (!seenRefs.has(ref)) {
+      seenRefs.add(ref);
+      libraryFigureRefs.push(ref);
+    }
+  }
+  const annotations: Annotation[] = rows.familyNotes.map((row) => ({
+    id: row.noteId, // REUSED — identity survives the D1→doc inversion.
+    authorId: rows.userId,
+    kind: row.kind,
+    text: row.text,
+    tags: [],
+    anchors: [
+      {
+        type: "figureType",
+        figureType: row.figureType,
+        danceScope: row.danceScope,
+        // Only include the timed fields when present — Automerge can't store
+        // `undefined`, and their absence IS the untimed whole-figure shape.
+        ...(row.count != null ? { count: row.count } : {}),
+        ...(row.role != null ? { role: row.role } : {}),
+      },
+    ],
+    replies: [],
+    createdAt: row.createdAt,
+    deletedAt: row.deletedAt ?? null,
+  }));
+  return {
+    id: `account:${rows.userId}`,
+    ownerId: rows.userId,
+    annotations,
+    libraryFigureRefs,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    deletedAt: null,
+  };
 }
 
 /** Read an account doc as a plain POJO; tombstoned notes/replies dropped by default. */
@@ -90,6 +176,11 @@ export function addFamilyNote(
     figureType: string;
     danceScope: DanceId | "all";
     tags?: string[];
+    /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+     *  matching figure. Only valid with a concrete danceScope (counts don't
+     *  align across dances); absent = the whole figure, the v1 shape. */
+    count?: number;
+    role?: Role;
   },
 ): A.Doc<AccountDoc> {
   return mutate(doc, (draft) => {
@@ -99,7 +190,15 @@ export function addFamilyNote(
       kind: input.kind,
       text: input.text,
       tags: input.tags ?? [],
-      anchors: [{ type: "figureType", figureType: input.figureType, danceScope: input.danceScope }],
+      anchors: [
+        {
+          type: "figureType",
+          figureType: input.figureType,
+          danceScope: input.danceScope,
+          ...(input.count != null ? { count: input.count } : {}),
+          ...(input.role != null ? { role: input.role } : {}),
+        },
+      ],
       replies: [],
       createdAt: Date.now(),
       deletedAt: null,
