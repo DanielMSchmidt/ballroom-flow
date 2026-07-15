@@ -680,8 +680,11 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
     const res = await saveToLibrary(partner.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
     // /mine reads the alarm-projected library_entry row — drive the partner's
-    // account-doc alarm before asserting (WEP-0002).
+    // account-doc alarm before asserting (WEP-0002). The owner's alarm runs too,
+    // so the not-bookmarked assertion below checks a projected list, not a
+    // vacuously empty one.
     await runAccountAlarm("u_co2");
+    await runAccountAlarm("u_co1");
     expect(await mineDocRefs(partner.authHeaders())).toContain(figureRef);
     // The owner's own library is untouched by the partner's bookmark.
     expect(await mineDocRefs(owner.authHeaders())).not.toContain(figureRef);

@@ -161,6 +161,28 @@
  },
  "figures": [
   {
+   "wdsfRef": "ISTD-W-BACKLOCK",
+   "figureType": "back-lock",
+   "name": "Back Lock",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "backward-lock",
+   "wdsf": {
+    "start": "LF back in CBMP, backing DW (Lady RF fwd in CBMP, OP)",
+    "finish": "RF diagonally back, still backing DW",
+    "timing": "12&3",
+    "notes": [
+     "ISTD Bronze (source labels it Bronze level).",
+     "Source: 'The Technical Details of the Back Lock are similar to the Quickstep Back Lock.'",
+     "Lady's note: next step after the figure starts in CBMP.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/back-lock"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
    "wdsfRef": "2.1.1",
    "figureType": "closed-change-on-rf",
    "name": "Closed Change on RF",
@@ -199,6 +221,120 @@
    "wdsfLevel": "bronze"
   },
   {
+   "wdsfRef": "ISTD-W-CLOSEDCHANGES",
+   "figureType": "closed-changes",
+   "name": "Closed Changes",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "closed-change-on-rf",
+   "wdsf": {
+    "start": "RF forward, facing DC",
+    "finish": "RF closes to LF, facing DC",
+    "timing": "123",
+    "notes": [
+     "ISTD Bronze per assignment; dancecentral labels Closed Changes 'Newcomer figures'.",
+     "The page is titled 'Closed Changes' and charts BOTH changes: a fully detailed 'Waltz RF Closed Change (Natural to Reverse)' commencing DC, plus an abbreviated 'Waltz LF Closed Change (Reverse to Natural)' commencing DW described as 'the normal opposite'. This entry transcribes the fully detailed RF (Natural to Reverse) chart.",
+     "Source: 'Though the chart show No Turn for the turn, a very slight turn to R may be made for RF Closed Change.'",
+     "Source: change steps can be danced forward or backward starting either leg (4 possibilities); two change steps make the basic box.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/waltz-closed-changes"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-W-CLOSEDIMPETUS",
+   "figureType": "closed-impetus",
+   "name": "Closed Impetus",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "impetus",
+   "wdsf": {
+    "start": "LF back, backing LOD",
+    "finish": "LF to side and slightly back, backing DC against LOD",
+    "timing": "123",
+    "notes": [
+     "ISTD Bronze (source labels it Bronze level).",
+     "Source: 'This can also start BDW, in which case turn 3/8 between 1-2, 1/8 between 2-3.'",
+     "Source: may be danced at a corner to end backing DC of new LOD; follows as for Natural Spin Turn at corner.",
+     "Source: enter in closed position, exit in closed position; step 1 can be OP depending on the previous figure.",
+     "Man's heel turn on 2: feet should not unite until weight commits to RF; late rise required to let the Lady pass.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/closed-impetus"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-W-CLOSEDTELEMARK",
+   "figureType": "closed-telemark",
+   "name": "Closed Telemark",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "telemark",
+   "wdsf": {
+    "start": "LF forward, facing DC",
+    "finish": "LF to side and slightly forward, pointing DW",
+    "timing": "123",
+    "notes": [
+     "ISTD Silver (source labels it Silver Level).",
+     "Lady's Heel Turn on step 2 (LF closes to RF).",
+     "The step after the figure is taken in CBMP, outside partner (the source shows it as an extra 'Count 1' row: Man RF fwd in CBMP OP facing DW; Lady LF back in CBMP backing DW).",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/closed-telemark"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-W-CLOSEDWING",
+   "figureType": "closed-wing",
+   "name": "Closed Wing",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "wing",
+   "wdsf": {
+    "start": "RF forward in CBMP, outside partner, facing DC",
+    "finish": "LF closes to RF without weight (Lady LF fwd in CBMP, OP on left side — Wing position)",
+    "timing": "123",
+    "notes": [
+     "ISTD Gold (source labels it Gold Level).",
+     "Man's step 3 is placed WITHOUT weight ('LF closes to RF w/o weight').",
+     "All following figures listed by the source take step 1 in CBMP, OP on the left side.",
+     "Lady keeps head up and leftward on step 3; her L leg goes ahead of the body into Wing position.",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/closed-wing"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
+  },
+  {
+   "wdsfRef": "ISTD-W-FALLAWAYWHISK",
+   "figureType": "fallaway-whisk",
+   "name": "Fallaway Whisk",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF back, backing LOD",
+    "finish": "LF crosses loosely behind RF in Fallaway, facing DC",
+    "timing": "123",
+    "notes": [
+     "ISTD Gold: source says 'an additional figure at Gold Level and may be danced in Medal Tests'.",
+     "Man's step 2: 'Using \"T\" footwork is also correct' (charted TH as printed).",
+     "Lady's head may be turned to L or R on step 3; typically to R, delaying the head turn until after the step ('&').",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/fallaway-whisk"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
+  },
+  {
    "wdsfRef": "2.1.3",
    "figureType": "natural-turn",
    "name": "Natural Turn",
@@ -216,6 +352,74 @@
      "NOTE - General: steps 1-3 or 4-6 only may be used",
      "NOTE - Foot Placement/Couple Position: may start with RF fwd in CBMP Outside Partner. If steps 4-6 only are used, step 4 may start LF bwd in CBMP Outside partner.",
      "Charted from WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 3, p. 49."
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-W-OPENIMPETUSANDWING",
+   "figureType": "open-impetus-and-wing",
+   "name": "Open Impetus and Wing",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF back backing LOD (Man), maintaining sway from the preceding Natural Turn",
+    "finish": "LF closes to RF without weight, facing DC - Wing ending, Lady outside partner on L side (Wrong Position)",
+    "timing": "123123",
+    "notes": [
+     "ISTD Silver amalgamation; dancecentral charts it as a single 6-step figure (steps 1-3 'Open Impetus', steps 4-6 'Wing').",
+     "Lady ends in Wrong Position: hips and feet on Man's left side, head quadrant still on his right.",
+     "Two admissible head shapings for the Lady on the Wing: gradual over counts 1-2-3, or sharp all on count 1.",
+     "Man maintains the sway from the previous Natural Turn through the heel turn on step 1-2.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/open-impetus-and-wing"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-W-OPENTELEMARKANDWING",
+   "figureType": "open-telemark-and-wing",
+   "name": "Open Telemark and Wing",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF fwd facing DC (Man), commencing to turn L",
+    "finish": "LF closes to RF without weight, facing DC - Wing ending, Lady outside partner on L side",
+    "timing": "123123",
+    "notes": [
+     "ISTD Silver amalgamation; dancecentral charts it as a single 6-step figure (steps 1-3 'Open Telemark', steps 4-6 'Wing').",
+     "Source note: Wing can be used from other positions; less turn can be made on the Wing to end facing LOD.",
+     "Man: no foot swivel on step 5 (body turn only to face LOD); foot swivel used on step 6 to end facing DC. Lady: no swivel on the LF on step 6.",
+     "Lady stays connected with Man on the wrong side at the end.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/open-telemark-and-wing"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-W-REVERSECORTE",
+   "figureType": "reverse-corte",
+   "name": "Reverse Corté",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "RF back backing LOD (Man), commencing to turn L",
+    "finish": "Position held on RF, backing DC against LOD (LF closed to RF without weight)",
+    "timing": "123",
+    "notes": [
+     "ISTD Bronze. Step 1 of all following figures would be CBMP, Lady outside partner.",
+     "Alternative amounts of turn between 1-2 with different endings: backing LOD + 1/2 L ends backing LOD (against LOD); backing LOD + 5/8 L ends BDW against LOD; backing DC + 1/4 L ends BDC against LOD. Lady turn adjusts correspondingly (just over 1/4 then just under 1/4; 3/8 then 1/4; 1/8 then 1/8).",
+     "Alternative Man footwork: turn on step 2 may be made on ball of RF with foot flat - footwork then 1. THT; 2. Toes both feet; 3. TH(RF).",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/reverse-corte"
     ]
    },
    "attributes": [],
@@ -267,6 +471,52 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-W-TURNINGLOCK",
+   "figureType": "turning-lock",
+   "name": "Turning Lock",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "reverse-turning-lock",
+   "wdsf": {
+    "start": "RF back, R side leading, backing DC (following a Natural Spin Turn)",
+    "finish": "RF fwd in CBMP outside partner, facing DW (may alternatively end in PP)",
+    "timing": "1&231",
+    "notes": [
+     "ISTD Silver. Turns LEFT; preceded by Natural Spin Turn, Closed Impetus, or Outside Spin.",
+     "Source charts a 5th step (count 1 of the following bar): Man RF fwd in CBMP OP / Lady LF back in CBMP - the exit step into the following figure. The WDSF twin (reverse-turning-lock) charts only 4 steps.",
+     "May end in PP (after RF brushes to LF for the Lady) - see Outside Change ended in PP; then Wing, Weave from PP, Cross Hesitation, Chasse from PP, Left Whisk may follow.",
+     "Foot rise comes before body rise (rise on count 2 LF, or end of 1& on RF). The figure curves gently forward.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/turning-lock"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-W-TURNINGLOCKTOR",
+   "figureType": "turning-lock-to-r",
+   "name": "Turning Lock to R",
+   "dance": "waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "natural-turning-lock",
+   "wdsf": {
+    "start": "RF back, R side leading, moving down LOD (following a Natural Spin Turn)",
+    "finish": "LF diag. fwd, L side leading in PP, pointing DC (body facing LOD)",
+    "timing": "1&23",
+    "notes": [
+     "ISTD Gold. Turns RIGHT and ends in Promenade Position.",
+     "Two admissible sway schemes across the four steps: L,L,S,S or R,R,S,S (source: 'Sway: LLSS or RRSS'; per-step cells print 'Sway (L or R)').",
+     "Lady will not brush on the preceding Natural Spin Turn, but brushes towards LF when moving into step 4.",
+     "Lady keeps head weight to left, which helps the turn; she articulates her head to PP only after weight settles on step 3.",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/waltz/turning-lock-to-r"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
   },
   {
    "wdsfRef": "2.1.6",
@@ -878,6 +1128,27 @@
    "attributes": []
   },
   {
+   "wdsfRef": "ISTD-F-CLOSEDTELEMARK",
+   "figureType": "closed-telemark",
+   "name": "Closed Telemark",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "telemark",
+   "wdsf": {
+    "start": "LF fwd facing DC",
+    "finish": "RF fwd in CBMP outside partner, facing DW (closed finish)",
+    "timing": "SQQS",
+    "notes": [
+     "Foxtrot timing is SQQS; technical details similar to Waltz Closed Telemark (source).",
+     "For Closed Telemark, body turns a bit more equally, turning Lady back to closed position; the final step is a closed finish (source commentary).",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/closedtelemark"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
    "wdsfRef": "2.2.1",
    "figureType": "feather-step",
    "name": "Feather Step",
@@ -898,6 +1169,48 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-F-NATURALZIGZAGFROMPP",
+   "figureType": "natural-zig-zag-from-pp",
+   "name": "Natural Zig-Zag from PP",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "natural-zig-zag-from-p-p",
+   "wdsf": {
+    "start": "RF fwd and across in PP and CBMP, facing DW (moving along LOD)",
+    "finish": "LF fwd facing DW",
+    "timing": "SQQQQS",
+    "notes": [
+     "Different alignment for Man and Lady on steps 3-4 (source).",
+     "Lady changes from PP to Man's L side (OP on L side, step 3) and then to Man's R side, OP (step 5) (source commentary).",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/natural-zig-zag-from-pp"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
+  },
+  {
+   "wdsfRef": "ISTD-F-OPENIMPETUS",
+   "figureType": "open-impetus",
+   "name": "Open Impetus",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "impetus-to-p-p",
+   "wdsf": {
+    "start": "LF back backing LOD",
+    "finish": "RF fwd in PP and CBMP, pointing DC (body facing LOD)",
+    "timing": "SQQS",
+    "notes": [
+     "Heel turn on step 2 (Man): do not lift the toe off the floor; the ball of the foot stays skimming the floor (source).",
+     "Step 3 (Man) ends in PP with L side leading, body slightly ahead of the Lady (source commentary).",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/open-impetus"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
   },
   {
    "wdsfRef": "2.2.2",
@@ -1099,6 +1412,27 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-F-WEAVEFROMPP",
+   "figureType": "weave-from-pp",
+   "name": "Weave from PP",
+   "dance": "foxtrot",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "weave-from-p-p",
+   "wdsf": {
+    "start": "RF fwd in PP and CBMP, pointing DC (body facing LOD)",
+    "finish": "LF fwd facing DW",
+    "timing": "SQQQQQQS",
+    "notes": [
+     "Printed source note: on step 4 the footwork of TH may be used; the rise on 5 will then be 'Up NFR'.",
+     "Printed source note: alternate alignments for the Weave from PP may be found in the Waltz charts.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/weave-from-pp"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
   },
   {
    "wdsfRef": "2.2.12",
@@ -1687,6 +2021,142 @@
    "attributes": []
   },
   {
+   "wdsfRef": "ISTD-Q-CHANGEOFDIRECTION",
+   "figureType": "change-of-direction",
+   "name": "Change of Direction",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF fwd facing DW (closed position)",
+    "finish": "LF fwd in CBMP facing DC",
+    "timing": "SSSS",
+    "notes": [
+     "Bronze level on the page (listed as an additional step danceable in Medal Tests) — dancecentral does chart it for quickstep, not just foxtrot.",
+     "Step 3 closes LF to RF slightly forward WITHOUT weight (Lady: RF to LF slightly back without weight).",
+     "Man step 2 alignment printed as 'Down wall, R toe pointing LOD'.",
+     "Page tip for the follower: 'pull left hip back, leave L knee fwd' after step 2.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/change-of-direction"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-CHASSEREVERSETURN",
+   "figureType": "chasse-reverse-turn",
+   "name": "Chassé Reverse Turn",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF fwd facing DC (closed position)",
+    "finish": "LF closes to RF backing LOD",
+    "timing": "SQQ",
+    "notes": [
+     "Page lists it as Newcomer level (assignment hint said ISTD Bronze — recording what the page says).",
+     "Page footnote: 'If Natural Pivot with Hesitation ends in LOD, turn 1/8 on step 1 in this Chasse Reverse Turn.'",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/chasse-reverse-turn"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-CLOSEDIMPETUS",
+   "figureType": "closed-impetus",
+   "name": "Closed Impetus",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "impetus",
+   "wdsf": {
+    "start": "LF back backing LOD (closed position)",
+    "finish": "RF back backing DC against LOD",
+    "timing": "SSSS",
+    "notes": [
+     "ISTD Bronze (per page).",
+     "Man dances a Heel Turn on step 2 (RF closes to LF).",
+     "Page note: step 4 often becomes a Reverse Pivot; when followed by a Reverse Pivot the step-3 lowering is in the foot only.",
+     "Lady brushes RF to LF before step 3.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/closed-impetus"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-CLOSEDTELEMARK",
+   "figureType": "closed-telemark",
+   "name": "Closed Telemark",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "telemark",
+   "wdsf": {
+    "start": "LF fwd facing DC (closed position)",
+    "finish": "RF fwd in CBMP outside partner, DW",
+    "timing": "SSSS",
+    "notes": [
+     "ISTD Silver (per page).",
+     "Chart rows are each timed S (SSSS); page lists alternative admissible timings SQQS and QQSS (the latter after a Reverse Pivot).",
+     "Lady dances a Heel Turn on step 2 (LF closes to RF).",
+     "Page says footwork is the same as the Waltz Closed Telemark.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/closed-telemark"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-Q-FISHTAIL",
+   "figureType": "fishtail",
+   "name": "Fishtail",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "fisht-tail",
+   "wdsf": {
+    "start": "RF fwd in CBMP outside partner, facing DC",
+    "finish": "RF fwd in CBMP outside partner, facing DW",
+    "timing": "SQQQQSS",
+    "notes": [
+     "ISTD Silver (per page).",
+     "Steps 2 and 5 are locks: man crosses LF/RF behind, lady crosses RF/LF in front.",
+     "Man step 3 is 'RF fwd and slightly to side (small step)'; step 4 is danced with L side leading (lady R side leading).",
+     "Page description: the man's body does a pendulum swing from left to right; often danced after Cross Swivel.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/fishtail"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-Q-NATURALPIVOTTURN",
+   "figureType": "natural-pivot-turn",
+   "name": "Natural Pivot Turn",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "natural-pivot",
+   "wdsf": {
+    "start": "RF fwd facing DW (closed, or outside partner depending on previous figure)",
+    "finish": "LF back (pivot up to 1/2 R), printed 'Point BDW'",
+    "timing": "SQQS",
+    "notes": [
+     "Page lists it as Newcomer level (assignment hint said ISTD Bronze — recording what the page says).",
+     "May commence in closed or outside partner position depending on the preceding figure.",
+     "Unlike a Spin Turn there is no rise in the Pivot Turn (page note).",
+     "Man step 4: RF held in CBMP while pivoting; heel stays in floor contact, turn on ball of foot, RF finishes on the same track as LF.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/natural-pivot-turn"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
    "wdsfRef": "2.3.1",
    "figureType": "natural-turn",
    "name": "Natural Turn",
@@ -1706,6 +2176,50 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-PROGRESSIVECHASSE",
+   "figureType": "progressive-chasse",
+   "name": "Progressive Chassé",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "progressive-chasse-to-l",
+   "wdsf": {
+    "start": "RF back (backing DC), commencing to turn L",
+    "finish": "RF fwd in CBMP outside partner, facing DW",
+    "timing": "SQQSS",
+    "notes": [
+     "ISTD bronze (assignment); the dancecentral page labels it a Newcomer level figure.",
+     "The plain (leftward) Progressive Chassé: commences with Man backing DC, typically after a Quarter Turn to Right; ends preparing an outside-partner step facing DW.",
+     "Page notes: keep the Lady in front through step 2 (do not end side by side); Lady on step 4 does not touch her right heel down until her left heel is level with the right foot.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/progressive-chasse"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-QUICKOPENREVERSE",
+   "figureType": "quick-open-reverse",
+   "name": "Quick Open Reverse",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "open-reverse-turn-quick-open-reverse",
+   "wdsf": {
+    "start": "LF fwd facing LOD, commencing to turn L",
+    "finish": "RF back, backing LOD",
+    "timing": "SQQS",
+    "notes": [
+     "ISTD silver level figure.",
+     "May commence facing LOD or DC; if commenced DC, turn 1/4 between 1-2 (instead of the charted 3/8).",
+     "A Reverse Pivot commonly substitutes/follows at step 4.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/quick-open-reverse"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
   },
   {
    "wdsfRef": "2.3.2",
@@ -1998,6 +2512,29 @@
    "wdsfLevel": "silver"
   },
   {
+   "wdsfRef": "ISTD-Q-RUNNINGRIGHTTURN",
+   "figureType": "running-right-turn",
+   "name": "Running Right Turn",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "running-natural-turn",
+   "wdsf": {
+    "start": "RF fwd facing DW, commencing to turn R",
+    "finish": "RF fwd in CBMP outside partner, facing (new) LOD",
+    "timing": "SQQSSSSQQSS",
+    "notes": [
+     "ISTD silver level figure.",
+     "Composite figure: Natural Pivot (1-4) + half Natural Turn with Lady's Heel Turn (5-7) + Running Finish (8-10).",
+     "Alternative timing SQQ may be used on steps 5-7.",
+     "As charted it turns a corner: step 9 arrives facing the new LOD.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/running-right-turn"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
    "wdsfRef": "2.3.19",
    "figureType": "telemark",
    "name": "Telemark",
@@ -2040,6 +2577,51 @@
    },
    "attributes": [],
    "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-Q-TIPPLECHASSETOR",
+   "figureType": "tipple-chasse-to-r",
+   "name": "Tipple Chassé to R",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "tipple-chasse-to-r-at-the-corner",
+   "wdsf": {
+    "start": "LF back backing LOD (at a corner), commencing to turn R",
+    "finish": "RF fwd in CBMP outside partner, facing DW of new LOD",
+    "timing": "SQQSQQSS",
+    "notes": [
+     "ISTD bronze level figure.",
+     "Danced at the end of the short side to turn the corner, finishing DW of the new LOD.",
+     "Optional styling from the page: 'Sway: to R with head turned to R (Lady to L) may be used' (the chart itself has no sway column).",
+     "The page also charts an along-side-of-room variant (see chart note).",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/tipple-chasse-to-r"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-Q-TIPSYTORORL",
+   "figureType": "tipsy-to-r-or-l",
+   "name": "Tipsy to R or L",
+   "dance": "quickstep",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "tipsy-to-r",
+   "wdsf": {
+    "start": "RF to side (small step)",
+    "finish": "RF to side (small step), lowered with sharp flexing of knees",
+    "timing": "Q&Q",
+    "notes": [
+     "ISTD gold level figure; this entry covers both Tipsies - the TO R version is charted, Tipsy to L is its exact mirror (Man LF-RF-LF: LF small step to side, RF halfway towards LF, LF small step to side).",
+     "Turn: 'None, or up to 3/8 to R or L'. Page note: after a forward step on LF any turn is to L; after a step back on LF any turn is to R.",
+     "Alignment depends entirely on the preceding figure ('timing varies per preceding figure' - no commence/end alignment charted).",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/quickstep/tipsy-to-right-and-left"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
   },
   {
    "wdsfRef": "2.3.21",
@@ -2490,6 +3072,113 @@
    "attributes": []
   },
   {
+   "wdsfRef": "ISTD-T-FALLAWAYPROMENADE",
+   "figureType": "fallaway-promenade",
+   "name": "Fallaway Promenade",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "fallaway-in-promenade",
+   "wdsf": {
+    "start": "LF to side in PP (along LOD, pointing DW)",
+    "finish": "RF closes to LF slightly back in PP, facing wall",
+    "timing": "SQQSQQ",
+    "notes": [
+     "ISTD Silver.",
+     "Source describes the shape as: 3 steps fwd curving rightward (like a 'C'), then 3 steps curving backward.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/fallaway-promenade"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-T-LFANDRFROCKS",
+   "figureType": "lf-and-rf-rocks",
+   "name": "LF and RF Rocks",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "rock-on-left-foot",
+   "wdsf": {
+    "start": "RF back in CBMP (RF Rock), backing LOD",
+    "finish": "LF back small step, L side leading, moving down LOD (LF Rock)",
+    "timing": "QQSQQS",
+    "notes": [
+     "ISTD Bronze.",
+     "Source page note: 'Rocks may be danced down LOD or DC. When a RF Rock follows a LF Rock, the first step of the RF Rock will be down LOD.'",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/lf-and-rf-rocks"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-T-NATURALPROMENADETURN",
+   "figureType": "natural-promenade-turn",
+   "name": "Natural Promenade Turn",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "natural-turn-from-pp",
+   "wdsf": {
+    "start": "LF to side in PP (along LOD, pointing DW)",
+    "finish": "RF fwd in CBMP, LF placed to side without weight in PP, end facing DW of new LOD",
+    "timing": "SQQS",
+    "notes": [
+     "ISTD Bronze.",
+     "Total amount of turn: 3/4 to right (source prints only the total, not per-step amounts).",
+     "Corner figure: exit alignment is relative to the new LOD.",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/natural-promenade-turn"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-T-OUTSIDESWIVELS",
+   "figureType": "outside-swivels",
+   "name": "Outside Swivels",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "outside-swivel-method-1-after-open-finish-and",
+   "wdsf": {
+    "start": "LF back in CBMP, RF crosses in front of LF without weight; end in PP (Lady swivels)",
+    "finish": "LF placed to side small step without weight, facing DW",
+    "timing": "SQQ",
+    "notes": [
+     "ISTD Silver.",
+     "Method 1 charted (taken after an Open Finish, incorporating the Promenade Link; Man does not change direction, Lady swivels). Method 2 (turning to L after an Open Finish ended DW) is on the same page and is already charted as 'outside-swivel-method-2-turning-to-l'; Method 3 (Reverse Outside Swivel) is a separate page/entry.",
+     "Source note: most advanced dancers do not cross the RF in front on step 1, but leave it forward; the Lady often lifts the LF from the floor on step 1 ('flick') keeping knees in contact.",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/outside-swivel"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-T-ROCKTURN",
+   "figureType": "rock-turn",
+   "name": "Rock Turn",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "natural-rock-turn",
+   "wdsf": {
+    "start": "RF fwd, facing DW",
+    "finish": "RF closes to LF slightly back, facing DW",
+    "timing": "SQQSQQS",
+    "notes": [
+     "ISTD Bronze (assignment); the source page labels it Newcomer level.",
+     "1/4 to R between steps 1-3, then 1/4 to L between steps 4-6 (net facing DW again).",
+     "ISTD-syllabus figure (Bronze) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/rock-turn"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "bronze"
+  },
+  {
    "wdsfRef": "2.4.1",
    "figureType": "tango-walk",
    "name": "Tango Walk",
@@ -2793,6 +3482,26 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-T-PROMENADE-LINK",
+   "figureType": "promenade-link",
+   "name": "Promenade Link",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF to side (Promenade Position)",
+    "finish": "LF to side small step w/o weight (Closed Position)",
+    "timing": "SQQ",
+    "notes": [
+     "ISTD-syllabus figure (Silver) not named as such in the WDSF syllabus: the WDSF Technique Book charts the same material as PROMENADE LINK TURNED TO RIGHT / TURNED TO LEFT (figs. 15-16). The plain ISTD figure matches fig. 15 (ends Facing Wall, Man 1/8 to R).",
+     "Timing sourced from the ISTD chart at dancecentral.info: S Q Q. https://www.dancecentral.info/ballroom/international-style/tango/promenade-link"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
   },
   {
    "wdsfRef": "2.4.16",
@@ -3177,6 +3886,48 @@
     ]
    },
    "attributes": []
+  },
+  {
+   "wdsfRef": "ISTD-VW-BACKWARDCHANGESTEP",
+   "figureType": "backward-change-step",
+   "name": "Backward Change Step",
+   "dance": "viennese_waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "lf-backward-change-step-natural-to-reverse",
+   "wdsf": {
+    "start": "LF back backing LOD (after 1/8 R from backing DC)",
+    "finish": "LF closes to RF, backing DW",
+    "timing": "123",
+    "notes": [
+     "Change step in V. Waltz is allowed to turn about 1/4 total to get the alignment needed for the next Reverse Turn (source).",
+     "Change steps make the travel direction change from one track to the other track; continuous Natural or Reverse Turns travel on one track (source).",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/viennese-waltz/natural-to-reverse"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
+   "wdsfRef": "ISTD-VW-FORWARDCHANGESTEP",
+   "figureType": "forward-change-step",
+   "name": "Forward Change Step",
+   "dance": "viennese_waltz",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "rf-forward-change-step-natural-to-reverse",
+   "wdsf": {
+    "start": "RF fwd facing LOD (after 1/8 R from facing DC)",
+    "finish": "RF closes to LF, facing DW",
+    "timing": "123",
+    "notes": [
+     "Change step in V. Waltz is allowed to turn about 1/4 total to get the alignment needed for the next Reverse Turn (source).",
+     "Change steps make the travel direction change from one track to the other track; continuous Natural or Reverse Turns travel on one track (source).",
+     "ISTD-syllabus figure (Silver) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/viennese-waltz/natural-to-reverse"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
   },
   {
    "wdsfRef": "2.5.1",
@@ -4461,6 +5212,28 @@
    },
    "attributes": [],
    "wdsfLevel": "bronze"
+  },
+  {
+   "wdsfRef": "ISTD-T-THECHASE",
+   "figureType": "the-chase",
+   "name": "The Chase",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": "chase",
+   "wdsf": {
+    "start": "LF to side in PP (along LOD, pointing DW)",
+    "finish": "RF to side, small step in PP, facing DC (Lady's RF placed to side without weight)",
+    "timing": "SQQQQS",
+    "notes": [
+     "ISTD Gold.",
+     "Leader total: 3/4 to R between steps 2-6. Follower: 1/8 to L between 2-3, then 7/8 to R between steps 3-6.",
+     "A sharp body turn to R is used on leader step 4.",
+     "ISTD-syllabus figure (Gold) charted from the ISTD chart at dancecentral.info: https://www.dancecentral.info/ballroom/international-style/tango/the-chase"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "gold"
   },
   {
    "wdsfRef": "TB-T-19",

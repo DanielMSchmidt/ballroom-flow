@@ -540,6 +540,91 @@
   },
   {
    "dance": "foxtrot",
+   "figureType": "closed-telemark",
+   "source": "https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/closedtelemark",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info chart (raw HTML fetched; Man + Lady rows). Consistent with the already-charted WDSF twin 'telemark' (foxtrot): same 3-step telemark shape with 3/4 total L turn for the leader and Lady heel turn on 2; dancecentral additionally prints a 4th step (RF fwd in CBMP, OP, S) as the closed finish.",
+   "note": "ISTD Silver (source: 'Silver Level figure'). Step 1: both roles 'start to turn L' (no amount printed on row 1). Step 2 leader turn printed 'slightly less than 3/8 between 1-2' -> recorded three_eighth_L. Step 3 leader turn printed 'slightly over 3/8 between 2-3, body turns less'; follower step 3 '3/8 between 2-3, body turns less'. Step 2 follower: heel turn (LF closes to RF); Lady rise differs: step 1 'rise slightly e/o 1, NFR', step 2 'continue to rise on 2' (Man prints 'Up'). Step 4: no rise printed for either role ('--') -> rise omitted. Position is printed only on step 4 ('in CBMP, OP' Man / 'in CBMP' Lady) -> unprinted rows omit position. Step 4 alignment printed 'DW' without qualifier; exitAlignment qualifier 'facing' inferred from the fwd step (flagged). Follower step 2 alignment printed 'LOD' (heel turn).",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
    "figureType": "curved-feather",
    "source": "WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 36, p. 137",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -2518,6 +2603,210 @@
   },
   {
    "dance": "foxtrot",
+   "figureType": "natural-zig-zag-from-pp",
+   "source": "https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/natural-zig-zag-from-pp",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info chart (raw HTML fetched; Man + Lady rows). The already-charted WDSF twin 'natural-zig-zag-from-p-p' is the 5-step WDSF variant commenced in CBMP; this dancecentral/ISTD version starts from PP and has 6 steps (SQQQQS) ending with a feather-like LF fwd. Zig-zag core (R turn then L turn with Lady passing OP on L side) agrees between the two.",
+   "note": "ISTD Gold (source: 'Gold Level figure'). Step 1 position printed 'in PP and CBMP' -> recorded promenade, CBMP noted here. Step 1: both roles 'Start to turn R' (no amount); step 3: both 'Start to turn L' (no amount). Step 3 couple position: Man 'RF back in CBMP', Lady 'LF fwd in CBMP, OP on L side' -> recorded outside_partner; note it is OP on the Man's LEFT side. Step 4 both roles 'body turns less'. Step 1 follower CBM printed 'CBM (slight)'. Step 5 position: Man 'in CBMP, OP' / Lady 'back in CBMP'. Step 6: no rise printed ('S' row has none) -> rise omitted; rows without a printed position omit position. Follower step 2 note: 'preparing to step OP on L side'. Timing taken from the per-row S/Q labels (no separate overall-timing line).",
+   "steps": [
+    {
+     "rise": "commence",
+     "position": "promenade",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "up",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    },
+    {
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
+   "figureType": "open-impetus",
+   "source": "https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/open-impetus",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info chart (raw HTML fetched; Man + Lady rows). Agrees with the already-charted WDSF twin 'impetus-to-p-p' on the core 3-step shape (Man back TH into RF heel turn with 3/8 R, exit diagonally fwd in PP with L side leading, Lady side then brush to PP); dancecentral additionally prints a 4th step (RF fwd in PP and CBMP, S).",
+   "note": "ISTD Silver (source: 'Silver Level figure'). Step 1: no rise printed for either role ('--') -> rise omitted; both roles 'start to turn R' (no amount on row 1). Step 2 (leader): heel turn (RF closes to LF); rise printed 'rise e/o 2' -> commence on step 2. Step 3 (leader): turn printed 'slight body turn to R' -> no turn value recorded, noted here; 'L side leading' printed -> bodyActions side_leading. Step 3 (follower): 'RF to side in PP having brushed to LF' (brush); turn '3/8 btwn 2-3, body turns less'. Step 4 rise printed 'rise e/o 4' (Man) / 'start to rise e/o 4' (Lady) -> commence on step 4 (rise into the next figure); follower step 4 'start to turn L' (no amount). Steps 3-4 position printed 'in PP' / 'in PP and CBMP' -> promenade recorded, CBMP on step 4 noted here; rows without a printed position omit position. Leader alignment steps 3-4: 'Pointing DC, body facing LOD'; exitAlignment records pointing DC. The WDSF twin is charted as 3 steps; dancecentral's 4th step is effectively the first step of the following PP figure.",
+   "steps": [
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "promenade",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "rise": "commence",
+     "position": "promenade",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "foxtrot",
    "figureType": "open-natural-turn",
    "source": "WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 14, p. 79",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -3543,6 +3832,154 @@
   },
   {
    "dance": "foxtrot",
+   "figureType": "weave-from-pp",
+   "source": "https://www.dancecentral.info/ballroom/international-style/slow-foxtrot/weave-from-pp",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info chart (raw HTML fetched; Man + Lady rows). Agrees with the already-charted WDSF twin 'weave-from-p-p' on the 7-step weave core (PP entry, L-rotating weave, Man back in CBMP mid-figure, exit RF fwd in CBMP OP); dancecentral additionally prints an 8th step (LF fwd, S) and distributes the leader's turn as 1/4 + 1/8 + 3/8 where WDSF prints a different per-step split.",
+   "note": "ISTD Silver (source: 'Silver Level figure'). Step 1 position printed 'in PP and CBMP' -> recorded promenade, CBMP noted here; leader step 1 row prints no turn cell; follower step 1 'start to turn L' (no amount). Steps 2 and 5 (leader) / step 5 (follower): 'start to turn L' (no amount). Leader step 6 '3/8 between 5-6 Body turns less'; follower step 3 '3/8 between 2-3 Body turns less'; follower step 7 '1/8 between 6-7 Body turns less'. Follower step 7 rise printed 'Up. NFR Lower e/o 7' (Lady NFR; Man prints 'Up. Lower e/o 7'). Step 8: no rise and no turn printed -> omitted. Printed footwork note: on step 4 TH may be used, rise on 5 then 'Up NFR'. Rows without a printed position omit position; positions printed: step 1 'PP and CBMP', step 4 Man 'in CBMP' / Lady 'in CBMP, OP' -> outside_partner, step 7 Man 'in CBMP, OP' / Lady 'in CBMP' -> outside_partner. Leader step 2 and follower step 5 sway printed 'Sways(S)' (typo for Sway(S)) -> none. Entry alignment printed 'Pointing DC Body facing LOD'.",
+   "steps": [
+    {
+     "rise": "commence",
+     "position": "promenade",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "rise": "up",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "to_R"
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "foxtrot",
    "figureType": "whisk",
    "source": "WDSF Technique Book — Slow Foxtrot (2nd ed., May 2013), fig. 12, p. 75",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -3765,6 +4202,332 @@
    },
    "exitAlignment": {
     "qualifier": "backing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "change-of-direction",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/change-of-direction",
+   "corroboration": "Fetched three times with differently-worded prompts; all passes agree on 4 step rows, all-Slow timing, footwork, sway and the 1/4 L turn spanning steps 1-3. Confirmed the page charts the figure for quickstep (Bronze), so no foxtrot transplant was needed.",
+   "note": "ISTD Bronze (per page). The page's chart has NO Rise & Fall column, so rise is omitted on every step. Turn is printed once on the step-2 row as '1/4 to L btwn 1-3' (spans steps 1-3) — recorded on step 2 as printed, not split per step. Step 3 is a close without weight for both roles. Step 1 'starts to turn left' is commencement text, not a turn amount. Lady step 2 footwork printed 'T, IE of TH'. Verifier re-confirmed the page is a QUICKSTEP chart: title 'Quickstep Change of Direction', quickstep URL path, 'Bronze Level figure, listed as an additional step that can be danced in Medal Tests' — not the foxtrot figure. One nit on the note wording: the chart rows DO carry a trailing rise cell, printed '--' (empty) on every step, rather than the column being absent — outcome unchanged, rise correctly omitted. Step 2 placement text prints 'R side leading' (leader) / 'L side leading' (follower); kept as descriptive text, not a bodyAction, consistent with the page marking CBM only on steps 1 and 4.",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "IE of TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "diagonal_back",
+      "footwork": "T, IE of TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "close",
+      "footwork": "IE of T (LF)",
+      "sway": "to_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "IE of T (RF)",
+      "sway": "to_R"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "chasse-reverse-turn",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/chasse-reverse-turn",
+   "corroboration": "Two fetch passes with different prompts returned identical 3-row charts (timing S Q Q, alignments FDC/BDW/BLOD man and BDC/PLOD/FLOD lady, footwork HT-T-TH / TH-T-TH). No already-charted twin known.",
+   "note": "ISTD level per page: Newcomer. Lady step 1 is NFR ('start to rise e/o 1, NFR'); couple rise recorded from the Man's column. Lady turn printed '3/8 to L, body turns less' on step 2 and 'body completes turn' on step 3 — the 3/8 is recorded on step 2, 'body completes turn' kept as a note, not a turn value. Lady step 2 alignment 'PLOD' (pointing LOD), step 3 'FLOD' (facing LOD).",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "closed-impetus",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/closed-impetus",
+   "corroboration": "Two fetch passes agree on 4 rows, SSSS, turn amounts (3/8 between 1-2, 1/4 between 2-3), footwork and sway; the raw-dump pass explicitly confirmed CBM on steps 1 and 4 for both roles. Same figure already charted under twin figureType 'impetus'.",
+   "note": "ISTD Bronze. Timing on the page is SSSS — four Slows (dancecentral charts a 4th exit step; the classic book chart is steps 1-3). Rise from Man's column: 'Rise e/o 2' recorded as commence on step 2; step 3 printed 'Up. Lower e/o 3' recorded as lowering. Step 1 has no rise cell. Man step 2 is a Heel Turn (footwork HT). Lady step 3 printed 'RF diag fwd (brushed to LF)'. One fetch pass omitted the CBM mark on Man step 1; the targeted raw dump confirmed it, so it is recorded. Verifier confirmed from raw HTML: CBM is printed on steps 1 and 4 for both roles; man step 4 turn cell is '-' (no turn value); page states 'Technical Details of Closed Impetus are the same in the Waltz figure. When danced in Quickstep it is counted SSSS.'",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "commence",
+     "leader": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_R"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DC_against"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "closed-telemark",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/closed-telemark",
+   "corroboration": "Two fetch passes agree on 4 rows, per-row S timing, alignments, footwork, sway and CBM on steps 1 and 4 for both roles. Same figure already charted under twin figureType 'telemark'.",
+   "note": "ISTD Silver. Timing recorded as SSSS (the per-row cells); alternatives SQQS / QQSS printed as options, not in the chart rows. Man turn cells printed 'slightly less than 3/8 between 1-2' and 'slightly over 3/8 between 2-3, body turns less' — both recorded as three_eighth_L since the enum cannot express the qualifiers; Lady step 3 also printed with 'body turns less' in one pass. Lady step 1 rise printed 'rise slightly e/o 1, NFR'; step 2 'continue to rise on 2' (Heel Turn) — couple rise recorded from Man's column. Man step 4 alignment cell prints just 'DW' (no facing/backing qualifier printed); exitAlignment qualifier 'facing' matches a forward step but the qualifier itself is not printed. Verifier confirmed the lady's step 3 turn cell also prints 'body turns less' ('3/8 between 2-3, body turns less') — not just one fetch pass; and the man's step 2 alignment prints 'almost BLOD' (the 'almost' qualifier is not expressible in the alignment enum).",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
     "direction": "DW"
    }
   },
@@ -4108,6 +4871,136 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "fishtail",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/fishtail",
+   "corroboration": "Two fetch passes returned identical 7-row charts (S Q Q Q Q S S; turns 1/8 R between 1-2 and 2-3; CBM on steps 1 and 7 both roles). Same figure already charted under twin figureType 'fisht-tail' (typo slug).",
+   "note": "ISTD Silver. Steps 1 and 7 are 'in CBMP, OP' (recorded as outside_partner). Man step 3 direction recorded as forward from 'RF fwd and slightly to side (small step)'. Step 4 side-leading noted, not a bodyAction (chart marks CBM only on 1 and 7). Step 7 footwork is T for the man as printed (forward step). Rise from Man's column: 'Rise e/o 1' recorded as commence on step 1, Up on 2-5, 'Lower e/o 6' as lowering on 6, no rise cell on 7. Positions on steps 2-6 are not printed on the page (the chart marks 'in CBMP, OP' only on steps 1 and 7); 'closed' on the middle steps is the standard inferred default, consistent with the other charted figures.",
+   "steps": [
+    {
+     "position": "outside_partner",
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "behind",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "in_front",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "T",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "diagonal_back",
+      "footwork": "T",
+      "sway": "none"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "behind",
+      "footwork": "T",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "in_front",
+      "footwork": "T",
+      "sway": "none"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "diagonal_back",
+      "footwork": "TH",
+      "sway": "none"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
    }
   },
   {
@@ -4576,6 +5469,95 @@
   },
   {
    "dance": "quickstep",
+   "figureType": "natural-pivot-turn",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/natural-pivot-turn",
+   "corroboration": "Two fetch passes agree on 4 rows, S Q Q S timing, alignments (FDW/BDC/BLOD/'Point BDW' man; BDW/PLOD/FLOD/FLOD lady), turn amounts, footwork (HT-T-TH-THT / TH-T-TH-HTH) and sway. Same figure already charted under twin figureType 'natural-pivot'.",
+   "note": "Level per page: Newcomer. Steps 1-3 are the quickstep natural-turn amounts (1/4 between 1-2, 1/8 between 2-3 for the man). Step 4 turn printed 'R up to 1/2 turn' (man) / 'up to 1/2 to R' (lady) — recorded as half_R; the amount is a maximum, not fixed. Lady step 2 printed '3/8 between 1-2' with 'body completes turn' on step 3 (kept as note, no turn value on her step 3). Man step 4 alignment printed 'Point BDW' — exitAlignment recorded as backing DW with the pointing wording noted here. Lady step 4 CBM was missing in one pass; the raw-dump pass marked CBM on steps 1 and 4 for both roles, which is recorded. Rise from Man's column: 'start to rise e/o 1' as commence, Up on 2, 'Up, lower e/o 3' as lowering on 3, none printed on 4. Lady step 1 rise cell prints 'start to rise e/o 1, NFR' — the NFR applies to the follower only; couple-level rise correctly taken from the Man's column. Lady step 2 prints 'body turns less' alongside '3/8 between 1-2'.",
+   "steps": [
+    {
+     "position": "closed",
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "THT",
+      "sway": "none",
+      "turn": "half_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HTH",
+      "sway": "none",
+      "turn": "half_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
    "figureType": "natural-spin-turn",
    "source": "WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 15, p. 79",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -4849,6 +5831,92 @@
   },
   {
    "dance": "quickstep",
+   "figureType": "progressive-chasse",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/progressive-chasse",
+   "corroboration": "Fetched three times with differently-worded prompts; step tables consistent across reads. Turn amounts (Man 1/4 between 1-2; Lady 1/8 between 1-2 + 1/8 between 2-3) match the already-charted WDSF twin progressive-chasse-to-l (4 steps) exactly.",
+   "note": "ISTD bronze; page labels it Newcomer. Chart printed with 5 rows and timing SQQSS: row 5 (RF fwd in CBMP, OP) is the outside-partner step that ISTD/WDSF chart as the first step of the FOLLOWING figure - the WDSF twin has 4 steps SQQS. Man step 1 rise cell: 'Start to rise e/o 1, NFR' (no foot rise, backing step). Rise omitted on step 3: the step-3 cell prints 'No rise & fall' although the step-2 cell prints 'Cont to rise on 2 and 3' (page-internal conflict; transcribed, not resolved). Man step 2 turn '1/4 between 1-2, body turns less'; Man step 3 'slight body turn' (no charted amount). Follower step 3 turn '1/8 between 2-3, body turns less'. Step 4 placements: Man 'LF to side/slightly fwd', Lady 'RF to side slightly back' (mapped to side). The chart has no sway column - sway omitted throughout. Verifier: the printed chart does have a sway column - it is simply empty ('-'/'--') on every row, so omitting sway is correct; the note's 'no sway column' phrasing is imprecise. All timings (SQQSS), directions, footwork, turns (Man 1/4 between 1-2; Lady 1/8 between 1-2 and 1/8 between 2-3), CBM placement, rise cells, and the BDC entry / DW exit re-confirmed against the source's Starting-BDC chart.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "leader": {
+      "direction": "close",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "T",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
    "figureType": "progressive-chasse-to-l",
    "source": "WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 5, p. 59",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -5112,6 +6180,90 @@
    "exitAlignment": {
     "qualifier": "backing",
     "direction": "DC"
+   }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "quick-open-reverse",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/quick-open-reverse",
+   "corroboration": "Fetched three times with differently-worded prompts; tables consistent. Already-charted WDSF twin open-reverse-turn-quick-open-reverse covers the same figure but WDSF charts it as 3 steps; this ISTD-style chart has 4 (SQQS). Sway pattern (Man to_L on 2-3, Lady to_R) matches the twin.",
+   "note": "ISTD silver. Commence facing LOD (or DC; 'If commenced DC, turn 1/4 between 1-2'). Man step 2 turn printed '3/8 between 1-2'; Lady step 2 '1/2 to L between 1-2, body turns less'; Lady step 3 'slight body turn' (no charted amount). Step 3 is Man back in CBMP with Lady fwd in CBMP outside partner. Rise omitted on step 4 (cell blank; figure has lowered e/o 3). Lady step-4 CBM: two reads show CBM, one read shows the cell blank - included as CBM to match the Man's step 4. Exit alignment is the leader's perspective (Man ends backing LOD; page prints 'End: LOD'). Verifier: Lady step 1 rise cell prints 'start to rise e/o 1, NFR' (backing entry, no foot rise) - add for completeness. Lady step-4 CBM confirmed present in the source ('S: LF fwd | Facing LOD | H | -- | Sway(S) | CBM | --'). All other cells (timing SQQS, 3/8 vs 1/2 turns on step 2, sway L/R pattern on 2-3, step-3 CBMP/OP, blank step-4 rise) match the source exactly.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "half_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_R"
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
    }
   },
   {
@@ -5697,6 +6849,220 @@
   },
   {
    "dance": "quickstep",
+   "figureType": "running-right-turn",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/running-right-turn",
+   "corroboration": "Fetched three times with differently-worded prompts; timing, sway and CBM columns re-verified in dedicated passes and consistent. WDSF twin running-natural-turn covers the same composite (their chart: 10 steps); per-step turn totals here sum to 1 5/8 R for both roles, internally consistent.",
+   "note": "ISTD silver. Chart printed with 11 rows: row 11 (RF fwd in CBMP, OP) is the first step of the following figure taken outside partner - the WDSF twin charts 10 steps. Lady rise: NFR on steps 1 and 5 (backing entries into turns). Step 4 is a pivot (Man LF back footwork THT, Lady RF fwd HTH, 1/2 to R on 4). Lady step 6 is a Heel Turn (RF closes to LF, footwork HT, 1/2 between 5-6). Turn cells without charted amounts: Man 5 and 8 'continue to turn'; Lady 3 'body completes turn', 8 'starts to turn' - recorded here, not as values. Rise omitted on steps 4 and 11 (cells blank). Side leading printed: Man 7 'R side leading', Man 10 'L side leading preparing OP'; Lady 7 'L side leading preparing OP', Lady 10 'R side leading'. Steps 9-11 alignments are relative to the new LOD (corner). Man step 9 'RF to side and slightly fwd' mapped to side. Verifier: step-to-timing mapping re-checked row by row in two independent reads - the 11 printed rows carry S,Q,Q,S,S,S,S,Q,Q,S,S exactly as charted (pivot on step 4 = S; heel-turn group 5-7 = SSS; Running Finish 8-11 = QQSS). One note omission: Lady step 5 turn cell also prints 'continue to turn' (no charted amount), alongside the already-recorded Man 5/8 and Lady 3/8 uncharted-turn cells. All turn amounts, sways, CBM rows, side-leading cells, NFR on Lady 1 and 5, and blank rise on 4 and 11 match the source.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "THT",
+      "sway": "none",
+      "turn": "half_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HTH",
+      "sway": "none",
+      "turn": "half_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "commence",
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_L",
+      "turn": "half_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "to_R",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_L",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "rise": "commence",
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_L",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "to_R",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "quickstep",
    "figureType": "running-spin-turn",
    "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/running-spin-turn",
    "corroboration": "Pivot footwork corroborated at dancecentral natural-spin-turn",
@@ -6038,6 +7404,132 @@
   },
   {
    "dance": "quickstep",
+   "figureType": "tipple-chasse-to-r",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/tipple-chasse-to-r",
+   "corroboration": "Fetched four times with differently-worded prompts (CBM column and step-1 rows re-verified in dedicated passes). Already-charted WDSF twins tipple-chasse-to-r-at-the-corner and tipple-chasse-to-r-along-lod cover the same figure (WDSF charts 4 steps, ending on the tipple); entry backing LOD / exit facing DW matches the at-the-corner twin.",
+   "note": "ISTD bronze. AT-A-CORNER variant charted (8 printed rows, timing SQQSQQSS); row 8 (RF fwd in CBMP, OP) is the outside-partner step ISTD/WDSF treat as the following figure's first step. ALONG-SIDE-OF-ROOM variant differs on steps 1-4 only: Man commences LF back in CBMP backing DW, '3/8 between 1-2 body turns less', 'body completes turn' on 3, '1/8 between 3-4'; Lady commences RF fwd in CBMP OP facing DW, '1/4 between 1-2', '1/8 between 2-3', '1/8 between 3-4'; steps 5-8 identical. Corner variant: Man step 1 rise 'start rise e/o 1, NFR'; Man's step-4 turn cell is blank although his alignment moves LOD to DW (transcribed as printed); Lady turns '1/4 between 1-2' and '1/8 between 3-4'. Step 3 rise set to continue from the step-2 cell 'continue rise on 2-3'. No sway column - sway omitted; page offers optional 'to R with head turned to R (Lady to L)'. Side leading printed on step 5 (Man 'L side leading', Lady 'R side leading'). Step 4 placements 'to side, slightly fwd/back' mapped to side. Lady step 5 printed 'RF back R side leading' (back, not diag back). Verifier: all cells of the At-Corner chart match the source, including the blank Man step-4 turn cell (despite his LOD-to-DW alignment change), Lady's 1/4 between 1-2 and 1/8 between 3-4, the behind/in_front cross on step 6, and the empty sway column with the optional 'to R with head turned to R (Lady to L)' styling note. The along-side-of-room variant description in the note also matches the source's second chart.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "turn": "quarter_R"
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "close",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "T"
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "T",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "behind",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "in_front",
+      "footwork": "T"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "TH"
+     },
+     "follower": {
+      "direction": "diagonal_back",
+      "footwork": "TH"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "quickstep",
    "figureType": "tipple-chasse-to-r-along-lod",
    "source": "WDSF Technique Book — Quickstep (2nd ed., May 2013), fig. 26, p. 103",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -6326,6 +7818,50 @@
     "qualifier": "facing",
     "direction": "DW"
    }
+  },
+  {
+   "dance": "quickstep",
+   "figureType": "tipsy-to-r-or-l",
+   "source": "https://www.dancecentral.info/ballroom/international-style/quickstep/tipsy-to-right-and-left",
+   "corroboration": "Fetched twice with differently-worded prompts; consistent. Same source page as the already-charted twins tipsy-to-r and tipsy-to-l (this ISTD entry covers both; the TO R steps are charted here, TO L is the mirror). Step shape (side / halfway close / side, Q&Q) matches both twins.",
+   "note": "ISTD gold. Tipsy TO R charted; Tipsy to L is the exact mirror on opposite feet. 3 steps, Q&Q (step 2 on the '&'). Step 2 'move LF halfway towards RF' (Lady RF towards LF) mapped to direction close, per the twins. Turn omitted: printed 'None, or up to 3/8 to R or L'. Rise cells verbatim: 'Slight rise on 1 and 2' / 'Lower e/o 2' / 'Down, with sharp flexing of knees' - mapped to commence/lowering/lowering matching the twins. Sway omitted on steps 2-3: the printed cells are compound ('L/S' then 'L/R' for Man; 'R/S' then 'R/L' for Lady) and could not be resolved to single values (the twin tipsy-to-r recorded them as Man to_L then to_R). Step 3 footwork verbatim: 'IE of T and IE of T of LF' (Lady: of RF). No alignments charted - figure is danced wherever the preceding figure ends. No CBM marked. Verifier: chart cells (Q&Q timing, side/halfway-close/side, T-T-'IE of T and IE of T' footwork, commence/lowering/lowering rise, unresolved compound sways omitted, turn 'None, or up to 3/8 to R or L' omitted) all match the source. One syllabus-note misquote: the page never says 'timing varies per preceding figure' - it prints the ALIGNMENT of step 1 as 'According to preceding figure'; the conclusion (no alignments charted) is nonetheless correct. Caveat on the mirror claim: the source's Tipsy to Left chart prints the Man's turn cell as 'None, or up to 3/8 to R' (no 'or L') and its sway letters are not mirrored, so it is a step-wise mirror rather than a cell-for-cell one; since only TO R is charted here, no shipped cell is affected.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "T"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "IE of T and IE of T of LF"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "IE of T and IE of T of RF"
+     }
+    }
+   ]
   },
   {
    "dance": "quickstep",
@@ -7768,6 +9304,108 @@
   },
   {
    "dance": "tango",
+   "figureType": "fallaway-promenade",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/fallaway-promenade",
+   "corroboration": "Fetched twice with differently worded prompts; both transcriptions agreed cell-for-cell. Structure (side in PP, fwd-and-across, side, back in fallaway, back in CBMP+fallaway, close to PP; SQQSQQ) matches the already-charted WDSF twin 'fallaway-in-promenade'.",
+   "note": "ISTD Silver. No sway column and no rise (tango). Aggregate turns: leader and follower both print '1/4 to R between 1-4' on row 1 (recorded as quarter_R on step 4, the completing step; source does not distribute it per-step); leader prints '1/8 to L between 4-5' on row 4 (recorded on step 5); follower prints '1/8 to L between 5-6' on row 5 (recorded on step 6). Leader step 6 prints 'Body completes turn' (note only, no value). Row 3 position: leader printed 'in PP' while follower printed 'in PP and CBMP' - promenade used, follower's CBMP noted here. Row 5 printed 'in CBMP and Fallaway' for both - fallaway used. Follower step 6 footwork printed 'Whole foot'.",
+   "steps": [
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "H"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "H"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "BH"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "fallaway",
+     "leader": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "turn": "quarter_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "turn": "quarter_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "position": "fallaway",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "close",
+      "footwork": "BH"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "Whole foot",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "wall"
+   }
+  },
+  {
+   "dance": "tango",
    "figureType": "fallaway-reverse-and-slip-pivot",
    "source": "WDSF Technique Book — Tango (2nd ed., May 2013), fig. 31, p. 127",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -8143,6 +9781,100 @@
   },
   {
    "dance": "tango",
+   "figureType": "lf-and-rf-rocks",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/lf-and-rf-rocks",
+   "corroboration": "dancecentral has one combined 'LF and RF Rocks' page containing two 3-step charts (RF Rock, then LF Rock); both charted here concatenated in page order. The catalog already has WDSF twins 'rock-on-left-foot' and 'rock-on-right-foot' as separate entries; the LF Rock half here matches rock-on-left-foot's back/in_place/back + I/E of BH pattern.",
+   "note": "ISTD Bronze. No sway column and no rise (tango). Steps 1-3 are the RF Rock (all in CBMP), steps 4-6 the LF Rock (no CBMP printed; charted with L/R side leading, recorded as side_leading). Steps 2 and 5 are weight transfers (rock) recorded as in_place: step 2 'Transfer weight forward to LF in CBMP' (leader) / 'Transfer weight back to RF in CBMP' (follower); step 5 'Transfer weight forward to RF in R side leading' (leader) / 'Transfer weight back to LF L side leading' (follower). No turn amounts printed anywhere. Alignments are printed without facing/backing qualifiers ('Back LOD', 'Against LOD', 'Down LOD'); entryAlignment backing-LOD read from leader step 1 'Back LOD' (RF back moving down LOD); exitAlignment omitted because step 6 prints only 'Down LOD'. Page note: rocks may be danced down LOD or DC; when a RF Rock follows a LF Rock, the first step of the RF Rock will be down LOD.",
+   "steps": [
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "H"
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "BH"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H"
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "in_place",
+      "footwork": "H",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "in_place",
+      "footwork": "IE of BH",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   }
+  },
+  {
+   "dance": "tango",
    "figureType": "mini-five-step",
    "source": "WDSF Technique Book — Tango (2nd ed., May 2013), fig. 29, p. 123",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -8237,6 +9969,75 @@
    ],
    "entryAlignment": {
     "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "natural-promenade-turn",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/natural-promenade-turn",
+   "corroboration": "Fetched twice; both transcriptions agreed. Step pattern (side in PP; fwd in PP+CBMP; side and slightly back turning R; fwd in CBMP with free foot placed to side without weight in PP; SQQS) matches the already-charted WDSF twin 'natural-turn-from-pp'.",
+   "note": "ISTD Bronze. No sway column and no rise (tango). Turn amounts: the source prints only 'turning R' on leader steps 2-3 and 'total of 3/4 to R' on leader step 4 ('3/4 to R' on follower step 4) - a figure total, not per-step amounts, so no per-step turn values are recorded (recording the total on one step would misstate it). Step 4: leader's LF and follower's RF are placed to side WITHOUT WEIGHT in PP. Step 4 footwork printed 'H then IE of B of LF' (leader) and 'BH then IE of B of RF' (follower). Leader step 3 footwork printed 'BHB'. Exit is at a corner: leader step 4 alignment printed 'DW of new LOD. End facing DW'; follower 'End facing DC of new LOD'. Row 3 has no position printed; row 4 charted CBMP per the printed 'in CBMP' (free foot ends in PP). Verified against the source 2026-07-15: all directions, positions, CBM placements, timing (SQQS), and the aggregate-turn handling (only 'turning R' on steps 2-3, 'total of 3/4 to R' on step 4; no per-step amounts recorded) match the page. Only correction: step-4 footwork tokens restored to the page's verbatim form including the 'of LF'/'of RF' suffixes.",
+   "steps": [
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "H"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "H"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H"
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "BHB"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H then IE of B of LF",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "BH then IE of B of RF"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
     "direction": "DW"
    },
    "exitAlignment": {
@@ -9085,6 +10886,65 @@
   },
   {
    "dance": "tango",
+   "figureType": "outside-swivels",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/outside-swivel",
+   "corroboration": "Fetched twice with differently worded prompts; transcriptions agreed. This is Method 1 from the page (the page carries Methods 1 and 2); the catalog already holds WDSF twins outside-swivel-method-1/2/3, and the Method 1 shape (back in CBMP with cross without weight, swivel to PP, fwd-and-across, side without weight) matches the method-1 twin.",
+   "note": "ISTD Silver. No sway column and no rise (tango). This is a swivel figure: on step 1 the leader's RF crosses in front of LF WITHOUT WEIGHT (ends in PP) and the follower's LF closes slightly back WITHOUT WEIGHT while she swivels to R; on step 3 both place the free foot to side small step WITHOUT WEIGHT. Turn amounts: leader step 1 printed 'Just under 1/8 to R, 1/8 to L between 1-2' - recorded eighth_R on step 1 (verbatim 'just under') and eighth_L on step 2; leader step 3 printed '1/8 to R'. Follower step 1 printed 'Just over 1/4 to R on 1' - recorded quarter_R (verbatim 'just over'); follower '3/8 to L between 2-3' recorded on step 3. Row 1 position: leader 'in CBMP', follower 'in CBMP, OP' - outside_partner used (the Lady's step is outside partner). Follower footwork verbatim: step 1 'HB (Foot flat) and IE of B of LF', step 2 'HB (Foot flat)'. Row 3 has no position printed. Entry alignment omitted: leader step 1 prints 'Between center and DC against the LOD toe turned in. End facing wall', which the alignment enum cannot express. Verified against the source 2026-07-15: Method 1 rows match cell-for-cell, including the verbatim footwork tokens ('BH with pressure on B of RF', 'HB (Foot flat) and IE of B of LF'), the 'just under 1/8 to R' / 'just over 1/4 to R' turn readings, the between-steps turns recorded on the completing step, and the without-weight foot placements. The page's unexpressible leader entry alignment ('Between center and DC against the LOD toe turned in') is correctly omitted.",
+   "steps": [
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH with pressure on B of RF",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HB (Foot flat) and IE of B of LF",
+      "turn": "quarter_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HB (Foot flat)",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "IE of B",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "IE of B",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
    "figureType": "progressive-link",
    "source": "WDSF Technique Book — Tango (2nd ed., May 2013), fig. 4, p. 61",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -9427,6 +11287,66 @@
    },
    "exitAlignment": {
     "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "promenade-link",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/promenade-link",
+   "corroboration": "Transcribed from the dancecentral.info ISTD chart (Man + Lady); corroborated cell-by-cell against the WDSF Technique Book — Tango (2nd ed., May 2013), fig. 15, p. 89 (PROMENADE LINK TURNED TO RIGHT), which charts the same figure with identical footwork, turn and endings.",
+   "note": "ISTD Silver. Step 2 (both roles): foot action printed as \"HB (foot flat)\" (dancecentral) / \"HB (Flat F)\" (WDSF). Step 3 (leader): placed to side small step without weight. Step 3 (follower): placed to side small step without weight; swivels on LF toward Closed Position between 2 and 3. Exit Facing Wall (leader) reproduced by derivation from entry pointing DW + 1/8 to R, so no exitAlignment is stored (D33).",
+   "steps": [
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "H",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "H",
+      "sway": "none"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HB",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HB",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
     "direction": "DW"
    }
   },
@@ -9844,6 +11764,122 @@
   },
   {
    "dance": "tango",
+   "figureType": "rock-turn",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/rock-turn",
+   "corroboration": "Single clean structured transcription with all seven step rows for both roles; rock action (steps 2-4) and quarter-turn-each-way shape corroborated by the already-charted WDSF twin 'natural-rock-turn'.",
+   "note": "ISTD Bronze per assignment; dancecentral labels the page Newcomer. No sway column and no rise (tango). Step 1 prints 'slight CBM' for both roles (recorded as CBM; 'slight' per source). Step 3 leader is a weight transfer ('Transfer weight to RF, R side leading') recorded as in_place; follower step 3 is 'LF back and slightly left wards, L side leading'. Turns: '1/4 to R between 1-3' printed on row 3 (recorded on step 3) and '1/4 to L between 4-6' printed on row 6 (recorded on step 6); step 5 prints 'No turn' (leader). Side leading printed on steps 3 and 4 (leader R then L; follower L then R). Leader step 6 footwork printed 'IE of foot'. Entry alignment: leader step 1 prints just 'DW' for a forward step (read as facing DW); exit step 7 prints 'FDW' (facing DW). Only step 5 prints a position (CBMP); other rows have none printed.",
+   "steps": [
+    {
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "IE of BH"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H"
+     }
+    },
+    {
+     "leader": {
+      "direction": "in_place",
+      "footwork": "IE of BH",
+      "turn": "quarter_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "turn": "quarter_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "IE of BH",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "IE of foot",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "IE of BH",
+      "turn": "quarter_L"
+     }
+    },
+    {
+     "leader": {
+      "direction": "close",
+      "footwork": "WF"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "WF"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
    "figureType": "tango-walk",
    "source": "https://www.dancecentral.info/ballroom/international-style/tango/walk",
    "corroboration": "ISTD Tango Walk (Newcomer); two forward walks (Man LF, RF), no rise, slight CBM, in CBMP",
@@ -9887,6 +11923,138 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DC"
+   }
+  },
+  {
+   "dance": "viennese_waltz",
+   "figureType": "backward-change-step",
+   "source": "https://www.dancecentral.info/ballroom/international-style/viennese-waltz/natural-to-reverse",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info 'Natural To Reverse' chart (raw HTML fetched). Leader rows are the page's 'Lady/Man (LF Backward Change Step)' chart, follower rows its 'Man/Lady (RF Forward Change Step)' chart, per the page's printed note that after the first half of a Natural Turn the Man can perform the LF Backward Change Step while the Lady does the RF Forward Change. Matches the already-charted WDSF twin 'lf-backward-change-step-natural-to-reverse' on shape (back TH / diag back T / close BH-vs-TH, 1/8 R per turning step, entry backing LOD, exit backing DW); footwork on step 3 differs by source (dancecentral TH, WDSF BH), and the sources disagree on the backward dancer's sway direction (dancecentral to_L, WDSF to_R).",
+   "note": "Source labels this a Bronze figure (assignment lists ISTD Silver; source's level recorded verbatim). dancecentral charts change steps by transition: this is the NATURAL-TO-REVERSE backward change (Man LF back), matching the assignment rule; the REVERSE-TO-NATURAL backward change (Man RF back, turning 1/8 L, sways mirrored) is on .../viennese-waltz/reverse-to-natural (already charted as twin 'rf-backward-change-step-reverse-to-natural'). The page prints this chart with the Lady as primary dancer ('Lady/Man'); alignments/cells are role-relative and identical for the Man dancing it. Step 1 turn printed '1/8 to R btwn preceding step and 1' -> made between the preceding figure and step 1, recorded on step 1. Step 3 rows print no turn cell. Step 1 rise for the backward-moving dancer printed 'rise e/o1, NFR' -> recorded commence, NFR noted (backward partner has no foot rise); the forward-moving partner prints 'rise e/o 1'. No position column printed -> position omitted (closed hold implied but unprinted). Rise from the leader's (backward) column: commence / 'up on 2' / 'up on 3, lower e/o3' -> lowering.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "diagonal_back",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "viennese_waltz",
+   "figureType": "forward-change-step",
+   "source": "https://www.dancecentral.info/ballroom/international-style/viennese-waltz/natural-to-reverse",
+   "corroboration": "Transcribed cell-by-cell from the dancecentral.info 'Natural To Reverse' chart (raw HTML fetched): Man dances RF Forward Change Step, Lady dances LF Backward Change Step. Matches the already-charted WDSF twin 'rf-forward-change-step-natural-to-reverse' (fwd HT / diag fwd T / close TH, 1/8 R per turning step, entry facing LOD, exit facing DW); dancecentral additionally prints an 1/8 R turn between the preceding step and step 1.",
+   "note": "Source labels this a Bronze figure (assignment lists ISTD Silver; source's level recorded verbatim). dancecentral charts change steps by transition, not as a generic Forward Change page: this is the NATURAL-TO-REVERSE forward change (Man RF fwd), the page's primary chart, per assignment rule; the REVERSE-TO-NATURAL forward change (Man LF fwd, turning 1/8 L, sways mirrored) is charted on .../viennese-waltz/reverse-to-natural (already charted as twin 'lf-forward-change-step-reverse-to-natural'). Step 1 turn printed '1/8 to R btwn preceding step and 1' -> turn made between the preceding figure and step 1, recorded on step 1 ('Start with Man facing DC, turning 1/8 to step RF forward along LOD'). Step 3 rows print no turn cell. Lady step 1 rise printed 'rise e/o1, NFR' (Man: 'rise e/o 1') -> Lady NFR noted. Page note: after the first half of a Natural Turn the Man may instead dance the LF Backward Change Step while the Lady dances the RF Forward Change. No position column printed on any row -> position omitted (closed hold implied but unprinted). Rise from Man's column: 'rise e/o 1' -> commence, 'up on 2' -> up, 'up on 3, lower e/o 3' -> lowering.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "eighth_R",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "diagonal_back",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
    }
   },
   {
@@ -10441,6 +12609,74 @@
   },
   {
    "dance": "waltz",
+   "figureType": "back-lock",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/back-lock",
+   "corroboration": "Full per-step chart on dancecentral.info Waltz Back Lock page (verbatim HTML transcription, verified against a second WebFetch pass that agreed cell-for-cell); the page itself cross-references the Quickstep Back Lock, matching the already-charted twin 'backward-lock'. Alignment backing DW on every step for the Man, Lady FDW throughout.",
+   "note": "ISTD Bronze. Chart has no sway and no turn column values (all '--') — sway/turn omitted throughout. Rise (couple-level, Man's column): step 1 printed 'start to rise e/o 1, NFR' -> commence (with No Foot Rise; Lady's rise on 1 has no NFR since she moves forward — noted difference); step 2 'Continue to rise on 2 and 3'; the '&' row's rise cell is blank in the source (covered by 'on 2 and 3') so rise omitted on that row; step 4 (count 3) printed 'Up. Lower e/o 4' -> up, the lowering happens on the first step of the following figure. Man's step 2 foot placement printed verbatim 'RF BW' (read as RF back) — flagged. Couple position printed only on step 1 (Man 'LF back in CBMP', Lady 'RF fwd in CBMP, OP' -> outside_partner); no position printed for steps 2-4, so omitted. Man step 1 CBM; Lady printed 'slight CBM'. Verifier: 'Lower e/o 4' means end of this figure's step 4 (count 3) — the figure lowers at its own end, not on the following figure's first step. Rise line corrected to commence / continue / continue / lowering, matching the source's 'Continue to rise on 2 and 3' (steps 2-3) and the twin backward-lock.",
+   "steps": [
+    {
+     "position": "outside_partner",
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "back",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "T"
+     }
+    },
+    {
+     "leader": {
+      "direction": "in_front",
+      "footwork": "T"
+     },
+     "follower": {
+      "direction": "behind",
+      "footwork": "T"
+     },
+     "rise": "continue"
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "diagonal_back",
+      "footwork": "TH"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "TH"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
    "figureType": "back-whisk",
    "source": "WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 7, p. 57",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -10938,6 +13174,254 @@
   },
   {
    "dance": "waltz",
+   "figureType": "closed-changes",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/waltz-closed-changes",
+   "corroboration": "Verbatim HTML transcription of the 'Waltz RF Closed Change (Natural to Reverse)' chart on the dancecentral Closed Changes page (the page's one fully detailed chart; the LF change is given only as 'the normal opposite' commencing DW). Equivalent to already-charted twins 'closed-change-on-rf' (this chart) / 'closed-change-on-lf' (the mirrored one).",
+   "note": "ISTD Bronze (page says Newcomer). No turn on any step ('Change step foot has no turn, but body has rotation'; 'a very slight turn to R may be made' — not charted as a value). Couple position is not printed anywhere on the page, so position omitted on all rows (standard closed position is implied by the figure name but not verifiable from the source). Man's step 3 alignment printed 'FD' — presumed typo for FDC (Man faces DC on steps 1-2 and Lady backs DC on all three steps); exitAlignment recorded as facing DC on that corroboration. Rise (Man): 1 'Start to rise at end of 1' -> commence; 2 'Cont to rise on 2 and 3' -> continue; 3 'Lower at end of 3' -> lowering. Lady's step 1 rise printed 'Start to rise e/o 1, NFR' (No Foot Rise — differs from Man). Both roles printed 'slight CBM' on step 1. Side steps printed 'side, slightly fwd' (Man) / 'side, slightly back' (Lady) -> mapped to side. Verifier: the LF Closed Change (Reverse to Natural) is actually printed as a complete chart on the page too (both roles, Man FDW / Lady BDW throughout, mirrored sways), not merely described as 'the normal opposite' — only the coaching commentary is unique to the RF chart. The transcribed RF (Natural to Reverse) chart matches the source cell-for-cell, including the 'FD' step-3 alignment typo and the no-turn-column layout.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "closed-impetus",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/closed-impetus",
+   "corroboration": "Verbatim HTML transcription of the dancecentral Waltz Closed Impetus chart, cross-checked against a WebFetch pass that agreed on every cell (placements, alignments, 3/8 + 1/4 turn split, sway S/L/S vs S/R/S, footwork TH-HT-TH / HT-T-TH). Equivalent to the already-charted twin 'impetus'. Page states enter and exit in closed position, supporting position=closed on all rows.",
+   "note": "ISTD Bronze. Step 1 turn column printed 'Start to turn R' (no amount) for both roles — amount is charted where printed: 3/8 between 1-2 on step 2, 1/4 between 2-3 on step 3. Step 2 is the Man's Heel Turn (RF closes to LF); Lady steps side on 2 and 'RF diag fwd having brushed to LF' on 3 (brush noted). Rise (Man): step 1 rise cell printed '--' so omitted; step 2 printed 'Rise e/o 2' -> commence (late rise for the heel turn); step 3 printed 'Up. Lower e/o 3' -> lowering. Step 1 may be OP depending on the preceding figure (charted closed per the page's enter/exit statement).",
+   "steps": [
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "commence",
+     "leader": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "closed",
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DC_against"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "closed-telemark",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/closed-telemark",
+   "corroboration": "Verbatim HTML transcription of the dancecentral Waltz Closed Telemark chart. Equivalent to the already-charted twin 'telemark'. The chart's trailing 'Count 1' rows are the first step of the FOLLOWING figure (Man RF fwd in CBMP OP) and are excluded from the 3 charted steps.",
+   "note": "ISTD Silver. Turn: step 1 printed 'start to turn L' (no amount, both roles); Man step 2 printed 'slightly less than 3/8 between 1-2' -> three_eighth_L (flagged: slightly less); Man step 3 printed 'slightly over 3/8 between 2-3. body turns less' -> three_eighth_L (flagged: slightly over; 'body turns less' kept as note per rules); Lady 3/8 between 1-2 and '3/8 between 2-3, body turns less'. Man's step 2 alignment printed 'almost BLOD' (backing LOD, flagged 'almost'); step 3 alignment 'Pointing DW'. Rise (Man): 1 'rise e/o 1' -> commence; 2 'Up' -> up; 3 'Up, lower e/o 3' -> lowering. Lady's rise on 1 printed 'rise slightly e/o 1, NFR' (No Foot Rise — differs from Man). Lady step 2 is a Heel Turn (LF closes to RF, footwork HT). Couple position not printed on any row, so position omitted (the following step, not charted here, is in CBMP OP). Verifier: Lady's printed rise also differs from the Man's on step 2 — 'continue to rise on 2' vs the Man's 'Up' (in addition to her step-1 'rise slightly e/o 1, NFR' already noted). Couple-level rise cells follow the Man's column as stated.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "closed-wing",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/closed-wing",
+   "corroboration": "Verbatim HTML transcription of the dancecentral Waltz Closed Wing chart. Equivalent to the already-charted twin 'wing'. Man stays facing DC on all three steps; Lady walks around him BDC -> BDC -> FDW against LOD into Wing position (the source explicitly names 'Wing position' on her step 3).",
+   "note": "ISTD Gold. Man's step 3 is placed WITHOUT weight ('LF closes to RF w/o weight'). Man's step 2 placement printed 'LF starts to close to RF' -> close (flagged: 'starts to close'; completes without weight on 3). Man's footwork on 2 and 3 kept verbatim: 'WF, pressure on IE of T of LF'. Turn: no amounts printed — Man printed 'Slight body turn to L on 2 and 3' and Lady's step 3 'Slight body turn to L' are body turns, kept as note per rules, no turn values emitted. Rise (Man's column): step 1 printed '-' so omitted; step 2 printed 'Slight rise on 2 and 3 NFR' -> body_rise (slight, No Foot Rise — verbatim kept here); step 3 '-' so omitted. Lady's rise differs materially: 1 'start to rise e/o 1, NFR', 2 'continue to rise on 2', 3 'Up. Lower e/o 3'. Sway: Man's sway cells all '-' (omitted); Lady printed 'Slight sway to L on 2 and 3' -> to_L on 2 and 3 (flagged: slight). No CBM marked on any step. Position: step 1 printed CBMP OP -> outside_partner; step 2 unprinted -> omitted; step 3 -> wing (source: Lady's 'L leg goes ahead of body to Wing position', 'LF fwd in CBMP, OP on L side').",
+   "steps": [
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H"
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH"
+     }
+    },
+    {
+     "rise": "body_rise",
+     "leader": {
+      "direction": "close",
+      "footwork": "WF, pressure on IE of T of LF"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L"
+     }
+    },
+    {
+     "position": "wing",
+     "leader": {
+      "direction": "close",
+      "footwork": "WF, pressure on IE of T of LF"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "waltz",
    "figureType": "cross-hesitation-from-pp",
    "source": "WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 27, p. 103",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -11256,6 +13740,72 @@
     }
    ],
    "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "fallaway-whisk",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/fallaway-whisk",
+   "corroboration": "Verbatim HTML transcription of the dancecentral Waltz Fallaway Whisk chart (no already-charted twin). Both roles cross loosely behind into Fallaway on step 3; Man backing LOD -> pointing DC -> facing DC, Lady facing LOD -> backing DC -> facing DC against LOD.",
+   "note": "ISTD Gold (additional figure, medal tests). Turn: step 1 printed 'Start to turn R' (no amount, both roles); Man step 2 '3/8 btwn 1-2, body turns less' -> three_eighth_R; Man step 3 printed 'Body continues to turn R' only — body turn, no value emitted (note per rules); Lady step 2 printed '3/8 btwn 1-3' (as printed — likely a typo for 1-2) -> three_eighth_R flagged; Lady step 3 '1/4 btwn 2-3, body continues to turn R' -> quarter_R. Printed foot-turn totals differ between roles (Man 3/8 + body, Lady 5/8) — transcribed as printed. Man's step 2 alignment 'Pointing DC'. Rise (Man): 1 'Start to rise e/o 1, NFR' -> commence (No Foot Rise; Lady's rise on 1 has no NFR); 2 'Continue to rise on 2'; 3 'Lower on 3' -> lowering. Man step 2 footwork TH with source note that 'T' is also correct; Lady step 2 footwork printed TH. Position: step 3 printed 'in Fallaway' -> fallaway on both placements; steps 1-2 have no printed position, so omitted. Sway: Man S/S/R, Lady S/S/L as printed.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "fallaway",
+     "rise": "lowering",
+     "leader": {
+      "direction": "behind",
+      "footwork": "TH",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "behind",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "quarter_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
     "qualifier": "facing",
     "direction": "DC"
    }
@@ -11935,6 +14485,235 @@
   },
   {
    "dance": "waltz",
+   "figureType": "open-impetus-and-wing",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/open-impetus-and-wing",
+   "corroboration": "Single dancecentral chart page for the ISTD amalgamation (fetched twice with different prompts, then verified cell-by-cell against the raw HTML). Component figures already charted from WDSF as 'impetus-to-pp' (waltz, 3 steps) and 'wing-from-pp' (waltz, 3 steps) - step shapes agree (heel turn on Man's step 2; Wing = Lady walks around Man to his left, Man closes LF without weight).",
+   "note": "ISTD Silver. Man step 2 is a heel turn (RF closes to LF). Man step 5: LF only STARTS to close (completes on 6); step 6 LF closes to RF WITHOUT WEIGHT. Man turn on steps 3/5/6 is body turn only ('slight body turn to R' on 3; 'body turn to L on 5'; 'body turn to L on 6') - not stored as turn values. Follower step 3: brush (RF brushed to LF), '3/8 btwn 2-3, body turns less'. Follower steps 5-6 print '1/8' without L/R; L inferred from the printed alignments (BLOD -> BDC) and the printed '1/8 to L btwn 3-4' - flagged, not invented. Rise verbatim (Man): step 2 'rise e/o 2' (mapped commence), step 3 'up, lower e/o 3' (mapped lowering), step 5 'slight rise on 5 and 6, NFR' (mapped NFR); no rise printed on 1, 4, 6. Lady rise differs on the Wing: 'start to rise e/o 4', 'cont to rise on 5', 'up, lower e/o 6'. Step 4 printed 'in PP and CBMP' (position stored promenade). Step 6 position stored 'wing' for printed 'OP on L side' (Wrong Position). Per-step printed alignments not storable at row level: Man 3-4 'Pointing DC, body facing LOD'; Lady 4 'BDW', 5 'BLOD', 6 'BDC'. Verifier: all turn cells re-checked against the raw HTML. The un-lettered fractions are confirmed by the page itself - Man 3/8 btwn 1-2 by step 1 'start to turn R' and Lady's explicit '3/8 to R btwn 1-2'; Lady 3/8 btwn 2-3 by the BDC -> Pointing-to-Centre alignment change (3/8 R); Lady 1/8 btwn 4-5 and 5-6 by the BDW -> BLOD -> BDC alignment chain (each 1/8 L) continuing the explicit '1/8 to L btwn 3-4'. No turn cell dropped.",
+   "steps": [
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_L",
+      "turn": "three_eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_R",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "promenade",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "NFR",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on T of RF with foot flat, and pressure on IE of T (LF)",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "wing",
+     "leader": {
+      "direction": "close",
+      "footwork": "same as step 5",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "open-telemark-and-wing",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/open-telemark-and-wing",
+   "corroboration": "Single dancecentral chart page for the ISTD amalgamation (fetched twice with different prompts, then verified cell-by-cell against the raw HTML). Component figures already charted from WDSF as 'telemark-to-pp' (waltz, 3 steps; Lady heel turn on step 2) and 'wing-from-pp' (waltz, 3 steps; Man closes without weight) - step shapes agree.",
+   "note": "ISTD Silver. Follower step 2 is a heel turn (LF closes to RF). Man step 5: LF only STARTS to close (completes on 6); step 6 LF closes to RF WITHOUT WEIGHT. Man step 3 '1/2 btwn 2-3, body turns less'; Man step 5 turn is 'body turn on 5' only (not stored). Follower step 3 turn is 'slightly body turn to L' only (not stored). Follower step 6 turn '1/4 btwn 5-6, then continue to turn body to BDC'. Man steps 4/6 and Lady steps 4/5 print the turn amount without L/R ('1/8 btwn 3-4', '1/8 btwn 5-6', '1/8 btwn 4-5'); L inferred from printed alignments (Man: Pointing DW -> Pointing LOD -> FDC; Lady: FDC -> Facing Centre -> Facing against LOD) - flagged, not invented. Rise verbatim (Man): step 1 'rise e/o 1' (mapped commence), step 2 'up', step 3 'up, lower e/o 3' (mapped lowering), step 5 'slight rise on 5 and 6, NFR' (mapped NFR); no rise printed on 4, 6. Lady rise differs: step 1 'rise slightly e/o 1, NFR', step 2 'cont rise on 2', then Wing 'start to rise e/o 4', 'cont to rise on 5', 'up, lower e/o 6'. Step 4 printed 'in PP and CBMP' (position stored promenade). Step 6 position stored 'wing' for printed 'OP on L side'. Entry alignment printed as bare 'DC' on Man's step 1 (facing qualifier from the forward step). Lady step 6 alignment verbatim: 'Facing against LOD, continue to turn to BDC'. Verifier: all turn cells re-checked against the raw HTML. The un-lettered fractions are confirmed by printed alignments - Man 1/8 btwn 3-4 (Pointing DW -> Pointing to LOD = 1/8 L), Man 1/8 btwn 5-6 (body facing LOD on 5 -> FDC on 6 = 1/8 L), Lady 1/8 btwn 3-4 (Pointing LOD -> FDC = 1/8 L), Lady 1/8 btwn 4-5 (FDC -> Facing Centre = 1/8 L), Lady 1/4 btwn 5-6 (Facing Centre -> Facing against LOD = 1/4 L); Man/Lady steps 2-3 direction is fixed by the printed 'start to turn L' on step 1. No turn cell dropped. Note: page prints Man step 3 alignment 'Pointing DW, body facing wall' (proposal note's alignment chain starts there).",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "up",
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "HT",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "half_L"
+     },
+     "follower": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "turn": "eighth_L",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "NFR",
+     "leader": {
+      "direction": "close",
+      "footwork": "Pressure on T of RF with foot flat, and pressure on IE of T (LF)",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "wing",
+     "leader": {
+      "direction": "close",
+      "footwork": "same as step 5",
+      "sway": "none",
+      "turn": "eighth_L"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
+   }
+  },
+  {
+   "dance": "waltz",
    "figureType": "outside-change",
    "source": "WDSF Technique Book — Waltz (2nd ed., May 2013), fig. 8, p. 59",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",
@@ -12265,6 +15044,70 @@
    "exitAlignment": {
     "qualifier": "backing",
     "direction": "LOD"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "reverse-corte",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/reverse-corte",
+   "corroboration": "dancecentral chart page fetched three times with different prompts and verified cell-by-cell against the raw HTML; all passes agree. No already-charted twin (distinct from the foxtrot Hover Corte).",
+   "note": "ISTD Bronze. Man step 2: LF closes to RF WITHOUT WEIGHT; Man step 3 is 'Position held' (mapped in_place, footwork verbatim 'TH(RF)'). Man footwork step 2 verbatim: 'H(LF) then toes both feet'. Man alignment steps 2-3 verbatim: 'BDC against LOD (or BDC on new LOD)' - the parenthetical is the corner case. Lady turn amounts print no L/R on the main rows ('1/4 turn between 1-2', '1/8 between 2-3'); L confirmed by the page's own alternative-turn note ('Just over 1/4 to L...') and the L-turn of the figure. Rise verbatim (Man): step 2 'rise on 2' (mapped commence), step 3 'up, lower e/o 3' (mapped lowering); nothing printed on step 1. Lady rise differs: 'Start to rise e/o 1', 'Continue to rise on 2 and 3', 'lower e/o 3'. No position column printed (couple remains in normal hold; following figures start CBMP Lady OP per source note). Verifier: every cell matches the raw HTML. The un-lettered turn fractions (Man 3/8 between 1-2; Lady 1/4 between 1-2, 1/8 between 2-3) are confirmed by the printed 'start to turn L' on step 1 of both roles and by the page's own alternative-turn notes, which letter every variant 'to L'. Exit 'BDC against LOD' matches the stored backing DC_against.",
+   "steps": [
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HT",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "close",
+      "footwork": "H(LF) then toes both feet",
+      "sway": "to_R",
+      "turn": "three_eighth_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "to_L",
+      "turn": "quarter_L"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "in_place",
+      "footwork": "TH(RF)",
+      "sway": "to_R"
+     },
+     "follower": {
+      "direction": "close",
+      "footwork": "TH",
+      "sway": "to_L",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "backing",
+    "direction": "DC_against"
    }
   },
   {
@@ -12992,6 +15835,180 @@
    "exitAlignment": {
     "qualifier": "pointing",
     "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "turning-lock",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/turning-lock",
+   "corroboration": "dancecentral chart page fetched twice with different prompts and verified cell-by-cell against the raw HTML; all passes agree, including the 5-row layout. Already-charted twin: 'reverse-turning-lock' (waltz, WDSF fig. 24) - same left-turning lock, charted there as 4 steps without the exit step row.",
+   "note": "ISTD Silver. Counts: 1 (1/2 beat), & (1/2 beat), 2, 3, then 1 of the next bar for the charted exit step (timing 1&23 1). Step 3: 'start to turn L' only (no amount printed). Step 4: '1/4 btwn 3-4, body turns less' (both roles). Rise verbatim (Man): step 1 'start to rise e/o 1' (mapped commence), step 2 'rise on 2 and 3' (mapped continue; the printed cell spans steps 2-3 - nothing separate printed on step 3, so rise omitted there), step 4 'up, lower e/o 4' (mapped lowering); nothing on step 5. Step 5 (exit step) position outside_partner from printed 'RF fwd in CBMP, OP' (Lady 'LF back in CBMP'); CBM marked on step 5 both roles. Man step 5 sway printed 'Sways(S)' (sic). No position printed for steps 1-4 (closed finish per source comment). Preceding Natural Spin Turn note: last step footwork is the normal TH for Man and Lady; may be shaped to the Man's left, leading the Lady to turn her head right. Verifier: every other cell matches the raw HTML, including the 5-row layout with the exit step on count 1 of the next bar and the 'Sways(S)' sic. The un-lettered '1/4 btwn 3-4' (both roles) is confirmed by the printed 'start to turn L' on step 3 of both roles. Timing '1&231' matches the page's counts and the repo's '1&23' convention for the 4-step twin. No turn cell dropped.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "to_L",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "to_R",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "in_front",
+      "footwork": "T",
+      "sway": "to_L"
+     },
+     "follower": {
+      "direction": "behind",
+      "footwork": "T",
+      "sway": "to_R"
+     }
+    },
+    {
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "sway": "none"
+     }
+    },
+    {
+     "rise": "lowering",
+     "leader": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "quarter_L"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "T",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "DC"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "waltz",
+   "figureType": "turning-lock-to-r",
+   "source": "https://www.dancecentral.info/ballroom/international-style/waltz/turning-lock-to-r",
+   "corroboration": "dancecentral chart page fetched twice with different prompts and verified cell-by-cell against the raw HTML. Already-charted twin: 'natural-turning-lock' (waltz, WDSF fig. 23) - same right-turning lock ending in PP, also 4 steps.",
+   "note": "ISTD Gold. Counts 1 & 2 3. SWAY OMITTED on steps 1-2: the chart prints alternatives only ('Sway (L or R)' per cell; 'Sway: LLSS or RRSS') - recorded in syllabusNotes, not stored to avoid picking one. Step 1 alignment printed verbatim 'Down LOD' (no facing/backing qualifier); entryAlignment 'backing LOD' from the Man's backward step - flagged as interpretation. Step 3 (both roles) prints '1/8 btwn 2-3' without L/R; R inferred from the figure's continuing right turn (step 2 prints '1/4 to R') and printed alignments - flagged, not invented. Man step 3 verbatim: 'RF to side and slightly fwd, small step, btwn partner's feet'. Man step 4 turn is 'Slight body turn to R' only (not stored). Follower step 4: '3/8 btwn 3-4, body turns less', 'RF to side in PP, having brushed towards LF' (brush). Rise verbatim (Man): step 1 'Start to rise e/o 1' (mapped commence), step 2 'Continue to rise 2 and 3' (mapped continue; spans step 3 - nothing separate printed on step 3, so rise omitted there), step 4 'Up. Lower e/o 4' (mapped lowering). No CBM marked on any step. No position printed for steps 1-3; step 4 in PP. Exit alignment 'Pointing DC, body facing LOD'. Verifier: every other cell matches the raw HTML. The un-lettered '1/8 btwn 2-3' is confirmed R by the explicit '1/4 to R btwn 1-2' on step 2 and by the printed alignments (Man Facing Centre -> FDC = 1/8 R; Lady Backing Centre -> BDC = 1/8 R); the Lady's '3/8 btwn 3-4' is confirmed R by BDC -> Pointing to Centre (3/8 R). Sway correctly omitted on steps 1-2 (page prints only the LLSS/RRSS alternatives). Entry 'backing LOD' from the bare printed 'Down LOD' plus the Man's backward step is a sound reading. No turn cell dropped.",
+   "steps": [
+    {
+     "rise": "commence",
+     "leader": {
+      "direction": "back",
+      "footwork": "T",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "T",
+      "bodyActions": [
+       "side_leading"
+      ]
+     }
+    },
+    {
+     "rise": "continue",
+     "leader": {
+      "direction": "in_front",
+      "footwork": "T",
+      "turn": "quarter_R"
+     },
+     "follower": {
+      "direction": "behind",
+      "footwork": "T",
+      "turn": "quarter_R"
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "T",
+      "sway": "none",
+      "turn": "eighth_R"
+     }
+    },
+    {
+     "rise": "lowering",
+     "position": "promenade",
+     "leader": {
+      "direction": "diagonal_forward",
+      "footwork": "TH",
+      "sway": "none",
+      "bodyActions": [
+       "side_leading"
+      ]
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "TH",
+      "sway": "none",
+      "turn": "three_eighth_R"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "backing",
+    "direction": "LOD"
+   },
+   "exitAlignment": {
+    "qualifier": "pointing",
+    "direction": "DC"
    }
   },
   {
@@ -17755,6 +20772,107 @@
    "entryAlignment": {
     "qualifier": "facing",
     "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
+   "figureType": "the-chase",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/the-chase",
+   "corroboration": "Single clean structured transcription with all six step rows for both roles; figure already charted in the catalog under the twin figureType 'chase' (same URL family).",
+   "note": "ISTD Gold. No sway column and no rise (tango). Aggregate turns are printed as figure spans, not per-step: leader '3/4 to R between steps 2-6' (row 2) and follower '7/8 to R between steps 3 to 6' (row 3) are NOT recorded as step values because the source gives no per-step distribution; only the follower's '1/8 to L between steps 2-3' is discrete (recorded on step 3). Step 4: leader fwd in CBMP OP (outside partner), with printed note 'A sharp body turn to R is used on this step'. Step 5: FOLLOWER is the one stepping outside partner ('RF fwd in CBMP, OP'); row charted outside_partner accordingly. Step 6: follower's RF is placed to side WITHOUT WEIGHT in PP; footwork printed 'BH and IE of B of LF' (leader) / 'BH and IE of B of RF' (follower); follower alignment 'Backing DC, ending facing DC against LOD'. Row 3 has no position printed. Verified against the source 2026-07-15: all six rows match for both roles, including the role-asymmetric outside-partner steps (leader OP on step 4, follower OP on step 5), the aggregate turns left unrecorded (leader '3/4 to R between steps 2-6', follower '7/8 to R between steps 3 to 6') with only the follower's discrete '1/8 to L between steps 2-3' recorded on step 3, and the follower's step-6 RF placed to side without weight.",
+   "steps": [
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "H"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "H"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "leader": {
+      "direction": "side",
+      "footwork": "IE of BH"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "IE of BH",
+      "turn": "eighth_L"
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "forward",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "back",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "outside_partner",
+     "leader": {
+      "direction": "back",
+      "footwork": "BH",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "H",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "BH and IE of B of LF"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "BH and IE of B of RF"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   },
+   "exitAlignment": {
+    "qualifier": "facing",
+    "direction": "DC"
    }
   },
   {
