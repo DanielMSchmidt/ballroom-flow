@@ -682,6 +682,9 @@ app.get("/api/routines/:id/family-notes", async (c) => {
     text: r.text,
     figureType: r.figureType,
     danceScope: r.danceScope,
+    // Surface the note's timestamp so the reading-view margin orders co-members'
+    // notes newest-first (v1 index tracks only updatedAt → it is the createdAt).
+    createdAt: r.updatedAt,
     ...(r.count != null ? { count: r.count } : {}),
     ...(r.role != null ? { role: r.role } : {}),
     anchors: [

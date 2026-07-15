@@ -19,6 +19,9 @@ export interface FamilyNoteRow {
   text: string;
   count: number | null;
   role: string | null;
+  /** The row's last-write time (v1 index tracks no separate createdAt). Surfaced
+   *  so the reading-view margin can order co-members' notes newest-first. */
+  updatedAt: number;
 }
 
 /** Fields needed to persist a family note. */
@@ -49,7 +52,7 @@ export async function familyNotesForMembers(
   if (authorIds.length === 0) return [];
   const placeholders = authorIds.map(() => "?").join(",");
   const sql =
-    `SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text, count, role FROM figure_type_note_index ` +
+    `SELECT noteId, accountDocRef, authorId, figureType, danceScope, kind, text, count, role, updatedAt FROM figure_type_note_index ` +
     `WHERE deletedAt IS NULL AND (danceScope = ? OR danceScope = 'all') ` +
     `AND authorId IN (${placeholders})`;
   const res = await db
