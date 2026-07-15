@@ -29,6 +29,14 @@ async function settleEmptyStateForCreateShot(page: Page): Promise<void> {
   await video.evaluate((v) => {
     v.style.display = "none";
   });
+  // The sample/template rows arrive from /api/templates, whose FIRST call after
+  // resetDb also lazily seeds the sample — a separate, slower query than the
+  // routines fetch the video-attach wait proves. Without this wait the shot's
+  // background depends on which side of that race the run lands (the baseline
+  // workflow and the PR job landed on different sides — a standing false diff).
+  await expect(page.getByRole("button", { name: /start from template/i })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 // Long Side then Short Side of the floor (the app's section model).
