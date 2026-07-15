@@ -57,7 +57,10 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
 - **The reading programme's notes margin:** the right ~29% of every figure is a margin — the
   figure header and each step row carry a cell with the note authors' avatars, a ＋ compose
   affordance (commenter+), and the latest note as a two-line snippet. Tapping a cell opens
-  that anchor's thread.
+  that anchor's thread. **Family notes surface here too** (2026-07-15): a `figureType` note
+  matching the figure folds into the same margin cells as the routine-anchored notes — one
+  merged, newest-first set, with family-scope notes tagged as such (a timed family note lands
+  on its count's row, an untimed one on the figure header).
 - **The figure detail (read lens):** the per-figure annotation thread plus the family-notes
   surface. The editing lens deliberately shows neither — the authoring surface stays clean.
 - **The library:** from a figure family you can open the cross-dance note surface (annotate
