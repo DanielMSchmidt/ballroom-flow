@@ -1208,6 +1208,102 @@ describe("US-027 Add a figure from the library picker", () => {
     expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
   });
 
+  it("surfaces a just-bookmarked figure placed in THIS choreo before /mine catches up", async () => {
+    // Intent: "add to my library" lands in the live account doc instantly, but
+    //   /api/figures/mine reads the alarm-written library_entry projection — a
+    //   picker fed only by that REST list misses the figure the user JUST
+    //   bookmarked (read-your-writes, the same gap PR #255 closed for the
+    //   Journal). The picker merges live bookmarks resolved from this routine's
+    //   placed figures, so the bookmark and the placement are the same figure
+    //   underneath (placing it references the SAME doc by ref — never a copy).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const placeFigure = vi.fn();
+    const mineFig: FigureDoc = {
+      ...figure("fig_mine", "My Lunge"),
+      scope: "account",
+      source: "custom",
+      figureType: "my-lunge",
+    };
+    const glueFig: FigureDoc = {
+      ...figure("fig_glue", "Glue Step"),
+      scope: "account",
+      source: "custom",
+      figureType: "glue-step",
+    };
+    const p1 = placement("p1", "fig_mine");
+    const p2 = placement("p2", "fig_glue");
+    const routine: RoutineDoc = {
+      ...emptySectionRoutine(),
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1, p2] }],
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(
+          routine,
+          [
+            { placement: p1, figure: mineFig, status: "live" },
+            { placement: p2, figure: glueFig, status: "live" },
+          ],
+          { placeFigure },
+        )}
+        // The stale REST list: the library_entry projection hasn't caught up.
+        libraryFigures={[]}
+        // The live account doc already carries the bookmark.
+        bookmarkedFigureRefs={new Set(["fig_mine"])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    const list = within(screen.getByRole("list", { name: /library figures/i }));
+    // A placed figure that was NOT bookmarked stays choreo-local — out of the
+    // picker (docs/concepts/figures.md § Scopes: glue steps stay out of every
+    // library).
+    expect(list.queryByRole("button", { name: /glue step/i })).toBeNull();
+    // Tapping the just-bookmarked figure places the SAME live doc by ref.
+    await userEvent.click(list.getByRole("button", { name: /my lunge/i }));
+    expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
+  });
+
+  it("dedupes a live bookmark against its /mine row once the projection catches up", async () => {
+    // Intent: once library_entry has projected, the same figure arrives via BOTH
+    //   the live account-doc set and the REST list — it must list exactly once
+    //   (the REST row wins, mirroring the Journal merge's dedupe rule).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const mineFig: FigureDoc = {
+      ...figure("fig_mine", "My Lunge"),
+      scope: "account",
+      source: "custom",
+      figureType: "my-lunge",
+    };
+    const p1 = placement("p1", "fig_mine");
+    const routine: RoutineDoc = {
+      ...emptySectionRoutine(),
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: mineFig, status: "live" }])}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 1,
+          },
+        ]}
+        bookmarkedFigureRefs={new Set(["fig_mine"])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    const list = within(screen.getByRole("list", { name: /library figures/i }));
+    expect(list.getAllByRole("button", { name: /my lunge/i })).toHaveLength(1);
+  });
+
   it("the picker's search filter finds library figures too", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     renderUi(

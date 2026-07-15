@@ -48,7 +48,7 @@ import { useOnline } from "../lib/use-online";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
 import { type FamilyNote, loadFamilyNotes } from "../store/family-notes";
-import type { MineFigure } from "../store/figures";
+import { type MineFigure, mergeLiveBookmarkedFigures } from "../store/figures";
 import { useMe } from "../store/me";
 import type {
   CopyOnWriteErrorReason,
@@ -557,7 +557,7 @@ export function Assemble({
   // (`fromLiveDoc`) or is still the read-only snapshot fallback. Match on the
   // placement's figureRef too, so the open sheet still resolves during the brief
   // window where the figure has no content yet (loading) and after a COW re-point.
-  const notatingPlacements = store.readPlacements();
+  const resolvedPlacements = store.readPlacements();
   const notatingRP =
     notating === null
       ? null
@@ -565,9 +565,9 @@ export function Assemble({
         // windows to its portion; fall back to a figure-id match for the reading-view
         // open path and to keep resolving during the brief COW re-point window.
         ((notatingPlacementId !== null
-          ? notatingPlacements.find((rp) => rp.placement.id === notatingPlacementId)
+          ? resolvedPlacements.find((rp) => rp.placement.id === notatingPlacementId)
           : undefined) ??
-        notatingPlacements.find(
+        resolvedPlacements.find(
           (rp) => rp.figure?.id === notating || rp.placement.figureRef === notating,
         ) ??
         null);
@@ -1037,7 +1037,16 @@ export function Assemble({
       >
         <AddFigurePicker
           dance={routine.dance}
-          libraryFigures={libraryFigures}
+          // Read-your-writes (mirrors PR #255's Journal merge): the REST /mine
+          // list trails a just-added bookmark by a WS round-trip + alarm tick,
+          // so merge live-bookmarked figures resolved from THIS routine's
+          // placed figure docs — the bookmark and the placement stay the same
+          // figure underneath (placing it references the same doc by ref).
+          libraryFigures={mergeLiveBookmarkedFigures(
+            libraryFigures ?? [],
+            bookmarkedFigureRefs ?? new Set(),
+            resolvedPlacements,
+          )}
           onAddFromLibrary={(figureRef) => {
             // Assembly of an existing library figure (⟳v5 §4.2): the placement
             // just references the live doc — whole figure, no portion step (the

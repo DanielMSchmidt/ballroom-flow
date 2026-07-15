@@ -162,7 +162,14 @@ WS-sync + alarm race, so the client merges **own** family notes from the live ac
 (`mergeLiveFamilyNotes`) and echoes just-saved routine entries over the REST list
 (`createRoutineJournalEntry` returns the created entry; `mergePendingEntries`), deduped by id
 once the projections catch up — the projections stay the only **cross-user** read path
-(read-your-writes fix, 2026-07-15).
+(read-your-writes fix, 2026-07-15). The **library surfaces** follow the same rule — both
+read `/api/figures/mine` (the `library_entry` projection), so a bookmark added moments ago
+would otherwise be invisible until the alarm projects it: the **Add-figure picker** merges
+live-bookmarked figures resolved from the open routine's placed figure docs
+(`mergeLiveBookmarkedFigures` — placing the row references the same live figure doc, never
+a copy), and the Library's **"My figures" tab** merges live catalog refs resolved from the
+bundled catalog (`mergeLiveCatalogBookmarks`); both dedupe by docRef with the REST row
+winning once the projection catches up.
 
 ## Ordering — fractional-index `sortKey`
 

@@ -20,7 +20,11 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { danceName, pickMessages, useLocale, useMessages } from "../i18n";
 import { figureLibraryMessages } from "../i18n/messages/figure-library";
-import type { MineFigure, SaveToLibraryResult } from "../store/figures";
+import {
+  type MineFigure,
+  mergeLiveCatalogBookmarks,
+  type SaveToLibraryResult,
+} from "../store/figures";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Card, Chip, EditIcon, EmptyState, IconButton, SectionDivider, useToast } from "../ui";
 
@@ -119,7 +123,13 @@ function MineBadge({ saved }: { saved: boolean }) {
 }
 
 /** The "My figures" personal-library tab (frames 2.3/2.4). */
-function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> }) {
+function PersonalLibrary({
+  loadMine,
+  liveBookmarkedRefs,
+}: {
+  loadMine?: () => Promise<MineFigure[]>;
+  liveBookmarkedRefs?: readonly string[];
+}) {
   const t = useMessages(figureLibraryMessages);
   const locale = useLocale();
   const [mine, setMine] = useState<MineFigure[] | null>(null);
@@ -136,7 +146,11 @@ function PersonalLibrary({ loadMine }: { loadMine?: () => Promise<MineFigure[]> 
     };
   }, [loadMine]);
 
-  const figures = mine ?? [];
+  // Read-your-writes (docs/system/architecture.md § D1 — the index &
+  // projections): a catalog figure "↟ save"d moments ago lives in the account
+  // doc's live ref set before the alarm projects it into the /mine REST read —
+  // merge it in (bundled catalog metadata) so the tab never misses it.
+  const figures = mergeLiveCatalogBookmarks(mine ?? [], liveBookmarkedRefs ?? []);
   const visible = dance === "all" ? figures : figures.filter((f) => f.dance === dance);
 
   return (
@@ -195,12 +209,17 @@ export function FigureLibrary({
   initialDance = "all",
   tab = "all",
   loadMine,
+  liveBookmarkedRefs,
   onSaveToLibrary,
   onViewMine,
 }: {
   initialDance?: DanceFilter;
   tab?: "all" | "mine";
   loadMine?: () => Promise<MineFigure[]>;
+  /** The live account doc's bookmark ref set (read-your-writes): catalog refs a
+   *  just-fired "↟ save" added surface in "My figures" immediately, before the
+   *  alarm projects them into the /mine REST read. Omitted → REST only. */
+  liveBookmarkedRefs?: readonly string[];
   onSaveToLibrary?: (input: SaveLibraryInput) => Promise<Pick<SaveToLibraryResult, "alreadySaved">>;
   /** Switch to the "My figures" segment — the save-toast's "View" action
    *  (Builder v2: "Saved to My figures · View"). */
@@ -217,7 +236,7 @@ export function FigureLibrary({
   const groups = useMemo(() => libraryGroupsForFilter(dance), [dance]);
 
   if (tab === "mine") {
-    return <PersonalLibrary loadMine={loadMine} />;
+    return <PersonalLibrary loadMine={loadMine} liveBookmarkedRefs={liveBookmarkedRefs} />;
   }
 
   async function handleSave(fig: LibraryFigure) {

@@ -65,5 +65,35 @@ test.describe("@smoke figure library", () => {
     await page.getByRole("button", { name: /feather step/i }).click();
     await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
+
+    // 3. Create a custom figure, bookmark it from its placement card, and place
+    //    it AGAIN from the picker — read-your-writes (docs/system/architecture.md
+    //    § D1 — the index & projections): the bookmark lands in the live account
+    //    doc instantly, and the picker must list the figure right away, NOT wait
+    //    for the alarm-written /api/figures/mine projection to catch up.
+    await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
+    await page.getByLabel("Figure name").fill("My Lunge");
+    await page.getByLabel("Figure name").press("Enter");
+    // The custom mint opens its step editor immediately (create-navigates, §4.3)
+    // — close it; this journey drives the bookmark → picker loop.
+    await expect(page.getByRole("dialog", { name: /steps · my lunge/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.keyboard.press("Escape");
+
+    // Bookmark it from the placement card (⟳v5 — a reference, never a copy).
+    await page.getByRole("button", { name: /add my lunge to my library/i }).click();
+    await expect(page.getByText(/added to your library/i)).toBeVisible({ timeout: 15_000 });
+
+    // The Add-figure picker lists the just-bookmarked figure immediately;
+    // tapping places the SAME live figure doc a second time (by ref).
+    await page.getByRole("button", { name: "Add figure" }).click();
+    const picker = page.getByRole("dialog", { name: /add a figure/i });
+    await picker.getByRole("button", { name: /my lunge/i }).click();
+    await expect(picker).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /edit steps: my lunge/i })).toHaveCount(2, {
+      timeout: 15_000,
+    });
   });
 });

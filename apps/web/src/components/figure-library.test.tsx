@@ -148,6 +148,32 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
     expect(screen.getByText(/nothing in My figures for this dance yet/i)).toBeInTheDocument();
     expect(screen.getByText(/save a catalog figure and it lands here/i)).toBeInTheDocument();
   });
+
+  it("surfaces a just-bookmarked catalog figure before the /mine projection catches up", async () => {
+    // Intent: the Library's "↟ save" writes the bookmark into the live account
+    //   doc instantly, but /api/figures/mine reads the alarm-written
+    //   library_entry projection — so the "My figures" tab must merge the live
+    //   ref set (read-your-writes, docs/system/architecture.md § D1 — the index
+    //   & projections) over the REST list. A catalog `global:` ref resolves its
+    //   metadata from the bundled catalog; the REST row wins once projected.
+    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
+      "../components/FigureLibrary",
+    );
+    renderUi(
+      <FigureLibrary
+        tab="mine"
+        // The stale REST list already carries one row — ALSO in the live set,
+        // so the merge must not duplicate it.
+        loadMine={loadMine}
+        liveBookmarkedRefs={["global:foxtrot:feather-step", "v1"]}
+      />,
+    );
+    // The just-bookmarked catalog figure lists from the live set alone.
+    expect(await screen.findByText("Feather Step")).toBeInTheDocument();
+    expect(screen.getByText(/not in a choreo yet/i)).toBeInTheDocument();
+    // The ref the projection already carries lists exactly once (REST row wins).
+    expect(screen.getAllByText("My Feather")).toHaveLength(1);
+  });
 });
 
 describe("US-035 Auto-variant on editing a global figure (⟳v5 variant-spawn toast)", () => {
