@@ -108,3 +108,41 @@ the document (or `GET /api/routines/<docRef>/snapshot` with the admin token).
   implement storage bookmarks, so this path can only be exercised against a **deployed** DO.
   The worker suite unit-tests the endpoint's admin gate + validation only
   (`apps/worker/src/admin-restore.test.ts`); the rewind itself is verified in a deployed env.
+
+---
+
+## Roll back the account-doc live-DO wiring (WEP-0002)
+
+The account doc (`account:<userId>`) went live as a per-user Durable Object with WEP-0002
+(2026-07-15): family notes + library bookmarks are now CRDT edits to that doc, and the D1
+tables `figure_type_note_index` + `library_entry` are **alarm-written projections** of it.
+Because those projections are **full-fidelity** (every note/bookmark the doc holds is
+projected, tombstones included), **reverting the deploy is safe**: the pre-WEP-0002 code reads
+those same D1 rows as truth, so a rollback lands on D1-as-truth **with the current data** — no
+migration to run, nothing lost at the moment of rollback.
+
+**What the rollback window costs, and the one decision it forces:**
+
+- During the rollback window the app writes D1 directly again (the old path). The **account
+  docs go stale** — a bookmark or family note added while rolled back lands in D1 but not in
+  the user's doc.
+- On a re-forward (redeploying WEP-0002), those stale docs are **not re-imported over**:
+  `ensureAccountDoc`'s import fires **only when the registry row is absent**, and these users
+  already have a `type='account'` registry row from the first forward. So the doc — not the
+  newer D1 rows — becomes truth again, and any edits made during the rollback window are
+  **silently dropped** from the doc's view.
+- Therefore, **a re-forward after any doc-vs-D1 divergence occurred needs an explicit ops
+  decision.** If the rollback window was write-free for account content, just re-forward. If
+  not, reconcile first — either accept the loss (small windows, low-value data), or, per
+  affected user, delete their `document_registry` row for `account:<userId>` **before** the
+  re-forward so `ensureAccountDoc` re-imports a fresh doc from the current D1 rows (the DO's
+  stale storage is orphaned; PITR/DR is separate). There is no automated reconciler — this is
+  deliberately a hand decision, because it trades a user's offline/undo CRDT history against
+  their rollback-window edits.
+
+**Find affected account docs:**
+
+```bash
+wrangler d1 execute weave-steps-<env> --env <env> --remote \
+  --command "SELECT docRef, ownerId, updatedAt FROM document_registry WHERE type='account';"
+```

@@ -10,14 +10,16 @@
 // `figuretype.ts` — and IS the live runtime path: the worker returns family-note
 // rows, the store hands them here to match against the routine's figures.
 //
-// STORAGE NOTE: in v1 a family note's content lives in the worker's D1 index row
-// (figure_type_note_index; server-mediated — single-author reference data, no
-// concurrent edit) and a library bookmark's in `library_entry` (migration 0015)
-// the same way. This account-doc CRDT (buildAccountDoc + the addFamilyNote/
-// addAccountReply/addLibraryRef/removeLibraryRef/softDelete… mutators) is built +
-// tested as the intended home once account docs get offline/concurrent edit, but
-// is NOT yet wired into a live DO. It is kept deliberately so that migration is a
-// store-seam swap, not a rebuild.
+// STORAGE NOTE (as-built, WEP-0002 — 2026-07-15): the account doc IS now wired to
+// a live per-user Durable Object (`account:<userId>`). This CRDT — buildAccountDoc
+// + the addFamilyNote/addAccountReply/addLibraryRef/removeLibraryRef/softDelete…
+// mutators — is the LIVE WRITE PATH: family notes and library bookmarks are edits
+// to that doc (offline-capable + undoable via the §11.2 machinery). The D1 tables
+// `figure_type_note_index` (family-note content) and `library_entry` (bookmarks,
+// migration 0015) are now ALARM-WRITTEN PROJECTIONS of this doc — non-destructive,
+// idempotent, tombstone-aware — so D1 is a pure index again (rows re-derivable from
+// the doc), exactly like journal_entry. `importAccountDoc` (below) builds the doc
+// from those rows on first touch (reusing each ULID noteId so identities survive).
 //
 // Whether ANOTHER user may see one of these notes (the option-2 co-membership
 // gate) is the worker's concern (US-041), never this module's.
