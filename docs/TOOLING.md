@@ -104,6 +104,27 @@ New dev dependencies:
   deterministic) for Testing Library + axe; true cross-browser + PWA
   install/offline coverage is the Playwright E2E layer (M9).
 
+## Exploratory QA (agent-driven, added 2026-07-15)
+
+Alongside the deterministic test layers there is an **on-demand exploratory QA system**,
+run only when the owner invokes it (it is not part of CI):
+
+- **`.claude/agents/qa-explorer.md`** — an independent tester agent. It launches its own
+  E2E server (`apps/web/e2e/serve.sh` on a unique `E2E_PORT`, optionally with
+  `--var SELF_SEED:1` for the full catalog) and its own browser, verifies every
+  `docs/concepts/` promise first-hand on desktop **and** mobile viewports, uses multiple
+  minted test accounts to exercise sharing/permissions, and files `[QA]`-prefixed GitHub
+  issues with reproduction steps. It never edits code.
+- **`/qa-run [focus]`** (`.claude/skills/qa-run/`) — launches the agent; reports land in
+  `.claude/qa/reports/`.
+- **`/qa-retro <ref>`** (`.claude/skills/qa-retro/`) — post-bugfix retrospective: decides
+  whether the explorer would have caught the fixed bug and, if not, generalizes the lesson
+  into **`.claude/qa/probes.md`**, the growing probe library every future run must execute.
+
+The explorer runs against the E2E harness (deterministic auth, `/api/test/*` fixtures), so
+its findings exercise the real worker boundary; harness-only artifacts are explicitly out
+of scope for issue filing.
+
 ## Key decisions & rationale
 
 - **lefthook over husky + lint-staged.** One binary + one `lefthook.yml`
