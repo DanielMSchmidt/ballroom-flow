@@ -22,7 +22,7 @@ import {
   loadRoutineOptions,
 } from "./store/journal";
 import { useMe } from "./store/me";
-import { useAccount } from "./store/use-account";
+import { useAccount, useLibraryRefs } from "./store/use-account";
 import { Styleguide } from "./styleguide/Styleguide";
 import {
   AppShell,
@@ -221,6 +221,9 @@ function LibraryScreen({
 }): React.JSX.Element {
   const t = useMessages(appMessages);
   const account = useAccount();
+  // Read-your-writes: the live bookmark set feeds "My figures" so a just-saved
+  // catalog figure shows before the alarm projects it into the /mine REST read.
+  const liveBookmarkedRefs = useLibraryRefs(account.store);
   const onSaveToLibrary = useCallback(
     async (input: SaveLibraryInput): Promise<{ alreadySaved: boolean }> => {
       // Idle account store (signed-out / id unresolved) → the REST shim.
@@ -248,6 +251,7 @@ function LibraryScreen({
       <FigureLibrary
         tab={libTab}
         loadMine={loadMine}
+        liveBookmarkedRefs={liveBookmarkedRefs}
         onSaveToLibrary={onSaveToLibrary}
         onViewMine={() => setLibTab("mine")}
       />
