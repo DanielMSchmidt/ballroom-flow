@@ -20,6 +20,12 @@ export interface FamilyNote {
   count?: number;
   role?: "leader" | "follower";
   anchors: Anchor[];
+  /** The note's timestamp, used to order notes newest-first in the reading-view
+   *  notes margin. The viewer's OWN notes read it live from the account doc's
+   *  `createdAt`; co-members' notes get it from the REST projection's `updatedAt`
+   *  (the v1 index tracks no separate created time). Optional only for forward
+   *  compatibility with an older worker that omits it. */
+  createdAt?: number;
 }
 
 /** Load the family notes visible on `routineId` (members' notes for its dance). */

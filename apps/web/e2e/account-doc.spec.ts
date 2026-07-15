@@ -242,9 +242,12 @@ test.describe("@smoke account doc (WEP-0002)", () => {
     // ── Reconnect: replay to the DO; the note stays, exactly once ─────────────
     await coachNet.goOnline();
     // Idempotent replay: the note appears exactly ONCE (no duplicate from the
-    // reconnect resend). A stable locator on the note text; the account doc reuses
-    // its noteId, so the projection upsert never forks it into two rows.
-    await expect(coach.page.getByText("on every Feather, keep the head left")).toHaveCount(1, {
+    // reconnect resend) — the account doc reuses its noteId, so the projection
+    // upsert never forks it into two rows. Scoped to the family-notes region: the
+    // same note now ALSO renders in the reading-view timeline margin (by design),
+    // so a page-wide count would legitimately be >1 across surfaces; counting
+    // within one surface is what proves the data wasn't duplicated.
+    await expect(familyAfter.getByText("on every Feather, keep the head left")).toHaveCount(1, {
       timeout: 30_000,
     });
 
