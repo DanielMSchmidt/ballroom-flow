@@ -1,6 +1,6 @@
 // US-039 / US-042 — the annotation panel: a kinded note/lesson/practice thread
 // for a selected anchor (a point or a figure), with replies and kind/figure
-// filters. PLAN §4.6.
+// filters. docs/concepts/annotations.md § The Journal.
 //
 // Presentational: data + handlers as props (the §3 seam). The screen (Task 8)
 // feeds it `annotations` + `onCreate/onReply/onDeleteReply` wired to the store;

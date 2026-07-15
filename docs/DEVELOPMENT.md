@@ -1,8 +1,9 @@
 # Development Guide
 
 How to install, run, and test Weave Steps locally. Architecture is in
-[PLAN.md](PLAN.md); account/secret provisioning is in [PROVISIONING.md](../PROVISIONING.md);
-the test-harness rationale is in [TOOLING.md](TOOLING.md).
+[system/architecture.md](system/architecture.md); account/secret provisioning is in
+[PROVISIONING.md](../PROVISIONING.md); the test-harness rationale is in
+[TOOLING.md](TOOLING.md).
 
 ## Prerequisites
 
@@ -80,8 +81,8 @@ Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 
 Watch mode: `pnpm --filter <pkg> test:watch`. Coverage: `pnpm coverage` (root)
 or per package — istanbul; thresholds are **armed and gate every PR** (domain
-≥90% lines, worker/DO ≥88% lines; ratcheting toward 95/90 — see PLAN §10.3 and
-TOOLING.md).
+≥90% lines, worker/DO ≥88% lines; ratcheting toward 95/90 — see
+[system/testing.md](system/testing.md) and TOOLING.md).
 
 ### E2E (Playwright)
 

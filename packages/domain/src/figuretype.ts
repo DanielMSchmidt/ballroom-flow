@@ -1,4 +1,5 @@
-// US-011 — figureType annotation resolution (PLAN §2.6, §5.1, D29).
+// US-011 — figureType annotation resolution (docs/concepts/annotations.md § Anchors,
+// docs/concepts/collaboration.md § Roles, D29: docs/concepts/annotations.md § Ownership & visibility).
 //
 // A figureType note is anchored to a figure FAMILY (a stable cross-dance identity
 // like `feather`), not a specific figure doc — so it surfaces on every figure of
@@ -33,7 +34,7 @@ export function matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean {
 }
 
 /**
- * The count a TIMED figureType note (WEP-0004) pins to on `figure`, or `null`
+ * The count a TIMED figureType note (WEP-0004; docs/concepts/annotations.md § Anchors) pins to on `figure`, or `null`
  * for figure-grain surfacing. Null when the anchor is untimed, doesn't match
  * the figure, or the figure's resolved length doesn't cover the count — the
  * soft fallback: a family sibling whose variant is shorter still SHOWS the

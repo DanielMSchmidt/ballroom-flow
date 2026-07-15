@@ -1,4 +1,5 @@
-// T6 — the cross-routine Journal index query + projection (PLAN §2.6/§2.7/§6).
+// T6 — the cross-routine Journal index query + projection
+// (docs/concepts/annotations.md § Anchors; docs/system/architecture.md § D1 — the index & projections).
 //
 // `journal_entry` (migration 0009) is the DERIVED projection of a routine doc's
 // lesson/practice annotations, written by the routine DO's alarm (projectJournal
@@ -113,7 +114,7 @@ interface AccountNoteRow {
   text: string;
   figureType: string;
   danceScope: string;
-  /** WEP-0004 timed-note fields (migration 0018); NULL = untimed v1 note. */
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed-note fields (migration 0018); NULL = untimed v1 note. */
   count: number | null;
   role: string | null;
   createdAt: number;
@@ -224,7 +225,7 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
           type: "figureType",
           figureType: r.figureType,
           danceScope: r.danceScope,
-          // WEP-0004: a timed note carries its count/role so the client can pin
+          // WEP-0004 (docs/concepts/annotations.md § Anchors): a timed note carries its count/role so the client can pin
           // it; keys stay absent on the untimed v1 corpus.
           ...(r.count != null ? { count: r.count } : {}),
           ...(r.role != null ? { role: r.role } : {}),

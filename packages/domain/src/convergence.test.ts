@@ -31,7 +31,7 @@ const keyOf = (e: { sortKey?: string } | undefined, what: string): string =>
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-009 — Automerge convergence invariants [M1, system/developer]
-// PLAN §5.3, §10.2 invariant: "Automerge convergence/commutativity/idempotence
+// docs/system/architecture.md § Ordering, docs/system/testing.md invariant: "Automerge convergence/commutativity/idempotence
 // (fast-check, shuffled/partitioned changes incl. across forks)".
 //
 // These are PROPERTY tests (fast-check) over real in-memory Automerge docs via
@@ -113,7 +113,7 @@ describe("US-009 Automerge convergence invariants", () => {
     await assertIdempotent(base, change);
   });
 
-  // ── US-026 / #63 — sortKey reorder convergence (PLAN §5.3) ────────────────
+  // ── US-026 / #63 — sortKey reorder convergence (docs/system/architecture.md § Ordering) ────────────────
   // Reorder is now a per-field `sortKey` update, not a JSON-copy splice. The
   // splice removed the moved Automerge object and re-inserted a plain copy, so a
   // concurrent edit to the moved item (or a second concurrent splice) was lost.

@@ -4,8 +4,9 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, openUser } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Permission / quota / invite journeys (PLAN §10.2 E2E: "permission (forged sync
-// connection rejected per doc); quota; invite redemption"). Runs against the REAL
+// Permission / quota / invite journeys (docs/system/testing.md § Layer
+// ownership: "permission (forged sync connection rejected per doc); quota;
+// invite redemption"). Runs against the REAL
 // worker (D1 + per-document Durable Objects + the fail-closed auth/sync boundary)
 // via the #191 E2E harness — real test JWTs, the real US-021 boundary.
 //   US-021 — a non-member opening a routine is denied (per doc);

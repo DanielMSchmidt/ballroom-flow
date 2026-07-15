@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 
 // ─────────────────────────────────────────────────────────────────────────
-// PWA install/offline shell + accessibility/cross-browser (PLAN §10.2 E2E:
-// "PWA install/app-shell-offline; nav"). Covers:
+// PWA install/offline shell + accessibility/cross-browser (docs/system/testing.md
+// § Layer ownership: "PWA install/app-shell-offline; nav"). Covers:
 //   US-050 — installable PWA; shell loads offline with a clear "you're offline";
 //   US-051 — keyboard/SR/reduced-motion + ≥44px (real-browser a11y);
 //   US-052 — runs across chromium-desktop / mobile-chrome / mobile-safari (the

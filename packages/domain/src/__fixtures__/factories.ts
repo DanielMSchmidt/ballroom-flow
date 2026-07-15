@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Pure domain factories / builders (PLAN.md §10.3 "pure factories").
+// Pure domain factories / builders (docs/system/testing.md "pure factories").
 //
 // These build the plain logical shapes of the document graph (types.ts) for
 // use as test inputs and as the expected/asserted shape. They are POJO
@@ -120,7 +120,7 @@ export function makeFigureTypeAnchor(
   opts: { count?: number; role?: Role } = {},
 ): Anchor {
   // Conditional spread: an Automerge doc can't store `undefined`, so absent
-  // opts must stay ABSENT keys (WEP-0004 timed anchors are additive).
+  // opts must stay ABSENT keys (WEP-0004 timed anchors are additive; docs/concepts/annotations.md § Anchors).
   return {
     type: "figureType",
     figureType,

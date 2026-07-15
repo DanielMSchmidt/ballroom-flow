@@ -1,4 +1,4 @@
-// Read-only snapshot model (the read/edit split — PLAN §6, extends D10).
+// Read-only snapshot model (the read/edit split — docs/system/sync-and-offline.md § The read/edit split).
 //
 // Opening a routine to *read* it (the common case) shouldn't cost one live
 // WebSocket per routine + per figure. This model hydrates the whole routine + its

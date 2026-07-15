@@ -10,7 +10,7 @@ import {
 } from "./order";
 
 // ─────────────────────────────────────────────────────────────────────────
-// #63 — Fractional-index ordering keys (PLAN §5.3).
+// #63 — Fractional-index ordering keys (docs/system/architecture.md § Ordering).
 // keyBetween/sequentialKeys/sortByOrder/keyForMove underpin sortKey-based
 // reorder so concurrent same-list reorders converge with no lost edits.
 // ─────────────────────────────────────────────────────────────────────────

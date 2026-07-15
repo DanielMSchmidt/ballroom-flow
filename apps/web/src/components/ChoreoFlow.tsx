@@ -80,11 +80,13 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
 
   // The viewer's library bookmarks (⟳v5, §4.2/§5.2): fetched only when a routine
   // is open. `/api/figures/mine` supplies figure METADATA (title/type/dance/usage)
-  // for the Add-figure picker; WEP-0002 makes the account doc the source of truth
-  // for WHICH refs are bookmarked, so bookmark state is instant + offline.
+  // for the Add-figure picker; docs/system/architecture.md (account docs, WEP-0002)
+  // makes the account doc the source of truth for WHICH refs are bookmarked, so
+  // bookmark state is instant + offline.
   const mineQ = useMineFigures({ enabled: Boolean(openRoutineId) });
-  // WEP-0002: open the account doc LAZILY (only when a routine is open — the
-  // "add to my library" surface lives in Assemble) and read the bookmark set live.
+  // docs/system/architecture.md (account docs, WEP-0002): open the account doc
+  // LAZILY (only when a routine is open — the "add to my library" surface lives
+  // in Assemble) and read the bookmark set live.
   const account = useAccount();
   const libraryRefs = useLibraryRefs(account.store);
   // The figureRef set Assemble O(1)-tests for "already in my library" — the UNION

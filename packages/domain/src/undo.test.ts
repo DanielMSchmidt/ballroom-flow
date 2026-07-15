@@ -3,7 +3,8 @@ import { importDomain, loadAutomerge } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-010 — History-based per-user undo [M1, system/developer]
-// PLAN §5.4, D14, Q-UNDO, §10.2 invariant: "history-based per-user undo
+// docs/concepts/collaboration.md § Undo, docs/system/architecture.md § Undo, D14,
+// Q-UNDO, docs/system/testing.md invariant: "history-based per-user undo
 // (own-change inverse; remote edit preserved; redo)". Automerge has no turnkey
 // per-user UndoManager — undo = invert the user's own last change from history
 // and apply it as a NEW change so it merges with others' concurrent edits.
@@ -158,7 +159,7 @@ describe("US-010 History-based per-user undo", () => {
   //
   // Detection only: `wasSupersededByOthers` reports whether another actor has
   // BUILT ON (causally depends on) my next undo target. It NEVER blocks undo —
-  // it drives a soft toast at most (PLAN §5.4: "no hard refusal; a soft
+  // it drives a soft toast at most (docs/concepts/collaboration.md § Undo: "no hard refusal; a soft
   // 'superseded' hint at most"). "Built on" = transitive dependency in the
   // Automerge change graph, which is the precise causal relation (see undo.ts).
 
@@ -224,7 +225,7 @@ describe("US-010 History-based per-user undo", () => {
     expect(undone.note).toBe("B-note"); // B's concurrent edit survives
   });
 
-  // ── PLAN §5.4 soundness regressions (2026-07-02 review) ──────────────────
+  // ── docs/system/architecture.md § Undo soundness regressions (2026-07-02 review) ──────────────────
   // The two verified failure modes of the positional-replay implementation:
   // (1) list inverses replayed by index deleted a CONCURRENT peer's element;
   // (2) a second undo press re-inverted the same change destructively.

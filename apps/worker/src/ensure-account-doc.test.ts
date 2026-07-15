@@ -1,4 +1,5 @@
-// WEP-0002 — ensureAccountDoc (lazy import) + the alarm projection inversion.
+// WEP-0002 (docs/system/architecture.md § D1 — the index & projections) —
+// ensureAccountDoc (lazy import) + the alarm projection inversion.
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { insertFamilyNote } from "./db/family-notes";

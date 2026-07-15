@@ -22,7 +22,8 @@ describe("buildGoldenWaltzBasic", () => {
     expect(section?.placements).toHaveLength(6);
     expect(routine.annotations).toEqual([]);
     // A freshly-minted doc is born at CURRENT — never a hardcoded legacy `1`
-    // (v5 milestone step 1, PLAN §7: the ladder runs on the DO load path, so
+    // (v5 milestone step 1, docs/system/architecture.md § Persistence & the DO
+    // lifecycle: the ladder runs on the DO load path, so
     // every fresh doc must already carry the current schema).
     expect(routine.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });

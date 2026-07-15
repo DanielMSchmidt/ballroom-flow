@@ -1,4 +1,4 @@
-// US-001 — ULID id generation (PLAN §2.1, D15).
+// US-001 — ULID id generation (docs/system/architecture.md § Global constraints, D15).
 //
 // Every entity id in the document graph is a client-generated ULID: a 26-char
 // Crockford-base32 string whose 48-bit time prefix makes ids sort

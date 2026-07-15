@@ -1,4 +1,4 @@
-// PLAN §11.2 — offline app open: the last-good REST read (choreo list, /api/me)
+// docs/system/sync-and-offline.md § Offline editing — offline app open: the last-good REST read (choreo list, /api/me)
 // is cached on-device and served when a fetch fails WHILE OFFLINE, so opening
 // the installed app in airplane mode lands on the normal (possibly empty) list
 // instead of an error/empty flash. Online failures still surface — the cache

@@ -7,7 +7,8 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-025 — Delete a routine from the Choreo overview [M3, user]
-// PLAN §4.0/§4.2. The REST surface behind the Choreo-card ⋯ → Delete: an OWNER
+// docs/concepts/collaboration.md; docs/concepts/figures.md § The library screen.
+// The REST surface behind the Choreo-card ⋯ → Delete: an OWNER
 // soft-deletes (tombstones) their routine; an editor/commenter/viewer cannot.
 // Soft-delete only (deletedAt) — the row is never hard-removed, and the deleted
 // routine drops out of GET /api/routines.

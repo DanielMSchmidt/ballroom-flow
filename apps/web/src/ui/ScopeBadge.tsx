@@ -38,7 +38,8 @@ const META: Record<FigureScope, ScopeMeta> = {
 
 /**
  * ScopeBadge — encodes the two figure scopes (library / custom) by content
- * divergence (PLAN §4.3): a figure whose attributes still match the catalog
+ * divergence (docs/concepts/figures.md § The custom badge): a figure whose
+ * attributes still match the catalog
  * reads "Library"; one that has diverged reads "Custom". Each scope is a
  * consistent text + icon + color treatment (DESIGN-PRINCIPLES #11).
  */

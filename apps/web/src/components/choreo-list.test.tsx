@@ -8,7 +8,8 @@ import { renderUi, screen, userEvent, within } from "../test-support/render";
 // US-037 — Choreo fork ("make it your own") affordance [M4, user]
 // US-045 — Sample routine + start-from-template [M7, user]
 //
-// PLAN §4.1, §10.2 component layer: quota upsell toast; fork action; empty →
+// docs/concepts/choreography.md § The choreo list, docs/system/testing.md
+// component layer: quota upsell toast; fork action; empty →
 // sample + template. Choreo List screen built by the frontend agent → dynamic
 // import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────

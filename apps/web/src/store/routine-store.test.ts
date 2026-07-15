@@ -21,7 +21,8 @@ vi.mock("../lib/ops", () => ({ reportError: vi.fn() }));
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-017 — store/ seam (multi-doc) [M2, system]
-// PLAN §6.1/§6.2, D6, §10.2: the typed store seam wraps Automerge: opening a
+// docs/system/architecture.md § Module boundaries / § The shape,
+// docs/system/testing.md § Layer ownership: the typed store seam wraps Automerge: opening a
 // routine connects to the routine doc's DO then to each referenced figure
 // doc's DO; each figure carries its own attributes (frozen copies — no overlay);
 // exposes typed reactive reads + mutations + history-based undo. Components import
@@ -50,7 +51,7 @@ class FakeSocket implements SocketLike {
     else if (type === "close") this.closed = fn;
   }
   send(data: string | ArrayBufferView | ArrayBuffer): void {
-    if (typeof data === "string") return; // heartbeat ping (WEP-0004) — ignored here
+    if (typeof data === "string") return; // heartbeat ping (docs/concepts/annotations.md § Anchors) — ignored here
     this.sent.push(
       data instanceof ArrayBuffer
         ? new Uint8Array(data)

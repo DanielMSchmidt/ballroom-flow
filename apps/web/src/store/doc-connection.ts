@@ -31,8 +31,8 @@ import { reconcile } from "./reconcile";
  *  (its `BufferSource` excludes SharedArrayBuffer-backed views), so the global
  *  `WebSocket` satisfies this interface as-is; {@link isBinary} re-establishes
  *  that backing for Automerge change bytes with a real runtime check. A `string`
- *  is also allowed for the TEXT heartbeat ping (WEP-0006); sync changes stay
- *  binary. */
+ *  is also allowed for the TEXT heartbeat ping (docs/system/sync-and-offline.md
+ *  § Heartbeat); sync changes stay binary. */
 export interface SocketLike {
   binaryType: string;
   send(data: string | Uint8Array<ArrayBuffer>): void;
@@ -88,7 +88,7 @@ export interface ReconnectPolicy {
 }
 
 /**
- * Heartbeat policy (WEP-0006): while the socket is idle, send a SYNC_PING every
+ * Heartbeat policy (docs/system/sync-and-offline.md § Heartbeat): while the socket is idle, send a SYNC_PING every
  * `intervalMs` and expect the DO's auto-response SYNC_PONG within `deadlineMs`.
  * ANY inbound frame counts as proof of life (a busy connection is never pinged).
  * A missed deadline means the socket is a half-open ZOMBIE — TCP thinks it's up
@@ -109,7 +109,7 @@ export interface DocConnectionOptions {
   getToken?: TokenProvider;
   /** Auto-reconnect policy (default: a capped exponential backoff). */
   reconnect?: ReconnectPolicy;
-  /** Zombie-socket heartbeat (WEP-0006; default {@link DEFAULT_HEARTBEAT}).
+  /** Zombie-socket heartbeat (docs/system/sync-and-offline.md § Heartbeat; default {@link DEFAULT_HEARTBEAT}).
    *  `false` disables the probe (online-only unit tests that fast-forward time). */
   heartbeat?: HeartbeatPolicy | false;
   /** Schedule a delayed callback (default: global setTimeout). */
@@ -117,7 +117,7 @@ export interface DocConnectionOptions {
   /** Cancel a scheduled callback (default: global clearTimeout). */
   cancel?: (handle: ReturnType<typeof setTimeout>) => void;
   /**
-   * Offline editing (PLAN §11.2): local persistence for this doc. When set (with
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): local persistence for this doc. When set (with
    * `storageKey`), the connection hydrates from the persisted bytes BEFORE the
    * network (state "local" — editable, visibly unsynced), persists every advance,
    * and replays the not-yet-delivered changes through the #161 resend on
@@ -139,7 +139,7 @@ const DEFAULT_RECONNECT: Required<ReconnectPolicy> = {
   maxColdAttempts: 4,
 };
 
-/** WEP-0006 defaults: a dead-but-open socket can impersonate "live" for at most
+/** Heartbeat defaults (docs/system/sync-and-offline.md § Heartbeat): a dead-but-open socket can impersonate "live" for at most
  *  ~intervalMs + deadlineMs (~30 s) — versus the OS TCP timeout (minutes). One
  *  tiny TEXT frame per idle interval; answered runtime-level, never waking the
  *  DO, so the D23 hibernation economics are untouched. */
@@ -156,7 +156,8 @@ export const DEFAULT_HEARTBEAT: HeartbeatPolicy = {
  * Where one document's connection is in its lifecycle (drives the UI indicator
  * and the edit gate). "connecting" = socket opening, reconnecting, OR
  * open-but-not-yet-hydrated; "live" = the DO's full catch-up replay has been
- * APPLIED (hydrated, safe to edit, #202); "local" (PLAN §11.2) = hydrated from
+ * APPLIED (hydrated, safe to edit, #202); "local" (docs/system/sync-and-offline.md
+ * § Offline editing) = hydrated from
  * LOCAL persistence (or previously live) while the server is unreachable —
  * editable, changes persist + replay on reconnect, visibly unsynced; "closed" =
  * TERMINAL — either disposed by the owner, or reconnect gave up after
@@ -180,7 +181,7 @@ export class DocConnection<T> {
   private attempt = 0;
   /** Pending reconnect timer handle, so close()/reconnectNow() can cancel it. */
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  // ── Heartbeat (WEP-0006) ──────────────────────────────────────────────────
+  // ── Heartbeat (docs/system/sync-and-offline.md § Heartbeat) ──────────────
   /** Armed while the socket is idle; fires → send a ping. */
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   /** Armed after a ping; fires with no inbound frame → the socket is a zombie. */
@@ -204,11 +205,11 @@ export class DocConnection<T> {
   private readonly openSocket: SocketFactory;
   private readonly getToken?: TokenProvider;
   private readonly reconnectPolicy: Required<ReconnectPolicy>;
-  /** Heartbeat policy; `null` = disabled (WEP-0006). */
+  /** Heartbeat policy; `null` = disabled (docs/system/sync-and-offline.md § Heartbeat). */
   private readonly heartbeat: HeartbeatPolicy | null;
   private readonly schedule: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   private readonly cancel: (handle: ReturnType<typeof setTimeout>) => void;
-  // ── Offline editing (PLAN §11.2) ─────────────────────────────────────────
+  // ── Offline editing (docs/system/sync-and-offline.md § Offline editing) ──
   /** Local persistence for this doc (null/undefined = online-only, pre-§11.2). */
   private readonly storage: DocStorage | null;
   private readonly storageKey: string;
@@ -341,7 +342,7 @@ export class DocConnection<T> {
     socket.addEventListener("open", () => {
       this.everOpened = true;
       this.coldFailures = 0; // a successful open clears the cold-failure streak
-      this.armHeartbeat(); // start the idle clock (WEP-0006)
+      this.armHeartbeat(); // start the idle clock (docs/system/sync-and-offline.md § Heartbeat)
       this.flush();
     });
     socket.addEventListener("close", () => {
@@ -360,7 +361,7 @@ export class DocConnection<T> {
    * persistently rejected/unreachable connection), unless the owner disposed us.
    */
   private onSocketClosed(): void {
-    this.clearHeartbeat(); // no socket, nothing to probe (WEP-0006)
+    this.clearHeartbeat(); // no socket, nothing to probe (docs/system/sync-and-offline.md § Heartbeat)
     if (this.disposed) {
       this.setState("closed");
       return;
@@ -430,7 +431,7 @@ export class DocConnection<T> {
     }, delay);
   }
 
-  // ── Heartbeat (WEP-0006) — zombie-socket detection ───────────────────────
+  // ── Heartbeat (docs/system/sync-and-offline.md § Heartbeat) — zombie-socket detection ──
 
   /** (Re)start the idle clock: after `intervalMs` with no inbound frame, ping. */
   private armHeartbeat(): void {
@@ -660,7 +661,7 @@ export class DocConnection<T> {
    */
   private receive(data: unknown): void {
     // ANY inbound frame is proof the socket is alive: clear a pending pong
-    // deadline and restart the idle clock (WEP-0006). A busy connection is
+    // deadline and restart the idle clock (docs/system/sync-and-offline.md § Heartbeat). A busy connection is
     // never pinged at all.
     this.noteAlive();
     // The heartbeat pong carries no payload — its arrival WAS the information.

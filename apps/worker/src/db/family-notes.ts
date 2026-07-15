@@ -1,4 +1,5 @@
-// US-041 — the FigureTypeNoteIndex query (PLAN §2.7, §5.1).
+// US-041 — the FigureTypeNoteIndex query (docs/system/architecture.md § D1 —
+// the index & projections; docs/concepts/collaboration.md § Roles).
 //
 // Given a routine's members and its dance, find the thin index rows for their
 // figure-family notes that apply to this dance (the family's own dance, or an
@@ -7,7 +8,7 @@
 // to the figures actually in the routine (resolveFamilyNotesFor).
 
 /** One family-note index row (carries content in v1 — see migration 0005).
- *  `count`/`role` are the WEP-0004 TIMED-note fields (migration 0018):
+ *  `count`/`role` are the WEP-0004 (docs/concepts/annotations.md § Anchors) TIMED-note fields (migration 0018):
  *  NULL = the untimed v1 whole-figure note. */
 export interface FamilyNoteRow {
   noteId: string;
@@ -32,10 +33,10 @@ export interface FamilyNoteInput {
   danceScope: string;
   kind: string;
   text: string;
-  /** WEP-0004: pin to one count (requires a concrete danceScope — the REST
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors): pin to one count (requires a concrete danceScope — the REST
    *  boundary enforces it via zFamilyNoteBody). Omitted = whole figure. */
   count?: number;
-  /** WEP-0004: narrow to one side; omitted/null = both. */
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors): narrow to one side; omitted/null = both. */
   role?: string | null;
 }
 
@@ -62,7 +63,8 @@ export async function familyNotesForMembers(
   return res.results ?? [];
 }
 
-/** One projected family-note row (WEP-0002): the account doc's figureType
+/** One projected family-note row (WEP-0002 — docs/system/architecture.md
+ *  § D1 — the index & projections): the account doc's figureType
  *  annotation, tombstone carried, projected to `figure_type_note_index`. */
 export interface FamilyNoteProjection {
   noteId: string;
@@ -78,7 +80,8 @@ export interface FamilyNoteProjection {
 
 /**
  * Project the account doc's `figureType` annotations to `figure_type_note_index`
- * (WEP-0002 — the alarm-written inversion of insertFamilyNote's direct write).
+ * (WEP-0002 — docs/system/architecture.md § D1 — the index & projections —
+ * the alarm-written inversion of insertFamilyNote's direct write).
  * Stable-key upsert on the reused ULID `noteId`, so this is idempotent and never
  * a wipe-and-rewrite; a tombstoned annotation carries its `deletedAt` through, so
  * a delete projects as a tombstone (never a hard removal). Non-destructive: rows

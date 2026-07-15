@@ -1,5 +1,5 @@
 // US-024 — the Share screen: who can see a routine, in what role, plus an invite
-// link to add more people. PLAN §4.7 / §5.
+// link to add more people. docs/concepts/collaboration.md § Invites / § Roles.
 //
 // Presentational ShareView (the §3 seam: data + handlers as props) is wrapped by
 // Share, which wires the store (member roster + remove + issue-invite) and the

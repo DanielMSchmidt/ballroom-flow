@@ -12,7 +12,7 @@ function firstIssueParams(e: unknown): Record<string, unknown> | undefined {
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-012 — Zod schemas (lenient read / strict write) [M1, system/developer]
-// PLAN §3, D7, §10.2 invariant: "unknown passthrough-on-read vs reject-on-write;
+// docs/concepts/notation.md § Kinds, D7, docs/system/testing.md invariant: "unknown passthrough-on-read vs reject-on-write;
 // diag_*→diagonal; timing range per meter". Schemas are derived from the merged registry.
 //
 // Product `schemas.ts` (M1 §9 1.10) doesn't exist yet → dynamic import, skipped.

@@ -1,4 +1,4 @@
-// US-017 — the `store/` seam (PLAN §6.1/§6.2, D6).
+// US-017 — the `store/` seam (docs/system/architecture.md § Module boundaries / § The shape).
 //
 // The ONLY thing components touch to read/edit a routine. It wraps Automerge +
 // the WS sync (DocConnection) behind a typed, reactive interface: open a
@@ -132,7 +132,7 @@ export interface RoutineReadModel {
   /** Lifecycle, for a "syncing…"/"loading…" indicator (US-018). */
   syncState(): SyncState;
   /**
-   * Offline editing (PLAN §11.2): how many of this client's changes (routine +
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): how many of this client's changes (routine +
    * figure docs) have not been handed to a live socket yet — drives the
    * truth-telling "N changes waiting to sync" indicator and the unsyncable-edits
    * notice. Optional: absent on models with no local persistence (the read-only
@@ -170,7 +170,7 @@ export interface RoutineStore extends RoutineReadModel {
    * (the user then edits its timeline, US-028) and appends a placement
    * referencing it. A library pick (US-032) passes the catalog's canonical
    * `figureType`; a custom figure omits it and the store slugs one from the name.
-   * `bars` is the figure's authored length chosen in the create flow (PLAN §2.5);
+   * `bars` is the figure's authored length chosen in the create flow (docs/concepts/notation.md § Figure length);
    * omitted → the store derives ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
    * attributes (a catalog figure's charted steps, or 1 for a fresh custom).
    * `beforePlacementId` inserts the new figure immediately BEFORE that placement
@@ -418,7 +418,7 @@ export interface OpenOptions {
    */
   reconnect?: ReconnectPolicy;
   /**
-   * Zombie-socket heartbeat for every doc connection (WEP-0006). Defaults to
+   * Zombie-socket heartbeat for every doc connection (docs/system/sync-and-offline.md § Heartbeat). Defaults to
    * the DocConnection policy (25 s idle ping / 5 s pong deadline) — shortened
    * automatically in E2E builds; `false` disables the probe.
    */
@@ -442,7 +442,7 @@ export interface OpenOptions {
   /** Cancel a scheduled callback (default: global clearTimeout) — injected for tests. */
   cancel?: (handle: ReturnType<typeof setTimeout>) => void;
   /**
-   * Offline editing (PLAN §11.2): local persistence for the routine + figure
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): local persistence for the routine + figure
    * docs, keyed by docRef. Defaults to the app-wide IndexedDB store; `null`
    * disables persistence (and with it the editable-offline "local" state) —
    * jsdom tests get that automatically since IndexedDB is absent there.
@@ -450,8 +450,9 @@ export interface OpenOptions {
   storage?: DocStorage | null;
 }
 
-// In an E2E build the factory is wrapped by the zombie seam (WEP-0006 ship
-// gate); in every real build `e2eZombifiableSocketFactory` is a pass-through.
+// In an E2E build the factory is wrapped by the zombie seam
+// (docs/system/sync-and-offline.md § Heartbeat ship gate); in every real
+// build `e2eZombifiableSocketFactory` is a pass-through.
 const defaultSocketFactory: SocketFactory = e2eZombifiableSocketFactory(
   (url, protocols) => new WebSocket(url, protocols),
 );
@@ -535,7 +536,7 @@ export async function openRoutine(
   // access preflight, so a figure whose own connection IS open resolves to an
   // honest loading / missing / error status rather than a blank "unknown figure".
   const reconnect = opts.reconnect;
-  // Heartbeat (WEP-0006): explicit option wins; E2E builds shorten the probe so
+  // Heartbeat (docs/system/sync-and-offline.md § Heartbeat): explicit option wins; E2E builds shorten the probe so
   // journeys exercise ping→pong continuously; otherwise the DocConnection
   // default applies (undefined here).
   const heartbeat = opts.heartbeat ?? e2eHeartbeat();
@@ -1191,7 +1192,7 @@ export async function openRoutine(
       const before = routineConn.current();
       // Peek the soft hint on the PRE-undo doc (the undo itself adds a change
       // that would otherwise perturb the dependency graph). Undo still always
-      // proceeds — this is advisory only (US-038 AC-3, PLAN §5.4).
+      // proceeds — this is advisory only (US-038 AC-3, docs/concepts/collaboration.md § Undo).
       const superseded = wasSupersededByOthers(before, actorId);
       const after = undoLastChange(before, actorId);
       // undoLastChange returns the SAME doc reference on a no-op (nothing to undo).

@@ -29,6 +29,14 @@ async function settleEmptyStateForCreateShot(page: Page): Promise<void> {
   await video.evaluate((v) => {
     v.style.display = "none";
   });
+  // The sample/template rows arrive from /api/templates, whose FIRST call after
+  // resetDb also lazily seeds the sample — a separate, slower query than the
+  // routines fetch the video-attach wait proves. Without this wait the shot's
+  // background depends on which side of that race the run lands (the baseline
+  // workflow and the PR job landed on different sides — a standing false diff).
+  await expect(page.getByRole("button", { name: /start from template/i })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 // Long Side then Short Side of the floor (the app's section model).
@@ -153,7 +161,8 @@ test.describe("@screenshots landing imagery", () => {
     await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: shot("reading.png"), fullPage: true });
 
-    // 6. Figure READ view (PLAN §4.4, design figMode): tapping a figure on the
+    // 6. Figure READ view (docs/concepts/notation.md § The figure editor,
+    //    design figMode): tapping a figure on the
     //    reading programme opens it read-only — the step grid as the content,
     //    the notes surfaces beneath, and the pencil "Edit steps" toggle in the
     //    header as the only route into editing.

@@ -1,4 +1,5 @@
-// US-020 — per-document capability model (PLAN §5.1).
+// US-020 — per-document capability model (docs/concepts/collaboration.md § Roles;
+// enforcement: docs/system/architecture.md § Permission enforcement).
 //
 // PURE role → capability mapping, shared by every layer that gates on a viewer's
 // per-document role: the worker REST surface, the DO sync boundary (US-021), and

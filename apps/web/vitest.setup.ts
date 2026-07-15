@@ -1,4 +1,4 @@
-// Component-layer test setup (PLAN.md §10.3). Registers DOM + a11y matchers
+// Component-layer test setup (docs/system/testing.md § Layer ownership). Registers DOM + a11y matchers
 // and auto-cleans the DOM between tests. This is harness wiring only — test
 // data factories / render helpers belong to the test engineer.
 import "@testing-library/jest-dom/vitest";

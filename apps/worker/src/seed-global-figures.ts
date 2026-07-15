@@ -1,4 +1,6 @@
-// ⟳v5 global-figure seeder (PLAN §9 step 3, D28/D30 ⟳). Imports the bundled catalog
+// ⟳v5 global-figure seeder (milestone step 3 — docs/README.md; D28 —
+// docs/concepts/figures.md; D30 — docs/system/architecture.md § The catalog
+// seed pipeline ⟳). Imports the bundled catalog
 // (LIBRARY_FIGURES) into REAL, admin-owned Automerge docs — one DO per
 // (dance × figureType), keyed by `globalFigureRef(dance, figureType)`.
 //

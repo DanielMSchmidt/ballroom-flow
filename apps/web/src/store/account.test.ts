@@ -1,4 +1,5 @@
-// WEP-0002 (phase 4) — the account `DocConnection` seam.
+// WEP-0002 (phase 4) — docs/system/architecture.md § D1 — the index & projections
+// — the account `DocConnection` seam.
 //
 // The per-user account doc (`account:<userId>`) hosts the library BOOKMARK set
 // (`libraryFigureRefs`) and the user's OWN figureType family notes. This store

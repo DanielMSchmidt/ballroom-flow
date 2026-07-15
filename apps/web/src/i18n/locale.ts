@@ -1,5 +1,6 @@
-// i18n locale seam — the single source for the UI language (PLAN §4: the UI is
-// bilingual EN/DE; user-authored content is never machine-translated).
+// i18n locale seam — the single source for the UI language (docs/system/architecture.md
+// § Non-functional requirements: the UI is bilingual EN/DE; user-authored content is
+// never machine-translated).
 //
 // The locale is a CLIENT-SIDE preference (like the leader/follower toggle), not
 // server data: it lives in localStorage, defaults from the browser language, and

@@ -1,4 +1,4 @@
-// Offline editing (PLAN §11.2) — the local persistence seam behind DocConnection.
+// Offline editing (docs/system/sync-and-offline.md § Offline editing) — the local persistence seam behind DocConnection.
 //
 // A `DocStorage` remembers one Automerge doc per docRef so an offline edit
 // survives a reload: `bytes` is the `A.save` blob (it embeds the local changes),

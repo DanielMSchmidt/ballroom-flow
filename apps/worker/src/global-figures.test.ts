@@ -1,4 +1,6 @@
-// ⟳v5 global figure docs (PLAN §9 step 3, D28/D30/D31): the additive seeder, the
+// ⟳v5 global figure docs (milestone step 3 — docs/README.md; D28 —
+// docs/concepts/figures.md; D30 — docs/system/architecture.md § The catalog
+// seed pipeline; D31 — docs/concepts/collaboration.md § Who uses this): the additive seeder, the
 // global-figure read/write boundary (resolveEffectiveRole), and the admin-gated
 // seed route.
 import { env, SELF } from "cloudflare:test";

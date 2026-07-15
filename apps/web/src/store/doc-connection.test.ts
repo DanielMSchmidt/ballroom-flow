@@ -22,7 +22,7 @@ class FakeSocket implements SocketLike {
   private opened: ((ev: { data: unknown }) => void) | null = null;
   private closed: ((ev: { data: unknown }) => void) | null = null;
   sent: Uint8Array[] = [];
-  /** TEXT frames sent by the client (the WEP-0006 heartbeat pings). */
+  /** TEXT frames sent by the client (docs/system/sync-and-offline.md § Heartbeat pings). */
   sentText: string[] = [];
   addEventListener(type: string, fn: ((ev: { data: unknown }) => void) | (() => void)): void {
     if (type === "message") this.msg = fn;
@@ -52,7 +52,7 @@ class FakeSocket implements SocketLike {
   fireCaughtUp(): void {
     this.msg?.({ data: SYNC_CAUGHT_UP });
   }
-  /** Deliver the DO's heartbeat pong (WEP-0006). */
+  /** Deliver the DO's heartbeat pong (docs/system/sync-and-offline.md § Heartbeat). */
   firePong(): void {
     this.msg?.({ data: SYNC_PONG });
   }
@@ -186,7 +186,7 @@ describe("DocConnection reconnect", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0006 — heartbeat zombie-socket detection. A half-open socket (TCP thinks
+// docs/system/sync-and-offline.md § Heartbeat — zombie-socket detection. A half-open socket (TCP thinks
 // it's up, nothing is delivered, navigator.onLine stays true — the practice-
 // room dead spot) is detected by an idle PING that must be answered within a
 // deadline; a miss drops the socket into the normal warm-reconnect machinery
@@ -426,7 +426,7 @@ describe("DocConnection snapshot catch-up + reconnect resend", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Offline editing (PLAN §11.2): local persistence behind the connection seam.
+// Offline editing (docs/system/sync-and-offline.md § Offline editing): local persistence behind the connection seam.
 // With a DocStorage configured, the connection hydrates from persisted bytes
 // BEFORE the network (state "local" — editable, visibly unsynced), persists
 // every advance, survives a "reload" (a fresh connection over the same

@@ -10,7 +10,8 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // US-022 — Quota: 3 owned routines + upsell [M3, user]
 // US-025 — Create a routine [M3, user]
 //
-// PLAN §1.6, §4.9, D21, §10.2: "quota (4th owned routine → upsell)". The quota
+// docs/concepts/collaboration.md § Plans, quotas & identity, D21;
+// docs/system/testing.md: "quota (4th owned routine → upsell)". The quota
 // is enforced SERVER-SIDE on create; shared-in routines don't count; the count
 // query must be indexed (EXPLAIN, no SCAN).
 //

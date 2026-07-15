@@ -7,7 +7,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // US-053 — Account / profile + plan status [M3, user]
 // US-038 — Per-user undo / redo UX [M5, user] (toast surface)
 //
-// PLAN §4.8, §4.9, §10.2 component layer: profile (plan/owned count); toasts
+// docs/concepts/collaboration.md, docs/system/testing.md component layer:
+// profile (plan/owned count); toasts
 // incl. "Undone". Built by the frontend agent → dynamic import behind it.skip.
 // (Two-client undo convergence is the E2E test; here we pin the UI surface.)
 // ─────────────────────────────────────────────────────────────────────────
@@ -183,4 +184,5 @@ describe("D7 Quota status in Profile (design 1.18)", () => {
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe
 // "US-038 Per-user undo / redo UX"). The two-client "only my change reverts;
 // redo restores" proof is the E2E test (`undo.spec.ts`). AC-3 (the soft
-// "superseded" hint) is deferred — see PLAN.md §5.4 (US-038).
+// "superseded" hint) is deferred — see docs/concepts/collaboration.md § Undo
+// (US-038).

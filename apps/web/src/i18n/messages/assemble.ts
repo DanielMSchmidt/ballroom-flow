@@ -15,7 +15,7 @@ const en = {
   listView: "List view",
   share: "Share",
   syncing: "Syncing…",
-  // Offline editing (PLAN §11.2) — the pending chip + the unsyncable alert
+  // Offline editing (docs/system/sync-and-offline.md § Offline editing) — the pending chip + the unsyncable alert
   offlinePending: (n: number) =>
     `${n} change${n === 1 ? "" : "s"} saved on this device — they'll sync when you're back online`,
   unsyncedChanges: (n: number) =>

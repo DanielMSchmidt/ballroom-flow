@@ -5,7 +5,8 @@ import { generateTestKeypair, makeTestJWT, type TestKeypair } from "../test-supp
 import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
-// T6 — GET /api/journal (PLAN §2.6/§2.7/§4.6). The cross-routine Journal read:
+// T6 — GET /api/journal (docs/concepts/annotations.md § Anchors / § The Journal;
+// docs/system/architecture.md § D1 — the index & projections). The cross-routine Journal read:
 // the UNION of routine-scoped lesson/practice annotations (projected to
 // journal_entry by the routine DO alarm) and account-scoped figureType
 // lesson/practice notes (figure_type_note_index). Visibility = the user PLUS
@@ -27,7 +28,8 @@ function authHeaders(token: string): Record<string, string> {
 }
 
 /**
- * WEP-0002 phase 3: POST /api/account/family-notes authors into the user's
+ * WEP-0002 phase 3 (docs/system/architecture.md § D1 — the index & projections):
+ * POST /api/account/family-notes authors into the user's
  * account DO; its alarm is the single writer of the `figure_type_note_index`
  * projection the account arm of the journal reads. Drive that alarm so the
  * projected row is visible synchronously.

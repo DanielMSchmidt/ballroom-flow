@@ -4,8 +4,8 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Per-user undo across two clients (PLAN §10.2 E2E: "per-user undo across two
-// clients"). Covers US-038 (undo reverts only YOUR change; the other client's
+// Per-user undo across two clients (docs/system/testing.md § Layer ownership:
+// "per-user undo across two clients"). Covers US-038 (undo reverts only YOUR change; the other client's
 // concurrent edit survives; redo). The domain primitive (history-based per-actor
 // undo, US-010) is proven in packages/domain; this proves it end-to-end through
 // the store seam + live sync, in two real browsers.
@@ -93,7 +93,8 @@ test.describe("@smoke per-user undo across two clients", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Figure-editor undo — "undo follows the surface being edited" (PLAN §5.4). The
+// Figure-editor undo — "undo follows the surface being edited"
+// (docs/concepts/collaboration.md § Undo). The
 // full-screen figure editor auto-saves with no Save button; its honesty rests on
 // an undo existing THERE, targeting the figure's OWN doc (store.undoFigure). This
 // drives the real journey: open the editor → set an attribute → undo → the cell

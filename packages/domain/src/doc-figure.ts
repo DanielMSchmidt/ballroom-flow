@@ -1,4 +1,4 @@
-// US-005 — Figure document schema (PLAN §2.2–2.5).
+// US-005 — Figure document schema (docs/concepts/figures.md, docs/concepts/notation.md).
 //
 // A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source),
 // a float-count attribute timeline, an optional

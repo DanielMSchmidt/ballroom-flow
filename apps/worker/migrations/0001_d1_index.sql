@@ -1,4 +1,5 @@
--- US-016 — D1 index/registry schema (PLAN §6.2, §2.7, D24).
+-- US-016 — D1 index/registry schema (docs/system/architecture.md § D1 — the index
+-- & projections / § Persistence & the DO lifecycle).
 --
 -- D1 is a PURE INDEX over the document graph — NO CRDT content lives here
 -- (canonical doc state is each DO's SQLite). The DO alarm projects a thin

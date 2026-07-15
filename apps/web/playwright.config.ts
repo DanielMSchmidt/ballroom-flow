@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// E2E layer (PLAN.md §10.3). Three device projects: desktop Chromium, mobile
+// E2E layer (docs/system/testing.md § Tooling & CI). Three device projects: desktop Chromium, mobile
 // Chrome, mobile Safari (WebKit) — the cross-browser + mobile-first matrix.
 // No sleeps: rely on Playwright's auto-waiting + web-first assertions.
 // `retries: 1` + trace-on-first-retry per the plan.

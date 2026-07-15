@@ -25,7 +25,8 @@ import { asTestPeek } from "./test-support/test-peek";
 // US-015 — Live WebSocket sync (two clients converge) [M2, system]
 // US-016 — DO alarm: compaction + D1 index projection + invite expiry [M2]
 //
-// PLAN §6, D23, §10.2: "two clients converge through a real per-document DO;
+// docs/system/architecture.md § Persistence & the DO lifecycle; docs/system/testing.md:
+// "two clients converge through a real per-document DO;
 // DO SQLite persistence (doc survives eviction/reload); alarm compaction + D1
 // index projection". Run in real workerd via vitest-pool-workers.
 //
@@ -828,7 +829,7 @@ describe("US-025 DO alarm: routine-card projection (bars / figureCount / forkedF
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 milestone step 1 (PLAN §7, 2026-07-02 review): "the ladder runs on the DO
+// v5 milestone step 1 (docs/system/sync-and-offline.md § Version skew, 2026-07-02 review): "the ladder runs on the DO
 // load path, and fresh docs are stamped CURRENT_SCHEMA_VERSION". Before this,
 // `migrate()`/`CURRENT_SCHEMA_VERSION` had zero production callers — every seed
 // site stamped a hardcoded `schemaVersion: 1` and the system survived on

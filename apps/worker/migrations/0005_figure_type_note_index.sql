@@ -1,4 +1,6 @@
--- US-041 — FigureTypeNoteIndex (PLAN §2.6, §2.7, §5.1, Q-FIGNOTE-VIS option 2).
+-- US-041 — FigureTypeNoteIndex (docs/concepts/annotations.md § Anchors / § Ownership
+-- & visibility; docs/system/architecture.md § D1 — the index & projections;
+-- docs/concepts/collaboration.md § Roles; Q-FIGNOTE-VIS option 2).
 --
 -- A figure-FAMILY note (US-040) is OWNED by one user (its author = account-doc
 -- owner). This is the server-mediated store a shared routine reads to discover

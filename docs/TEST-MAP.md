@@ -1,9 +1,10 @@
 # Test Map — feature/story key → test file × layer
 
 > **Note (2026-07-02):** the `USER-STORIES.md` backlog was removed. The `US-…` ids
-> below survive as **stable keys** (in test names, headers, and PLAN.md) — this map
-> and each test's header comment are now their only definition. Roadmap/status
-> live in `PLAN.md` §9.
+> below survive as **stable keys** (in test names and headers) — this map and each
+> test's header comment are now their only definition. (The `PLAN §…` citations in
+> older rows below refer to the dissolved `docs/PLAN.md` — decode via the
+> historians table in [`README.md`](README.md).)
 
 **Status (updated 2026-07-03):** the TDD suite was authored ahead of the build as
 fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **it has since been
@@ -201,7 +202,7 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
   `apps/web/e2e/convergence.spec.ts`.
 - **US-038 AC-3** soft "superseded" hint — **SHIPPED**: `wasSupersededByOthers(doc,
   actorId)` in `packages/domain/src/undo.ts` + store seam + `Assemble.tsx` toast
-  variant. See PLAN.md §5.4 for the full spec.
+  variant. See [system/architecture.md](system/architecture.md) § Undo for the full spec.
 
 **New surfaces shipped in the design-parity program (reconciled 2026-06):**
 - **Journal tab** (US-039/040/041/042 cross-routine view): `apps/web/e2e/journal.spec.ts`
@@ -219,7 +220,8 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
   (`figureTypeHasCatalogFamily`) + the ship gate's custom-figure case.
 - **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
   `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
-  server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.
+  server-resolves catalog figure from bundled reference data. See
+  [concepts/figures.md](concepts/figures.md) § Scopes.
 - **Tango-Rise write gate** (`dance_not_applicable`): the DO seed route + store seam reject
   a `rise` attribute on a Tango figure with a `dance_not_applicable` error; vocabulary
   `appliesToDances` enforced on the write path. Covered in `vocabulary.test.ts` /

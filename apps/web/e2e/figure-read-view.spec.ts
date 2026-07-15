@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Figure read view journey (PLAN §4.4, design `figMode`): tapping a figure on
+// Figure read view journey (docs/concepts/notation.md § The figure editor,
+// design `figMode`): tapping a figure on
 // the READING programme opens the figure READ-ONLY — the notes surfaces are
 // there (addable per role) but nothing is editable, even for an editor. The
 // step editor is reached only explicitly: the pencil "Edit steps" toggle on

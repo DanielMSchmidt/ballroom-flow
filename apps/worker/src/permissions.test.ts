@@ -13,7 +13,8 @@ import { asTestPeek } from "./test-support/test-peek";
 // US-020 — Per-document membership & roles [M3, system]
 // US-021 — Permission boundary at the DO connection [M3, system]
 //
-// PLAN §5.1, §6, §10.2: "permission per document at the boundary —
+// docs/concepts/collaboration.md § Roles; docs/system/architecture.md
+// § Permission enforcement; docs/system/testing.md: "permission per document at the boundary —
 // editor/commenter/viewer/non-member/forged-connection on a routine doc AND on
 // a figure doc". Enforcement is at the DO sync connection (Clerk JWT verify +
 // D1 role lookup), NEVER post-hoc CRDT-cell rejection.

@@ -15,7 +15,7 @@ keep it trustworthy, and the checklist for adding a figure.
 - What a "figure", "footwork HT/TH", "CBM vs CBMP", or "alignment" *means* in ballroom → **ballroom-dance-reference** (this skill assumes those terms; they're defined there).
 - The live-figure/variant/overlay document model, `resolveFigure(base, variant)`, forking → **ballroom-flow-crdt-reference** and **ballroom-flow-v5-migration-campaign**.
 - Running tests, coverage, E2E → **ballroom-flow-validation-and-qa**.
-- PR/TDD/PLAN.md process rules → **ballroom-flow-change-control**.
+- PR/TDD/doc-sync process rules → **ballroom-flow-change-control**.
 - Why past data decisions were made (full history) → **ballroom-flow-failure-archaeology**; this skill keeps only the data-quality lessons.
 
 ---
@@ -176,7 +176,8 @@ sourced timing added to `docs/seed/wdsf-standard-figures.json` first.
    token form HT/TH/T/H/"heel pull"); `sway`/`turn` `"none"` is allowed in the seed
    (the generator drops it); alignments are from the **leader's perspective**, and
    a figure's exit should chain onto plausible followers' entries.
-   **Exit alignments are DERIVED since 2026-07-10 (PLAN §3.8/D33):** transcribe the
+   **Exit alignments are DERIVED since 2026-07-10 (formerly PLAN §3.8/D33, now
+   `docs/concepts/notation.md` § Kinds — the "removed from the model" note):** transcribe the
    book's exit while charting to CHECK your turns, but store `exitAlignment` ONLY
    when `deriveExitAlignment(entry, steps)` (packages/domain/src/alignment.ts)
    does NOT reproduce the printed token — a stored exit that derivation reproduces
@@ -211,8 +212,8 @@ sourced timing added to `docs/seed/wdsf-standard-figures.json` first.
    pnpm --filter @weavesteps/domain test && pnpm lint && pnpm typecheck
    ```
 8. **Process:** this is product data — normal change control applies (TDD where a
-   behavior changes, PR into `development`, PLAN.md untouched unless the model
-   changed). See **ballroom-flow-change-control**.
+   behavior changes, PR into `main`, `docs/concepts/`/`docs/system/` untouched unless
+   the model changed). See **ballroom-flow-change-control**.
 
 ## 5. Timing math — `parseWdsfTiming`
 
@@ -250,7 +251,8 @@ in plan v4.3 (8f49169) — don't re-derive them from memory.
 
 ## 7. v5 — the global-figure seeder is SHIPPED (additive-only, D30)
 
-PLAN.md v5 (D30 ⟳v5; roadmap §9 step 3 ✅ as of 2026-07-02, PR #137): global catalog
+Formerly PLAN.md v5 (D30 ⟳v5; roadmap §9 step 3 ✅ as of 2026-07-02, PR #137), now
+`docs/system/architecture.md` § The catalog seed pipeline: global catalog
 figures are **real, admin-owned Automerge docs** (one Durable Object each). The
 seeder exists — `seedGlobalFigures` in **`apps/worker/src/seed-global-figures.ts`**
 — **self-healing since D30 ⟳2026-07-07**: `ensureGlobalFigures` (same module) runs
@@ -273,8 +275,8 @@ explicitly. Its D30 contract:
   A seed-JSON correction now DOES reach already-imported figures on the next
   seeder run; admin in-app edits to SEEDED cells are subordinate to the seed.
 - The bundled catalog (`library-data.ts`) remains the browse/picker index (names,
-  families, dances); **figure content in routines reads from the docs** (PLAN §9
-  content workstream). The store still uses the bundle as the last-resort render
+  families, dances); **figure content in routines reads from the docs** (formerly PLAN §9
+  content workstream, now `docs/concepts/figures.md` § The core rule). The store still uses the bundle as the last-resort render
   fallback for a `global:` ref whose doc/snapshot hasn't hydrated
   (`catalogFigureFor` / `resolveBaseContent` in `apps/web/src/store/routine.ts`),
   so a catalog placement is pre-filled by construction.
@@ -287,15 +289,19 @@ the seeder is an ops action per environment (see **ballroom-flow-run-and-operate
 ## Provenance and maintenance
 
 Written 2026-07-02 against repo HEAD `70eed7e`; **§7 refreshed 2026-07-02 — verified at HEAD
-`c9622c9`** (PR #137: `seedGlobalFigures` + admin route shipped, PLAN §9 step 3 ✅) on
-`development`. Verified directly:
+`c9622c9`** (PR #137: `seedGlobalFigures` + admin route shipped, v5 milestone step 3 ✅,
+formerly PLAN §9) on `development` (the trunk at the time — merged into `main` and deleted
+from the remote 2026-07-05, PR #161). Verified directly:
 both generator scripts read in full; seed metas and entry counts recounted from the
 JSON (`python3 -c "import json; print(len(json.load(open('docs/seed/figure-charts.json'))['figures']))"` → 147; istd 121, wdsf 147); `library-data.ts` → 204 rows;
 `wdsf-timing.ts` / `figure-steps.ts` / `library.ts` read in full; guard tests read
 (`figure-steps.test.ts`, `library.test.ts`, `wdsf-timing.test.ts`, `library-data.test.ts`);
 `apps/worker/src/seed-global-figures.ts` + the admin route read at `c9622c9`;
 commits 1f67e38, 58a11f6, 01284a9, 4b9cf8a, d2d4b75 messages read via `git log`;
-PLAN.md D30/D31/Q-LIBSEED and the §9 content-workstream wording read.
+PLAN.md D30/D31/Q-LIBSEED and the §9 content-workstream wording read (that document was
+dissolved 2026-07-15 into `docs/README.md` + `docs/concepts/` + `docs/system/` — D30 now
+lives in `docs/system/architecture.md` § The catalog seed pipeline; see `docs/README.md`
+§ For historians for the full old→new map).
 
 Re-verify before trusting volatile facts:
 
@@ -309,7 +315,7 @@ for f in ["figure-charts","istd-standard-figures","wdsf-standard-figures"]:
 EOF
 # v5 seeder still shipped + additive (D30)?
 grep -n "seedGlobalFigures" apps/worker/src/seed-global-figures.ts apps/worker/src/index.ts
-grep -n "Global figure docs" docs/PLAN.md
+grep -n "Global figure docs" docs/system/architecture.md
 # the step-count guard test still exists
 grep -n "step count matches its timing" packages/domain/src/figure-steps.test.ts
 # timing durations unchanged

@@ -3,7 +3,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-003 — ATTRIBUTE_REGISTRY + merge [M1, system/developer]
-// PLAN §3, §10.2 invariant: "registry/Zod — NFR/H/⅛; Tango omits rise;
+// docs/concepts/notation.md § Kinds, docs/system/testing.md invariant: "registry/Zod — NFR/H/⅛; Tango omits rise;
 // position vs body-action; CBP→CBMP; unknown passthrough-on-read; user-defined
 // kind merges". One vocabulary read by editor, lanes, chips, Zod.
 //
@@ -107,7 +107,7 @@ describe("US-003 ATTRIBUTE_REGISTRY + merge", () => {
   });
 
   it("models direction as the ISTD directional set plus crossing/legacy values (⟳2026-07-10)", async () => {
-    // PLAN §3.8: direction is the step's relative TRANSLATION — the ISTD set
+    // docs/concepts/notation.md § Kinds: direction is the step's relative TRANSLATION — the ISTD set
     // (forward/back/side/diagonal_forward/diagonal_back/close) plus the own-foot
     // crossing values in_front/behind (lock steps — NOT CBMP, which stays in
     // position/bodyActions), in_place, and the legacy UNSPLIT `diagonal` kept for

@@ -81,7 +81,8 @@ describe("Journal list (frames 3.1 / 3.2)", () => {
   });
 });
 
-// WEP-0004 — the choreo-first link picker: choreo → figure (type-ahead) →
+// docs/concepts/annotations.md § The Journal (WEP-0004) — the choreo-first link
+// picker: choreo → figure (type-ahead) →
 // placement grid (entire figure / one count, role lens) → scope LAST, gated by
 // the placement (a timed note never spans dances).
 const whiskFigures = [

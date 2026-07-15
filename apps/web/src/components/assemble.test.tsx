@@ -14,7 +14,8 @@ import { axeCheck, renderUi, screen, userEvent, within } from "../test-support/r
 // US-026 — Add / rename / reorder / delete sections [M3, user]
 // US-027 — Add / reorder / delete figure placements [M3, user]
 //
-// PLAN §4.3, §10.2 component layer: "section rename; placement cards; viewer/
+// docs/concepts/choreography.md § Assembling, docs/system/testing.md component
+// layer: "section rename; placement cards; viewer/
 // commenter gating". Assemble screen built by the frontend
 // agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
@@ -1158,7 +1159,8 @@ describe("US-027 Add a figure from the library picker", () => {
 
   it("lists the user's library figures (dance-scoped, deduped) and places a live reference on tap", async () => {
     // Intent: a figure the user added to their library/catalog must surface in
-    //   the choreo's add-figure search (PLAN §4.2: a bookmark "can be placed
+    //   the choreo's add-figure search (docs/concepts/figures.md § The library
+    //   screen: a bookmark "can be placed
     //   into your other routines"). Bookmarked CATALOG figures dedupe into the
     //   preset rows; other-dance figures stay out.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");

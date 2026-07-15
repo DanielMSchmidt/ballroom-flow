@@ -526,7 +526,7 @@ export function ChoreoList({
         </div>
       </Sheet>
 
-      {/* Delete confirm (destructive) — PLAN §4.0: deletes are confirmed. */}
+      {/* Delete confirm (destructive) — docs/concepts/collaboration.md: deletes are confirmed. */}
       <Modal
         open={confirmDelete != null}
         onClose={closeConfirmDelete}

@@ -70,7 +70,8 @@ async function ensureSample(env: Env): Promise<void> {
 
 export type Env = {
   DB: D1Database;
-  // Per-document Automerge host (US-014, PLAN §6/D23): one DO per routine/figure
+  // Per-document Automerge host (US-014, docs/system/architecture.md
+  // § Persistence & the DO lifecycle): one DO per routine/figure
   // document, SQLite-backed, the sync + permission boundary. Typed with the DO
   // class so the create routes can call its RPC (seedDoc, #205).
   DOC_DO: DurableObjectNamespace<DocDO>;
@@ -394,7 +395,8 @@ app.post("/api/routines", async (c) => {
 // MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
 // it into a NEW owned routine. App-owned templates (ownerId="app") may also be
 // forked by any authenticated user without a membership row (US-045/Task 6).
-// The fork is INDEPENDENT of its ORIGIN (v5, PLAN §2.4/§5.2, D12): we snapshot
+// The fork is INDEPENDENT of its ORIGIN (v5, docs/concepts/choreography.md
+// § Forking, docs/concepts/figures.md § Variants, D12): we snapshot
 // the origin's CRDT content and seed a brand-new doc with it (no shared
 // history), so later origin STRUCTURAL edits never appear in the fork, AND we
 // copy every referenced ACCOUNT figure for the forker (a variant copied as a
@@ -434,14 +436,14 @@ app.post("/api/routines/:id/fork", async (c) => {
 });
 
 // DELETE /api/routines/:id — delete a routine from the Choreo overview (US-025
-// delete flow). DELETE is OWNER-ONLY (PLAN §4.0: only the owner can delete the
+// delete flow). DELETE is OWNER-ONLY (docs/concepts/collaboration.md: only the owner can delete the
 // doc — `canDelete`). Ownership is the registry `ownerId`, NOT the effective role:
 // an owner carries an EDITOR membership row (createOwnedRoutine, #168), so
 // resolveEffectiveRole would resolve them to "editor" and never "owner" — gating
 // on that would lock the real owner out. So we compare ownerId to the verified
 // sub. A non-owner member (editor/commenter/viewer) or non-member → 403; an
 // unknown routine → 404. Soft-delete only: the registry row is tombstoned
-// (deletedAt), never hard-removed (PLAN §2.1), so the routine drops out of the
+// (deletedAt), never hard-removed (docs/system/architecture.md § Global constraints), so the routine drops out of the
 // list/count/search while its CRDT doc and shared-in members' history survive.
 // A re-delete (already tombstoned) matches zero rows → 404.
 app.delete("/api/routines/:id", async (c) => {
@@ -557,7 +559,7 @@ app.post("/api/figures", async (c) => {
 });
 
 // POST /api/figures/save-to-library — "↟ Save to my library" (T5; ⟳v5 — a
-// BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). Records `figureRef` in the
+// BOOKMARK, never a copy, docs/concepts/figures.md § The library screen / § Variants, D28). Records `figureRef` in the
 // CALLER'S `library_entry` projection (+ their account doc, once it is wired to
 // a live DO — see doc-account.ts's STORAGE NOTE). Supersedes the v4.x
 // frozen-copy promotion: no figure doc is minted or seeded here.
@@ -601,7 +603,7 @@ app.post("/api/figures/save-to-library", async (c) => {
     if (role == null) return c.json({ error: "forbidden" }, 403);
   }
 
-  // WEP-0002: write THROUGH the account DO — the canonical bookmark set lives in
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): write THROUGH the account DO — the canonical bookmark set lives in
   // the account doc's `libraryFigureRefs`; the DO alarm is the single writer of
   // the `library_entry` D1 projection. A re-add is an idempotent no-op, so the
   // v1 `{ alreadySaved }` shape is derived from whether the edit changed the doc.
@@ -624,7 +626,7 @@ app.delete("/api/figures/save-to-library", async (c) => {
   const parsed = zFigureRefBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "invalid_request" }, 400);
   const { figureRef } = parsed.data;
-  // WEP-0002: un-bookmark THROUGH the account DO (the alarm tombstones the
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): un-bookmark THROUGH the account DO (the alarm tombstones the
   // `library_entry` row). Idempotent — removing an absent ref is a no-op — so
   // this still 200s regardless of whether the doc changed.
   await ensureAccountDoc(c.env, user.sub);
@@ -672,7 +674,7 @@ app.get("/api/routines/:id/family-notes", async (c) => {
   const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
   // Shape each row as an Annotation-like note (with a figureType anchor) so the
   // client can match it to the routine's figures (resolveFamilyNotesFor). A
-  // TIMED note (WEP-0004) carries count/role on the note AND its anchor so the
+  // TIMED note (WEP-0004 — docs/concepts/annotations.md § Anchors) carries count/role on the note AND its anchor so the
   // client can pin it in the figure grid; keys are conditionally spread — an
   // untimed row keeps the exact v1 shape.
   const notes = rows.map((r) => ({
@@ -710,11 +712,11 @@ app.post("/api/account/family-notes", async (c) => {
 
   const parsed = zFamilyNoteBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "invalid_family_note" }, 400);
-  // count/role are the WEP-0004 timed-note fields; zFamilyNoteBody has already
+  // count/role are the WEP-0004 (docs/concepts/annotations.md § Anchors) timed-note fields; zFamilyNoteBody has already
   // rejected them with danceScope "all" (counts don't align across dances).
   const { kind, text, figureType, danceScope, count, role } = parsed.data;
 
-  // WEP-0002: author THROUGH the account DO — the note lands in the account doc's
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): author THROUGH the account DO — the note lands in the account doc's
   // annotations (server-minted id), and the DO alarm is the single writer of the
   // `figure_type_note_index` D1 projection co-members read (US-041). Response
   // shape is unchanged from the direct-insert path; `id` is now the DO-minted id.
@@ -747,8 +749,9 @@ app.post("/api/account/family-notes", async (c) => {
   );
 });
 
-// GET /api/journal — the signed-in user's cross-routine Journal (T6, PLAN §2.6/
-// §2.7/§4.6). The UNION of routine-scoped lesson/practice annotations (projected
+// GET /api/journal — the signed-in user's cross-routine Journal (T6,
+// docs/concepts/annotations.md § Anchors / § The Journal; docs/system/architecture.md
+// § D1 — the index & projections). The UNION of routine-scoped lesson/practice annotations (projected
 // to journal_entry by the routine DO alarm) and account-scoped figureType
 // lesson/practice notes (figure_type_note_index), newest-first, tombstones
 // excluded, author display/colour joined. VISIBILITY (T6 LOCKED): both arms are
@@ -1151,7 +1154,7 @@ app.get("/api/docs/:id/connect", async (c) => {
     : undefined;
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  // WEP-0002: an account doc is minted on its owner's FIRST connect. Ensure it
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): an account doc is minted on its owner's FIRST connect. Ensure it
   // exists (seeded + registered) BEFORE forwarding, so the owner boundary resolves
   // (resolveEffectiveRole needs the registry row) and the first connect finds real
   // content. Gated on the authenticated user OWNING this ref — a forged connect to

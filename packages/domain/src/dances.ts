@@ -1,4 +1,5 @@
-// US-002 — Dance metadata registry (PLAN §3, §10.2).
+// US-002 — Dance metadata registry (docs/concepts/notation.md § Kinds,
+// docs/system/testing.md).
 //
 // One source of truth for the 5 Standard *travelling* dances of v1. Timing,
 // phrasing, and applicability rules (e.g. float-count timing in US-004, the

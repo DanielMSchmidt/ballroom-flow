@@ -1,4 +1,4 @@
-// PLAN §11.2 — offline app OPEN. On an installed PWA opened with no network,
+// docs/system/sync-and-offline.md § Offline editing — offline app OPEN. On an installed PWA opened with no network,
 // live Clerk cannot initialize (`isLoaded` never turns true), which used to
 // hold the entire app on the full-screen auth spinner forever. The auth seam
 // now FAILS OPEN to the last-known signed-in identity cached on this device:

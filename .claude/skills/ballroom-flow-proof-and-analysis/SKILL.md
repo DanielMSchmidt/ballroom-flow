@@ -204,7 +204,8 @@ since C."
 
 Undo here is history-based (no op-log): find the user's own last change, compute its
 inverse with `A.diff`, apply it as a *new* change so it merges with concurrent edits
-(`packages/domain/src/undo.ts`; PLAN §5.4/D14). The subtlety: an inverse computed
+(`packages/domain/src/undo.ts`; formerly PLAN §5.4/D14, now `docs/concepts/collaboration.md`
+§ Undo, mechanics in `docs/system/architecture.md` § Undo). The subtlety: an inverse computed
 against history is only valid *in* that history.
 
 **Recipe — three obligations, each with a proof step:**
@@ -302,15 +303,16 @@ scenario name then becomes the permanent shorthand for the decision.
    them only on its untouched beats").
 3. Walk each candidate design through the scenario mechanically. A design that
    cannot produce the observations is dead regardless of its other virtues.
-4. Record the decision AND the rejected alternative with its failure inline in
-   docs/PLAN.md (§8 decisions / §12 questions) — that's what stops the debate from
-   reopening. Pin the scenario with a test named after it.
+4. Record the decision AND the rejected alternative with its failure inline in the
+   owning `docs/concepts/` or `docs/system/` doc (formerly docs/PLAN.md §8 decisions /
+   §12 questions) — that's what stops the debate from reopening. Pin the scenario with
+   a test named after it.
    (Process details: ballroom-flow-change-control.)
 
 **Worked example A — the Passing Tumble Turn (decided PLAN v5, 2026-07-02).** The
 figure model had oscillated: live-overlay (v4) → frozen-copy (2026-06-29, PRs
-#97/#99/#100) → back to live. The scenario that ended it (docs/PLAN.md §5.2, and the
-v5 banner near the top): *a Slowfox choreo places the catalog Tumble Turn twice — once
+#97/#99/#100) → back to live. The scenario that ended it (formerly docs/PLAN.md §5.2, now
+`docs/concepts/figures.md` § Variants): *a Slowfox choreo places the catalog Tumble Turn twice — once
 plain, once danced as a "Passing Tumble Turn" with the last ~3 beats re-choreographed.
 The catalog figure later gains values of a new attribute kind.* Expected observations:
 the plain placement shows the new values on every beat (live reference); the Passing
@@ -426,5 +428,5 @@ Re-verify if drifted:
 - `grep -n "commenterChangeAllowed\|refreshConnectedRoles" apps/worker/src/doc-do.ts`
 - `grep -n "recordIdentityOps\|revertedSet" packages/domain/src/undo.ts`
 - `grep -rn "expectIndexedQuery" apps/worker/src --include='*.test.ts' | head`
-- `grep -n "Tumble Turn" docs/PLAN.md packages/domain/src/fork.test.ts`
+- `grep -n "Tumble Turn" docs/concepts/figures.md packages/domain/src/fork.test.ts`
 - Line numbers cited above will drift first; symbol names and file paths are the stable anchors.

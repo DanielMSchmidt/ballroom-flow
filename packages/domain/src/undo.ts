@@ -1,4 +1,5 @@
-// US-010 — History-based per-user undo (PLAN §5.4, D14, Q-UNDO).
+// US-010 — History-based per-user undo (docs/concepts/collaboration.md § Undo,
+// mechanics: docs/system/architecture.md § Undo, D14, Q-UNDO).
 //
 // Automerge has NO turnkey per-user UndoManager (unlike Yjs). Undo is built from
 // history: find the user's OWN last change (filter the change log by actor id),
@@ -13,7 +14,7 @@
 // `actorId` is the Automerge actor id of the user; the app-user → actor-id
 // mapping is the store seam's concern, not this pure helper.
 //
-// SOUNDNESS (PLAN §5.4, LOCKED 2026-07-02 — the two review-verified failure
+// SOUNDNESS (docs/system/architecture.md § Undo, LOCKED 2026-07-02 — the two review-verified failure
 // modes this file must never reintroduce):
 //  1. The inverse must target list elements BY IDENTITY, never by positional
 //     index. `A.diff` patches carry HISTORICAL indices; replaying them against
@@ -416,7 +417,7 @@ function undoTarget<T>(doc: A.Doc<T>, actorId: string): ChangeMeta | undefined {
 }
 
 /**
- * US-038 AC-3 — the soft "superseded by others" hint (advisory, PLAN §5.4).
+ * US-038 AC-3 — the soft "superseded by others" hint (advisory, docs/concepts/collaboration.md § Undo).
  *
  * Reports whether ANOTHER actor has BUILT ON the change `undoLastChange(doc,
  * actorId)` would revert — i.e. some change by a different actor causally

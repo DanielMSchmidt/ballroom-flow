@@ -6,7 +6,8 @@ import { installOfflineControl } from "./support/offline";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Offline editing (PLAN §11.2 — the v1.1 done bar). CRDT edits to an
+// Offline editing (docs/system/sync-and-offline.md § Offline editing (as
+// built) — the v1.1 done bar). CRDT edits to an
 // ALREADY-HYDRATED doc keep working while disconnected: they are remembered
 // locally (IndexedDB behind DocConnection, surviving a reload) and replayed to
 // the DO on reconnect via the shipped resend machinery (D10). Two journeys:

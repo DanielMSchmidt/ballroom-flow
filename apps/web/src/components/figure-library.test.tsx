@@ -12,7 +12,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // US-035 — Auto-variant on editing a non-owned figure (toast) [M4, user]
 // US-036 — Fork a figure into a variant explicitly [M4, user]
 //
-// PLAN §4.2, §10.2 component layer: "figure library screen (variant badge,
+// docs/concepts/figures.md § The library screen, docs/system/testing.md
+// component layer: "figure library screen (variant badge,
 // 'used in N'); fork/variant affordances + copy-on-write prompt; toasts incl.
 // 'copied as your variant'". Screens built by the frontend agent → dynamic
 // import behind it.skip.
@@ -55,7 +56,8 @@ describe("US-032 Application-global figure library browse", () => {
 describe("T5 — ↟ Save to my library (promote a global figure)", () => {
   it("calls onSaveToLibrary with the figure identity + toasts on success", async () => {
     // Intent: each global card carries a "↟ save" affordance that promotes the figure
-    // into the user's personal library (PLAN §5.2). Act: click the first save button.
+    // into the user's personal library (docs/concepts/figures.md § Variants).
+    // Act: click the first save button.
     // Assert: the mutation is invoked and a success toast shows.
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",

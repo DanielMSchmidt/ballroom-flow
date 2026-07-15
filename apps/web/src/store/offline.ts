@@ -1,4 +1,4 @@
-// store/ seam — offline-editing helpers (PLAN §11.2).
+// store/ seam — offline-editing helpers (docs/system/sync-and-offline.md § Offline editing).
 import { useEffect, useState } from "react";
 import { defaultDocStorage } from "./doc-storage";
 

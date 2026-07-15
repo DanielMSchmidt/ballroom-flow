@@ -13,7 +13,8 @@ import { Profile } from "./Profile";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-051 — Accessibility WCAG AA [M9, user]
-// PLAN §7, §10.3: "axe reports no violations on each screen (component-level
+// docs/system/architecture.md § Non-functional requirements, docs/system/testing.md:
+// "axe reports no violations on each screen (component-level
 // vitest-axe)"; color never the sole signal; ≥44px; keyboard + SR; reduced-motion.
 //
 // One axe sweep per primary PRESENTATIONAL screen, rendered with minimal real

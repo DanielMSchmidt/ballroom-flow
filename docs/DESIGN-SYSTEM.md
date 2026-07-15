@@ -3,7 +3,7 @@
 **Status:** v1 (base foundation), 2026-06-25.
 **Scope:** the token-driven styling layer + accessible primitive components + an `AppShell` + a live gallery. This is the **base** the product screens are built on; it deliberately contains **no product screens or domain/CRDT logic**.
 
-**Source of truth for rules:** [`docs/design/DESIGN-PRINCIPLES.md`](design/DESIGN-PRINCIPLES.md) (the 28 numbered principles — referenced below as `#n`). Colors/scopes trace to [`docs/PLAN.md`](PLAN.md) §3 and the visual language in `docs/design/Ballroom Builder.dc.html`.
+**Source of truth for rules:** [`docs/design/DESIGN-PRINCIPLES.md`](design/DESIGN-PRINCIPLES.md) (the 28 numbered principles — referenced below as `#n`). Colors/scopes trace to [`docs/concepts/notation.md`](concepts/notation.md) § Kinds and the visual language in `docs/design/Ballroom Builder.dc.html`.
 
 > **Builder v2 refresh (2026-07-02):** the visual language now follows `docs/design/project/Ballroom Builder v2.dc.html`. Deltas from v1: `AttrChip` renders kind **tint + ink + 1px kind border** (no solid fill/white text); `--bf-ink-faint` darkened to `#8a857b` and a new `--bf-ink-label` (`#6f6a61`) covers eyebrow labels; off-beat counts read in the accent (size still differentiates); note affordances are accent “✎ Add note” with ≥36px hit areas and author-initial avatars; the attribute explainer is a full page with a kind pager. The first-visit tour popover (driver.js) is themed via the `.bf-tour` overrides in `styles/index.css` — tokens only.
 
@@ -37,7 +37,7 @@ All tokens live in `apps/web/src/styles/tokens.css` as `--bf-<group>-<role>`. **
 ### Accent (studio blue)
 `--bf-accent`, `--bf-accent-ink` (AA text on tints), `--bf-accent-tint`, `--bf-accent-border`.
 
-### The five attribute-kind colors (PLAN §3) — paired with code+word **always** (#5)
+### The five attribute-kind colors ([concepts/notation.md](concepts/notation.md) § Kinds) — paired with code+word **always** (#5)
 Each kind exposes `base / -ink / -tint / -border`:
 
 | kind | id | base hex | code | word |
@@ -51,7 +51,7 @@ Each kind exposes `base / -ink / -tint / -border`:
 > Attribute kinds are **registry-driven** (#24): the standard five are tokenized, but the UI must render from the merged `ATTRIBUTE_REGISTRY` (standard + user-defined). For a user-defined kind whose color isn't in the standard set, pass its stored color through to `Chip`/`Badge` via `style`.
 
 ### Figure scopes (#11) — two consistent, distinct treatments
-Scope is determined by **content divergence** (PLAN §4.3), not the copy mechanism.
+Scope is determined by **content divergence** ([concepts/figures.md](concepts/figures.md) § The custom badge), not the copy mechanism.
 `--bf-scope-{global|custom}` each with `-ink / -tint / -border`. Encoded by the `ScopeBadge` primitive as **word + icon + color** (never color alone):
 - `library` — matches catalog (app-owned or account copy that still agrees): **Library** (slate, globe icon)
 - `custom`  — diverged from or unrelated to the catalog (user-edited copy, from-scratch): **Custom** (amber, pencil icon)

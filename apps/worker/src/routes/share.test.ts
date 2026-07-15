@@ -6,7 +6,7 @@ import { applyMigrations, roleFor, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-024 — Share screen (member list + roles) [M3, user]
-// PLAN §4.7. The REST surface behind the Share screen: list members + roles;
+// docs/concepts/collaboration.md § Invites. The REST surface behind the Share screen: list members + roles;
 // editor/owner removes a member; commenter/viewer cannot. (The visual screen is
 // covered at the component layer; here we pin the SERVER authorization + data.)
 //

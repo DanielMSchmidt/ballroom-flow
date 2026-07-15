@@ -5,7 +5,8 @@ import { applyMigrations } from "./test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-049 — Ops: Sentry + Analytics Engine + EXPLAIN gate + Smart Placement [M8]
-// PLAN §7, D25/D26, §10.2: errors→Sentry, metrics→Analytics Engine; the CI
+// docs/system/architecture.md § Non-functional requirements, D25/D26;
+// docs/system/testing.md: errors→Sentry, metrics→Analytics Engine; the CI
 // EXPLAIN gate fails on any index/registry/membership/quota SCAN; Smart
 // Placement + staging/prod.
 //

@@ -1,5 +1,5 @@
 // Service-worker-driven update reload — the FAST half of the rollout-skew
-// story (PLAN §7 "Version evolution / rollout skew").
+// story (docs/system/sync-and-offline.md § Version skew).
 //
 // Motivating incident (2026-07-14, the Feather-step count mismatch): a fix
 // deployed at 17:48 was still invisible at 18:52 — a freshly opened tab is

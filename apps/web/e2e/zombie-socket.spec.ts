@@ -4,7 +4,8 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0006 ship gate — zombie-socket heartbeat. The practice-room dead spot:
+// Zombie-socket heartbeat ship gate (formerly WEP-0006; see
+// docs/system/sync-and-offline.md § Heartbeat — zombie-socket detection). The practice-room dead spot:
 // the network dies under an ESTABLISHED socket without the browser noticing
 // (`navigator.onLine` stays true, no close event — an AP reboot). Before the
 // heartbeat, edits made in that window vanished into the dead pipe while the

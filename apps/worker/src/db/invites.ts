@@ -1,4 +1,4 @@
-// US-023 — invite issue + redeem against the D1 index (PLAN §5.5, §4.7).
+// US-023 — invite issue + redeem against the D1 index (docs/concepts/collaboration.md § Invites).
 //
 // SECURITY MODEL: the invite is an unguessable random token whose CONTENTS
 // (docRef, role, expiry) live in D1, not in the token. The redeemer presents

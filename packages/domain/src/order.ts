@@ -1,4 +1,4 @@
-// #63 — Fractional-index ordering keys for sections & placements (PLAN §5.3).
+// #63 — Fractional-index ordering keys for sections & placements (docs/system/architecture.md § Ordering).
 //
 // A `sortKey` is an opaque, lexicographically-ordered string. Giving every
 // section and placement one turns a reorder into a FIELD UPDATE — set the moved

@@ -150,7 +150,7 @@ export interface DomainApi {
     byUser: string,
   ): { variant: FigureDoc | null; placement: Placement };
 
-  // ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02)
+  // ⟳v5 — live overlay variants (docs/concepts/figures.md § Variants, 2026-07-02)
   ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number>;
   resolveFigure(
     base: Pick<FigureDoc, "attributes" | "counts" | "bars">,
@@ -178,7 +178,7 @@ export interface DomainApi {
   // depend on) my next undo target? Advisory only; undo still always proceeds.
   wasSupersededByOthers<T>(doc: AmDoc<T>, actorId: string): boolean;
 
-  // US-011 figureType note matching (+ WEP-0004 timed-note count pinning)
+  // US-011 figureType note matching (+ WEP-0004 timed-note count pinning; docs/concepts/annotations.md § Anchors)
   matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean;
   figureTypeNoteCount(anchor: Anchor, figure: FigureDoc): number | null;
 
@@ -190,7 +190,8 @@ export interface DomainApi {
   // US-013 migration ladder
   CURRENT_SCHEMA_VERSION: number;
   migrate(doc: unknown): { schemaVersion: number } & Record<string, unknown>;
-  // v5 milestone step 1 (PLAN §7) — the DO-load-path draft-mutating counterpart
+  // v5 milestone step 1 (docs/system/architecture.md § Persistence & the DO
+  // lifecycle) — the DO-load-path draft-mutating counterpart
   // of `migrate`, called inside an Automerge `A.change`.
   migrateDraft(draft: Record<string, unknown>): void;
 

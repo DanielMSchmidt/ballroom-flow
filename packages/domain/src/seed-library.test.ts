@@ -6,12 +6,13 @@ import { LIBRARY_FIGURES } from "./library";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-054 — Full Standard syllabus library seed [Content, system]
-// PLAN §9 Content workstream, D30, Q-LIBSEED: the full Standard syllabus is
+// the Content workstream (docs/README.md), D30, Q-LIBSEED (docs/system/architecture.md
+// § The catalog seed pipeline): the full Standard syllabus is
 // seeded per figureType × dance, app-owned, validated against the schema.
 //
 // UNSKIPPED 2026-07-06: the owner's WDSF Technique Books (2nd ed., May 2013)
 // arrived and the whole five-book syllabus was charted from them (the external
-// dependency PLAN §9 named). Reshaped from the original draft to the AS-BUILT
+// dependency the roadmap named). Reshaped from the original draft to the AS-BUILT
 // v5 architecture: there is no GLOBAL_FIGURE_SEED module — the bundled catalog
 // (LIBRARY_FIGURES) + charted steps (FIGURE_STEPS) are the seed data, and the
 // worker's additive-only `seedGlobalFigures` imports them into real app-owned

@@ -1,4 +1,4 @@
--- WEP-0004 — TIMED figure-family notes ("count 3 of every Whisk in my Waltz
+-- WEP-0004 (docs/concepts/annotations.md § Anchors) — TIMED figure-family notes ("count 3 of every Whisk in my Waltz
 -- choreos"): the figureType anchor gained optional `count`/`role`, and in the
 -- v1 storage model a family note's CONTENT lives on its FigureTypeNoteIndex row
 -- (migration 0005), so the row carries the two new fields too.

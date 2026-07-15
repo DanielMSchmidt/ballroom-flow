@@ -78,7 +78,8 @@ export async function unbookmarkFigure(
 
 /**
  * Project the account doc's live `libraryFigureRefs` set to `library_entry`
- * (WEP-0002 — the alarm-written inversion of bookmarkFigure/unbookmarkFigure).
+ * (WEP-0002 — docs/system/architecture.md § D1 — the index & projections —
+ * the alarm-written inversion of bookmarkFigure/unbookmarkFigure).
  * Non-destructive + idempotent: each live ref is upserted to a live row (reviving
  * a tombstone, preserving the original `createdAt`), and any currently-live row
  * whose ref left the set is TOMBSTONED (never hard-deleted). A doc already

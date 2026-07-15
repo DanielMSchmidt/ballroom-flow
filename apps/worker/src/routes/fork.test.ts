@@ -11,7 +11,8 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // ─────────────────────────────────────────────────────────────────────────
 // US-037 — Choreo fork ("make it your own") [M4, user]
 //
-// PLAN §2.4, §4.1, §5.2: forking a routine yields an OWNED, independent copy (a
+// docs/concepts/choreography.md § Forking / § The choreo list; docs/concepts/figures.md
+// § Variants: forking a routine yields an OWNED, independent copy (a
 // new doc, no shared history) with `forkedFromRef` provenance; a later
 // STRUCTURAL edit to the origin does NOT appear in the fork; the fork counts
 // against the forker's quota. The domain primitive for the routine clone
@@ -143,8 +144,8 @@ describe("US-037 Choreo fork", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 fork — account figures are copied for the forker (PLAN §2.4/§5.2, D12
-// ⟳v5, milestone §9 step 5). The fork must be independent of its ORIGIN, not
+// v5 fork — account figures are copied for the forker (docs/concepts/figures.md
+// § Variants, D12 ⟳v5, milestone step 5 — see docs/README.md). The fork must be independent of its ORIGIN, not
 // just its routine content: a placement referencing an ACCOUNT figure is
 // re-pointed at a fresh copy the forker owns (a variant copied AS a variant —
 // `copyFigureForFork` keeps `baseFigureRef`, so catalog flow-in continues);

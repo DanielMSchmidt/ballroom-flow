@@ -1,5 +1,5 @@
 // Service-worker-driven update reload — the FAST half of the rollout-skew
-// story (PLAN §7). The SW precache updates itself via periodic/visibility
+// story (docs/system/sync-and-offline.md § Version skew). The SW precache updates itself via periodic/visibility
 // update checks; when an UPDATED service worker takes control (controllerchange
 // with a controller already present at startup — new precache live), the tab
 // reloads onto it at the first moment that can't interrupt the user:

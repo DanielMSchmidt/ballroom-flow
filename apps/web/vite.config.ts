@@ -24,7 +24,8 @@ export default defineConfig({
     VitePWA({
       // Registration happens in src/lib/sw-update.ts (wired from main.tsx), not
       // via an injected registerSW.js — the app drives periodic update checks
-      // and the update-takeover reload itself (PLAN §7 rollout skew). With
+      // and the update-takeover reload itself (docs/system/sync-and-offline.md
+      // § Version skew). With
       // injectRegister off, the plugin no longer auto-enables the autoUpdate
       // worker behaviors, so skipWaiting/clientsClaim are set explicitly below:
       // a new SW takes control as soon as it's installed.

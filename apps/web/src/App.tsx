@@ -198,7 +198,8 @@ function AppHome(): React.JSX.Element {
 }
 
 /**
- * The Library tab (WEP-0002). Rendered ONLY while the library tab is active, so
+ * The Library tab (docs/system/architecture.md § D1 — the index & projections).
+ * Rendered ONLY while the library tab is active, so
  * the account doc it opens (via `useAccount`) stays LAZY (D10 — no eager socket
  * per session). The catalog "↟ save" writes a bookmark through the account-doc
  * seam (instant + offline; the worker alarm projects it into `library_entry`),

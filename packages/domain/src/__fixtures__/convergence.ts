@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Convergence helper for the Automerge property tests (PLAN.md §10.2/§10.3:
+// Convergence helper for the Automerge property tests (docs/system/testing.md:
 // "convergence asserted by exchanging changes"; US-009).
 //
 // Models two (or N) replicas of one Automerge document, lets a test apply

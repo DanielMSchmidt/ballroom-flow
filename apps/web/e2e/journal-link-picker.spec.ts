@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0004 ship gate — the choreo-first journal link picker (PLAN §4.6).
+// Choreo-first journal link picker ship gate (formerly WEP-0004; see
+// docs/concepts/annotations.md § The Journal).
 // Runs against the REAL worker (D1 + per-document DOs) via the #191 harness.
 //
 // The rushed-Whisk scenario: two Waltz routines share the catalog Whisk.
@@ -14,7 +15,8 @@ import { resetDb, seedDb } from "./support/fixtures";
 //   2. "The entire figure" → all three scopes → "This choreo only" saves a
 //      routine-scoped figure annotation that does NOT leak to the sibling.
 //
-// @smoke — part of the CI PR smoke subset (the WEP-0004 ship gate).
+// @smoke — part of the CI PR smoke subset (the journal link picker ship gate,
+// formerly WEP-0004).
 // ─────────────────────────────────────────────────────────────────────────
 
 const USER = "user_wep4";

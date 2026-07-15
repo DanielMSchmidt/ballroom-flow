@@ -8,7 +8,7 @@ const en = {
   stepsFor: "Steps for",
   leader: "Leader",
   follower: "Follower",
-  // WEP-0008: the edit-only third lens — one edit writes both roles.
+  // docs/concepts/notation.md § Role lenses: the edit-only third lens — one edit writes both roles.
   both: "Both",
   bothHint: "writes both — follower direction & sway mirrored · footwork stays the leader's",
   lockedCell: (column: string, count: string) =>

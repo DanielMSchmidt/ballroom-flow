@@ -1,4 +1,4 @@
-// US-004 / US-028 — bars-driven figure timing grid (PLAN §2.5, §4.4).
+// US-004 / US-028 — bars-driven figure timing grid (docs/concepts/notation.md § Figure length, § The figure editor).
 //
 // A figure carries an explicit length in musical bars (`FigureDoc.bars`). The
 // figure editor renders EVERY possible timing that length allows — not just the
@@ -60,7 +60,7 @@ export function stepSpan(attributes: Attribute[]): number {
  * NOTE this is the SPAN, not the number of steps: a figure with a Slow (2 beats,
  * 1 count) has a gap, so "count of distinct steps" would undershoot the length
  * and orphan the trailing step (the Foxtrot Feather Step "SQQ" steps on 1, 3, 4
- * — 3 steps but length 4). Fixed 2026-07-14; see PLAN §2.5.2.
+ * — 3 steps but length 4). Fixed 2026-07-14; see docs/concepts/notation.md § Figure length.
  */
 export function defaultFigureCounts(attributes: Attribute[]): number {
   return Math.max(1, stepSpan(attributes));

@@ -31,7 +31,8 @@ export const zRoutineListItem = z.object({
   /**
    * Total bar count across the routine's non-deleted placements (US-025 card,
    * frame 1.1 "<dance> · <N bars> · <date>") — Σ of each referenced figure's
-   * projected per-figure `bars` (PLAN §2.5/§2.7). Projected from D1 by the routine
+   * projected per-figure `bars` (docs/concepts/notation.md § Figure length,
+   * docs/system/architecture.md § D1 — the index & projections). Projected from D1 by the routine
    * DO's alarm; OPTIONAL because it is eventually consistent — it may lag a figure
    * edit until the routine re-projects, and is absent until the first projection.
    */
@@ -98,7 +99,7 @@ export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
  * Save-to-library request (T5 / US-034 reuse; ⟳v5 — "add to my library" is a
- * BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). The v5 shape is direct: the client
+ * BOOKMARK, never a copy, docs/concepts/figures.md § The library screen, § Variants, D28). The v5 shape is direct: the client
  * names the figureRef to bookmark (an account-figure docRef, or a catalog
  * `global:<dance>:<figureType>` ref minted client-side via `globalFigureRef`).
  *
@@ -159,11 +160,11 @@ export const zFamilyNoteBody = z
     kind: z.enum(["note", "lesson", "practice"]),
     text: z.string().trim().min(1).max(4000, "Keep the note under 4000 characters"),
     figureType: z.string().trim().min(1).max(120),
-    // A figureType note scopes to one dance or the whole family ("all", PLAN §2.6).
+    // A figureType note scopes to one dance or the whole family ("all", docs/concepts/annotations.md § Anchors).
     // Constrained to that set so a garbage scope — which would silently never match
     // any routine's dance in the journal join — can't be persisted as dead data.
     danceScope: z.enum([...DANCE_IDS, "all"]),
-    // WEP-0004: a TIMED family note — pin to one count (the timing grid starts
+    // WEP-0004 (docs/concepts/annotations.md § Anchors): a TIMED family note — pin to one count (the timing grid starts
     // at 1) and optionally one side. Additive; absent = the v1 whole-figure note.
     count: z.number().positive().optional(),
     role: z.enum(["leader", "follower"]).nullish(),
@@ -250,7 +251,7 @@ export const SYNC_SUBPROTOCOL_V1 = "ballroom.sync.v1";
 export const SYNC_RESYNC_CLOSE_CODE = 4001;
 
 /**
- * WS heartbeat (WEP-0006): the client sends {@link SYNC_PING} as a TEXT frame
+ * WS heartbeat (WEP-0006; docs/system/sync-and-offline.md § Heartbeat): the client sends {@link SYNC_PING} as a TEXT frame
  * while the connection is idle; the DO answers {@link SYNC_PONG} via a
  * runtime-level auto-response (`setWebSocketAutoResponse`) that never wakes a
  * hibernating DO and never reaches `webSocketMessage`. A missed pong deadline
@@ -317,7 +318,7 @@ export const zJournalAnchor = z.object({
   count: z.number().optional(),
   figureType: z.string().optional(),
   danceScope: z.string().optional(),
-  /** WEP-0004: the side a timed figureType note narrows to (absent = both). */
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors): the side a timed figureType note narrows to (absent = both). */
   role: z.enum(["leader", "follower"]).nullish(),
   /** Pre-resolved display label for the link chip (server-side, no client refetch). */
   label: z.string().optional(),
@@ -325,7 +326,8 @@ export const zJournalAnchor = z.object({
 export type JournalAnchor = z.infer<typeof zJournalAnchor>;
 
 /**
- * T6 — One cross-routine Journal entry (PLAN §2.6/§2.7/§4.6). The UNION of a
+ * T6 — One cross-routine Journal entry (docs/concepts/annotations.md § Anchors,
+ * § The Journal, docs/system/architecture.md § D1 — the index & projections). The UNION of a
  * routine-scoped lesson/practice annotation (projected to `journal_entry`) and
  * an account-scoped figureType lesson/practice note (`figure_type_note_index`).
  * `source` distinguishes the two homes; `routineRef` is the owning doc (a routine

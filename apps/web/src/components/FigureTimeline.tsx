@@ -1,4 +1,5 @@
-// US-028 / US-030 — the figure timeline (the hero flow). PLAN §4.4/§4.5, §1.5.
+// US-028 / US-030 — the figure timeline (the hero flow). docs/concepts/notation.md
+// § The figure editor; docs/concepts/notation.md § Role lenses.
 // 2026-07-01 design update (frames 1.11 figure editor / 1.12 attribute editor):
 // the EDIT view is a BARS-DRIVEN column grid. Its rows are generated from the
 // figure's authored bar count — NOT from the steps it already has — so every
@@ -78,7 +79,8 @@ export interface FigureTimelineProps {
   legacyBars?: number;
   /** Emits the next count length when the header LENGTH stepper is used (editor only). */
   onCountsChange?: (next: number) => void;
-  /** The role lens (US-030/WEP-0008); the WRITE SCOPE while editing. Uncontrolled default. */
+  /** The role lens (US-030/docs/concepts/notation.md § Role lenses, WEP-0008);
+   *  the WRITE SCOPE while editing. Uncontrolled default. */
   initialView?: EditRoleView;
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
    *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
@@ -205,7 +207,8 @@ export function FigureTimeline({
   const [libraryName, setLibraryName] = useState<string | null>(null);
   const isGlobal = figureScope === "global";
   const editable = role === "editor";
-  // WEP-0008: "both" is an EDIT-ONLY lens (the write scope) — a stored "both"
+  // docs/concepts/notation.md § Role lenses (WEP-0008): "both" is an EDIT-ONLY
+  // lens (the write scope) — a stored "both"
   // reads as the leader's chart, and the grid always DISPLAYS the read
   // projection (under Both that's the verbatim leader side of its writes).
   const lens: EditRoleView = editable ? view : asReadView(view);
@@ -308,7 +311,8 @@ export function FigureTimeline({
     if (here.length === 0) {
       const kind = quickAddKind(col);
       if (kind) {
-        // WEP-0008: the quick-added presence inherits the lens as its WRITE
+        // docs/concepts/notation.md § Role lenses (WEP-0008): the quick-added
+        // presence inherits the lens as its WRITE
         // SCOPE — under a single role it must not leak into the partner's
         // chart; a presence has no value to mirror, so Both stays shared.
         onCountChange(count, [
@@ -364,7 +368,8 @@ export function FigureTimeline({
           <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
             {t.stepsFor}
           </span>
-          {/* WEP-0008: editing offers the third "Both" lens (the write scope);
+          {/* docs/concepts/notation.md § Role lenses (WEP-0008): editing offers
+              the third "Both" lens (the write scope);
               reading keeps the two-way Leader/Follower lens. */}
           <SegmentedToggle<EditRoleView>
             ariaLabel={t.stepsFor}
@@ -516,7 +521,8 @@ export function FigureTimeline({
                       <CountCell label={row.label} offBeat={!row.whole} />
                     </th>
                     {columns.map((col) => {
-                      // WEP-0008: under Both, a hand-diverged (kind, count) is
+                      // docs/concepts/notation.md § Role lenses (WEP-0008): under
+                      // Both, a hand-diverged (kind, count) is
                       // LOCKED — Both may only edit derivation-consistent state.
                       const locked =
                         editable &&
@@ -713,7 +719,8 @@ function GridCell({
   present: boolean;
   offBeat: boolean;
   editable: boolean;
-  /** WEP-0008: diverged under the Both lens — shown but not editable there. */
+  /** docs/concepts/notation.md § Role lenses (WEP-0008): diverged under the Both
+   *  lens — shown but not editable there. */
   locked?: boolean;
   color?: string;
   onOpen: () => void;

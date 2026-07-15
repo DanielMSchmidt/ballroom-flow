@@ -65,7 +65,8 @@ export function Journal(props: JournalProps): React.JSX.Element {
   // First-visit tour — held while the entry editor covers the tab.
   useFirstVisitTour("journal", !composing);
 
-  // WEP-0002: the Journal is an account-doc AUTHORING surface, so it opens the
+  // docs/system/architecture.md (account docs, WEP-0002): the Journal is an
+  // account-doc AUTHORING surface, so it opens the
   // account doc LAZILY here (D10) and authors figureType family notes through the
   // seam — a CRDT edit that persists offline + replays on reconnect + is undoable,
   // and that the alarm projects into the D1 index the journal list reads back. The

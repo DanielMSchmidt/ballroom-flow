@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// T6 Journal journey (PLAN §2.6/§2.7/§4.6 E2E). Runs against the REAL worker
+// T6 Journal journey (docs/concepts/annotations.md § Anchors, § The Journal;
+// docs/system/architecture.md § D1 — the index & projections). Runs against the REAL worker
 // (D1 + per-document Durable Objects + the cross-routine journal_entry index)
 // via the #191 harness — no live Clerk, a real test JWT, the real DO alarm
 // projection. Proves the projection + read end-to-end: a lesson authored in a

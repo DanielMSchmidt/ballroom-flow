@@ -27,7 +27,8 @@ export interface FamilyNotesProps {
   figureType: string;
   /** The dance of the figure — scopes which notes apply + the "this dance" value. */
   dance: DanceId;
-  /** The resolved figure in context (WEP-0004): a TIMED note pins to its count
+  /** The resolved figure in context (docs/concepts/annotations.md § Anchors,
+   *  WEP-0004): a TIMED note pins to its count
    *  only when this figure covers it (figureTypeNoteCount's soft fallback). */
   figure?: FigureDoc;
   /** All family notes loaded for the routine (members' notes). */
@@ -78,7 +79,8 @@ export function FamilyNotes({
       <h3 className="text-sm font-medium text-ink-secondary">{t.notesOnEvery(figureType)}</h3>
       <ul aria-label={t.familyNotesList} className="flex flex-col gap-1.5">
         {matching.map((n) => {
-          // WEP-0004: a TIMED note pins to its count when this figure covers it;
+          // docs/concepts/annotations.md § Anchors (WEP-0004): a TIMED note pins
+          // to its count when this figure covers it;
           // a shorter variant degrades to whole-figure display (never hidden).
           const anchor = n.anchors[0];
           const pinned = figure && anchor ? figureTypeNoteCount(anchor, figure) : (n.count ?? null);

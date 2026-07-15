@@ -78,7 +78,7 @@ export function libraryGroupsForDance(dance: DanceId): LibraryGroup[] {
 }
 
 /**
- * The canonical provenance ref for a global-catalog figure (T5 / PLAN §5.2). A
+ * The canonical provenance ref for a global-catalog figure (T5 / docs/concepts/figures.md § Variants). A
  * bundled catalog figure has no Automerge URL of its own (it's reference data, not
  * a DO), so the cross-dance identity `(dance × figureType)` is its stable id.
  * ⟳v5: this is now also a directly BOOKMARKABLE ref — "add to my library" on an

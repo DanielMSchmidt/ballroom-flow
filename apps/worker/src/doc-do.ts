@@ -1,6 +1,6 @@
 // US-014 — Per-document SQLite-backed Durable Object hosting an Automerge doc.
 //
-// PLAN §6 / D23: one DO per document (routine + figure docs). The DO holds the
+// docs/system/architecture.md § Persistence & the DO lifecycle: one DO per document (routine + figure docs). The DO holds the
 // Automerge doc in memory and persists INCREMENTAL changes to its own SQLite —
 // never a full rewrite per edit (SPIKE-FINDINGS sharp-edge #2). After eviction a
 // fresh DO instance rehydrates the same doc by replaying the persisted changes
@@ -86,7 +86,8 @@ export type DocOp =
   | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
 
 /**
- * High-level edits on the per-user ACCOUNT doc (WEP-0002) — family notes +
+ * High-level edits on the per-user ACCOUNT doc (WEP-0002 —
+ * docs/system/architecture.md § D1 — the index & projections) — family notes +
  * library bookmarks. Applied server-side via {@link DocDO.applyAccountEdit} on
  * the REST-shim (online) path; the offline path authors the same domain edit
  * against the store's local doc and syncs raw changes. Ids are server-minted
@@ -101,7 +102,7 @@ export type AccountOp =
       figureType: string;
       danceScope: DanceId | "all";
       tags?: string[];
-      /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed note: pin to one count (+ optional role lens) of every
        *  matching figure. Only valid with a concrete danceScope. */
       count?: number;
       role?: Role;
@@ -176,7 +177,7 @@ function emptyRoutine(): RoutineDoc {
 
 /**
  * The Automerge actor id every migration change is attributed to (v5 milestone
- * step 1, PLAN §7). Fixed and non-random — NEVER a real per-connection actor
+ * step 1, docs/system/sync-and-offline.md § Version skew). Fixed and non-random — NEVER a real per-connection actor
  * (`newActorId()` above) — so per-user undo (`packages/domain/src/undo.ts`
  * `changesByActor`, which filters strictly by exact actor id) can never select
  * it as an undo target: a user's undo after a migrated load reverts their own
@@ -190,7 +191,8 @@ const MIGRATION_ACTOR = `${"0".repeat(31)}1`;
  *  migration's on a doc that has already been schema-migrated once. */
 const BREAK_MIGRATION_ACTOR = `${"0".repeat(31)}2`;
 
-/** The Automerge change message stamped on every migration change (PLAN §7). */
+/** The Automerge change message stamped on every migration change
+ *  (docs/system/sync-and-offline.md § Version skew). */
 const MIGRATION_MESSAGE = "ballroom:migrate";
 
 /**
@@ -242,7 +244,7 @@ export class DocDO extends DurableObject<Env> {
       "INSERT OR IGNORE INTO storage_meta (id, storageVersion) VALUES (0, ?)",
       STORAGE_VERSION,
     );
-    // Heartbeat (WEP-0006): answer the client's idle SYNC_PING with SYNC_PONG at
+    // Heartbeat (WEP-0006 — docs/system/sync-and-offline.md § Heartbeat): answer the client's idle SYNC_PING with SYNC_PONG at
     // the RUNTIME level — the reply is sent without invoking webSocketMessage and
     // WITHOUT waking a hibernating DO, so zombie-socket detection costs zero DO
     // compute and the D23 hibernation economics are untouched. Applies to every
@@ -341,7 +343,8 @@ export class DocDO extends DurableObject<Env> {
 
   /**
    * {@link loadPersisted} narrowed to the ACCOUNT shape by a RUNTIME check
-   * (WEP-0002): an account doc carries neither `sections` (routine) nor
+   * (WEP-0002 — docs/system/architecture.md § D1 — the index & projections):
+   * an account doc carries neither `sections` (routine) nor
    * `figureType` (figure). Null when nothing is persisted or this DO hosts a
    * different shape — a `loadPersisted` that never auto-materializes, so an
    * account read/edit never fabricates the empty-routine placeholder.
@@ -353,7 +356,7 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * v5 milestone step 1 (PLAN §7): "the ladder runs on the DO load path, and
+   * v5 milestone step 1 (docs/system/sync-and-offline.md § Version skew): "the ladder runs on the DO load path, and
    * fresh docs are stamped `CURRENT_SCHEMA_VERSION`". Every persisted doc
    * passes through `loadPersisted` (directly, or via `getDoc`), so this is the
    * single choke-point that brings an older doc current and PERSISTS the
@@ -368,7 +371,7 @@ export class DocDO extends DurableObject<Env> {
    * migration actor must brand only this one change, not every future
    * server-driven mutation (`applyOp`) this DO instance happens to make.
    *
-   * Determinism (PLAN §5.3): `migrateDraft` delegates to the pure `migrate`
+   * Determinism (docs/system/architecture.md § Ordering): `migrateDraft` delegates to the pure `migrate`
    * ladder — the same bytes in always produce the same migrated shape out — so
    * two DO instances that independently migrate the same persisted state
    * compute the identical upgrade; the sortKey backfill's convergence guarantee
@@ -544,7 +547,8 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Apply a high-level edit to this per-user ACCOUNT doc (WEP-0002), the
+   * Apply a high-level edit to this per-user ACCOUNT doc (WEP-0002 —
+   * docs/system/architecture.md § D1 — the index & projections), the
    * REST-shim (online) write path for family notes + library bookmarks. The DO
    * must already be seeded (ensureAccountDoc runs first, mint+seed before touch),
    * so a null persisted account doc here is a routing bug — surfaced loudly, never
@@ -626,7 +630,8 @@ export class DocDO extends DurableObject<Env> {
         if (touchedProjectable) return;
         for (const p of patches) {
           // `annotations` → journal (routine) / family-note (account) projections;
-          // `libraryFigureRefs` → the account library_entry projection (WEP-0002).
+          // `libraryFigureRefs` → the account library_entry projection
+          // (WEP-0002 — docs/system/architecture.md § D1 — the index & projections).
           if (p.path[0] === "annotations" || p.path[0] === "libraryFigureRefs") {
             touchedProjectable = true;
             return;
@@ -684,7 +689,8 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Read this doc as an ACCOUNT snapshot (WEP-0002; tombstoned notes dropped),
+   * Read this doc as an ACCOUNT snapshot (WEP-0002 —
+   * docs/system/architecture.md § D1 — the index & projections; tombstoned notes dropped),
    * or null when this DO hosts a different shape or nothing is persisted. Uses
    * `loadPersistedAccount` (never `getDoc`), so a read never auto-materializes the
    * empty-routine placeholder.
@@ -736,7 +742,8 @@ export class DocDO extends DurableObject<Env> {
     const doName = request.headers.get("x-doc-name");
     if (doName) this.rememberDoName(doName);
 
-    // US-021 — FAIL-CLOSED per-document permission boundary (PLAN §5.1/§6).
+    // US-021 — FAIL-CLOSED per-document permission boundary
+    // (docs/system/architecture.md § Permission enforcement; docs/concepts/collaboration.md § Roles).
     // A token is REQUIRED and verified BEFORE any role lookup (AC-1 fail-closed):
     //   • missing/invalid/expired token → 401 (never reaches the role check)
     //   • valid token, non-member       → 403 (per-doc, routine AND figure; AC-3)
@@ -1459,7 +1466,8 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Compute the US-025 card-projection counts for THIS document (PLAN §2.5/§2.7):
+   * Compute the US-025 card-projection counts for THIS document
+   * (docs/concepts/notation.md § Timing; docs/system/architecture.md § D1 — the index & projections):
    *  • routine → figureCount = its NON-deleted placement count; bars = Σ over those
    *    placements of each referenced figure's projected per-figure `bars`.
    *  • figure  → bars = this figure's authored `bars` field when set, else the
@@ -1580,7 +1588,8 @@ export class DocDO extends DurableObject<Env> {
 
   /**
    * T6 — project THIS routine's lesson/practice annotations to the cross-routine
-   * `journal_entry` index (PLAN §2.6/§2.7/§6). Mirrors `projectToD1`: D1 stays a
+   * `journal_entry` index (docs/concepts/annotations.md § Anchors;
+   * docs/system/architecture.md § D1 — the index & projections). Mirrors `projectToD1`: D1 stays a
    * pure index; the routine doc (DO SQLite) is the source of truth.
    *
    * Scope (memory: per-document DO layering): touches only THIS routine's own
@@ -1631,7 +1640,8 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Project a per-user ACCOUNT doc to its D1 indexes (WEP-0002 — the write
+   * Project a per-user ACCOUNT doc to its D1 indexes
+   * (docs/system/architecture.md § D1 — the index & projections; WEP-0002 — the write
    * direction inverted: D1 becomes a pure alarm-written projection of the doc,
    * like journal_entry). Non-destructive, idempotent, tombstone-aware:
    * `library_entry` mirrors the live `libraryFigureRefs` set (refs that left it

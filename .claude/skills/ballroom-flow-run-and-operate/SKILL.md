@@ -267,7 +267,8 @@ a vitest import; known orphan).
 Cron `0 5 * * *` UTC + `workflow_dispatch`. Runs the **full 3-project Playwright matrix**
 (chromium-desktop, mobile-chrome/Pixel 7, mobile-safari/iPhone 14 — installs chromium +
 webkit) against the real e2e harness, uploads the Playwright report artifact (7 days),
-plus a Lighthouse **stub** job (real budgets are M9, PLAN §7). This is the "full" gate;
+plus a Lighthouse **stub** job (real budgets are M9, formerly PLAN §7, now
+`docs/system/architecture.md` § Non-functional requirements). This is the "full" gate;
 PRs only run `@smoke` chromium.
 
 ---
@@ -277,7 +278,7 @@ PRs only run `@smoke` chromium.
 Things done by an operator (Cloudflare/Clerk dashboards, `wrangler` CLI, direct D1
 statements) rather than through app UI.
 
-### Admin seams — SHIPPED (PR #137, migration 0014; PLAN §9 step 6 ✅)
+### Admin seams — SHIPPED (PR #137, migration 0014; v5 milestone step 6 ✅, formerly PLAN §9)
 
 v1 admin is two columns on `users` (D31, `0014_admin.sql`, in `db/schema.ts`):
 
@@ -302,7 +303,8 @@ pnpm exec wrangler d1 execute DB --env staging --remote \
 ```
 
 **Elevation** (`account → global` re-scope, same docRef so placements survive) likewise
-remains ops-driven, admin-approved (queue UI is v1.1, PLAN §11).
+remains ops-driven, admin-approved (queue UI is v1.1, formerly PLAN §11, now tracked as a
+research-frontier item — see **ballroom-flow-research-frontier**).
 
 ### Seeding the global figure catalog — self-healing (PR #137, D30 ⟳2026-07-07)
 
@@ -336,7 +338,8 @@ member names, D1 creation) lives in `PROVISIONING.md` — follow it, don't impro
 
 Verified 2026-07-02 against repo HEAD `70eed7e`; **admin/migrations sections refreshed
 2026-07-02 — verified at HEAD `c9622c9`** (PR #137: migration 0014 + admin route; PR #136:
-migration 0015) on `development`, by reading:
+migration 0015) on `development` (the trunk at the time — merged into `main` and deleted
+from the remote 2026-07-05, PR #161), by reading:
 `apps/worker/wrangler.toml` (all four envs, D1 ids, committed e2e PEM, dist-e2e comment),
 `.github/workflows/deploy.yml` / `screenshots.yml` / `nightly.yml`, `apps/web/e2e/serve.sh`,
 commit `e71d06d` (the staging auth-bypass incident, full message), root + worker
@@ -347,7 +350,10 @@ commit `e71d06d` (the staging auth-bypass incident, full message), root + worker
 `apps/worker/src/sample.ts`
 + `src/index.ts` `ensureSample`, `scripts/gen-library.mjs` / `gen-figure-charts.mjs`
 (both executed earlier this cycle: 204 figures / 147 charts, clean diff), `PROVISIONING.md`
-(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅).
+(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅) — that document
+was dissolved 2026-07-15 into `docs/README.md` + `docs/concepts/` + `docs/system/`; D31 now
+lives in `docs/system/architecture.md` § Non-functional requirements area / the admin seams
+described above (see `docs/README.md` § For historians for the full citation map).
 
 Re-verify drift with:
 

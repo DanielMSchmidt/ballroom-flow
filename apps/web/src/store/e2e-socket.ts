@@ -1,4 +1,4 @@
-// E2E-only zombie-socket seam (WEP-0006). NEVER active in a real build: every
+// E2E-only zombie-socket seam (docs/system/sync-and-offline.md § Heartbeat). NEVER active in a real build: every
 // entry point is gated on `isE2E()` (the compile-time `VITE_E2E` flag), so in
 // dev/staging/prod this module folds to pass-throughs and dead code.
 //

@@ -5,7 +5,8 @@ import { type MigrationStep, runLadder } from "./migrations";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-013 — Migration ladder (schemaVersion) [M1, system/developer]
-// PLAN §2.1, §7, §10.2 invariant: "migration ladder". Every doc carries a
+// docs/system/architecture.md § Global constraints, § Persistence & the DO lifecycle,
+// docs/system/testing.md invariant: "migration ladder". Every doc carries a
 // schemaVersion; an ordered chain upgrades older docs; unknown values survive;
 // migrating a current doc is a no-op. Used by JSON import (US-048).
 //
@@ -113,7 +114,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     expect(result.upgraded).toBe(true);
   });
 
-  // ── v3 → v4: assign sortKeys to sections + placements (#63, PLAN §5.3) ──
+  // ── v3 → v4: assign sortKeys to sections + placements (#63, docs/system/architecture.md § Ordering) ──
   // (migrate() applies the full ladder, so a v2 doc lands at v4 with sortKeys.)
 
   it("assigns ascending sortKeys to sections and placements in array order (#63)", async () => {
@@ -254,7 +255,8 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 milestone step 1 (PLAN §7) — `migrateDraft`: the DO-load-path
+// v5 milestone step 1 (docs/system/architecture.md § Persistence & the DO lifecycle)
+// — `migrateDraft`: the DO-load-path
 // draft-mutating counterpart of `migrate`, called inside an Automerge
 // `A.change`. Exercised here against plain mutable objects (a Draft duck-types
 // as a plain object for get/set/delete/enumerate — see `proxies.js`'s
@@ -281,7 +283,8 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
     const { migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
     const target = { schemaVersion: CURRENT_SCHEMA_VERSION, kind: "routine", sections: [] };
     // A Proxy that throws on any write/delete trap: proves migrateDraft performs
-    // ZERO mutations on an already-current doc (PLAN §7: "no empty change, no
+    // ZERO mutations on an already-current doc (docs/system/architecture.md
+    // § Persistence & the DO lifecycle: "no empty change, no
     // version downgrade" — the enclosing A.change must produce nothing to persist).
     const guarded = new Proxy(target, {
       set() {

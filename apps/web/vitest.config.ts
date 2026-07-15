@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 // Component layer — React components in a DOM environment with
-// @testing-library/react + vitest-axe (PLAN.md §10.3). jsdom gives a fast,
+// @testing-library/react + vitest-axe (docs/system/testing.md § Layer ownership). jsdom gives a fast,
 // deterministic DOM for component + a11y assertions; full real-browser
 // coverage (PWA install + offline shell) is the Playwright E2E layer's job
 // (playwright.config.ts), so we don't pay for browser binaries here.

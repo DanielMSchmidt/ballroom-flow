@@ -10,7 +10,8 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-011 — figureType annotation resolution [M1, system/developer]
-// PLAN §2.6, §5.1, D29, §10.2 invariant: "figureType annotation resolution (an
+// docs/concepts/annotations.md § Anchors, docs/concepts/collaboration.md § Roles,
+// D29 (docs/concepts/annotations.md § Ownership & visibility), docs/system/testing.md invariant: "figureType annotation resolution (an
 // `all`-dances note matches a figure of that family in ANY dance; a
 // `this-dance` note matches only its dance; variants inherit figureType)".
 // Identity-based (not a predicate query), pure/deterministic.
@@ -115,7 +116,7 @@ describe("WEP-0004 figureTypeNoteCount — count pinning with soft fallback", ()
 
   it("degrades to figure grain (null) when the figure is shorter than the count", async () => {
     // Intent: a family sibling whose variant lacks the count still SHOWS the
-    // note, just un-pinned — never hidden (WEP-0004 soft fallback).
+    // note, just un-pinned — never hidden (WEP-0004 soft fallback; docs/concepts/annotations.md § Anchors).
     const { figureTypeNoteCount, matchesFigureType } = await importDomain();
     const anchor = makeFigureTypeAnchor("feather", "foxtrot", { count: 5 });
     expect(figureTypeNoteCount(anchor, FEATHER_FOXTROT)).toBeNull();

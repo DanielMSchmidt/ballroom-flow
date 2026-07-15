@@ -15,7 +15,7 @@
 // background CRDT rematerialization happened.
 //
 // Arrays of entities are matched by `id` (the repo-wide client-ULID identity —
-// PLAN §5.3: identity, never position), so an insert/reorder preserves the
+// docs/system/architecture.md § Ordering: identity, never position), so an insert/reorder preserves the
 // identities of every untouched element; arrays without ids match by index.
 // Cost is one O(doc) walk per ACTUAL doc change — the same order as the
 // `A.toJS` it piggybacks on, and strictly cheaper than the re-renders it saves.

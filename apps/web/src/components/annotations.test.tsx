@@ -12,7 +12,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // US-040 — figureType annotations (this-dance / all-dances) [M6, user]
 // US-042 — Annotation filters (all / lessons / practice / by figure) [M6, user]
 //
-// PLAN §4.6, §10.2 component layer: "annotation create (point/figure);
+// docs/concepts/annotations.md § The Journal, docs/system/testing.md component
+// layer: "annotation create (point/figure);
 // viewer/commenter gating". Annotation UI built by the frontend agent →
 // dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
