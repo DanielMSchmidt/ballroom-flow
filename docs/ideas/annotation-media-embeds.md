@@ -127,9 +127,19 @@ renders appended after the text — nothing silently lost. CRDT semantics stay t
 (append + tombstone list; the text field's merge behavior untouched).
 
 **Storage & upload (worker/ops):** one **R2 bucket per env** (the dependency this idea
-introduces). Upload = presigned PUT, browser→R2 direct; `POST
-/api/docs/:docRef/media/upload-url` checks commenter+ membership **and the caps**, then
-mints. On PUT success the client writes the `MediaItem` + token — an ordinary CRDT edit.
+introduces). Upload is **worker-hosted** (decided 2026-07-15, revising the original
+"presigned PUT, browser→R2 direct" sketch — presigned R2 PUTs require exactly the S3
+credential class this idea rejects for serving, and the local/E2E harness has no S3
+endpoint): `POST /api/docs/:docRef/media/upload-url` checks commenter+ membership **and the
+caps**, then mints a grant; images and small videos then `PUT /api/media/<objectKey>`
+through the worker into the R2 binding. Videos larger than the Workers request-body limit
+(~100 MB — below the 300 MB video cap) use the **R2 multipart Workers API** behind the same
+grant + authz gate: create → uniform parts (each well under the body limit, ≥ 5 MiB) →
+complete, with abort on cancel; R2 auto-aborts incomplete multipart uploads after 7 days,
+which doubles as cleanup for abandoned uploads
+(<https://developers.cloudflare.com/r2/objects/upload-objects/>). Per-part upload also
+gives the in-app retry natural resume points on flaky studio Wi-Fi. On upload success the
+client writes the `MediaItem` + token — an ordinary CRDT edit.
 Serving: `GET /api/media/<objectKey>` on the worker — membership of the docRef in the key
 prefix gates it (viewer+), **streamed through the worker from the R2 binding with Range
 support** (`get(key, { range })`). *Decided (2026-07-15), with numbers:* stream-through
@@ -204,6 +214,10 @@ TEST-MAP, and deletes this file.
   not rejected: client-side covers v-first at zero infra.
 - **General oEmbed for arbitrary providers** — one provider, one renderer, one privacy
   story; widen only on demonstrated need.
+- **Presigned browser→R2 PUT for uploads** — rejected 2026-07-15: needs per-env S3 API
+  credentials (the secret class the serving decision already rejected), has no local/E2E
+  equivalent (breaking the zero-secret test matrix), and single-PUT ergonomics are worse
+  than multipart for 300 MB on mobile anyway (no resume points).
 - **302-to-signed-R2-URL serving** — rejected 2026-07-15 with numbers (see Design details):
   saves no ops or egress cost over stream-through, adds per-env S3 credentials, and opens a
   revocation gap equal to the URL TTL on the hard-gated authz surface.

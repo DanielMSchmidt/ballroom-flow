@@ -64,12 +64,17 @@ scope → chip *"↳ all left sways · every dance"*; the disabled "coming later
 - `kind` — any kind from the merged registry, built-in or custom.
 - `value` — a value of that kind to match, **including the sentinel `none`** ("every step
   with no sway logged" — absence is an explicit, selectable match value). Matched **by
-  meaning**, normalized through the registry's read aliases — the same content comparison
-  the "custom" badge uses ([`docs/concepts/figures.md`](../concepts/figures.md) § The custom
-  badge). Unknown persisted values pass through and do not match a known value.
+  meaning**, normalized through the registry's read aliases — concretely `normalizeValue`
+  (`packages/domain/src/vocabulary.ts`, applied via `withNormalizedValue`), the same
+  normalization the read path already applies to persisted values. (Precision note
+  2026-07-15: the "custom badge" comparison this doc originally cited compares raw values —
+  the alias seam is `normalizeValue`.) Unknown persisted values pass through and do not
+  match a known value.
 - `role?` — leader-only, follower-only, or either (absent = either/both).
-- `scope` — `routine` (*this choreo only* — resolvable entirely client-side) ·
-  `<DanceId>` (*all of this user's choreos in that dance*) · `all` (*every dance*).
+- `scope` — `routine` (*this choreo only* — resolvable entirely client-side; carries a
+  `routineRef`, required iff this scope, since the anchor is otherwise routine-less — the
+  WEP-0004 timed-link precedent) · `<DanceId>` (*all of this user's choreos in that
+  dance*) · `all` (*every dance*).
 
 **Resolution:** dynamic — re-evaluated on read; content-based matching over the resolved
 timeline.
@@ -112,9 +117,13 @@ optional role → scope (*this choreo* · *all my &lt;dance&gt; choreos* · *eve
 the shared "target → scope" shape, not a data-model merge.
 
 **Sync/permissions/migrations:** no new document types, no DO boundary change — the anchor
-is new data in existing account-doc annotations (`anchors[]` union gains a variant; lenient
-readers ignore unknown anchor types, so old clients degrade to not surfacing the note). No
-migration step.
+is new data in existing account-doc annotations (`anchors[]` union gains a variant). Old
+clients degrade to not surfacing the note because the account-doc *readers* filter on
+`anchor.type` without running Zod; note that `zAnchor` itself is a discriminated union
+pinned by `z.ZodType<Anchor>` and `parseAnchors` nulls the whole array on an unknown
+member — so the TS union and the Zod schema must land in the same commit (the plan's
+Task 1 pins this with a corpus-regression test). No migration step for documents; one D1
+migration for the new index table.
 
 ## Test plan & ship gate
 

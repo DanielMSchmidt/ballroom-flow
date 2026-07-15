@@ -118,7 +118,10 @@ the thread empty, as if never coached; under this rule all three are active, no 
 - **Where it applies:** the reading view's per-anchor lists — the thread panel collapses
   stale comments behind one divider row (stale are the older ones, so the divider sits above
   the active tail); the margin cell derives snippet/avatars from active comments only. An
-  all-stale non-empty cell cannot occur (never-empty guarantee).
+  all-stale non-empty cell cannot occur (never-empty guarantee). **Family notes that fold
+  into the same margin cells are exempt** (2026-07-15): co-member family notes ride the
+  projection and can lack an authored-time trail, and the margin has no expander for them —
+  fade-out governs the routine-anchored comment lists only.
 - **Evaluation time:** `now` captured per view mount and passed down; recomputation
   piggybacks on existing memoization — the store's referential-stability guarantees
   ([`docs/system/sync-and-offline.md`](../system/sync-and-offline.md) § Flicker) must be
