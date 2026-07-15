@@ -69,6 +69,9 @@ export interface OwnFamilyNote {
   text: string;
   figureType: string;
   danceScope: DanceId | "all";
+  /** The doc annotation's timestamp — the Journal's live self-read sorts by it
+   *  (WEP-0002 read-your-writes; the D1 projection mirrors it as createdAt). */
+  createdAt: number;
   count?: number;
   role?: Role;
 }
@@ -169,6 +172,7 @@ function toOwnFamilyNote(a: Annotation): OwnFamilyNote | null {
     text: a.text,
     figureType: anchor.figureType,
     danceScope: anchor.danceScope,
+    createdAt: a.createdAt,
     ...(anchor.count != null ? { count: anchor.count } : {}),
     ...(anchor.role != null ? { role: anchor.role } : {}),
   };

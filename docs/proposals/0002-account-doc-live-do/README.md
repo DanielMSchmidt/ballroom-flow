@@ -142,8 +142,16 @@ post-connect `refreshConnectedRoles`.
     it with the live bookmark set.
   - *About-others* reads stay on the projections, unchanged: co-member family notes
     (`GET /api/routines/:id/family-notes` over `figure_type_note_index`) and the Journal's
-    account arm. These were already eventually consistent in spirit (journal_entry is); the
-    alarm keeps the lag to its existing compaction cadence.
+    account arm for CO-MEMBERS' notes. These were already eventually consistent in spirit
+    (journal_entry is); the alarm keeps the lag to its existing compaction cadence.
+  - *Journal read-your-writes* (2026-07-15, flake root-cause): the Journal list itself is a
+    self-read surface too — its one-shot `/api/journal` fetch after a save reliably loses
+    the WS-sync + alarm race, so a just-authored entry vanished from the list (caught by
+    `journal-link-picker.spec.ts`). The client merges OWN family notes from the live account
+    doc (`mergeLiveFamilyNotes`) and echoes just-saved routine entries
+    (`createRoutineJournalEntry` returns the created entry; `mergePendingEntries`) over the
+    REST list, deduped by id once the projections catch up. The projections stay the only
+    cross-user read path.
 
 ### Projection — alarm-written, non-destructive, doc-derived
 

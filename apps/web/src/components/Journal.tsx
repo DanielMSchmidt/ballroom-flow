@@ -5,7 +5,7 @@
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
 import type { Anchor, AnnotationKind } from "@weavesteps/domain";
 import { isDanceId } from "@weavesteps/domain";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import {
@@ -13,9 +13,11 @@ import {
   chipLabel,
   type JournalEntry,
   type JournalFilter,
+  mergeLiveFamilyNotes,
+  mergePendingEntries,
   relativeDate,
 } from "../store/journal";
-import { useAccount } from "../store/use-account";
+import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
@@ -32,10 +34,12 @@ export interface JournalProps {
     count?: number;
     role?: "leader" | "follower";
   }) => Promise<void>;
+  /** Saves a routine-anchored entry; resolves to the created entry (or null)
+   *  so the list can show it before the D1 projection catches up (WEP-0002). */
   createRoutineEntry: (
     routineRef: string,
     input: { kind: AnnotationKind; text: string; anchors: Anchor[] },
-  ) => Promise<void>;
+  ) => Promise<JournalEntry | null>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
   /** The signed-in user's id, so their own entries read "you". */
@@ -106,6 +110,25 @@ export function Journal(props: JournalProps): React.JSX.Element {
     refresh();
   }, [refresh]);
 
+  // WEP-0002 read-your-writes: the REST list reads D1 projections that trail a
+  // just-saved entry (WS sync + DO alarm on both arms) — so the post-save
+  // refresh would miss it. Merge (a) the live account-doc self-read for family
+  // notes (reactive: a local edit re-renders instantly) and (b) the optimistic
+  // echo of just-saved routine entries; both dedupe by id once the projection
+  // catches up.
+  const liveFamilyNotes = useOwnFamilyNotes(account.store);
+  const [pendingRoutineEntries, setPendingRoutineEntries] = useState<JournalEntry[]>([]);
+  const mergedEntries = useMemo(
+    () =>
+      entries === null
+        ? null
+        : mergePendingEntries(
+            mergeLiveFamilyNotes(entries, liveFamilyNotes, currentUserId),
+            pendingRoutineEntries,
+          ),
+    [entries, liveFamilyNotes, currentUserId, pendingRoutineEntries],
+  );
+
   if (composing) {
     return (
       <JournalEntryEditor
@@ -115,16 +138,20 @@ export function Journal(props: JournalProps): React.JSX.Element {
           refresh();
         }}
         createFamilyEntry={createFamilyEntry}
-        createRoutineEntry={(routineRef, input) =>
-          props.createRoutineEntry(routineRef, { ...input, anchors: input.anchors })
-        }
+        createRoutineEntry={async (routineRef, input) => {
+          const saved = await props.createRoutineEntry(routineRef, {
+            ...input,
+            anchors: input.anchors,
+          });
+          if (saved) setPendingRoutineEntries((p) => [saved, ...p]);
+        }}
         loadRoutineOptions={props.loadRoutineOptions}
         loadRoutineFigures={props.loadRoutineFigures}
       />
     );
   }
 
-  const visible = entries ? applyJournalFilter(entries, filter) : [];
+  const visible = mergedEntries ? applyJournalFilter(mergedEntries, filter) : [];
 
   return (
     <section aria-label={t.journalTitle} className="flex flex-col gap-3">
@@ -140,7 +167,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </IconButton>
       </header>
 
-      {entries !== null && entries.length > 0 && (
+      {mergedEntries !== null && mergedEntries.length > 0 && (
         <fieldset data-tour="journal-filters" className="flex flex-wrap items-center gap-1">
           <legend className="bf-sr-only">{t.filterJournal}</legend>
           {FILTERS.map((f) => (
@@ -151,7 +178,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </fieldset>
       )}
 
-      {entries === null && !error && <Spinner size={24} label={t.loadingJournal} />}
+      {mergedEntries === null && !error && <Spinner size={24} label={t.loadingJournal} />}
 
       {error && (
         <Card>
@@ -162,7 +189,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </Card>
       )}
 
-      {entries !== null && entries.length === 0 && (
+      {mergedEntries !== null && mergedEntries.length === 0 && (
         <EmptyState
           icon={<JournalIcon size={28} />}
           title={t.emptyTitle}
@@ -175,7 +202,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         />
       )}
 
-      {entries !== null && entries.length > 0 && (
+      {mergedEntries !== null && mergedEntries.length > 0 && (
         <ul aria-label={t.journalEntries} className="flex flex-col gap-3">
           {visible.map((e) => (
             <li key={e.id}>

@@ -5,11 +5,15 @@
 // DO alarm) and account-scoped figureType notes (figure_type_note_index). The
 // worker owns visibility (the user + co-members on shared routines). Components
 // reach this ONLY through the store — never lib/rpc directly (the §3 boundary).
-import type { JournalEntry as ContractJournalEntry } from "@weavesteps/contract";
+import {
+  type JournalEntry as ContractJournalEntry,
+  figureTypeAnchorLabel,
+} from "@weavesteps/contract";
 import type { Anchor, AnnotationKind, Attribute, FigureDoc } from "@weavesteps/domain";
 import { getLocale, pickMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import { apiGet } from "../lib/rpc";
+import type { OwnFamilyNote } from "./account";
 // NOTE: `openRoutineView` (→ routine.ts → @automerge/automerge) is imported
 // DYNAMICALLY inside createRoutineJournalEntry, not statically — it is the only
 // use of the Automerge store here, and a static import would pull the ~2.75 MB
@@ -112,11 +116,37 @@ export async function loadRoutineFigureOptions(
   return out;
 }
 
+/** Map a domain anchor onto the journal wire shape (no `label` — the client
+ *  chip falls back; the server projection resolves labels on its own read). */
+function toJournalAnchor(a: Anchor): JournalAnchor {
+  if (a.type === "point") {
+    return {
+      type: "point",
+      figureRef: a.figureRef,
+      count: a.count,
+      ...(a.role ? { role: a.role } : {}),
+    };
+  }
+  if (a.type === "figure") return { type: "figure", figureRef: a.figureRef };
+  return {
+    type: "figureType",
+    figureType: a.figureType,
+    danceScope: a.danceScope,
+    ...(a.count != null ? { count: a.count } : {}),
+    ...(a.role != null ? { role: a.role } : {}),
+  };
+}
+
 /**
  * Author a ROUTINE-scoped journal entry (LOCKED full-parity #1): open the routine's
  * editable store and createAnnotation with the built anchor(s). Resolves once the
  * annotation is applied locally (so it has been sent over the routine WS); the DO
  * persists it and projects it to journal_entry on its next (coalesced) alarm.
+ *
+ * Returns the created entry (WEP-0002 read-your-writes symmetry): the D1
+ * `journal_entry` projection trails the save by a WS round-trip + alarm tick,
+ * so the Journal list's post-save refresh can miss the entry — the caller
+ * merges this optimistic echo until the projection catches up (dedupe by id).
  */
 export async function createRoutineJournalEntry(
   routineRef: string,
@@ -127,7 +157,7 @@ export async function createRoutineJournalEntry(
     baseUrl?: string;
     timeoutMs?: number;
   },
-): Promise<void> {
+): Promise<JournalEntry | null> {
   const { openRoutineView } = await import("./routine-view");
   const store = openRoutineView(routineRef, {
     editable: true,
@@ -137,6 +167,7 @@ export async function createRoutineJournalEntry(
     hydrationTimeoutMs: 12_000,
   });
   const timeoutMs = opts.timeoutMs ?? 15_000;
+  let created: { id: string; authorId: string; createdAt: number } | null = null;
   try {
     await new Promise<void>((resolve, reject) => {
       let settled = false;
@@ -156,10 +187,13 @@ export async function createRoutineJournalEntry(
           requested = true;
           store.createAnnotation(input);
         }
-        const present = store
+        const match = store
           .readAnnotations()
-          .some((a) => a.text === input.text && a.kind === input.kind && a.deletedAt == null);
-        if (present) finish();
+          .find((a) => a.text === input.text && a.kind === input.kind && a.deletedAt == null);
+        if (match) {
+          created = { id: match.id, authorId: match.authorId, createdAt: match.createdAt };
+          finish();
+        }
       };
       const unsub = store.subscribe(tryProgress);
       tryProgress();
@@ -169,6 +203,85 @@ export async function createRoutineJournalEntry(
   } finally {
     store.close();
   }
+  // The journal read is lesson/practice only — a plain note never surfaces there.
+  if (created === null || (input.kind !== "lesson" && input.kind !== "practice")) return null;
+  const echo: { id: string; authorId: string; createdAt: number } = created;
+  return {
+    id: echo.id,
+    routineRef,
+    authorId: echo.authorId,
+    kind: input.kind,
+    text: input.text,
+    anchors: input.anchors.map(toJournalAnchor),
+    createdAt: echo.createdAt,
+    displayName: null,
+    identityColor: null,
+    source: "routine",
+  };
+}
+
+/**
+ * Merge just-saved (optimistic-echo) entries over the REST list: an entry the
+ * projection has already caught up on is deduped by id (the REST row wins — it
+ * carries the joined author display fields); the rest surface immediately.
+ */
+export function mergePendingEntries(
+  entries: JournalEntry[],
+  pending: JournalEntry[],
+): JournalEntry[] {
+  if (pending.length === 0) return entries;
+  const seen = new Set(entries.map((e) => e.id));
+  const merged = [...entries, ...pending.filter((p) => !seen.has(p.id))];
+  merged.sort((a, b) => b.createdAt - a.createdAt);
+  return merged;
+}
+
+/**
+ * WEP-0002 read-your-writes: merge the user's OWN family notes read LIVE from
+ * the open account doc into the REST journal list. The REST account arm reads
+ * the `figure_type_note_index` D1 projection, which the account DO's alarm
+ * writes only AFTER the local CRDT edit has synced over the WebSocket — so a
+ * just-authored family entry is reliably missing from a fetch that follows the
+ * save (the note is only local, or the alarm hasn't ticked). The live self-read
+ * is the source of truth for own notes; entries the projection has already
+ * caught up on are deduped by id (the REST row wins — it carries the joined
+ * author display fields). Journal = lesson/practice only, matching the read.
+ */
+export function mergeLiveFamilyNotes(
+  entries: JournalEntry[],
+  liveNotes: OwnFamilyNote[],
+  currentUserId: string | undefined,
+): JournalEntry[] {
+  if (!currentUserId || liveNotes.length === 0) return entries;
+  const seen = new Set(entries.map((e) => e.id));
+  const merged = [...entries];
+  for (const n of liveNotes) {
+    if (seen.has(n.id)) continue;
+    if (n.kind !== "lesson" && n.kind !== "practice") continue;
+    merged.push({
+      id: n.id,
+      routineRef: `account:${currentUserId}`,
+      authorId: currentUserId,
+      kind: n.kind,
+      text: n.text,
+      anchors: [
+        {
+          type: "figureType",
+          figureType: n.figureType,
+          danceScope: n.danceScope,
+          ...(n.count != null ? { count: n.count } : {}),
+          ...(n.role != null ? { role: n.role } : {}),
+          label: figureTypeAnchorLabel(n.figureType, n.danceScope, n.count),
+        },
+      ],
+      createdAt: n.createdAt,
+      displayName: null,
+      identityColor: null,
+      source: "account",
+    });
+  }
+  merged.sort((a, b) => b.createdAt - a.createdAt);
+  return merged;
 }
 
 export type JournalFilter = "all" | "lessons" | "practice" | "byFigure";

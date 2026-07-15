@@ -441,3 +441,30 @@ export const zSeedBody = z.object({
     .optional(),
 });
 export type SeedBody = z.infer<typeof zSeedBody>;
+
+/** Title-case a figureType/dance slug for a chip label ("natural_turn" → "Natural Turn"). */
+function humanizeSlug(slug: string): string {
+  return slug
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * The resolved chip label for a figureType journal anchor: "all Whisks · all
+ * Waltz" / "· all dances"; a TIMED note (WEP-0004) appends its pinned count
+ * ("· count 3"). Shared here so the worker's D1 projection read and the web's
+ * live account-doc read (WEP-0002 read-your-writes) compose the IDENTICAL
+ * label — two independent composers would drift.
+ */
+export function figureTypeAnchorLabel(
+  figureType: string,
+  danceScope: string,
+  count?: number | null,
+): string {
+  const family = `all ${humanizeSlug(figureType)}s`;
+  const scope = danceScope === "all" ? "all dances" : `all ${humanizeSlug(danceScope)}`;
+  return count != null ? `${family} · ${scope} · count ${count}` : `${family} · ${scope}`;
+}
