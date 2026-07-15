@@ -36,18 +36,34 @@ export interface GridSlot {
 }
 
 /**
- * The default COUNT length for a figure: the number of distinct whole-beat
- * steps (integer counts carrying ≥1 live attribute), at least 1. Used to seed a
- * new figure's length and as the fallback when a doc has neither an authored
- * `counts` nor a legacy `bars` (see {@link resolveFigureCounts}).
+ * The highest whole beat any LIVE step occupies — a figure's step SPAN. A step
+ * on count `c` (whole or sub-beat) sits in whole beat `⌊c⌋`, so the span is the
+ * max `⌊count⌋` over non-deleted attributes (0 for an empty timeline). This is
+ * the load-bearing quantity behind the figure-length invariant: a figure's
+ * length in counts must be ≥ its span, or a step lands off the grid.
  */
-export function defaultFigureCounts(attributes: Attribute[]): number {
-  const wholeBeats = new Set<number>();
+export function stepSpan(attributes: Attribute[]): number {
+  let span = 0;
   for (const a of attributes) {
     if (a.deletedAt != null) continue;
-    if (Number.isInteger(a.count)) wholeBeats.add(a.count);
+    span = Math.max(span, Math.floor(a.count));
   }
-  return Math.max(1, wholeBeats.size);
+  return span;
+}
+
+/**
+ * The default COUNT length for a figure: its step {@link stepSpan} — the highest
+ * whole beat a live step occupies — at least 1. Used to seed a new figure's
+ * length and as the fallback when a doc has neither an authored `counts` nor a
+ * legacy `bars` (see {@link resolveFigureCounts}).
+ *
+ * NOTE this is the SPAN, not the number of steps: a figure with a Slow (2 beats,
+ * 1 count) has a gap, so "count of distinct steps" would undershoot the length
+ * and orphan the trailing step (the Foxtrot Feather Step "SQQ" steps on 1, 3, 4
+ * — 3 steps but length 4). Fixed 2026-07-14; see PLAN §2.5.2.
+ */
+export function defaultFigureCounts(attributes: Attribute[]): number {
+  return Math.max(1, stepSpan(attributes));
 }
 
 /**
@@ -66,8 +82,28 @@ export function defaultFigureBars(attributes: Attribute[], dance: DanceId): numb
  * (pre-v5 docs — the v4→v5 migration converts them in storage, this is the
  * lenient read), else {@link defaultFigureCounts} over its attributes.
  * Non-positive stored values clamp to ≥1 so a corrupt doc still renders.
+ *
+ * SELF-HEALING (figure-length invariant, 2026-07-14): whatever length is stored,
+ * the result is lifted to at least the step {@link stepSpan} so a doc whose
+ * `counts`/`bars` is too short for its steps (a pre-fix figure, or one edited by
+ * an old client) never orphans a trailing step off the grid. The durable repair
+ * is the schema v6 migration; this is the read-time safety net.
  */
 export function resolveFigureCounts(figure: {
+  counts?: number;
+  bars?: number;
+  attributes: Attribute[];
+  dance: DanceId;
+}): number {
+  const authored = authoredFigureCounts(figure);
+  return Math.max(authored, stepSpan(figure.attributes));
+}
+
+/** The figure's AUTHORED length before the step-span floor is applied: explicit
+ *  `counts`, else legacy `bars × beatsPerBar`, else the step-span default. Split
+ *  out of {@link resolveFigureCounts} so the migration can lift a stored value
+ *  without re-deriving the whole precedence chain. */
+function authoredFigureCounts(figure: {
   counts?: number;
   bars?: number;
   attributes: Attribute[];

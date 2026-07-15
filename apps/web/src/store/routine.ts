@@ -39,6 +39,7 @@ import {
   softDeleteSection,
   sortByOrder,
   spawnVariant,
+  stepSpan,
   undoLastChange,
   variantAttributesForEdit,
   wasSupersededByOthers,
@@ -1091,7 +1092,15 @@ export async function openRoutine(
     },
 
     setFigureCounts: (figureRef, rawCounts) => {
-      editFigure(figureRef, { counts: Math.min(64, Math.max(1, Math.round(rawCounts))) });
+      // The LENGTH stepper cannot shrink a figure below its last live step
+      // (figure-length invariant, §2.5.2): a step must never land off the grid.
+      // Floor the requested length at the figure's step SPAN — self-healing, so
+      // dragging LENGTH down stops at the last notated beat instead of orphaning
+      // it. (Reads self-heal too via `resolveFigureCounts`; this keeps the STORED
+      // value honest.) Clamped into the authored 1–64 range.
+      const span = stepSpan(figureOwnDoc(figureRef)?.attributes ?? []);
+      const requested = Math.min(64, Math.max(1, Math.round(rawCounts)));
+      editFigure(figureRef, { counts: Math.max(requested, span) });
     },
     renameFigure: (figureRef, name) => {
       const next = name.trim();

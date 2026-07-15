@@ -417,3 +417,77 @@ describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
     expect(migrated.counts).toBe(64);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Figure-length invariant (2026-07-14) — v5→v6: a figure's `counts` must cover
+// its step SPAN (highest whole beat a live step occupies). The pre-fix default
+// counted DISTINCT steps, undershooting whenever a Slow leaves a gap (Foxtrot
+// Feather Step "SQQ" → steps on 1, 3, 4, seeded counts:3 → count-4 step orphaned).
+// ─────────────────────────────────────────────────────────────────────────
+describe("migration v5→v6 — counts covers the step span (figure-length invariant)", () => {
+  const attr = (count: number) => ({
+    id: `a${count}`,
+    kind: "footwork",
+    count,
+    role: null,
+    value: "HT",
+    deletedAt: null,
+  });
+
+  it("lifts a too-short counts to the step span (Feather Step: 3 → 4)", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "feather-step",
+      dance: "foxtrot",
+      counts: 3,
+      attributes: [attr(1), attr(3), attr(4)],
+    });
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.counts).toBe(4);
+  });
+
+  it("leaves a counts that already covers its span untouched", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "natural-turn",
+      dance: "waltz",
+      counts: 6,
+      attributes: [attr(1), attr(2), attr(3)],
+    });
+    expect(migrated.counts).toBe(6);
+  });
+
+  it("ignores tombstoned steps and sub-beats when computing the span", async () => {
+    const { migrate } = await importDomain();
+    // Live whole beats {1, 3}; the count-4 step is tombstoned and 3.5 is a
+    // sub-beat of beat 3 → span 3, so counts:3 needs no lift.
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "three-step",
+      dance: "foxtrot",
+      counts: 3,
+      attributes: [attr(1), attr(3), attr(3.5), { ...attr(4), deletedAt: 1 }],
+    });
+    expect(migrated.counts).toBe(3);
+  });
+
+  it("leaves a doc without numeric counts alone (length derives live)", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "variant",
+      dance: "foxtrot",
+      attributes: [attr(4)],
+    });
+    expect("counts" in migrated).toBe(false);
+  });
+
+  it("passes a routine doc through with only the version bump", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const migrated = migrate({ schemaVersion: 5, sections: [], annotations: [] });
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("counts" in migrated).toBe(false);
+  });
+});

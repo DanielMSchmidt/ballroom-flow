@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DANCE_IDS } from "./dances";
+import { defaultFigureCounts } from "./figure-grid";
 import { FIGURE_STEPS } from "./figure-steps";
 import { LIBRARY_FIGURES } from "./library";
 
@@ -48,6 +49,29 @@ describe("US-054 Full Standard syllabus library seed (WDSF technique books)", ()
     // charted figure is keyed dance:figureType; the step-count guard
     // (figure-steps.test.ts) keeps each chart aligned to its timing.
     expect(Object.keys(FIGURE_STEPS).length).toBeGreaterThanOrEqual(210);
+  });
+
+  it("gives every seeded figure a length that covers its last step (figure-length invariant)", () => {
+    // The figure-length invariant (§2.5.2, fixed 2026-07-14): a figure's default
+    // length must be its step SPAN, not the number of distinct steps — else a
+    // figure with a Slow (2 beats, 1 count → a gap) has a trailing step off the
+    // grid. Assert the SEED-TIME default (`defaultFigureCounts`, what the worker
+    // seeds each global doc with) covers the span — NOT the self-healed read, so
+    // this bites if the default ever regresses to the old "#distinct steps": the
+    // Foxtrot Feather Step "SQQ" (steps on 1, 3, 4) seeded length 3 < span 4.
+    // Compute the span INDEPENDENTLY here (max whole beat of any live step) so
+    // this guard bites even if the production `stepSpan`/default is reverted.
+    const offenders: string[] = [];
+    for (const fig of LIBRARY_FIGURES) {
+      const attributes = fig.attributes ?? [];
+      const span = attributes
+        .filter((a) => a.deletedAt == null)
+        .reduce((m, a) => Math.max(m, Math.floor(a.count)), 0);
+      const length = defaultFigureCounts([...attributes]);
+      if (length < span)
+        offenders.push(`${fig.dance}:${fig.figureType} (seeded length ${length} < span ${span})`);
+    }
+    expect(offenders, `figures whose length omits a step:\n${offenders.join("\n")}`).toEqual([]);
   });
 
   it("keeps figureType a cross-dance family key (all-dances annotation scope)", () => {

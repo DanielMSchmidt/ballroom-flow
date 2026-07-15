@@ -53,6 +53,7 @@ export {
   resolveFigureBars,
   resolveFigureCounts,
   SUB_BEATS,
+  stepSpan,
   windowAttributes,
 } from "./figure-grid";
 export { figureTypeNoteCount, matchesFigureType } from "./figuretype";

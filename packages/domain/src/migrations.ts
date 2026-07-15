@@ -14,10 +14,11 @@
 // (US-041) depend on them being stable for life. The ladder enforces this — a
 // step that changes either throws.
 //
-// CURRENT is 4 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
-// v3→v4: backfill section/placement `sortKey`). A future v5 step adds TWO
-// localized edits here (add a `MIGRATIONS[4]` entry AND bump
-// CURRENT_SCHEMA_VERSION = 5), with no caller changes.
+// CURRENT is 6 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
+// v3→v4: backfill section/placement `sortKey`; v4→v5: legacy `bars` → `counts`;
+// v5→v6: lift a figure's `counts` to cover its step span, §2.5.2). A future step
+// adds TWO localized edits here (add a `MIGRATIONS[n]` entry AND bump
+// CURRENT_SCHEMA_VERSION), with no caller changes.
 //
 // WIRED (2026-07-02, v5 milestone step 1, PLAN §7): the DO load path
 // (`apps/worker/src/doc-do.ts` `loadPersisted`) runs this ladder on every
@@ -31,7 +32,7 @@ import { isPlainRecord } from "./guards";
 import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -45,7 +46,7 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
 
 /**
  * The ordered ladder, keyed by source version. `MIGRATIONS[n]` upgrades a v`n`
- * doc to v`n+1`. A v5 step adds `MIGRATIONS[4]` here (see the file header).
+ * doc to v`n+1`. A new step adds the next `MIGRATIONS[n]` here (see the file header).
  */
 const MIGRATIONS: Record<number, MigrationStep> = {
   // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
@@ -128,6 +129,30 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     // migrate to a counts value the rest of the system treats as impossible.
     const counts = Math.min(64, Math.max(1, Math.floor(bars)) * meter.beatsPerBar);
     return { ...rest, counts };
+  },
+
+  // v5 → v6 (figure-length invariant, 2026-07-14): a figure's authored `counts`
+  // must cover its step SPAN — the highest whole beat any live step occupies.
+  // The pre-fix default computed length as the NUMBER of distinct steps, which
+  // undershoots whenever a figure holds a Slow (2 beats, 1 count → a gap): the
+  // Foxtrot Feather Step "SQQ" steps on counts 1, 3, 4 but was seeded counts:3,
+  // so its count-4 step fell off the grid (§2.5.2). Lift a too-short `counts` to
+  // its span so every existing production figure — and the choreos referencing
+  // it — renders every step. STRUCTURE-ONLY, DETERMINISTIC (the span comes from
+  // the doc's own attributes); a doc with no numeric `counts` (routine/account
+  // docs, or a figure whose length derives live from its base) and a figure
+  // already long enough pass through with the version bump alone. The span floor
+  // wins over the §2.5.2 1–64 ceiling — an orphaned step is worse than an
+  // over-long figure (real seed spans are far under 64).
+  5: (doc) => {
+    if (typeof doc.counts !== "number" || !Array.isArray(doc.attributes)) return { ...doc };
+    let span = 0;
+    for (const a of doc.attributes) {
+      if (!isPlainRecord(a) || a.deletedAt != null) continue;
+      if (typeof a.count === "number") span = Math.max(span, Math.floor(a.count));
+    }
+    if (span <= doc.counts) return { ...doc };
+    return { ...doc, counts: span };
   },
 };
 
