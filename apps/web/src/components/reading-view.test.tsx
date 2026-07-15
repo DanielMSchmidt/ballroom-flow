@@ -1,9 +1,10 @@
 import type { Annotation, Attribute, FigureDoc, RoutineDoc } from "@weavesteps/domain";
 import type { ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FamilyNote } from "../store/family-notes";
 import type { ResolvedPlacement } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen } from "../test-support/render";
+import { axeCheck, renderUi, screen } from "../test-support/render";
 import type { RoleView } from "./role-view";
 
 interface ReadingProps {
@@ -11,6 +12,7 @@ interface ReadingProps {
   placements: ResolvedPlacement[];
   roleView: RoleView;
   annotations?: Annotation[];
+  familyNotes?: FamilyNote[];
   canComment?: boolean;
   memberColors?: Record<string, string>;
   memberNames?: Record<string, string>;
@@ -344,6 +346,198 @@ describe("RoutineReadingView — notes margin (Builder v3)", () => {
     const bg = avatar instanceof HTMLElement ? avatar.style.background : undefined;
     // #1f8a5b === rgb(31, 138, 91) — accept both representations.
     expect(bg === "#1f8a5b" || bg === "rgb(31, 138, 91)").toBe(true);
+  });
+});
+
+describe("RoutineReadingView — family notes fold into the margin (US-040/041)", () => {
+  // A three-count Feather so a timed note can pin to count 3 and an untimed one
+  // lands on the header. figureType "feather" + dance "waltz" so family notes
+  // match by identity (the reading routine is a Waltz).
+  const feather = (): FigureDoc =>
+    figure({
+      id: "f1",
+      figureType: "feather",
+      name: "Feather",
+      counts: 3,
+      attributes: [
+        attr(1, "direction", "forward"),
+        attr(2, "direction", "side"),
+        attr(3, "direction", "close"),
+      ],
+    });
+
+  function renderWithFamily(extra: Partial<ReadingProps>) {
+    const fig = feather();
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: fig.id }] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    return renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: fig.id }, figure: fig, status: "live" }]}
+        roleView="leader"
+        {...extra}
+      />,
+    );
+  }
+
+  const familyNote = (over: Partial<FamilyNote>): FamilyNote => {
+    const figureType = over.figureType ?? "feather";
+    const danceScope = over.danceScope ?? "waltz";
+    const count = over.count;
+    return {
+      id: "fn1",
+      authorId: "coauthor",
+      kind: "lesson",
+      text: "sway grows through the rise",
+      figureType,
+      danceScope,
+      anchors: [
+        {
+          type: "figureType",
+          figureType,
+          danceScope: danceScope === "all" ? "all" : "waltz",
+          ...(count != null ? { count } : {}),
+        },
+      ],
+      ...(count != null ? { count } : {}),
+      ...over,
+    };
+  };
+
+  it("renders a whole-figure (untimed) family note on the figure-header margin cell", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithFamily({
+      familyNotes: [familyNote({ id: "fn-whole", text: "keep the poise long", createdAt: 5 })],
+    });
+    // The header cell (…— Feather) carries the family note's snippet.
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    expect(header).toHaveTextContent("keep the poise long");
+  });
+
+  it("pins a TIMED family note (WEP-0004) to its count row, not the header", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithFamily({
+      familyNotes: [
+        familyNote({ id: "fn-timed", text: "rise begins here", count: 3, createdAt: 5 }),
+      ],
+    });
+    // The count-3 row cell shows the timed note…
+    const row3 = screen.getByRole("button", { name: /notes — count 3/i });
+    expect(row3).toHaveTextContent("rise begins here");
+    // …and the header cell does NOT (it's pinned, not whole-figure).
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    expect(header).not.toHaveTextContent("rise begins here");
+  });
+
+  it("soft-falls-back a timed note onto the header when the figure is too short to cover the count", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // A 3-count Feather can't cover a note pinned to count 5 → shows un-pinned on
+    // the header rather than vanishing (figureTypeNoteCount's soft fallback).
+    renderWithFamily({
+      familyNotes: [familyNote({ id: "fn-far", text: "only in the long variant", count: 5 })],
+    });
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    expect(header).toHaveTextContent("only in the long variant");
+  });
+
+  it("renders a co-member's family note with the author's avatar colour + initial", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // authorId ≠ the viewer — the margin avatar uses the co-author's stored colour.
+    renderWithFamily({
+      memberColors: { coauthor: "#1f8a5b" },
+      memberNames: { coauthor: "Priya" },
+      familyNotes: [familyNote({ id: "fn-co", text: "heads left on 2", createdAt: 5 })],
+    });
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    expect(header).toHaveTextContent("heads left on 2");
+    const avatar = header.querySelector("span[data-avatar]");
+    expect(avatar?.textContent).toBe("P");
+    const bg = avatar instanceof HTMLElement ? avatar.style.background : undefined;
+    expect(bg === "#1f8a5b" || bg === "rgb(31, 138, 91)").toBe(true);
+  });
+
+  it("folds a family note and a routine annotation into ONE cell, newest-first snippet", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithFamily({
+      // Routine whole-figure comment at t=1 (older).
+      annotations: [
+        {
+          id: "an-old",
+          authorId: "u2",
+          kind: "note",
+          text: "older routine note",
+          tags: [],
+          anchors: [{ type: "figure", figureRef: "f1" }],
+          replies: [],
+          createdAt: 1,
+        },
+      ],
+      // Family note at t=10 (newer) → it wins the latest-snippet slot.
+      familyNotes: [familyNote({ id: "fn-new", text: "newer family note", createdAt: 10 })],
+    });
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    // BOTH authors contribute avatars (u2 + coauthor) — two dots in the cluster.
+    expect(header.querySelectorAll("span[data-avatar]")).toHaveLength(2);
+    // The NEWER note is the visible snippet; the older one collapses under it.
+    expect(header).toHaveTextContent("newer family note");
+    expect(header).not.toHaveTextContent("older routine note");
+  });
+
+  it("marks a family-scope note with a screen-reader cue so it doesn't read as a live comment", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithFamily({
+      familyNotes: [familyNote({ id: "fn-sr", text: "family-scope note", createdAt: 5 })],
+    });
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    // The margin's own vocabulary (sr-only text) distinguishes the scope — no new visual.
+    expect(header).toHaveTextContent(/family note/i);
+  });
+
+  it("does not surface a family note whose family/dance doesn't match this figure", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithFamily({
+      familyNotes: [familyNote({ id: "fn-miss", figureType: "three-step", text: "wrong family" })],
+    });
+    const header = screen.getByRole("button", { name: /notes — feather/i });
+    expect(header).not.toHaveTextContent("wrong family");
+  });
+
+  it("is axe-clean with family notes folded into the margin", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    const { container } = renderWithFamily({
+      canComment: true,
+      onOpenThread: vi.fn(),
+      familyNotes: [
+        familyNote({ id: "fn-a", text: "whole-figure family note", createdAt: 5 }),
+        familyNote({ id: "fn-b", text: "timed family note", count: 3, createdAt: 6 }),
+      ],
+    });
+    expect(await axeCheck(container)).toHaveNoViolations();
   });
 });
 

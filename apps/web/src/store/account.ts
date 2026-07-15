@@ -71,6 +71,9 @@ export interface OwnFamilyNote {
   danceScope: DanceId | "all";
   count?: number;
   role?: Role;
+  /** The note's authored timestamp (from the doc annotation) — lets a consumer
+   *  order own + co-member notes newest-first in the reading-view notes margin. */
+  createdAt: number;
 }
 
 /** The reactive account seam a component consumes: read + mutate, nothing else. */
@@ -169,6 +172,7 @@ function toOwnFamilyNote(a: Annotation): OwnFamilyNote | null {
     text: a.text,
     figureType: anchor.figureType,
     danceScope: anchor.danceScope,
+    createdAt: a.createdAt,
     ...(anchor.count != null ? { count: anchor.count } : {}),
     ...(anchor.role != null ? { role: anchor.role } : {}),
   };

@@ -46,6 +46,9 @@ const en = {
   notesHeader: "NOTES",
   notesForCount: (count: string) => `Notes — count ${count}`,
   notesForFigure: (name: string) => `Notes — ${name}`,
+  /** sr-only prefix marking a family-scope note in the margin (US-040/041) so it
+   *  doesn't read as a here-and-now routine comment. */
+  familyNoteScope: "Family note:",
 
   // Figure timeline (FigureTimeline)
   countsStepperLabel: "Length",
@@ -119,6 +122,7 @@ const de: typeof en = {
   notesHeader: "NOTIZEN",
   notesForCount: (count) => `Notizen — Zählzeit ${count}`,
   notesForFigure: (name) => `Notizen — ${name}`,
+  familyNoteScope: "Familiennotiz:",
 
   countsStepperLabel: "Länge",
   countsStepperUnit: "Zählzeiten",

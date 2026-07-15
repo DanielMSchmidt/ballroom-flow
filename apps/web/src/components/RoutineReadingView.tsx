@@ -20,6 +20,8 @@ import {
   type DanceId,
   type FigureDoc,
   figureMatchesLibraryOrigin,
+  figureTypeNoteCount,
+  matchesFigureType,
   type NumberedBeatEntry,
   numberRoutineBeats,
   type PlacementPart,
@@ -34,6 +36,7 @@ import {
 import { memo, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
+import type { FamilyNote } from "../store/family-notes";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
 import { AttrChip, cx, IDENTITY_COLORS, kindVar, SectionDivider, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
@@ -56,10 +59,55 @@ import { filterByRoleView, type RoleView } from "./role-view";
 /** The notes margin's share of the row (Builder v3: `flex:0 0 29%`). */
 const MARGIN_BASIS = "29%";
 
+/**
+ * A note as the margin cell reads it — the common shape a routine annotation and
+ * a figure-family note both fold into so ONE ordered set (newest-first) fills a
+ * cell's avatars + latest-snippet. `createdAt` drives the ordering; a co-member
+ * family note whose REST projection carries no authored time sorts as oldest
+ * (0) — see {@link FamilyNote.createdAt}. `family` tags a family-scope note so
+ * the cell can distinguish it within the margin's own vocabulary (a sr-only
+ * scope word, never a new visual).
+ */
+interface MarginNote {
+  id: string;
+  authorId: string;
+  text: string;
+  createdAt: number;
+  family: boolean;
+}
+
+/** Adapt a routine annotation into the unified margin shape (never a family note). */
+function annotationMarginNote(a: Annotation): MarginNote {
+  return { id: a.id, authorId: a.authorId, text: a.text, createdAt: a.createdAt, family: false };
+}
+
+/** Adapt a figure-family note into the unified margin shape. */
+function familyMarginNote(n: FamilyNote): MarginNote {
+  return {
+    id: n.id,
+    authorId: n.authorId,
+    text: n.text,
+    // A co-member note's REST projection has no authored time — sort it oldest
+    // rather than fabricate a "now" that would jump it to the top on every load.
+    createdAt: n.createdAt ?? 0,
+    family: true,
+  };
+}
+
+/** Merge routine + family margin notes into ONE newest-first set. Ties (equal
+ *  `createdAt`, e.g. co-member notes at 0) keep a stable order by id so the
+ *  cell's avatar cluster + latest snippet don't churn between renders. */
+function mergeMarginNotes(routine: MarginNote[], family: MarginNote[]): MarginNote[] {
+  return [...routine, ...family].sort(
+    (a, b) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+}
+
 export function RoutineReadingView({
   routine,
   placements,
   annotations = [],
+  familyNotes = NO_FAMILY_NOTES,
   canComment = false,
   memberColors,
   memberNames,
@@ -73,6 +121,13 @@ export function RoutineReadingView({
   placements: ResolvedPlacement[];
   /** Annotations on this routine — surfaced in the notes margin beside their step. */
   annotations?: Annotation[];
+  /** Figure-family notes (US-040/041, own + co-members') that apply to this
+   *  routine's figures — folded into the SAME margin cells as routine
+   *  annotations. A whole-figure note lands on the figure-header cell; a WEP-0004
+   *  timed note lands on its count row (soft-fallback to the header when a shorter
+   *  variant doesn't cover the count). The caller (Assemble) passes the already
+   *  co-membership-gated, deduped set; matching to figures happens here. */
+  familyNotes?: FamilyNote[];
   /** Whether THIS member may add a comment (commenter/editor — NOT a viewer).
    *  Gates the margin's ＋ add affordance (a viewer reads notes only). */
   canComment?: boolean;
@@ -128,6 +183,16 @@ export function RoutineReadingView({
   // figure whose notes changed gets a new array — every other FigureReadout
   // sees reference-equal props and skips its re-render (React.memo below).
   const annotationsByFigure = useStableAnnotationsByFigure(annotations);
+  // Per-figure family-note slices (US-040/041), stable-identity in the same way:
+  // only the figure whose applicable family notes changed gets a new array, so an
+  // added family note doesn't re-render every FigureReadout. Keyed by figure id
+  // (a family note applies to a figure by figureType+dance identity, so it can
+  // land on several figures at once).
+  const figures = useMemo(
+    () => placements.map((p) => p.figure).filter((f): f is FigureDoc => f != null),
+    [placements],
+  );
+  const familyNotesByFigure = useStableFamilyNotesByFigure(familyNotes, figures);
   // The column picker (Builder v3): the reader's picked column ids, per device
   // + across choreos. The chips row covers every type USED anywhere in this
   // routine (under the active role lens — same "only what's set" rule as the
@@ -237,6 +302,7 @@ export function RoutineReadingView({
                     columns={shownColumns}
                     beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
                     annotations={(figureId && annotationsByFigure.get(figureId)) || NO_ANNOTATIONS}
+                    familyNotes={(figureId && familyNotesByFigure.get(figureId)) || NO_FAMILY_NOTES}
                     canComment={canComment}
                     memberColors={memberColors}
                     memberNames={memberNames}
@@ -258,7 +324,42 @@ export function RoutineReadingView({
 // Stable empties: a figure with no notes / no beats must receive the SAME
 // array identity every render, or React.memo could never bail for it.
 const NO_ANNOTATIONS: Annotation[] = [];
+const NO_FAMILY_NOTES: FamilyNote[] = [];
 const NO_TOKENS: string[] = [];
+
+/**
+ * Group family notes by the figure they apply to, keeping each group's ARRAY
+ * IDENTITY stable across regroupings when its members are unchanged — the
+ * family-note counterpart to {@link useStableAnnotationsByFigure}. A family note
+ * matches a figure by figureType+dance IDENTITY (never a figureRef), so one note
+ * can land on several figures at once; a tombstoned figure/note contributes
+ * nothing. The result: adding a family note re-slices only the figures it
+ * actually matches, so every other FigureReadout keeps its reference-equal prop.
+ */
+function useStableFamilyNotesByFigure(
+  familyNotes: FamilyNote[],
+  figures: FigureDoc[],
+): Map<string, FamilyNote[]> {
+  const prevRef = useRef<Map<string, FamilyNote[]>>(new Map());
+  return useMemo(() => {
+    const next = new Map<string, FamilyNote[]>();
+    for (const figure of figures) {
+      if (next.has(figure.id)) continue; // a figure placed twice slices once
+      const matching = familyNotes.filter((n) =>
+        n.anchors.some((anchor) => matchesFigureType(anchor, figure)),
+      );
+      if (matching.length > 0) next.set(figure.id, matching);
+    }
+    for (const [figureId, arr] of next) {
+      const prev = prevRef.current.get(figureId);
+      if (prev && prev.length === arr.length && prev.every((x, i) => x === arr[i])) {
+        next.set(figureId, prev);
+      }
+    }
+    prevRef.current = next;
+    return next;
+  }, [familyNotes, figures]);
+}
 
 /**
  * Group annotations by the figure they anchor to (point OR whole-figure
@@ -421,6 +522,7 @@ const FigureReadout = memo(function FigureReadout({
   columns,
   beatTokens,
   annotations,
+  familyNotes,
   canComment,
   memberColors,
   memberNames,
@@ -441,6 +543,10 @@ const FigureReadout = memo(function FigureReadout({
    *  this figure's `counts`. Drives the timing sub + per-step count cell. */
   beatTokens: string[];
   annotations: Annotation[];
+  /** Family notes (own + co-members') that match THIS figure's family — folded
+   *  into the same margin cells as the routine annotations (whole-figure onto the
+   *  header, timed onto their count row). */
+  familyNotes: FamilyNote[];
   canComment: boolean;
   memberColors?: Record<string, string>;
   memberNames?: Record<string, string>;
@@ -486,17 +592,41 @@ const FigureReadout = memo(function FigureReadout({
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   // The continuous beat token per count (US-004a), zipped with the sorted counts.
   const tokenByCount = new Map(counts.map((c, i) => [c, beatTokens[i] ?? String(c)]));
-  // Notes anchored to a specific step (point) of this figure — margin cells.
+  // Routine notes anchored to a specific step (point) of this figure — margin cells.
   const figureComments = annotations.filter(
     (a) =>
       a.deletedAt == null &&
       a.anchors.some((an) => an.type === "point" && an.figureRef === figure.id),
   );
-  // Notes anchored to the WHOLE figure (figure anchor, no count — US-004a).
+  // Routine notes anchored to the WHOLE figure (figure anchor, no count — US-004a).
   const wholeFigureComments = annotations.filter(
     (a) =>
       a.deletedAt == null &&
       a.anchors.some((an) => an.type === "figure" && an.figureRef === figure.id),
+  );
+  // Fold the figure's family notes (own + co-members') onto its margin cells
+  // (US-040/041): a TIMED note (WEP-0004) pins to its count when THIS figure
+  // covers it — figureTypeNoteCount's soft fallback returns null for a shorter
+  // variant, so an un-pinnable timed note degrades onto the figure header rather
+  // than vanishing (parity with FamilyNotes.tsx). An untimed note is header-scope.
+  const familyByCount = new Map<number, MarginNote[]>();
+  const familyWholeFigure: MarginNote[] = [];
+  for (const n of familyNotes) {
+    const anchor = n.anchors[0];
+    const pinned = anchor ? figureTypeNoteCount(anchor, figure) : null;
+    if (pinned != null) {
+      const arr = familyByCount.get(pinned);
+      if (arr) arr.push(familyMarginNote(n));
+      else familyByCount.set(pinned, [familyMarginNote(n)]);
+    } else {
+      familyWholeFigure.push(familyMarginNote(n));
+    }
+  }
+  // The header cell: routine whole-figure notes ∪ untimed/soft-fallback family
+  // notes, newest-first across both.
+  const headerNotes = mergeMarginNotes(
+    wholeFigureComments.map(annotationMarginNote),
+    familyWholeFigure,
   );
   return (
     <div className="relative flex flex-col gap-[5px]">
@@ -528,7 +658,7 @@ const FigureReadout = memo(function FigureReadout({
         </div>
         <NotesMarginCell
           label={t.notesForFigure(figure.name)}
-          comments={wholeFigureComments}
+          notes={headerNotes}
           canComment={canComment}
           memberColors={memberColors}
           memberNames={memberNames}
@@ -572,8 +702,13 @@ const FigureReadout = memo(function FigureReadout({
                 label={tokenByCount.get(count) ?? String(count)}
                 columns={columns}
                 here={live.filter((a) => a.count === count)}
-                comments={figureComments.filter((a) =>
-                  a.anchors.some((an) => an.type === "point" && an.count === count),
+                notes={mergeMarginNotes(
+                  figureComments
+                    .filter((a) =>
+                      a.anchors.some((an) => an.type === "point" && an.count === count),
+                    )
+                    .map(annotationMarginNote),
+                  familyByCount.get(count) ?? [],
                 )}
                 figureId={figure.id}
                 canComment={canComment}
@@ -710,7 +845,7 @@ function StepRow({
   label,
   columns,
   here,
-  comments,
+  notes,
   figureId,
   canComment,
   memberColors,
@@ -723,7 +858,8 @@ function StepRow({
   label: string;
   columns: ReadingColumn[];
   here: Attribute[];
-  comments: Annotation[];
+  /** This count's margin notes, already merged (routine + family) newest-first. */
+  notes: MarginNote[];
   figureId: string;
   canComment: boolean;
   memberColors?: Record<string, string>;
@@ -778,7 +914,7 @@ function StepRow({
       </div>
       <NotesMarginCell
         label={t.notesForCount(label)}
-        comments={comments}
+        notes={notes}
         canComment={canComment}
         memberColors={memberColors}
         memberNames={memberNames}
@@ -788,32 +924,39 @@ function StepRow({
   );
 }
 
-/** A notes-margin cell (Builder v3): the note authors' avatars (latest-first,
+/** A notes-margin cell (Builder v3): the note authors' avatars (newest-first,
  *  up to 3 — initial inside the dot, colour never the only signal #5), a ＋
  *  add chip for a member who may comment, and the latest note as a two-line
  *  Caveat snippet. The whole cell is one tap target opening the anchor's
- *  thread (a viewer may read it; only a commenter may add). */
+ *  thread (a viewer may read it; only a commenter may add).
+ *
+ *  `notes` is the ALREADY-MERGED set (routine annotations ∪ family notes),
+ *  ordered newest-first — so `notes[0]` is the snippet and avatars read forward.
+ *  A family-scope note (`family: true`) carries a sr-only "family note" cue so
+ *  it never reads as a here-and-now comment — an affordance already in the
+ *  margin's vocabulary (colour/initial + text), no new visual. */
 function NotesMarginCell({
   label,
-  comments,
+  notes,
   canComment,
   memberColors,
   memberNames,
   onOpen,
 }: {
   label: string;
-  comments: Annotation[];
+  notes: MarginNote[];
   canComment: boolean;
   memberColors?: Record<string, string>;
   memberNames?: Record<string, string>;
   onOpen?: () => void;
 }) {
-  const latest = comments.length > 0 ? comments[comments.length - 1] : undefined;
-  // Distinct authors, latest first (Builder v3 `_margin`), capped at 3.
+  const t = useMessages(timelineMessages);
+  const latest = notes[0];
+  // Distinct authors, newest first (Builder v3 `_margin`), capped at 3.
   const authors: string[] = [];
-  for (let i = comments.length - 1; i >= 0 && authors.length < 3; i--) {
-    const id = comments[i]?.authorId;
-    if (id && !authors.includes(id)) authors.push(id);
+  for (const n of notes) {
+    if (authors.length >= 3) break;
+    if (!authors.includes(n.authorId)) authors.push(n.authorId);
   }
   return (
     <button
@@ -849,6 +992,7 @@ function NotesMarginCell({
           className="line-clamp-2 text-[12px] leading-[1.3] text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)" }}
         >
+          {latest.family && <span className="bf-sr-only">{t.familyNoteScope} </span>}
           {latest.text}
         </span>
       )}
