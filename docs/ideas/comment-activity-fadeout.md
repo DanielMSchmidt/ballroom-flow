@@ -1,8 +1,12 @@
 # Comment activity fade-out in the timeline reading view
 
 *(Created 2026-07-14 as WEP-0007, migrated 2026-07-15 · areas: web, domain, design.
-Presentation-only — no data-shape change; the `docs/design/` prototype for the collapsed
-divider + stale-margin treatment is still owed before implementation.)*
+Presentation-only — no data-shape change. **Design-complete and dispatch-ready as of
+2026-07-15**: the collapsed divider, expand-in-place, and active-only margin derivation are
+prototyped in `docs/design/project/Ballroom Builder v3.dc.html` — thread `f3|2` seeds the
+comeback burst (9 collapsed + 3 active), `f4|1` the quiet >28-day thread that stays fully
+readable with no divider. Execution plan:
+[`comment-activity-fadeout.plan.md`](comment-activity-fadeout.plan.md).)*
 
 ## Summary
 
@@ -114,7 +118,10 @@ the thread empty, as if never coached; under this rule all three are active, no 
 - **Where it applies:** the reading view's per-anchor lists — the thread panel collapses
   stale comments behind one divider row (stale are the older ones, so the divider sits above
   the active tail); the margin cell derives snippet/avatars from active comments only. An
-  all-stale non-empty cell cannot occur (never-empty guarantee).
+  all-stale non-empty cell cannot occur (never-empty guarantee). **Family notes that fold
+  into the same margin cells are exempt** (2026-07-15): co-member family notes ride the
+  projection and can lack an authored-time trail, and the margin has no expander for them —
+  fade-out governs the routine-anchored comment lists only.
 - **Evaluation time:** `now` captured per view mount and passed down; recomputation
   piggybacks on existing memoization — the store's referential-stability guarantees
   ([`docs/system/sync-and-offline.md`](../system/sync-and-offline.md) § Flicker) must be
@@ -122,6 +129,9 @@ the thread empty, as if never coached; under this rule all three are active, no 
 - **Lens split respected:** the read lens renders annotations, the editing lens doesn't —
   fade-out touches the read lens only.
 - New en/de strings for the expander; no casts, no new types.
+- **Design source:** `docs/design/project/Ballroom Builder v3.dc.html` — the counted
+  divider row (collapsed) and its "showing all · collapse older" expanded state in the
+  thread panel, and the margin cells deriving snippet/avatars from active comments only.
 
 ## Test plan & ship gate
 

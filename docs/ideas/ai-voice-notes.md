@@ -1,7 +1,14 @@
 # AI voice notes — speak a note, land it on the right anchor
 
 *(Created 2026-07-14 as WEP-0009, migrated 2026-07-15 · areas: web, worker, contract,
-domain, ops. Design-complete and dispatch-ready; owner-approved for implementation.)*
+domain, ops. Design-complete and dispatch-ready; owner-approved for implementation.
+Re-verified 2026-07-15: the store seams this rides (`createAnnotation`/`createFamilyNote`,
+`mergeLiveFamilyNotes`) exist as described, and the Workers AI model ids check out against
+the current catalog (`@cf/meta/llama-3.3-70b-instruct-fp8-fast` — 24k context, function
+calling, $0.29/$2.25 per M tokens; `@cf/meta/llama-3.1-8b-instruct-fast`). The capture →
+proposal → confirm surfaces are prototyped in
+`docs/design/project/Ballroom Builder v3.dc.html` (voice sheet off the Journal entry
+editor). Execution plan: [`ai-voice-notes.plan.md`](ai-voice-notes.plan.md).)*
 
 ## Summary
 
