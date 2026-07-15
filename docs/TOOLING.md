@@ -66,7 +66,7 @@ allowlist, which keeps every new bypass review-visible.
 | **E2E layer** | Playwright config — 3 projects (`chromium-desktop`, `mobile-chrome`, `mobile-safari`), `vite preview` webServer, `retries:1`, trace-on-retry; `@smoke` tag convention | `apps/web/playwright.config.ts`, `apps/web/e2e/` |
 | **Local dev** | `pnpm dev` runs web + worker together via `concurrently` | root `package.json` |
 | **Git hooks** | **lefthook** pre-commit: Biome on staged files + monorepo typecheck | `lefthook.yml`, root `prepare` script |
-| **CI** | layered PR fast gate (lint+typecheck → unit/property → contract/drift → worker/DO/D1 → component+axe → E2E smoke) | `.github/workflows/ci.yml` |
+| **CI** | layered PR fast gate (lint+typecheck → unit/property → contract/drift → worker/DO/D1 → component+axe → E2E smoke); **docs-only PRs skip it** — a cheap `changes` job detects a diff that is entirely markdown/`docs/` (excluding `docs/seed/`, generator input) and `fast-gate`/`full-e2e` skip at the job level, which satisfies branch-protection required checks, so a docs PR is mergeable in seconds | `.github/workflows/ci.yml` |
 | **Nightly** | full Playwright matrix + Lighthouse-CI stub | `.github/workflows/nightly.yml` |
 | **Scripts** | `dev`, `test:e2e`, `test:e2e:smoke`, `coverage` (root + web), per-package `coverage` | various `package.json` |
 
