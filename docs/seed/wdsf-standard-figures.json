@@ -2795,6 +2795,26 @@
    "wdsfLevel": "bronze"
   },
   {
+   "wdsfRef": "ISTD-T-PROMENADE-LINK",
+   "figureType": "promenade-link",
+   "name": "Promenade Link",
+   "dance": "tango",
+   "scope": "global",
+   "source": "library",
+   "seeAlso": null,
+   "wdsf": {
+    "start": "LF to side (Promenade Position)",
+    "finish": "LF to side small step w/o weight (Closed Position)",
+    "timing": "SQQ",
+    "notes": [
+     "ISTD-syllabus figure (Silver) not named as such in the WDSF syllabus: the WDSF Technique Book charts the same material as PROMENADE LINK TURNED TO RIGHT / TURNED TO LEFT (figs. 15-16). The plain ISTD figure matches fig. 15 (ends Facing Wall, Man 1/8 to R).",
+     "Timing sourced from the ISTD chart at dancecentral.info: S Q Q. https://www.dancecentral.info/ballroom/international-style/tango/promenade-link"
+    ]
+   },
+   "attributes": [],
+   "wdsfLevel": "silver"
+  },
+  {
    "wdsfRef": "2.4.16",
    "figureType": "promenade-link-turned-to-right",
    "name": "Promenade Link Turned to Right",

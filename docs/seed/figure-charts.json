@@ -9432,6 +9432,66 @@
   },
   {
    "dance": "tango",
+   "figureType": "promenade-link",
+   "source": "https://www.dancecentral.info/ballroom/international-style/tango/promenade-link",
+   "corroboration": "Transcribed from the dancecentral.info ISTD chart (Man + Lady); corroborated cell-by-cell against the WDSF Technique Book — Tango (2nd ed., May 2013), fig. 15, p. 89 (PROMENADE LINK TURNED TO RIGHT), which charts the same figure with identical footwork, turn and endings.",
+   "note": "ISTD Silver. Step 2 (both roles): foot action printed as \"HB (foot flat)\" (dancecentral) / \"HB (Flat F)\" (WDSF). Step 3 (leader): placed to side small step without weight. Step 3 (follower): placed to side small step without weight; swivels on LF toward Closed Position between 2 and 3. Exit Facing Wall (leader) reproduced by derivation from entry pointing DW + 1/8 to R, so no exitAlignment is stored (D33).",
+   "steps": [
+    {
+     "position": "promenade",
+     "leader": {
+      "direction": "side",
+      "footwork": "H",
+      "sway": "none"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "H",
+      "sway": "none"
+     }
+    },
+    {
+     "position": "CBMP",
+     "leader": {
+      "direction": "forward",
+      "footwork": "HB",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     },
+     "follower": {
+      "direction": "forward",
+      "footwork": "HB",
+      "sway": "none",
+      "bodyActions": [
+       "CBM"
+      ]
+     }
+    },
+    {
+     "position": "closed",
+     "leader": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none",
+      "turn": "eighth_R"
+     },
+     "follower": {
+      "direction": "side",
+      "footwork": "I/E of B",
+      "sway": "none",
+      "turn": "eighth_L"
+     }
+    }
+   ],
+   "entryAlignment": {
+    "qualifier": "pointing",
+    "direction": "DW"
+   }
+  },
+  {
+   "dance": "tango",
    "figureType": "promenade-link-turned-to-left",
    "source": "WDSF Technique Book — Tango (2nd ed., May 2013), fig. 16, p. 91",
    "corroboration": "Transcribed cell-by-cell from the official WDSF Technique Book chart (Man + Lady, Side 1 + Side 2); page image consulted for ambiguous cells.",

@@ -6144,6 +6144,45 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
+  "tango:promenade-link": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_L",
+      },
+    },
+  ],
   "tango:promenade-link-turned-to-left": [
     {
       position: "promenade",
