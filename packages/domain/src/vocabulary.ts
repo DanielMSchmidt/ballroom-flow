@@ -1,4 +1,4 @@
-// US-003 — ATTRIBUTE_REGISTRY + merge (PLAN §3, D17/D22, Q-D4).
+// US-003 — ATTRIBUTE_REGISTRY + merge (docs/concepts/notation.md § Kinds, D17/D22, Q-D4).
 //
 // The single controlled vocabulary read everywhere: the attribute editor, the
 // lanes view, info-sheet chips, and the Zod layer (US-012). Two tiers, merged:
@@ -73,7 +73,7 @@ export interface RegistryKind {
   required?: boolean;
   /**
    * How a BOTH-lens write derives the follower's value from the leader's
-   * (WEP-0008): "mirror" looks the value up in `mirror` (identity when absent —
+   * (WEP-0008; docs/concepts/notation.md § Role lenses): "mirror" looks the value up in `mirror` (identity when absent —
    * side steps are their own image); "leaderOnly" never derives (footwork —
    * heel/toe work is authored per role, a guessed value would be fabrication);
    * "copy" (the default, incl. custom kinds) stores one shared value for both.
@@ -153,7 +153,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     // the merged "Step*" column, the one slot the notate grid marks required.
     roleAware: true,
     required: true,
-    // WEP-0008: a Both-lens write mirrors the follower's direction. Only the
+    // WEP-0008 (docs/concepts/notation.md § Role lenses): a Both-lens write mirrors the follower's direction. Only the
     // asymmetric pairs are listed; side/close/in_place mirror to themselves, and
     // legacy `diagonal` deliberately so — its forward/back sense is unverified
     // (alignment-derivation-report §D), so it must never be split mechanically.
@@ -258,7 +258,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     },
     // Footwork genuinely differs by role (e.g. heel turns are the follower's).
     roleAware: true,
-    // WEP-0008: never derivable — leader TH pairs with follower "H flat" in the
+    // WEP-0008 (docs/concepts/notation.md § Role lenses): never derivable — leader TH pairs with follower "H flat" in the
     // Back Feather, not with any mechanical transform. A Both-lens write stores
     // the leader's footwork only; the follower's is authored separately.
     bothWrite: "leaderOnly",
@@ -267,7 +267,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
   // NOTE (2026-07-10): the ballet-derived `footPosition` kind (first…fifth) was
   // REMOVED — zero charted uses across the whole catalog, and the moving foot's
   // relative placement is already fully carried by `direction`. The step model is
-  // direction (relative translation) + turn (relative rotation); see PLAN §3.
+  // direction (relative translation) + turn (relative rotation); see docs/concepts/notation.md § Kinds.
   rise: {
     kind: "rise",
     label: "Rise & Fall",
@@ -370,7 +370,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     },
     // Sway mirrors between partners, so it reads differently per role.
     roleAware: true,
-    // WEP-0008: partners face each other, so the same physical lean is the
+    // WEP-0008 (docs/concepts/notation.md § Role lenses): partners face each other, so the same physical lean is the
     // opposite named side per dancer (leader to_R ↔ follower to_L in the WDSF
     // charts). "none" mirrors to itself via the identity fallback.
     bothWrite: "mirror",

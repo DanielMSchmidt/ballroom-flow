@@ -7,7 +7,8 @@ import { type AttributeKind, isAttributeKind } from "../ui";
 /** The leader/follower view lens. */
 export type RoleView = "leader" | "follower";
 
-/** The EDIT lens (WEP-0008): reading stays two-way, editing adds "both" — the
+/** The EDIT lens (docs/concepts/notation.md § Role lenses, WEP-0008): reading
+ *  stays two-way, editing adds "both" — the
  *  lens is the WRITE SCOPE (Both derives the follower; single roles write
  *  role-tagged values). */
 export type EditRoleView = RoleView | "both";

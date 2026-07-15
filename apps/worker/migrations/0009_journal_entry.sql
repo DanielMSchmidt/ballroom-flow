@@ -1,4 +1,5 @@
--- T6 — JournalEntry index (PLAN §2.6, §2.7, §6). The cross-routine projection of a
+-- T6 — JournalEntry index (docs/concepts/annotations.md § Anchors;
+-- docs/system/architecture.md § D1 — the index & projections). The cross-routine projection of a
 -- routine doc's lesson/practice annotations. The routine DO's alarm writes these
 -- (mirroring document_registry projection); the journal read UNIONs them with the
 -- account-scoped figureType lesson/practice rows in figure_type_note_index.

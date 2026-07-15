@@ -4,14 +4,15 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectAbsent, openTwoUsers, openUser } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Fork + inheritance journeys (PLAN §10.2 E2E). Covers:
+// Fork + inheritance journeys (docs/system/testing.md § Layer ownership). Covers:
 //   US-037 — choreo fork → frozen/independent (origin edit does NOT appear);
 //   US-034 — edit your own shared figure → flows into a SECOND routine;
 //   US-035 — copy-on-write: edit a global/non-owned figure → frozen copy created
 //            (its own attributes, no overlay), original untouched, "copied as your
 //            variant" toast.
 //
-// @smoke includes one fork/copy-on-write journey (PLAN §10.3). All journeys in
+// @smoke includes one fork/copy-on-write journey (docs/system/testing.md §
+// Tooling & CI). All journeys in
 // this file are LIVE — the last skipped slice (the US-040 cross-dance
 // figureType-note journey) was unskipped and scripted 2026-07-03.
 // ─────────────────────────────────────────────────────────────────────────
@@ -424,7 +425,8 @@ test.describe("cross-dance figureType notes (US-040)", () => {
     await gotoRoutine(page, "rt_fox_notes");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
     // The family-notes compose surface lives in the READ lens of the figure
-    // detail (PLAN §4.4, 2026-07-10 — notes are reading-context only). Opening an
+    // detail (docs/concepts/notation.md § The figure editor, 2026-07-10 — notes
+    // are reading-context only). Opening an
     // existing routine already lands in Reading view, so tap the figure name
     // there to open its read-only detail (as figure-read-view.spec does).
     await page

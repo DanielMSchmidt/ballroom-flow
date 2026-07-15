@@ -153,7 +153,8 @@ test.describe("@screenshots landing imagery", () => {
     await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: shot("reading.png"), fullPage: true });
 
-    // 6. Figure READ view (PLAN §4.4, design figMode): tapping a figure on the
+    // 6. Figure READ view (docs/concepts/notation.md § The figure editor,
+    //    design figMode): tapping a figure on the
     //    reading programme opens it read-only — the step grid as the content,
     //    the notes surfaces beneath, and the pencil "Edit steps" toggle in the
     //    header as the only route into editing.

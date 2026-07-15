@@ -1,4 +1,4 @@
-// US-039 — routine annotation mutators (PLAN §4.6).
+// US-039 — routine annotation mutators (docs/concepts/annotations.md § The Journal).
 import { describe, expect, it } from "vitest";
 import { makeRoutineDoc } from "./__fixtures__/factories";
 import {

@@ -1,4 +1,5 @@
-// US-013 — Migration ladder (schemaVersion envelope) (PLAN §2.1, §7, §10.2).
+// US-013 — Migration ladder (schemaVersion envelope) (docs/system/architecture.md
+// § Global constraints, § Persistence & the DO lifecycle, docs/system/testing.md).
 //
 // Every document carries a `schemaVersion`. `migrate` walks an ORDERED ladder of
 // per-version upgrade steps from the doc's version up to CURRENT_SCHEMA_VERSION,
@@ -20,7 +21,8 @@
 // adds TWO localized edits here (add a `MIGRATIONS[n]` entry AND bump
 // CURRENT_SCHEMA_VERSION), with no caller changes.
 //
-// WIRED (2026-07-02, v5 milestone step 1, PLAN §7): the DO load path
+// WIRED (2026-07-02, v5 milestone step 1, docs/system/architecture.md § Persistence
+// & the DO lifecycle): the DO load path
 // (`apps/worker/src/doc-do.ts` `loadPersisted`) runs this ladder on every
 // persisted doc via {@link migrateDraft} below and PERSISTS the upgrade as a
 // normal (migration-actor-attributed) change, so an older doc is brought
@@ -81,7 +83,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // v3 → v4 (#63 same-section reorder convergence): assign a fractional-index
   // `sortKey` to every section and to every placement within each section, IN
   // THEIR CURRENT ARRAY ORDER, so reorder becomes a per-field update that
-  // converges under concurrency (PLAN §5.3). Deterministic — every replica that
+  // converges under concurrency (docs/system/architecture.md § Ordering). Deterministic — every replica that
   // migrates the same persisted bytes assigns identical keys, so the backfill
   // itself converges. STRUCTURE-ONLY: only ADD `sortKey` (never rewrite an
   // existing one), never write `undefined` back (Automerge can't store it — so a
@@ -264,9 +266,10 @@ type MutableVersionedDoc = Record<string, unknown>;
  * A doc already at or above `CURRENT_SCHEMA_VERSION` is left COMPLETELY
  * untouched (no field writes) — the caller can therefore tell "nothing to do"
  * apart from "migrated" by checking whether the enclosing `A.change` produced
- * any changes at all (PLAN §7: no empty change, no version downgrade).
+ * any changes at all (docs/system/architecture.md § Persistence & the DO lifecycle:
+ * no empty change, no version downgrade).
  *
- * DETERMINISM (PLAN §5.3): `migrate` is pure and the v3→v4 sortKey backfill
+ * DETERMINISM (docs/system/architecture.md § Ordering): `migrate` is pure and the v3→v4 sortKey backfill
  * assigns keys from array order alone, so two callers who migrate the same
  * starting doc bytes compute byte-identical `after` values — the ladder's
  * existing convergence guarantee carries over unchanged; this function adds

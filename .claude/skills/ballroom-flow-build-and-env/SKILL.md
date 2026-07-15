@@ -42,8 +42,9 @@ Use the `packageManager` pin, not the docs.
   `lefthook.yml`:
   - **pre-commit**: `biome check --write` on staged JS/TS (re-stages autofixes) +
     full-monorepo `pnpm -r typecheck`, in parallel.
-  - **pre-push**: blocks direct pushes to `main` **and** `development` — branch off
-    `development` and open a PR (see **ballroom-flow-change-control**).
+  - **pre-push**: blocks direct pushes to `main` **and** `development` (the latter no
+    longer exists as a branch — deleted 2026-07-05, `lefthook.yml`'s rule just hasn't been
+    trimmed) — branch off `main` and open a PR (see **ballroom-flow-change-control**).
 
 ### The pnpm 11 build-script allowlist trap
 
@@ -84,7 +85,7 @@ order-of-magnitude, not SLA.
 lines, web none) — docs claiming they're "commented out" are stale;
 `pnpm --filter @weavesteps/domain coverage` and `pnpm --filter worker coverage` fail
 below them. CLAUDE.md's "domain ≥95%, worker ≥90%" figures are NOT stale numbers:
-they are the **PLAN §10.3 ratchet TARGETS** — ratchet the config floors *up* toward
+they are the **`docs/system/testing.md` § Tooling & CI ratchet TARGETS** — ratchet the config floors *up* toward
 them as coverage rises, never down. The full per-metric table, measured actuals, and
 ratchet semantics live in **ballroom-flow-validation-and-qa** §6.
 
@@ -219,7 +220,7 @@ re-verify with the one-liner if you suspect drift.
 | # | Doc claim | Reality (verified 2026-07-02) | Re-verify |
 |---|---|---|---|
 | 1 | `docs/DEVELOPMENT.md:10` + CLAUDE.md: **pnpm 10** | Pin is **pnpm 11.9.0** | `grep packageManager package.json` |
-| 2 | `docs/TOOLING.md:56` / `DEVELOPMENT.md:73`: coverage thresholds "commented out"; CLAUDE.md: "uncomment when suites land" | **Armed** at the measured floors: domain 90 lines, worker 88 lines. (CLAUDE.md's 95/90 figures are the PLAN §10.3 ratchet *targets*, not stale claims — full table: **ballroom-flow-validation-and-qa** §6) | `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts` |
+| 2 | `docs/TOOLING.md:56` / `DEVELOPMENT.md:73`: coverage thresholds "commented out"; CLAUDE.md: "uncomment when suites land" | **Armed** at the measured floors: domain 90 lines, worker 88 lines. (CLAUDE.md's 95/90 figures are the `docs/system/testing.md` § Tooling & CI ratchet *targets*, not stale claims — full table: **ballroom-flow-validation-and-qa** §6) | `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts` |
 | 3 | `docs/DEVELOPMENT.md:123`: "migrations dir is empty until M2" | **15 migrations** exist | `ls apps/worker/migrations \| wc -l` |
 | 4 | `DEVELOPMENT.md:78` / `TOOLING.md:40`: E2E webServer is `vite preview`, "build first" | webServer is **`e2e/serve.sh`** — self-building, real wrangler-dev backend | `grep -n serve.sh apps/web/playwright.config.ts` |
 | 5 | `docs/TEST-MAP.md:11`: domain 154 / web 114 / worker 101 tests | **245 / 355 / 180** (as of 2026-07-02, HEAD `759b3a8`) | `pnpm test` and read the summaries |

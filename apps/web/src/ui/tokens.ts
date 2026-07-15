@@ -8,7 +8,8 @@
  * styles/tokens.css; here we only name them.
  */
 
-/** The standard attribute-kind ids with a token color family (PLAN §3;
+/** The standard attribute-kind ids with a token color family
+ *  (docs/concepts/notation.md § Kinds;
  *  2026-06-28 parity adds `direction`, renames `step`→`footwork`). User-defined
  *  kinds extend the registry at runtime; the UI must not hardcode this list for
  *  rendering — it's here only to type the standard palette. */
@@ -39,7 +40,8 @@ export function kindVar(kind: AttributeKind, role: "base" | "ink" | "tint" | "bo
   return `var(--bf-kind-${kind}${suffix})`;
 }
 
-/** The two figure scopes — by content divergence (PLAN §4.3, DESIGN-PRINCIPLES #11):
+/** The two figure scopes — by content divergence (docs/concepts/figures.md
+ *  § The custom badge, DESIGN-PRINCIPLES #11):
  *  - `library` — matches the app-owned catalog (global or account copy that still agrees)
  *  - `custom`  — diverged from or unrelated to the catalog (user's own edits) */
 export const FIGURE_SCOPES = ["library", "custom"] as const;

@@ -1,4 +1,4 @@
-// US-004 — Float-count timing (PLAN §2.5, §9 1.4, Q-D3).
+// US-004 — Float-count timing (docs/concepts/notation.md § Timing, Q-D3).
 //
 // Attribute counts are floats relative to a figure's start. These helpers render
 // them in conventional ballroom notation and locate them within the dance's

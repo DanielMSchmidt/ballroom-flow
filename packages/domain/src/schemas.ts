@@ -1,4 +1,5 @@
-// US-012 — Zod schemas: lenient read / strict write (PLAN §3, D7, §10.2).
+// US-012 — Zod schemas: lenient read / strict write (docs/concepts/notation.md
+// § Kinds, D7, docs/system/testing.md).
 //
 // One vocabulary, two postures (D7 "forward-compatible reads, strict writes"):
 //   • READ is LENIENT — a future/unknown value survives (no data loss); aliases
@@ -50,7 +51,7 @@ export const zAnchor: z.ZodType<Anchor> = z
       type: z.literal("figureType"),
       figureType: z.string(),
       danceScope: z.union([z.custom<DanceId>(isDanceId), z.literal("all")]),
-      // WEP-0004: a timed family note. Optional + additive — the whole v1
+      // WEP-0004 (docs/concepts/annotations.md § Anchors): a timed family note. Optional + additive — the whole v1
       // corpus keeps parsing. The superRefine below carries the invariant.
       count: z.number().optional(),
       role: z.enum(["leader", "follower"]).nullish(),

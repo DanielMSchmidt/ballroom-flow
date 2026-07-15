@@ -7,7 +7,7 @@
 -- with a per-user BOOKMARK (`library_entry`, migration 0015 — a reference, never a
 -- copy), so the index no longer guards its original purpose.
 --
--- Meanwhile ⟳v5 variant-on-edit (PLAN §5.2) creates an INDEPENDENT account-figure
+-- Meanwhile ⟳v5 variant-on-edit (docs/concepts/figures.md § Variants) creates an INDEPENDENT account-figure
 -- variant every time a user re-times a placed CATALOG figure — each stamped with
 -- `forkedFromRef = globalFigureRef(dance, figureType)` (the LIVE base link). So the
 -- SECOND edit of the same base by the same user (e.g. re-timing "Running Spin Turn"

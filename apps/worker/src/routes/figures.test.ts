@@ -427,7 +427,8 @@ async function mineDocRefs(headers: Record<string, string>): Promise<string[]> {
 }
 
 /**
- * WEP-0002 phase 3: save/un-save now write THROUGH the user's account DO, and the
+ * WEP-0002 phase 3 (docs/system/architecture.md § D1 — the index & projections):
+ * save/un-save now write THROUGH the user's account DO, and the
  * DO alarm is the single writer of the `library_entry` D1 projection `/mine` reads.
  * Drive that alarm so a test can assert the projected rows synchronously (in prod
  * the alarm fires shortly after the edit off the request path).
@@ -648,7 +649,7 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
   });
 
   it("bookmarking works via the ROUTINE CASCADE — a co-member can bookmark a figure they don't own", async () => {
-    // PLAN §5.1 cascade: a routine member's role extends to the figures that
+    // docs/concepts/collaboration.md § Roles cascade: a routine member's role extends to the figures that
     // routine references — resolveEffectiveRole resolves non-null for the
     // co-member too, so they CAN bookmark a partner's shared-choreo figure.
     const owner = await authedContext({ keypair: kp, userId: "u_co1", docRef: "x", role: null });

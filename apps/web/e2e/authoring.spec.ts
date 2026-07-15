@@ -3,7 +3,8 @@ import { gotoRoutine, seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Core authoring journey (PLAN §10.2 E2E: "full authoring"). Runs against the
+// Core authoring journey (docs/system/testing.md § Layer ownership: "full
+// authoring"). Runs against the
 // REAL worker (D1 + per-document Durable Objects + the fail-closed auth/sync
 // boundary) via the #191 E2E harness — no live Clerk, but a real test JWT and
 // the real permission boundary.

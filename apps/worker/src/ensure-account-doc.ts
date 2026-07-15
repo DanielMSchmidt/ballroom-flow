@@ -1,4 +1,5 @@
-// WEP-0002 — lazily mint a user's ACCOUNT doc as a live Durable Object.
+// WEP-0002 (docs/system/architecture.md § D1 — the index & projections) —
+// lazily mint a user's ACCOUNT doc as a live Durable Object.
 //
 // Mirrors the `ensureGlobalFigures` self-healing-seed precedent: idempotent, gated
 // on the registry row's absence, seeding the DO BEFORE registering it (mint +

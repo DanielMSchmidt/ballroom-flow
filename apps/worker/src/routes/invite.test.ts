@@ -6,7 +6,7 @@ import { applyMigrations, roleFor, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-023 — Invite by link (issue + redeem) [M3, user]
-// PLAN §5.5, §4.7, §10.2: "invite lifecycle". An editor issues a signed expiring
+// docs/concepts/collaboration.md § Invites; docs/system/testing.md: "invite lifecycle". An editor issues a signed expiring
 // token (docRef+role+expiry); redeeming creates a Membership; expired/redeemed/
 // non-editor rejected.
 //

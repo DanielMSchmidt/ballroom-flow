@@ -52,8 +52,9 @@ function appendValues(list: string[], tokens: string[]): string[] {
  * calls onCreate (an upsert, so it doubles as the edit save).
  *
  * Beyond the core shape it also captures the data-driven RegistryKind fields
- * (#111 / PLAN §3): a one-line `description` + per-value definitions (which power
- * the registry-derived info-sheet, §4.9), and `roleAware`/`required` flags (which
+ * (#111 / docs/concepts/notation.md § Kinds): a one-line `description` + per-value
+ * definitions (which power the registry-derived info-sheet, docs/concepts/collaboration.md),
+ * and `roleAware`/`required` flags (which
  * drive Profile's attribute-types manager affordances, frame 1.17). All optional
  * — a kind left blank simply omits them and degrades gracefully.
  *

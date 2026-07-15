@@ -119,7 +119,7 @@ on stderr is harmless (Node 22).
   `SEARCH <table> USING INTEGER PRIMARY KEY` = PK lookup, good.
   `SCAN <table>` = full-table scan, **fail** — unless allow-listed via `opts.allow` for a tiny
   reference table.
-- **Why it's a hard gate:** PLAN.md §7 NFR — "Index every D1 query (EXPLAIN in CI)". Beyond
+- **Why it's a hard gate:** `docs/system/architecture.md` § Non-functional requirements — "Index every D1 query (EXPLAIN in CI)". Beyond
   latency, Cloudflare **bills D1 by rows read**: a SCAN reads every row in the table on every
   request, so an unindexed hot query's cost grows with your data even when it returns one row.
 - **Ad-hoc check for a query you're designing:** use `explain-query.mjs` above; then encode the
@@ -142,7 +142,7 @@ The per-workspace threshold table and measured actuals are single-homed in
 
 Semantics: the config numbers are **armed ratchet floors, not targets** — set at the measured
 floor so coverage can't silently regress (a drop below any number fails `pnpm coverage`, which
-CI runs for domain and worker). PLAN.md §10.3 targets are higher (domain ≥95, worker ≥90);
+CI runs for domain and worker). `docs/system/testing.md` § Tooling & CI targets are higher (domain ≥95, worker ≥90);
 ratchet the config numbers *up* as branches get covered, never down. The worker "All files"
 number is permanently depressed by `src/routes/test-seed.ts` (E2E-only fixture route exercised
 by Playwright, not vitest) — a constant drag, not a regression.
@@ -241,7 +241,7 @@ precache  6 entries (3596.13 KiB)
 ```
 
 Interpretation: the Automerge WASM dominates everything and its **~920 KiB gzip** figure is
-the M0.5-measured baseline recorded in PLAN.md §7 (~line 373: worker bundle "~920 KiB gzipped
+the M0.5-measured baseline recorded in `docs/system/architecture.md` § Non-functional requirements (worker bundle "~920 KiB gzipped
 … well under the 10 MB paid limit"). The `(!) Some chunks are larger than 500 kB` Vite warning
 is expected — do not "fix" it by splitting the WASM. What IS a signal: the *app JS* gzip
 (150 KiB baseline) creeping up, or the PWA precache total growing — compare against these
@@ -300,7 +300,7 @@ grep -n "COMPACT_THRESHOLD" apps/worker/src/doc-do.ts                     # comp
 grep -n "thresholds" -A5 packages/domain/vitest.config.ts apps/worker/vitest.config.ts  # coverage floors
 grep -n "reloadForTest\|debugChangeRowCount\|buildChangeForTest\|runAlarmForTest\|debugPersistedSize" apps/worker/src/doc-do.ts
 grep -n "retries\|trace\|workers:" apps/web/playwright.config.ts          # trace/retry/serialization config
-grep -n "920 KiB" docs/PLAN.md                                            # WASM gzip baseline claim
+grep -n "920 KiB" docs/system/architecture.md                             # WASM gzip baseline claim
 node scripts/gen-library.mjs && node scripts/gen-figure-charts.mjs && git diff --stat  # generator determinism
 pnpm exec playwright test --list --grep @smoke 2>/dev/null | tail -1      # smoke count (from apps/web)
 ```

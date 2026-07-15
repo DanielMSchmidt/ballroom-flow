@@ -111,22 +111,24 @@ the document (or `GET /api/routines/<docRef>/snapshot` with the admin token).
 
 ---
 
-## Roll back the account-doc live-DO wiring (WEP-0002)
+## Roll back the account-doc live-DO wiring (shipped 2026-07-15 as WEP-0002 — see git history)
 
-The account doc (`account:<userId>`) went live as a per-user Durable Object with WEP-0002
-(2026-07-15): family notes + library bookmarks are now CRDT edits to that doc, and the D1
-tables `figure_type_note_index` + `library_entry` are **alarm-written projections** of it.
-Because those projections are **full-fidelity** (every note/bookmark the doc holds is
-projected, tombstones included), **reverting the deploy is safe**: the pre-WEP-0002 code reads
-those same D1 rows as truth, so a rollback lands on D1-as-truth **with the current data** — no
-migration to run, nothing lost at the moment of rollback.
+The account doc (`account:<userId>`) went live as a per-user Durable Object (2026-07-15) —
+see `docs/system/architecture.md` § D1 — the index & projections (and the account-doc entry
+under § The shape: a graph of Automerge documents): family notes + library bookmarks are now
+CRDT edits to that doc, and the D1 tables `figure_type_note_index` + `library_entry` are
+**alarm-written projections** of it. Because those projections are **full-fidelity** (every
+note/bookmark the doc holds is projected, tombstones included), **reverting the deploy is
+safe**: the pre-migration code reads those same D1 rows as truth, so a rollback lands on
+D1-as-truth **with the current data** — no migration to run, nothing lost at the moment of
+rollback.
 
 **What the rollback window costs, and the one decision it forces:**
 
 - During the rollback window the app writes D1 directly again (the old path). The **account
   docs go stale** — a bookmark or family note added while rolled back lands in D1 but not in
   the user's doc.
-- On a re-forward (redeploying WEP-0002), those stale docs are **not re-imported over**:
+- On a re-forward (redeploying the account-doc live-DO wiring), those stale docs are **not re-imported over**:
   `ensureAccountDoc`'s import fires **only when the registry row is absent**, and these users
   already have a `type='account'` registry row from the first forward. So the doc — not the
   newer D1 rows — becomes truth again, and any edits made during the rollback window are

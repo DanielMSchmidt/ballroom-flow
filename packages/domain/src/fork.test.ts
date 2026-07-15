@@ -20,7 +20,8 @@ function historyLength(doc: unknown): number {
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-007 — Choreo fork (clone) + US-008 — Copy-on-write (auto-variant)
-// [M1, system/developer]. PLAN §2.4, §5.2, §10.2 invariant: "fork clone +
+// [M1, system/developer]. docs/concepts/choreography.md § Forking, docs/concepts/figures.md
+// § Variants, docs/system/testing.md invariant: "fork clone +
 // copy-on-write (new ids, lineage, placement re-point, no disturbance to the
 // shared base)".
 //
@@ -48,7 +49,8 @@ describe("US-007 Choreo fork (clone)", () => {
     // Intent: AC-1 "retaining shared history" — pin it directly. cloneRoutine
     // uses A.clone (keeps change-ancestry), NOT A.from(materialized) (which would
     // sever it). Shared ancestry is what makes a future explicit merge-back
-    // possible (PLAN §5.2 / §1 "lineage so changes can merge back"); a refactor
+    // possible (docs/concepts/figures.md § Variants / docs/concepts/collaboration.md
+    // "lineage so changes can merge back"); a refactor
     // that quietly rebuilds the doc would break that, so assert it self-evidently.
     const { buildRoutineDoc, cloneRoutine } = await importDomain();
     const origin = buildRoutineDoc(SAMPLE_ROUTINE);
@@ -226,7 +228,7 @@ describe("US-008 Copy-on-write (frozen copy)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02).
+// ⟳v5 — live overlay variants (docs/concepts/figures.md § Variants, 2026-07-02).
 // The Passing Tumble Turn scenario is the canonical spec: a variant that
 // re-choreographs its last beats keeps them exactly as authored while new
 // catalog values keep appearing on its untouched beats.

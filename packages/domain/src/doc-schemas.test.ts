@@ -12,7 +12,8 @@ import { asInvalid } from "./__fixtures__/invalid";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-005 — Routine + figure document schemas [M1, system/developer]
-// PLAN §2.2–2.6, §10.2: typed Automerge doc builders/readers; soft-delete is a
+// docs/concepts/figures.md, docs/concepts/choreography.md, docs/concepts/notation.md,
+// docs/concepts/annotations.md, docs/system/testing.md: typed Automerge doc builders/readers; soft-delete is a
 // mergeable deletedAt flip (never a hard removal).
 //
 // Product `doc-routine.ts` / `doc-figure.ts` (M1 §9 1.5) don't exist yet → the

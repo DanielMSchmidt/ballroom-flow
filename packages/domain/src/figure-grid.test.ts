@@ -1,4 +1,4 @@
-// US-004 / US-028 — bars-driven figure timing grid (PLAN §2.5, §4.4).
+// US-004 / US-028 — bars-driven figure timing grid (docs/concepts/notation.md § Figure length, § The figure editor).
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
 import {

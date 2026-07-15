@@ -10,7 +10,7 @@
 const en = {
   // AttributeEditor (frame 1.12)
   attributesForCount: (n: number) => `Attributes for count ${n}`,
-  // WEP-0008 scope banner — the STEPS FOR lens is the write scope.
+  // docs/concepts/notation.md § Role lenses scope banner — the STEPS FOR lens is the write scope.
   writingForBoth: "Writing for · Both",
   writingForBothNote: "follower gets the mirrored direction & sway · footwork stays the leader's",
   writingForLeader: "Writing for · Leader",

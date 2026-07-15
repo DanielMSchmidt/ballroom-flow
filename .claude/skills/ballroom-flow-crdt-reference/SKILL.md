@@ -98,7 +98,7 @@ fallback + `ensureSortKeys` remain as read-side defence.
 
 ---
 
-## 5. Per-beat overlay variants (`packages/domain/src/fork.ts`, PLAN §5.2, ⟳v5)
+## 5. Per-beat overlay variants (`packages/domain/src/fork.ts`, `docs/concepts/figures.md` § Variants, ⟳v5)
 
 v5 model (2026-07-02): figures are **live wherever referenced**. A non-admin editing a **global**
 (catalog) figure spawns a **variant** — an account figure whose `baseFigureRef` is a *live* link.
@@ -118,7 +118,7 @@ slots e/&/a; `beatOf = Math.floor(count)`.
 | `copyFigureForFork(figure, byUser)` :237 | Choreo fork: account figures are copied so the fork is independent of the ORIGIN — but **a variant is copied AS a variant** (same `baseFigureRef`, same owned beats), so catalog flow-in continues. Global refs are NOT copied — the fork keeps them live. |
 | `copyOnWrite` :72 | **LEGACY** pre-v5 frozen-copy path, retained read-only for existing data. New divergence goes through `spawnVariant`. |
 
-**v4 back-compat (no data migration, PLAN §9):** an existing v4 frozen copy has content on every
+**v4 back-compat (no data migration, `docs/README.md` roadmap):** an existing v4 frozen copy has content on every
 beat it uses, so it *owns every beat it has content on* — `resolveFigure` returns exactly its
 current timeline. Its `baseFigureRef` becoming live changes nothing until the catalog adds values
 on beats the copy never touched.
@@ -138,7 +138,7 @@ global refs live.
 
 ---
 
-## 6. History-based per-user undo (`packages/domain/src/undo.ts`, PLAN §5.4, D14)
+## 6. History-based per-user undo (`packages/domain/src/undo.ts`, `docs/system/architecture.md` § Undo, D14)
 
 Automerge has no per-user UndoManager. Undo here = find the user's own last change in history,
 compute its inverse, apply the inverse as a **new, mergeable change**. No op-log, no external
@@ -294,7 +294,10 @@ Authored 2026-07-02 against repo HEAD `70eed7e`; refreshed at `3693ff6`; **refre
 `development`. Verified directly against:
 `packages/domain/src/{fork,order,undo,doc-internal,migrations}.ts`, `packages/domain/src/__fixtures__/convergence.ts`,
 `apps/worker/src/doc-do.ts`, `apps/worker/src/index.ts` (connect route), `apps/web/src/store/{doc-connection,routine}.ts`,
-`packages/contract/src/index.ts`, `docs/DEVELOPMENT.md`, `docs/PLAN.md` §5.2/§5.4/§9/D10-D14,
+`packages/contract/src/index.ts`, `docs/DEVELOPMENT.md`, `docs/PLAN.md` §5.2/§5.4/§9/D10-D14
+at the time of writing — since the 2026-07-15 docs restructure the equivalent material lives
+in `docs/concepts/figures.md` § Variants, `docs/system/architecture.md` § Undo, `docs/README.md`
+(roadmap), and `docs/system/sync-and-offline.md` (D10),
 `docs/spike/SPIKE-FINDINGS.md`. Incident hashes (38dfba7, 3725ec9, 99fa1b9, 903d109, PR
 #107/#132–#137/#139) from git history; "#63/#161/#202" are the repo's internal ledger numbers
 (they do NOT resolve on GitHub). PR #140 was closed as superseded by #139.
@@ -306,7 +309,7 @@ grep -n "SYNC_CAUGHT_UP\|SYNC_FRAME_\|SYNC_RESYNC" packages/contract/src/index.t
 grep -n "this.doc = fresh" apps/worker/src/doc-do.ts               # the #139 adopt still in place
 grep -n "COMPACT_THRESHOLD" apps/worker/src/doc-do.ts              # compaction bound
 grep -n "resolveVariantOverlay" apps/web/src/store/routine.ts      # store overlay resolution live
-grep -n "☐" docs/PLAN.md | head                                    # remaining open box(es)
+grep -n "roadmap\|Roadmap" docs/README.md                          # remaining open item(s) — no more §9 checkboxes
 grep -n "ballroom:undo" packages/domain/src/undo.ts                # undo message tags
 grep -n "never ends in the zero digit\|ZERO" packages/domain/src/order.ts
 ```

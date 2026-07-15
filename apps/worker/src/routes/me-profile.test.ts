@@ -9,7 +9,7 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // US-019 — Clerk sign-in + onboarding (server side) [M3, user]
 // US-053 — Account / profile + plan status [M3, user]
 //
-// PLAN §4.0, §4.8, D9. The NEGATIVE auth path (missing/invalid → 401) is already
+// docs/concepts/collaboration.md, D9. The NEGATIVE auth path (missing/invalid → 401) is already
 // covered in auth/index.test.ts. Here we cover the POSITIVE networkless-verify
 // path + onboarding/profile persistence + plan/owned-count.
 //

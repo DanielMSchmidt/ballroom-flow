@@ -1,4 +1,5 @@
-// US-053 — Account / profile + plan status. PLAN §4.8. Lets a user set their
+// US-053 — Account / profile + plan status. docs/concepts/collaboration.md.
+// Lets a user set their
 // identity (display name + note colour — the same call as first-run onboarding,
 // POST /api/onboarding), see their plan + owned-routine count against the cap,
 // and sign out. Presentational `Profile` (data + handlers as props, the §3 seam)
@@ -30,7 +31,8 @@ import {
 import { AttributeTypesManager } from "./AttributeTypesManager";
 
 /**
- * The six identity-colour swatches (PLAN §4.8 — colour is consistent per user).
+ * The six identity-colour swatches (docs/concepts/collaboration.md — colour is
+ * consistent per user).
  * Each pairs the design *token* (a CSS variable, used to paint the swatch so the
  * UI never hardcodes a palette hex) with the canonical hex the onboarding
  * endpoint persists — the server validates identityColor as `^#…` and authorship

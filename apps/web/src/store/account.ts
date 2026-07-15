@@ -1,9 +1,10 @@
-// WEP-0002 (phase 4) — the account `DocConnection` seam.
+// WEP-0002 (phase 4) — docs/system/architecture.md § D1 — the index & projections
+// — the account `DocConnection` seam.
 //
 // The per-user ACCOUNT doc (`account:<userId>`) is the CRDT home for the library
 // BOOKMARK set (`libraryFigureRefs`) and the user's OWN figureType family notes.
 // This store opens it through the SAME `DocConnection` machinery as a routine doc
-// (per WEP-0002 "Write-path inversion"), so:
+// (per the account-doc "write-path inversion"), so:
 //
 //  • SELF reads live from the doc — the Library bookmark set and the user's own
 //    family notes come from here, instantly and offline (no /api/figures/mine
@@ -124,7 +125,7 @@ export interface OpenAccountOptions {
   getToken?: TokenProvider;
   /** Auto-reconnect policy (default: the DocConnection capped backoff). */
   reconnect?: ReconnectPolicy;
-  /** Zombie-socket heartbeat (WEP-0006; default the DocConnection policy). */
+  /** Zombie-socket heartbeat (docs/system/sync-and-offline.md § Heartbeat; default the DocConnection policy). */
   heartbeat?: HeartbeatPolicy | false;
   /** Schedule/cancel a delayed callback — injected for tests. */
   schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
@@ -134,8 +135,8 @@ export interface OpenAccountOptions {
   storage?: DocStorage | null;
 }
 
-// In an E2E build the factory is wrapped by the zombie seam (WEP-0006 ship gate);
-// in every real build `e2eZombifiableSocketFactory` is a pass-through.
+// In an E2E build the factory is wrapped by the zombie seam (docs/system/sync-and-offline.md
+// § Heartbeat ship gate); in every real build `e2eZombifiableSocketFactory` is a pass-through.
 const defaultSocketFactory: SocketFactory = e2eZombifiableSocketFactory(
   (url, protocols) => new WebSocket(url, protocols),
 );

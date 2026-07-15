@@ -50,7 +50,7 @@ export async function loadRoutineOptions(
 /** A routine's placed figures as link-picker options (from its REST snapshot).
  *  Each carries its distinct sorted counts AND its live resolved attributes so
  *  the picker's placement grid renders the figure like the detail view does
- *  (WEP-0004): a v5 VARIANT resolves against its live base (`resolveFigure`),
+ *  (docs/concepts/annotations.md § Anchors): a v5 VARIANT resolves against its live base (`resolveFigure`),
  *  exactly as the reading view renders it. */
 export async function loadRoutineFigureOptions(
   routineId: string,
@@ -323,7 +323,7 @@ export function applyJournalFilter(entries: JournalEntry[], filter: JournalFilte
 }
 
 /** The display label for a link chip (the server pre-resolves `label`; fallback
- *  otherwise). A TIMED figureType anchor (WEP-0004) appends its pinned count. */
+ *  otherwise). A TIMED figureType anchor (docs/concepts/annotations.md § Anchors) appends its pinned count. */
 export function chipLabel(anchor: JournalAnchor): string {
   const t = pickMessages(journalMessages);
   if (anchor.label) return anchor.label;
@@ -354,5 +354,6 @@ export function relativeDate(createdAt: number, now: number = Date.now()): strin
   return new Date(createdAt).toLocaleDateString(dateLocale, { day: "numeric", month: "short" });
 }
 
-// (The catalog-family picker path — `figureFamilies()` — was removed by
-// WEP-0004: every journal link now starts from one of the user's choreos.)
+// (The catalog-family picker path — `figureFamilies()` — was removed
+// (docs/concepts/annotations.md § The Journal): every journal link now starts
+// from one of the user's choreos.)

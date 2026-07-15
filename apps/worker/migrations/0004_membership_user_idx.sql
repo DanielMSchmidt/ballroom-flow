@@ -1,4 +1,5 @@
--- US-025 — index membership by user (PLAN §7 "index every D1 query").
+-- US-025 — index membership by user (docs/system/architecture.md § Non-functional
+-- requirements — "index every D1 query").
 --
 -- The Choreo list needs the routines SHARED IN to a user: the membership rows
 -- WHERE userId = ? AND deletedAt IS NULL. The existing membership indexes lead

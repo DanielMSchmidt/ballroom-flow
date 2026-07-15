@@ -364,8 +364,8 @@ reach for during triage:
   trace. E2E runs serialized (`workers: 1`, shared D1) — don't parallelize it to "speed up
   debugging".
 
-When the fix is scoped: TDD + PR-into-`development` rules are in
-**ballroom-flow-change-control**; keep `docs/PLAN.md` in sync in the same change.
+When the fix is scoped: TDD + PR-into-`main` rules are in
+**ballroom-flow-change-control**; keep `docs/concepts/` + `docs/system/` in sync in the same change.
 
 ## Provenance and maintenance
 

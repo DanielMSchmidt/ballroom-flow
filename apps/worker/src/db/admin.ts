@@ -1,4 +1,6 @@
-// D31 (⟳v5) — the admin seam (PLAN §5.2, §2.7, D31). Two tiny reads over the
+// D31 (⟳v5) — the admin seam (docs/concepts/figures.md § Variants;
+// docs/system/architecture.md § D1 — the index & projections;
+// docs/concepts/collaboration.md § Who uses this; D31). Two tiny reads over the
 // `users` row (migration 0014): whether a user is an admin, and the owned-routine
 // cap that applies to them (the per-user override before the plan default).
 //
@@ -33,7 +35,8 @@ export interface RoutineCap {
 }
 
 /**
- * The owned-routine cap the quota seam enforces for `userId` (PLAN §1.6/D31). A
+ * The owned-routine cap the quota seam enforces for `userId`
+ * (docs/concepts/collaboration.md § Plans, quotas & identity, D31). A
  * per-user `routineCapOverride` (an admin grant) wins over the plan default; a
  * free account with no override falls back to FREE_ROUTINE_CAP; a pro account is
  * unbounded (POSITIVE_INFINITY — `owned >= ∞` is never true, so no upsell). An

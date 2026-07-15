@@ -1,4 +1,4 @@
-// Read/edit split facade — role-aware hybrid (PLAN §6, extends D10).
+// Read/edit split facade — role-aware hybrid (docs/system/sync-and-offline.md § The read/edit split).
 //
 // The cost we cut is the per-document WebSocket fan-out for the common READ path,
 // WITHOUT giving up live collaboration (US-015):

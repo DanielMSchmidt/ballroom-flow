@@ -1,4 +1,5 @@
--- US-020 — per-document membership (PLAN §5.1, §2.7).
+-- US-020 — per-document membership (docs/concepts/collaboration.md § Roles;
+-- docs/system/architecture.md § D1 — the index & projections).
 --
 -- D1 is a pure index — this table records WHO may act on a document and at what
 -- role. Permission is enforced per document at the sync boundary (US-021) by

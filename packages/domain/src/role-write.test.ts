@@ -10,7 +10,7 @@ import {
 import { ATTRIBUTE_REGISTRY, type RegistryKind } from "./vocabulary";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0008 — role-scoped step editing with a Both write mode.
+// WEP-0008 (docs/concepts/notation.md § Role lenses) — role-scoped step editing with a Both write mode.
 // A Both write stores the leader's value verbatim and DERIVES the follower's:
 // direction/sway mirror (forward↔back, to_L↔to_R), footwork is leaderOnly
 // (never derivable — heel/toe work is authored per role), every other kind

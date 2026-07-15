@@ -92,8 +92,9 @@ describe("relativeDate", () => {
   });
 });
 
-// (The `figureFamilies` catalog helper was removed by WEP-0004 — every journal
-// link now starts from one of the user's choreos, so there is no catalog step.)
+// (The `figureFamilies` catalog helper was removed (docs/concepts/annotations.md
+// § The Journal) — every journal link now starts from one of the user's
+// choreos, so there is no catalog step.)
 
 describe("mergeLiveFamilyNotes (WEP-0002 read-your-writes)", () => {
   const liveNote = (over: Partial<OwnFamilyNote>): OwnFamilyNote => ({

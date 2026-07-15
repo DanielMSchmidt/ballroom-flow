@@ -4,8 +4,8 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Two live clients converge on a routine (PLAN §10.2 E2E: "two live contexts
-// converge on a routine"). Covers US-015 (live WS sync) + US-052 (cross-browser).
+// Two live clients converge on a routine (docs/system/testing.md § Layer
+// ownership: "two live contexts converge on a routine"). Covers US-015 (live WS sync) + US-052 (cross-browser).
 //
 // This is the FE-4 ship gate: the DO + Hibernatable-WS + Automerge sync is unit-
 // proven at the DO level (doc-do.test), and the client `DocConnection` speaks the

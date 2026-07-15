@@ -1,4 +1,5 @@
-// WEP-0002 (phase 4) — the React hook seam over the account `DocConnection`.
+// WEP-0002 (phase 4) — docs/system/architecture.md § D1 — the index & projections
+// — the React hook seam over the account `DocConnection`.
 //
 // `useAccount()` opens the current user's account doc (`account:<userId>`)
 // LAZILY (D10 — no eager socket per session): the connection is created on the

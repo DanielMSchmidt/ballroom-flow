@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 // Unique Durable Object id helper — MANDATORY for the worker layer.
 //
-// WHY (M0.5 finding, PLAN §10.3, DEVELOPMENT.md "Per-test DO-id convention"):
+// WHY (M0.5 finding, docs/system/testing.md, DEVELOPMENT.md "Per-test DO-id convention"):
 //   vitest-pool-workers runs with `isolatedStorage: false` because SQLite-backed
 //   DOs break its isolated-storage teardown. Storage is therefore NOT reset
 //   between tests, so EVERY test must address a UNIQUE DO id/name or state leaks

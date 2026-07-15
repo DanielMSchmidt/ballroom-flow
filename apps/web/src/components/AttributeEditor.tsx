@@ -1,5 +1,5 @@
-// US-028 / US-029 / WEP-0008 — the attribute editor for ONE count on a figure
-// timeline.
+// US-028 / US-029 / docs/concepts/notation.md § Role lenses (WEP-0008) — the
+// attribute editor for ONE count on a figure timeline.
 //
 // Registry-driven (US-003): the sections + value options render from the merged
 // ATTRIBUTE_REGISTRY — attribute kinds are DATA, not code. Single-cardinality
@@ -9,7 +9,8 @@
 // Dance scoping (Tango hides rise) is US-029; honored here via appliesToDances
 // so it's correct from the start.
 //
-// The ROLE lens is the WRITE SCOPE (WEP-0008) — there is no per-attribute roles
+// The ROLE lens is the WRITE SCOPE (docs/concepts/notation.md § Role lenses,
+// WEP-0008) — there is no per-attribute roles
 // control. Under "both", one edit notates both dancers: the leader's value
 // verbatim plus the follower's DERIVED per the kind's `bothWrite` registry
 // entry (direction/sway mirror, footwork stays the leader's, everything else
@@ -49,7 +50,8 @@ export interface AttributeEditorProps {
   role: MembershipRole;
   /** The dance, to scope the registry (e.g. Tango omits rise — US-029). */
   dance?: DanceId;
-  /** The role lens = the WRITE SCOPE (WEP-0008). Defaults to "both". */
+  /** The role lens = the WRITE SCOPE (docs/concepts/notation.md § Role lenses,
+   *  WEP-0008). Defaults to "both". */
   view?: EditRoleView;
   /** This count's current attributes (controlled). */
   value?: Attribute[];
@@ -226,8 +228,8 @@ export function AttributeEditor({
     const suggestions = kind.values ?? [];
     // Selected values not in the suggestion list (e.g. a free-text footwork)
     // still render as chips so a custom value is visible + clearable. Both the
-    // read-only and editable renders scope to the active lens (WEP-0008 — no
-    // cross-role leak).
+    // read-only and editable renders scope to the active lens
+    // (docs/concepts/notation.md § Role lenses, WEP-0008 — no cross-role leak).
     const customSelected = live
       .filter((a) => a.kind === kind.kind && visible(a))
       .map((a) => normalizeValue(kind.kind, String(a.value)))
@@ -294,7 +296,8 @@ export function AttributeEditor({
   const primary = focused ? kinds : kinds.filter((k) => IDENTITY.has(k.kind));
   const secondary = focused ? [] : kinds.filter((k) => !IDENTITY.has(k.kind));
 
-  // The scope banner (WEP-0008, design Builder v3): states which side(s) this
+  // The scope banner (docs/concepts/notation.md § Role lenses, WEP-0008, design
+  // Builder v3): states which side(s) this
   // edit writes — the lens replaces the old per-attribute ROLES toggle.
   const scopeBanner =
     view === "both"

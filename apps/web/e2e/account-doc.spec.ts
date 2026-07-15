@@ -6,7 +6,8 @@ import { installOfflineControl } from "./support/offline";
 import { closeUsers, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0002 ship gate — the account doc, live. The per-user account doc
+// Account-doc live-DO ship gate (formerly WEP-0002; see
+// docs/system/architecture.md § D1 — the index & projections). The per-user account doc
 // (`account:<userId>`) is now a real per-document Durable Object, exactly like
 // a routine or figure doc: family notes + library bookmarks are CRDT edits to
 // an already-hydrated doc, so they inherit the shipped §11.2 offline machinery
@@ -25,7 +26,8 @@ import { closeUsers, openTwoUsers } from "./support/two-users";
 //     on its matching figure; a non-member does not (Q-FIGNOTE-VIS option 2 —
 //     the co-membership gate, never a peer reading another user's account doc).
 //
-// @smoke — this journey is WEP-0002's PR gate (delivery model, CLAUDE.md §6).
+// @smoke — this journey is the account-doc ship gate's PR gate (delivery
+// model, CLAUDE.md §6; formerly WEP-0002).
 // ─────────────────────────────────────────────────────────────────────────
 
 const COACH = "user_coach";
@@ -156,7 +158,7 @@ test.describe("@smoke account doc (WEP-0002)", () => {
   test("a family note authored OFFLINE survives an offline reload and replays on reconnect, exactly once", async ({
     browser,
   }) => {
-    // Intent (WEP-0002 ship gate #1): a family note is the one annotation class
+    // Intent (account-doc ship gate #1, formerly WEP-0002): a family note is the one annotation class
     //   that had no document behind it — a direct D1 insert that failed offline.
     //   With the account doc live it is a CRDT edit to an already-hydrated doc:
     //   authored offline, it is visible instantly (own notes read live from the
@@ -261,7 +263,7 @@ test.describe("@smoke account doc (WEP-0002)", () => {
     // backoff reconnect, then the DO alarm cadence), so this journey needs more
     // than the default 30s per-test budget for its final /mine poll.
     test.setTimeout(90_000);
-    // Intent (WEP-0002 ship gate #2): a library bookmark is now a CRDT edit to
+    // Intent (account-doc ship gate #2, formerly WEP-0002): a library bookmark is now a CRDT edit to
     //   the account doc (`libraryFigureRefs`). Added offline it is idempotently
     //   applied to the hydrated doc and reflected instantly from the live
     //   self-read (the catalog "already in My figures" verdict is derived from
@@ -353,7 +355,7 @@ test.describe("@smoke account doc (WEP-0002)", () => {
   test("visibility unchanged: a co-member sees the family note on the matching figure; a non-member does not", async ({
     browser,
   }) => {
-    // Intent (WEP-0002 ship gate #3): the projection inversion must not change
+    // Intent (account-doc ship gate #3, formerly WEP-0002): the projection inversion must not change
     //   who can SEE a family note. A co-member still discovers the coach's note
     //   via the D1 index + the routine's co-membership gate (Q-FIGNOTE-VIS option
     //   2), now that the D1 row is an alarm-written projection of the coach's

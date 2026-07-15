@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0004 — timed figureType anchors (choreo-first journal links).
-// PLAN §4.6 / WEP-0004 Design Details: the figureType anchor gains optional
+// WEP-0004 (docs/concepts/annotations.md § Anchors) — timed figureType anchors (choreo-first journal links).
+// docs/concepts/annotations.md § The Journal: the figureType anchor gains optional
 // `count`/`role` so a count-pinned note can scope to ALL of one dance's
 // choreos — but NEVER across dances (counts don't align: a Waltz Whisk's
 // 1-2-3 vs its Quickstep sibling's S-Q-Q). zAnchor enforces the invariant:
@@ -40,7 +40,7 @@ describe("WEP-0004 zAnchor: timed figureType anchors", () => {
   });
 
   it("keeps parsing the untimed v1 anchor corpus unchanged (additive back-compat)", async () => {
-    // Intent: every stored anchor remains valid — no migration (WEP-0004).
+    // Intent: every stored anchor remains valid — no migration (WEP-0004; docs/concepts/annotations.md § Anchors).
     const { parseAnchors } = await importDomain();
     const corpus = [
       { type: "point", figureRef: "fig_1", count: 2, role: "follower" },

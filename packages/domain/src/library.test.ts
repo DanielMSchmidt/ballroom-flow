@@ -15,7 +15,8 @@ import {
 import { parseAttributeWrite } from "./schemas";
 
 // US-032 — the application-global figure library (client-bundled catalog shaped
-// from the ISTD Standard syllabus seed). PLAN §4.2, D30. The catalog is pure
+// from the ISTD Standard syllabus seed). docs/concepts/figures.md § The library screen,
+// D30 (docs/system/architecture.md § The catalog seed pipeline). The catalog is pure
 // reference data; these prove the dance-scoped read + figureType grouping the
 // picker and Library browse rely on.
 
@@ -97,7 +98,7 @@ describe("figure library catalog", () => {
 describe("globalFigureRef — canonical provenance ref for a catalog figure (T5)", () => {
   it("encodes (dance, figureType) as a stable global: ref", () => {
     // The save-to-library promotion records this as the frozen copy's baseFigureRef
-    // (PLAN §5.2, provenance only). It must be deterministic for idempotency.
+    // (docs/concepts/figures.md § Variants, provenance only). It must be deterministic for idempotency.
     expect(globalFigureRef("waltz", "natural-turn")).toBe("global:waltz:natural-turn");
     expect(globalFigureRef("foxtrot", "feather-step")).toBe("global:foxtrot:feather-step");
   });

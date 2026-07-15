@@ -1,5 +1,6 @@
-// store/ seam (US-033): the user's LIBRARY — bookmarked figures (⟳v5, PLAN
-// §4.2/§5.2/D28). Components touch ONLY the store (this) + ui — never lib/rpc
+// store/ seam (US-033): the user's LIBRARY — bookmarked figures (⟳v5,
+// docs/concepts/figures.md § The library screen / § Variants). Components
+// touch ONLY the store (this) + ui — never lib/rpc
 // directly (§3/AC-4). Built on the same react-query + lib/rpc pattern as
 // store/routines.ts.
 
@@ -44,7 +45,8 @@ export async function loadMineFigures(token: string | null): Promise<MineFigure[
 
 /**
  * Bookmark a figure into the caller's library ("↟ Save to my library" / "add to
- * my library", T5 ⟳v5) — a REFERENCE, never a copy (PLAN §4.2/§5.2/D28). Accepts
+ * my library", T5 ⟳v5) — a REFERENCE, never a copy (docs/concepts/figures.md
+ * § The library screen / § Variants). Accepts
  * either the direct `{ figureRef }` shape (the account/choreo-local affordance)
  * or the legacy `(dance, figureType, name)` triple the global-catalog "↟ save"
  * card still sends (the worker resolves it to `globalFigureRef` and bookmarks

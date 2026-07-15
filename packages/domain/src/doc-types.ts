@@ -1,4 +1,5 @@
-// US-005 — Document-graph types (PLAN §2.2–2.6).
+// US-005 — Document-graph types (docs/concepts/choreography.md, docs/concepts/figures.md,
+// docs/concepts/notation.md, docs/concepts/annotations.md).
 //
 // The logical shapes of the Automerge document graph: a routine doc (sections →
 // placements + annotations) and a figure doc (metadata + a float-count attribute
@@ -127,11 +128,12 @@ export type Anchor =
       type: "figureType";
       figureType: FigureType;
       danceScope: DanceId | "all";
-      /** WEP-0004: pin the note to one count of every matching figure. Only
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors): pin the note to one
+       *  count of every matching figure. Only
        *  valid with a CONCRETE danceScope — counts don't align across dances
        *  (zAnchor enforces this; absent = the whole figure, the v1 shape). */
       count?: number;
-      /** WEP-0004: narrow a timed note to one side (absent/null = both). */
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors): narrow a timed note to one side (absent/null = both). */
       role?: Role;
     };
 

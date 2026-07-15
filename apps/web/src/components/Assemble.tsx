@@ -1,4 +1,5 @@
-// US-018 — Open & view a routine (the Assemble screen). PLAN §4.3, §6.2.
+// US-018 — Open & view a routine (the Assemble screen). docs/concepts/choreography.md
+// § Assembling; docs/system/architecture.md.
 //
 // Opens a routine through the store seam (the ONLY way a component reaches
 // Automerge/the worker — CLAUDE.md §3, enforced by the store boundary test) and
@@ -167,7 +168,8 @@ export interface AssembleProps {
    */
   initialMode?: "edit" | "read";
   /**
-   * The caller's library bookmark set (⟳v5, PLAN §4.2/§5.2): figureRefs already
+   * The caller's library bookmark set (⟳v5, docs/concepts/figures.md § The library
+   * screen / § Variants): figureRefs already
    * "added to my library". Drives the placement-card / figure-editor "add to my
    * library" ↔ "in your library" affordance for a choreo-local ACCOUNT figure.
    * Omitted → the affordance hides (e.g. offline, or a test that doesn't wire it).
@@ -176,7 +178,8 @@ export interface AssembleProps {
   /** Bookmark a figure into the caller's library (a REFERENCE, never a copy). */
   onAddToLibrary?: (figureRef: string) => Promise<{ alreadySaved: boolean }>;
   /**
-   * The caller's library figures (⟳v5, PLAN §4.2: a bookmark "can be placed
+   * The caller's library figures (⟳v5, docs/concepts/figures.md § The library screen:
+   * a bookmark "can be placed
    * into your other routines") — surfaced by the Add-figure picker alongside
    * the catalog presets. Account-scope entries list as tappable rows (placed
    * by ref via `store.placeFigure`); bookmarked CATALOG refs dedupe into the
@@ -422,7 +425,8 @@ export function Assemble({
     placement: Placement;
   } | null>(null);
 
-  // "Add to my library" (⟳v5, PLAN §4.2/§5.2): bookmark a placed/notated ACCOUNT
+  // "Add to my library" (⟳v5, docs/concepts/figures.md § The library screen /
+  // § Variants): bookmark a placed/notated ACCOUNT
   // figure. Wraps the caller's mutation with the same toast contract as the
   // global-library "↟ save" card (FigureLibrary.tsx) — "Added"/"Already in your
   // library" on success, a danger toast on failure; never throws into the caller.
@@ -478,7 +482,8 @@ export function Assemble({
   useEffect(() => {
     void reloadFamilyNotes();
   }, [reloadFamilyNotes]);
-  // WEP-0002: the user's OWN family notes read live from the account doc (instant +
+  // docs/system/architecture.md (account docs / § D1 projections): the user's OWN
+  // family notes read live from the account doc (instant +
   // offline), so a note the user just authored appears immediately — before the
   // alarm projects it into the co-member REST read. The account doc opens LAZILY
   // here (the compose surface). Merge own ∪ co-member, deduped by note id (the
@@ -711,7 +716,8 @@ export function Assemble({
                   onClick={() => {
                     // Undo always proceeds (CRDT merges). When another actor had
                     // built on the reverted change, soften the toast — advisory
-                    // only, no modal, no refusal (US-038 AC-3, PLAN §5.4).
+                    // only, no modal, no refusal (US-038 AC-3, docs/concepts/collaboration.md
+                    // § Undo).
                     const supersededByOthers = store.undo()?.supersededByOthers ?? false;
                     if (supersededByOthers) {
                       toast.show(t.undoneSupersededToast, {
@@ -1257,7 +1263,8 @@ export function Assemble({
                   notes={familyNotes}
                   canAnnotate={can(role, "canAnnotate")}
                   onCreate={(input) => {
-                    // WEP-0002: author through the account-doc seam — the note is a
+                    // docs/system/architecture.md (account docs): author through the
+                    // account-doc seam — the note is a
                     // CRDT edit (instant, offline-capable, undoable) that the alarm
                     // projects into the D1 index for co-member reads. `danceScope`
                     // is "all" or a DanceId (never count/role from this surface).

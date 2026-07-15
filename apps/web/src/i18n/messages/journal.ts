@@ -45,7 +45,7 @@ const en = {
   addMediaHint: "+ photo / video · coming soon",
   saveFailed: "Couldn't save this entry. Try again.",
 
-  // ── Link picker (JournalLinkPicker.tsx — WEP-0004 choreo-first flow) ──────
+  // ── Link picker (JournalLinkPicker.tsx — docs/concepts/annotations.md § The Journal, choreo-first flow) ──────
   titleChoreo: "Which choreo?",
   titleFigureIn: (routine: string) => `Pick a figure in ${routine}`,
   titleGrain: (figure: string) => `Where on ${figure}?`,
@@ -181,7 +181,7 @@ const de: typeof en = {
   addMediaHint: "+ Foto / Video · bald verfügbar",
   saveFailed: "Dieser Eintrag konnte nicht gespeichert werden. Versuch es erneut.",
 
-  // ── Link picker (WEP-0004 choreo-first flow) ──────────────────────────────
+  // ── Link picker (docs/concepts/annotations.md § The Journal, choreo-first flow) ──
   titleChoreo: "Welche Choreo?",
   titleFigureIn: (routine) => `Wähle eine Figur in ${routine}`,
   titleGrain: (figure) => `Wo bei ${figure}?`,

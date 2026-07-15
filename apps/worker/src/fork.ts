@@ -62,7 +62,8 @@ export async function forkRoutineFor(
   const title = origin.title ?? "Untitled routine";
   const dance = origin.dance ?? "waltz";
 
-  // v5 (PLAN §2.4/§5.2, D12): a fork must be independent of its ORIGIN, so
+  // v5 (docs/concepts/choreography.md § Forking; docs/concepts/figures.md
+  // § Variants; D12): a fork must be independent of its ORIGIN, so
   // every ACCOUNT figure it places is copied for the forker BEFORE the routine
   // doc is seeded — the fork is born with the correct refs, never re-pointed by
   // post-hoc CRDT surgery. A variant is copied AS a variant (`copyFigureForFork`
@@ -117,7 +118,8 @@ export async function forkRoutineFor(
 }
 
 /**
- * Copy every ACCOUNT figure in `figureRefs` for the forker (v5, PLAN §2.4/§5.2)
+ * Copy every ACCOUNT figure in `figureRefs` for the forker (v5,
+ * docs/concepts/choreography.md § Forking; docs/concepts/figures.md § Variants)
  * and return a map of origin figureRef → the forker's new copy. Left OUT of the
  * returned map (placement stays live) for three cases:
  *   • a GLOBAL (catalog) ref (registry `type='global-figure'`);

@@ -13,7 +13,8 @@ import { renderUi, screen, userEvent, within } from "../test-support/render";
 // US-030 — Timeline role-view toggle [M2, user]
 // US-044 — Lanes (one kind across all counts) [M7, user]
 //
-// PLAN §4.4/§4.5, §10.2 component layer: "attribute editor (registry-derived;
+// docs/concepts/notation.md § The figure editor, docs/system/testing.md component
+// layer: "attribute editor (registry-derived;
 // Tango hides rise; new user-defined kind appears); timeline role flip; Lanes".
 //
 // The Timeline/AttributeEditor/Lanes components are built by the frontend agent

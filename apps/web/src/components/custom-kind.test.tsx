@@ -8,7 +8,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-043 — Custom attribute-kind creation UI [M7, user]
-// PLAN §4.5, D22, §10.2 component layer: "new user-defined kind appears". Create
+// docs/concepts/notation.md § The figure editor, D22, docs/system/testing.md
+// component layer: "new user-defined kind appears". Create
 // a kind → it merges into the registry and appears in the editor. Built by the
 // frontend agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────

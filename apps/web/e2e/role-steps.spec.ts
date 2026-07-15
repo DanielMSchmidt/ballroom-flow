@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// WEP-0008 ship gate — role-scoped step editing with a Both write mode.
+// Role-scoped step editing ship gate (formerly WEP-0008; see
+// docs/concepts/notation.md § Role lenses) — with a Both write mode.
 // The edit-mode STEPS FOR lens is the WRITE SCOPE: Both writes the leader's
 // direction verbatim + the mirrored follower's (forward↔back), leaves the
 // follower's footwork empty (never derivable), and a single-role write is

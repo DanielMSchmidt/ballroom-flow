@@ -3,7 +3,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-004 — Float-count timing [M1, system/developer]
-// PLAN §2.5, Q-D3, §10.2 invariant: "float-count timing; count fraction
+// docs/concepts/notation.md § Timing, Q-D3, docs/system/testing.md invariant: "float-count timing; count fraction
 // e/&/a". Counts render in conventional ballroom notation modulo the phrase.
 //
 // Product helpers `countLabel`/`countToPhrase`/`barsForFigure` (timing.ts, M1 §9

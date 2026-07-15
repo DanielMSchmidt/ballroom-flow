@@ -1,5 +1,5 @@
 -- Follow-up to US-043 — persist the data-driven RegistryKind fields added in
--- #111 (PLAN §3): a one-line `description`, per-value definitions, role-awareness
+-- #111 (docs/concepts/notation.md § Kinds): a one-line `description`, per-value definitions, role-awareness
 -- (L/F), and the required-slot marker. The creation editor (AddKindSheet) now
 -- captures these, so the account_custom_kind table must round-trip them — else a
 -- user-authored kind loses its prose/flags on reload.

@@ -10,7 +10,8 @@
 // `figuretype.ts` — and IS the live runtime path: the worker returns family-note
 // rows, the store hands them here to match against the routine's figures.
 //
-// STORAGE NOTE (as-built, WEP-0002 — 2026-07-15): the account doc IS now wired to
+// STORAGE NOTE (as-built, WEP-0002 (docs/system/architecture.md § D1 — the index
+// & projections) — 2026-07-15): the account doc IS now wired to
 // a live per-user Durable Object (`account:<userId>`). This CRDT — buildAccountDoc
 // + the addFamilyNote/addAccountReply/addLibraryRef/removeLibraryRef/softDelete…
 // mutators — is the LIVE WRITE PATH: family notes and library bookmarks are edits
@@ -51,7 +52,7 @@ export type AccountFamilyNoteRow = {
   text: string;
   figureType: string;
   danceScope: DanceId | "all";
-  /** WEP-0004 timed-note fields (migration 0018): carried so a timed family note
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed-note fields (migration 0018): carried so a timed family note
    *  survives the import instead of flattening to the untimed v1 shape. */
   count?: number | null;
   role?: Role | null;
@@ -61,7 +62,7 @@ export type AccountFamilyNoteRow = {
   deletedAt?: number | null;
 };
 
-/** The user's live D1 rows that seed a first `ensureAccountDoc` import (WEP-0002). */
+/** The user's live D1 rows that seed a first `ensureAccountDoc` import (WEP-0002; docs/system/architecture.md § D1 — the index & projections). */
 export type AccountImportRows = {
   userId: string;
   /** Live `library_entry` refs (caller pre-filters `deletedAt IS NULL`); deduped, order preserved. */
@@ -72,7 +73,7 @@ export type AccountImportRows = {
 
 /**
  * Build the initial `AccountDoc` for `ensureAccountDoc` from a user's existing D1
- * projection rows (WEP-0002). PURE and DETERMINISTIC — no `Date.now()`, no ULID
+ * projection rows (WEP-0002; docs/system/architecture.md § D1 — the index & projections). PURE and DETERMINISTIC — no `Date.now()`, no ULID
  * minting: family-note `noteId`s are REUSED as annotation ids so identities survive
  * the D1→doc inversion, and timestamps come from the rows. Tombstone-safe: a
  * tombstoned row imports as a tombstoned annotation (never dropped, never
@@ -176,7 +177,7 @@ export function addFamilyNote(
     figureType: string;
     danceScope: DanceId | "all";
     tags?: string[];
-    /** WEP-0004 timed note: pin to one count (+ optional role lens) of every
+    /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed note: pin to one count (+ optional role lens) of every
      *  matching figure. Only valid with a concrete danceScope (counts don't
      *  align across dances); absent = the whole figure, the v1 shape. */
     count?: number;

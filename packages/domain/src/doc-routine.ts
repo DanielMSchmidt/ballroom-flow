@@ -1,4 +1,4 @@
-// US-005 — Routine document schema (PLAN §2.6).
+// US-005 — Routine document schema (docs/concepts/annotations.md § The Journal).
 //
 // A routine doc holds sections → ordered placements + routine-scoped
 // annotations. Build it from a plain RoutineDoc, read it back (dropping

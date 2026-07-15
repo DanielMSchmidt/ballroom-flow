@@ -14,7 +14,7 @@ without inventing domain data. Assume zero dance knowledge.
 - Building/regenerating the seed catalog or `*.generated.ts` files → **ballroom-flow-figure-data-pipeline** (this skill only tells you what the data *means*).
 - CRDT/Automerge mechanics, variants/fork resolution internals → **ballroom-flow-crdt-reference**.
 - Module boundaries, store seam, DO/D1 → **ballroom-flow-architecture-contract**.
-- Process (TDD, PLAN.md updates, branching) → **ballroom-flow-change-control**.
+- Process (TDD, docs/README.md updates, branching) → **ballroom-flow-change-control**.
 
 **Cardinal domain rule (D30/#117/#118 lineage): never invent domain data.** Figures
 without a verifiable per-step source were *removed* from the catalog, not guessed
@@ -53,9 +53,9 @@ charts**. Consequences baked into the code:
 - `Attribute.role ∈ "leader" | "follower" | null` (`doc-types.ts:15,22-30`); `null`
   means "the couple together" (rise and position are couple-shared; direction,
   footwork, sway, turn, bodyActions are `roleAware` in the registry).
-- Role is a **view dimension, not a user attribute** (PLAN §1.5): no stored default
-  role; which role's steps you see is a per-device toggle.
-- **Foot (L/R) is NEVER stored** (PLAN §2.5): feet alternate automatically with each
+- Role is a **view dimension, not a user attribute** (`docs/concepts/notation.md` §
+  Role lenses): no stored default role; which role's steps you see is a per-device toggle.
+- **Foot (L/R) is NEVER stored** (`docs/concepts/notation.md` § The attribute): feet alternate automatically with each
   weight change, so recording "LF"/"RF" would be redundant and could drift. The step's
   headline is `direction` (forward/back/side/…), not which foot.
 
@@ -103,7 +103,8 @@ Gotchas:
   wraps in — a *counting* concept, two bars of music, not a bar.
 - All five are **travelling** dances (progress counter-clockwise around the floor along
   the Line of Dance). Latin dances are mostly **spot** dances (danced in place) — that's
-  why `travelling` exists as a flag and why Latin is deliberately absent in v1 (PLAN §3).
+  why `travelling` exists as a flag and why Latin is deliberately absent in v1
+  (`docs/concepts/notation.md` § Kinds).
 
 ---
 
@@ -139,7 +140,7 @@ render per the conventional "1 **e** & **a** 2" count (`FRACTION_LABELS`, timing
 | .375 | `ai` | | .625 / .875 | *no label* (deliberate — fall back to `"N+0.625"`) |
 
 **History:** an earlier draft swapped `e` and `a`; the mappings above are the
-*corrected* ones (comment at timing.ts:11, PLAN §2.5). If you see e=.75 anywhere,
+*corrected* ones (comment at timing.ts:11, `docs/concepts/notation.md` § Timing). If you see e=.75 anywhere,
 that's the old bug — do not reintroduce it. `countLabel(3.25)` → `"3e"`.
 
 ### 4.3 Phrases, bars, and continuous numbering
@@ -149,7 +150,7 @@ that's the old bug — do not reintroduce it. `countLabel(3.25)` → `"3e"`.
   renamed from `bar` — it indexes *phrases*, not musical bars.
 - `barsForFigure(counts, dance)` = the phrase index of the max count (empty → 1). Used
   as a card-projection fallback.
-- **Authored bars** (`FigureDoc.bars`, PLAN §2.5.2) are the primary length:
+- **Authored bars** (`FigureDoc.bars`, `docs/concepts/notation.md` § Figure length) are the primary length:
   `defaultFigureBars` = ⌈distinct *live* whole-beat counts ÷ beatsPerBar⌉, min 1
   (`figure-grid.ts:43`); `resolveFigureBars` prefers explicit `bars` ≥ 1.
   `figureGridSlots(bars, dance)` generates the editor grid from bars, not from existing
@@ -169,7 +170,7 @@ Definitions from research/domain.md; enums verified against `vocabulary.ts` (202
 
 | Ballroom concept | What it means | Where in the code |
 |---|---|---|
-| **LOD / alignment** | Line of Dance = counter-clockwise travel line around the floor. An alignment = **qualifier × direction**: how the body relates (facing/backing/pointing) to a room reference (LOD, against-LOD, wall, centre, the diagonals) | `Alignment` (doc-types.ts:32): qualifier `facing`\|`backing`\|`pointing`; direction `LOD`\|`ALOD`\|`wall`\|`centre`\|`DW`\|`DC`\|`DW_against`\|`DC_against`. **Per-figure** `entryAlignment`/`exitAlignment` only (PLAN §3: per-figure is sufficient, no floor concept in v1 — real charts are per-step; this is a deliberate simplification) |
+| **LOD / alignment** | Line of Dance = counter-clockwise travel line around the floor. An alignment = **qualifier × direction**: how the body relates (facing/backing/pointing) to a room reference (LOD, against-LOD, wall, centre, the diagonals) | `Alignment` (doc-types.ts:32): qualifier `facing`\|`backing`\|`pointing`; direction `LOD`\|`ALOD`\|`wall`\|`centre`\|`DW`\|`DC`\|`DW_against`\|`DC_against`. **Per-figure** `entryAlignment`/`exitAlignment` only (`docs/concepts/notation.md` § Kinds: per-figure is sufficient, no floor concept in v1 — real charts are per-step; this is a deliberate simplification) |
 | **CBM** (Contrary Body Movement) | A **body action**: turning the opposite side of the body toward the moving foot to initiate rotation | `bodyActions` value `CBM` |
 | **CBMP** (Contrary Body Movement *Position*) | A **foot position**, not a body action: the foot placed on/across the line of the supporting foot (Tango walks, Promenade). **CBM ≠ CBMP** — a step may have either, both, or neither | `position` value `CBMP`. Putting CBMP in bodyActions is a domain error |
 | **Rise & Fall** | The controlled rise/lower through feet-ankles-body characteristic of the swing dances. **Tango has none** | `rise` kind with `appliesToDances: [waltz, viennese_waltz, quickstep, foxtrot]` (RISE_DANCES, vocabulary.ts:96) — Tango omitted; writes of rise on Tango rejected `dance_not_applicable` (schemas.ts), views hide the lane |
@@ -179,7 +180,7 @@ Definitions from research/domain.md; enums verified against `vocabulary.ts` (202
 | **Heel turn** | Closing foot drawn to the standing foot, turning on the standing heel — characteristically the **follower's** (why footwork is roleAware) | `footwork` values `heel turn`, `heel pull`; follower heel-turn sequence TH, HT, TH |
 | **Positions** (hold shapes) | Closed hold; **PP** = Promenade Position (V-shape opening the same way); **OP** = Outside Partner (stepping outside the partner's track) | `position`: `closed`,`promenade`,`counter_promenade`,`outside_partner`,`left_side`,`right_side`,`tandem`,`wing`,`CBMP` (couple-shared, not roleAware) |
 | **Foot Position** (ballet) | The five classical relationships of the feet (ISTD's occasional extra chart column) | the `footPosition` kind was REMOVED ⟳2026-07-10 (D33) — zero charted uses; the moving foot's placement lives in `direction` |
-| **Direction** (step headline) | What the chart's Description column says the foot does ("LF forward", "RF to side") — minus the foot letter; the step's relative TRANSLATION in the derived-alignment model (PLAN §3.8) | `direction`: `forward`,`back`,`side`,`diagonal_forward`,`diagonal_back`,`close`,`behind`,`in_front`,`diagonal` (legacy unsplit),`in_place`. Closed enum, `required: true` (drives the "Step*" grid column), roleAware. Legacy `diag_forward`/`diag_back` alias-normalize to the split values on read (⟳2026-07-10) |
+| **Direction** (step headline) | What the chart's Description column says the foot does ("LF forward", "RF to side") — minus the foot letter; the step's relative TRANSLATION in the derived-alignment model (`docs/concepts/notation.md` § Kinds, the "removed from the model" note) | `direction`: `forward`,`back`,`side`,`diagonal_forward`,`diagonal_back`,`close`,`behind`,`in_front`,`diagonal` (legacy unsplit),`in_place`. Closed enum, `required: true` (drives the "Step*" grid column), roleAware. Legacy `diag_forward`/`diag_back` alias-normalize to the split values on read (⟳2026-07-10) |
 | **Floorcraft / corners** | Placing travelling figures on long sides, turning figures at corners | Theory only — no floor model in the app (v1) |
 
 ### The core registry kinds at a glance (`ATTRIBUTE_REGISTRY`, vocabulary.ts — 7 standard kinds; `footPosition` + the free-text `rotation`/`head` prose kinds removed ⟳2026-07-10: `turn` is the canonical rotation, the WDSF Rotation/Extension prose stays seed-only provenance)
@@ -190,7 +191,7 @@ Definitions from research/domain.md; enums verified against `vocabulary.ts` (202
 | `footwork` | single | yes | `#a9742c` | `freeText: true` (lenient writes tolerate the syllabus scaffold) but `freeTextInput: false` (editor = closed picklist) |
 | `rise` | single | no (couple-shared) | `#1f8a5b` | `appliesToDances` omits Tango; values `commence`,`body_rise`,`foot_rise`,`up`,`continue`,`lowering`,`body_lower`,`NFR` |
 | `position` | single | no (couple-shared) | `#8a5cab` | |
-| `bodyActions` | **multi** | yes | `#b07cc6` | values `CBM`,`side_leading`,`shaping`,`oversway`,`leg_line`. (PLAN §3 prose groups it with position under `#8a5cab`; the code's rendered color is `#b07cc6` — minor doc drift) |
+| `bodyActions` | **multi** | yes | `#b07cc6` | values `CBM`,`side_leading`,`shaping`,`oversway`,`leg_line`. (`docs/concepts/notation.md` § Kinds prose groups it with position under `#8a5cab`; the code's rendered color is `#b07cc6` — minor doc drift) |
 | `sway` | single | yes | `#c0563f` | |
 | `turn` | single | yes | `#5b6b8a` | |
 
@@ -206,7 +207,7 @@ The classic ISTD/Alex Moore technique chart (one row per step, per role) maps as
 | Step number | implicit — the ordered distinct `count`s |
 | Description / Action ("LF forward") | `direction` attribute (foot letter dropped — feet alternate) |
 | Count / Beat value ("1 2 3", "S Q Q") | `Attribute.count` (float, via `parseWdsfTiming`) |
-| Amount of Turn | `turn` attribute — the canonical rotation; tokens = signed eighths, absolute alignment derives from their sum (PLAN §3.8/D33, `packages/domain/src/alignment.ts`) |
+| Amount of Turn | `turn` attribute — the canonical rotation; tokens = signed eighths, absolute alignment derives from their sum (`docs/concepts/notation.md` § Kinds, D33, `packages/domain/src/alignment.ts`) |
 | Rise & Fall | `rise` attribute (role `null`) |
 | Footwork | `footwork` attribute |
 | CBM / CBMP / body position | split: CBM → `bodyActions`; CBMP + holds → `position` (role `null`) |
@@ -296,7 +297,7 @@ generator scripts, verification workflow — is owned by
 Written 2026-07-02 against repo HEAD `70eed7e` on `development`. Verified directly
 against: `packages/domain/src/{dances,vocabulary,timing,figure-grid,wdsf-timing,figure-steps,doc-types,library,library-data}.ts`,
 `packages/domain/src/figure-charts.generated.ts` (waltz:reverse-turn entry + alignments),
-`docs/seed/*.json` metas, `docs/PLAN.md` §1.5/§2.5/§2.5.2/§3, and `research/domain.md`
+`docs/seed/*.json` metas, `docs/concepts/notation.md` (§ Role lenses/§ The attribute/§ Figure length/§ Kinds/§ Timing), and `research/domain.md`
 (the underlying theory research; tempo/character figures come from there, not code).
 
 Re-verify if these drift:
@@ -311,6 +312,6 @@ grep -n 'waltz:reverse-turn' packages/domain/src/figure-charts.generated.ts  # w
 ```
 
 Known doc drift as of 2026-07-02: `bodyActions` color `#b07cc6` in code vs `#8a5cab`
-grouped in PLAN §3. Seed metas match their own files (ISTD 121, WDSF 147), but the
+grouped in `docs/concepts/notation.md` § Kinds. Seed metas match their own files (ISTD 121, WDSF 147), but the
 comparison file counts 122/184 from a different (larger, pre-curation) snapshot — trust
 each seed's own contents.

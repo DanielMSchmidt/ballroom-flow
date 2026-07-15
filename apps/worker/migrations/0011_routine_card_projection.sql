@@ -1,4 +1,5 @@
--- US-025 (T1) — routine-card data projection (PLAN §2.5, §2.7, §4.1).
+-- US-025 (T1) — routine-card data projection (docs/concepts/choreography.md
+-- § The choreo list; docs/system/architecture.md § D1 — the index & projections).
 --
 -- The Choreo list card renders "<dance> · <N bars> · <date>", a "no figures yet"
 -- state, and a "⑂ forked from <title>" lineage line (frames 1.1/1.3). To serve

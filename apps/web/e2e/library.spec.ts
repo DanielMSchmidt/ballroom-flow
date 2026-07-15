@@ -33,7 +33,8 @@ test.describe("@smoke figure library", () => {
     });
 
     // 1b. Save a global figure to the personal library (T5) and confirm it lands in
-    //     "My figures" (a frozen account-figure copy — PLAN §5.2).
+    //     "My figures" (a frozen account-figure copy — docs/concepts/figures.md
+    //     § Variants).
     await page.getByRole("button", { name: /save/i }).first().click();
     await expect(page.getByText(/saved to My figures/i)).toBeVisible({ timeout: 15_000 });
     await page.getByRole("tab", { name: /my figures/i }).click();

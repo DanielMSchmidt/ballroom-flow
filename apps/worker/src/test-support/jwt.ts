@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Clerk test JWT minting (PLAN §10.3: "Clerk test JWKS/PEM + makeTestJWT; real
+// Clerk test JWT minting (docs/system/testing.md: "Clerk test JWKS/PEM + makeTestJWT; real
 // verify + per-doc role lookup at the DO boundary").
 //
 // We mint REAL RS256 JWTs with a FIXED RSA keypair (test-keys.ts) using Web

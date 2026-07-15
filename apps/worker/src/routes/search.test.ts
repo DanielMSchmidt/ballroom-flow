@@ -11,7 +11,8 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // US-032 — Application-global figure library browse [M4, user]
 // US-033 — Account variants + custom figures in library [M4, user]
 //
-// PLAN §4.1, §4.2, §10.2: search routines/figures over the D1 index; "EXPLAIN
+// docs/concepts/choreography.md § The choreo list, docs/concepts/figures.md
+// § The library screen, docs/system/testing.md: search routines/figures over the D1 index; "EXPLAIN
 // shows no SCAN". Library browse reads the registry + FigureType catalog (no
 // CRDT scan). Endpoints are M4/M7 product code → skipped.
 // ─────────────────────────────────────────────────────────────────────────

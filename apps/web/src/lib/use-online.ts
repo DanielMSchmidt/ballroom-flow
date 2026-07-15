@@ -1,4 +1,4 @@
-// Browser connectivity as a React external store (PLAN §11.2).
+// Browser connectivity as a React external store (docs/system/sync-and-offline.md § Offline editing).
 //
 // `navigator.onLine` + the online/offline events — PLUS a slow poll, because
 // not every environment fires the events when connectivity flips (Chromium's

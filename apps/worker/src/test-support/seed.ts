@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// seedDb(...) — seed an isolated per-suite D1 (PLAN §10.3: "Per-suite isolated
+// seedDb(...) — seed an isolated per-suite D1 (docs/system/testing.md: "Per-suite isolated
 // D1 + applyD1Migrations(); seedDb(...) for D1 + seeded Automerge docs").
 //
 // HOW IT FITS THE HARNESS:
@@ -9,10 +9,12 @@
 //     empty until M2 — `applyD1Migrations` is a no-op for [] today, which is why
 //     the seed/insert SQL only runs inside SKIPPED test bodies for now.
 //   • `seedDb` then inserts the D1 INDEX rows (users, memberships, document
-//     registry, invites — the §2.7 tables). It does NOT write CRDT content:
+//     registry, invites — the docs/system/architecture.md § D1 — the index &
+//     projections tables). It does NOT write CRDT content:
 //     canonical doc state lives in each DO's SQLite (seed that via the DO stub).
 //
-// The D1 table/column names below mirror PLAN §2.7 / the §9 ER diagram. When M2
+// The D1 table/column names below mirror docs/system/architecture.md § D1 —
+// the index & projections (and its ER summary). When M2
 // lands the Drizzle schema, implementers can swap these raw inserts for typed
 // Drizzle inserts; the shape is the contract.
 // ─────────────────────────────────────────────────────────────────────────

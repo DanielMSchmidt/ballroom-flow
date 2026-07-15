@@ -7,7 +7,10 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-041 — Co-member visibility of family notes (option 2) [M6, system]
-// PLAN §2.6, §2.7, §5.1, Q-FIGNOTE-VIS option 2, §10.2: a figureType note is
+// docs/concepts/annotations.md § Anchors / § Ownership & visibility;
+// docs/system/architecture.md § D1 — the index & projections;
+// docs/concepts/collaboration.md § Roles; Q-FIGNOTE-VIS option 2; docs/system/testing.md:
+// a figureType note is
 // OWNED in the author's account doc but VISIBLE to co-members of a shared
 // routine where the figure appears — via the FigureTypeNoteIndex + a
 // co-membership gate. A NON-member sees NONE. A viewer never browses another
@@ -25,7 +28,8 @@ beforeAll(async () => {
 });
 
 /**
- * WEP-0002 phase 3: POST /api/account/family-notes now authors the note in the
+ * WEP-0002 phase 3 (docs/system/architecture.md § D1 — the index & projections):
+ * POST /api/account/family-notes now authors the note in the
  * author's account DO; the DO alarm is the single writer of the
  * `figure_type_note_index` projection the co-member GET reads. Drive that alarm
  * (for the AUTHOR's account doc) so the projected row is visible synchronously —

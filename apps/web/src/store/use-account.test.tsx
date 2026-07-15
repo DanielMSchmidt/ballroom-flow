@@ -1,4 +1,5 @@
-// WEP-0002 (phase 4) — the React hook seam over the account store, at the
+// WEP-0002 (phase 4) — docs/system/architecture.md § D1 — the index & projections
+// — the React hook seam over the account store, at the
 // component layer (jsdom + Testing Library + vitest-axe). Verifies that a
 // component reading the bookmark set / own family notes through `useLibraryRefs`
 // / `useOwnFamilyNotes` re-renders reactively off the store's `subscribe` (so a

@@ -22,7 +22,7 @@ const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 // before anything renders so even a boot crash reports.
 initErrorReporting();
 
-// Rollout-skew reload machinery (PLAN §7), two layers:
+// Rollout-skew reload machinery (docs/system/sync-and-offline.md § Version skew), two layers:
 // 1. SW-driven (fast path): register the service worker (replacing the
 //    plugin's injected registerSW.js — vite.config.ts sets injectRegister:
 //    false), keep checking sw.js for a new deploy while the tab is open, and

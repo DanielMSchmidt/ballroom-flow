@@ -8,8 +8,8 @@ import { TEST_JWT_PUBLIC_KEY_PEM } from "./src/test-support/test-keys";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 // Worker / DO / D1 layer — runs in real `workerd` via vitest-pool-workers
-// (PLAN.md §10.3). The M0.5-spike sharp edge still governs how tests are
-// written here:
+// (docs/system/testing.md). The M0.5-spike sharp edge still governs how tests
+// are written here:
 //
 //  • Each test MUST use a UNIQUE Durable Object id / name. Derive ids from
 //    the test name or a ULID — never share a DO id across tests, or state
@@ -79,7 +79,7 @@ export default defineConfig(async () => {
         provider: "istanbul" as const,
         include: ["src/**/*.ts"],
         exclude: ["src/**/*.test.ts", "src/**/*.d.ts", "src/test-support/**"],
-        // PLAN.md §10.3 targets worker/DO ≥ 90%. ARMED at the current measured
+        // docs/system/testing.md targets worker/DO ≥ 90%. ARMED at the current measured
         // floor so coverage can't silently regress; ratchet UP toward 90 as the
         // DO/route branches get covered. (The All-files number is depressed by
         // test-seed.ts — the E2E-only fixture route exercised by Playwright, not

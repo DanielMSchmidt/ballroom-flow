@@ -1,6 +1,6 @@
 // T6 — the Journal entry editor (frame 3.3). A Lesson/Practice toggle, a
 // handwritten-style text area, the LINKS section (chips + the link picker), and a
-// disabled "media coming soon" affordance (PLAN §4.0 media = v1.1).
+// disabled "media coming soon" affordance (docs/ideas/annotation-media-embeds.md).
 //
 // Per the LOCKED full-parity decision the SAVE path is determined by the entry's
 // links: a routine-scoped link (point/figure) saves via createRoutineEntry on
@@ -26,7 +26,8 @@ export interface JournalEntryEditorProps {
   /** Called after a successful save so the list refreshes + the editor closes. */
   onSaved: () => void;
   /** Author an account-scoped figureType lesson/practice (createFamilyNote).
-   *  WEP-0004: a TIMED link passes count/role through (never with "all"). */
+   *  docs/concepts/annotations.md § Anchors (WEP-0004): a TIMED link passes
+   *  count/role through (never with "all"). */
   createFamilyEntry: (input: {
     figureType: string;
     danceScope: string;
@@ -89,7 +90,8 @@ export function JournalEntryEditor({
             danceScope: acct.danceScope,
             kind,
             text: text.trim(),
-            // WEP-0004: a timed link carries its pinned count (+ optional side).
+            // docs/concepts/annotations.md § Anchors (WEP-0004): a timed link
+            // carries its pinned count (+ optional side).
             ...(acct.count != null ? { count: acct.count } : {}),
             ...(acct.role ? { role: acct.role } : {}),
           });

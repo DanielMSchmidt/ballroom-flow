@@ -3,7 +3,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-001 — ULID id generation [M1, system/developer]
-// PLAN §2.1, §10.2 invariant: "all ids are client-generated ULIDs".
+// docs/system/architecture.md § Global constraints, docs/system/testing.md invariant: "all ids are client-generated ULIDs".
 //
 // These prove the id primitive every document shape depends on. Product module
 // `@weavesteps/domain` does not export `newId`/`ids` yet (M1 §9 1.1), so the body

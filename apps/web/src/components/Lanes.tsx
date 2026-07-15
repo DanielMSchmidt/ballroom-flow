@@ -7,9 +7,9 @@
 // indistinguishable downstream.
 //
 // Honors the same per-device role-view toggle as FigureTimeline (US-030,
-// PLAN §1.5, principle #25): the view is local UI state, not a stored
-// User.defaultRole. New values added through the inline picker inherit
-// the current view.
+// docs/concepts/notation.md § Role lenses, principle #25): the view is local UI
+// state, not a stored User.defaultRole. New values added through the inline
+// picker inherit the current view.
 //
 // Controlled: `attributes` is the figure's full attribute set; every edit
 // emits the next full set via `onChange`.

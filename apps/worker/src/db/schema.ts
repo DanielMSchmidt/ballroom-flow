@@ -1,4 +1,5 @@
-// Drizzle table definitions mirroring the D1 index (PLAN §2.7). D1 is a pure
+// Drizzle table definitions mirroring the D1 index (docs/system/architecture.md
+// § D1 — the index & projections). D1 is a pure
 // index/registry over the document graph — no CRDT content lives here.
 //
 // Tables land per-story as their migration does (migrations/*.sql is the source
@@ -70,7 +71,8 @@ export const documentRegistry = sqliteTable("document_registry", {
   title: text("title"),
   forkedFromRef: text("forkedFromRef"),
   /**
-   * US-025 card projection (PLAN §2.7). For a FIGURE row: the figure's own bar
+   * US-025 card projection (docs/system/architecture.md § D1 — the index &
+   * projections). For a FIGURE row: the figure's own bar
    * count (`barsForFigure`, computed by the figure DO). For a ROUTINE row: Σ of
    * its referenced figures' `bars`. Nullable — eventually consistent (projected
    * on the DO alarm; absent until the first projection).

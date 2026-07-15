@@ -1,4 +1,5 @@
-// WEP-0004 — the Journal link picker, rebuilt CHOREO-FIRST. One linear
+// docs/concepts/annotations.md § Anchors / § The Journal (WEP-0004) — the
+// Journal link picker, rebuilt CHOREO-FIRST. One linear
 // bottom-sheet flow: pick a choreo → pick a figure FROM that choreo (type-ahead
 // filter) → place the note via the figure's attribute grid (entire figure, or
 // one count, with a Both/Leader/Follower role lens) → choose the sharing scope
@@ -43,7 +44,8 @@ export interface RoutineFigureOption {
 /**
  * A built link the editor stores. `home` decides the save path:
  * routine → createAnnotation on `routineRef`; account → createFamilyNote
- * (WEP-0004: optionally TIMED — count/role ride along, never with "all").
+ * (docs/concepts/annotations.md § Anchors, WEP-0004: optionally TIMED —
+ * count/role ride along, never with "all").
  */
 export type JournalLink =
   | { home: "routine"; routineRef: string; routineTitle: string; anchor: Anchor; label: string }
@@ -385,7 +387,8 @@ function FigureInRoutineChooser({
 }
 
 /**
- * The place step (WEP-0004): a read-only rendering of the figure's attribute
+ * The place step (docs/concepts/annotations.md § Anchors, WEP-0004): a
+ * read-only rendering of the figure's attribute
  * grid, mirroring the detail view — one row per count with that count's value
  * chips (kind-tinted, role-lens filtered) — plus an "entire figure" row on top
  * and a Both/Leader/Follower lens. Tapping a row picks that count.

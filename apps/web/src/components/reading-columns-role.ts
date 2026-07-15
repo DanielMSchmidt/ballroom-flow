@@ -1,7 +1,9 @@
-// Persisted role lens (frame 1.6 "STEPS FOR" / WEP-0008 edit lens). The choice
+// Persisted role lens (frame 1.6 "STEPS FOR" / docs/concepts/notation.md
+// § Role lenses, WEP-0008 edit lens). The choice
 // is remembered across routines + reloads via localStorage (key `bb_role`), so
 // re-opening a routine keeps the dancer's chosen side. The stored value may be
-// the edit-only "both" (WEP-0008) — read surfaces coerce it via `asReadView`.
+// the edit-only "both" (docs/concepts/notation.md § Role lenses, WEP-0008) —
+// read surfaces coerce it via `asReadView`.
 // Falls back to "leader" when storage is unavailable (SSR / private mode /
 // tests).
 import { useCallback, useState } from "react";

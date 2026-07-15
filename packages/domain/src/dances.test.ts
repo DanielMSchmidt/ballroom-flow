@@ -4,7 +4,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-002 — Dance metadata registry [M1, system/developer]
-// PLAN §3, §10.2 invariant: timing/phrasing derive from ONE `DANCES` source.
+// docs/concepts/notation.md § Kinds, docs/system/testing.md invariant: timing/phrasing derive from ONE `DANCES` source.
 //
 // Product `DANCES` (dances.ts, M1 §9 1.2) does not exist yet → dynamic import,
 // suite skipped. RED→GREEN: export `DANCES` keyed by DanceId with the metadata

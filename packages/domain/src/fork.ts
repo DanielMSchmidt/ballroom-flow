@@ -1,4 +1,5 @@
-// Fork, variants & overlay resolution (PLAN §2.4, §5.2, D12 ⟳v5).
+// Fork, variants & overlay resolution (docs/concepts/choreography.md § Forking,
+// docs/concepts/figures.md § Variants, D12 ⟳v5).
 //
 // ⟳v5 (2026-07-02): figures are LIVE wherever referenced. The only automatic
 // divergence is editing a GLOBAL (catalog) figure as a non-admin, which spawns a
@@ -52,7 +53,8 @@ function ownsFigure(figure: FigureDoc, byUser: string): boolean {
 }
 
 /**
- * Copy-on-write = freeze-on-edit-from-outside (PLAN §2.4, §5.2, Q-COW-TRIGGER).
+ * Copy-on-write = freeze-on-edit-from-outside (docs/concepts/choreography.md § Forking,
+ * docs/concepts/figures.md § Variants, Q-COW-TRIGGER).
  * Editing a figure you don't own (a global-library figure, or someone else's
  * shared one) silently spawns an account-scoped copy you own — a new figure doc
  * that is a FROZEN SNAPSHOT of the source's attributes at copy time, with
@@ -96,7 +98,7 @@ export function copyOnWrite(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, Q-OVERLAY-GRAIN).
+// ⟳v5 — live overlay variants (docs/concepts/figures.md § Variants, Q-OVERLAY-GRAIN).
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Attribute meaning key — the same content comparison the "custom" badge uses
@@ -196,7 +198,7 @@ export function variantAttributesForEdit(
 }
 
 /**
- * ⟳v5 variant spawn (PLAN §5.2): a non-admin editing a GLOBAL figure gets a live
+ * ⟳v5 variant spawn (docs/concepts/figures.md § Variants): a non-admin editing a GLOBAL figure gets a live
  * overlay variant — a new account figure owning ONLY the edited beats (nothing,
  * when `editedAttributes` is omitted), with `baseFigureRef` as a LIVE link — and
  * the placement re-points to it. The base is never mutated (§2.5.1 #17). `bars`
@@ -229,7 +231,7 @@ export function spawnVariant(
 }
 
 /**
- * ⟳v5 fork-copy (PLAN §2.4): copy an ACCOUNT figure for a choreo fork. The fork
+ * ⟳v5 fork-copy (docs/concepts/choreography.md § Forking): copy an ACCOUNT figure for a choreo fork. The fork
  * must be independent of its ORIGIN's later edits, so the forker gets their own
  * doc — but a variant is copied AS A VARIANT (same `baseFigureRef`, same owned
  * beats), so catalog flow-in continues; a from-scratch custom is copied plain.
