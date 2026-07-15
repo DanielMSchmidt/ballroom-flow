@@ -21,6 +21,7 @@
   @keyframes sheetIn{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes popIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+  @keyframes micPulse{0%{box-shadow:0 0 0 0 rgba(47,93,143,.35)}70%{box-shadow:0 0 0 20px rgba(47,93,143,0)}100%{box-shadow:0 0 0 0 rgba(47,93,143,0)}}
 </style>
 </helmet>
 
@@ -145,6 +146,8 @@
                           <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #cdddee;color:var(--accent);display:flex;align-items:center;justify-content:center;font:700 12px 'Inconsolata';flex:0 0 auto;line-height:1">＋</span>
                         </div>
                         <sc-if value="{{ fig.figMargin.hasComments }}" hint-placeholder-val="{{ true }}"><span style="font:500 12px/1.3 var(--note-font);color:#6b665e;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ fig.figMargin.snippet }}</span></sc-if>
+                        <!-- compact surfaces show a media CHIP, never the media (docs/ideas/annotation-media-embeds.md) -->
+                        <sc-if value="{{ fig.figMargin.hasMedia }}" hint-placeholder-val="{{ true }}"><span style="align-self:flex-start;font:700 8px 'Inconsolata';color:#4a6b8a;background:#eef4fb;border:1px solid #cdddee;border-radius:7px;padding:2px 6px">{{ fig.figMargin.mediaLabel }}</span></sc-if>
                       </div>
                     </div>
                     <div style="display:flex;align-items:stretch">
@@ -175,6 +178,7 @@
                             <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #cdddee;color:var(--accent);display:flex;align-items:center;justify-content:center;font:700 12px 'Inconsolata';flex:0 0 auto;line-height:1">＋</span>
                           </div>
                           <sc-if value="{{ step.margin.hasComments }}" hint-placeholder-val="{{ true }}"><span style="font:500 12px/1.3 var(--note-font);color:#6b665e;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ step.margin.snippet }}</span></sc-if>
+                          <sc-if value="{{ step.margin.hasMedia }}" hint-placeholder-val="{{ true }}"><span style="align-self:flex-start;font:700 8px 'Inconsolata';color:#4a6b8a;background:#eef4fb;border:1px solid #cdddee;border-radius:7px;padding:2px 6px">{{ step.margin.mediaLabel }}</span></sc-if>
                         </div>
                       </div>
                     </sc-for>
@@ -502,16 +506,69 @@
           <sc-for list="{{ peopleLegend }}" as="p" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:5px;font:600 10px 'Inconsolata';color:#5a554c"><span style="width:11px;height:11px;border-radius:50%;background:{{ p.color }}"></span>{{ p.name }}</span></sc-for>
         </div>
         <div class="scrl" style="flex:1;min-height:0;overflow-y:auto;padding:13px 16px;display:flex;flex-direction:column;gap:10px">
+          <!-- fade-out divider: stale comments collapse behind an honest count; tap expands in place (docs/ideas/comment-activity-fadeout.md) -->
+          <sc-if value="{{ tCollapsed }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ onToggleStale }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:1px 0">
+              <span style="flex:1;height:1px;background:#e6e0d4"></span>
+              <span style="font:700 10px 'Inconsolata';color:#8a857b;border:1.5px solid #e1dcd2;border-radius:12px;padding:4px 12px;background:#faf8f3">{{ tStaleLabel }}</span>
+              <span style="flex:1;height:1px;background:#e6e0d4"></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tExpandedBar }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ onToggleStale }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:1px 0">
+              <span style="flex:1;height:1px;background:#e6e0d4"></span>
+              <span style="font:600 9px 'Inconsolata';color:#b0aaa0">showing all · collapse older</span>
+              <span style="flex:1;height:1px;background:#e6e0d4"></span>
+            </div>
+          </sc-if>
           <sc-for list="{{ comments }}" as="c" hint-placeholder-count="3">
             <div style="background:{{ c.bg }};border-left:3px solid {{ c.border }};border-radius:0 10px 10px 0;padding:9px 12px">
               <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:{{ c.border }}"></span><span style="font:700 9px 'Inconsolata';color:{{ c.nameColor }}">{{ c.head }}</span></div>
-              <div style="font:500 15px var(--note-font);color:{{ c.ink }};margin-top:2px;line-height:1.35">{{ c.text }}</div>
+              <!-- note body = ordered text/media parts; media renders INLINE at its position in the prose (docs/ideas/annotation-media-embeds.md) -->
+              <div style="margin-top:2px;display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ c.parts }}" as="p" hint-placeholder-count="1">
+                  <sc-if value="{{ p.isText }}" hint-placeholder-val="{{ true }}"><span style="font:500 15px var(--note-font);color:{{ c.ink }};line-height:1.35">{{ p.tx }}</span></sc-if>
+                  <sc-if value="{{ p.isPhoto }}" hint-placeholder-val="{{ true }}">
+                    <div onClick="{{ p.onTap }}" style="border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.09);cursor:pointer">
+                      <div style="height:104px;background:linear-gradient(135deg,#ddd7ca,#f0ebe0 55%,#cfc6b4);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a49e92" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"></rect><circle cx="12" cy="13" r="3.2"></circle><path d="M8 6l1.5-2h5L16 6"></path></svg></div>
+                      <div style="display:flex;align-items:center;gap:5px;padding:5px 9px;background:rgba(255,255,255,.72)"><span style="font:700 9px 'Inconsolata';color:#6b665e">▣ {{ p.label }}</span></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ p.isVideo }}" hint-placeholder-val="{{ true }}">
+                    <div onClick="{{ p.onTap }}" style="position:relative;border-radius:10px;overflow:hidden;cursor:pointer;background:linear-gradient(150deg,#3a3831,#23211c 70%)">
+                      <div style="height:128px;display:flex;align-items:center;justify-content:center"><span style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"></path></svg></span></div>
+                      <span style="position:absolute;left:8px;bottom:8px;font:700 9px 'Inconsolata';color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:2px 7px">{{ p.dur }}</span>
+                      <span style="position:absolute;right:8px;bottom:8px;font:600 9px 'Inconsolata';color:rgba(255,255,255,.75)">{{ p.label }}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ p.isYt }}" hint-placeholder-val="{{ true }}">
+                    <div onClick="{{ p.onTap }}" style="border-radius:10px;overflow:hidden;cursor:pointer;background:linear-gradient(150deg,#2c2a26,#191713 70%)">
+                      <div style="height:104px;display:flex;align-items:center;justify-content:center"><span style="width:46px;height:32px;border-radius:9px;background:#e33;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"></path></svg></span></div>
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 9px;background:rgba(255,255,255,.08)"><span style="font:700 9px 'Inconsolata';color:#e8e4da;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.title }}</span><span style="font:600 8px 'Inconsolata';color:#8f8a80;flex:0 0 auto">tap to load · YouTube</span></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ p.isGone }}" hint-placeholder-val="{{ true }}">
+                    <div style="border:1.5px dashed #ddd6ca;border-radius:9px;padding:6px 10px;font:600 9px 'Inconsolata';color:#b0aaa0">media removed — undo restores it</div>
+                  </sc-if>
+                </sc-for>
+              </div>
             </div>
           </sc-for>
         </div>
-        <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid #ece8e0;background:#faf8f3">
-          <input value="{{ replyText }}" onChange="{{ onReplyChange }}" placeholder="reply…" style="flex:1;border:1.5px solid #d6d0c6;border-radius:18px;padding:9px 14px;font:500 12px 'Inconsolata';color:#3a352d;background:#fff;outline:none"></input>
-          <span onClick="{{ onAddReply }}" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--accent);cursor:pointer;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></span>
+        <div style="flex:0 0 auto;border-top:1px solid #ece8e0;background:#faf8f3">
+          <sc-if value="{{ replyHasMedia }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 0">
+              <span style="display:inline-flex;align-items:center;gap:7px;border:1.5px solid #cdddee;background:#eef4fb;border-radius:9px;padding:5px 10px;font:700 9px 'Inconsolata';color:#1f3f63">{{ replyMediaLabel }}<span onClick="{{ onClearReplyMedia }}" style="cursor:pointer;color:#8aa0c0">✕</span></span>
+              <span style="font:500 12px var(--note-font);color:#9a958c">lands inline, right where your text ends</span>
+            </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:7px;padding:10px 14px">
+            <span onClick="{{ onAttachPhoto }}" title="photo" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;cursor:pointer;flex:0 0 auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a857b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"></rect><circle cx="12" cy="13" r="3.2"></circle><path d="M8 6l1.5-2h5L16 6"></path></svg></span>
+            <span onClick="{{ onAttachVideo }}" title="video" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;cursor:pointer;flex:0 0 auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a857b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="2"></rect><path d="M15 10l6-3v10l-6-3z"></path></svg></span>
+            <span onClick="{{ onAttachYt }}" title="YouTube link" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;cursor:pointer;flex:0 0 auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a857b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M10 8.5l6 3.5-6 3.5z" fill="#8a857b" stroke="none"></path></svg></span>
+            <input value="{{ replyText }}" onChange="{{ onReplyChange }}" placeholder="reply…" style="flex:1;min-width:0;border:1.5px solid #d6d0c6;border-radius:18px;padding:9px 14px;font:500 12px 'Inconsolata';color:#3a352d;background:#fff;outline:none"></input>
+            <span onClick="{{ onAddReply }}" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--accent);cursor:pointer;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"></path></svg></span>
+          </div>
         </div>
       </div>
     </sc-if>
@@ -563,7 +620,7 @@
               <div style="flex:1;min-width:0">
                 <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 12px 'Inconsolata';color:#3a352d">{{ e.title }}</span><span style="font:600 9px 'Inconsolata';color:#9a958c">{{ e.date }}</span></div>
                 <div style="font:500 15px var(--note-font);color:#6b665e;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.text }}</div>
-                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><sc-for list="{{ e.tags }}" as="t" hint-placeholder-count="2"><span style="font:600 8px 'Inconsolata';background:{{ t.bg }};border:1px solid {{ t.bd }};border-radius:8px;padding:2px 7px;color:{{ t.tx }}">{{ t.label }}</span></sc-for></div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><sc-for list="{{ e.tags }}" as="t" hint-placeholder-count="2"><span style="font:600 8px 'Inconsolata';background:{{ t.bg }};border:1px solid {{ t.bd }};border-radius:8px;padding:2px 7px;color:{{ t.tx }}">{{ t.label }}</span></sc-for><sc-if value="{{ e.hasMedia }}" hint-placeholder-val="{{ true }}"><span style="font:700 8px 'Inconsolata';color:#4a6b8a;background:#eef4fb;border:1px solid #cdddee;border-radius:7px;padding:2px 6px">{{ e.mediaLabel }}</span></sc-if></div>
               </div>
             </div>
           </sc-for>
@@ -588,7 +645,8 @@
             <div onClick="{{ onAddLink }}" style="border:1.5px dashed #cdc7bc;border-radius:10px;padding:9px;text-align:center;font:600 10px 'Inconsolata';color:#9a958c;cursor:pointer">+ link to a step, figure or attribute</div>
           </div>
           <div style="margin-top:4px;display:flex;gap:14px;align-items:center;font:600 10px 'Inconsolata';color:#9a958c">
-            <span onClick="{{ onMedia }}" style="display:flex;align-items:center;gap:5px;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a958c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>voice</span>
+            <!-- voice = AI capture (docs/ideas/ai-voice-notes.md): speak the note, the anchor is proposed -->
+            <span onClick="{{ onVoiceStart }}" style="display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent);font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>voice</span>
             <span onClick="{{ onMedia }}" style="display:flex;align-items:center;gap:5px;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a958c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"></rect><circle cx="12" cy="13" r="3.2"></circle><path d="M8 6l1.5-2h5L16 6"></path></svg>photo</span>
             <span onClick="{{ onMedia }}" style="display:flex;align-items:center;gap:5px;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a958c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="2"></rect><path d="M15 10l6-3v10l-6-3z"></path></svg>video</span>
           </div>
@@ -965,6 +1023,45 @@
       </div>
     </sc-if>
 
+    <!-- ===== AI VOICE NOTE (capture → transcript → proposed anchor) — docs/ideas/ai-voice-notes.md ===== -->
+    <sc-if value="{{ voiceOpen }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ onVoiceDiscard }}" style="position:absolute;inset:0;background:rgba(20,18,12,.35);z-index:24"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:16px 18px 30px;z-index:25;box-shadow:0 -6px 28px rgba(0,0,0,.18);animation:sheetIn .22s ease">
+        <div style="width:36px;height:4px;border-radius:3px;background:#e0dbd0;margin:0 auto 14px"></div>
+
+        <sc-if value="{{ voiceRec }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:13px;padding:6px 0 2px">
+            <span style="width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;animation:micPulse 1.6s ease-out infinite"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></span>
+            <span style="font:700 12px 'Inconsolata';color:#1c1c1e">listening…</span>
+            <div style="width:100%;background:#f7f5f0;border:1.5px solid #e6e0d4;border-radius:11px;padding:11px 13px;font:500 17px var(--note-font);line-height:1.4;color:#3a352d">“In Slowfox, in the Feather Step, I need to settle the sway before the Three Step<span style="opacity:.4">…</span>”</div>
+            <span style="font:500 13px var(--note-font);color:#9a958c">transcribes on this device — falls back to the app's speech service if it can't</span>
+            <span onClick="{{ onVoiceStop }}" style="display:flex;align-items:center;gap:8px;background:#1c1c1e;color:#fff;border-radius:22px;padding:12px 22px;font:700 12px 'Inconsolata';cursor:pointer"><span style="width:10px;height:10px;border-radius:2px;background:#e05252"></span>stop</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ voiceConfirm }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:700 13px 'Inconsolata';color:#1c1c1e">Here's what I heard</div>
+            <div style="background:#f7f5f0;border:1.5px solid #e6e0d4;border-radius:11px;padding:11px 13px;font:500 17px var(--note-font);line-height:1.4;color:#3a352d">“Settle the sway before the Three Step.”</div>
+            <div>
+              <div style="font:700 9px 'Inconsolata';color:#6f6a61;margin-bottom:7px">PROPOSED TARGET <span style="font:600 8px 'Inconsolata';color:#1f7a4d;background:#e7f3ec;border-radius:5px;padding:2px 6px;margin-left:4px">high confidence</span></div>
+              <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #cdddee;background:#eef4fb;border-radius:10px;padding:10px 12px">
+                <span style="flex:1;font:700 11px 'Inconsolata';color:#1f3f63">↳ every Feather Step · all my Slow Foxtrot choreos</span>
+              </div>
+              <div style="font:500 12px var(--note-font);color:#9a958c;margin-top:5px">resolved against the figures actually in your choreos — nothing saves without your confirm</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:2px">
+              <span onClick="{{ onVoiceConfirm }}" style="display:flex;align-items:center;justify-content:center;gap:7px;background:var(--accent);color:#fff;border-radius:12px;padding:13px;font:700 13px 'Inconsolata';cursor:pointer">Confirm &amp; save</span>
+              <div style="display:flex;gap:8px">
+                <span onClick="{{ onVoiceEdit }}" style="flex:1;text-align:center;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:12px;padding:11px;font:700 11px 'Inconsolata';cursor:pointer">Edit target</span>
+                <span onClick="{{ onVoiceDiscard }}" style="flex:1;text-align:center;border:1.5px solid #e6c2b8;color:#c0563f;border-radius:12px;padding:11px;font:700 11px 'Inconsolata';cursor:pointer">Discard</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
     <!-- ===== TOAST ===== -->
     <sc-if value="{{ toastShown }}" hint-placeholder-val="{{ true }}">
       <div style="position:absolute;left:50%;bottom:108px;transform:translateX(-50%);display:flex;align-items:center;background:#1c1c1e;color:#fff;font:600 11px 'Inconsolata';padding:10px 16px;border-radius:11px;z-index:31;box-shadow:0 6px 20px rgba(0,0,0,.25);white-space:nowrap">{{ toast }}<sc-if value="{{ toastHasAction }}" hint-placeholder-val="{{ true }}"><span onClick="{{ onToastAction }}" style="font:700 11px 'Inconsolata';color:#8fb4e3;margin-left:12px;cursor:pointer;padding:4px 2px">{{ toastActionLabel }}</span></sc-if></div>
@@ -1017,6 +1114,7 @@ class Component extends DCLogic {
 
     return {
       tab:'choreo', choreoView:'list', assembleEdit:false, infoKey:null, threadReturnView:'figure',
+      expandedThreads:{}, replyMedia:null, voice:null,
       openChoreoId:'c1',
       choreos:[
         {id:'c1',title:'Gold Waltz',dance:'Waltz',bars:7,created:'Jun 2025'},
@@ -1035,20 +1133,26 @@ class Component extends DCLogic {
       customTypes:[ { key:'cu_head', label:'Head', color:'#0f6b66', desc:'Where the head is placed & turned', mode:'list', opts:['left','right','closed','to partner'], defs:{ left:'head stays left, resist turning', right:'head turned to the right', closed:'head centred over the frame' }, single:true, roleAware:true, dances:null, scope:'choreo' } ],
       momentStepId:null, editAttr:null, addAttrFor:null, newType:null, addTimingOpen:false,
       routine,
+      /* comments carry `days` (age in days) for the activity fade-out rule
+         (docs/ideas/comment-activity-fadeout.md) and optionally `parts` — inline
+         text/media segments (docs/ideas/annotation-media-embeds.md). Lists are
+         chronological, oldest first. */
       threads:{
-        'f1':[ {author:'anna',time:'3 May',text:'whole figure: keep it travelling — don\'t sit between the turns'}, {author:'me',time:'1d ago',text:'noted, more swing through the set'} ],
-        'f3':[ {author:'lena',time:'2d ago',text:'the whole whisk should rise as one movement'} ],
-        'f2|2':[ {author:'me',time:'2d ago',text:'feels rushed — wait for her weight'}, {author:'lena',time:'1d ago',text:"agree — I'll commit to the side step sooner"}, {author:'anna',time:'lesson 3 May',text:'both: think “up & out”, not up.'} ],
-        'f1|2':[ {author:'anna',time:'3 May',text:"heads stay left — don't turn the head early"}, {author:'marco',time:'2d ago',text:"I'm rushing the turn — wait for me"}, {author:'me',time:'1d ago',text:"will give you another beat"} ],
-        'f1|1':[ {author:'marco',time:'4d ago',text:'commence the rise a touch later here'}, {author:'me',time:'3d ago',text:'got it — feels smoother now'} ],
-        'f1|3':[ {author:'sofia',time:'2 wk',text:'lovely close — keep the heel turn quiet'}, {author:'anna',time:'3 May',text:'no weight back as you close'}, {author:'james',time:'Mon',text:'topline staying level through here'} ],
-        'f3|2':[ {author:'lena',time:'5d ago',text:'more cross, less turn on the whisk'}, {author:'me',time:'5d ago',text:'agreed, I drift early'}, {author:'sofia',time:'4d ago',text:'sway looks much better today'} ],
-        'f4|1':[ {author:'james',time:'2 wk',text:'PP shape collapsing — open the right side'}, {author:'sofia',time:'1 wk',text:'lead it from the back, not the arm'} ],
-        'f5|2':[ {author:'marco',time:'Tue',text:'continue the sway through — don\'t stop it'} ],
-        'f7|3':[ {author:'anna',time:'3 May',text:'the wing is a pause, not a stop'}, {author:'me',time:'2d ago',text:'keep the head left longer'}, {author:'lena',time:'1d ago',text:'+1, I lose the connection here'}, {author:'james',time:'Mon',text:'soften the right arm on the hold'} ],
+        'f1':[ {author:'anna',days:73,time:'3 May',text:'whole figure: keep it travelling — don\'t sit between the turns'}, {author:'me',days:1,time:'1d ago',text:'noted, more swing through the set'} ],
+        'f3':[ {author:'lena',days:2,time:'2d ago',text:'the whole whisk should rise as one movement'} ],
+        'f2|2':[ {author:'anna',days:73,time:'lesson 3 May',text:'both: think “up & out”, not up.'}, {author:'me',days:2,time:'2d ago',text:'feels rushed — wait for her weight'}, {author:'lena',days:1,time:'1d ago',text:"agree — I'll commit to the side step sooner"} ],
+        'f1|2':[ {author:'anna',days:73,time:'3 May',text:"heads stay left — don't turn the head early"}, {author:'marco',days:2,time:'2d ago',text:"I'm rushing the turn — wait for me"}, {author:'me',days:1,time:'1d ago',parts:[ {tx:"will give you another beat — coach showed it Tuesday, watch how she delays the rise:"}, {vid:1,dur:'0:20',label:'coach · heads through the turn'}, {tx:'the whiteboard from the lesson:'}, {ph:1,label:'whiteboard sketch'}, {tx:'and compare this couple:'}, {yt:1,title:'Natural Turn — WDSF technique'} ]} ],
+        'f1|1':[ {author:'marco',days:4,time:'4d ago',text:'commence the rise a touch later here'}, {author:'me',days:3,time:'3d ago',text:'got it — feels smoother now'} ],
+        'f1|3':[ {author:'anna',days:73,time:'3 May',text:'no weight back as you close'}, {author:'sofia',days:14,time:'2 wk',text:'lovely close — keep the heel turn quiet'}, {author:'james',days:2,time:'Mon',text:'topline staying level through here'} ],
+        /* the "comeback" thread — a settled May burst behind the divider, this week's note on top */
+        'f3|2':[ {author:'anna',days:73,time:'3 May',text:'more cross, less turn — the whisk is a crossing action'}, {author:'me',days:73,time:'3 May',text:'agreed, I drift early'}, {author:'lena',days:72,time:'4 May',text:'left side keeps collapsing on 3'}, {author:'anna',days:71,time:'5 May',text:'think of the sway starting from the floor'}, {author:'me',days:70,time:'6 May',text:'better today — holding the cross longer'}, {author:'lena',days:70,time:'6 May',text:'yes! keep exactly that'}, {author:'anna',days:69,time:'7 May',text:'now quiet the head at the end'}, {author:'me',days:68,time:'8 May',text:'noted for next run'}, {author:'anna',days:68,time:'lesson 8 May',text:'settled — moving on to the fallaway'}, {author:'lena',days:5,time:'5d ago',text:'more cross, less turn on the whisk'}, {author:'me',days:5,time:'5d ago',text:'agreed, I drift early'}, {author:'sofia',days:4,time:'4d ago',text:'sway looks much better today'} ],
+        /* the quiet thread — >28d old but one burst: stays fully readable, no divider */
+        'f4|1':[ {author:'james',days:45,time:'~6 wk',text:'PP shape collapsing — open the right side'}, {author:'sofia',days:42,time:'~6 wk',text:'lead it from the back, not the arm'} ],
+        'f5|2':[ {author:'marco',days:1,time:'Tue',text:'continue the sway through — don\'t stop it'} ],
+        'f7|3':[ {author:'anna',days:73,time:'3 May',text:'the wing is a pause, not a stop'}, {author:'me',days:2,time:'2d ago',parts:[ {tx:'keep the head left longer'}, {gone:1} ]}, {author:'james',days:2,time:'Mon',text:'soften the right arm on the hold'}, {author:'lena',days:1,time:'1d ago',text:'+1, I lose the connection here'} ],
       },
       journal:[
-        { id:'j1', kind:'Lesson', who:'Anna', author:'anna', date:'3 May', text:"Heads stay left through the natural turn. Don't sit into the knees on the lowering. Whisk: more cross, less turn.", links:[{fig:'Natural Turn',step:2},{fig:'Whisk'}], tags:[{label:'Natural Turn',tone:'step'},{label:'Whisk',tone:'step'}] },
+        { id:'j1', kind:'Lesson', who:'Anna', author:'anna', date:'3 May', text:"Heads stay left through the natural turn. Don't sit into the knees on the lowering. Whisk: more cross, less turn.", media:'⏵1 ▣1', links:[{fig:'Natural Turn',step:2},{fig:'Whisk'}], tags:[{label:'Natural Turn',tone:'step'},{label:'Whisk',tone:'step'}] },
         { id:'j2', kind:'Practice', who:'solo', author:'me', date:'today', text:'Spin not rushing; whisk sway still collapsing.', links:[{fig:'Spin Turn',step:2}], tags:[{label:'Whisk · sway',tone:'sway'}] },
         { id:'j3', kind:'Practice', who:'w/ Lena', author:'lena', date:'Mon', text:'Ran the routine full 5×; counts run 24/27.', links:[], tags:[{label:'Routine 1',tone:'plain'},{label:'counts run',tone:'plain'}] },
       ],
@@ -1437,13 +1541,31 @@ class Component extends DCLogic {
   createCustomType(){ const n = this.state.newType; if (!n || !(n.label||'').trim()) return; const opts = n.freetext ? [] : (n.opts||[]); const defs = {}; opts.forEach(o=>{ if(n.defs&&n.defs[o]) defs[o]=n.defs[o]; });
     if (n.mode==='edit' && n.key){ this.setState(s => ({ customTypes: s.customTypes.map(t => t.key!==n.key ? t : ({ ...t, label:n.label.trim(), desc:(n.desc||'').trim(), color:n.color||t.color, mode:(n.freetext?'text':'list'), opts, defs, single:!n.multi, roleAware:!!n.roleAware, required:!!n.required })), newType:null }), () => this.toast('Type saved')); return; }
     const key = 'cu_' + Date.now(); const t = { key, label:n.label.trim(), desc:(n.desc||'').trim(), color:n.color||'#0f6b66', mode:(n.freetext ? 'text' : 'list'), opts, defs, single:!n.multi, roleAware:!!n.roleAware, required:!!n.required, dances:null, scope:'choreo' }; const hadStep = !!this.state.addAttrFor; this.setState(s => ({ customTypes: s.customTypes.concat([t]), newType:null }), () => { if (hadStep) this.pickType(key); }); }
+  /* ---- comment activity fade-out (docs/ideas/comment-activity-fadeout.md) ----
+     active(c) ⇔ age ≤ 28d (absolute window) ∨ age ≤ newest-in-list + 7d (session-gap
+     window). Never-empty by construction: the newest comment is always active. */
+  partitionByActivity(list){
+    if (!list.length) return { active:[], stale:[] };
+    const newest = Math.min.apply(null, list.map(c => (c.days == null ? 0 : c.days)));
+    const active = [], stale = [];
+    for (const c of list){ const d = (c.days == null ? 0 : c.days); ((d <= 28 || d <= newest + 7) ? active : stale).push(c); }
+    return { active, stale };
+  }
+  /* plain-text view of a comment (media-part comments contribute their text segments) */
+  cText(c){ if (c.text) return c.text; const t = (c.parts || []).map(p => p.tx || '').join(' ').trim(); return t || 'sent media'; }
+  /* media chip counts for the compact surfaces: ⏵ = video + YouTube, ▣ = photo */
+  cMediaCounts(list){ let v = 0, p = 0; for (const c of list) for (const pt of (c.parts || [])){ if (pt.vid || pt.yt) v++; if (pt.ph) p++; } return { v, p }; }
+  cMediaLabel(list){ const m = this.cMediaCounts(list); return (m.v ? ('⏵' + m.v) : '') + (m.v && m.p ? ' ' : '') + (m.p ? ('▣' + m.p) : ''); }
   addReply(){
     const txt = (this.state.replyText || '').trim();
-    if (!txt) return;
+    const med = this.state.replyMedia;
+    if (!txt && !med) return;
     this.setState(s => {
       const key = s.threadStepKey;
-      const list = (s.threads[key] || []).concat([{ author:'me', time:'just now', text:txt }]);
-      return { threads:{ ...s.threads, [key]:list }, replyText:'' };
+      const mPart = med === 'photo' ? { ph:1, label:'from camera roll' } : med === 'video' ? { vid:1, dur:'0:14', label:'practice clip' } : med === 'yt' ? { yt:1, title:'YouTube video' } : null;
+      const entry = mPart ? { author:'me', days:0, time:'just now', parts:(txt ? [{tx:txt}] : []).concat([mPart]) } : { author:'me', days:0, time:'just now', text:txt };
+      const list = (s.threads[key] || []).concat([entry]);
+      return { threads:{ ...s.threads, [key]:list }, replyText:'', replyMedia:null };
     });
   }
   danceFigures(dance){
@@ -1688,6 +1810,7 @@ class Component extends DCLogic {
 
     /* thread */
     let tTitle = '', tSub = '', comments = [];
+    let tCollapsed = false, tExpandedBar = false, tStaleLabel = '', onToggleStale = () => {};
     if (st.threadStepKey){
       if (st.threadStepKey.indexOf('|') < 0){
         const { figure:fg } = this.findFigure(st.threadStepKey);
@@ -1702,17 +1825,35 @@ class Component extends DCLogic {
           tSub = 'count ' + stp.count + (liveT.length ? ' · ' + liveT.map(a => this.typeInfo(a.type).label.toLowerCase()).join(' · ') : '');
         }
       }
-      comments = (st.threads[st.threadStepKey] || []).map(c => {
+      /* fade-out: stale comments collapse behind a counted divider; expand restores in place */
+      const _tKey = st.threadStepKey;
+      const _all = st.threads[_tKey] || [];
+      const _pt = this.partitionByActivity(_all);
+      const _exp = !!(st.expandedThreads || {})[_tKey];
+      const _hasStale = _pt.stale.length > 0;
+      tCollapsed = _hasStale && !_exp;
+      tExpandedBar = _hasStale && _exp;
+      tStaleLabel = _pt.stale.length + ' more comment' + (_pt.stale.length === 1 ? '' : 's');
+      onToggleStale = () => this.setState(s => ({ expandedThreads:{ ...s.expandedThreads, [_tKey]: !(s.expandedThreads || {})[_tKey] } }));
+      const _visible = (_exp || !_hasStale) ? _all : _all.filter(c => _pt.active.indexOf(c) >= 0);
+      comments = _visible.map(c => {
         const m = this.authorMeta(c.author), col = m.color;
-        return { head: m.name + (m.role ? ' (' + m.role + ')' : '') + ' · ' + c.time, text:c.text, bg:this.lighten(col,.86), border:col, nameColor:this.darken(col,.12), ink:this.darken(col,.45) };
+        const parts = (c.parts || [ { tx:(c.text || '') } ]).map(p => ({
+          isText: !!p.tx, tx: p.tx || '',
+          isPhoto: !!p.ph, isVideo: !!p.vid, isYt: !!p.yt, isGone: !!p.gone,
+          label: p.label || '', dur: p.dur || '', title: p.title || '',
+          onTap: p.ph ? (() => this.toast('opens full-size')) : p.vid ? (() => this.toast('plays inline — poster first, streamed from the app')) : p.yt ? (() => this.toast('YouTube iframe loads only now — after your tap')) : (() => {}),
+        }));
+        return { head: m.name + (m.role ? ' (' + m.role + ')' : '') + ' · ' + c.time, parts, bg:this.lighten(col,.86), border:col, nameColor:this.darken(col,.12), ink:this.darken(col,.45) };
       });
     }
     const peopleLegend = [ { name:'Me', color:profile.color }, { name:'Lena', color:'#cf5aa0' }, { name:'Anna', color:'#b89400' } ];
 
-    /* journal */
+    /* journal — cards are a compact surface: media shows as a chip, never embeds */
     const journal = st.journal.map(e => {
       const m = this.authorMeta(e.author);
       return { id:e.id, title:e.kind + ' · ' + e.who, date:e.date, text:e.text, initial:m.initial, avatarColor:m.color,
+        hasMedia: !!e.media, mediaLabel: e.media || '',
         tags:(e.tags || []).map(t => { const s = this.tagStyle(t.tone); return { label:t.label, bg:s.bg, bd:s.bd, tx:s.tx }; }),
         onOpen:() => this.openEntry(e.id) };
     });
@@ -1758,7 +1899,9 @@ class Component extends DCLogic {
     const filterChips = this.allTypes().filter(t=>_usedAll[t.key]).map(t=>{ const on=readShownSafe.indexOf(t.key)>=0; return { key:t.key, label:this.typeAbbr(t), on, off:!on, ink:this.darken(t.color,.32), tint:this.lighten(t.color,.84), bd:t.color, onTap:()=>this.toggleReadType(t.key) }; });
     const readColHint = filterChips.filter(c=>c.on).length + ' of 4';
     const readCols = readShownSafe.map(k=>{ const t=this.typeInfo(k); return { key:k, abbr:this.typeAbbr(t), color:t.color, weight:(k==='step'?1.7:1), onInfo:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({infoKey:k, infoValue:null}); } }; });
-    const _margin=(list, openFn)=>{ const authors=[]; const seen={}; for(let i=list.length-1;i>=0;i--){ const a=list[i].author; if(!seen[a]){ seen[a]=1; authors.push(a); } } const av=authors.slice(0,3).map(a=>{ const m=this.authorMeta(a); return { color:m.color, initial:m.initial }; }); const latest=list.length?list[list.length-1]:null; return { avatars:av, hasComments:list.length>0, noComments:list.length===0, snippet: latest?(latest.text.length>72?latest.text.slice(0,72)+'\u2026':latest.text):'', count:list.length, moreLabel:(list.length>1?('+'+(list.length-1)+' more'):''), hasMore:list.length>1, onOpen:openFn }; };
+    /* margin cells derive snippet/avatars from ACTIVE comments only (fade-out rule);
+       the media chip counts across the whole list \u2014 media never renders here, only the chip */
+    const _margin=(list, openFn)=>{ const src=this.partitionByActivity(list).active; const authors=[]; const seen={}; for(let i=src.length-1;i>=0;i--){ const a=src[i].author; if(!seen[a]){ seen[a]=1; authors.push(a); } } const av=authors.slice(0,3).map(a=>{ const m=this.authorMeta(a); return { color:m.color, initial:m.initial }; }); const latest=src.length?src[src.length-1]:null; const lt=latest?this.cText(latest):''; const mediaLabel=this.cMediaLabel(list); return { avatars:av, hasComments:list.length>0, noComments:list.length===0, snippet: lt.length>72?lt.slice(0,72)+'\u2026':lt, hasMedia:mediaLabel.length>0, mediaLabel, count:list.length, moreLabel:(src.length>1?('+'+(src.length-1)+' more'):''), hasMore:src.length>1, onOpen:openFn }; };
     let _beat = 0;
     /* reading groups collapse with the SAME st.collapsed the edit view uses —
        fold a section in one lens, it stays folded in the other. Figures (and
@@ -1839,10 +1982,29 @@ class Component extends DCLogic {
       onCloseSheets:()=>this.setState({ addAttrFor:null, newType:null }),
 
       tTitle, tSub, comments, peopleLegend,
+      /* comment-activity fade-out (docs/ideas/comment-activity-fadeout.md) */
+      tCollapsed, tExpandedBar, tStaleLabel, onToggleStale,
+      /* inline media attach (docs/ideas/annotation-media-embeds.md): commenter+ only;
+         picking queues ONE pending item that lands inline at the cursor on send */
       replyText: st.replyText,
+      replyHasMedia: !!st.replyMedia,
+      replyMediaLabel: st.replyMedia === 'photo' ? '▣ photo · from camera roll' : st.replyMedia === 'video' ? '⏵ video · 0:14 · compresses on device' : st.replyMedia === 'yt' ? '⏵ YouTube link' : '',
+      onAttachPhoto:() => this.setState({ replyMedia:'photo' }),
+      onAttachVideo:() => this.setState({ replyMedia:'video' }),
+      onAttachYt:() => this.setState({ replyMedia:'yt' }),
+      onClearReplyMedia:() => this.setState({ replyMedia:null }),
       onReplyChange:(e) => this.setState({ replyText:e.target.value }),
       onAddReply:() => this.addReply(),
       onBackFromThread:() => this.setState(s => ({ choreoView:s.threadReturnView||'figure' })),
+      /* AI voice note capture (docs/ideas/ai-voice-notes.md): record → transcript →
+         PROPOSED anchor rendered like the link picker's result → confirm/correct.
+         Nothing saves without the confirm — the AI only pre-fills. */
+      voiceOpen: !!st.voice, voiceRec: st.voice === 'rec', voiceConfirm: st.voice === 'confirm',
+      onVoiceStart:() => this.setState({ voice:'rec' }),
+      onVoiceStop:() => this.setState({ voice:'confirm' }),
+      onVoiceConfirm:() => { this.setState({ voice:null, editingEntryId:null, draft:null }); this.toast('Saved — every Feather · my Slow Foxtrot choreos'); },
+      onVoiceEdit:() => { this.setState({ voice:null }); this.addLink(); },
+      onVoiceDiscard:() => this.setState({ voice:null }),
 
       owner, shared,
       onBackShare:() => this.setState({ choreoView:'assemble' }),

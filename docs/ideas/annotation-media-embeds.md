@@ -1,8 +1,12 @@
 # Embed photos, videos, and YouTube links in annotations
 
 *(Created 2026-07-14 as WEP-0005, migrated 2026-07-15 · areas: domain, contract, worker,
-web, design, ops. Direction and scenario are set; design details are a completable sketch —
-the `docs/design/` prototype is still owed before implementation.)*
+web, design, ops. **Design-complete and dispatch-ready as of 2026-07-15**: the open
+questions below are decided (owner-confirmed caps, serving path decided with numbers,
+worker-proxied facade thumbnail, stale-tab rendering accepted) and the `docs/design/`
+prototype exists — thread compose + inline embeds + margin/Journal chips in
+`docs/design/project/Ballroom Builder v3.dc.html`. Execution plan:
+[`annotation-media-embeds.plan.md`](annotation-media-embeds.plan.md).)*
 
 ## Summary
 
@@ -93,13 +97,18 @@ The partner (a member) sees everything; the URLs are useless to anyone else.
 - *Media outlives what it's attached to* (soft-delete world): tombstoned media stays
   fetchable to members (undo must restore it); R2 garbage collection is deferred debt
   (Drawbacks).
-- *Stale tabs* render the inline token as literal text until reload — likely acceptable
-  (the stale-bundle nudge bounds the window); confirm before implementing.
+- *Stale tabs* render the inline token as literal text until reload — **accepted**
+  (owner-confirmed 2026-07-15): harmless, short-lived, no data loss; the stale-bundle nudge
+  bounds the window. No token-forward-compat pre-ship.
 
 ## Design details
 
-*(Sketch — complete before implementing; prototype the compose/render surfaces in
-`docs/design/` first, graduating the attach affordance from "coming soon".)*
+*(Complete. The compose/render surfaces are prototyped in
+`docs/design/project/Ballroom Builder v3.dc.html`: attach affordances + pending-item chip in
+the thread compose row, inline photo/video/YouTube-facade/removed-stub parts in the opened
+thread (`f1|2` seeds the coach scenario, `f7|3` the removed stub), media chips on the
+notes-margin cells and Journal cards. The Journal entry editor's photo/video affordances
+stay "coming soon" — media rides routine-scoped annotation threads only, per Non-goals.)*
 
 **Data shape (domain):** `Annotation` gains optional `media?: MediaItem[]` (optional ⇒
 lenient reads, no migration step). Discriminated union, client-ULID ids, soft-delete only:
@@ -122,20 +131,31 @@ introduces). Upload = presigned PUT, browser→R2 direct; `POST
 /api/docs/:docRef/media/upload-url` checks commenter+ membership **and the caps**, then
 mints. On PUT success the client writes the `MediaItem` + token — an ordinary CRDT edit.
 Serving: `GET /api/media/<objectKey>` on the worker — membership of the docRef in the key
-prefix gates it (viewer+), streamed from R2 with **Range** support. *Open question:*
-stream-through vs 302-to-signed-URL — decide with numbers. Upload retry is in-app (iOS
-Safari lacks Background Sync); attaching is **live-gated**.
+prefix gates it (viewer+), **streamed through the worker from the R2 binding with Range
+support** (`get(key, { range })`). *Decided (2026-07-15), with numbers:* stream-through
+beats 302-to-signed-URL — R2 egress is free and reads are Class B ($0.36/M beyond 10M/month
+included; <https://developers.cloudflare.com/r2/pricing/>), so both options cost one worker request + one Class B op
+per fetch — the redirect saves nothing. Signed URLs would additionally require per-env S3
+API credentials (a new secret class in PROVISIONING.md) and leave a membership-revocation
+gap equal to the URL TTL, on exactly the authz surface this idea hard-gates. Streaming a
+response body costs wall-time, not billed CPU-time. Upload retry is in-app (iOS Safari
+lacks Background Sync); attaching is **live-gated**.
 
 **YouTube:** click-to-load facade (`youtube-nocookie.com`); no third-party request from
-merely reading a note. *Open question:* facade thumbnail sourcing.
+merely reading a note. *Facade thumbnail (decided 2026-07-15):* **worker-proxied** —
+`GET /api/media/youtube-thumb/<videoId>` (viewer+ of the docRef via a `docRef` query param,
+same membership gate) fetches `i.ytimg.com` server-side and streams it with long-lived
+`Cache-Control`; the reader's browser only ever talks to the app. The iframe itself still
+loads only after an explicit tap.
 
 **Permissions:** exactly the annotation's model — create/attach commenter+, modify
 author-only (media edits are annotation modifications; the post-connect authorship check
 applies), read viewer+ members. No public URLs, ever.
 
-**Caps (proposed, confirm before implementing):** image ≤ 10 MB pre-compression (client
-targets ~2 MB); video ≤ 90 s and ≤ 150 MB; ≤ 4 items per annotation; 500 MB per free user —
-enforced at mint, usage tracked in an indexed D1 counter.
+**Caps (owner-confirmed 2026-07-15):** image ≤ 10 MB pre-compression (client targets
+~2 MB); video ≤ 3 min and ≤ 300 MB; ≤ 4 items per annotation; 1 GB per free user — enforced
+at mint, usage tracked in an indexed D1 counter. (Confirmed looser than the original
+90 s/150 MB/500 MB sketch — full-figure demos don't fit in 90 s.)
 
 **Back-compat:** `media?` is inert to old readers; rollback leaves R2 objects unread.
 
@@ -184,3 +204,10 @@ TEST-MAP, and deletes this file.
   not rejected: client-side covers v-first at zero infra.
 - **General oEmbed for arbitrary providers** — one provider, one renderer, one privacy
   story; widen only on demonstrated need.
+- **302-to-signed-R2-URL serving** — rejected 2026-07-15 with numbers (see Design details):
+  saves no ops or egress cost over stream-through, adds per-env S3 credentials, and opens a
+  revocation gap equal to the URL TTL on the hard-gated authz surface.
+- **Facade thumbnail direct from `i.ytimg.com`** — rejected: the reader's browser would
+  contact Google on thread open, breaking the "no third-party request from reading a note"
+  goal the facade exists for. A thumbnail-less neutral facade was the runner-up (zero infra)
+  but loses the at-a-glance recognizability the scenario's "compare this couple" needs.
