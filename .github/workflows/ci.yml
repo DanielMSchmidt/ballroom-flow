@@ -9,6 +9,13 @@ name: CI
 # fast gate passes (`needs: fast-gate`), so a broken PR fails fast/cheap and the
 # expensive cross-browser matrix runs only when the fast checks are green. (This
 # replaced the old scheduled nightly.yml, whose failures were silent for days.)
+#
+# Docs-only PRs (every changed file is markdown or under docs/, excluding
+# docs/seed/) skip the gate entirely: the cheap `changes` job detects the diff
+# shape and `fast-gate`/`full-e2e` skip via job-level `if:`. Job-level skips —
+# not a workflow-level `paths-ignore` — because a skipped job satisfies
+# branch-protection required checks, while a never-triggered workflow leaves
+# them pending ("Expected") and the PR unmergeable forever.
 on:
   pull_request:
   workflow_dispatch:
@@ -174,7 +181,49 @@ jobs:
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
 
+  # Cheap docs-only detector (seconds, no toolchain). A PR whose entire diff is
+  # markdown and/or docs/ cannot change anything fast-gate builds or tests — no
+  # product code imports a .md file, and docs/ holds only prose + the design
+  # bundle. The one carve-out is docs/seed/**: that JSON is generator input for
+  # committed TS in packages/domain (see ballroom-flow-figure-data-pipeline), so
+  # seed edits keep the full gate to catch un-regenerated drift.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs-only: ${{ steps.filter.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - name: Detect a docs-only diff
+        id: filter
+        run: |
+          # Non-PR runs (workflow_dispatch) have no diff to inspect — run the
+          # full gate.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Same fork-point resolution as the screenshots job: diff only THIS
+          # PR's changes, not whatever else landed on the base branch.
+          git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
+          base="$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")"
+          files="$(git diff --name-only "$base" HEAD)"
+          non_docs="$(printf '%s\n' "$files" | grep -vE '\.md$|^docs/' || true)"
+          seed="$(printf '%s\n' "$files" | grep -E '^docs/seed/' || true)"
+          if [ -n "$files" ] && [ -z "$non_docs" ] && [ -z "$seed" ]; then
+            echo "docs-only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs-only=false" >> "$GITHUB_OUTPUT"
+          fi
+
   fast-gate:
+    needs: changes
+    # Skipped (not absent) on docs-only PRs: a skipped job reports success to
+    # branch protection, so the PR is mergeable as soon as `changes` finishes.
+    # `full-e2e` follows automatically through its `needs: fast-gate`.
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
