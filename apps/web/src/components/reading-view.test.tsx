@@ -1,5 +1,5 @@
 import type { Annotation, Attribute, FigureDoc, RoutineDoc } from "@weavesteps/domain";
-import type { ComponentType } from "react";
+import { type ComponentType, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedPlacement } from "../store/routine";
 import { importComponent } from "../test-support/import-component";
@@ -16,6 +16,8 @@ interface ReadingProps {
   memberNames?: Record<string, string>;
   onOpenFigure?: (id: string) => void;
   onOpenThread?: (id: string) => void;
+  collapsedSections?: ReadonlySet<string>;
+  onToggleSection?: (sectionId: string) => void;
 }
 
 // The column picks persist per device (bb_read_columns) — clear between tests
@@ -539,6 +541,107 @@ describe("RoutineReadingView — continuous beat numbering + breaks (US-004a)", 
     // …and the figure AFTER the window starts a fresh phrase — both f1 and f3
     // read "1 2 3" (f3 wrapped after 3 + 3 window beats fill the Waltz phrase).
     expect(screen.getAllByText("1 2 3")).toHaveLength(2);
+  });
+});
+
+describe("RoutineReadingView — collapsible sections", () => {
+  const threeStep = (id: string, name: string): FigureDoc =>
+    figure({
+      id,
+      name,
+      attributes: [
+        attr(1, "direction", "forward"),
+        attr(2, "direction", "side"),
+        attr(3, "direction", "close"),
+      ],
+    });
+
+  const twoSectionRoutine = (): RoutineDoc => ({
+    id: "r1",
+    title: "Gold Waltz",
+    dance: "waltz",
+    ownerId: "u1",
+    sections: [
+      { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: "f1" }] },
+      { id: "s2", name: "Corner", placements: [{ id: "p2", figureRef: "f2" }] },
+    ],
+    annotations: [],
+    schemaVersion: 1,
+  });
+
+  const twoSectionPlacements = (f1: FigureDoc, f2: FigureDoc): ResolvedPlacement[] => [
+    { placement: { id: "p1", figureRef: "f1" }, figure: f1, status: "live" },
+    { placement: { id: "p2", figureRef: "f2" }, figure: f2, status: "live" },
+  ];
+
+  /** Drives the CONTROLLED collapse props the way Assemble does (one shared
+   *  Set for both lenses) — the component itself stays stateless about it. */
+  function Harness() {
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+    return (
+      <RoutineReadingView
+        routine={twoSectionRoutine()}
+        placements={twoSectionPlacements(
+          threeStep("f1", "Natural Turn"),
+          threeStep("f2", "Reverse Turn"),
+        )}
+        roleView="leader"
+        collapsedSections={collapsed}
+        onToggleSection={(id) => {
+          setCollapsed((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        }}
+      />
+    );
+  }
+
+  it("folds a section's figures behind its divider and expands them back", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderUi(<Harness />);
+    // Both sections start expanded.
+    expect(screen.getByText("Natural Turn")).toBeInTheDocument();
+    expect(screen.getByText("Reverse Turn")).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Collapse 1st Long Side" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(toggle);
+    // The folded section hides its figures but keeps its divider + a fig count;
+    // the OTHER section is untouched.
+    expect(screen.queryByText("Natural Turn")).toBeNull();
+    expect(screen.getByText("1st Long Side")).toBeInTheDocument();
+    expect(screen.getByText("1 fig")).toBeInTheDocument();
+    expect(screen.getByText("Reverse Turn")).toBeInTheDocument();
+    const expand = screen.getByRole("button", { name: "Expand 1st Long Side" });
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(expand);
+    expect(screen.getByText("Natural Turn")).toBeInTheDocument();
+  });
+
+  it("keeps the continuous beat numbering intact while a section is folded", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderUi(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Collapse 1st Long Side" }));
+    // Folding is display-only: the second section's figure still numbers its
+    // beats AFTER the hidden section's span (4 5 6), never restarting at 1.
+    expect(screen.getByText("4 5 6")).toBeInTheDocument();
+  });
+
+  it("renders plain, non-interactive dividers when no onToggleSection is wired", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderReading(figure({ attributes: [attr(1, "direction", "forward")] }));
+    expect(screen.getByText("1st Long Side")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /collapse 1st long side/i })).toBeNull();
   });
 });
 

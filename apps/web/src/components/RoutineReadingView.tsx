@@ -68,6 +68,8 @@ export function RoutineReadingView({
   timingView = "counts",
   onOpenFigure,
   onOpenThread,
+  collapsedSections,
+  onToggleSection,
 }: {
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
@@ -98,6 +100,13 @@ export function RoutineReadingView({
    *  passes the specific figureRef + count so the caller can focus the panel
    *  on the right anchor). A whole-figure cell omits `count` (US-004a). */
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
+  /** Folded section ids (Builder v3: tap a divider → collapse). CONTROLLED by
+   *  the caller — Assemble shares ONE Set across the edit and reading lenses,
+   *  so a section folded while editing arrives folded here and vice versa. */
+  collapsedSections?: ReadonlySet<string>;
+  /** Tap a section divider → flip its fold. Omitted (e.g. in a context with no
+   *  fold state) the dividers stay the plain non-interactive eyebrow rows. */
+  onToggleSection?: (sectionId: string) => void;
 }) {
   const t = useMessages(timelineMessages);
   const dance = routine.dance;
@@ -209,47 +218,68 @@ export function RoutineReadingView({
       {routine.sections.length === 0 ? (
         <p className="text-2xs text-ink-faint">{t.noSections}</p>
       ) : (
-        routine.sections.map((section) => (
-          <section key={section.id} className="flex flex-col gap-[12px]">
-            <SectionDivider label={section.name} />
-            {section.placements.length === 0 ? (
-              <p className="text-2xs text-ink-faint">{t.noFiguresInSection}</p>
-            ) : (
-              section.placements.map((pl) => {
-                const numbered = numberByPlacement.get(pl.id);
-                if (pl.source === "break") {
+        routine.sections.map((section) => {
+          // Folding is DISPLAY-ONLY: the beat numbering above is computed from
+          // the sections themselves, so a hidden section still occupies its
+          // span and the visible ones keep their real running counts.
+          const isCollapsed =
+            onToggleSection != null && (collapsedSections?.has(section.id) ?? false);
+          return (
+            <section key={section.id} className="flex flex-col gap-[12px]">
+              <SectionDivider
+                label={section.name}
+                collapsed={isCollapsed}
+                onToggle={onToggleSection && (() => onToggleSection(section.id))}
+                toggleLabel={
+                  isCollapsed ? t.expandSection(section.name) : t.collapseSection(section.name)
+                }
+                meta={
+                  isCollapsed
+                    ? t.figCount(section.placements.filter((pl) => pl.source !== "break").length)
+                    : undefined
+                }
+              />
+              {isCollapsed ? null : section.placements.length === 0 ? (
+                <p className="text-2xs text-ink-faint">{t.noFiguresInSection}</p>
+              ) : (
+                section.placements.map((pl) => {
+                  const numbered = numberByPlacement.get(pl.id);
+                  if (pl.source === "break") {
+                    return (
+                      <BreakReadout
+                        key={pl.id}
+                        numbered={numbered?.kind === "break" ? numbered : undefined}
+                      />
+                    );
+                  }
+                  const rp = resolvedByPlacement.get(pl.id);
+                  const figureId = rp?.figure?.id;
                   return (
-                    <BreakReadout
+                    <FigureReadout
                       key={pl.id}
-                      numbered={numbered?.kind === "break" ? numbered : undefined}
+                      figure={rp?.figure ?? null}
+                      status={rp?.status ?? "loading"}
+                      part={pl.part ?? null}
+                      roleView={roleView}
+                      columns={shownColumns}
+                      beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
+                      annotations={
+                        (figureId && annotationsByFigure.get(figureId)) || NO_ANNOTATIONS
+                      }
+                      canComment={canComment}
+                      memberColors={memberColors}
+                      memberNames={memberNames}
+                      customKinds={customKinds}
+                      scopeLabel={routine.title}
+                      onOpenFigure={onOpenFigure}
+                      onOpenThread={onOpenThread}
                     />
                   );
-                }
-                const rp = resolvedByPlacement.get(pl.id);
-                const figureId = rp?.figure?.id;
-                return (
-                  <FigureReadout
-                    key={pl.id}
-                    figure={rp?.figure ?? null}
-                    status={rp?.status ?? "loading"}
-                    part={pl.part ?? null}
-                    roleView={roleView}
-                    columns={shownColumns}
-                    beatTokens={numbered?.kind === "figure" ? numbered.tokens : NO_TOKENS}
-                    annotations={(figureId && annotationsByFigure.get(figureId)) || NO_ANNOTATIONS}
-                    canComment={canComment}
-                    memberColors={memberColors}
-                    memberNames={memberNames}
-                    customKinds={customKinds}
-                    scopeLabel={routine.title}
-                    onOpenFigure={onOpenFigure}
-                    onOpenThread={onOpenThread}
-                  />
-                );
-              })
-            )}
-          </section>
-        ))
+                })
+              )}
+            </section>
+          );
+        })
       )}
     </div>
   );

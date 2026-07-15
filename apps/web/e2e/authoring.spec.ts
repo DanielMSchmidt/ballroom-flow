@@ -100,7 +100,20 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
     await expect(reading.getByText("fwd·HT")).toBeVisible();
+
+    // 5d. Sections are collapsible in BOTH lenses, sharing ONE fold state:
+    //     fold "Intro" on the reading programme → its figure hides behind the
+    //     divider (which now reads a "1 fig" meta)…
+    await reading.getByRole("button", { name: "Collapse Intro" }).click();
+    await expect(reading.getByText("fwd·HT")).toBeHidden();
+    await expect(reading.getByText("1 fig")).toBeVisible();
+    //     …switch to the builder: the SAME section arrives folded; expanding it
+    //     there brings the placement card back (and the fold is display-only —
+    //     nothing was deleted).
     await page.getByRole("button", { name: /list view/i }).click();
+    await expect(page.getByText("My Step")).toBeHidden();
+    await page.getByRole("button", { name: "Expand Intro" }).click();
+    await expect(page.getByText("My Step")).toBeVisible();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
     await page.getByRole("button", { name: /all choreos/i }).click();

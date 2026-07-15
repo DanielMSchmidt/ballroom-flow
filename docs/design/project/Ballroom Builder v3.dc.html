@@ -118,10 +118,14 @@
             </div>
             <sc-for list="{{ readingGroups }}" as="grp" hint-placeholder-count="3">
               <div style="display:flex;flex-direction:column;gap:12px">
-                <div style="display:flex;align-items:center;gap:9px">
+                <div onClick="{{ grp.onToggle }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none">
+                  <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6f6a61" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+                  <sc-if value="{{ grp.collapsed }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6f6a61" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"></path></svg></sc-if>
                   <span style="font:700 9px 'Inconsolata';color:#6f6a61;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap">{{ grp.sideName }}</span>
                   <div style="flex:1;height:1px;background:#e8e3da"></div>
+                  <sc-if value="{{ grp.collapsed }}" hint-placeholder-val="{{ true }}"><span style="font:600 9px 'Inconsolata';color:#b3aea4;white-space:nowrap">{{ grp.figCountLabel }}</span></sc-if>
                 </div>
+                <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}">
                 <sc-for list="{{ grp.figures }}" as="fig" hint-placeholder-count="2">
                   <sc-if value="{{ fig.notBreak }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;flex-direction:column;gap:5px;position:relative">
@@ -177,6 +181,7 @@
                   </div>
                   </sc-if>
                 </sc-for>
+                </sc-if>
               </div>
             </sc-for>
           </div>
@@ -1755,8 +1760,15 @@ class Component extends DCLogic {
     const readCols = readShownSafe.map(k=>{ const t=this.typeInfo(k); return { key:k, abbr:this.typeAbbr(t), color:t.color, weight:(k==='step'?1.7:1), onInfo:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({infoKey:k, infoValue:null}); } }; });
     const _margin=(list, openFn)=>{ const authors=[]; const seen={}; for(let i=list.length-1;i>=0;i--){ const a=list[i].author; if(!seen[a]){ seen[a]=1; authors.push(a); } } const av=authors.slice(0,3).map(a=>{ const m=this.authorMeta(a); return { color:m.color, initial:m.initial }; }); const latest=list.length?list[list.length-1]:null; return { avatars:av, hasComments:list.length>0, noComments:list.length===0, snippet: latest?(latest.text.length>72?latest.text.slice(0,72)+'\u2026':latest.text):'', count:list.length, moreLabel:(list.length>1?('+'+(list.length-1)+' more'):''), hasMore:list.length>1, onOpen:openFn }; };
     let _beat = 0;
+    /* reading groups collapse with the SAME st.collapsed the edit view uses —
+       fold a section in one lens, it stays folded in the other. Figures (and
+       the running beat counter) are still computed while collapsed: numbering
+       is display-independent, hiding a section must not renumber the rest. */
     const readingGroups = st.routine.sides.map(sd => ({
       sideName: sd.name,
+      collapsed: !!st.collapsed[sd.id], expanded: !st.collapsed[sd.id],
+      figCountLabel: (() => { const n = sd.figures.filter(f=>f.source!=='break').length; return n + (n===1?' fig':' figs'); })(),
+      onToggle: () => this.toggleSide(sd.id),
       figures: sd.figures.map(f => {
         const cols = readCols;
         const stepsM = f.steps.map((stp,i)=>{
