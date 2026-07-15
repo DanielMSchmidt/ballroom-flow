@@ -1,0 +1,60 @@
+name: Screenshot baseline
+
+# Renders the marketing screenshots fresh from main's code on every (relevant)
+# push and uploads them as the `screenshots-baseline` artifact. The PR
+# `screenshots` job in ci.yml downloads the NEWEST of these artifacts and
+# pixel-diffs the PR's rendered screenshots against it — so the diff baseline is
+# what main's code actually renders today, not the committed images (those
+# stopped being refreshed when the auto-commit bot was removed on 2026-07-14,
+# so they drift stale as UI changes merge; they still serve the landing page).
+#
+# If no artifact exists — before this workflow's first run, or when every run
+# has aged past the 90-day artifact retention — the PR job falls back to the
+# committed images at the PR's merge-base. Use workflow_dispatch to seed or
+# refresh the baseline manually.
+on:
+  push:
+    branches: [main]
+    # Mirror the PR job's relevance filter: only these paths can change what
+    # the screenshots render.
+    paths:
+      - "apps/web/**"
+      - "apps/worker/**"
+      - "packages/**"
+      - ".github/workflows/screenshot-baseline.yml"
+  workflow_dispatch:
+
+# A newer main push supersedes an in-flight baseline render.
+concurrency:
+  group: screenshot-baseline
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build the SPA + worker so the E2E harness (wrangler dev) can serve the
+      # app — same recipe as the PR screenshots job in ci.yml.
+      - run: pnpm -r build
+      - name: Install Playwright (chromium)
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Render screenshots
+        run: pnpm --filter web screenshots
+      # The zip's root is the PNGs themselves (single-dir glob), which is the
+      # layout ci.yml unpacks into SCREENSHOT_BASELINE_DIR.
+      - name: Upload baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-baseline
+          path: apps/web/src/marketing/screenshots/*.png
+          retention-days: 90

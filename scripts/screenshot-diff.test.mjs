@@ -88,15 +88,39 @@ describe("renderComment", () => {
   });
   it("inlines before and after from release-asset URLs when the env is set (no diff, no Δ)", () => {
     const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], assetCtx);
+    // "before" inlines the exact bytes that were diffed (staged as a release
+    // asset) — NOT a raw.githubusercontent URL, which only exists for committed
+    // images and diverges once the baseline comes from the main-run artifact.
     expect(md).toContain(
-      "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.before.png",
     );
     // "after" inlines from the prerelease's asset download URL; no diff image or Δ column.
     expect(md).toContain(
       "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
     );
+    expect(md).not.toContain("raw.githubusercontent.com");
     expect(md).not.toContain(".diff.png");
     expect(md).not.toContain("Δ pixels");
+  });
+  it("names the main baseline run when the baseline came from the artifact", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], {
+      ...assetCtx,
+      baselineSha: "abcdef0123456789abcdef0123456789abcdef01",
+    });
+    expect(md).toContain("abcdef0");
+    expect(md).toContain("screenshots-baseline");
+  });
+  it("falls back to describing the committed baseline when no baseline sha is set", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], assetCtx);
+    expect(md).toContain("committed");
+    expect(md).not.toContain("screenshots-baseline");
+  });
+  it("inlines the before release asset for a REMOVED screenshot", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "removed" }], assetCtx);
+    expect(md).toContain("### Removed");
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.before.png",
+    );
   });
   it("inlines the after image for a NEW screenshot (no before) under release assets", () => {
     const md = renderComment([{ key: "hero", file: "hero.png", status: "new" }], assetCtx);

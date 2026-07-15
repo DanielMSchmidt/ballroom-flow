@@ -22,19 +22,25 @@ on:
 
 jobs:
   # Landing-page screenshot comparison. Renders the marketing screenshots fresh
-  # from THIS PR's code, pixel-diffs them against the base branch's committed
-  # images, and upserts a before/after PR comment. It NEVER commits the rendered images back to the PR branch — that is the
+  # from THIS PR's code, pixel-diffs them against the `screenshots-baseline`
+  # artifact from the last main run of screenshot-baseline.yml (what main's code
+  # actually renders — the committed images stopped being refreshed when the
+  # auto-commit bot was removed on 2026-07-14, so they drift stale; when no
+  # artifact exists yet or it aged past retention, the diff falls back to the
+  # committed images at the merge-base), and upserts a before/after PR comment.
+  # It NEVER commits the rendered images back to the PR branch — that is the
   # deliberate change from the old screenshots.yml, whose bot commit carried
   # `[skip ci]` and became the PR HEAD with no CI on it (a red PR could then show no
   # failing checks on its HEAD). With no bot commit there is exactly one commit per
   # push, so fast-gate/full-e2e below always run on the PR's real HEAD.
   #
-  # To inline the "after" in the comment (a comment can only embed images it can
+  # To inline before/after in the comment (a comment can only embed images it can
   # fetch by URL), the PNGs are published as assets on a dedicated `ci-screenshots`
   # prerelease and the comment links their `releases/download/...` URLs — hosting
   # them WITHOUT any commit (a release tag points at an existing commit; it adds no
   # history and never touches the PR). `contents: write` is needed to create the
-  # release + upload assets. The same PNGs are also kept as a run artifact. Stale
+  # release + upload assets; `actions: read` to fetch the baseline artifact. The
+  # same PNGs are also kept as a run artifact. Stale
   # per-PR assets are pruned each push here, and on PR close by screenshot-cleanup.yml.
   # Informational only: this job does not gate the merge and runs independently of
   # fast-gate. Path-filtered at the step level so doc-only PRs skip the heavy work.
@@ -44,12 +50,17 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # Resolve the fork point so the diff reflects only THIS PR's changes. The
-      # base branch isn't fetched by the head-ref checkout, so fetch it explicitly.
+      # Resolve the fork point for the relevance filter below and for the
+      # committed-image FALLBACK baseline (used when no main-run artifact exists).
+      # Note: with the artifact baseline the diff is PR-HEAD vs LATEST main — a PR
+      # behind main can show changes that merged after its fork point; rebase to
+      # narrow the diff to the PR's own changes. The base branch isn't fetched by
+      # the head-ref checkout, so fetch it explicitly.
       - name: Resolve PR base
         id: base
         run: |
@@ -64,6 +75,40 @@ jobs:
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
+      # Fetch the diff baseline: the newest live `screenshots-baseline` artifact
+      # rendered from main by screenshot-baseline.yml. When none exists (first
+      # run, or all runs older than the artifact retention) the diff script falls
+      # back to the committed images at the merge-base — so this step never fails
+      # the job, it only decides which baseline the diff uses.
+      - name: Fetch baseline screenshots (last main run)
+        if: steps.changes.outputs.relevant == 'true'
+        id: baseline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner, repo, name: 'screenshots-baseline', per_page: 100,
+            });
+            const latest = artifacts
+              .filter((a) => !a.expired && a.workflow_run && a.workflow_run.head_branch === 'main')
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+            if (!latest) {
+              core.notice('No screenshots-baseline artifact from main found — diffing against the committed merge-base images instead.');
+              core.setOutput('dir', '');
+              core.setOutput('sha', '');
+              return;
+            }
+            const dl = await github.rest.actions.downloadArtifact({
+              owner, repo, artifact_id: latest.id, archive_format: 'zip',
+            });
+            fs.writeFileSync('screenshot-baseline.zip', Buffer.from(dl.data));
+            core.setOutput('dir', 'screenshot-baseline');
+            core.setOutput('sha', latest.workflow_run.head_sha);
+      - name: Unpack baseline screenshots
+        if: steps.changes.outputs.relevant == 'true' && steps.baseline.outputs.dir != ''
+        run: unzip -q screenshot-baseline.zip -d screenshot-baseline
       - uses: pnpm/action-setup@v4
         if: steps.changes.outputs.relevant == 'true'
       - uses: actions/setup-node@v4
@@ -91,6 +136,9 @@ jobs:
           # was rendered), not github.sha (the merge commit).
           SCREENSHOT_ASSET_PREFIX: "pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-"
           SCREENSHOT_ASSET_URL_BASE: "${{ github.server_url }}/${{ github.repository }}/releases/download/ci-screenshots"
+          # Baseline from the last main run (empty → committed merge-base fallback).
+          SCREENSHOT_BASELINE_DIR: ${{ steps.baseline.outputs.dir }}
+          SCREENSHOT_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
           node scripts/screenshot-diff.mjs \
             "${{ steps.base.outputs.sha }}" \
@@ -105,11 +153,12 @@ jobs:
           path: screenshot-artifacts/
           if-no-files-found: ignore
           retention-days: 14
-      # Host the fresh after PNGs so the comment can inline them, WITHOUT a commit:
-      # upload them as assets on the `ci-screenshots` prerelease. The staged
-      # filenames already ARE the asset names (SCREENSHOT_ASSET_PREFIX + key +
-      # ".after.png"), so we upload each file under its basename and the URLs the
-      # comment computed match. Runs before the comment upsert so the images exist
+      # Host the before/after PNGs so the comment can inline them, WITHOUT a
+      # commit: upload them as assets on the `ci-screenshots` prerelease. The
+      # staged filenames already ARE the asset names (SCREENSHOT_ASSET_PREFIX +
+      # key + ".before.png"/".after.png"), so we upload each file under its
+      # basename and the URLs the comment computed match. Runs before the comment
+      # upsert so the images exist
       # when the comment first renders (else camo may cache a 404). Stale assets from
       # this PR's earlier pushes are deleted first.
       - name: Publish screenshot images as release assets
