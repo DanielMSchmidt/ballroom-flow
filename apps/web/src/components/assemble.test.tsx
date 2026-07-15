@@ -167,6 +167,49 @@ describe("Reading view (read-only routine timeline)", () => {
     expect(screen.queryByTestId("reading-view")).toBeNull();
     expect(screen.getByTestId("section-list")).toBeInTheDocument();
   });
+
+  it("shares a section's collapsed state across the edit and reading lenses", async () => {
+    // Intent: collapsing works while EDITING and while VIEWING, and it's ONE
+    //   state — fold a section in the builder, it stays folded in the reading
+    //   programme (and vice versa). Both lenses live in Assemble, which owns
+    //   the shared Set.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    // Collapse in the builder: the placement card folds away, meta reads figs.
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Intro" }));
+    expect(screen.queryByText("Feather")).toBeNull();
+    expect(screen.getByText("1 fig")).toBeInTheDocument();
+    // Switch to the reading programme: the SAME section arrives folded.
+    await userEvent.click(screen.getByRole("button", { name: /reading view/i }));
+    expect(screen.getByTestId("reading-view")).toBeInTheDocument();
+    expect(screen.queryByText("Feather")).toBeNull();
+    // Expand it in the reading view…
+    await userEvent.click(screen.getByRole("button", { name: "Expand Intro" }));
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    // …and the builder sees the expansion too.
+    await userEvent.click(screen.getByRole("button", { name: /list view/i }));
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+  });
 });
 
 describe("Section header bar count (edit view)", () => {

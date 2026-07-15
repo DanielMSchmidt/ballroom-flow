@@ -405,7 +405,9 @@ export function Assemble({
     (anchor: { figureRef: string; count?: number }) => setThreadAnchor(anchor),
     [],
   );
-  // Which sections are collapsed in the editing view (frame 1.9: ▾/▸).
+  // Which sections are folded (frame 1.9: ▾/▸) — ONE Set shared by both
+  // lenses, so a section collapsed while editing stays collapsed in the
+  // reading programme and vice versa.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleCollapsed = useCallback((sectionId: string) => {
     setCollapsed((prev) => {
@@ -802,6 +804,8 @@ export function Assemble({
               timingView={effectiveTimingView}
               onOpenFigure={openFigureFromReading}
               onOpenThread={openThreadFromReading}
+              collapsedSections={collapsed}
+              onToggleSection={toggleCollapsed}
             />
             {/* Quick-note FAB (Builder v2): a floating "✎ note" pill on the
                 reading programme that jumps straight into a note on the first

@@ -25,6 +25,10 @@ const en = {
   // Reading view (RoutineReadingView)
   noSections: "This choreo has no sections yet.",
   noFiguresInSection: "No figures in this section.",
+  // Collapsible section dividers (same fold state as the edit view's headers).
+  expandSection: (name: string) => `Expand ${name}`,
+  collapseSection: (name: string) => `Collapse ${name}`,
+  figCount: (n: number) => `${n} fig${n === 1 ? "" : "s"}`,
   figureUnavailable: "This figure is unavailable.",
   loadingFigure: "Loading figure…",
   breakLabel: "Break",
@@ -98,6 +102,9 @@ const de: typeof en = {
 
   noSections: "Diese Choreo hat noch keine Abschnitte.",
   noFiguresInSection: "Keine Figuren in diesem Abschnitt.",
+  expandSection: (name) => `${name} ausklappen`,
+  collapseSection: (name) => `${name} einklappen`,
+  figCount: (n) => (n === 1 ? "1 Figur" : `${n} Figuren`),
   figureUnavailable: "Diese Figur ist nicht verfügbar.",
   loadingFigure: "Figur lädt …",
   breakLabel: "Pause",

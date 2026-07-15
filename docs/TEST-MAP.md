@@ -71,7 +71,7 @@ imports through small shims that defer module resolution to runtime:
 | US-023 | Invite by link (issue + redeem) | worker + E2E | `apps/worker/src/routes/invite.test.ts`, `apps/web/e2e/permission-quota-invite.spec.ts` |
 | US-024 | Share screen (member list + roles) | worker | `apps/worker/src/routes/share.test.ts` |
 | US-025 | Create a routine | worker + E2E | `apps/worker/src/routes/quota.test.ts`, `apps/web/e2e/authoring.spec.ts` |
-| US-026 | Add / rename / reorder / delete sections | component + E2E | `apps/web/src/components/assemble.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
+| US-026 | Add / rename / reorder / delete sections; collapse/expand a section in BOTH lenses (one fold state shared by the builder and the reading programme, 2026-07-15) | component + E2E | `apps/web/src/components/assemble.test.tsx` (incl. "shares a section's collapsed state across the edit and reading lenses"), `apps/web/src/components/reading-view.test.tsx` ("collapsible sections" describe), `apps/web/src/ui/SectionDivider.test.tsx` ("collapse toggle" describe), `apps/web/e2e/authoring.spec.ts` (@smoke step 5d) |
 | US-027 | Add / reorder / delete placements | component + E2E | `apps/web/src/components/assemble.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-028 | Figure timeline: place/edit/remove attributes | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-029 | Attribute editor (registry-derived) | component | `apps/web/src/components/attribute-editor.test.tsx` |
