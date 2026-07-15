@@ -71,14 +71,14 @@ packages/domain/    pure TS domain logic (Automerge doc schemas, overlay, fork, 
 packages/contract/  Zod schemas + Hono RPC types shared by web & worker
 apps/worker/        Hono Worker + per-document Durable Object + D1 index
 apps/web/           React PWA: design system (src/ui), store seam, screens
-docs/               PLAN.md (current-state spec) + proposals/ (WEP change process) + design, tooling, testing
-research/           deep-dive research behind the plan's decisions
+docs/               README.md (the index) + concepts/ (mental model) + system/ (how it works) + ideas/ (future work) + design, tooling, testing
+research/           deep-dive research behind the architecture's decisions
 ```
 
 ## Where to read more
 
-- **[`docs/PLAN.md`](docs/PLAN.md)** — the single source of truth for current state (domain model, architecture, milestones, locked decisions).
-- **[`docs/proposals/`](docs/proposals/README.md)** — the change process: KEP-style **Weave Enhancement Proposals** (WEPs) with statuses, ship gates, and the rejected-alternatives record.
-- **[`CLAUDE.md`](CLAUDE.md)** — the working guide that routes contributors (human or agent) to the right doc for their task.
+- **[`docs/README.md`](docs/README.md)** — the documentation index: the product's mental model in one screen, routing into **`docs/concepts/`** (the world view) and **`docs/system/`** (how it works underneath).
+- **[`docs/ideas/`](docs/ideas/README.md)** — designed-but-not-built future work, each idea explicit about the mental-model delta it would make and deleted when shipped.
+- **[`CLAUDE.md`](CLAUDE.md)** — the working guide for contributors (human or agent): the standing rules and the same-change doc-update discipline.
 
-> **Status:** the **M0–M9 v1 roadmap is complete end-to-end** (PLAN §9 close-outs, 2026-07-03; v5 live-figure migration 2026-07-02; offline editing 2026-07-05; Builder-v3 model changes 2026-07-07) and staging is live. New work is scoped through the [WEP index](docs/proposals/README.md).
+> **Status:** the **v1 roadmap is complete end-to-end** (v5 live-figure migration 2026-07-02; ops/PWA close-outs 2026-07-03; offline editing 2026-07-05; Builder-v3 model changes 2026-07-07) and staging is live. New work starts in [`docs/ideas/`](docs/ideas/README.md).

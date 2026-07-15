@@ -5,6 +5,16 @@ description: Load BEFORE making any change to the weave-steps repo — when clas
 
 # Weave Steps — Change Control
 
+> **⟳ Docs restructure (2026-07-15) — read this first.** This skill predates two changes:
+> **(1)** `docs/PLAN.md` and `docs/proposals/` (WEPs) were **dissolved** into
+> `docs/README.md` (the index — mandatory first read) + `docs/concepts/` (the mental model)
+> + `docs/system/` (the technical layer) + `docs/ideas/` (future work, no statuses). Every
+> `PLAN §…`/`WEP-…` reference below decodes via the historians table in `docs/README.md`;
+> the same-change doc-sync rule now covers **both** layers (concepts + system), and
+> substantive proposals are idea docs, not WEPs. **(2)** the `development` branch was
+> deleted (2026-07-05) — **branch off `main`**, PR into `main`, merging deploys production
+> (CLAUDE.md §6). Everything else here (gates, incidents, non-negotiables) still stands.
+
 The rules for changing this repo, each with the incident that made it a rule. This codebase was built in 8 days / 131 PRs (2026-06-24 → 2026-07-02); every rule below was paid for. The internal issue numbers cited in commit messages (#63, #161, #168, …) are a gitignored ledger and do NOT resolve on GitHub — PR numbers do.
 
 **When NOT to use this:** For *how to build/run/test* → `ballroom-flow-build-and-env` and `ballroom-flow-validation-and-qa`. For *what the architecture is* → `ballroom-flow-architecture-contract`. For *why past attempts failed in detail* → `ballroom-flow-failure-archaeology`. For the active migration work itself → `ballroom-flow-v5-migration-campaign`. This skill is only the governance layer: what class of change you're making, what gates it must pass, and what is forbidden.

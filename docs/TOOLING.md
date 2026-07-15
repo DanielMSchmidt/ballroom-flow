@@ -1,7 +1,7 @@
 # Tooling & Test-Harness Assessment
 
-DevOps assessment of the Weave Steps dev tooling against [PLAN.md](PLAN.md)
-§10.3 ("Tooling, CI, fixtures"). Scope: the test **harness** (frameworks,
+DevOps assessment of the Weave Steps dev tooling against the testing strategy
+([system/testing.md](system/testing.md) § Tooling & CI). Scope: the test **harness** (frameworks,
 configs, CI, hooks, DX) — **not** test cases or test-helper abstractions
 (factories, `seedDb`, `authedContext`, `makeTestJWT`, convergence helpers),
 which the **test engineer** owns and builds on this harness.
@@ -81,24 +81,25 @@ New dev dependencies:
 ### Coverage thresholds — ARMED (was deferred; landed with the M1/M2 suites)
 - **Coverage thresholds are armed and gate every PR** — domain ≥90% lines
   (`packages/domain/vitest.config.ts`), worker ≥88% lines
-  (`apps/worker/vitest.config.ts`); ratcheting toward 95/90 (PLAN.md §10.3). Web
+  (`apps/worker/vitest.config.ts`); ratcheting toward 95/90 ([system/testing.md](system/testing.md)). Web
   coverage is collected but **not yet threshold-gated** — see the readiness
   backlog. (This section previously said the thresholds were commented out until
   tests existed; the suites have long since landed.)
 - **EXPLAIN QUERY PLAN helper** — implemented (`expectIndexedQuery`,
   `apps/worker/src/test-support/explain.ts`); the US-049 suites run it as a
-  no-SCAN gate. (PLAN.md §7, §10.3.)
+  no-SCAN gate. ([system/architecture.md](system/architecture.md) § Global constraints.)
 
 ### Intentionally deferred (with milestone pointers)
 - **`applyD1Migrations()`** — invoked in per-suite fixtures (`seedDb`); the
   migrations dir now carries the full ladder (17 migrations as of 2026-07-13),
   no longer empty.
 - **Lighthouse-CI** — stubbed in `nightly.yml`; budgets authored in **M9**
-  (PLAN.md §7 perf NFRs).
+  ([system/architecture.md](system/architecture.md) § Non-functional requirements).
 - **Sentry + Analytics Engine** — shipped in **M8** as dependency-free envelope
   reporters (no Sentry SDK): worker `apps/worker/src/ops.ts` (+ auth
   verification-failure reporting, 2026-07-05) and web `apps/web/src/lib/ops.ts`
-  (`VITE_SENTRY_DSN`). See PLAN.md §7 Ops, §9 M8. Not part of the test harness.
+  (`VITE_SENTRY_DSN`). See [system/architecture.md](system/architecture.md) § Non-functional
+  requirements (Ops). Not part of the test harness.
 - **Real-browser component testing** — the component layer uses jsdom (fast,
   deterministic) for Testing Library + axe; true cross-browser + PWA
   install/offline coverage is the Playwright E2E layer (M9).
