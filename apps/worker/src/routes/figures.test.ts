@@ -680,6 +680,10 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
 
     const res = await saveToLibrary(partner.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
+    // WEP-0002: the bookmark is a DO edit; /mine reads the alarm-written
+    // library_entry projection. Force the PARTNER's account alarm so /mine
+    // reflects it deterministically instead of racing the async projection.
+    await runAccountAlarm("u_co2");
     expect(await mineDocRefs(partner.authHeaders())).toContain(figureRef);
     // The owner's own library is untouched by the partner's bookmark.
     expect(await mineDocRefs(owner.authHeaders())).not.toContain(figureRef);
