@@ -602,6 +602,9 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
     const res = await saveToLibrary(ctx.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ alreadySaved: false });
+    // The bookmark lands in the account doc; /mine reads the alarm-projected
+    // library_entry row, so drive the alarm before asserting (WEP-0002).
+    await runAccountAlarm("u_own");
     expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
   });
 
@@ -676,6 +679,9 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
 
     const res = await saveToLibrary(partner.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
+    // /mine reads the alarm-projected library_entry row — drive the partner's
+    // account-doc alarm before asserting (WEP-0002).
+    await runAccountAlarm("u_co2");
     expect(await mineDocRefs(partner.authHeaders())).toContain(figureRef);
     // The owner's own library is untouched by the partner's bookmark.
     expect(await mineDocRefs(owner.authHeaders())).not.toContain(figureRef);
