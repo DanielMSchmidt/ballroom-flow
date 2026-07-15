@@ -20,12 +20,11 @@ export interface FamilyNote {
   count?: number;
   role?: "leader" | "follower";
   anchors: Anchor[];
-  /** The note's authored timestamp, used to order notes newest-first in the
-   *  reading-view notes margin. Present for the viewer's OWN notes (read live
-   *  from the account doc, which carries `createdAt`); ABSENT for co-members'
-   *  notes, whose REST projection (`figure_type_note_index`) exposes no
-   *  per-note authored time — those sort as oldest (a documented limitation
-   *  that a worker change would lift). */
+  /** The note's timestamp, used to order notes newest-first in the reading-view
+   *  notes margin. The viewer's OWN notes read it live from the account doc's
+   *  `createdAt`; co-members' notes get it from the REST projection's `updatedAt`
+   *  (the v1 index tracks no separate created time). Optional only for forward
+   *  compatibility with an older worker that omits it. */
   createdAt?: number;
 }
 

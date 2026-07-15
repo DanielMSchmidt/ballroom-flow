@@ -70,13 +70,11 @@ export interface OwnFamilyNote {
   figureType: string;
   danceScope: DanceId | "all";
   /** The doc annotation's timestamp — the Journal's live self-read sorts by it
-   *  (WEP-0002 read-your-writes; the D1 projection mirrors it as createdAt). */
+   *  (WEP-0002 read-your-writes; the D1 projection mirrors it as createdAt), and
+   *  the reading-view notes margin orders own + co-member notes newest-first by it. */
   createdAt: number;
   count?: number;
   role?: Role;
-  /** The note's authored timestamp (from the doc annotation) — lets a consumer
-   *  order own + co-member notes newest-first in the reading-view notes margin. */
-  createdAt: number;
 }
 
 /** The reactive account seam a component consumes: read + mutate, nothing else. */
