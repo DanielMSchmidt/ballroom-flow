@@ -74,6 +74,9 @@ export interface OwnFamilyNote {
   createdAt: number;
   count?: number;
   role?: Role;
+  /** The note's authored timestamp (from the doc annotation) — lets a consumer
+   *  order own + co-member notes newest-first in the reading-view notes margin. */
+  createdAt: number;
 }
 
 /** The reactive account seam a component consumes: read + mutate, nothing else. */

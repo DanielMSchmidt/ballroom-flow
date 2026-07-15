@@ -496,6 +496,7 @@ export function Assemble({
         text: n.text,
         figureType: n.figureType,
         danceScope: n.danceScope,
+        createdAt: n.createdAt,
         anchors: [
           {
             type: "figureType" as const,
@@ -796,6 +797,7 @@ export function Assemble({
               routine={routine}
               placements={store.readPlacements()}
               annotations={store.readAnnotations()}
+              familyNotes={familyNotes}
               canComment={can(role, "canAnnotate")}
               memberColors={memberColorMap}
               memberNames={memberNameMap}
