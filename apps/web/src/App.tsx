@@ -103,13 +103,12 @@ function AppHome(): React.JSX.Element {
     async (
       routineRef: string,
       input: { kind: "note" | "lesson" | "practice"; text: string; anchors: Anchor[] },
-    ) => {
-      await createRoutineJournalEntry(
+    ) =>
+      createRoutineJournalEntry(
         routineRef,
         { kind: input.kind, text: input.text, anchors: input.anchors },
         { getToken: () => getToken(), currentUserId },
-      );
-    },
+      ),
     [getToken, currentUserId],
   );
   const loadJournalRoutineOptions = useCallback(

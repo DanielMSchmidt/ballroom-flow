@@ -21,9 +21,12 @@ const entry = (over: Partial<JournalEntry>): JournalEntry => ({
 });
 
 const noop = async (): Promise<void> => {};
+// createRoutineEntry resolves to the created entry (WEP-0002 optimistic echo);
+// null = "nothing to echo", the untested default.
+const nullNoop = async (): Promise<null> => null;
 const baseProps = {
   createFamilyEntry: vi.fn(noop),
-  createRoutineEntry: vi.fn(noop),
+  createRoutineEntry: vi.fn(nullNoop),
   loadRoutineOptions: vi.fn(async () => []),
   loadRoutineFigures: vi.fn(async () => []),
 };
@@ -144,7 +147,7 @@ const routineEntryMock = () =>
     async (
       _routineRef: string,
       _input: { kind: "note" | "lesson" | "practice"; text: string; anchors: unknown[] },
-    ) => {},
+    ) => null,
   );
 
 describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {

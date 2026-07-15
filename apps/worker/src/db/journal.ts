@@ -13,6 +13,7 @@
 //     any routine the user can access), symmetric with familyNotesForMembers.
 //
 // D1 stays a pure index; the routine doc (DO SQLite) is the source of truth.
+import { figureTypeAnchorLabel } from "@weavesteps/contract";
 
 /** One row to upsert into `journal_entry` (the DO projection's output). */
 export interface JournalEntryProjection {
@@ -78,27 +79,9 @@ export async function projectJournalEntries(
   await db.batch(stmts);
 }
 
-/** Title-case a figureType/dance slug for a chip label ("natural_turn" → "Natural Turn"). */
-function humanize(slug: string): string {
-  return slug
-    .replace(/[_-]+/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-/** The chip label for a figureType anchor: "all Whisks · all Waltz" / "· all
- *  dances"; a TIMED note (WEP-0004) appends its pinned count ("· count 3"). */
-export function figureTypeLabel(
-  figureType: string,
-  danceScope: string,
-  count?: number | null,
-): string {
-  const family = `all ${humanize(figureType)}s`;
-  const scope = danceScope === "all" ? "all dances" : `all ${humanize(danceScope)}`;
-  return count != null ? `${family} · ${scope} · count ${count}` : `${family} · ${scope}`;
-}
+// (The figureType chip-label composer moved to @weavesteps/contract as
+// `figureTypeAnchorLabel` — the web's live account-doc read composes the same
+// label for read-your-writes parity, so it must be shared, never duplicated.)
 
 /** Parse a stored anchors JSON blob defensively (bad/empty → []). */
 function parseAnchors(raw: string): Array<Record<string, unknown>> {
@@ -245,7 +228,7 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
           // it; keys stay absent on the untimed v1 corpus.
           ...(r.count != null ? { count: r.count } : {}),
           ...(r.role != null ? { role: r.role } : {}),
-          label: figureTypeLabel(r.figureType, r.danceScope, r.count),
+          label: figureTypeAnchorLabel(r.figureType, r.danceScope, r.count),
         },
       ],
       createdAt: r.createdAt,

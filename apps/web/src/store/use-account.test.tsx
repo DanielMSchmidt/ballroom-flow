@@ -44,6 +44,7 @@ function fakeStore(): AccountStore {
           text: input.text,
           figureType: input.figureType,
           danceScope: input.danceScope,
+          createdAt: notes.length,
         },
       ];
       notify();
