@@ -29,7 +29,7 @@ import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
-import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
+import { listMembers, ownerInfoFor, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import {
   countOwnedRoutines,
@@ -860,15 +860,22 @@ app.post("/api/invites/:token/redeem", async (c) => {
   );
 });
 
-// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Any
-// MEMBER may read the roster (resolveEffectiveRole → non-null); a non-member 403s.
+// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Only
+// roles that can manage membership (editor/owner, can(role,"canInvite")) may read
+// the roster — the Share button is already hidden from viewer/commenter in the UI,
+// and the API enforces the same gate. Returns the membership rows PLUS the doc owner
+// (who has no membership row but must appear in the roster).
 app.get("/api/docs/:id/members", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const docRef = c.req.param("id");
   const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
-  if (!role) return c.json({ error: "forbidden" }, 403);
-  return c.json({ members: await listMembers(c.env.DB, docRef) });
+  if (!role || !can(role, "canInvite")) return c.json({ error: "forbidden" }, 403);
+  const [members, owner] = await Promise.all([
+    listMembers(c.env.DB, docRef),
+    ownerInfoFor(c.env.DB, docRef),
+  ]);
+  return c.json({ members, owner });
 });
 
 // DELETE /api/docs/:id/members/:userId — remove a member (US-024 AC-2). Only a

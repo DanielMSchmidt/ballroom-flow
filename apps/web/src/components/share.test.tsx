@@ -115,4 +115,45 @@ describe("US-024 Share screen (member list + roles)", () => {
     expect(screen.getByText("Daniel")).toBeInTheDocument();
     expect(screen.getByText(/you · owner/i)).toBeInTheDocument();
   });
+
+  it("shows the owner row when the viewer is not the owner (roster bug fix)", () => {
+    renderShare({
+      viewerRole: "editor",
+      members: MEMBERS,
+      viewer: { userId: "u_ed", displayName: "Editor" },
+      owner: { userId: "u_owner", displayName: "Owner Anna" },
+    });
+    // The owner appears in the roster…
+    expect(screen.getByText("Owner Anna")).toBeInTheDocument();
+    // …with the "owner" pill (Full control blurb).
+    expect(screen.getByText(/full control/i)).toBeInTheDocument();
+  });
+
+  it("does not show the owner row when the viewer IS the owner (no duplicate)", () => {
+    renderShare({
+      viewerRole: "owner",
+      members: MEMBERS,
+      viewer: { userId: "u_me", displayName: "Daniel" },
+      owner: { userId: "u_me", displayName: "Daniel" },
+    });
+    // Owner is shown only in the "you" row, not as a separate roster entry.
+    expect(screen.getByText(/you · owner/i)).toBeInTheDocument();
+    // The owner row is not a separate entry (Daniel only appears once in the roster).
+    expect(screen.getAllByText("Daniel")).toHaveLength(1);
+  });
+
+  it("does not duplicate the current viewer in the members list", () => {
+    // The viewer appears in MEMBERS (as a raw API row) — they must be filtered
+    // from the otherMembers list since they already have a "you" row.
+    const membersWithSelf: Member[] = [{ userId: "u_ed", role: "editor" }, ...MEMBERS];
+    renderShare({
+      viewerRole: "editor",
+      members: membersWithSelf,
+      viewer: { userId: "u_ed", displayName: "Editor" },
+    });
+    // "Editor" appears only once (the "you" row), not again in the list.
+    const editorRefs = screen.queryAllByText("Editor");
+    // The viewer row appears once ("you" row); their raw list entry is filtered.
+    expect(editorRefs).toHaveLength(1);
+  });
 });

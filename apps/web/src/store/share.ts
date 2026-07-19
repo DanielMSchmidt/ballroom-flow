@@ -10,6 +10,13 @@ import { apiDelete, apiGet, apiPost } from "../lib/rpc";
 /** A stored membership role (never "owner" — ownership isn't a membership row). */
 export type StoredRole = "editor" | "commenter" | "viewer";
 
+/** The document owner's identity, as returned by GET /api/docs/:id/members. */
+export interface OwnerInfo {
+  userId: string;
+  identityColor?: string;
+  displayName?: string;
+}
+
 /** One member of a document, as the Share roster shows them.
  *  T8: `identityColor` + `displayName` are included when available (the server
  *  joins `users` on the members query) so annotation threads can resolve real
@@ -25,6 +32,7 @@ export interface Member {
 
 interface MembersResponse {
   members: Member[];
+  owner?: OwnerInfo | null;
 }
 
 /** The document's member roster + roles (US-024 AC-1). Any member may read it. */

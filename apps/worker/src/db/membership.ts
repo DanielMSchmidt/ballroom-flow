@@ -90,6 +90,35 @@ export async function resolveEffectiveRole(
   return cascadeFigureRole(db, docRef, userId);
 }
 
+/** The document owner's identity for the Share screen roster (US-024). */
+export interface OwnerInfo {
+  userId: string;
+  identityColor?: string;
+  displayName?: string;
+}
+
+/** The document owner with their display identity, or null if the doc isn't indexed. */
+export async function ownerInfoFor(db: D1Database, docRef: string): Promise<OwnerInfo | null> {
+  const row = await drizzle(db)
+    .select({
+      ownerId: documentRegistry.ownerId,
+      identityColor: users.identityColor,
+      displayName: users.displayName,
+      cachedName: userNameCache.name,
+    })
+    .from(documentRegistry)
+    .leftJoin(users, eq(documentRegistry.ownerId, users.id))
+    .leftJoin(userNameCache, eq(documentRegistry.ownerId, userNameCache.id))
+    .where(eq(documentRegistry.docRef, docRef))
+    .get();
+  if (!row) return null;
+  return {
+    userId: row.ownerId,
+    identityColor: row.identityColor ?? undefined,
+    displayName: row.displayName ?? row.cachedName ?? undefined,
+  };
+}
+
 /** One member of a document (for the US-024 Share screen member list).
  *  T8: `identityColor` + `displayName` are joined from the `users` table so
  *  annotation threads can show real identity colours without a separate fetch.

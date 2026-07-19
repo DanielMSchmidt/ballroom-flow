@@ -62,19 +62,21 @@ export function JournalEntryEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = text.trim().length > 0 && links.length > 0 && !saving;
+  const canSave = text.trim().length > 0 && !saving;
 
   const save = async (): Promise<void> => {
     if (!canSave) return;
     setSaving(true);
     setError(null);
     try {
-      // A routine-scoped link wins the entry's home: its annotation carries every
-      // routine anchor on the (single) chosen routine. Otherwise the entry is an
-      // account figureType note (the first figureType link).
       const routineLinks = links.filter((l) => l.home === "routine");
+      const accountLinks = links.filter(
+        (l): l is Extract<JournalLink, { home: "account" }> => l.home === "account",
+      );
       const [firstRoutine] = routineLinks;
       if (firstRoutine) {
+        // A routine-scoped link wins the entry's home: all same-routine anchors
+        // collapse into one annotation.
         const routineRef = firstRoutine.routineRef;
         const sameRoutine = routineLinks.filter((l) => l.routineRef === routineRef);
         await createRoutineEntry(routineRef, {
@@ -82,20 +84,27 @@ export function JournalEntryEditor({
           text: text.trim(),
           anchors: sameRoutine.map((l) => l.anchor),
         });
-      } else {
-        const acct = links.find((l) => l.home === "account");
-        if (acct && acct.home === "account") {
+      } else if (accountLinks.length > 0) {
+        // docs/concepts/annotations.md § Anchors (WEP-0004): one family note per
+        // linked figureType (each carries its own scope + optional timed anchor).
+        for (const acct of accountLinks) {
           await createFamilyEntry({
             figureType: acct.figureType,
             danceScope: acct.danceScope,
             kind,
             text: text.trim(),
-            // docs/concepts/annotations.md § Anchors (WEP-0004): a timed link
-            // carries its pinned count (+ optional side).
             ...(acct.count != null ? { count: acct.count } : {}),
             ...(acct.role ? { role: acct.role } : {}),
           });
         }
+      } else {
+        // No link — save as a general account note (unanchored to a specific figure).
+        await createFamilyEntry({
+          figureType: "general",
+          danceScope: "all",
+          kind,
+          text: text.trim(),
+        });
       }
       onSaved();
     } catch {

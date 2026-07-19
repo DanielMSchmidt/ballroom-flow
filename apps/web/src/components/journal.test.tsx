@@ -351,6 +351,33 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     });
   });
 
+  it("saves without a link when text is present (no link required)", async () => {
+    const createFamilyEntry = familyEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        loadRoutineOptions={vi.fn(async () => [])}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    const done = screen.getByRole("button", { name: /^done$/i });
+    // done is disabled with no text…
+    expect(done).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("entry text"), "worked on posture today");
+    // …enabled with text, even without a link.
+    expect(done).not.toBeDisabled();
+    await userEvent.click(done);
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
+      figureType: "general",
+      danceScope: "all",
+      kind: "lesson",
+      text: "worked on posture today",
+    });
+  });
+
   it("this-choreo-only with a count builds a point anchor and saves via createRoutineEntry", async () => {
     const createRoutineEntry = routineEntryMock();
     renderUi(
