@@ -13,7 +13,12 @@
 // Styling: uses the `../ui` primitives (Button, Chip) so the panel matches the
 // rest of the app — 44px touch targets (#3), focus rings (#7), the shared
 // type/colour scale — and keeps the accessible names/roles the tests rely on.
-import type { Annotation, AnnotationKind, Role } from "@weavesteps/domain";
+import {
+  type Annotation,
+  type AnnotationKind,
+  partitionByActivity,
+  type Role,
+} from "@weavesteps/domain";
 import { useState } from "react";
 import { getLocale, pickMessages, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -72,6 +77,14 @@ export interface AnnotationPanelProps {
   currentUserColor?: string;
   /** Current viewer's display name (for avatar initial in reply composer). */
   currentUserName?: string;
+  /**
+   * Evaluation instant for comment activity fade-out (docs/concepts/annotations.md
+   * § Where notes appear). Thread mode only: stale comments (older than 28d and
+   * >7d behind the newest activity in this thread) collapse behind one counted
+   * divider. Injected in tests; defaults to the mount instant in the app — the
+   * app's first wall-clock-dependent rendering, captured once per mount.
+   */
+  now?: number;
 }
 
 /** A kind filter, or a `figure:<ref>` by-figure filter (US-042). */
@@ -116,6 +129,7 @@ export function AnnotationPanel({
   authorColorMap,
   currentUserColor,
   currentUserName,
+  now,
 }: AnnotationPanelProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const canAnnotate = role === "commenter" || role === "editor";
@@ -123,6 +137,12 @@ export function AnnotationPanel({
   const [kind, setKind] = useState<AnnotationKind>("note");
   const [filter, setFilter] = useState<Filter>("all");
   const [local, setLocal] = useState<Annotation[]>([]);
+  // Fade-out evaluation instant: captured once per mount so the partition is
+  // stable across unrelated re-renders (docs/system/sync-and-offline.md § Flicker).
+  const [mountNow] = useState(() => Date.now());
+  const evalNow = now ?? mountNow;
+  // Expanded state is plain local state — resets on unmount (no per-device persistence).
+  const [showOlder, setShowOlder] = useState(false);
 
   // Controlled when `annotations` is provided; otherwise the panel owns the list.
   const list = annotations ?? local;
@@ -167,6 +187,11 @@ export function AnnotationPanel({
 
   // ── Thread mode (frame 1.14): titled header + flat comment list + footer reply ──
   if (threadTitle) {
+    // Comment activity fade-out: `visible` is the full per-anchor list in thread
+    // mode (the kind/figure filter is a standard-mode feature only). Stale
+    // comments collapse behind ONE counted divider that expands in place.
+    const { active, stale } = partitionByActivity(visible, evalNow);
+    const threadComments = stale.length > 0 && !showOlder ? active : visible;
     return (
       <section aria-label={t.thread} className="flex flex-col gap-3">
         {/* Thread header: title ("Spin Turn · step 2") + comment count. */}
@@ -177,11 +202,38 @@ export function AnnotationPanel({
               {threadSubtitle}
             </p>
           )}
+          {/* Header count stays honest to the FULL thread, not the collapsed subset. */}
           <p className="text-2xs text-ink-muted">{t.commentCount(visible.length)}</p>
         </div>
 
+        {/* One tap row above the list: counted "N more comments" (collapsed) or
+            "showing all · collapse older" (expanded). Absent when nothing is stale. */}
+        {stale.length > 0 && (
+          <button
+            type="button"
+            aria-expanded={showOlder}
+            onClick={() => setShowOlder((v) => !v)}
+            className="flex items-center gap-2 min-h-[var(--bf-touch-target)]"
+          >
+            <span className="h-px flex-1" style={{ background: "var(--bf-border-subtle)" }} />
+            {showOlder ? (
+              <span className="text-ink-faint" style={{ font: "600 9px/1 inherit" }}>
+                {t.showingAllCollapseOlder}
+              </span>
+            ) : (
+              <span
+                className="rounded-[12px] border-[1.5px] border-line bg-surface px-2 py-0.5 text-ink-faint"
+                style={{ font: "700 10px/1.4 inherit" }}
+              >
+                {t.moreComments(stale.length)}
+              </span>
+            )}
+            <span className="h-px flex-1" style={{ background: "var(--bf-border-subtle)" }} />
+          </button>
+        )}
+
         <ul aria-label={t.commentThread} className="flex flex-col gap-4">
-          {visible.map((a) => (
+          {threadComments.map((a) => (
             <li key={a.id}>
               <ThreadComment
                 annotation={a}
