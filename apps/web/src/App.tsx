@@ -13,6 +13,7 @@ import { SignInPrompt } from "./components/SignInPrompt";
 import { useMessages } from "./i18n";
 import { appMessages } from "./i18n/messages/app";
 import { navigate, useRoute } from "./lib/router";
+import { createSpeechCapture } from "./lib/speech";
 import { listAccountKinds } from "./store/custom-kinds";
 import { createFamilyNote } from "./store/family-notes";
 import { loadMineFigures, saveFigureToLibrary } from "./store/figures";
@@ -24,6 +25,7 @@ import {
 } from "./store/journal";
 import { useMe } from "./store/me";
 import { useAccount, useLibraryRefs } from "./store/use-account";
+import { interpretVoiceNote, transcribeVoiceClip } from "./store/voice-notes";
 import { Styleguide } from "./styleguide/Styleguide";
 import {
   AppShell,
@@ -124,6 +126,18 @@ function AppHome(): React.JSX.Element {
     async (routineRef: string) => loadRoutineFigureOptions(routineRef, await getToken()),
     [getToken],
   );
+  // AI voice notes (docs/concepts/annotations.md § The Journal): read-only
+  // interpret/transcribe through the store seam; the proposal commits through the
+  // existing journal seams above once the user confirms.
+  const interpretVoice = useCallback(
+    async (input: { transcript: string; routineRef?: string }) =>
+      interpretVoiceNote(input, await getToken()),
+    [getToken],
+  );
+  const transcribeVoice = useCallback(
+    async (clip: Blob) => transcribeVoiceClip(clip, await getToken()),
+    [getToken],
+  );
   const openRoutineId = route.name === "routine" ? route.id : undefined;
   // First-run nudge: a signed-in user who hasn't set a name/colour yet (US-019)
   // is pointed at Profile, so they aren't shown as a raw id to co-editors.
@@ -189,6 +203,9 @@ function AppHome(): React.JSX.Element {
             loadRoutineFigures={loadJournalRoutineFigures}
             loadCustomKinds={loadJournalCustomKinds}
             currentUserId={currentUserId}
+            createSpeechCapture={createSpeechCapture}
+            interpretVoice={interpretVoice}
+            transcribeVoice={transcribeVoice}
           />
         ) : tab === "profile" ? (
           <ProfileScreen />

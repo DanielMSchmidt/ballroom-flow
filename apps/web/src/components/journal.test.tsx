@@ -1,7 +1,9 @@
 // T6 — Journal tab component tests (frames 3.1–3.7). Empty state copy, a populated
 // author-coloured list with kind pills + link chips, filter pills, the editor's
 // Lesson/Practice toggle, and the link picker's disabled "An attribute" / media.
+import type { VoiceNoteProposal } from "@weavesteps/contract";
 import { describe, expect, it, vi } from "vitest";
+import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
 import type { JournalEntry } from "../store/journal";
 import { renderUi, screen, userEvent, waitFor } from "../test-support/render";
 import { Journal } from "./Journal";
@@ -556,5 +558,145 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
       figureType: "whisk",
       danceScope: "all",
     });
+  });
+});
+
+describe("Journal editor — AI voice path (the AI never writes; Confirm uses the ordinary seams)", () => {
+  // A scripted capture the test drives to emit a final transcript on demand.
+  function scriptedCapture(): { capture: SpeechCapture; emit: (text: string) => void } {
+    let cb: SpeechCaptureCallbacks | null = null;
+    return {
+      capture: {
+        onDevice: true,
+        start(c) {
+          cb = c;
+        },
+        stop() {},
+      },
+      emit: (text) => cb?.onTranscript(text, true),
+    };
+  }
+
+  const familyProposal: VoiceNoteProposal = {
+    resolved: true,
+    noteText: "settle the sway",
+    confidence: "high",
+    proposed: {
+      anchor: { type: "figureType", figureType: "feather", danceScope: "foxtrot" },
+      routineRef: null,
+      label: "all Feathers · all Foxtrot",
+    },
+    alternatives: [],
+  };
+
+  const figureProposal: VoiceNoteProposal = {
+    resolved: true,
+    noteText: "more diagonal",
+    confidence: "medium",
+    proposed: {
+      anchor: { type: "figure", figureRef: "fig_bounce_1" },
+      routineRef: "rt_comp",
+      label: "Bounce Fallaway · Comp Slowfox",
+    },
+    alternatives: [],
+  };
+
+  async function openEditorWithVoice(
+    proposal: VoiceNoteProposal,
+    seams: {
+      createFamilyEntry: ReturnType<typeof familyEntryMock>;
+      createRoutineEntry: ReturnType<typeof routineEntryMock>;
+    },
+  ) {
+    const { capture, emit } = scriptedCapture();
+    const interpretVoice = vi.fn(async () => proposal);
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={seams.createFamilyEntry}
+        createRoutineEntry={seams.createRoutineEntry}
+        createSpeechCapture={() => capture}
+        interpretVoice={interpretVoice}
+        transcribeVoice={async () => ""}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^voice$/i }));
+    return { emit, interpretVoice };
+  }
+
+  it("a figureType proposal confirms through createFamilyEntry (same payload as the picker)", async () => {
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    const { emit } = await openEditorWithVoice(familyProposal, {
+      createFamilyEntry,
+      createRoutineEntry,
+    });
+    emit("In Slowfox, in Feather Steps, settle the sway.");
+    await waitFor(() => expect(screen.getByText("Confirm & save")).toBeInTheDocument());
+    // No save seam fires before Confirm.
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+    expect(createRoutineEntry).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText("Confirm & save"));
+    // The proposal became an ordinary link + text; Done drives the unchanged save.
+    await waitFor(() =>
+      expect(screen.getByText("↳ all Feathers · all Foxtrot")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
+      figureType: "feather",
+      danceScope: "foxtrot",
+      kind: "lesson",
+      text: "settle the sway",
+    });
+    expect(createRoutineEntry).not.toHaveBeenCalled();
+  });
+
+  it("a figure proposal confirms through createRoutineEntry with the figure anchor", async () => {
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    const { emit } = await openEditorWithVoice(figureProposal, {
+      createFamilyEntry,
+      createRoutineEntry,
+    });
+    emit("In my competition slowfox, on the first bounce fallaway, more diagonal.");
+    await waitFor(() => expect(screen.getByText("Confirm & save")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Confirm & save"));
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createRoutineEntry.mock.calls[0]?.[0]).toBe("rt_comp");
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "figure", figureRef: "fig_bounce_1" }],
+      text: "more diagonal",
+    });
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+  });
+
+  it("an unresolved proposal keeps the transcript as text with no link", async () => {
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    const unresolved: VoiceNoteProposal = {
+      resolved: false,
+      noteText: "Remember to breathe.",
+      confidence: "low",
+      proposed: null,
+      alternatives: [],
+    };
+    const { emit } = await openEditorWithVoice(unresolved, {
+      createFamilyEntry,
+      createRoutineEntry,
+    });
+    emit("Remember to breathe and stay grounded.");
+    await waitFor(() => expect(screen.getByText("Keep as note text")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Keep as note text"));
+    // The transcript fills the textarea; no link chip.
+    await waitFor(() =>
+      expect(screen.getByLabelText("entry text")).toHaveValue(
+        "Remember to breathe and stay grounded.",
+      ),
+    );
+    expect(screen.queryByText(/↳/)).toBeNull();
   });
 });
