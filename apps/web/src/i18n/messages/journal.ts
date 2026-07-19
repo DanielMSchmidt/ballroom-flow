@@ -189,6 +189,9 @@ const en = {
   voiceUnresolvedTitle: "Couldn't find a target",
   voiceUnresolvedBody:
     "I couldn't match this to a figure in your choreos. Keep it as note text, or discard.",
+  voiceEmptyTitle: "Didn't catch anything",
+  voiceEmptyBody: "I didn't hear anything. Tap the mic and try again.",
+  voiceRetry: "Try again",
   voiceKeepAsText: "Keep as note text",
 };
 
@@ -367,6 +370,9 @@ const de: typeof en = {
   voiceUnresolvedTitle: "Kein Ziel gefunden",
   voiceUnresolvedBody:
     "Ich konnte das keiner Figur in deinen Choreografien zuordnen. Als Notiztext behalten oder verwerfen.",
+  voiceEmptyTitle: "Nichts verstanden",
+  voiceEmptyBody: "Ich habe nichts gehört. Tippe auf das Mikrofon und versuch es erneut.",
+  voiceRetry: "Erneut versuchen",
   voiceKeepAsText: "Als Notiztext behalten",
 };
 

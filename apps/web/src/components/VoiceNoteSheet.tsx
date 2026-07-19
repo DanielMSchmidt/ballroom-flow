@@ -27,7 +27,7 @@ export interface VoiceNoteSheetProps {
   routineRef?: string;
 }
 
-type Phase = "rec" | "interpreting" | "confirm" | "unresolved";
+type Phase = "rec" | "interpreting" | "confirm" | "unresolved" | "empty";
 
 /**
  * Map a grounded proposal to the verbatim `JournalLink` the manual picker
@@ -67,6 +67,14 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   const resolveTranscript = useCallback(
     async (finalText: string) => {
       setTranscript(finalText);
+      // An empty/silent capture has nothing to interpret — the contract's
+      // transcript.trim().min(1) guard would 400 the request. Short-circuit to an
+      // honest "didn't catch anything" state client-side (bug #289): no doomed
+      // round-trip, no console error, no misleading saveFailed copy.
+      if (finalText.trim().length === 0) {
+        setPhase("empty");
+        return;
+      }
       setPhase("interpreting");
       try {
         const p = await interpret({ transcript: finalText, ...(routineRef ? { routineRef } : {}) });
@@ -80,9 +88,7 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
     [interpret, routineRef, t.saveFailed],
   );
 
-  // Start capture when the sheet opens; stop + reset when it closes.
-  useEffect(() => {
-    if (!open) return;
+  const startCapture = useCallback((): void => {
     setPhase("rec");
     setTranscript("");
     setProposal(null);
@@ -102,8 +108,14 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
       },
       onError: () => setError(t.saveFailed),
     });
+  }, [capture, resolveTranscript, transcribe, t.saveFailed]);
+
+  // Start capture when the sheet opens; stop when it closes.
+  useEffect(() => {
+    if (!open) return;
+    startCapture();
     return () => capture.stop();
-  }, [open, capture, resolveTranscript, transcribe, t.saveFailed]);
+  }, [open, capture, startCapture]);
 
   const stop = (): void => {
     capture.stop();
@@ -178,7 +190,10 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
               <span
                 className={
                   proposal.confidence === "high"
-                    ? "rounded bg-success-subtle px-1.5 py-0.5 text-3xs font-semibold text-success"
+                    ? // AA-contrast success pairing (bug #290): tint bg + ink fg is
+                      // the shipped Badge component's success combo (6.6:1). The
+                      // former bg-success-subtle + text-success was 4.33:1 (fails AA).
+                      "rounded bg-success-tint px-1.5 py-0.5 text-3xs font-semibold text-success-ink"
                     : "rounded bg-surface-sunken px-1.5 py-0.5 text-3xs font-semibold text-ink-secondary"
                 }
               >
@@ -223,25 +238,52 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
         </div>
       )}
 
-      {phase === "unresolved" && (
+      {(phase === "unresolved" || phase === "empty") && (
         <div className="flex flex-col gap-3">
-          <div className="text-2xs font-bold text-ink">{t.voiceUnresolvedTitle}</div>
+          <div className="text-2xs font-bold text-ink">
+            {phase === "empty" ? t.voiceEmptyTitle : t.voiceUnresolvedTitle}
+          </div>
           <div
             className="rounded-xl border border-border-default bg-surface-sunken px-3 py-3 text-ink"
             style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-md)" }}
           >
             {transcript ? `“${transcript}”` : "…"}
           </div>
-          <p className="text-2xs text-ink-muted">{error ?? t.voiceUnresolvedBody}</p>
+          <p className="text-2xs text-ink-muted">
+            {phase === "empty" ? t.voiceEmptyBody : (error ?? t.voiceUnresolvedBody)}
+          </p>
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => props.onUseAsText(transcript)}
-              className="rounded-xl bg-accent px-3 py-3 text-center text-2xs font-bold text-surface"
-              disabled={transcript.trim().length === 0}
-            >
-              {t.voiceKeepAsText}
-            </button>
+            {phase === "empty" ? (
+              // Nothing was heard — the retry affordance restarts capture (bug
+              // #289). Keep-as-text is still rendered but stays disabled: there is
+              // no transcript to keep, so no empty note can be saved.
+              <>
+                <button
+                  type="button"
+                  onClick={startCapture}
+                  className="rounded-xl bg-accent px-3 py-3 text-center text-2xs font-bold text-surface"
+                >
+                  {t.voiceRetry}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => props.onUseAsText(transcript)}
+                  className="rounded-xl border border-border-strong px-3 py-2.5 text-center text-3xs font-bold text-ink-secondary disabled:opacity-50"
+                  disabled={transcript.trim().length === 0}
+                >
+                  {t.voiceKeepAsText}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => props.onUseAsText(transcript)}
+                className="rounded-xl bg-accent px-3 py-3 text-center text-2xs font-bold text-surface"
+                disabled={transcript.trim().length === 0}
+              >
+                {t.voiceKeepAsText}
+              </button>
+            )}
             <button
               type="button"
               onClick={props.onClose}
