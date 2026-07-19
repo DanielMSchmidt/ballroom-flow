@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   zCreateFigure,
   zFamilyNoteBody,
+  zInterpretVoiceNote,
   zJournalList,
   zProfileBody,
   zRegistryKind,
@@ -9,6 +10,9 @@ import {
   zSaveToLibrary,
   zSearchResults,
   zTemplateList,
+  zTranscribeResponse,
+  zVoiceExtraction,
+  zVoiceNoteProposal,
 } from "./index";
 
 describe("zJournalList (T6)", () => {
@@ -272,4 +276,190 @@ it("US-045 shapes the template list", () => {
     templates: [{ docRef: "t1", title: "Sample", dance: "foxtrot", role: "viewer", updatedAt: 1 }],
   });
   expect(ok.success).toBe(true);
+});
+
+describe("AI voice notes — interpret request/extraction/proposal schemas", () => {
+  describe("zInterpretVoiceNote", () => {
+    it("trims and requires a non-empty transcript; routineRef optional", () => {
+      const parsed = zInterpretVoiceNote.parse({ transcript: "  settle the sway  " });
+      expect(parsed.transcript).toBe("settle the sway");
+      expect(parsed.routineRef).toBeUndefined();
+      expect(zInterpretVoiceNote.safeParse({ transcript: "" }).success).toBe(false);
+      expect(zInterpretVoiceNote.safeParse({ transcript: "   " }).success).toBe(false);
+      expect(zInterpretVoiceNote.safeParse({ transcript: "x".repeat(4001) }).success).toBe(false);
+      expect(zInterpretVoiceNote.safeParse({ transcript: "ok", routineRef: "rt_1" }).success).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("zVoiceExtraction (untrusted model output)", () => {
+    it("accepts all three anchor shapes", () => {
+      const point = zVoiceExtraction.safeParse({
+        resolved: true,
+        noteText: "settle the sway",
+        confidence: "high",
+        anchor: { type: "point", figureRef: "fig_1", count: 2, role: "leader" },
+      });
+      expect(point.success).toBe(true);
+      const figure = zVoiceExtraction.safeParse({
+        resolved: true,
+        noteText: "more diagonal",
+        confidence: "medium",
+        anchor: { type: "figure", figureRef: "fig_2" },
+      });
+      expect(figure.success).toBe(true);
+      const family = zVoiceExtraction.safeParse({
+        resolved: true,
+        noteText: "settle the sway",
+        confidence: "high",
+        anchor: { type: "figureType", figureType: "feather", danceScope: "foxtrot", count: 3 },
+      });
+      expect(family.success).toBe(true);
+    });
+
+    it("defaults alternatives to []", () => {
+      const parsed = zVoiceExtraction.parse({
+        resolved: false,
+        noteText: "breathe",
+        confidence: "low",
+        anchor: null,
+      });
+      expect(parsed.alternatives).toEqual([]);
+    });
+
+    it("rejects malformed model output", () => {
+      // missing noteText
+      expect(
+        zVoiceExtraction.safeParse({ resolved: true, confidence: "high", anchor: null }).success,
+      ).toBe(false);
+      // bad confidence
+      expect(
+        zVoiceExtraction.safeParse({
+          resolved: false,
+          noteText: "x",
+          confidence: "certain",
+          anchor: null,
+        }).success,
+      ).toBe(false);
+      // unknown anchor type (predicate falls back to plain notes — never proposed)
+      expect(
+        zVoiceExtraction.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          anchor: { type: "predicate", kind: "sway", value: "left" },
+        }).success,
+      ).toBe(false);
+      // resolved:true with a null anchor
+      expect(
+        zVoiceExtraction.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          anchor: null,
+        }).success,
+      ).toBe(false);
+      // a timed figureType anchor cannot span "all"
+      expect(
+        zVoiceExtraction.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          anchor: { type: "figureType", figureType: "feather", danceScope: "all", count: 3 },
+        }).success,
+      ).toBe(false);
+      // too many alternatives
+      expect(
+        zVoiceExtraction.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          anchor: { type: "figure", figureRef: "fig_2" },
+          alternatives: Array.from({ length: 6 }, () => ({ type: "figure", figureRef: "f" })),
+        }).success,
+      ).toBe(false);
+      // non-object garbage
+      expect(zVoiceExtraction.safeParse("[]").success).toBe(false);
+      expect(zVoiceExtraction.safeParse(null).success).toBe(false);
+    });
+  });
+
+  describe("zVoiceNoteProposal (route response)", () => {
+    it("accepts a resolved figureType proposal (routineRef null for a family anchor)", () => {
+      const ok = zVoiceNoteProposal.safeParse({
+        resolved: true,
+        noteText: "settle the sway",
+        confidence: "high",
+        proposed: {
+          anchor: { type: "figureType", figureType: "feather", danceScope: "foxtrot" },
+          routineRef: null,
+          label: "all Feathers · all Foxtrot",
+        },
+        alternatives: [],
+      });
+      expect(ok.success).toBe(true);
+    });
+
+    it("accepts a resolved figure proposal (routineRef required)", () => {
+      const ok = zVoiceNoteProposal.safeParse({
+        resolved: true,
+        noteText: "more diagonal",
+        confidence: "medium",
+        proposed: {
+          anchor: { type: "figure", figureRef: "fig_2" },
+          routineRef: "rt_comp",
+          label: "Bounce Fallaway · Comp Slowfox",
+        },
+        alternatives: [],
+      });
+      expect(ok.success).toBe(true);
+    });
+
+    it("rejects resolved:true with proposed:null", () => {
+      expect(
+        zVoiceNoteProposal.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          proposed: null,
+          alternatives: [],
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a figure/point proposal whose routineRef is null", () => {
+      expect(
+        zVoiceNoteProposal.safeParse({
+          resolved: true,
+          noteText: "x",
+          confidence: "high",
+          proposed: {
+            anchor: { type: "figure", figureRef: "fig_2" },
+            routineRef: null,
+            label: "Bounce Fallaway",
+          },
+          alternatives: [],
+        }).success,
+      ).toBe(false);
+    });
+
+    it("accepts a resolved:false / proposed:null fallback", () => {
+      const ok = zVoiceNoteProposal.parse({
+        resolved: false,
+        noteText: "remember to breathe",
+        confidence: "low",
+        proposed: null,
+        alternatives: [],
+      });
+      expect(ok.proposed).toBeNull();
+    });
+  });
+
+  describe("zTranscribeResponse", () => {
+    it("shapes the STT echo", () => {
+      expect(zTranscribeResponse.parse({ transcript: "hello" }).transcript).toBe("hello");
+      expect(zTranscribeResponse.safeParse({}).success).toBe(false);
+    });
+  });
 });
