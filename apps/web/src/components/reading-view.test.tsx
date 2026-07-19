@@ -1076,6 +1076,18 @@ describe("RoutineReadingView — predicate notes surface on matching steps", () 
     );
   });
 
+  it("#285: announces a predicate note with its OWN scope cue, not the family one", async () => {
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    renderWithPredicate({ predicateNotes: [predicateNote({ text: "soften every left sway" })] });
+    // The matched count's margin cell announces the predicate note as an ATTRIBUTE
+    // note (its distinct anchor type), never miscategorized as a "Family note:".
+    const cell = screen.getByRole("button", { name: /notes — count 1/i });
+    expect(cell).toHaveTextContent("Attribute note:");
+    expect(cell).not.toHaveTextContent("Family note:");
+  });
+
   it("surfaces a `none` note on the counts carrying no matching value", async () => {
     ({ RoutineReadingView } = await importComponent<ReadingModule>(
       "../components/RoutineReadingView",
@@ -1185,6 +1197,130 @@ describe("RoutineReadingView — predicate notes surface on matching steps", () 
       />,
     );
     expect(screen.getByRole("button", { name: /notes — count 1/i })).toHaveTextContent(
+      "soften every left sway",
+    );
+  });
+
+  it("#284: re-slices when a figure's CONTENT changes under a stable id (drops a note whose value was retagged)", async () => {
+    // Regression (issue #284): after an in-place edit retags a matching step's
+    // value, the SAME figure id now resolves to different content. The
+    // referential-stability cache must re-slice — reusing the prior match set on
+    // an id whose content changed would keep the note on a count that no longer
+    // matches (exactly the QA symptom: display flips to the new value, the note
+    // clings to the old one). This is the component-level twin of the store test.
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // Before: left sway on count 2 → the note matches count 2.
+    const before = figure({
+      id: "fx",
+      figureType: "whisk",
+      name: "Whisk",
+      counts: 3,
+      attributes: [attr(1, "sway", "to_R"), attr(2, "sway", "to_L")],
+    });
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [{ id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: "fx" }] }],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    const notes = [predicateNote({ text: "soften every left sway" })];
+    const { rerender } = renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: "fx" }, figure: before, status: "live" }]}
+        roleView="leader"
+        predicateNotes={notes}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /notes — count 2/i })).toHaveTextContent(
+      "soften every left sway",
+    );
+
+    // After: the SAME figure id, count 2 retagged to right (both counts right now).
+    const after = figure({
+      id: "fx",
+      figureType: "whisk",
+      name: "Whisk",
+      counts: 3,
+      attributes: [attr(1, "sway", "to_R"), attr(2, "sway", "to_R")],
+    });
+    rerender(
+      <RoutineReadingView
+        routine={routine}
+        placements={[{ placement: { id: "p1", figureRef: "fx" }, figure: after, status: "live" }]}
+        roleView="leader"
+        predicateNotes={notes}
+      />,
+    );
+    // The note must DROP from count 2 — no left sway exists on any count anymore.
+    expect(screen.getByRole("button", { name: /notes — count 2/i })).not.toHaveTextContent(
+      "soften every left sway",
+    );
+  });
+
+  it("#284: matches over the ACTIVE ROLE LENS — a mirrored split doesn't surface the hidden side", async () => {
+    // Regression (issue #284, root cause): a Both-lens sway edit splits into
+    // leader `to_R` + follower `to_L` (the same physical lean — sway MIRRORS,
+    // WEP-0008). Under the leader lens the reading table shows only "R" on that
+    // count, so a `to_L` note must NOT surface there (it clung in #284 because
+    // matchPredicate ran over the UNFILTERED figure and caught the hidden follower
+    // value). Under the follower lens the same note DOES surface — the follower
+    // genuinely sways left there.
+    ({ RoutineReadingView } = await importComponent<ReadingModule>(
+      "../components/RoutineReadingView",
+    ));
+    // Count 2: a split sway (leader right, follower left) — a variant Both-edit.
+    const split = figure({
+      id: "fsplit",
+      figureType: "whisk",
+      name: "Whisk",
+      counts: 3,
+      attributes: [attr(2, "sway", "to_R", "leader"), attr(2, "sway", "to_L", "follower")],
+    });
+    const routine: RoutineDoc = {
+      id: "r1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      ownerId: "u1",
+      sections: [
+        { id: "s1", name: "1st Long Side", placements: [{ id: "p1", figureRef: "fsplit" }] },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+    };
+    const notes = [predicateNote({ text: "soften every left sway" })]; // attrValue to_L, role Both
+    const { rerender } = renderUi(
+      <RoutineReadingView
+        routine={routine}
+        placements={[
+          { placement: { id: "p1", figureRef: "fsplit" }, figure: split, status: "live" },
+        ]}
+        roleView="leader"
+        predicateNotes={notes}
+      />,
+    );
+    // Leader lens: count 2 shows the leader's RIGHT sway → the left-sway note is absent.
+    expect(screen.getByRole("button", { name: /notes — count 2/i })).not.toHaveTextContent(
+      "soften every left sway",
+    );
+
+    // Follower lens: count 2 shows the follower's LEFT sway → the note surfaces.
+    rerender(
+      <RoutineReadingView
+        routine={routine}
+        placements={[
+          { placement: { id: "p1", figureRef: "fsplit" }, figure: split, status: "live" },
+        ]}
+        roleView="follower"
+        predicateNotes={notes}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /notes — count 2/i })).toHaveTextContent(
       "soften every left sway",
     );
   });
