@@ -174,7 +174,9 @@ note); the AI only *proposes* and the human confirms, so **no wrong anchor can b
 past the confirm step**.
 
 An utterance that matches no figure **degrades to a plain transcribed note** (kept as note
-text, never a guessed anchor). **Predicate-shaped** utterances ("soften every left sway")
+text, never a guessed anchor). A **silent or empty capture** — mic tapped but nothing heard —
+lands in an honest *"didn't catch anything"* state with a **try-again** affordance; it never
+attempts to interpret an empty transcript. **Predicate-shaped** utterances ("soften every left sway")
 also fall back to a plain note today — a voice-proposed `attributePredicate` anchor is a
 recorded **future refinement** (the predicate anchor itself ships, but the voice pipeline does
 not yet propose it). No audio is retained (transcribe and discard).
