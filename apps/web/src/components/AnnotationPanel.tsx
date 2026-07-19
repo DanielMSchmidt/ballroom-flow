@@ -46,6 +46,14 @@ export interface AnnotationPanelProps {
   onReply?: (annotationId: string, text: string) => void;
   /** Reply-delete handler (controlled); shown only on the viewer's own replies. */
   onDeleteReply?: (annotationId: string, replyId: string) => void;
+  /**
+   * Whole-annotation soft-delete handler (#294, docs/concepts/annotations.md §
+   * Ownership: "anyone may only edit or delete their own"). Offered ONLY on the
+   * viewer's OWN annotations (a.authorId === currentUserId) — same author gate as
+   * reply-delete; the worker/DO still enforces it. Soft-delete only (tombstone;
+   * routine-doc undo restores it). Omitted ⇒ no delete control renders.
+   */
+  onDeleteAnnotation?: (annotationId: string) => void;
   // ── T8 Thread parity (frame 1.14) ────────────────────────────────────────
   /** Thread header title — e.g. "Spin Turn · step 2". When set, the panel
    *  renders in THREAD MODE: a titled header + flat comment list + single reply
@@ -101,6 +109,7 @@ export function AnnotationPanel({
   onCreate,
   onReply,
   onDeleteReply,
+  onDeleteAnnotation,
   threadTitle,
   threadSubtitle,
   authorNameMap,
@@ -184,6 +193,11 @@ export function AnnotationPanel({
                 onDeleteReply={
                   onDeleteReply ? (replyId) => onDeleteReply(a.id, replyId) : undefined
                 }
+                onDelete={
+                  onDeleteAnnotation && a.authorId === currentUserId
+                    ? () => onDeleteAnnotation(a.id)
+                    : undefined
+                }
               />
             </li>
           ))}
@@ -253,6 +267,11 @@ export function AnnotationPanel({
               canReply={canAnnotate && Boolean(onReply)}
               onReply={onReply ? (text) => onReply(a.id, text) : undefined}
               onDeleteReply={onDeleteReply ? (replyId) => onDeleteReply(a.id, replyId) : undefined}
+              onDelete={
+                onDeleteAnnotation && a.authorId === currentUserId
+                  ? () => onDeleteAnnotation(a.id)
+                  : undefined
+              }
             />
           </li>
         ))}
@@ -356,6 +375,7 @@ function ThreadComment({
   canReply,
   onReply,
   onDeleteReply,
+  onDelete,
 }: {
   annotation: Annotation;
   currentUserId?: string;
@@ -364,6 +384,8 @@ function ThreadComment({
   canReply: boolean;
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
+  /** Whole-note soft-delete (author-only; already gated by the caller). */
+  onDelete?: () => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
   const authorName = authorNameMap?.[a.authorId] ?? a.authorId;
@@ -373,12 +395,25 @@ function ThreadComment({
     <div className="flex gap-3">
       <AuthorAvatar name={authorName} color={authorColor} size="md" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* Author name (in identity colour) · relative time */}
+        {/* Author name (in identity colour) · relative time, then the author's
+            own delete affordance pushed to the row's end. */}
         <p className="flex items-baseline gap-1.5 text-sm">
           <span className="font-semibold" style={{ color: authorColor ?? "var(--bf-ink)" }}>
             {authorName}
           </span>
           <span className="text-2xs text-ink-muted">· {time}</span>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto"
+              aria-label={t.deleteNote}
+              onClick={onDelete}
+            >
+              {t.deleteNote}
+            </Button>
+          )}
         </p>
         {/* Comment text — Caveat (hand-written) font per brief */}
         <p className="text-[15px] text-ink" style={{ fontFamily: "var(--bf-font-note)" }}>
@@ -419,12 +454,15 @@ function AnnotationRow({
   canReply,
   onReply,
   onDeleteReply,
+  onDelete,
 }: {
   annotation: Annotation;
   currentUserId?: string;
   canReply: boolean;
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
+  /** Whole-note soft-delete (author-only; already gated by the caller). */
+  onDelete?: () => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
   return (
@@ -435,6 +473,18 @@ function AnnotationRow({
           {t.kindLabel(a.kind)}
         </Chip>
         <span className="text-ink">{a.text}</span>
+        {onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            aria-label={t.deleteNote}
+            onClick={onDelete}
+          >
+            {t.deleteNote}
+          </Button>
+        )}
       </p>
       <ul aria-label={t.repliesThread} className="flex flex-col gap-1 pl-3">
         {a.replies.map((r) => (

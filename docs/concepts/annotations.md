@@ -15,7 +15,12 @@ Timeline comments and journal entries are **one thing**: an **annotation** —
 - **Kinds** carry intent: a plain `note`, a `lesson` (what the coach said), a `practice`
   (what you noticed). Lessons and practice notes additionally appear in the Journal (below).
 - **Replies** form a thread under each annotation; a reply is deletable by its author only.
-- Deleting an annotation is a reversible tombstone, like everything else.
+- Deleting an annotation is a reversible tombstone, like everything else — the author (and
+  only the author) removes their own note from the opened thread or the annotations panel;
+  undo restores it, and it drops from every surface (margin cell, avatars, read lens) at once.
+  Deleting a note tombstones **only that note record**: its replies are not hard-removed (they
+  ride along, unsurfaced while the parent is gone), so undo brings the note back with its
+  thread intact — a reply is never destroyed by deleting the note it hangs under.
 - Media attachments are a planned increment —
   [`docs/ideas/annotation-media-embeds.md`](../ideas/annotation-media-embeds.md).
 
