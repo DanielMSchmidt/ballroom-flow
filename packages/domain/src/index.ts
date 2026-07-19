@@ -29,9 +29,11 @@ export {
   addAnnotation,
   addReply,
   addSection,
+  attachMedia,
   buildRoutineDoc,
   readRoutine,
   softDeleteAnnotation,
+  softDeleteMedia,
   softDeleteReply,
   softDeleteSection,
 } from "./doc-routine";
@@ -46,12 +48,15 @@ export type {
   FigureDoc,
   FigureSource,
   FigureType,
+  MediaItem,
   Placement,
   ReadOptions,
   Reply,
   Role,
   RoutineDoc,
   Section,
+  UploadedMediaItem,
+  YouTubeMediaItem,
 } from "./doc-types";
 export {
   defaultFigureBars,
@@ -93,6 +98,7 @@ export {
   libraryGroupsForFilter,
   parseGlobalFigureRef,
 } from "./library";
+export { type MediaPart, mediaToken, splitMediaParts } from "./media";
 export { CURRENT_SCHEMA_VERSION, migrate, migrateDraft } from "./migrations";
 export {
   ensureSortKeys,
