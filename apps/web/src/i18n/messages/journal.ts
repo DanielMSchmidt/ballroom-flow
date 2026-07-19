@@ -169,6 +169,29 @@ const en = {
   thisFigureChip: "this figure",
   figureChip: "figure",
   today: "today",
+
+  // ── AI voice note capture (VoiceNoteSheet.tsx — docs/concepts/annotations.md § The Journal) ──
+  voice: "voice",
+  voiceSheetTitle: "Voice note",
+  voiceListening: "listening…",
+  voiceOnDeviceHint:
+    "transcribes on this device — falls back to the app's speech service if it can't",
+  voiceStop: "stop",
+  voiceInterpreting: "resolving against your choreos…",
+  voiceHeard: "Here's what I heard",
+  voiceProposedTarget: "PROPOSED TARGET",
+  voiceConfidenceHigh: "high confidence",
+  voiceConfidenceMedium: "medium confidence",
+  voiceConfidenceLow: "low confidence",
+  voiceGroundedHint:
+    "resolved against the figures actually in your choreos — nothing saves without your confirm",
+  voiceConfirmSave: "Confirm & save",
+  voiceEditTarget: "Edit target",
+  voiceDiscard: "Discard",
+  voiceUnresolvedTitle: "Couldn't find a target",
+  voiceUnresolvedBody:
+    "I couldn't match this to a figure in your choreos. Keep it as note text, or discard.",
+  voiceKeepAsText: "Keep as note text",
 };
 
 const de: typeof en = {
@@ -326,6 +349,28 @@ const de: typeof en = {
   thisFigureChip: "diese Figur",
   figureChip: "Figur",
   today: "heute",
+
+  // ── AI-Sprachnotiz-Aufnahme (VoiceNoteSheet.tsx) ──────────────────────────
+  voice: "Sprache",
+  voiceSheetTitle: "Sprachnotiz",
+  voiceListening: "höre zu…",
+  voiceOnDeviceHint: "wird auf diesem Gerät transkribiert — sonst über den Sprachdienst der App",
+  voiceStop: "stopp",
+  voiceInterpreting: "wird mit deinen Choreografien abgeglichen…",
+  voiceHeard: "Das habe ich gehört",
+  voiceProposedTarget: "VORGESCHLAGENES ZIEL",
+  voiceConfidenceHigh: "hohe Sicherheit",
+  voiceConfidenceMedium: "mittlere Sicherheit",
+  voiceConfidenceLow: "geringe Sicherheit",
+  voiceGroundedHint:
+    "abgeglichen mit den Figuren in deinen Choreografien — nichts wird ohne deine Bestätigung gespeichert",
+  voiceConfirmSave: "Bestätigen & speichern",
+  voiceEditTarget: "Ziel bearbeiten",
+  voiceDiscard: "Verwerfen",
+  voiceUnresolvedTitle: "Kein Ziel gefunden",
+  voiceUnresolvedBody:
+    "Ich konnte das keiner Figur in deinen Choreografien zuordnen. Als Notiztext behalten oder verwerfen.",
+  voiceKeepAsText: "Als Notiztext behalten",
 };
 
 export const journalMessages = { en, de };
