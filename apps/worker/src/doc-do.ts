@@ -29,6 +29,7 @@ import {
   addAnnotation,
   addFamilyNote,
   addLibraryRef,
+  addPredicateNote,
   addReply,
   addSection,
   barsForFigure,
@@ -65,6 +66,7 @@ import { type JournalEntryProjection, projectJournalEntries } from "./db/journal
 import { projectLibraryEntries } from "./db/library";
 import { resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
+import { type PredicateNoteProjection, projectPredicateNotes } from "./db/predicate-notes";
 import type { Env } from "./index";
 
 /** Per-connection socket attachment (survives hibernation). */
@@ -106,6 +108,18 @@ export type AccountOp =
        *  matching figure. Only valid with a concrete danceScope. */
       count?: number;
       role?: Role;
+    }
+  | {
+      op: "addPredicateNote";
+      authorId: string;
+      kind: AnnotationKind;
+      text: string;
+      attrKind: string;
+      attrValue: string;
+      attrRole?: Role;
+      scope: DanceId | "all" | "routine";
+      routineRef?: string;
+      tags?: string[];
     }
   | { op: "addAccountReply"; annotationId: string; authorId: string; text: string }
   | { op: "deleteFamilyNote"; annotationId: string }
@@ -577,7 +591,7 @@ export class DocDO extends DurableObject<Env> {
     await this.maybeScheduleProjection();
     this.broadcast(changes, null);
     const created =
-      op.op === "addFamilyNote"
+      op.op === "addFamilyNote" || op.op === "addPredicateNote"
         ? (readAccount(after, { includeDeleted: true })
             .annotations.map((a) => a.id)
             .find((id) => !idsBefore.has(id)) ?? null)
@@ -598,6 +612,18 @@ export class DocDO extends DurableObject<Env> {
           tags: op.tags,
           ...(op.count != null ? { count: op.count } : {}),
           ...(op.role != null ? { role: op.role } : {}),
+        });
+      case "addPredicateNote":
+        return addPredicateNote(doc, {
+          authorId: op.authorId,
+          kind: op.kind,
+          text: op.text,
+          attrKind: op.attrKind,
+          attrValue: op.attrValue,
+          scope: op.scope,
+          tags: op.tags,
+          ...(op.attrRole != null ? { attrRole: op.attrRole } : {}),
+          ...(op.routineRef != null ? { routineRef: op.routineRef } : {}),
         });
       case "addAccountReply":
         return addAccountReply(doc, op.annotationId, { authorId: op.authorId, text: op.text });
@@ -1683,6 +1709,28 @@ export class DocDO extends DurableObject<Env> {
       });
     }
     await projectFamilyNotes(this.env.DB, notes);
+
+    // Predicate notes — one row per attributePredicate annotation, tombstones
+    // carried. ALL predicate annotations project (including scope 'routine',
+    // stored as the literal 'routine' — keeps the upsert authoritative if a
+    // note's scope ever changes; the cross-account read excludes them by scope).
+    const predicateNotes: PredicateNoteProjection[] = [];
+    for (const a of account.annotations) {
+      const anchor = a.anchors.find((an) => an.type === "attributePredicate");
+      if (anchor?.type !== "attributePredicate") continue;
+      predicateNotes.push({
+        noteId: a.id,
+        authorId: userId,
+        attrKind: anchor.kind,
+        attrValue: anchor.value,
+        attrRole: anchor.role ?? null,
+        scope: anchor.scope,
+        kind: a.kind,
+        text: a.text,
+        deletedAt: a.deletedAt ?? null,
+      });
+    }
+    await projectPredicateNotes(this.env.DB, predicateNotes);
   }
 
   /** Look up figure display names (document_registry.title) for the given refs. */
