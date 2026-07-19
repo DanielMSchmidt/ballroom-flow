@@ -9,15 +9,22 @@ surface. For storage and the cross-account read path, see
 Timeline comments and journal entries are **one thing**: an **annotation** —
 
 ```
-{ author, kind (note | lesson | practice), text, tags, anchors[], replies[] }
+{ author, kind (note | lesson | practice), text, tags, anchors[], replies[], media[] }
 ```
 
 - **Kinds** carry intent: a plain `note`, a `lesson` (what the coach said), a `practice`
   (what you noticed). Lessons and practice notes additionally appear in the Journal (below).
 - **Replies** form a thread under each annotation; a reply is deletable by its author only.
 - Deleting an annotation is a reversible tombstone, like everything else.
-- Media attachments are a planned increment —
-  [`docs/ideas/annotation-media-embeds.md`](../ideas/annotation-media-embeds.md).
+- **Media** — an annotation carries `media[]`: uploaded **photos**, uploaded **videos**, and
+  **YouTube** references, placed **inline in the text** by an `![media:<id>]` token so each
+  renders at its position in the prose ("watch how she delays the rise: ⏵"), not as a gallery
+  bolted underneath. Media is **routine-anchored notes only** — never on replies, family
+  notes, or the Journal's account arm. Each item is a client-ULID, soft-delete-only record;
+  a tombstoned item renders a quiet "removed" stub (undo restores it). Media reads are gated
+  by the same membership that gates the annotation — a coach's video is never on the public
+  internet. See § Where notes appear (below) for the compact-vs-full rule, and
+  [`../system/architecture.md`](../system/architecture.md) § Annotation media for storage.
 
 ## Anchors — what a note points at
 
@@ -89,6 +96,15 @@ model merge — `figureType` keeps its own identity semantics.
 - **The library:** from a figure family you can open the cross-dance note surface (annotate
   this dance or all dances) — the catalog-side home for family notes.
 - **Filters:** all / lessons / practice / by figure.
+- **Media — compact vs. full (2026-07-19):** full embeds (a playable video, a full-size
+  photo, a YouTube player) render **only in the opened thread**, inline at the token's
+  position. The **compact surfaces never render a player, iframe, or image**: the reading
+  programme's notes-margin cell and the Journal cards show a small **media chip** (e.g.
+  `⏵2 ▣1` — videos and images), and tapping opens the thread exactly as today. A full-size
+  player in the 29% margin that renders every note would be a performance and layout
+  non-starter. The YouTube embed is a **click-to-load facade**: reading a note contacts no
+  third party — its thumbnail is proxied through the app, and the `youtube-nocookie.com`
+  player loads only after an explicit tap.
 
 ### Comment activity fade-out
 
@@ -120,7 +136,10 @@ The Journal tab is a **cross-choreo view over lesson/practice annotations** — 
 store. It merges (a) the routine-anchored lessons/practice notes from every choreo you can
 see, author-colored, with resolved link chips, and (b) family-note lessons/practice entries.
 Filter pills: all / lessons / practice / by figure. The entry editor has a Lesson/Practice
-toggle, handwritten-style text, link chips, and a (disabled, planned) media affordance.
+toggle, handwritten-style text, and link chips; its media affordance stays "coming soon" —
+media rides routine-scoped annotation threads only, so a lesson/practice note attaches media
+from the reading-view thread, not from the Journal's account arm. Journal cards show the same
+compact media chip (from a projected count), never the media itself.
 
 **The link picker is choreo-first**, then forks by **target**:
 
