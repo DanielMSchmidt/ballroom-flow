@@ -26,6 +26,7 @@ import {
   numberRoutineBeats,
   type PlacementPart,
   partBeatSpan,
+  partitionByActivity,
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
@@ -118,6 +119,7 @@ export function RoutineReadingView({
   onOpenThread,
   collapsedSections,
   onToggleSection,
+  now,
 }: {
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
@@ -162,9 +164,22 @@ export function RoutineReadingView({
   /** Tap a section divider → flip its fold. Omitted (e.g. in a context with no
    *  fold state) the dividers stay the plain non-interactive eyebrow rows. */
   onToggleSection?: (sectionId: string) => void;
+  /**
+   * Evaluation instant for comment activity fade-out (docs/concepts/annotations.md
+   * § Where notes appear): each margin cell derives its snippet/avatars from its
+   * ACTIVE routine comments only. Captured once per view mount and passed down as
+   * a stable scalar (docs/system/sync-and-offline.md § Flicker) — never a fresh
+   * `now` per render. Injected in tests; defaults to the mount instant.
+   */
+  now?: number;
 }) {
   const t = useMessages(timelineMessages);
   const dance = routine.dance;
+  // Fade-out evaluation instant, mount-stable: the partition is derived per
+  // render from identity-stable inputs plus this scalar, so React.memo bail-outs
+  // hold. A view left open across a window boundary re-evaluates on remount.
+  const [mountNow] = useState(() => Date.now());
+  const evalNow = now ?? mountNow;
   const resolvedByPlacement = useMemo(
     () => new Map(placements.map((p) => [p.placement.id, p])),
     [placements],
@@ -339,6 +354,7 @@ export function RoutineReadingView({
                       memberNames={memberNames}
                       customKinds={customKinds}
                       scopeLabel={routine.title}
+                      now={evalNow}
                       onOpenFigure={onOpenFigure}
                       onOpenThread={onOpenThread}
                     />
@@ -560,6 +576,7 @@ const FigureReadout = memo(function FigureReadout({
   memberNames,
   customKinds = [],
   scopeLabel,
+  now,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -584,6 +601,10 @@ const FigureReadout = memo(function FigureReadout({
   memberNames?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
+  /** Fade-out evaluation instant (mount-stable scalar) — the margin cell shows
+   *  ACTIVE routine comments' snippet/avatars only (docs/concepts/annotations.md
+   *  § Where notes appear). Family notes are exempt (they merge in unpartitioned). */
+  now: number;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
@@ -654,10 +675,18 @@ const FigureReadout = memo(function FigureReadout({
       familyWholeFigure.push(familyMarginNote(n));
     }
   }
-  // The header cell: routine whole-figure notes ∪ untimed/soft-fallback family
-  // notes, newest-first across both.
+  // Comment activity fade-out (docs/concepts/annotations.md § Where notes appear):
+  // each margin cell derives its snippet/avatars from its ACTIVE routine comments
+  // only — partition the per-cell routine list (the rule's granularity), keep the
+  // active side, then map to margin notes (partition needs `replies`, which the
+  // flattened MarginNote drops). Family notes are EXEMPT: co-members' family notes
+  // can lack an authored time and have no expander behind the cell, so they always
+  // render (merged in unpartitioned, exactly as before).
+  //
+  // The header cell: ACTIVE routine whole-figure notes ∪ untimed/soft-fallback
+  // family notes, newest-first across both.
   const headerNotes = mergeMarginNotes(
-    wholeFigureComments.map(annotationMarginNote),
+    partitionByActivity(wholeFigureComments, now).active.map(annotationMarginNote),
     familyWholeFigure,
   );
   return (
@@ -735,11 +764,12 @@ const FigureReadout = memo(function FigureReadout({
                 columns={columns}
                 here={live.filter((a) => a.count === count)}
                 notes={mergeMarginNotes(
-                  figureComments
-                    .filter((a) =>
+                  partitionByActivity(
+                    figureComments.filter((a) =>
                       a.anchors.some((an) => an.type === "point" && an.count === count),
-                    )
-                    .map(annotationMarginNote),
+                    ),
+                    now,
+                  ).active.map(annotationMarginNote),
                   familyByCount.get(count) ?? [],
                 )}
                 figureId={figure.id}
