@@ -159,8 +159,25 @@ There is deliberately **no catalog path** — a figure links only from a choreo 
 (the journal is about *your* dancing); the library's family-note surface remains the
 catalog-side escape hatch.
 
-*(A speech-driven capture path — speak a note, have the right anchor proposed — is a
-dispatch-ready idea: [`docs/ideas/ai-voice-notes.md`](../ideas/ai-voice-notes.md).)*
+### Voice capture (speak a note, land it on the right anchor)
+
+The entry editor also has a **voice** affordance: speak a practice note — *"In Slowfox, in
+Feather Steps, I need to settle the sway"* — and the app proposes the right anchor. The mic
+records; a transcript is produced (on-device speech recognition first, a server Whisper
+fallback where that's unsupported); the transcript is resolved **against the figures actually
+in your choreos** into a **proposed** anchor rendered as a chip; you **Confirm** (or **Edit
+target** to hand off to the ordinary picker, or **Discard**). Nothing is a new note class —
+this is an **on-ramp onto the existing anchor model**: Confirm produces the very same link the
+manual picker would, committed through the ordinary annotation write. The three static anchor
+shapes are proposable (a family `figureType` note, a `figure` instance note, a timed `point`
+note); the AI only *proposes* and the human confirms, so **no wrong anchor can be committed
+past the confirm step**.
+
+An utterance that matches no figure **degrades to a plain transcribed note** (kept as note
+text, never a guessed anchor). **Predicate-shaped** utterances ("soften every left sway")
+also fall back to a plain note today — a voice-proposed `attributePredicate` anchor is a
+recorded **future refinement** (the predicate anchor itself ships, but the voice pipeline does
+not yet propose it). No audio is retained (transcribe and discard).
 
 ---
 
