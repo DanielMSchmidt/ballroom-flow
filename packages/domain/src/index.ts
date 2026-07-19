@@ -120,6 +120,7 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
+export { matchPredicate, PREDICATE_NONE } from "./predicate";
 export {
   type BothWriteTargets,
   bothWriteTargets,
