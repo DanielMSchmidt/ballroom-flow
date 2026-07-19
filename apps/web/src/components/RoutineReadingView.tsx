@@ -76,9 +76,12 @@ interface MarginNote {
   authorId: string;
   text: string;
   createdAt: number;
-  family: boolean;
+  /** The note's category within the margin's vocabulary — drives the SR-only
+   *  scope cue read before the snippet (#285: a predicate note is NOT a family
+   *  note, so it must not be announced as one). `"routine"` carries no cue. */
+  scope: "routine" | "family" | "predicate";
   /** Live image/video counts for the compact MediaChip (YouTube counts as video).
-   *  docs/ideas/annotation-media-embeds.md: the margin shows a chip, NEVER the media. */
+   *  docs/concepts/annotations.md § Media: the margin shows a chip, NEVER the media. */
   images: number;
   videos: number;
 }
@@ -102,7 +105,7 @@ function annotationMarginNote(a: Annotation): MarginNote {
     authorId: a.authorId,
     text: a.text,
     createdAt: a.createdAt,
-    family: false,
+    scope: "routine",
     ...mediaCounts(a.media),
   };
 }
@@ -116,22 +119,23 @@ function familyMarginNote(n: FamilyNote): MarginNote {
     // A co-member note's REST projection has no authored time — sort it oldest
     // rather than fabricate a "now" that would jump it to the top on every load.
     createdAt: n.createdAt ?? 0,
-    family: true,
+    scope: "family",
     // Family/predicate notes carry no media (media rides routine annotations only).
     images: 0,
     videos: 0,
   };
 }
 
-/** Adapt a predicate note into the unified margin shape (family-scope in the margin
- *  vocabulary — it is a co-member/own dynamic note, same envelope as a family note). */
+/** Adapt a predicate note into the unified margin shape. It rides the same margin
+ *  envelope as a family note but is a DISTINCT anchor type (a content predicate,
+ *  not a figure-identity note), so it carries its own SR-only cue (#285). */
 function predicateMarginNote(n: PredicateNote): MarginNote {
   return {
     id: n.id,
     authorId: n.authorId,
     text: n.text,
     createdAt: n.createdAt ?? 0,
-    family: true,
+    scope: "predicate",
     images: 0,
     videos: 0,
   };
@@ -277,6 +281,7 @@ export function RoutineReadingView({
     predicateNotes,
     figures,
     routine.id,
+    roleView,
   );
   // The column picker (Builder v3): the reader's picked column ids, per device
   // + across choreos. The chips row covers every type USED anywhere in this
@@ -449,24 +454,39 @@ const NO_TOKENS: string[] = [];
  * set is unchanged keeps its previous array identity, so an unrelated doc change
  * re-renders nothing. A routine-scoped anchor is confined to `routineId` here (a
  * bare figure doesn't know its routine); a figure placed twice slices once.
+ *
+ * Matching runs over the figure's attributes AS FILTERED BY THE ACTIVE ROLE LENS —
+ * the exact set the reading table renders (`filterByRoleView`). This matters for
+ * MIRRORED kinds (sway/turn/direction): a Both-lens sway edit splits into
+ * leader `to_R` + follower `to_L` (the same physical lean, WEP-0008), so an
+ * unfiltered match would surface a "left sway" note on the hidden follower value
+ * while the leader lens shows only "right" (issue #284 — the note clinging to a
+ * step whose visible value was retagged). Filtering to the lens keeps the note
+ * tied to what the dancer actually sees on this side.
  */
 function useStablePredicateNotesByFigure(
   predicateNotes: PredicateNote[],
   figures: FigureDoc[],
   routineId: string,
+  roleView: RoleView,
 ): Map<string, PredicateMatch[]> {
   const prevRef = useRef<Map<string, PredicateMatch[]>>(new Map());
   return useMemo(() => {
     const next = new Map<string, PredicateMatch[]>();
     for (const figure of figures) {
       if (next.has(figure.id)) continue;
+      // Match over the lens's projection — the same view the reading table shows.
+      const lensFigure = {
+        ...figure,
+        attributes: filterByRoleView(figure.attributes, roleView),
+      };
       const matches: PredicateMatch[] = [];
       for (const note of predicateNotes) {
         const anchor = note.anchors[0];
         if (anchor?.type !== "attributePredicate") continue;
         // Confine a routine-scoped anchor to its own routine (the caller's gate).
         if (anchor.scope === "routine" && anchor.routineRef !== routineId) continue;
-        const counts = matchPredicate(anchor, figure);
+        const counts = matchPredicate(anchor, lensFigure);
         if (counts.length > 0) matches.push({ note, counts });
       }
       if (matches.length > 0) next.set(figure.id, matches);
@@ -479,7 +499,7 @@ function useStablePredicateNotesByFigure(
     }
     prevRef.current = next;
     return next;
-  }, [predicateNotes, figures, routineId]);
+  }, [predicateNotes, figures, routineId, roleView]);
 }
 
 /** Structural equality of two predicate-match slices (note id + matched counts). */
@@ -1136,11 +1156,13 @@ function StepRow({
  *  Caveat snippet. The whole cell is one tap target opening the anchor's
  *  thread (a viewer may read it; only a commenter may add).
  *
- *  `notes` is the ALREADY-MERGED set (routine annotations ∪ family notes),
- *  ordered newest-first — so `notes[0]` is the snippet and avatars read forward.
- *  A family-scope note (`family: true`) carries a sr-only "family note" cue so
- *  it never reads as a here-and-now comment — an affordance already in the
- *  margin's vocabulary (colour/initial + text), no new visual. */
+ *  `notes` is the ALREADY-MERGED set (routine annotations ∪ family notes ∪
+ *  predicate notes), ordered newest-first — so `notes[0]` is the snippet and
+ *  avatars read forward. A non-routine note carries a sr-only scope cue keyed to
+ *  its `scope` ("family note" / "attribute note", #285) so it never reads as a
+ *  here-and-now comment and a predicate note is not miscategorized as a family
+ *  one — an affordance already in the margin's vocabulary (colour/initial +
+ *  text), no new visual. */
 function NotesMarginCell({
   label,
   notes,
@@ -1203,7 +1225,10 @@ function NotesMarginCell({
           className="line-clamp-2 text-[12px] leading-[1.3] text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)" }}
         >
-          {latest.family && <span className="bf-sr-only">{t.familyNoteScope} </span>}
+          {latest.scope === "family" && <span className="bf-sr-only">{t.familyNoteScope} </span>}
+          {latest.scope === "predicate" && (
+            <span className="bf-sr-only">{t.predicateNoteScope} </span>
+          )}
           {latest.text}
         </span>
       )}
