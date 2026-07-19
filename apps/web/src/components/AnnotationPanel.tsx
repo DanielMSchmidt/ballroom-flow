@@ -13,17 +13,27 @@
 // Styling: uses the `../ui` primitives (Button, Chip) so the panel matches the
 // rest of the app — 44px touch targets (#3), focus rings (#7), the shared
 // type/colour scale — and keeps the accessible names/roles the tests rely on.
+import type { MintMediaUpload, MintMediaUploadResponse } from "@weavesteps/contract";
 import {
   type Annotation,
   type AnnotationKind,
+  type MediaItem,
+  mediaToken,
   partitionByActivity,
   type Role,
 } from "@weavesteps/domain";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getLocale, pickMessages, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import {
+  captureVideoPoster,
+  compressImage,
+  videoDurationSeconds,
+  youtubeVideoId,
+} from "../lib/media-files";
 import { onSelectValue } from "../lib/select-value";
 import { Button, Chip } from "../ui";
+import { MediaParts } from "./MediaParts";
 
 /** A point or figure anchor the panel is composing against (Task 8 supplies it). */
 export type ComposeAnchor =
@@ -45,8 +55,23 @@ export interface AnnotationPanelProps {
    * a name. A ref with no entry falls back to the ref itself.
    */
   figureLabels?: Record<string, string>;
-  /** Create handler (controlled). Omitted ⇒ the panel appends to internal state. */
-  onCreate?: (input: { kind: AnnotationKind; text: string }) => void;
+  /** Create handler (controlled). Omitted ⇒ the panel appends to internal state.
+   *  `media` carries the composer's attached items (inline, placed by tokens in
+   *  `text`) — omitted when there is none (docs/ideas/annotation-media-embeds.md). */
+  onCreate?: (input: { kind: AnnotationKind; text: string; media?: MediaItem[] }) => void;
+  // ── Inline media compose (docs/ideas/annotation-media-embeds.md) ──────────────
+  /** The routine docRef — needed for the worker-proxied YouTube thumbnail and mint. */
+  docRef?: string;
+  /** Whether the routine's sync is LIVE — uploads are server-minting, so the attach
+   *  affordances only appear when live (note text stays offline-capable). */
+  mediaSyncLive?: boolean;
+  /** Mint an upload grant (wired from the store; commenter+ + caps checked server-side). */
+  onMintMediaUpload?: (req: MintMediaUpload) => Promise<MintMediaUploadResponse>;
+  /** Upload a media blob to its minted URL (single PUT or multipart; from the store). */
+  onUploadMedia?: (uploadUrl: string, blob: Blob, mimeType: string) => Promise<void>;
+  /** Mint a client ULID for a new media item (from the store's `newId`). Injectable
+   *  for tests; defaults to a local counter so the panel works standalone. */
+  newMediaId?: () => string;
   /** Reply handler (controlled). */
   onReply?: (annotationId: string, text: string) => void;
   /** Reply-delete handler (controlled); shown only on the viewer's own replies. */
@@ -86,6 +111,9 @@ const KINDS: AnnotationKind[] = ["note", "lesson", "practice"];
 
 let localSeq = 0;
 const nextLocalId = (): string => `local-${localSeq++}`;
+let localMediaSeq = 0;
+/** Standalone media-id fallback (the store injects a real ULID via `newMediaId`). */
+const nextLocalMediaId = (): string => `localmedia-${localMediaSeq++}`;
 
 /** The distinct figure refs an annotation set anchors to (US-042 by-figure). */
 function figureRefsOf(list: Annotation[]): string[] {
@@ -121,11 +149,31 @@ export function AnnotationPanel({
   currentUserColor,
   currentUserName,
   now,
+  docRef = "",
+  mediaSyncLive = false,
+  onMintMediaUpload,
+  onUploadMedia,
+  newMediaId,
 }: AnnotationPanelProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const canAnnotate = role === "commenter" || role === "editor";
   const [draft, setDraft] = useState("");
   const [kind, setKind] = useState<AnnotationKind>("note");
+  // Pending attached media (built with conditional spreads — never an `undefined`
+  // key). Uploads are live-gated (mediaSyncLive); note text stays offline-capable.
+  const [pendingMedia, setPendingMedia] = useState<MediaItem[]>([]);
+  const mintId = newMediaId ?? nextLocalMediaId;
+  // A stable compose-session id for the object-key namespace. The final annotation
+  // gets its own id at create time; membership is derived from the docRef prefix,
+  // never this segment, so a compose-session value is sufficient for the key.
+  const composeSessionRef = useRef<string | null>(null);
+  if (composeSessionRef.current === null) {
+    composeSessionRef.current = mintId();
+  }
+  const composeAnnotationId = composeSessionRef.current;
+  // File inputs for the photo/video pickers (opened by the icon buttons).
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [local, setLocal] = useState<Annotation[]>([]);
   // Fade-out evaluation instant: captured once per mount so the partition is
@@ -144,8 +192,11 @@ export function AnnotationPanel({
     if (!text) return;
     // Thread mode always uses "note" kind; the filter-bar mode uses the select.
     const submitKind: AnnotationKind = threadTitle ? "note" : kind;
+    // Conditional spread: an omitted `media` key when there's none (the domain
+    // rejects an assigned `undefined`; the store passes this straight through).
+    const mediaFields = pendingMedia.length > 0 ? { media: pendingMedia } : {};
     if (onCreate) {
-      onCreate({ kind: submitKind, text });
+      onCreate({ kind: submitKind, text, ...mediaFields });
     } else {
       const anchor: ComposeAnchor = composeAnchor ?? { type: "figure", figureRef: "" };
       setLocal((prev) => [
@@ -158,12 +209,101 @@ export function AnnotationPanel({
           tags: [],
           anchors: [anchor],
           replies: [],
+          ...mediaFields,
           createdAt: 0,
           deletedAt: null,
         },
       ]);
     }
     setDraft("");
+    setPendingMedia([]);
+  };
+
+  // ── Media attach (note composer only; no media on replies) ────────────────────
+  // Append a media item + its inline token to the draft, holding the item for Create.
+  const holdMedia = (item: MediaItem): void => {
+    setDraft((prev) => `${prev}${prev && !prev.endsWith(" ") ? " " : ""}${mediaToken(item.id)}`);
+    setPendingMedia((prev) => [...prev, item]);
+  };
+  const clearPending = (mediaId: string): void => {
+    setPendingMedia((prev) => prev.filter((m) => m.id !== mediaId));
+    setDraft((prev) =>
+      prev
+        .replace(mediaToken(mediaId), "")
+        .replace(/\s{2,}/g, " ")
+        .trim(),
+    );
+  };
+
+  /** Upload an image/video: compress/capture → mint → upload → hold with its token. */
+  const attachUpload = async (file: File, type: "image" | "video"): Promise<void> => {
+    if (!onMintMediaUpload || !onUploadMedia) return;
+    const mediaId = mintId();
+    if (type === "image") {
+      const { blob, width, height } = await compressImage(file);
+      const grant = await onMintMediaUpload({
+        annotationId: composeAnnotationId,
+        mediaId,
+        type: "image",
+        mimeType: "image/jpeg",
+        sizeBytes: blob.size,
+      });
+      await onUploadMedia(grant.uploadUrl, blob, "image/jpeg");
+      holdMedia({
+        id: mediaId,
+        type: "image",
+        objectKey: grant.objectKey,
+        mimeType: "image/jpeg",
+        sizeBytes: blob.size,
+        width,
+        height,
+        createdAt: Date.now(),
+      });
+      return;
+    }
+    // Video: capture a poster (uploaded separately) + read the duration.
+    const [poster, durationSeconds] = await Promise.all([
+      captureVideoPoster(file),
+      videoDurationSeconds(file),
+    ]);
+    const posterId = mintId();
+    const posterGrant = await onMintMediaUpload({
+      annotationId: composeAnnotationId,
+      mediaId: posterId,
+      type: "image",
+      mimeType: "image/jpeg",
+      sizeBytes: poster.size,
+      poster: true,
+    });
+    await onUploadMedia(posterGrant.uploadUrl, poster, "image/jpeg");
+    const grant = await onMintMediaUpload({
+      annotationId: composeAnnotationId,
+      mediaId,
+      type: "video",
+      mimeType: file.type || "video/mp4",
+      sizeBytes: file.size,
+      durationSeconds,
+    });
+    await onUploadMedia(grant.uploadUrl, file, file.type || "video/mp4");
+    holdMedia({
+      id: mediaId,
+      type: "video",
+      objectKey: grant.objectKey,
+      posterKey: posterGrant.objectKey,
+      mimeType: file.type || "video/mp4",
+      sizeBytes: file.size,
+      durationSeconds,
+      createdAt: Date.now(),
+    });
+  };
+
+  /** Attach a YouTube link (no upload): parse the id → token + youtube item. */
+  const attachYoutube = (): void => {
+    const raw = window.prompt(t.youtubePrompt);
+    if (!raw) return;
+    const videoId = youtubeVideoId(raw);
+    if (!videoId) return;
+    holdMedia({ id: mintId(), type: "youtube", videoId, url: raw.trim(), createdAt: Date.now() });
   };
 
   const visible = list.filter((a) => {
@@ -228,6 +368,7 @@ export function AnnotationPanel({
             <li key={a.id}>
               <ThreadComment
                 annotation={a}
+                docRef={docRef}
                 currentUserId={currentUserId}
                 authorColorMap={authorColorMap}
                 authorNameMap={authorNameMap}
@@ -343,6 +484,20 @@ export function AnnotationPanel({
             rows={2}
             className="w-full rounded-md border border-border-strong bg-surface-sunken px-3.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none"
           />
+          {/* Inline media attach (docs/ideas/annotation-media-embeds.md): the three
+              affordances appear only when sync is live (uploads are server-minting)
+              and a mint/upload seam is wired. Note text stays offline-capable. */}
+          {mediaSyncLive && onMintMediaUpload && onUploadMedia && (
+            <MediaComposeRow
+              pending={pendingMedia}
+              onClear={clearPending}
+              photoInputRef={photoInputRef}
+              videoInputRef={videoInputRef}
+              onPickPhoto={(file) => void attachUpload(file, "image")}
+              onPickVideo={(file) => void attachUpload(file, "video")}
+              onAttachYoutube={attachYoutube}
+            />
+          )}
           <Button type="submit" variant="primary" size="sm" disabled={!draft.trim()}>
             {t.addNote}
           </Button>
@@ -350,6 +505,142 @@ export function AnnotationPanel({
       )}
     </section>
   );
+}
+
+/** Photo/video/YouTube icon buttons (44px targets) + hidden file inputs + a pending
+ *  media chip row ("lands inline…" helper). Builder v3 ~559-568. Note composer only —
+ *  media is not allowed on replies (discrepancy note 6). */
+function MediaComposeRow({
+  pending,
+  onClear,
+  photoInputRef,
+  videoInputRef,
+  onPickPhoto,
+  onPickVideo,
+  onAttachYoutube,
+}: {
+  pending: MediaItem[];
+  onClear: (mediaId: string) => void;
+  photoInputRef: React.RefObject<HTMLInputElement | null>;
+  videoInputRef: React.RefObject<HTMLInputElement | null>;
+  onPickPhoto: (file: File) => void;
+  onPickVideo: (file: File) => void;
+  onAttachYoutube: () => void;
+}): React.JSX.Element {
+  const t = useMessages(journalMessages);
+  return (
+    <div className="flex flex-col gap-2">
+      {pending.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {pending.map((m) => (
+            <span
+              key={m.id}
+              data-testid="pending-media-chip"
+              className="inline-flex items-center gap-1.5 rounded-[9px] border-[1.5px] px-2.5 py-1 text-[9px] font-bold"
+              style={{
+                borderColor: "var(--bf-accent-border, #cdddee)",
+                background: "var(--bf-media-chip-bg, #eef4fb)",
+                color: "var(--bf-studio-blue, #1f3f63)",
+              }}
+            >
+              {mediaChipGlyph(m)}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={t.clearMedia}
+                onClick={() => onClear(m.id)}
+              >
+                ✕
+              </Button>
+            </span>
+          ))}
+          <span className="text-2xs text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
+            {t.pendingMediaHint}
+          </span>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          ref={photoInputRef}
+          data-testid="media-photo-input"
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onPickPhoto(file);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={videoInputRef}
+          data-testid="media-video-input"
+          type="file"
+          accept="video/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onPickVideo(file);
+            e.target.value = "";
+          }}
+        />
+        <AttachIconButton label={t.attachPhoto} onClick={() => photoInputRef.current?.click()}>
+          <rect x="3" y="6" width="18" height="14" rx="2" />
+          <circle cx="12" cy="13" r="3.2" />
+          <path d="M8 6l1.5-2h5L16 6" />
+        </AttachIconButton>
+        <AttachIconButton label={t.attachVideo} onClick={() => videoInputRef.current?.click()}>
+          <rect x="2" y="6" width="13" height="12" rx="2" />
+          <path d="M15 10l6-3v10l-6-3z" />
+        </AttachIconButton>
+        <AttachIconButton label={t.attachYoutube} onClick={onAttachYoutube}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none" />
+        </AttachIconButton>
+      </div>
+    </div>
+  );
+}
+
+/** A 44px-target attach icon button (Builder v3 ~566-568). */
+function AttachIconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="flex min-h-[var(--bf-touch-target)] min-w-[var(--bf-touch-target)] items-center justify-center rounded-md text-ink-muted outline-none"
+    >
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {children}
+      </svg>
+    </button>
+  );
+}
+
+/** The compact glyph for a pending item's chip (▣ photo, ⏵ video/YouTube). */
+function mediaChipGlyph(item: MediaItem): string {
+  return item.type === "image" ? "▣" : "⏵";
 }
 
 // ── T8 helpers: Thread mode components ───────────────────────────────────────
@@ -402,6 +693,7 @@ function AuthorAvatar({
  *  colour + relative time + Caveat text.  Reply thread indented below. */
 function ThreadComment({
   annotation: a,
+  docRef,
   currentUserId,
   authorColorMap,
   authorNameMap,
@@ -410,6 +702,7 @@ function ThreadComment({
   onDeleteReply,
 }: {
   annotation: Annotation;
+  docRef: string;
   currentUserId?: string;
   authorColorMap?: Record<string, string>;
   authorNameMap?: Record<string, string>;
@@ -432,10 +725,11 @@ function ThreadComment({
           </span>
           <span className="text-2xs text-ink-muted">· {time}</span>
         </p>
-        {/* Comment text — Caveat (hand-written) font per brief */}
-        <p className="text-[15px] text-ink" style={{ fontFamily: "var(--bf-font-note)" }}>
-          {a.text}
-        </p>
+        {/* Comment body — ordered text/media parts; media renders INLINE at its
+            token position in the prose (docs/ideas/annotation-media-embeds.md). */}
+        <div className="text-[15px] text-ink" style={{ fontFamily: "var(--bf-font-note)" }}>
+          <MediaParts text={a.text} media={a.media} docRef={docRef} />
+        </div>
         {/* Threaded replies (indented) */}
         {a.replies.length > 0 && (
           <ul aria-label={t.repliesThread} className="mt-1 flex flex-col gap-1 pl-2">

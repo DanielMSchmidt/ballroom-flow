@@ -244,6 +244,53 @@ export async function apiPost<T>(
   return readJson<T>(res);
 }
 
+/**
+ * PUT a raw binary body (the media-upload arm, docs/ideas/annotation-media-embeds.md).
+ * A single R2 PUT through the worker — the blob rides as the request body under the
+ * caller's `content-type`. Like every mutation this NEVER retries (a re-sent PUT that
+ * reached R2 is a double-write); throws an {@link ApiError} on non-2xx. No JSON body
+ * is returned (an object PUT answers empty), so this resolves `void`.
+ */
+export async function apiPutBlob(
+  path: string,
+  token: string | null,
+  blob: Blob,
+  contentType: string,
+): Promise<void> {
+  const res = await resilientFetch("PUT", path, token, {
+    method: "PUT",
+    headers: {
+      "content-type": contentType,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: blob,
+  });
+  if (!res.ok) throw new ApiError(res.status, await readBody(res), `PUT ${path} -> ${res.status}`);
+}
+
+/**
+ * PUT a raw binary body and read a JSON response (the multipart upload-part arm:
+ * the worker answers each part PUT with `{ partNumber, etag }`). Same no-retry
+ * mutation policy as {@link apiPutBlob}; throws an {@link ApiError} on non-2xx.
+ */
+export async function apiPutBlobJson<T>(
+  path: string,
+  token: string | null,
+  blob: Blob,
+  contentType: string,
+): Promise<T> {
+  const res = await resilientFetch("PUT", path, token, {
+    method: "PUT",
+    headers: {
+      "content-type": contentType,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: blob,
+  });
+  if (!res.ok) throw new ApiError(res.status, await readBody(res), `PUT ${path} -> ${res.status}`);
+  return readJson<T>(res);
+}
+
 /** Typed DELETE. Throws an {@link ApiError} on non-2xx. `body`, when given, is
  *  JSON-encoded and sent as the DELETE payload (e.g. un-bookmark: a figureRef can
  *  contain `/`/`:`, so it rides in the body rather than a path param). */
