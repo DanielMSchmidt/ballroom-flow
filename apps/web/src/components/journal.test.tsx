@@ -419,6 +419,98 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
       text: "commit to the side step",
     });
   });
+
+  // #293 — an entry carrying BOTH a routine link and an account figureType link
+  // must write BOTH: the routine annotation AND one family note per figureType
+  // link. Previously the routine link short-circuited and the account links were
+  // dropped silently.
+  //
+  // Adds `link` to the currently-open picker: pick a figure, then a placement +
+  // scope. `scope === "count 2 · This choreo only"` → a routine point link;
+  // `scope === "The entire figure · Every dance"` → an account figureType link.
+  async function addWholeFigureLink(
+    figureName: RegExp,
+    scope: "This choreo only" | "Every dance" | "All Waltz choreos",
+  ): Promise<void> {
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
+    await userEvent.click(await screen.findByRole("button", { name: figureName }));
+    await userEvent.click(await screen.findByText("The entire figure"));
+    await userEvent.click(await screen.findByText(scope));
+  }
+
+  it("#293: a routine link + one account figureType link writes BOTH", async () => {
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "sway then commit");
+    // A routine-scoped link (this-choreo only, a whole-figure anchor)…
+    await addWholeFigureLink(/^Whisk/, "This choreo only");
+    // …AND an account figureType link (all Whisks, every dance).
+    await addWholeFigureLink(/^Whisk/, "Every dance");
+    await waitFor(() =>
+      expect(screen.getByText(/^↳ all Whisks · all dances$/)).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createRoutineEntry.mock.calls[0]?.[0]).toBe("rt1");
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "figure", figureRef: "f1" }],
+      text: "sway then commit",
+    });
+    // The bug: this family note was silently dropped when a routine link was present.
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
+      figureType: "whisk",
+      danceScope: "all",
+      kind: "lesson",
+      text: "sway then commit",
+    });
+  });
+
+  it("#293: a routine link + two account figureType links writes all three", async () => {
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "shape across the pair");
+    // A routine link plus TWO account figureType links on the same family at
+    // different scopes (cross-dance + this-dance) — all three must land.
+    await addWholeFigureLink(/^Whisk/, "This choreo only");
+    await addWholeFigureLink(/^Whisk/, "Every dance");
+    await addWholeFigureLink(/^Whisk/, "All Waltz choreos");
+    await waitFor(() => expect(screen.getByText(/^↳ all Whisks · all Waltz$/)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(2));
+    const scopes = createFamilyEntry.mock.calls.map((c) => c[0]?.danceScope);
+    expect(scopes).toEqual(["all", "waltz"]);
+    for (const call of createFamilyEntry.mock.calls) {
+      expect(call[0]).toMatchObject({ figureType: "whisk", text: "shape across the pair" });
+    }
+  });
 });
 
 describe("Journal editor — AI voice path (the AI never writes; Confirm uses the ordinary seams)", () => {

@@ -2466,12 +2466,11 @@ function PlacementAttributes({
  *
  * Author colour data path: `useMembers(routineId)` → `Member.identityColor`
  * (T8 extended the members endpoint to LEFT JOIN users). Current user: `useMe`
- * → `Me.identityColor`.
- *
- * Gap documented: the `InlineComments` author dots in RoutineReadingView still
- * use the hash fallback (identityColor(authorId)). To fix those too would
- * require threading authorColorMap through RoutineReadingView → FigureReadout
- * → StepRow → InlineComments; deferred (dots in the panel use real colours).
+ * → `Me.identityColor`. Names come from the same members list (+ useMe for the
+ * current user), passed as `authorNameMap` so the panel avatars show a real
+ * initial. The reading-view margin dots get the equivalent maps from Assemble
+ * (`memberColors`/`memberNames`) — both paths resolve names, neither derives an
+ * avatar initial from a raw author id (a ULID starts with "0" — that was #292).
  */
 function ThreadSheetContents({
   routineId,

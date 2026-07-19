@@ -3,9 +3,11 @@
 // disabled "media coming soon" affordance (docs/ideas/annotation-media-embeds.md).
 //
 // Per the LOCKED full-parity decision the SAVE path is determined by the entry's
-// links: a routine-scoped link (point/figure) saves via createRoutineEntry on
-// that routine's editable store (createAnnotation); an account figureType link
-// saves via createFamilyEntry (createFamilyNote). Both are injected (store seam).
+// links, and each link kind writes independently (#293): routine-scoped links
+// (point/figure) collapse into one createRoutineEntry (createAnnotation) on that
+// routine's editable store, AND each account figureType link saves its own
+// createFamilyEntry (createFamilyNote) — an entry carrying both kinds lands both.
+// All seams are injected (store seam).
 import type { VoiceNoteProposal } from "@weavesteps/contract";
 import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
@@ -114,10 +116,13 @@ export function JournalEntryEditor({
         (l): l is Extract<JournalLink, { home: "accountPredicate" }> =>
           l.home === "accountPredicate",
       );
+      // Each link kind writes to its own home INDEPENDENTLY (#293): an entry
+      // carrying both a routine link and an account figureType link must land
+      // both — the routine annotation AND one family note per figureType link —
+      // matching exactly what each link kind produces on its own.
       const [firstRoutine] = routineLinks;
       if (firstRoutine) {
-        // A routine-scoped link wins the entry's home: all same-routine anchors
-        // collapse into one annotation.
+        // All same-routine anchors collapse into one annotation.
         const routineRef = firstRoutine.routineRef;
         const sameRoutine = routineLinks.filter((l) => l.routineRef === routineRef);
         await createRoutineEntry(routineRef, {
@@ -125,32 +130,32 @@ export function JournalEntryEditor({
           text: text.trim(),
           anchors: sameRoutine.map((l) => l.anchor),
         });
-      } else if (accountLinks.length > 0 || predicateLinks.length > 0) {
-        // docs/concepts/annotations.md § Anchors: one account note per linked target —
-        // a figureType family note (WEP-0004, with its scope + optional timed anchor) or
-        // an attribute-predicate note (each carries its own kind/value/scope).
-        for (const acct of accountLinks) {
-          await createFamilyEntry({
-            figureType: acct.figureType,
-            danceScope: acct.danceScope,
-            kind,
-            text: text.trim(),
-            ...(acct.count != null ? { count: acct.count } : {}),
-            ...(acct.role ? { role: acct.role } : {}),
-          });
-        }
-        for (const pred of predicateLinks) {
-          await createPredicateEntry({
-            attrKind: pred.attrKind,
-            attrValue: pred.attrValue,
-            scope: pred.scope,
-            kind,
-            text: text.trim(),
-            ...(pred.role ? { role: pred.role } : {}),
-            ...(pred.routineRef ? { routineRef: pred.routineRef } : {}),
-          });
-        }
-      } else {
+      }
+      // docs/concepts/annotations.md § Anchors: one account note per linked target —
+      // a figureType family note (WEP-0004, with its scope + optional timed anchor) or
+      // an attribute-predicate note (each carries its own kind/value/scope).
+      for (const acct of accountLinks) {
+        await createFamilyEntry({
+          figureType: acct.figureType,
+          danceScope: acct.danceScope,
+          kind,
+          text: text.trim(),
+          ...(acct.count != null ? { count: acct.count } : {}),
+          ...(acct.role ? { role: acct.role } : {}),
+        });
+      }
+      for (const pred of predicateLinks) {
+        await createPredicateEntry({
+          attrKind: pred.attrKind,
+          attrValue: pred.attrValue,
+          scope: pred.scope,
+          kind,
+          text: text.trim(),
+          ...(pred.role ? { role: pred.role } : {}),
+          ...(pred.routineRef ? { routineRef: pred.routineRef } : {}),
+        });
+      }
+      if (links.length === 0) {
         // No link — save as a general account note (unanchored to a specific figure).
         await createFamilyEntry({
           figureType: "general",
