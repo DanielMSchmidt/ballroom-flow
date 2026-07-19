@@ -32,6 +32,7 @@ import {
   addPredicateNote,
   addReply,
   addSection,
+  attachMedia,
   barsForFigure,
   buildDoc,
   buildRoutineDoc,
@@ -85,7 +86,8 @@ export type DocOp =
   | ({ op: "addSection"; name: string } & Record<string, unknown>)
   | ({ op: "addAnnotation"; text: string } & Record<string, unknown>)
   | ({ op: "addReply"; annotationId: string; text: string } & Record<string, unknown>)
-  | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
+  | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>)
+  | ({ op: "attachMedia"; annotationId: string } & Record<string, unknown>);
 
 /**
  * High-level edits on the per-user ACCOUNT doc (WEP-0002 —
@@ -537,7 +539,7 @@ export class DocDO extends DurableObject<Env> {
     // Arm the journal projection only when the op touched annotations, so an
     // annotation edit projects promptly WITHOUT a structural-edit burst spuriously
     // arming the alarm (and compacting the log out from under the structural tests).
-    if (op.op === "addAnnotation" || op.op === "deleteAnnotation") {
+    if (op.op === "addAnnotation" || op.op === "deleteAnnotation" || op.op === "attachMedia") {
       await this.maybeScheduleProjection();
     }
     // An RPC edit also propagates to any live WebSocket clients of this doc.
@@ -704,6 +706,22 @@ export class DocDO extends DurableObject<Env> {
         });
       case "deleteAnnotation":
         return softDeleteAnnotation(doc, String(op.id));
+      case "attachMedia": {
+        // A media attach is an ordinary annotation-field edit (the commenter gate
+        // treats it exactly like any other change to `annotations`, so only the
+        // annotation's own author lands it post-connect). Client ULIDs; a minimal
+        // image item is enough for the write path (the full item is built client-
+        // side and carried in the CRDT change from the compose flow).
+        const mediaId = typeof op.mediaId === "string" ? op.mediaId : newId();
+        return attachMedia(doc, String(op.annotationId), {
+          id: mediaId,
+          type: "image",
+          objectKey: `media/x/${String(op.annotationId)}/${mediaId}`,
+          mimeType: "image/jpeg",
+          sizeBytes: typeof op.sizeBytes === "number" ? op.sizeBytes : 1,
+          createdAt: Date.now(),
+        });
+      }
       default:
         return doc;
     }
@@ -1653,15 +1671,22 @@ export class DocDO extends DurableObject<Env> {
     }
     const names = await this.resolveFigureNames([...figureRefs]);
 
-    const rows: JournalEntryProjection[] = journalAnnotations.map((a) => ({
-      entryId: a.id,
-      authorId: a.authorId,
-      kind: a.kind,
-      text: a.text,
-      anchors: JSON.stringify(a.anchors.map((an) => this.labelAnchor(an, names))),
-      createdAt: a.createdAt,
-      deletedAt: a.deletedAt ?? null,
-    }));
+    const rows: JournalEntryProjection[] = journalAnnotations.map((a) => {
+      // docs/ideas/annotation-media-embeds.md — project live media counts for the
+      // Journal card chip (YouTube counts as video; tombstoned media excluded).
+      const liveMedia = (a.media ?? []).filter((m) => m.deletedAt == null);
+      return {
+        entryId: a.id,
+        authorId: a.authorId,
+        kind: a.kind,
+        text: a.text,
+        anchors: JSON.stringify(a.anchors.map((an) => this.labelAnchor(an, names))),
+        createdAt: a.createdAt,
+        deletedAt: a.deletedAt ?? null,
+        imageCount: liveMedia.filter((m) => m.type === "image").length,
+        videoCount: liveMedia.filter((m) => m.type === "video" || m.type === "youtube").length,
+      };
+    });
     await projectJournalEntries(this.env.DB, docRef, rows);
   }
 

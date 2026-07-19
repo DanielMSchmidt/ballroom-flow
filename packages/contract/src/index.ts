@@ -390,6 +390,14 @@ export const zMintMediaUploadResponse = z.object({
 });
 export type MintMediaUploadResponse = z.infer<typeof zMintMediaUploadResponse>;
 
+/** The R2 multipart `complete` parts list (docs/ideas/annotation-media-embeds.md,
+ *  plan discrepancy 1) — validated at the worker boundary so `upload.complete`
+ *  receives a checked R2UploadedPart[] shape (no cast). */
+export const zR2Parts = z.object({
+  parts: z.array(z.object({ partNumber: z.number().int().positive(), etag: z.string().min(1) })),
+});
+export type R2Parts = z.infer<typeof zR2Parts>;
+
 /**
  * E2E fixtures seed body (POST /api/test/seed — mounted ONLY under
  * E2E_TEST_ROUTES). Runtime-validated at the route so a malformed seed fails

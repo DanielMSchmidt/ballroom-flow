@@ -1,4 +1,5 @@
 import {
+  MEDIA_CAPS,
   SYNC_SUBPROTOCOL_V1,
   zCreateFigure,
   zCreateRoutine,
@@ -6,7 +7,9 @@ import {
   zFigureRefBody,
   zInterpretVoiceNote,
   zIssueInvite,
+  zMintMediaUpload,
   zProfileBody,
+  zR2Parts,
   zRegistryKind,
   zSaveToLibrary,
 } from "@weavesteps/contract";
@@ -26,7 +29,7 @@ import {
 } from "@weavesteps/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
@@ -34,6 +37,14 @@ import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
+import {
+  addUploadedBytes,
+  annotationMediaCount,
+  insertMediaObject,
+  mediaObjectFor,
+  softDeleteMediaObject,
+  userMediaBytes,
+} from "./db/media";
 import { listMembers, ownerInfoFor, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import { predicateNotesForMembers } from "./db/predicate-notes";
@@ -52,6 +63,8 @@ import type { DocDO } from "./doc-do";
 import { accountDocRef, ensureAccountDoc } from "./ensure-account-doc";
 import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
+import { type MediaKey, parseMediaKey } from "./media-key";
+import { isValidPartSize, parsePartNumber } from "./media-mpu";
 import { reportError, writeMetric } from "./ops";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
@@ -110,6 +123,12 @@ export type Env = {
   // test matrix. Same optional-binding pattern as ANALYTICS.
   AI?: Ai;
   AI_GATEWAY_ID?: string;
+  // docs/ideas/annotation-media-embeds.md — the FIRST binary storage: annotation
+  // media (photos/videos) in R2, keyed media/<docRef>/<annotationId>/<mediaId>
+  // (the authz scope). Serving is stream-through with Range support (never a
+  // signed URL). Declared per env in wrangler.toml (bindings are NOT inherited);
+  // Miniflare simulates it for vitest + [env.e2e].
+  MEDIA: R2Bucket;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -780,6 +799,178 @@ app.get("/api/routines/:id/predicate-notes", async (c) => {
     ];
   });
   return c.json({ notes });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Annotation media (docs/ideas/annotation-media-embeds.md). The FIRST binary
+// storage + a NEW AUTHZ SURFACE — hard review gate. The object key IS the
+// authorization scope: media/<docRef>/<annotationId>/<mediaId>. Every route here
+// derives the docRef from the key prefix and gates on resolveEffectiveRole; a
+// 403 is returned BEFORE any R2 read/write. No public URLs, ever.
+//
+// Upload is worker-hosted (plan discrepancy 1 — presigned browser→R2 PUTs would
+// need the S3 secret class the serving decision already rejected). Caps are
+// enforced at MINT (idea § Caps, FINAL) and re-checked at the byte boundary.
+// ─────────────────────────────────────────────────────────────────────────
+
+// POST /api/docs/:id/media/upload-url — mint an upload grant. Commenter+ AND the
+// caps are enforced HERE. Writes a media_object row reserving the annotation's
+// item slot + the user's byte budget (a concurrent mint sees it).
+app.post("/api/docs/:id/media/upload-url", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role || !can(role, "canAnnotate")) return c.json({ error: "forbidden" }, 403);
+  const parsed = zMintMediaUpload.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid body" }, 400);
+  const { annotationId, mediaId, type, sizeBytes, durationSeconds, poster } = parsed.data;
+  if (type === "image" && sizeBytes > MEDIA_CAPS.imageMaxBytes)
+    return c.json({ error: "image exceeds 10 MB" }, 413);
+  if (
+    type === "video" &&
+    (sizeBytes > MEDIA_CAPS.videoMaxBytes || (durationSeconds ?? 0) > MEDIA_CAPS.videoMaxSeconds)
+  )
+    return c.json({ error: "video exceeds 3 min / 300 MB" }, 413);
+  // The 4-items-per-annotation cap (posters excluded from the count).
+  if (
+    poster !== true &&
+    (await annotationMediaCount(c.env.DB, docRef, annotationId)) >= MEDIA_CAPS.itemsPerAnnotation
+  )
+    return c.json({ error: "media cap reached (4 per note)" }, 409);
+  // The 1 GB total (owner-confirmed for free; applied to every plan until a pro
+  // cap exists — plan discrepancy 4).
+  if ((await userMediaBytes(c.env.DB, user.sub)) + sizeBytes > MEDIA_CAPS.freeUserTotalBytes)
+    return c.json({ error: "storage quota exceeded" }, 402);
+  const objectKey = `media/${docRef}/${annotationId}/${mediaId}`;
+  await insertMediaObject(c.env.DB, {
+    objectKey,
+    docRef,
+    annotationId,
+    userId: user.sub,
+    bytes: sizeBytes,
+    poster: poster === true,
+  });
+  return c.json({ objectKey, uploadUrl: `/api/media/${objectKey}`, maxBytes: sizeBytes });
+});
+
+/** Parse the media object key out of a `/api/media/<objectKey>` request and load
+ *  its grant. The grant's owner IS the only user allowed to write to the key, and
+ *  they must still be a commenter+ of the docRef in the key prefix. Returns the
+ *  parsed key + grant, or a Response to short-circuit (404/403). Part of the
+ *  hard-gated authz surface — every write subroute funnels through this. */
+async function authorizeMediaWrite(
+  c: Context<{ Bindings: Env }>,
+  userSub: string,
+): Promise<{ objectKey: string; key: MediaKey; bytes: number; uploadedBytes: number } | Response> {
+  const objectKey = decodeURIComponent(new URL(c.req.url).pathname.slice("/api/media/".length));
+  const key = parseMediaKey(objectKey);
+  if (!key) return c.json({ error: "not found" }, 404);
+  const grant = await mediaObjectFor(c.env.DB, objectKey);
+  // No grant (or the caller isn't its owner) → not authorized to write this key.
+  if (!grant || grant.userId !== userSub) return c.json({ error: "forbidden" }, 403);
+  const role = await resolveEffectiveRole(c.env.DB, key.docRef, userSub);
+  if (!role || !can(role, "canAnnotate")) return c.json({ error: "forbidden" }, 403);
+  return { objectKey, key, bytes: grant.bytes, uploadedBytes: grant.uploadedBytes };
+}
+
+// PUT /api/media/<objectKey> — worker-hosted upload streaming the body into R2.
+// `?action=mpu-uploadpart` uploads one multipart part (videos above the Workers
+// body limit — plan discrepancy 1). Both funnel through authorizeMediaWrite, so
+// authorization derives from the key alone (grant owner + commenter+ of docRef).
+app.put("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey, bytes: grantBytes, uploadedBytes } = authorized;
+  const action = c.req.query("action");
+
+  if (action === "mpu-uploadpart") {
+    const uploadId = c.req.query("uploadId");
+    const partNumber = parsePartNumber(c.req.query("partNumber"));
+    if (!uploadId || partNumber === null) return c.json({ error: "invalid part" }, 400);
+    const declared = Number(c.req.header("content-length"));
+    const isLast = c.req.query("last") === "1";
+    if (!isValidPartSize(declared, isLast))
+      return c.json({ error: "part must be ≥ 5 MiB (except the last)" }, 400);
+    // Cumulative bytes across parts may never exceed the granted total.
+    if (uploadedBytes + declared > grantBytes)
+      return c.json({ error: "body exceeds granted size" }, 413);
+    const body = c.req.raw.body;
+    if (body === null) return c.json({ error: "empty body" }, 400);
+    const upload = c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId);
+    const part = await upload.uploadPart(partNumber, body);
+    await addUploadedBytes(c.env.DB, objectKey, declared);
+    return c.json({ partNumber: part.partNumber, etag: part.etag });
+  }
+
+  // Single PUT (blobs ≤ singlePutMaxBytes).
+  const declared = Number(c.req.header("content-length"));
+  if (!Number.isFinite(declared) || declared <= 0 || declared > grantBytes)
+    return c.json({ error: "body exceeds granted size" }, 413);
+  const body = c.req.raw.body;
+  if (body === null) return c.json({ error: "empty body" }, 400);
+  await c.env.MEDIA.put(objectKey, body, {
+    httpMetadata: { contentType: c.req.header("content-type") ?? "application/octet-stream" },
+  });
+  return c.json({ objectKey });
+});
+
+// POST /api/media/<objectKey>?action=mpu-create|mpu-complete — multipart create
+// + complete. Same authz as the PUT (grant owner + commenter+ of the key's
+// docRef). create returns the R2 uploadId; complete assembles the parts.
+app.post("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey } = authorized;
+  const action = c.req.query("action");
+
+  if (action === "mpu-create") {
+    const upload = await c.env.MEDIA.createMultipartUpload(objectKey, {
+      httpMetadata: { contentType: c.req.header("content-type") ?? "application/octet-stream" },
+    });
+    return c.json({ uploadId: upload.uploadId });
+  }
+  if (action === "mpu-complete") {
+    const uploadId = c.req.query("uploadId");
+    if (!uploadId) return c.json({ error: "missing uploadId" }, 400);
+    const parsedBody = await c.req.json().catch(() => null);
+    const parts = zR2Parts.safeParse(parsedBody);
+    if (!parts.success) return c.json({ error: "invalid parts" }, 400);
+    const upload = c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId);
+    try {
+      await upload.complete(parts.data.parts);
+    } catch {
+      // An aborted or already-completed upload → 400 (never a 500).
+      return c.json({ error: "cannot complete upload" }, 400);
+    }
+    return c.json({ objectKey });
+  }
+  return c.json({ error: "unknown action" }, 400);
+});
+
+// DELETE /api/media/<objectKey>?action=mpu-abort — cancel a multipart upload and
+// tombstone its reserved grant row (freeing the byte budget). Same authz.
+app.delete("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey } = authorized;
+  if (c.req.query("action") !== "mpu-abort") return c.json({ error: "unknown action" }, 400);
+  const uploadId = c.req.query("uploadId");
+  if (uploadId) {
+    try {
+      await c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId).abort();
+    } catch {
+      // Already aborted/completed — the tombstone below is still the intent.
+    }
+  }
+  await softDeleteMediaObject(c.env.DB, objectKey);
+  return c.json({ ok: true });
 });
 
 // POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
