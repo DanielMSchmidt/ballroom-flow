@@ -26,15 +26,19 @@ export interface PredicateNote {
   createdAt?: number;
 }
 
-/** Load the predicate notes visible on `routineId` (members' dance-/all-scoped notes). */
+/** Load the predicate notes visible on `routineId` (members' dance-/all-scoped notes).
+ *  `refreshToken` (#275): on an authed 401 (a token lapsed past `exp`) mint a fresh
+ *  one (skipCache) and retry once before the reporter cries config mismatch. */
 export async function loadPredicateNotes(
   routineId: string,
   token: string | null,
   baseUrl = "",
+  refreshToken?: () => Promise<string | null>,
 ): Promise<PredicateNote[]> {
   const { notes } = await apiGet<{ notes: PredicateNote[] }>(
     `${baseUrl}/api/routines/${routineId}/predicate-notes`,
     token,
+    refreshToken ? { refreshToken } : undefined,
   );
   return notes;
 }

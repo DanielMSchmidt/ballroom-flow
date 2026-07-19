@@ -164,6 +164,11 @@ export function openRoutineSnapshot(
       return apiGet<RoutineSnapshot>(
         `${baseUrl}/api/routines/${encodeURIComponent(id)}/snapshot`,
         token,
+        // #275: this poll runs every 20s, so a token can lapse `exp` between
+        // ticks and 401 despite a live session. On an authed 401, mint a fresh
+        // token (skipCache) and retry ONCE before the reporter cries config
+        // mismatch — clearing the transient failure AND the false alarm.
+        getToken ? { refreshToken: () => getToken({ skipCache: true }) } : undefined,
       );
     });
 

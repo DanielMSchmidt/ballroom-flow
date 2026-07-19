@@ -480,7 +480,9 @@ export function Assemble({
   const reloadFamilyNotes = useCallback(async () => {
     if (!getToken) return;
     try {
-      setCoMemberNotes(await loadFamilyNotes(routineId, await getToken()));
+      setCoMemberNotes(
+        await loadFamilyNotes(routineId, await getToken(), "", () => getToken({ skipCache: true })),
+      );
     } catch {
       // Surfacing family notes is best-effort; a failure must not block authoring.
     }
@@ -531,7 +533,11 @@ export function Assemble({
   const reloadPredicateNotes = useCallback(async () => {
     if (!getToken) return;
     try {
-      setCoMemberPredicateNotes(await loadPredicateNotes(routineId, await getToken()));
+      setCoMemberPredicateNotes(
+        await loadPredicateNotes(routineId, await getToken(), "", () =>
+          getToken({ skipCache: true }),
+        ),
+      );
     } catch {
       // Best-effort — a failure must not block authoring or reading.
     }

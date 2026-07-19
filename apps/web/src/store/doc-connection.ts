@@ -53,8 +53,16 @@ function isBinary(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
  *  rides here, #189). Production: `(url, protocols) => new WebSocket(url, protocols)`. */
 export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
 
-/** Resolve a fresh auth token for ONE connection-open (#189). null = no token. */
-export type TokenProvider = () => Promise<string | null>;
+/** How a token request may be tuned. `skipCache` forces a fresh mint past the
+ *  cached token's `exp` — the authed-401 refresh-retry (#275). */
+export interface TokenRequestOptions {
+  skipCache?: boolean;
+}
+
+/** Resolve a fresh auth token (#189). null = no token. The connection-open path
+ *  calls it with no args; the REST layer may pass `{ skipCache: true }` to force a
+ *  refresh on an authed 401 (#275). Existing zero-arg providers stay assignable. */
+export type TokenProvider = (opts?: TokenRequestOptions) => Promise<string | null>;
 
 /** The WS subprotocol that carries the bearer token (the worker route reads it). */
 export const AUTH_SUBPROTOCOL = "ballroom.auth";

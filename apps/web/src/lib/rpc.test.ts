@@ -14,6 +14,15 @@ import { ApiError, ApiTimeoutError, apiDelete, apiGet, apiPost, shouldRetryQuery
 vi.mock("./ops", () => ({ reportError: vi.fn() }));
 const reportSpy = vi.mocked(reportError);
 
+/** Read the Authorization header the Nth `fetch` call carried. `Headers`
+ *  normalizes any HeadersInit (record/array/Headers) the init might use, so this
+ *  needs no cast to inspect the mock's recorded arguments. */
+function authHeaderOf(fetchMock: ReturnType<typeof vi.fn>, callIndex: number): string | null {
+  const init = fetchMock.mock.calls[callIndex]?.[1];
+  const headers = init && typeof init === "object" && "headers" in init ? init.headers : undefined;
+  return new Headers(headers instanceof Object ? headers : {}).get("Authorization");
+}
+
 function respond(status: number, body: unknown = { error: "x" }): void {
   vi.stubGlobal(
     "fetch",
@@ -206,6 +215,151 @@ describe("rpc request timeout", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(reportSpy).toHaveBeenCalledTimes(1);
     expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:network:POST:/api/routines");
+  });
+});
+
+// #275 — an authed 401 on an idempotent GET is USUALLY a token-expiry race on
+// the 20s snapshot poll (a token used just past `exp`), NOT the Clerk instance
+// mismatch the reporter warns about. Before reporting, a GET that carried a
+// token retries ONCE with a force-refreshed token (`refreshToken`, the Clerk
+// skipCache path). A refreshed token that verifies → the caller gets the data
+// and nothing is reported; a refreshed token that STILL 401s → the failure is
+// real, reported once. GETs only (retrying is safe); a mutation never retries.
+describe("rpc authed-401 fresh-token retry (#275)", () => {
+  it("a GET 401 → fresh-token retry SUCCEEDS: caller gets data, nothing reported", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "unauthenticated" }), { status: 401 }),
+      )
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const refreshToken = vi.fn(async () => "fresh-token");
+
+    await expect(
+      apiGet("/api/routines/x/snapshot", "stale-token", { retryDelaysMs: [], refreshToken }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // The retry carried the FRESH token, not the stale one.
+    expect(authHeaderOf(fetchMock, 1)).toBe("Bearer fresh-token");
+    expect(reportSpy).not.toHaveBeenCalled(); // a healed expiry race is not an incident
+  });
+
+  it("a GET 401 → fresh-token retry STILL 401s: reported once as authed-401", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ error: "unauthenticated" }), { status: 401 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const refreshToken = vi.fn(async () => "fresh-but-still-rejected");
+
+    await expect(
+      apiGet("/api/routines/x/snapshot", "stale-token", { retryDelaysMs: [], refreshToken }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:authed-401");
+  });
+
+  it("does NOT refresh-retry a 401 that carried no token (signed-out is normal)", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const refreshToken = vi.fn(async () => "fresh");
+
+    await expect(
+      apiGet("/api/routines", null, { retryDelaysMs: [], refreshToken }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    expect(refreshToken).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  it("does NOT refresh-retry a mutation 401 — a re-sent POST is not idempotent", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const refreshToken = vi.fn(async () => "fresh");
+
+    await expect(
+      apiPost("/api/routines", "stale", { title: "x" }, { refreshToken }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    expect(refreshToken).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // single attempt
+    expect(reportSpy).toHaveBeenCalledTimes(1); // still reported (a real authed-401)
+    expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:authed-401");
+  });
+
+  it("reports normally when no refreshToken is wired (behaviour unchanged for other callers)", async () => {
+    respond(401, { error: "unauthenticated" });
+    await expect(apiGet("/api/routines", "tok")).rejects.toBeInstanceOf(ApiError);
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:authed-401");
+  });
+
+  it("a refreshToken that yields null falls through to a single reported 401", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ error: "unauthenticated" }), { status: 401 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const refreshToken = vi.fn(async () => null); // session gone
+
+    await expect(
+      apiGet("/api/routines/x/snapshot", "stale-token", { retryDelaysMs: [], refreshToken }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    // A null refresh means there is no fresher token to try — don't re-fire the
+    // identical stale-token request; report the original 401 once.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:authed-401");
+  });
+});
+
+// #276 — 'Failed to fetch' bursts are the BROWSER tearing down in-flight requests
+// as the page navigates/unloads, not an online transport failure. When the page
+// is being torn down (pagehide / hidden) OR the throw is a deliberate abort, the
+// network-throw report is suppressed. A genuine transport failure with a live,
+// visible page still reports.
+describe("rpc network-throw reporting: teardown vs genuine failure (#276)", () => {
+  it("does NOT report a genuine-looking throw once the page is being torn down", async () => {
+    const boom = new TypeError("Failed to fetch");
+    const fetchMock = vi.fn(async () => {
+      throw boom;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      apiGet("/api/routines/x/snapshot", "tok", { retryDelaysMs: [], pageAlive: () => false }),
+    ).rejects.toBe(boom);
+    expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  it("does NOT report a deliberate AbortError (browser cancelled an in-flight request)", async () => {
+    const abort = new DOMException("The operation was aborted.", "AbortError");
+    const fetchMock = vi.fn(async () => {
+      throw abort;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      apiGet("/api/routines/x/snapshot", "tok", { retryDelaysMs: [], pageAlive: () => true }),
+    ).rejects.toBe(abort);
+    expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  it("DOES report a genuine transport failure while the page is alive", async () => {
+    const boom = new TypeError("Failed to fetch");
+    const fetchMock = vi.fn(async () => {
+      throw boom;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      apiGet("/api/routines/x/snapshot", "tok", { retryDelaysMs: [], pageAlive: () => true }),
+    ).rejects.toBe(boom);
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0]?.[1]?.key).toBe("api:network:GET:/api/routines/x/snapshot");
   });
 });
 

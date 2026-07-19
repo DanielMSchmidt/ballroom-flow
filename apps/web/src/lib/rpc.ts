@@ -50,6 +50,23 @@ export interface RequestOptions {
    * a re-sent POST/DELETE that DID reach the server is a double-write.
    */
   retryDelaysMs?: number[];
+  /**
+   * Force-refresh the auth token (the Clerk `getToken({ skipCache: true })` path,
+   * #275). GETs only: on an authed 401 — usually a token used just past `exp` on
+   * the 20s snapshot poll, NOT the Clerk instance mismatch the reporter warns
+   * about — the request retries ONCE with a freshly-minted token before anything
+   * is reported. Returns null when the session is genuinely gone (no fresher
+   * token to try → the original 401 stands, reported once). Omitted → the 401 is
+   * reported immediately as before. Safe because it re-issues an idempotent GET.
+   */
+  refreshToken?: () => Promise<string | null>;
+  /**
+   * Whether the page is still alive (not navigating/unloading), #276. A network
+   * throw is only reported when this is true: a `fetch` the BROWSER aborts as the
+   * page tears down surfaces as `TypeError: Failed to fetch` while `navigator.onLine`
+   * is still true, and reporting it is a false alarm. Default {@link pageIsAlive}.
+   */
+  pageAlive?: () => boolean;
 }
 
 /** Generous enough for a slow mobile uplink, short enough that the UI's
@@ -63,6 +80,23 @@ const DEFAULT_RETRY_DELAYS_MS = [500, 1500];
 const TRANSIENT_STATUSES = new Set([502, 503, 504]);
 
 const browserOnline = (): boolean => (typeof navigator === "undefined" ? true : navigator.onLine);
+
+/**
+ * Whether the document is still alive rather than mid-teardown (#276). During a
+ * page navigation/unload the browser aborts in-flight `fetch`es, which surface as
+ * `TypeError: Failed to fetch` even though `navigator.onLine` is still true —
+ * reporting those is a false alarm. `visibilityState === "hidden"` covers a
+ * backgrounded/unloading tab; SSR/jsdom without a `document` default to alive.
+ */
+const pageIsAlive = (): boolean =>
+  typeof document === "undefined" ? true : document.visibilityState !== "hidden";
+
+/** A throw that is a DELIBERATE cancellation (browser-issued abort as the page
+ *  tears down, or a caller AbortController), not a transport failure (#276). Our
+ *  own request-timeout abort is already converted to {@link ApiTimeoutError}
+ *  before this is consulted, so an AbortError reaching here is never the timeout. */
+const isAbortThrow = (thrown: unknown): boolean =>
+  thrown instanceof DOMException && thrown.name === "AbortError";
 
 /**
  * Default TanStack Query retry predicate (wired app-wide in `main.tsx`).
@@ -106,6 +140,7 @@ function reportApiFailure(
   path: string,
   outcome: { status: number } | { thrown: unknown },
   hadToken: boolean,
+  pageAlive: () => boolean,
 ): void {
   if ("status" in outcome) {
     const { status } = outcome;
@@ -123,7 +158,12 @@ function reportApiFailure(
         { key: "api:authed-401", url: path, method },
       );
     }
-  } else if (typeof navigator === "undefined" || navigator.onLine) {
+  } else {
+    // A deliberate abort (browser teardown / caller cancel) or a page mid-unload
+    // is NOT a transport failure (#276) — suppress it. A genuine throw while the
+    // browser believes it's online AND the page is alive still reports.
+    const online = typeof navigator === "undefined" || navigator.onLine;
+    if (!online || isAbortThrow(outcome.thrown) || !pageAlive()) return;
     const e = outcome.thrown;
     reportError(e instanceof Error ? e : new Error(String(e)), {
       key: `api:network:${method}:${path}`,
@@ -131,6 +171,15 @@ function reportApiFailure(
       method,
     });
   }
+}
+
+/** Return a copy of `init` with its `Authorization` header set to a fresh bearer
+ *  token (the #275 refresh-retry). Uses `Headers` so it merges cleanly regardless
+ *  of how the original headers were expressed (record/array/Headers), no cast. */
+function withBearer(init: RequestInit, token: string): RequestInit {
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  return { ...init, headers };
 }
 
 /** One `fetch` attempt under a deadline. On the deadline firing, the request is
@@ -180,6 +229,13 @@ async function resilientFetch(
 ): Promise<Response> {
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const delays = method === "GET" ? (opts?.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS) : [];
+  const pageAlive = opts?.pageAlive ?? pageIsAlive;
+  // The authed-401 fresh-token retry is a GET-only, once-per-request affordance
+  // (#275): a POST/DELETE re-send is a double-write, and one refresh is enough to
+  // clear a token-expiry race. Guarded so it never re-fires a stale request.
+  const refreshToken = method === "GET" ? opts?.refreshToken : undefined;
+  let refreshedOnce = false;
+  let hadToken = token != null;
   for (let attempt = 0; ; attempt += 1) {
     const delay = delays[attempt];
     const mayRetry = delay !== undefined && browserOnline();
@@ -189,14 +245,28 @@ async function resilientFetch(
         await retryPause(delay);
         continue;
       }
-      if (!res.ok) reportApiFailure(method, path, { status: res.status }, token != null);
+      // A signed-in 401 is usually a just-expired token, not a config mismatch:
+      // mint a fresh token (skipCache) and re-issue the GET ONCE before reporting.
+      if (res.status === 401 && hadToken && refreshToken && !refreshedOnce) {
+        refreshedOnce = true;
+        const fresh = await refreshToken();
+        if (fresh != null) {
+          init = withBearer(init, fresh);
+          hadToken = true;
+          attempt -= 1; // the refresh retry doesn't consume a transient-backoff slot
+          continue;
+        }
+        // A null refresh means the session is gone — no fresher token to try;
+        // let the original 401 stand and be reported below.
+      }
+      if (!res.ok) reportApiFailure(method, path, { status: res.status }, hadToken, pageAlive);
       return res;
     } catch (thrown) {
       if (mayRetry) {
         await retryPause(delay);
         continue;
       }
-      reportApiFailure(method, path, { thrown }, token != null);
+      reportApiFailure(method, path, { thrown }, hadToken, pageAlive);
       throw thrown;
     }
   }
