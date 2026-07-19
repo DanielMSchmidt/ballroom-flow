@@ -210,6 +210,10 @@ PR CI gate (`.github/workflows/ci.yml`) is the source of truth.
 
 ## Branch & deploy
 
-`development` → **staging**, `main` → **production**; feature branches PR into
-`development`. PRs run the CI fast gate; pushes to the two long-lived branches
-re-run checks then deploy (see `deploy.yml` + PROVISIONING.md).
+`development` → **staging**, `main` → **production**. Fixes/chores/docs PR into
+`main`; `docs/ideas/` implementation work PRs into `development` (promoted to
+`main` in a release PR when ready). `sync-development.yml` auto-merges every
+`main` push into `development` (merge, not rebase — stacked PRs must survive)
+and dispatches the staging deploy. PRs run the CI fast gate; pushes to the two
+long-lived branches re-run checks then deploy (see `deploy.yml` +
+PROVISIONING.md).

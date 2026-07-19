@@ -3,6 +3,9 @@ name: Deploy
 on:
   push:
     branches: [development, main]
+  # sync-development.yml merges main into development with GITHUB_TOKEN, whose
+  # pushes never trigger `push` workflows — it dispatches this one explicitly.
+  workflow_dispatch:
 
 # One deploy at a time per branch; let a newer push cancel an in-flight one.
 concurrency:

@@ -1,0 +1,58 @@
+# Keeps the `development` integration branch up to date with `main`: every push
+# to main is merged into development through a short-lived PR (development's
+# branch protection requires PRs; it requires 0 approvals, so the merge is
+# immediate). A merge conflict fails this job loudly — resolve it manually by
+# merging main into development in a PR of your own.
+#
+# Merge, not rebase: development accumulates WEP merges ahead of main, and PRs
+# are stacked on it — rebasing would force-push and invalidate every open stack.
+name: Sync development with main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+# Serialize syncs; a newer main push should wait, not race the merge.
+concurrency:
+  group: sync-development
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge main into development via PR
+        id: merge
+        run: |
+          set -euo pipefail
+          git fetch origin development main
+          if git merge-base --is-ancestor origin/main origin/development; then
+            echo "development already contains main — nothing to sync"
+            echo "synced=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pr=$(gh pr list --base development --head main --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            pr=$(gh pr create --base development --head main \
+              --title "chore: sync development with main" \
+              --body "Automated merge of \`main\` into \`development\` (sync-development workflow)." \
+              | grep -oE '[0-9]+$')
+          fi
+          # Fails on conflicts — that is the intended loud failure mode.
+          gh pr merge "$pr" --merge
+          echo "synced=true" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch staging deploy
+        if: steps.merge.outputs.synced == 'true'
+        run: gh workflow run deploy.yml --ref development
