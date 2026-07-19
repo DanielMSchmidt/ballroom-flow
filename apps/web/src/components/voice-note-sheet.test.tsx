@@ -180,6 +180,42 @@ describe("VoiceNoteSheet", () => {
     expect(onUseAsText).toHaveBeenCalledWith("Remember to breathe and stay grounded.");
   });
 
+  it.each([["empty", ""] as const, ["whitespace-only", "   "] as const])(
+    "short-circuits an %s transcript: no interpret call, honest 'didn't catch anything' copy",
+    async (_kind, text) => {
+      // Bug #289: an empty/silent capture must NOT fire the doomed 400 interpret
+      // round-trip nor show the misleading saveFailed copy. It short-circuits
+      // client-side to an honest empty state (voiceEmptyBody), matching the
+      // transcript.trim().min(1) guard the contract already enforces server-side.
+      const { emit, interpret } = renderSheet(familyProposal);
+      emit(text);
+      await waitFor(() => expect(screen.getByText("Didn't catch anything")).toBeTruthy());
+      expect(interpret).not.toHaveBeenCalled();
+      expect(screen.getByText("I didn't hear anything. Tap the mic and try again.")).toBeTruthy();
+      // "Keep as note text" stays disabled — nothing to keep.
+      const keep = screen.getByRole("button", { name: "Keep as note text" });
+      expect(keep).toBeDisabled();
+      // The misleading generic save-failed copy never appears.
+      expect(screen.queryByText("Couldn't save this entry. Try again.")).toBeNull();
+    },
+  );
+
+  it("uses an AA-contrast success token pairing for the high-confidence badge", async () => {
+    // Bug #290: the confidence badge must pair bg-success-tint with
+    // text-success-ink (the shipped Badge component's success pairing, 6.6:1),
+    // NOT bg-success-subtle + text-success (4.33:1, fails WCAG AA). axe under
+    // jsdom can't compute contrast, so we assert the token classes directly.
+    const { emit } = renderSheet(familyProposal);
+    emit("say something");
+    await waitFor(() => expect(screen.getByText("high confidence")).toBeTruthy());
+    const badge = screen.getByText("high confidence");
+    expect(badge.className).toContain("bg-success-tint");
+    expect(badge.className).toContain("text-success-ink");
+    expect(badge.className).not.toContain("bg-success-subtle");
+    // The bare text-success token (the failing 4.33:1 combo) is gone; text-success-ink is fine.
+    expect(badge.className.split(/\s+/)).not.toContain("text-success");
+  });
+
   it("has no axe violations in the rec state", async () => {
     const { container } = renderSheet(familyProposal);
     expect(await axe(container)).toHaveNoViolations();
