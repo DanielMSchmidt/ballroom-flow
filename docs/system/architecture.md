@@ -211,6 +211,39 @@ correctly with concurrent edits. Soundness rules (each pinned by tests, each onc
 - the "others built on this" hint is exact causal dependency in the change DAG (a transitive
   successor by another actor), peeked pre-undo — advisory only, undo always proceeds.
 
+## AI voice notes — the read-only interpret/transcribe seam
+
+Voice capture (`docs/concepts/annotations.md` § The Journal) rides two **read-only** worker
+routes and one mockable AI seam; it adds **no new data shape and no new write path**.
+
+- **`POST /api/voice-notes/interpret`** assembles the caller's in-scope choreography and
+  resolves a transcript into a *proposed* anchor. Context assembly reuses the snapshot route's
+  **per-figure authorization** verbatim — a routine's placements are caller-controlled CRDT
+  content, so every referenced figure ref is gated individually by `resolveEffectiveRole`,
+  and only annotate-capable (non-viewer) routines are in scope. A pure serializer in
+  `packages/domain` (`serializeChoreoContext`, `resolveDanceAlias`) turns the assembled docs
+  into grounding data (figures in placement order, one entry per placement so ordinals ground;
+  variants resolved live against their base). **`POST /api/voice-notes/transcribe`** echoes a
+  Whisper-fallback transcript; the audio is never stored.
+- **Both routes are read-only** — they never write D1, never touch a DO's CRDT content, never
+  mint registry rows. The only commit path is the existing client → store seam
+  (`createAnnotation` / `createFamilyNote`) behind the user's explicit **Confirm**. The AI
+  stays entirely outside the DO boundary, the permission model, and the CRDT.
+- **The model output is never trusted.** Workers AI JSON mode gives no hard schema guarantee,
+  so the worker **re-validates** every extraction with the contract Zod schema **and grounds**
+  every ref against the assembled context (`groundProposal`); any mismatch degrades to
+  `resolved: false` (a transcript-only note). The one hard safety property is structural:
+  **zero wrong-anchor commits can occur past the confirm step.**
+- **The AI seam is mockable** (`VoiceAi` in `apps/worker/src/voice-ai.ts`): a deterministic
+  fixture backs dev, unit tests, and E2E, so the **zero-secret test matrix holds**. The real
+  Workers AI binding (`AI`, routed via **AI Gateway** for logging/rate-limiting/cost/accept-
+  rate telemetry) exists **only in the deployed wrangler envs** — `voiceAiFor` selects the
+  fixture whenever the binding is absent or the E2E flag is set. Model choice is a data
+  decision recorded in `docs/TOOLING.md`.
+- **Invariant:** the AI is advisory pre-fill only. A voice-proposed `attributePredicate`
+  anchor is a recorded future refinement — predicate utterances fall back to a plain note
+  today (the predicate anchor itself ships; the voice pipeline does not propose it).
+
 ## The catalog seed pipeline (summary)
 
 The Standard syllabus ships as data: ISTD is the system of record for identity (families ×
