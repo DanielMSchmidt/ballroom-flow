@@ -22,6 +22,7 @@ import {
   zVoiceExtraction,
 } from "@weavesteps/contract";
 import type { ChoreoContext, ChoreoContextFigure } from "@weavesteps/domain";
+import type { Env } from "./index";
 
 export interface VoiceAi {
   /** Whisper-fallback STT. `initialPrompt` is seeded with in-scope figure names. */
@@ -256,13 +257,202 @@ export function fixtureVoiceAi(): VoiceAi {
   };
 }
 
+// ── Workers AI implementation (deployed envs only) ───────────────────────────
+// Model choice is a DATA decision — keep docs/TOOLING.md § AI voice notes in sync.
+// These two are the models the code actually CALLS and are present in the pinned
+// @cloudflare/workers-types v5 `AiModels` catalog:
+export const VOICE_STT_MODEL = "@cf/openai/whisper-large-v3-turbo" as const;
+export const VOICE_EXTRACT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast" as const;
+
+/** The JSON-schema hint sent to the extraction model. It is a HINT — Workers AI
+ *  gives no hard schema guarantee, so groundProposal's Zod re-validation stays
+ *  mandatory. Hand-written to mirror zVoiceExtraction (kept in sync deliberately). */
+const EXTRACTION_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    resolved: { type: "boolean" },
+    noteText: { type: "string" },
+    confidence: { type: "string", enum: ["high", "medium", "low"] },
+    anchor: {
+      type: ["object", "null"],
+      properties: { type: { type: "string", enum: ["point", "figure", "figureType"] } },
+    },
+    alternatives: { type: "array" },
+  },
+  required: ["resolved", "noteText", "confidence", "anchor"],
+} as const;
+
+/** Serialize the grounding context into the system prompt (closed multiple-choice). */
+function contextPrompt(context: ChoreoContext): string {
+  return JSON.stringify(context);
+}
+
+/** Base64-encode audio bytes for the Whisper `audio` input (string form). */
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+/** Read the text field off a Workers AI text-generation result without a cast. */
+function readResponseText(out: unknown): string | null {
+  if (typeof out === "object" && out !== null && "response" in out) {
+    const r = out.response;
+    return typeof r === "string" ? r : null;
+  }
+  return null;
+}
+
+/** Read the transcript off a Whisper result without a cast. */
+function readTranscript(out: unknown): string {
+  if (typeof out === "object" && out !== null && "text" in out) {
+    const t = out.text;
+    if (typeof t === "string") return t;
+  }
+  return "";
+}
+
 /**
- * Select the VoiceAi implementation. Until the Workers AI binding lands (Task 4),
- * this returns the fixture UNCONDITIONALLY and honestly — `Env` carries no `AI`
- * yet, so there is no real seam to select. Task 4 turns this into
- * `env.AI && env.E2E_TEST_ROUTES !== "1" ? workersVoiceAi(...) : fixtureVoiceAi()`
- * so dev/tests/e2e keep running the fixture (zero secrets), structurally.
+ * The narrow surface `workersVoiceAi` needs from the Workers AI binding: one
+ * `run(model, inputs, options?)` call returning the raw model output. Keeping the
+ * seam this small lets `voiceAiFor` adapt the heavily-overloaded `Ai.run` (each
+ * concrete call there resolves against a typed overload) AND lets a test supply a
+ * recording stub — both without a type assertion (CLAUDE.md §4).
  */
-export function voiceAiFor(_env: unknown): VoiceAi {
-  return fixtureVoiceAi();
+export interface VoiceAiRunner {
+  run(
+    model: string,
+    inputs: Record<string, unknown>,
+    options?: { gateway?: { id: string } },
+  ): Promise<unknown>;
+}
+
+/**
+ * The real Workers AI seam (deployed envs). `interpret` returns the model's RAW
+ * output for `groundProposal` to validate — the JSON-schema constraint is a hint,
+ * never a guarantee; the Zod re-validation is mandatory. Audio is never stored.
+ */
+export function workersVoiceAi(runner: VoiceAiRunner, gatewayId?: string): VoiceAi {
+  const gateway = gatewayId ? { gateway: { id: gatewayId } } : {};
+  return {
+    async transcribe(audio, opts) {
+      const out = await runner.run(
+        VOICE_STT_MODEL,
+        { audio: toBase64(audio), initial_prompt: opts.initialPrompt, language: "en" },
+        gateway,
+      );
+      return readTranscript(out);
+    },
+    async interpret(transcript, context) {
+      const out = await runner.run(
+        VOICE_EXTRACT_MODEL,
+        {
+          messages: [
+            {
+              role: "system",
+              content:
+                "You resolve a spoken ballroom practice note against the dancer's actual choreography. " +
+                "Reply ONLY with JSON matching the schema. Choose an anchor ONLY from the figures/dances in this context; " +
+                "if nothing matches, return resolved:false with anchor:null. Context: " +
+                contextPrompt(context),
+            },
+            { role: "user", content: transcript },
+          ],
+          response_format: { type: "json_schema", json_schema: EXTRACTION_JSON_SCHEMA },
+        },
+        gateway,
+      );
+      // The model may return the JSON as a string (chat) — parse it; groundProposal
+      // re-validates whatever comes back. A parse failure surfaces as an unparseable
+      // raw value, which groundProposal degrades to resolved:false.
+      const text = readResponseText(out);
+      if (text == null) return out;
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    },
+  };
+}
+
+/**
+ * Adapt the Workers AI binding to the narrow `VoiceAiRunner`. Each branch calls
+ * `ai.run` with the concrete model key so it resolves against a typed overload —
+ * the widening to `Record<string, unknown>` inputs happens ONLY at this boundary,
+ * and the result is immediately widened to `unknown` for groundProposal to parse.
+ */
+function runnerFor(ai: Ai): VoiceAiRunner {
+  return {
+    async run(model, inputs, options) {
+      if (model === VOICE_STT_MODEL) {
+        return ai.run(VOICE_STT_MODEL, whisperInputs(inputs), options);
+      }
+      return ai.run(VOICE_EXTRACT_MODEL, textGenInputs(inputs), options);
+    },
+  };
+}
+
+/** Narrow the runner's Record inputs into the Whisper input shape (no cast). */
+function whisperInputs(inputs: Record<string, unknown>): {
+  audio: string;
+  initial_prompt?: string;
+  language?: string;
+} {
+  const audio = typeof inputs.audio === "string" ? inputs.audio : "";
+  const initial_prompt =
+    typeof inputs.initial_prompt === "string" ? inputs.initial_prompt : undefined;
+  const language = typeof inputs.language === "string" ? inputs.language : undefined;
+  return {
+    audio,
+    ...(initial_prompt != null ? { initial_prompt } : {}),
+    ...(language != null ? { language } : {}),
+  };
+}
+
+/** Narrow the runner's Record inputs into the text-generation input shape (no cast). */
+function textGenInputs(inputs: Record<string, unknown>): {
+  messages: { role: string; content: string }[];
+  response_format?: { type: "json_schema"; json_schema: unknown };
+} {
+  const messages = Array.isArray(inputs.messages)
+    ? inputs.messages.flatMap((m) =>
+        typeof m === "object" &&
+        m !== null &&
+        "role" in m &&
+        typeof m.role === "string" &&
+        "content" in m &&
+        typeof m.content === "string"
+          ? [{ role: m.role, content: m.content }]
+          : [],
+      )
+    : [];
+  const rf = inputs.response_format;
+  const response_format =
+    typeof rf === "object" && rf !== null && "json_schema" in rf
+      ? { type: "json_schema" as const, json_schema: rf.json_schema }
+      : undefined;
+  return { messages, ...(response_format != null ? { response_format } : {}) };
+}
+
+/**
+ * Whether the real Workers AI seam should be used: the `AI` binding must be bound
+ * AND we must not be under the E2E harness. The binding is declared only on the
+ * deployed wrangler envs, so this is false in every unit/e2e run — the selection
+ * is structural, not a secret check. Structural params so the decision is directly
+ * testable without fabricating an `Ai` binding.
+ */
+export function shouldUseWorkersAi(sel: { ai: unknown; e2e: string | undefined }): boolean {
+  return sel.ai != null && sel.e2e !== "1";
+}
+
+/**
+ * Select the VoiceAi implementation: the real Workers AI seam when
+ * `shouldUseWorkersAi`, the deterministic fixture everywhere else (dev, unit
+ * tests, [env.e2e]) — so no secret can leak into CI.
+ */
+export function voiceAiFor(env: Env): VoiceAi {
+  return env.AI && shouldUseWorkersAi({ ai: env.AI, e2e: env.E2E_TEST_ROUTES })
+    ? workersVoiceAi(runnerFor(env.AI), env.AI_GATEWAY_ID)
+    : fixtureVoiceAi();
 }
