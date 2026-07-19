@@ -67,8 +67,29 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
   this dance or all dances) — the catalog-side home for family notes.
 - **Filters:** all / lessons / practice / by figure.
 
-*(A planned refinement — fading long-settled comments behind a counted expander — is
-specified in [`docs/ideas/comment-activity-fadeout.md`](../ideas/comment-activity-fadeout.md).)*
+### Comment activity fade-out
+
+In the reading view, comments **fade in importance over time without ever being lost**. Only
+**active** comments render by default; the rest collapse behind an honest, counted expander
+that restores them on demand. The one-sentence rule: *comments from the last 4 weeks, plus
+the last conversation.* A comment is active when its thread saw activity within the **last 28
+days**, **or** within **7 days of the newest activity in its rendered list** — the second
+clause is a session-gap window that guarantees a quiet routine never goes dark: its last
+conversation stays readable no matter how long ago it happened. Activity is per thread — a
+reply reactivates a settled comment — and a non-empty list never renders empty (the newest
+comment is active by construction).
+
+Concretely: the **thread panel** collapses stale comments behind ONE counted divider ("9 more
+comments") that expands in place and collapses again, order preserved; the **margin cell**
+derives its snippet and avatars from that cell's active comments only. Staleness is a pure
+function of the existing `createdAt`/reply timestamps and the current time, computed at render
+— nothing is deleted, resolved, marked read, or reordered, and there is no new stored state.
+
+This governs the **routine-anchored comment lists only**. **Family notes are exempt** — a
+co-member's family note can lack an authored time and has no expander behind the cell, so it
+always renders. The Journal, the library family-note surface, and the editing lens are
+untouched. This is the app's first wall-clock-dependent rendering (see
+[`../system/sync-and-offline.md`](../system/sync-and-offline.md) § Flicker).
 
 ## The Journal
 

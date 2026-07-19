@@ -132,3 +132,12 @@ transient reconnect), and the figure editor waits for the figure's own live doc 
 rendering. Together these stop open editors flickering on unrelated sync frames and prevent
 stale-snapshot swaps from resetting in-flight edits — any new read path must preserve these
 properties.
+
+**Comment activity fade-out is the app's first wall-clock-dependent rendering** (see
+[`../concepts/annotations.md`](../concepts/annotations.md) § Comment activity fade-out). The
+reading view captures `now` **once per view mount** and passes it down as a stable scalar; the
+active/stale partition (`packages/domain/src/annotation-activity.ts`) is derived per render
+from identity-stable inputs plus that mount-stable `now` — never stored, never a fresh `now`
+per render — so the `React.memo` bail-outs above keep working. A view left open across a
+window boundary re-evaluates on the next data change or remount; there is deliberately no
+ticker.
