@@ -160,6 +160,8 @@ const en = {
   removeMedia: "remove media",
   mediaUploadFailed: "Couldn't upload that. Tap to retry.",
   deleteReply: "delete reply",
+  /** Whole-annotation soft-delete (#294) — author-only, on the viewer's own note. */
+  deleteNote: "delete note",
   replyForm: "Reply",
   replyField: "reply",
   replyPlaceholder: "Reply…",
@@ -350,6 +352,7 @@ const de: typeof en = {
   removeMedia: "Medium entfernen",
   mediaUploadFailed: "Upload fehlgeschlagen. Zum Wiederholen tippen.",
   deleteReply: "Antwort löschen",
+  deleteNote: "Notiz löschen",
   replyForm: "Antworten",
   replyField: "Antwort",
   replyPlaceholder: "Antwort …",

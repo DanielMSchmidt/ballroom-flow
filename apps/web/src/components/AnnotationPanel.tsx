@@ -77,6 +77,14 @@ export interface AnnotationPanelProps {
   /** Reply-delete handler (controlled); shown only on the viewer's own replies. */
   onDeleteReply?: (annotationId: string, replyId: string) => void;
   /**
+   * Whole-annotation soft-delete handler (#294, docs/concepts/annotations.md §
+   * Ownership: "anyone may only edit or delete their own"). Offered ONLY on the
+   * viewer's OWN annotations (a.authorId === currentUserId) — same author gate as
+   * reply-delete; the worker/DO still enforces it. Soft-delete only (tombstone;
+   * routine-doc undo restores it). Omitted ⇒ no delete control renders.
+   */
+  onDeleteAnnotation?: (annotationId: string) => void;
+  /**
    * Soft-delete one posted media item (docs/concepts/annotations.md § Media). The
    * per-item ✕ is offered ONLY on the viewer's OWN annotations (media edits an
    * annotation's content — same author-only gate as reply-delete; the worker/DO
@@ -149,6 +157,7 @@ export function AnnotationPanel({
   onCreate,
   onReply,
   onDeleteReply,
+  onDeleteAnnotation,
   onRemoveMedia,
   threadTitle,
   threadSubtitle,
@@ -390,6 +399,11 @@ export function AnnotationPanel({
                     ? (mediaId) => onRemoveMedia(a.id, mediaId)
                     : undefined
                 }
+                onDelete={
+                  onDeleteAnnotation && a.authorId === currentUserId
+                    ? () => onDeleteAnnotation(a.id)
+                    : undefined
+                }
               />
             </li>
           ))}
@@ -463,6 +477,11 @@ export function AnnotationPanel({
               onRemoveMedia={
                 onRemoveMedia && a.authorId === currentUserId
                   ? (mediaId) => onRemoveMedia(a.id, mediaId)
+                  : undefined
+              }
+              onDelete={
+                onDeleteAnnotation && a.authorId === currentUserId
+                  ? () => onDeleteAnnotation(a.id)
                   : undefined
               }
             />
@@ -720,6 +739,7 @@ function ThreadComment({
   onReply,
   onDeleteReply,
   onRemoveMedia,
+  onDelete,
 }: {
   annotation: Annotation;
   docRef: string;
@@ -730,21 +750,40 @@ function ThreadComment({
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
   onRemoveMedia?: (mediaId: string) => void;
+  /** Whole-note soft-delete (author-only; already gated by the caller). */
+  onDelete?: () => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
-  const authorName = authorNameMap?.[a.authorId] ?? a.authorId;
+  // Resolved display name only; the label may still show the raw id as text, but
+  // the avatar initial must never come from an id — a ULID starts with "0", which
+  // is exactly the leak in #292. `undefined` here makes AuthorAvatar show "?".
+  const resolvedName = authorNameMap?.[a.authorId];
+  const authorName = resolvedName ?? a.authorId;
   const authorColor = authorColorMap?.[a.authorId];
   const time = relativeTime(a.createdAt);
   return (
     <div className="flex gap-3">
-      <AuthorAvatar name={authorName} color={authorColor} size="md" />
+      <AuthorAvatar name={resolvedName} color={authorColor} size="md" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* Author name (in identity colour) · relative time */}
+        {/* Author name (in identity colour) · relative time, then the author's
+            own delete affordance pushed to the row's end. */}
         <p className="flex items-baseline gap-1.5 text-sm">
           <span className="font-semibold" style={{ color: authorColor ?? "var(--bf-ink)" }}>
             {authorName}
           </span>
           <span className="text-2xs text-ink-muted">· {time}</span>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto"
+              aria-label={t.deleteNote}
+              onClick={onDelete}
+            >
+              {t.deleteNote}
+            </Button>
+          )}
         </p>
         {/* Comment body — ordered text/media parts; media renders INLINE at its
             token position in the prose (docs/ideas/annotation-media-embeds.md).
@@ -789,6 +828,7 @@ function AnnotationRow({
   onReply,
   onDeleteReply,
   onRemoveMedia,
+  onDelete,
 }: {
   annotation: Annotation;
   currentUserId?: string;
@@ -797,17 +837,34 @@ function AnnotationRow({
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
   onRemoveMedia?: (mediaId: string) => void;
+  /** Whole-note soft-delete (author-only; already gated by the caller). */
+  onDelete?: () => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-line p-2">
-      {/* kind chip + the note body as ordered text/media parts (media renders
-          inline at its token position — docs/ideas/annotation-media-embeds.md).
-          The author gets a per-item ✕ to soft-delete a mis-attached media. */}
+      {/* kind chip (+ the author's own delete affordance) then the note body as
+          ordered text/media parts (media renders inline at its token position —
+          docs/ideas/annotation-media-embeds.md). The author gets a per-item ✕ to
+          soft-delete a mis-attached media. */}
       <div className="flex flex-col gap-1.5 text-sm">
-        <Chip tone="neutral" asStatic data-kind={a.kind}>
-          {t.kindLabel(a.kind)}
-        </Chip>
+        <div className="flex items-center gap-1.5">
+          <Chip tone="neutral" asStatic data-kind={a.kind}>
+            {t.kindLabel(a.kind)}
+          </Chip>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto"
+              aria-label={t.deleteNote}
+              onClick={onDelete}
+            >
+              {t.deleteNote}
+            </Button>
+          )}
+        </div>
         <div className="text-ink">
           <MediaParts text={a.text} media={a.media} docRef={docRef} onRemove={onRemoveMedia} />
         </div>

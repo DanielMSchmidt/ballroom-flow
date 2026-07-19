@@ -1066,6 +1066,7 @@ export function Assemble({
             }
             onReply={(annotationId, text) => store.addReply(annotationId, text)}
             onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
             onRemoveMedia={(annotationId, mediaId) => store.removeMedia(annotationId, mediaId)}
           />
         )}
@@ -1288,15 +1289,17 @@ export function Assemble({
                   onUploadMedia={(uploadUrl, blob, mimeType) =>
                     store.uploadMedia(uploadUrl, blob, mimeType)
                   }
-                  annotations={store
-                    .readAnnotations()
-                    .filter((a) =>
+                  annotations={store.readAnnotations().filter(
+                    (a) =>
+                      // Drop tombstoned notes so a soft-delete leaves the read
+                      // lens (matches the reading-view margin; #294).
+                      a.deletedAt == null &&
                       a.anchors.some(
                         (an) =>
                           (an.type === "figure" || an.type === "point") &&
                           an.figureRef === notatingFigure.id,
                       ),
-                    )}
+                  )}
                   composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
                   figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
                   onCreate={({ kind, text, media }) =>
@@ -1311,6 +1314,7 @@ export function Assemble({
                   onDeleteReply={(annotationId, replyId) =>
                     store.deleteReply(annotationId, replyId)
                   }
+                  onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
                   onRemoveMedia={(annotationId, mediaId) =>
                     store.removeMedia(annotationId, mediaId)
                   }
@@ -2468,12 +2472,11 @@ function PlacementAttributes({
  *
  * Author colour data path: `useMembers(routineId)` → `Member.identityColor`
  * (T8 extended the members endpoint to LEFT JOIN users). Current user: `useMe`
- * → `Me.identityColor`.
- *
- * Gap documented: the `InlineComments` author dots in RoutineReadingView still
- * use the hash fallback (identityColor(authorId)). To fix those too would
- * require threading authorColorMap through RoutineReadingView → FigureReadout
- * → StepRow → InlineComments; deferred (dots in the panel use real colours).
+ * → `Me.identityColor`. Names come from the same members list (+ useMe for the
+ * current user), passed as `authorNameMap` so the panel avatars show a real
+ * initial. The reading-view margin dots get the equivalent maps from Assemble
+ * (`memberColors`/`memberNames`) — both paths resolve names, neither derives an
+ * avatar initial from a raw author id (a ULID starts with "0" — that was #292).
  */
 function ThreadSheetContents({
   routineId,
@@ -2486,6 +2489,7 @@ function ThreadSheetContents({
   onCreate,
   onReply,
   onDeleteReply,
+  onDeleteAnnotation,
   onRemoveMedia,
 }: {
   routineId: string;
@@ -2500,6 +2504,8 @@ function ThreadSheetContents({
   onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
+  /** Soft-delete a whole annotation (author-only; #294). */
+  onDeleteAnnotation: (annotationId: string) => void;
   /** Soft-delete a posted media item (author-only ✕; annotation-media). */
   onRemoveMedia: (annotationId: string, mediaId: string) => void;
 }) {
@@ -2571,6 +2577,7 @@ function ThreadSheetContents({
       onCreate={onCreate}
       onReply={onReply}
       onDeleteReply={onDeleteReply}
+      onDeleteAnnotation={onDeleteAnnotation}
       onRemoveMedia={onRemoveMedia}
     />
   );
