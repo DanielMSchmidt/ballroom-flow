@@ -1,6 +1,6 @@
 // @weavesteps/contract — Zod request/response schemas shared by web + worker.
 // (Dependency direction: contract → domain; web/worker → contract.)
-import { DANCE_IDS } from "@weavesteps/domain";
+import { DANCE_IDS, zAnchor } from "@weavesteps/domain";
 import { z } from "zod";
 
 /**
@@ -386,6 +386,31 @@ export const zSeedBody = z.object({
               id: z.string(),
               name: z.string(),
               placements: z.array(z.object({ id: z.string(), figureRef: z.string() })),
+            }),
+          )
+          .optional(),
+        /** E2E-only: server-seed routine annotations with EXPLICIT createdAt —
+         *  the UI stamps Date.now(), so backdated comments (comment activity
+         *  fade-out journeys) must arrive through this seam. */
+        annotations: z
+          .array(
+            z.object({
+              id: z.string(),
+              authorId: z.string(),
+              kind: z.enum(["note", "lesson", "practice"]),
+              text: z.string(),
+              anchors: z.array(zAnchor),
+              createdAt: z.number(),
+              replies: z
+                .array(
+                  z.object({
+                    id: z.string(),
+                    authorId: z.string(),
+                    text: z.string(),
+                    createdAt: z.number(),
+                  }),
+                )
+                .optional(),
             }),
           )
           .optional(),
