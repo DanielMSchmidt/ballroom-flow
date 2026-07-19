@@ -21,7 +21,9 @@ Timeline comments and journal entries are **one thing**: an **annotation** —
 
 ## Anchors — what a note points at
 
-An annotation targets the choreography through one of three anchor types:
+An annotation targets the choreography through one of four anchor types. The first three are
+**static** — a fixed address or a fixed identity; the fourth is **dynamic** — its match set is
+re-evaluated on read, so it follows the technique as choreography changes.
 
 1. **`point`** — one count of one figure placement in one choreo ("count 3 of *this* Whisk,
    here"). Optionally role-scoped.
@@ -34,9 +36,22 @@ An annotation targets the choreography through one of three anchor types:
    S-Q-Q. On read, a timed family note pins to its count on every matching figure that
    covers it; a shorter variant degrades gracefully to whole-figure surfacing — a note is
    never hidden.
+4. **`attributePredicate`** — a **predicate over notation**: `{ kind, value, role?, scope }`,
+   targeting **every step whose notation matches an attribute condition** — "soften every
+   left-side sway", "every step with *no* sway logged". This is the natural generalization of
+   `figureType` from an *identity* match to a *content* match, and the first **dynamic** anchor:
+   add a matching step and the note surfaces there automatically; retag or remove it and the
+   note drops — all on read, with no precomputed step set. The `value` is matched **by meaning**
+   through the registry's read aliases (the same normalization the read path applies to
+   persisted values), and includes the explicit absence sentinel **`none`** ("no value of that
+   kind logged" — a selectable match value). `scope` is `routine` (this choreo only — carries a
+   `routineRef`, required for this scope) · a `DanceId` (all of the author's choreos in that
+   dance) · `all` (every dance).
 
-A fourth anchor type — a *predicate* over notation ("all left sways") — is a designed future
-idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate-anchors.md).
+The link picker's targets unify into one **target → scope** flow: the "place / figure" path and
+the "attribute" path share the same shape, with `figureType` remaining a special case (a
+figure-identity predicate) and `attributePredicate` the content predicate. It is *not* a data-
+model merge — `figureType` keeps its own identity semantics.
 
 ## Ownership & visibility
 
@@ -49,6 +64,11 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
   wholesale; co-membership of a shared choreo is what authorizes seeing exactly the relevant
   ones. *(This visibility rule was an explicit choice — the alternative, strictly-private
   family notes, would have broken the coach→student scenario the feature exists for.)*
+- **Predicate notes** (`attributePredicate`) copy the family-note model **unchanged**:
+  author-owned in their account, visible to co-members of any shared choreo where a *matching
+  step* appears (dance-/all-scoped notes), and surfacing only where a step actually matches. A
+  `routine`-scoped predicate note is the author's own, read entirely from their account — never
+  served cross-account.
 - Creating notes/replies requires **commenter** or better; anyone may only edit or delete
   **their own** ([`collaboration.md`](collaboration.md) § Roles).
 
@@ -60,7 +80,10 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
   that anchor's thread. **Family notes surface here too** (2026-07-15): a `figureType` note
   matching the figure folds into the same margin cells as the routine-anchored notes — one
   merged, newest-first set, with family-scope notes tagged as such (a timed family note lands
-  on its count's row, an untimed one on the figure header).
+  on its count's row, an untimed one on the figure header). **Predicate notes surface here too**
+  (2026-07-19): each folds onto every step row whose notation matches — a value note on the
+  carrying counts, a `none` note on the counts with no matching value — via the same margin
+  cells (a matched count the figure doesn't render falls to the header).
 - **The figure detail (read lens):** the per-figure annotation thread plus the family-notes
   surface. The editing lens deliberately shows neither — the authoring surface stays clean.
 - **The library:** from a figure family you can open the cross-dance note surface (annotate
@@ -99,19 +122,24 @@ see, author-colored, with resolved link chips, and (b) family-note lessons/pract
 Filter pills: all / lessons / practice / by figure. The entry editor has a Lesson/Practice
 toggle, handwritten-style text, link chips, and a (disabled, planned) media affordance.
 
-**The link picker is choreo-first** — one linear flow:
+**The link picker is choreo-first**, then forks by **target**:
 
 ```
-choreo → figure from that choreo (type-ahead) → placement on the figure's
-attribute grid (entire figure, or one count, with a role lens) → scope last
+choreo → target → · a figure from that choreo (type-ahead) → placement on the
+                     figure's attribute grid (entire figure, or one count, role lens) → scope
+                   · an attribute → family (dance-gated registry) → value (incl. the
+                     explicit "no value logged" row) → role → scope
 ```
 
-The scope step offers exactly what the anchor model can honor:
+The **figure** path's scope step offers exactly what the identity-anchor model can honor:
 
 - **whole figure** → *every dance this family exists in* (`figureType`/all) · *all my
   choreos of this dance* (`figureType`/dance) · *only this choreo* (`figure`);
 - **one count** → *this dance* (timed `figureType`) · *only this choreo* (`point`) — never
   across dances.
+
+The **attribute** path builds an `attributePredicate` note, with scope *this choreo* · *all my
+〈dance〉 choreos* · *every dance*.
 
 The family scopes require a real catalog family: a from-scratch custom figure names no
 family, so both family rows drop and the note falls through to a plain choreo annotation.

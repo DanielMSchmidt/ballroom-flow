@@ -138,10 +138,10 @@ Tables (Drizzle, `apps/worker/src/db/`): **User** (Clerk sub, displayName, ident
 plan, `isAdmin`, `routineCapOverride`), **UserNameCache** (claims-derived name/email so
 co-members of a not-yet-onboarded user see something real), **Membership** (per docRef),
 **DocumentRegistry** (docRef → type/owner/DO routing + card projection columns),
-**Invite**, and the projections: **JournalEntry**, **FigureTypeNoteIndex**, **LibraryEntry**,
-**PlacementEdge** (routine→figure edges: the role cascade + "used in N choreos"),
-**account_custom_kind** (the one deliberate D1-as-truth exception: user-defined kinds,
-declared a non-goal of the account-doc migration).
+**Invite**, and the projections: **JournalEntry**, **FigureTypeNoteIndex**,
+**AttributePredicateNoteIndex**, **LibraryEntry**, **PlacementEdge** (routine→figure edges:
+the role cascade + "used in N choreos"), **account_custom_kind** (the one deliberate
+D1-as-truth exception: user-defined kinds, declared a non-goal of the account-doc migration).
 
 **Projections are alarm-written, non-destructive, idempotent, tombstone-aware** — the DO is
 the single writer of its rows:
@@ -150,7 +150,22 @@ the single writer of its rows:
   design) + `journal_entry` (lesson/practice annotations, for the Journal's routine arm);
 - account DO → `library_entry` (bookmarks) + `figure_type_note_index` (family notes; rows
   currently carry the note content — co-member visibility reads this index gated by
-  co-membership, never another user's doc).
+  co-membership, never another user's doc) + `attribute_predicate_note_index` (migration 0019
+  — attribute-predicate notes, mirroring the family-note index exactly: content-carrying,
+  keyed by `{ attrKind, attrValue, scope }`, same co-membership read gate. `routine`-scoped
+  rows project for upsert-consistency but the cross-account read filters them out structurally
+  — they are self-read only).
+
+The **predicate-note read** (`GET /api/routines/:id/predicate-notes`) mirrors the family-note
+read exactly: `resolveEffectiveRole` gates on co-membership (a non-member is refused **before**
+any note is read), the author set is the routine's members ∪ owner (the owner has no membership
+row), and the query is index-served (EXPLAIN no-SCAN in CI). The note *surfaces* only where a
+step matches: the client runs the pure `matchPredicate` (`packages/domain/src/predicate.ts`)
+over the resolved timelines it can already see — a read-time content match by meaning
+(`normalizeValue` read-aliases), the first content-dependent read path (referential stability
+per [`sync-and-offline.md`](sync-and-offline.md) § Flicker). `routine`-scoped predicate notes
+resolve entirely client-side from the author's own account doc, merged live via the same seam
+as family notes.
 
 The **Journal read** (`GET /api/journal`) UNIONs the two arms; the routine arm is gated by
 co-membership of the routine, the account arm by the accessible-authors set — symmetric.
