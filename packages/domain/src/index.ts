@@ -148,4 +148,13 @@ export {
   type StandardRegistry,
   slugifyKind,
 } from "./vocabulary";
+export {
+  type ChoreoContext,
+  type ChoreoContextChoreo,
+  type ChoreoContextCount,
+  type ChoreoContextFigure,
+  DANCE_ALIASES,
+  resolveDanceAlias,
+  serializeChoreoContext,
+} from "./voice-context";
 export { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";
