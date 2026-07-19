@@ -128,6 +128,68 @@ test.describe("@smoke annotation media embeds", () => {
     expect(guard.log.some((u) => u.includes("youtube-nocookie.com/embed/"))).toBe(true);
   });
 
+  test("the author soft-deletes a posted photo → removed stub → undo restores it (#291)", async ({
+    page,
+  }) => {
+    // The documented soft-delete/undo path, driven end-to-end (QA dig-next 3):
+    // attach a photo, remove it (tombstone → the "removed" stub renders, the img
+    // is gone), then undo from the editing toolbar → the photo returns. The R2
+    // object keeps serving throughout (undo just flips the tombstone).
+    const user = "user_media_a";
+    await resetDb(page);
+    await seedDb(page, { users: [{ id: user, displayName: "Coach", identityColor: "#1f8a5b" }] });
+    await seedAuth(page, user);
+    await page.goto("/");
+
+    const panel = await openFigureAnnotations(page);
+
+    await expect(panel.getByRole("button", { name: /attach photo/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    // Type the prose first, THEN attach — the media token lands after the text
+    // (holdMedia appends it), so the posted note keeps its inline `![media:…]`
+    // token. (A later fill() would wipe the token, leaving the item unreferenced —
+    // which renders while live but leaves no "removed" stub once tombstoned.)
+    await panel.getByLabel("Kind").selectOption("lesson");
+    await panel.getByRole("textbox", { name: /^note$/i }).fill("wrong photo");
+    await panel
+      .getByTestId("media-photo-input")
+      .setInputFiles({ name: "whiteboard.png", mimeType: "image/png", buffer: PNG_2x2 });
+    await expect(panel.getByTestId("pending-media-chip")).toHaveCount(1, { timeout: 15_000 });
+    await panel.getByRole("button", { name: /add note/i }).click();
+
+    // The photo renders inline; the author sees the per-item remove ✕.
+    const photo = panel.getByRole("img", { name: /attachment on this note/i });
+    await expect(photo).toBeVisible({ timeout: 15_000 });
+    const removeBtn = panel.getByRole("button", { name: /remove media/i });
+    await expect(removeBtn).toBeVisible();
+
+    // Remove it → the embed becomes the quiet "removed" stub; the img is gone.
+    await removeBtn.click();
+    await expect(panel.getByText(/media removed/i)).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByRole("img", { name: /attachment on this note/i })).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: /remove media/i })).toHaveCount(0);
+
+    // Undo lives in the editing toolbar (routine doc). Close the figure detail,
+    // flip to List view, undo, then back to Reading view and reopen the figure —
+    // the photo is restored (tombstone reverted; the same object still serves it).
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /^undo$/i }).click();
+    await expect(page.getByText(/^undone$/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
+    const restoredPanel = page.getByRole("region", { name: /^annotations$/i });
+    const restored = restoredPanel.getByRole("img", { name: /attachment on this note/i });
+    await expect(restored).toBeVisible({ timeout: 15_000 });
+    expect(await restored.getAttribute("src")).toMatch(/^\/api\/media\/media\//);
+    await expect(restoredPanel.getByText(/media removed/i)).toHaveCount(0);
+  });
+
   test("a second member loads the photo; a signed-in non-member's direct fetch is 403", async ({
     browser,
   }) => {

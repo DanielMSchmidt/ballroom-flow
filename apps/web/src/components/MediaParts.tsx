@@ -14,6 +14,8 @@
 import type { MediaItem, UploadedMediaItem, YouTubeMediaItem } from "@weavesteps/domain";
 import { splitMediaParts } from "@weavesteps/domain";
 import { useState } from "react";
+import { useMessages } from "../i18n";
+import { journalMessages } from "../i18n/messages/journal";
 
 export interface MediaPartsProps {
   /** The annotation's text — the token positions drive inline ordering. */
@@ -22,13 +24,20 @@ export interface MediaPartsProps {
   media?: MediaItem[];
   /** The routine docRef — needed for the worker-proxied youtube-thumb URL. */
   docRef: string;
+  /**
+   * Soft-delete a live item (docs/concepts/annotations.md § Media — "a tombstoned
+   * item renders a quiet 'removed' stub; undo restores it"). Wired ONLY when the
+   * viewer may edit this annotation's content (its author); omitted otherwise, so
+   * every live embed then renders remove-less. Never offered on the removed stub.
+   */
+  onRemove?: (mediaId: string) => void;
 }
 
 /** Same-origin media URL for an uploaded object key (never a third-party host). */
 const mediaSrc = (objectKey: string): string => `/api/media/${objectKey}`;
 
 /** Renders `splitMediaParts(text, media)` in order (text/photo/video/youtube/removed). */
-export function MediaParts({ text, media, docRef }: MediaPartsProps): React.JSX.Element {
+export function MediaParts({ text, media, docRef, onRemove }: MediaPartsProps): React.JSX.Element {
   const parts = splitMediaParts(text, media);
   return (
     <span className="flex flex-col gap-1.5">
@@ -60,14 +69,51 @@ export function MediaParts({ text, media, docRef }: MediaPartsProps): React.JSX.
           );
         }
         const { item } = part;
-        if (item.type === "youtube") {
-          return <YouTubeFacade key={item.id} item={item} docRef={docRef} />;
-        }
-        if (item.type === "image") {
-          return <PhotoBlock key={item.id} item={item} />;
-        }
-        return <VideoBlock key={item.id} item={item} />;
+        const embed =
+          item.type === "youtube" ? (
+            <YouTubeFacade item={item} docRef={docRef} />
+          ) : item.type === "image" ? (
+            <PhotoBlock item={item} />
+          ) : (
+            <VideoBlock item={item} />
+          );
+        return (
+          <MediaEmbed key={item.id} onRemove={onRemove ? () => onRemove(item.id) : undefined}>
+            {embed}
+          </MediaEmbed>
+        );
       })}
+    </span>
+  );
+}
+
+/** Wraps a live embed so its author can soft-delete it (docs/concepts/annotations.md
+ *  § Media). When `onRemove` is absent the embed renders exactly as before — a
+ *  reader/non-author never sees the control. The ✕ overlays the top-right corner. */
+function MediaEmbed({
+  onRemove,
+  children,
+}: {
+  onRemove?: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const t = useMessages(journalMessages);
+  if (!onRemove) return <>{children}</>;
+  return (
+    <span className="relative block">
+      {children}
+      <button
+        type="button"
+        aria-label={t.removeMedia}
+        title={t.removeMedia}
+        onClick={onRemove}
+        className="absolute right-1.5 top-1.5 flex min-h-[var(--bf-touch-target)] min-w-[var(--bf-touch-target)] items-center justify-center rounded-full text-white outline-none"
+        style={{ background: "rgba(0,0,0,.55)" }}
+      >
+        <span aria-hidden="true" className="text-[13px] font-bold leading-none">
+          ✕
+        </span>
+      </button>
     </span>
   );
 }

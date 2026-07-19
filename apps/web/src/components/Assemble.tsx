@@ -1060,6 +1060,7 @@ export function Assemble({
             }
             onReply={(annotationId, text) => store.addReply(annotationId, text)}
             onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            onRemoveMedia={(annotationId, mediaId) => store.removeMedia(annotationId, mediaId)}
           />
         )}
       </Sheet>
@@ -1303,6 +1304,9 @@ export function Assemble({
                   onReply={(annotationId, text) => store.addReply(annotationId, text)}
                   onDeleteReply={(annotationId, replyId) =>
                     store.deleteReply(annotationId, replyId)
+                  }
+                  onRemoveMedia={(annotationId, mediaId) =>
+                    store.removeMedia(annotationId, mediaId)
                   }
                 />
                 {/* Figure-family notes (US-040/041): "every Feather" notes from this
@@ -2476,6 +2480,7 @@ function ThreadSheetContents({
   onCreate,
   onReply,
   onDeleteReply,
+  onRemoveMedia,
 }: {
   routineId: string;
   anchor: { figureRef: string; count?: number };
@@ -2489,6 +2494,8 @@ function ThreadSheetContents({
   onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
+  /** Soft-delete a posted media item (author-only ✕; annotation-media). */
+  onRemoveMedia: (annotationId: string, mediaId: string) => void;
 }) {
   // Only called when the Sheet is open (component is mounted) — see note above.
   const t = useMessages(assembleMessages);
@@ -2558,6 +2565,7 @@ function ThreadSheetContents({
       onCreate={onCreate}
       onReply={onReply}
       onDeleteReply={onDeleteReply}
+      onRemoveMedia={onRemoveMedia}
     />
   );
 }
