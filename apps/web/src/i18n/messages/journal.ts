@@ -108,6 +108,9 @@ const en = {
   thread: "Thread",
   commentCount: (n: number) => `${n} comments`,
   commentThread: "comment thread",
+  /** Comment activity fade-out divider (docs/concepts/annotations.md § Where notes appear). */
+  moreComments: (n: number) => (n === 1 ? "1 more comment" : `${n} more comments`),
+  showingAllCollapseOlder: "showing all · collapse older",
   addReply: "Add reply",
   addReplyField: "add a reply",
   addReplyPlaceholder: "add a reply…",
@@ -242,6 +245,8 @@ const de: typeof en = {
   thread: "Thread",
   commentCount: (n) => (n === 1 ? "1 Kommentar" : `${n} Kommentare`),
   commentThread: "Kommentar-Thread",
+  moreComments: (n) => (n === 1 ? "1 weiterer Kommentar" : `${n} weitere Kommentare`),
+  showingAllCollapseOlder: "alle angezeigt · ältere einklappen",
   addReply: "Antwort hinzufügen",
   addReplyField: "Antwort hinzufügen",
   addReplyPlaceholder: "Antwort hinzufügen …",
