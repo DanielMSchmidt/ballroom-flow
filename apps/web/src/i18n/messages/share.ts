@@ -44,7 +44,7 @@ const en = {
     editor: "Editor — can edit",
   },
   coEditExplainer:
-    "Everyone on this choreo edits the same figures — changes stay inside this choreo. To branch off on your own, fork it: a frozen, independent copy.",
+    "Everyone on this choreo edits the same figures — a figure edit ripples to every routine that uses it. To work independently, fork it: a copy just for you.",
   fork: "Fork — make it your own",
   inviteRoleSelectLabel: "Role",
   createLink: "Create link",
@@ -110,7 +110,7 @@ const de: typeof en = {
     editor: "Bearbeiter — kann bearbeiten",
   },
   coEditExplainer:
-    "Alle an dieser Choreo bearbeiten dieselben Figuren — Änderungen bleiben innerhalb dieser Choreo. Um eigene Wege zu gehen, zweige sie ab: eine eingefrorene, unabhängige Kopie.",
+    "Alle an dieser Choreo bearbeiten dieselben Figuren — eine Figurenänderung wirkt sich auf jede Choreo aus, die sie verwendet. Um unabhängig zu arbeiten, zweige sie ab: eine Kopie nur für dich.",
   fork: "Abzweigen — mach es zu deinem eigenen",
   inviteRoleSelectLabel: "Rolle",
   createLink: "Link erstellen",

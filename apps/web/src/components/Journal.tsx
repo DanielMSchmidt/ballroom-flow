@@ -247,16 +247,19 @@ function JournalCard({
       >
         {entry.text}
       </p>
-      {entry.anchors.length > 0 && (
+      {entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
+        0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {entry.anchors.map((a) => (
-            <span
-              key={`${entry.id}-${a.type}-${chipLabel(a)}`}
-              className="rounded-md bg-surface-sunken px-2 py-1 text-2xs text-studio-blue"
-            >
-              ↳ {chipLabel(a)}
-            </span>
-          ))}
+          {entry.anchors
+            .filter((a) => a.type !== "figureType" || a.figureType !== "general")
+            .map((a) => (
+              <span
+                key={`${entry.id}-${a.type}-${chipLabel(a)}`}
+                className="rounded-md bg-surface-sunken px-2 py-1 text-2xs text-studio-blue"
+              >
+                ↳ {chipLabel(a)}
+              </span>
+            ))}
         </div>
       )}
     </article>
