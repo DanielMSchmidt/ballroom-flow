@@ -14,6 +14,7 @@ import {
   can,
   type FigureDoc,
   globalFigureRef,
+  isDanceId,
   isReservedKind,
   LIBRARY_FIGURES,
   newId,
@@ -31,6 +32,7 @@ import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
 import { listMembers, ownerInfoFor, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
+import { predicateNotesForMembers } from "./db/predicate-notes";
 import {
   countOwnedRoutines,
   createOwnedRoutine,
@@ -699,6 +701,71 @@ app.get("/api/routines/:id/family-notes", async (c) => {
       },
     ],
   }));
+  return c.json({ notes });
+});
+
+// GET /api/routines/:id/predicate-notes — the co-member ATTRIBUTE-PREDICATE note read
+// (attribute-predicate-anchors). Mirrors the family-note read exactly: surfaces the
+// dance-/all-scoped predicate notes authored by THIS routine's members (+ owner), so the
+// client can run matchPredicate over the routine's resolved timelines and surface each note
+// on its matching steps. The content lives on the attribute_predicate_note_index row, so
+// this returns it directly — the client never reads another user's account doc. The
+// co-membership gate is the security boundary: a NON-member is refused (403) BEFORE any
+// note is read. A 'routine'-scoped note is self-read only — it is never served here (the
+// query's scope filter excludes it structurally).
+app.get("/api/routines/:id/predicate-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+
+  // Gate on co-membership of the routine: a non-member resolves to null → 403.
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  const reg = await c.env.DB.prepare(
+    "SELECT dance, ownerId FROM document_registry WHERE docRef = ?",
+  )
+    .bind(routineRef)
+    .first<{ dance: string | null; ownerId: string | null }>();
+  const dance = reg?.dance ?? "waltz";
+
+  // Author set = the routine's members PLUS its owner — the owner is elevated by
+  // resolveEffectiveRole WITHOUT a membership row (#168), so without this arm the owner's
+  // own predicate notes would never surface on their own routine. Deduped.
+  const members = await listMembers(c.env.DB, routineRef);
+  const authorIds = [
+    ...new Set([...members.map((m) => m.userId), ...(reg?.ownerId ? [reg.ownerId] : [])]),
+  ];
+  const rows = await predicateNotesForMembers(c.env.DB, authorIds, dance);
+  // Shape each row as an Annotation-like note carrying an attributePredicate anchor so the
+  // client's matchPredicate consumes an Anchor. The row's `scope` is a D1 string — narrow
+  // it to a valid anchor scope (a DanceId or 'all'; 'routine' is excluded by the query) and
+  // skip a malformed row rather than casting.
+  const notes = rows.flatMap((r) => {
+    if (!(r.scope === "all" || isDanceId(r.scope))) return [];
+    return [
+      {
+        id: r.noteId,
+        authorId: r.authorId,
+        kind: r.kind,
+        text: r.text,
+        attrKind: r.attrKind,
+        attrValue: r.attrValue,
+        scope: r.scope,
+        createdAt: r.updatedAt,
+        ...(r.attrRole ? { role: r.attrRole } : {}),
+        anchors: [
+          {
+            type: "attributePredicate",
+            kind: r.attrKind,
+            value: r.attrValue,
+            scope: r.scope,
+            ...(r.attrRole ? { role: r.attrRole } : {}),
+          },
+        ],
+      },
+    ];
+  });
   return c.json({ notes });
 });
 
