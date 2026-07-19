@@ -46,7 +46,12 @@ re-evaluated on read, so it follows the technique as choreography changes.
    left-side sway", "every step with *no* sway logged". This is the natural generalization of
    `figureType` from an *identity* match to a *content* match, and the first **dynamic** anchor:
    add a matching step and the note surfaces there automatically; retag or remove it and the
-   note drops — all on read, with no precomputed step set. The `value` is matched **by meaning**
+   note drops — all on read, with no precomputed step set. Matching runs over the notation **as
+   the active role lens presents it** — the same leader/follower projection the reading table
+   renders — so a note tracks what the dancer on that side actually sees. This matters for
+   *mirrored* kinds (sway/turn/direction): a Both-lens sway edit stores leader `to_R` +
+   follower `to_L` (the same physical lean), so a "left sway" note surfaces under the follower
+   lens but not the leader lens, never on a value the current lens hides. The `value` is matched **by meaning**
    through the registry's read aliases (the same normalization the read path applies to
    persisted values), and includes the explicit absence sentinel **`none`** ("no value of that
    kind logged" — a selectable match value). `scope` is `routine` (this choreo only — carries a
@@ -88,7 +93,9 @@ model merge — `figureType` keeps its own identity semantics.
   on its count's row, an untimed one on the figure header). **Predicate notes surface here too**
   (2026-07-19): each folds onto every step row whose notation matches — a value note on the
   carrying counts, a `none` note on the counts with no matching value — via the same margin
-  cells (a matched count the figure doesn't render falls to the header).
+  cells (a matched count the figure doesn't render falls to the header). A predicate note rides
+  the family envelope visually but is announced to assistive tech with its own scope cue
+  ("attribute note", *not* "family note") — the two are distinct anchor types.
 - **The figure detail (read lens):** the per-figure annotation thread plus the family-notes
   surface. The editing lens deliberately shows neither — the authoring surface stays clean.
 - **The library:** from a figure family you can open the cross-dance note surface (annotate
