@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  MEDIA_CAPS,
   zCreateFigure,
   zFamilyNoteBody,
   zInterpretVoiceNote,
   zJournalList,
+  zMintMediaUpload,
+  zMintMediaUploadResponse,
   zProfileBody,
   zRegistryKind,
   zRoutineList,
@@ -461,5 +464,42 @@ describe("AI voice notes — interpret request/extraction/proposal schemas", () 
       expect(zTranscribeResponse.parse({ transcript: "hello" }).transcript).toBe("hello");
       expect(zTranscribeResponse.safeParse({}).success).toBe(false);
     });
+  });
+});
+
+describe("media upload mint contract (docs/ideas/annotation-media-embeds.md)", () => {
+  it("accepts a valid image mint request and rejects an over-cap one at the schema", () => {
+    const ok = zMintMediaUpload.safeParse({
+      annotationId: "01ANN",
+      mediaId: "01MED",
+      type: "image",
+      mimeType: "image/jpeg",
+      sizeBytes: 1024,
+    });
+    expect(ok.success).toBe(true);
+    expect(
+      zMintMediaUpload.safeParse({
+        annotationId: "01ANN",
+        mediaId: "01MED",
+        type: "image",
+        mimeType: "image/jpeg",
+        sizeBytes: 0,
+      }).success,
+    ).toBe(false);
+  });
+  it("carries the owner-confirmed caps", () => {
+    expect(MEDIA_CAPS.imageMaxBytes).toBe(10 * 1024 * 1024);
+    expect(MEDIA_CAPS.videoMaxBytes).toBe(300 * 1024 * 1024);
+    expect(MEDIA_CAPS.videoMaxSeconds).toBe(180);
+    expect(MEDIA_CAPS.itemsPerAnnotation).toBe(4);
+    expect(MEDIA_CAPS.freeUserTotalBytes).toBe(1024 * 1024 * 1024);
+  });
+  it("round-trips the mint response", () => {
+    const res = zMintMediaUploadResponse.parse({
+      objectKey: "media/r/a/m",
+      uploadUrl: "/api/media/media/r/a/m",
+      maxBytes: 1024,
+    });
+    expect(res.uploadUrl.startsWith("/api/media/")).toBe(true);
   });
 });

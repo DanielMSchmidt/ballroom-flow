@@ -344,10 +344,51 @@ export const zJournalEntry = z.object({
   displayName: z.string().nullable(),
   identityColor: z.string().nullable(),
   source: z.enum(["routine", "account"]),
+  /** docs/ideas/annotation-media-embeds.md (plan discrepancy 3) — the Journal
+   *  card's media chip renders from these projected live counts, never CRDT.
+   *  YouTube counts as video. Optional ⇒ old workers keep validating. */
+  imageCount: z.number().int().nonnegative().optional(),
+  videoCount: z.number().int().nonnegative().optional(),
 });
 export const zJournalList = z.object({ entries: z.array(zJournalEntry) });
 export type JournalEntry = z.infer<typeof zJournalEntry>;
 export type JournalList = z.infer<typeof zJournalList>;
+
+/** Media caps — owner-confirmed 2026-07-15 (docs/ideas/annotation-media-embeds.md
+ *  § Caps): image ≤ 10 MB pre-compression, video ≤ 3 min & ≤ 300 MB, ≤ 4 items
+ *  per annotation, 1 GB total per free user. Enforced at upload-URL mint.
+ *  `singlePutMaxBytes` is the Workers request-body ceiling below which a single
+ *  PUT is used; larger videos go through the R2 multipart flow (plan
+ *  discrepancy 1) — set safely under the ~100 MB body limit. */
+export const MEDIA_CAPS = {
+  imageMaxBytes: 10 * 1024 * 1024,
+  videoMaxBytes: 300 * 1024 * 1024,
+  videoMaxSeconds: 180,
+  itemsPerAnnotation: 4,
+  freeUserTotalBytes: 1024 * 1024 * 1024,
+  singlePutMaxBytes: 90 * 1024 * 1024,
+} as const;
+
+/** POST /api/docs/:id/media/upload-url body. Ids are client ULIDs; `poster`
+ *  marks a video's poster-frame object (excluded from the 4-item count, bytes
+ *  still counted). Duration is client-declared (no server probing — see plan). */
+export const zMintMediaUpload = z.object({
+  annotationId: z.string().min(1),
+  mediaId: z.string().min(1),
+  type: z.enum(["image", "video"]),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+  durationSeconds: z.number().positive().optional(),
+  poster: z.boolean().optional(),
+});
+export type MintMediaUpload = z.infer<typeof zMintMediaUpload>;
+
+export const zMintMediaUploadResponse = z.object({
+  objectKey: z.string().min(1),
+  uploadUrl: z.string().min(1),
+  maxBytes: z.number().int().positive(),
+});
+export type MintMediaUploadResponse = z.infer<typeof zMintMediaUploadResponse>;
 
 /**
  * E2E fixtures seed body (POST /api/test/seed — mounted ONLY under
