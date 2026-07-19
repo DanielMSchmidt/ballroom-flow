@@ -457,6 +457,7 @@ export function AnnotationPanel({
             <AnnotationRow
               annotation={a}
               currentUserId={currentUserId}
+              docRef={docRef}
               canReply={canAnnotate && Boolean(onReply)}
               onReply={onReply ? (text) => onReply(a.id, text) : undefined}
               onDeleteReply={onDeleteReply ? (replyId) => onDeleteReply(a.id, replyId) : undefined}
@@ -801,6 +802,7 @@ function ThreadComment({
 function AnnotationRow({
   annotation: a,
   currentUserId,
+  docRef,
   canReply,
   onReply,
   onDeleteReply,
@@ -808,6 +810,7 @@ function AnnotationRow({
 }: {
   annotation: Annotation;
   currentUserId?: string;
+  docRef: string;
   canReply: boolean;
   onReply?: (text: string) => void;
   onDeleteReply?: (replyId: string) => void;
@@ -817,12 +820,15 @@ function AnnotationRow({
   const t = useMessages(journalMessages);
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-line p-2">
-      <p className="flex items-center gap-1.5 text-sm">
-        {/* kind shown as text so colour is never the sole signal (a11y #5). */}
+      {/* kind chip + the note body as ordered text/media parts (media renders
+          inline at its token position — docs/ideas/annotation-media-embeds.md). */}
+      <div className="flex flex-col gap-1.5 text-sm">
         <Chip tone="neutral" asStatic data-kind={a.kind}>
           {t.kindLabel(a.kind)}
         </Chip>
-        <span className="text-ink">{a.text}</span>
+        <div className="text-ink">
+          <MediaParts text={a.text} media={a.media} docRef={docRef} />
+        </div>
         {onDelete && (
           <Button
             type="button"
@@ -835,7 +841,7 @@ function AnnotationRow({
             {t.deleteNote}
           </Button>
         )}
-      </p>
+      </div>
       <ul aria-label={t.repliesThread} className="flex flex-col gap-1 pl-3">
         {a.replies.map((r) => (
           <li key={r.id} className="flex items-center gap-2 text-2xs text-ink-secondary">
