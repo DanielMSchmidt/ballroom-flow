@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "grant-cap": "node scripts/grant-cap.mjs",
     "test": "vitest run --passWithNoTests",
     "coverage": "vitest run --passWithNoTests --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -19,11 +20,11 @@
     "hono": "^4.12.27"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.71",
-    "@cloudflare/workers-types": "^4.20260624.1",
-    "@vitest/coverage-istanbul": "^3.2.6",
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
+    "@cloudflare/workers-types": "^5.0.0",
+    "@vitest/coverage-istanbul": "^4.1.0",
     "drizzle-kit": "^0.31.10",
-    "vitest": "^3.2.6",
+    "vitest": "^4.1.0",
     "wrangler": "^4.104.0"
   }
 }

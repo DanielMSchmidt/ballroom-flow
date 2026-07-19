@@ -1,5 +1,5 @@
 // US-024 — the Share screen: who can see a routine, in what role, plus an invite
-// link to add more people. PLAN §4.7 / §5.
+// link to add more people. docs/concepts/collaboration.md § Invites / § Roles.
 //
 // Presentational ShareView (the §3 seam: data + handlers as props) is wrapped by
 // Share, which wires the store (member roster + remove + issue-invite) and the
@@ -10,10 +10,12 @@ import { can, type EffectiveRole } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { shareMessages } from "../i18n/messages/share";
+import { onSelectValue } from "../lib/select-value";
 import { useMe } from "../store/me";
 import {
   type IssuedInvite,
   type Member,
+  type OwnerInfo,
   useIssueInvite,
   useMembers,
   useRemoveMember,
@@ -33,15 +35,15 @@ import {
  *  may be changed (editor / commenter). The ▾ is a visual affordance for a
  *  future role-change flow; it is not interactive in this release. The role
  *  microcopy (label + pill + blurb per role, DP #15) lives in the share catalog. */
-function RolePill({ role }: { role: Member["role"] }) {
+function RolePill({ memberRole }: { memberRole: Member["role"] | "owner" }) {
   const t = useMessages(shareMessages);
-  const changeable = role === "editor" || role === "commenter";
+  const changeable = memberRole === "editor" || memberRole === "commenter";
   return (
     <span
       className="ml-auto inline-flex flex-none items-center gap-[3px] rounded-[5px] border px-2 py-0.5 text-2xs font-medium text-ink-secondary"
       style={{ borderColor: "var(--bf-border-strong)" }}
     >
-      {t.roles[role].pill}
+      {t.roles[memberRole].pill}
       {changeable && (
         <span aria-hidden="true" className="text-[9px] leading-none text-ink-faint">
           ▾
@@ -79,8 +81,10 @@ const INVITE_ROLE_OPTIONS = ["viewer", "commenter", "editor"] as const;
 export interface ShareViewProps {
   /** The viewer's own role on this routine (gates the manage affordances). */
   viewerRole: EffectiveRole;
-  /** The current member roster (each with their role). */
+  /** The current member roster (each with their role, excluding the owner). */
   members: Member[];
+  /** The document owner (shown as a roster row when different from the viewer). */
+  owner?: OwnerInfo | null;
   /** The current viewer (rendered as the "you" row at the top of the roster). */
   viewer?: { userId: string; displayName?: string };
   /** The routine's title (shown as the header subtitle). */
@@ -112,6 +116,7 @@ function inviteUrl(token: string): string {
 export function ShareView({
   viewerRole,
   members,
+  owner,
   viewer,
   routineName,
   loading,
@@ -131,6 +136,10 @@ export function ShareView({
   const toast = useToast();
 
   const youLabel = viewer?.displayName?.trim() || viewer?.userId || t.you;
+  // Filter the current viewer from the members list (they appear in the "you" row).
+  const otherMembers = viewer ? members.filter((m) => m.userId !== viewer.userId) : members;
+  // Show the owner as a separate roster row only when they aren't the current viewer.
+  const showOwnerRow = owner && viewer && owner.userId !== viewer.userId;
 
   return (
     <section aria-label={t.shareRegionLabel} className="flex flex-col gap-4">
@@ -161,11 +170,22 @@ export function ShareView({
           <div className="flex items-center gap-2 text-ink-faint" role="status">
             <Spinner /> <span className="text-2xs">{t.loadingMembers}</span>
           </div>
-        ) : members.length === 0 && !viewer ? (
+        ) : otherMembers.length === 0 && !showOwnerRow && !viewer ? (
           <p className="text-2xs text-ink-faint">{t.emptyRoster}</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {members.map((m) => (
+            {/* Owner row — shown when the viewer is not the owner themselves. */}
+            {showOwnerRow && (
+              <li className="flex min-h-[44px] items-center gap-3 rounded-md border border-line px-3 py-2">
+                <Avatar label={owner.displayName ?? owner.userId} userId={owner.userId} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium text-ink">{owner.displayName ?? owner.userId}</span>
+                  <span className="text-2xs text-ink-muted">{t.roles.owner.blurb}</span>
+                </span>
+                <RolePill memberRole="owner" />
+              </li>
+            )}
+            {otherMembers.map((m) => (
               <li
                 key={m.userId}
                 className="flex min-h-[44px] items-center gap-3 rounded-md border border-line px-3 py-2"
@@ -177,7 +197,7 @@ export function ShareView({
                 </span>
                 {/* Role pill: lowercase label, ▾ indicator for changeable roles
                     (editor/commenter may be downgraded — future role-change flow). */}
-                <RolePill role={m.role} />
+                <RolePill memberRole={m.role} />
                 {canManage && (
                   <Button
                     variant="ghost"
@@ -228,7 +248,7 @@ export function ShareView({
                     label: t.inviteRoleLabels[value],
                   }))}
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as Member["role"])}
+                  onChange={onSelectValue(INVITE_ROLE_OPTIONS, setInviteRole)}
                 />
                 <Button
                   variant="primary"
@@ -321,6 +341,7 @@ export function Share({
     <ShareView
       viewerRole={viewerRole}
       viewer={viewer}
+      owner={membersQ.data?.owner}
       routineName={routineName}
       members={membersQ.data?.members ?? []}
       loading={membersQ.isLoading}

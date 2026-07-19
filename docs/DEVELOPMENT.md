@@ -1,13 +1,14 @@
 # Development Guide
 
 How to install, run, and test Weave Steps locally. Architecture is in
-[PLAN.md](PLAN.md); account/secret provisioning is in [PROVISIONING.md](../PROVISIONING.md);
-the test-harness rationale is in [TOOLING.md](TOOLING.md).
+[system/architecture.md](system/architecture.md); account/secret provisioning is in
+[PROVISIONING.md](../PROVISIONING.md); the test-harness rationale is in
+[TOOLING.md](TOOLING.md).
 
 ## Prerequisites
 
 - **Node 22** (`.nvmrc`) — `nvm use`.
-- **pnpm 10** — `corepack enable` then `corepack prepare pnpm@10 --activate`.
+- **pnpm 11** — `corepack enable` then `corepack prepare pnpm@11 --activate` (the exact version is pinned via `packageManager` in the root `package.json`).
 
 ## Install
 
@@ -60,6 +61,16 @@ accounts** — auth is tested on its negative path; the Worker tests run on loca
 
 Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 
+> **Suites run one at a time.** `pnpm test` and `pnpm coverage` pass
+> `--workspace-concurrency=1` to `pnpm -r`, so the four workspace suites run
+> **sequentially**, each getting the whole machine. Each vitest still parallelizes
+> its own files across CPU cores — but running all four suites at once meant four
+> vitest instances each spawning a CPU-sized worker pool, oversubscribing the
+> cores and starving load-sensitive tests (e.g. the axe sweeps, which are
+> O(DOM nodes)) into timeout *flakes* under load. Serializing costs a little
+> wall-time and buys determinism. Need a single layer fast? Run it directly, e.g.
+> `pnpm --filter web test`.
+
 | Layer | Command | Stack |
 |---|---|---|
 | **Domain** (unit/property) | `pnpm --filter @weavesteps/domain test` | Node + `fast-check` + in-memory Automerge |
@@ -69,8 +80,9 @@ Run everything: `pnpm test` (all unit/component/worker suites; **not** E2E).
 | **E2E smoke only** | `pnpm test:e2e:smoke` | Playwright, `@smoke`-tagged tests |
 
 Watch mode: `pnpm --filter <pkg> test:watch`. Coverage: `pnpm coverage` (root)
-or per package — istanbul; thresholds (domain ≥95%, worker/DO ≥90%) are present
-but commented out until tests exist (see TOOLING.md).
+or per package — istanbul; thresholds are **armed and gate every PR** (domain
+≥90% lines, worker/DO ≥88% lines; ratcheting toward 95/90 — see
+[system/testing.md](system/testing.md) and TOOLING.md).
 
 ### E2E (Playwright)
 
@@ -138,8 +150,8 @@ the moment a test calls it.
 
 Automerge throws when a value is `undefined` — `RangeError: Cannot assign
 undefined value at /path` — at `A.from(...)` and inside `A.change(...)`. Our
-logical doc shapes carry optional fields (e.g. `entryAlignment`,
-`perPlacementAlignment`, `baseFigureRef`) that POJOs/fixtures often
+logical doc shapes carry optional fields (e.g. `counts`,
+`baseFigureRef`, `part`) that POJOs/fixtures often
 leave `undefined`, so feeding them straight into Automerge fails. The domain doc
 builders therefore **strip `undefined`-valued keys before `A.from`** (JSON
 drop-the-key semantics — an absent optional simply isn't set, and reads still
@@ -149,7 +161,7 @@ a meaningful tombstone value the CRDT must keep. This is centralized in
 a POJO into Automerge must go through it (or sanitize `undefined` the same way).
 
 ```ts
-// ✗ throws if section.deletedAt or an optional alignment is `undefined`
+// ✗ throws if section.deletedAt or another optional field is `undefined`
 A.from({ sections });
 // ✓ builders run stripUndefined(structuredClone(input)) first
 buildRoutineDoc(routine); // safe — undefined keys dropped, null kept

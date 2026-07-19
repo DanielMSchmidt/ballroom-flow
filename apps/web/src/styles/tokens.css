@@ -9,7 +9,7 @@
  * Naming: `--bf-<group>-<role>`. Never hardcode a hex/px in a
  * component that duplicates a token (DESIGN-PRINCIPLES #22).
  *
- * Values trace to docs/PLAN.md §3 (the five attribute-kind colors)
+ * Values trace to docs/concepts/notation.md § Kinds (the five attribute-kind colors)
  * and docs/design/Ballroom Builder.dc.html (the studio-paper visual
  * language). Contrast pairings are chosen to meet WCAG AA (#6).
  */
@@ -46,7 +46,7 @@
   --bf-accent-border: #cdddee; /* accent-tinted border */
 
   /* =============================================================
-   * The five attribute-kind colors (PLAN §3). ALWAYS paired with a
+   * The five attribute-kind colors (docs/concepts/notation.md § Kinds). ALWAYS paired with a
    * two-letter code / label in the UI — color is never the only
    * signal (#5). Each kind gets: base (the dot/border), -ink (AA
    * text on its tint), -tint (chip background), -border.
@@ -58,11 +58,6 @@
   --bf-kind-footwork-tint: #f3e6d2;
   --bf-kind-footwork-border: #a9742c;
 
-  /* footPosition (feet relationship, 1st–5th) — teal */
-  --bf-kind-footPosition: #2c8a85;
-  --bf-kind-footPosition-ink: #186b66;
-  --bf-kind-footPosition-tint: #d6f0ee;
-  --bf-kind-footPosition-border: #2c8a85;
 
   /* direction (step headline) — blue */
   --bf-kind-direction: #2f5d8f;
@@ -99,6 +94,7 @@
   --bf-kind-turn-ink: #3e4a63;
   --bf-kind-turn-tint: #e3e8f2;
   --bf-kind-turn-border: #5b6b8a;
+
 
   /* =============================================================
    * Figure scopes (DESIGN-PRINCIPLES #11). Three scopes, each a

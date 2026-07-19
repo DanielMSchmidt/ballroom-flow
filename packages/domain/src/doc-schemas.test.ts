@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   FEATHER_FOXTROT,
+  type FigureDoc,
   importDomain,
   makeAttribute,
   makePlacement,
   makeSection,
   SAMPLE_ROUTINE,
 } from "./__fixtures__";
+import { asInvalid } from "./__fixtures__/invalid";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-005 — Routine + figure document schemas [M1, system/developer]
-// PLAN §2.2–2.6, §10.2: typed Automerge doc builders/readers; soft-delete is a
+// docs/concepts/figures.md, docs/concepts/choreography.md, docs/concepts/notation.md,
+// docs/concepts/annotations.md, docs/system/testing.md: typed Automerge doc builders/readers; soft-delete is a
 // mergeable deletedAt flip (never a hard removal).
 //
 // Product `doc-routine.ts` / `doc-figure.ts` (M1 §9 1.5) don't exist yet → the
@@ -78,6 +81,19 @@ describe("US-005 Routine + figure document schemas", () => {
     let doc = buildFigureDoc(fig);
     doc = softDeleteAttribute(doc, "a1");
     expect(readFigure(doc).attributes).toHaveLength(0);
+  });
+
+  it("reads a figure doc with no `attributes` as an empty timeline (never throws)", async () => {
+    // Regression (Sentry WEAVESTEPS-FRONTEND-3/-4): a figure-typed DO whose
+    // content was never seeded as a FigureDoc materializes with
+    // `attributes === undefined`. readFigure must treat it as an empty timeline,
+    // not throw "Cannot read properties of undefined (reading 'filter')" and 500
+    // the whole snapshot fan-out.
+    const { buildFigureDoc, readFigure } = await importDomain();
+    const { attributes: _a, ...noAttrs } = FEATHER_FOXTROT;
+    const doc = buildFigureDoc(asInvalid<FigureDoc>(noAttrs));
+    expect(() => readFigure(doc)).not.toThrow();
+    expect(readFigure(doc).attributes).toEqual([]);
   });
 
   // ── Extra edge cases (in the spirit of US-005, beyond the listed ACs) ──

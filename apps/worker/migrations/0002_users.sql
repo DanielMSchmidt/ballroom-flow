@@ -1,4 +1,5 @@
--- US-019 — users table (PLAN §2.7, §4.0, §4.8, D9).
+-- US-019 — users table (docs/system/architecture.md § D1 — the index &
+-- projections; docs/concepts/collaboration.md, D9).
 --
 -- D1 is a PURE INDEX over the document graph — this table holds the account
 -- identity captured at onboarding (Clerk `sub` → display name + identity color +

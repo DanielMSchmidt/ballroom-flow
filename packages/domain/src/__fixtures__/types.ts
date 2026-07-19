@@ -20,7 +20,6 @@
 // Re-export the product document-graph types — single source of truth.
 export type { DanceId } from "../dances";
 export type {
-  Alignment,
   Anchor,
   Annotation,
   AnnotationKind,
@@ -56,7 +55,8 @@ export type MembershipRole = "viewer" | "commenter" | "editor";
 // AccountDoc and its dependents reference the product types above.
 import type { Annotation } from "../doc-types";
 
-/** The per-user account doc holding figureType notes + variant index (PLAN §2.7).
+/** The per-user account doc holding figureType notes + variant index
+ *  (docs/system/architecture.md § D1 — the index & projections).
  *  No product builder yet — test-owned until that lands. */
 export interface AccountDoc {
   id: string;

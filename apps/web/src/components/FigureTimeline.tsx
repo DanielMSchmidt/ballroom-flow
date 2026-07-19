@@ -1,4 +1,5 @@
-// US-028 / US-030 — the figure timeline (the hero flow). PLAN §4.4/§4.5, §1.5.
+// US-028 / US-030 — the figure timeline (the hero flow). docs/concepts/notation.md
+// § The figure editor; docs/concepts/notation.md § Role lenses.
 // 2026-07-01 design update (frames 1.11 figure editor / 1.12 attribute editor):
 // the EDIT view is a BARS-DRIVEN column grid. Its rows are generated from the
 // figure's authored bar count — NOT from the steps it already has — so every
@@ -34,16 +35,21 @@ import {
   countLabel,
   DANCES,
   type DanceId,
-  defaultFigureBars,
-  figureGridSlots,
+  figureCountSlots,
   type GridSlot,
+  isBothConsistent,
+  mergeRegistry,
   offBeatSymbol,
+  type PlacementPart,
+  phraseCountLabel,
   type RegistryKind,
+  resolveFigureCounts,
+  windowAttributes,
 } from "@weavesteps/domain";
 import { type ReactNode, useMemo, useState } from "react";
-import { pickMessages, useLocale, useMessages } from "../i18n";
+import { getLocale, localizedRegistry, pickMessages, useLocale, useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
-import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper } from "../ui";
+import { AttrChip, Button, cx, kindVar, SegmentedToggle, Sheet, Stepper, useToast } from "../ui";
 import type { MembershipRole } from "./Assemble";
 import { AttributeEditor } from "./AttributeEditor";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
@@ -53,9 +59,10 @@ import {
   cellValue,
   columnUsage,
   infoKindsForColumn,
+  isColumnKind,
   type ReadingColumn,
 } from "./reading-columns";
-import { displayValue, filterByRoleView, type RoleView } from "./role-view";
+import { asReadView, displayValue, type EditRoleView, filterByRoleView } from "./role-view";
 
 export interface FigureTimelineProps {
   /** Membership role — only an editor can place/edit attributes. */
@@ -64,18 +71,22 @@ export interface FigureTimelineProps {
   dance?: DanceId;
   /** The figure's current attributes (controlled-with-fallback). */
   attributes?: Attribute[];
-  /** The figure's authored length in musical bars (drives the generated grid).
-   *  Falls back to ⌈whole-beat steps ÷ beatsPerBar⌉ when omitted. */
-  bars?: number;
-  /** Emits the next bar count when the header stepper is used (editor only). */
-  onBarsChange?: (next: number) => void;
-  /** The viewed role lens (US-030); new values inherit it. Uncontrolled default. */
-  initialView?: "leader" | "follower";
+  /** The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①; drives
+   *  the generated grid). Falls back to `legacyBars × beatsPerBar`, then to a
+   *  bar's worth of beats for an empty figure / the step default otherwise. */
+  counts?: number;
+  /** A pre-v5 doc's authored length in whole bars (lenient read only). */
+  legacyBars?: number;
+  /** Emits the next count length when the header LENGTH stepper is used (editor only). */
+  onCountsChange?: (next: number) => void;
+  /** The role lens (US-030/docs/concepts/notation.md § Role lenses, WEP-0008);
+   *  the WRITE SCOPE while editing. Uncontrolled default. */
+  initialView?: EditRoleView;
   /** Controlled role lens (QUAL-5): when set, the lens is owned by the caller —
    *  wired to the store-persisted `bb_role` so reading/timeline/lanes agree. */
-  roleView?: RoleView;
+  roleView?: EditRoleView;
   /** Emits the next role lens when the toggle is used (controlled mode). */
-  onRoleViewChange?: (next: RoleView) => void;
+  onRoleViewChange?: (next: EditRoleView) => void;
   /** User-defined kinds to merge into the attribute registry (US-043). */
   customKinds?: RegistryKind[];
   /** Emits the figure's next full attribute set after an edit. */
@@ -94,6 +105,28 @@ export interface FigureTimelineProps {
   /** Bookmark this figure into the caller's library — shown for an OWNED (account)
    *  figure only; a "↟ save" on a global figure lives on the Library screen instead. */
   onAddToLibrary?: () => void;
+  /** The figure's display name — drives the "adjusted for this choreo — still X"
+   *  identity reassurance beside Add to library (Builder v3 variant bar). */
+  figureName?: string;
+  /** The design's variantBar.adjusted flag: the figure HAS an origin (a base /
+   *  catalog identity) it was adjusted away from. Gates the "adjusted for this
+   *  choreo — still X" chip — a from-scratch custom (no origin) must NOT show
+   *  it: nothing was ever adjusted. Default false (the chip is opt-in). */
+  adjusted?: boolean;
+  /** Rename the LIVE figure doc (Builder v3 ⑤): the add-to-library naming flow
+   *  writes the typed name onto the shared doc before bookmarking. */
+  onRenameFigure?: (name: string) => void;
+  /** The placement's portion window (Builder v3 ③, §4.3): when set, the editor
+   *  windows its grid to counts [fromCount, toCount] — the placement dances only
+   *  that slice, so only those beats are shown and editable here. The figure doc
+   *  stays whole (edits merge back into the full timeline; §4.4). No `part` = the
+   *  whole figure. The window is FIXED — the LENGTH stepper is hidden. */
+  part?: PlacementPart | null;
+  /** Whether to render the per-count text recap under the grid (the authoring
+   *  summary). Default true; the Assemble reading lens turns it off — when
+   *  viewing, the grid/chips ARE the content and the prose recap is noise
+   *  (owner request 2026-07-08). */
+  showStepRecap?: boolean;
 }
 
 /** Humanize a stored value for a roomy chip ("quarter_R" → "quarter R"). */
@@ -105,13 +138,15 @@ const SUB_BEAT_VULGAR: Record<string, string> = { e: "¼", "&": "½", a: "¾" };
 /**
  * The attribute-overlay title for a timing (frame 1.12): a whole beat reads
  * "count N"; a sub-beat reads "the & (½ beat)" (the symbol + its fraction).
+ * The beat number wraps at the dance's phrase (phraseCountLabel) so the title
+ * agrees with the visible row label — a Waltz beat 7 opens as "count 1".
  */
-function timingTitle(count: number): string {
+function timingTitle(count: number, dance: DanceId): string {
   const t = pickMessages(timelineMessages);
-  if (Number.isInteger(count)) return t.countN(count);
+  if (Number.isInteger(count)) return t.countN(phraseCountLabel(count, dance));
   const symbol = offBeatSymbol(count) ?? "";
   const vulgar = SUB_BEAT_VULGAR[symbol];
-  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(countLabel(count));
+  return vulgar ? t.subBeatTitle(symbol, vulgar) : t.countN(phraseCountLabel(count, dance));
 }
 
 /** The registry kind(s) a column's overlay edits: the merged Step column edits
@@ -122,27 +157,16 @@ function columnKinds(col: ReadingColumn): string[] {
 
 /** A column's header/text color — the kind's base token, slate for custom. */
 function columnColor(col: ReadingColumn): string {
-  const standard = [
-    "direction",
-    "footwork",
-    "footPosition",
-    "rise",
-    "position",
-    "bodyActions",
-    "sway",
-    "turn",
-  ];
-  return standard.includes(col.kind)
-    ? kindVar(col.kind as Parameters<typeof kindVar>[0])
-    : "var(--bf-ink-secondary)";
+  return isColumnKind(col.kind) ? kindVar(col.kind) : "var(--bf-ink-secondary)";
 }
 
 export function FigureTimeline({
   role,
   dance,
   attributes,
-  bars,
-  onBarsChange,
+  counts,
+  legacyBars,
+  onCountsChange,
   initialView,
   roleView,
   onRoleViewChange,
@@ -154,9 +178,15 @@ export function FigureTimeline({
   scopeLabel,
   isBookmarked = false,
   onAddToLibrary,
+  figureName,
+  adjusted = false,
+  onRenameFigure,
+  part,
+  showStepRecap = true,
 }: FigureTimelineProps) {
   const t = useMessages(timelineMessages);
   const locale = useLocale();
+  const toast = useToast();
   const attrs = attributes ?? [];
   // The open attribute overlay: a (timing, column) target, or null (frame 1.12).
   const [openCell, setOpenCell] = useState<{ count: number; column: ReadingColumn } | null>(null);
@@ -165,16 +195,24 @@ export function FigureTimeline({
   const [infoCol, setInfoCol] = useState<ReadingColumn | null>(null);
   // Role lens: controlled by `roleView` (QUAL-5, wired to the store-persisted
   // `bb_role`) when provided; otherwise local UI state seeded from initialView.
-  const [localView, setLocalView] = useState<RoleView>(roleView ?? initialView ?? "leader");
+  const [localView, setLocalView] = useState<EditRoleView>(roleView ?? initialView ?? "leader");
   const view = roleView ?? localView;
-  const setView = (next: RoleView): void => {
+  const setView = (next: EditRoleView): void => {
     onRoleViewChange?.(next);
     if (roleView === undefined) setLocalView(next);
   };
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
+  // The in-flight add-to-library naming draft (Builder v3 ⑤), or null.
+  const [libraryName, setLibraryName] = useState<string | null>(null);
   const isGlobal = figureScope === "global";
   const editable = role === "editor";
+  // docs/concepts/notation.md § Role lenses (WEP-0008): "both" is an EDIT-ONLY
+  // lens (the write scope) — a stored "both"
+  // reads as the leader's chart, and the grid always DISPLAYS the read
+  // projection (under Both that's the verbatim leader side of its writes).
+  const lens: EditRoleView = editable ? view : asReadView(view);
+  const displayView = asReadView(lens);
 
   const byCount = useMemo(() => {
     const map = new Map<number, Attribute[]>();
@@ -190,12 +228,22 @@ export function FigureTimeline({
   // Sorted distinct counts that actually carry a value (for out-of-grid rows).
   const placedCounts = useMemo(() => [...byCount.keys()].sort((a, b) => a - b), [byCount]);
 
-  const gridDance = (dance ?? "waltz") as DanceId;
+  const gridDance = dance ?? "waltz";
   const beatsPerBar = DANCES[gridDance].beatsPerBar;
-  // The figure's authored length: the explicit `bars` prop, else the default from
-  // its whole-beat steps. Clamped so the stepper never drops below one bar.
+  // The figure's authored length in COUNTS (Builder v3 ①): the explicit `counts`
+  // prop, else a legacy `bars × beatsPerBar`, else the step default — but an
+  // entirely EMPTY un-authored figure opens with a full bar's worth of slots so
+  // there's somewhere to notate. Clamped ≥1.
   const liveAttrs = useMemo(() => attrs.filter((a) => a.deletedAt == null), [attrs]);
-  const resolvedBars = Math.max(1, bars ?? defaultFigureBars(liveAttrs, gridDance));
+  const resolvedCounts =
+    counts == null && legacyBars == null && liveAttrs.length === 0
+      ? beatsPerBar
+      : resolveFigureCounts({
+          ...(counts != null ? { counts } : {}),
+          ...(legacyBars != null ? { bars: legacyBars } : {}),
+          attributes: liveAttrs,
+          dance: gridDance,
+        });
 
   // The grid columns: every kind applicable to the dance (all-applicable, so empty
   // cells are addable) — the EDIT counterpart to the reading view's used-columns.
@@ -211,19 +259,26 @@ export function FigureTimeline({
   // generated from `bars` (US-028) — plus any attribute placed OUTSIDE that range
   // (e.g. a step left beyond a since-shrunk bar count) so no value is ever hidden.
   const rows = useMemo(() => {
-    const slots = figureGridSlots(resolvedBars, gridDance);
+    const slots = figureCountSlots(resolvedCounts, gridDance);
     const inGrid = new Set(slots.map((s) => s.count));
     const extras: GridSlot[] = placedCounts
       .filter((c) => !inGrid.has(c))
       .map((c) => ({
         count: c,
-        label: countLabel(c),
+        label: phraseCountLabel(c, gridDance),
         bar: Math.max(1, Math.ceil(Math.floor(c) / beatsPerBar)),
         beat: Math.floor(c),
         whole: Number.isInteger(c),
       }));
-    return [...slots, ...extras].sort((a, b) => a.count - b.count);
-  }, [resolvedBars, gridDance, beatsPerBar, placedCounts]);
+    // Portion window (Builder v3 ③, §4.4): a placement that dances only counts
+    // [fromCount, toCount] edits only those rows — the figure doc stays whole, so
+    // the underlying `attrs` (and thus onChange's merge-back) is untouched; we
+    // just don't render the beats outside the window.
+    return windowAttributes(
+      [...slots, ...extras].sort((a, b) => a.count - b.count),
+      part,
+    );
+  }, [resolvedCounts, gridDance, beatsPerBar, placedCounts, part]);
 
   /** Replace one count's attributes within the full set + emit (COW on first
    *  edit of a non-owned global figure). */
@@ -233,35 +288,100 @@ export function FigureTimeline({
     onChange?.([...others, ...next]);
   };
 
+  // Quick-add (Builder v3 ②): tapping an EMPTY cell of an OPEN kind (the merged
+  // Step column, a free-text kind, or one with no closed value list) instantly
+  // places a PRESENCE attribute (`value: null` — the dashed ring) instead of
+  // opening the editor; tap it again to set its value. A closed-enum kind still
+  // opens the single-attribute editor directly — there's a value to pick.
+  // biome-ignore lint/correctness/useExhaustiveDependencies(locale): localizedRegistry reads the active locale via getLocale(), so it must recompute on switch.
+  const registry = useMemo(
+    () => mergeRegistry(localizedRegistry(getLocale()), customKinds),
+    [customKinds, locale],
+  );
+  const quickAddKind = (col: ReadingColumn): string | null => {
+    if (col.isStep) return "direction"; // a blank STEP = a presence direction attr
+    const kind = registry[col.kind];
+    if (!kind || kind.valueType === "text" || kind.freeText || !kind.values?.length) {
+      return col.kind;
+    }
+    return null;
+  };
+  const onCellTap = (count: number, col: ReadingColumn): void => {
+    const here = (byCount.get(count) ?? []).filter((a) => columnKinds(col).includes(a.kind));
+    if (here.length === 0) {
+      const kind = quickAddKind(col);
+      if (kind) {
+        // docs/concepts/notation.md § Role lenses (WEP-0008): the quick-added
+        // presence inherits the lens as its WRITE
+        // SCOPE — under a single role it must not leak into the partner's
+        // chart; a presence has no value to mirror, so Both stays shared.
+        onCountChange(count, [
+          ...(byCount.get(count) ?? []),
+          {
+            id: `${kind}-${count}-presence-${Date.now()}`,
+            kind,
+            count,
+            value: null,
+            role: lens === "both" ? null : lens,
+            deletedAt: null,
+          },
+        ]);
+        toast.show(col.isStep ? t.stepPlacedToast : t.presenceAddedToast);
+        return;
+      }
+    }
+    setOpenCell({ count, column: col });
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header controls: the "− N bars +" length stepper (editor only) + the
           "Steps for" role lens (frame 1.11). The lens is a per-device VIEW. */}
       <div className="flex flex-wrap items-center gap-3">
-        {editable && onBarsChange && (
+        {/* A portioned placement (Builder v3 ③) hides the LENGTH stepper: the
+            window is FIXED, and figure length is the whole figure's concern —
+            instead we label the placed slice ("4–6 of 6"). */}
+        {editable && onCountsChange && !part && (
           <Stepper
-            label={t.barsStepperLabel}
+            label={t.countsStepperLabel}
             hideLabel
-            unit={t.barsStepperUnit}
+            unit={t.countsStepperUnit}
             min={1}
-            max={32}
-            value={resolvedBars}
-            onChange={(next) => onBarsChange(next)}
+            max={64}
+            value={resolvedCounts}
+            onChange={(next) => onCountsChange(next)}
           />
+        )}
+        {part && (
+          <span
+            className="text-2xs font-bold uppercase tracking-wider text-ink-muted"
+            data-portion-label
+          >
+            {t.partLabel(
+              Math.max(1, Math.ceil(part.fromCount)),
+              Math.floor(part.toCount),
+              resolvedCounts,
+            )}
+          </span>
         )}
         <div className="flex items-center gap-2">
           <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
             {t.stepsFor}
           </span>
-          <SegmentedToggle<RoleView>
+          {/* docs/concepts/notation.md § Role lenses (WEP-0008): editing offers
+              the third "Both" lens (the write scope);
+              reading keeps the two-way Leader/Follower lens. */}
+          <SegmentedToggle<EditRoleView>
             ariaLabel={t.stepsFor}
-            value={view}
+            value={lens}
             onChange={setView}
             options={[
               { value: "leader", label: t.leader },
               { value: "follower", label: t.follower },
+              ...(editable ? [{ value: "both" as const, label: t.both }] : []),
             ]}
           />
+          {lens === "both" && <span className="text-2xs italic text-ink-faint">{t.bothHint}</span>}
         </div>
         {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2): an OWNED
             (account) figure only — a global figure's bookmark affordance lives on
@@ -278,11 +398,55 @@ export function FigureTimeline({
               {t.inYourLibrary}
             </span>
           ) : (
-            onAddToLibrary && (
-              <Button variant="secondary" size="sm" onClick={onAddToLibrary}>
-                <span aria-hidden="true">↟</span> {t.addToMyLibrary}
-              </Button>
-            )
+            onAddToLibrary &&
+            (libraryName != null ? (
+              /* Naming bar (Builder v3 ⑤): name the variant as it enters the
+                   library — the name renames the LIVE shared figure doc. */
+              <span className="flex items-center gap-2">
+                <input
+                  aria-label={t.variantNameLabel}
+                  placeholder={t.variantNamePlaceholder}
+                  value={libraryName}
+                  onChange={(e) => setLibraryName(e.target.value)}
+                  className="min-h-[36px] rounded-[8px] border-[1.5px] px-2 text-2xs font-semibold text-ink"
+                  style={{ borderColor: "var(--bf-border-strong)" }}
+                />
+                <Button variant="ghost" size="sm" onClick={() => setLibraryName(null)}>
+                  {t.variantNameCancel}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    const next = libraryName.trim();
+                    if (next && next !== figureName) onRenameFigure?.(next);
+                    onAddToLibrary();
+                    setLibraryName(null);
+                  }}
+                >
+                  {t.variantNameSave}
+                </Button>
+              </span>
+            ) : (
+              <>
+                {/* Identity reassurance (Builder v3 variant bar): the figure was
+                      adjusted for this choreo but is still the same named figure.
+                      Variants/diverged-origin figures only (`adjusted`) — a
+                      from-scratch custom was never adjusted from anything. */}
+                {adjusted && figureName && (
+                  <span className="rounded-[8px] bg-surface-sunken px-2 py-1.5 text-2xs font-semibold text-ink-muted">
+                    {t.adjustedStill(figureName)}
+                  </span>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setLibraryName(figureName ?? "")}
+                >
+                  <span aria-hidden="true">↟</span> {t.addToMyLibrary}
+                </Button>
+              </>
+            ))
           ))}
       </div>
 
@@ -332,7 +496,6 @@ export function FigureTimeline({
                     style={{ color: "inherit" }}
                   >
                     {col.label}
-                    {col.isStep && <span aria-hidden="true">*</span>}
                   </button>
                 </th>
               ))}
@@ -341,7 +504,8 @@ export function FigureTimeline({
           <tbody>
             {rows.map((row, i) => {
               const newBar = i === 0 || rows[i - 1]?.bar !== row.bar;
-              const here = filterByRoleView(byCount.get(row.count) ?? [], view);
+              const allHere = byCount.get(row.count) ?? [];
+              const here = filterByRoleView(allHere, displayView);
               return (
                 <BarRowGroup
                   key={row.count}
@@ -356,19 +520,35 @@ export function FigureTimeline({
                     >
                       <CountCell label={row.label} offBeat={!row.whole} />
                     </th>
-                    {columns.map((col) => (
-                      <td key={col.id} className="px-0.5 align-middle">
-                        <GridCell
-                          column={col}
-                          count={row.count}
-                          label={cellValue(here, col)}
-                          offBeat={!row.whole}
-                          editable={editable}
-                          color={colorByKind.get(col.kind)}
-                          onOpen={() => setOpenCell({ count: row.count, column: col })}
-                        />
-                      </td>
-                    ))}
+                    {columns.map((col) => {
+                      // docs/concepts/notation.md § Role lenses (WEP-0008): under
+                      // Both, a hand-diverged (kind, count) is
+                      // LOCKED — Both may only edit derivation-consistent state.
+                      const locked =
+                        editable &&
+                        lens === "both" &&
+                        columnKinds(col).some((k) => {
+                          const kd = registry[k];
+                          return kd != null && !isBothConsistent(kd, allHere);
+                        });
+                      return (
+                        <td key={col.id} className="px-0.5 align-middle">
+                          <GridCell
+                            column={col}
+                            count={row.count}
+                            label={cellValue(here, col)}
+                            present={columnKinds(col).some((k) => here.some((a) => a.kind === k))}
+                            offBeat={!row.whole}
+                            editable={editable}
+                            locked={locked}
+                            color={colorByKind.get(col.kind)}
+                            onOpen={() =>
+                              locked ? toast.show(t.divergedLockedToast) : onCellTap(row.count, col)
+                            }
+                          />
+                        </td>
+                      );
+                    })}
                   </tr>
                 </BarRowGroup>
               );
@@ -380,42 +560,44 @@ export function FigureTimeline({
       {/* Helper caption (frame 1.11). */}
       <p className="text-2xs italic text-ink-faint">{t.helperCaption}</p>
 
-      {/* Always-visible per-count recap (the headline word + this count's value
-          words) — the readable summary the authoring journey reads, present as soon
-          as the figure opens. */}
-      {rows.map((row) => {
-        const here = filterByRoleView(byCount.get(row.count) ?? [], view);
-        if (here.length === 0) return null;
-        const direction = here.find((a) => a.kind === "direction");
-        const slots = here.filter((a) => a.kind !== "direction");
-        return (
-          <div
-            key={`detail-${row.count}`}
-            data-testid={`step-detail-${row.count}`}
-            className="flex flex-wrap items-center gap-2"
-          >
-            <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
-              {row.label}
-            </span>
-            <span
-              data-testid={`step-headline-${row.count}`}
-              className="text-2xs font-bold text-ink"
-            >
-              {stepAction(direction?.value)}
-            </span>
-            <ul
-              aria-label={t.countAttributes(row.count)}
+      {/* Per-count recap (the headline word + this count's value words) — the
+          readable summary the authoring journey reads, present as soon as the
+          figure opens. Rendered only when the caller wants the authoring aid
+          (`showStepRecap`); the reading lens hides it. */}
+      {showStepRecap &&
+        rows.map((row) => {
+          const here = filterByRoleView(byCount.get(row.count) ?? [], displayView);
+          if (here.length === 0) return null;
+          const direction = here.find((a) => a.kind === "direction");
+          const slots = here.filter((a) => a.kind !== "direction");
+          return (
+            <div
+              key={`detail-${row.count}`}
+              data-testid={`step-detail-${row.count}`}
               className="flex flex-wrap items-center gap-2"
             >
-              {slots.map((a) => (
-                <li key={a.id} className="text-2xs text-ink-muted">
-                  {humanize(a.value)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+              <span className="rounded-md bg-surface-sunken px-2 py-1 text-2xs font-bold tabular-nums text-ink">
+                {row.label}
+              </span>
+              <span
+                data-testid={`step-headline-${row.count}`}
+                className="text-2xs font-bold text-ink"
+              >
+                {stepAction(direction?.value)}
+              </span>
+              <ul
+                aria-label={t.countAttributes(row.count)}
+                className="flex flex-wrap items-center gap-2"
+              >
+                {slots.map((a) => (
+                  <li key={a.id} className="text-2xs text-ink-muted">
+                    {humanize(a.value)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
 
       {/* The single-attribute overlay (frame 1.12): title = the timing, meta = the
           attribute name; body = ONLY that column's kind(s); Save confirms, Remove
@@ -424,7 +606,7 @@ export function FigureTimeline({
         <Sheet
           open
           onClose={() => setOpenCell(null)}
-          title={timingTitle(openCell.count)}
+          title={timingTitle(openCell.count, gridDance)}
           meta={openCell.column.label}
         >
           <AttributeEditor
@@ -432,7 +614,7 @@ export function FigureTimeline({
             count={openCell.count}
             role={role}
             dance={dance}
-            view={view}
+            view={lens}
             customKinds={customKinds}
             onlyKinds={columnKinds(openCell.column)}
             value={byCount.get(openCell.count) ?? []}
@@ -515,31 +697,52 @@ function CountCell({ label, offBeat }: { label: string; offBeat: boolean }) {
   );
 }
 
-/** One grid cell: a filled AttrChip (Step = merged direction·footwork) or a faint
- *  ＋ placeholder. Tapping a filled cell edits; tapping a ＋ adds. */
+/** One grid cell — three states (Builder v3): a filled AttrChip (Step = merged
+ *  direction·footwork) for a set value; a dashed "present" ring when the
+ *  attribute exists but carries no value yet; a faint ＋ for an empty slot.
+ *  Tapping a filled/present cell edits; tapping a ＋ adds. */
 function GridCell({
   column,
   count,
   label,
+  present,
   offBeat,
   editable,
+  locked = false,
   color,
   onOpen,
 }: {
   column: ReadingColumn;
   count: number;
   label: string | null;
+  /** The attribute exists at this (count, kind) — even if it has no value. */
+  present: boolean;
   offBeat: boolean;
   editable: boolean;
+  /** docs/concepts/notation.md § Role lenses (WEP-0008): diverged under the Both
+   *  lens — shown but not editable there. */
+  locked?: boolean;
   color?: string;
   onOpen: () => void;
 }) {
   const t = useMessages(timelineMessages);
-  const cellLabel = label
-    ? t.editCell(column.label, countLabel(count))
-    : t.addCell(column.label, countLabel(count));
+  const cellLabel = locked
+    ? t.lockedCell(column.label, countLabel(count))
+    : present
+      ? t.editCell(column.label, countLabel(count))
+      : t.addCell(column.label, countLabel(count));
+  const ringColor = color ?? columnColor(column);
   const content = label ? (
     <AttrChip kind={column.kind} label={label} color={color} dimmed={offBeat} />
+  ) : present ? (
+    <span
+      aria-hidden="true"
+      data-present-cell
+      className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-full border-[1.5px] border-dashed text-[10px] font-bold leading-none"
+      style={{ borderColor: ringColor, color: ringColor }}
+    >
+      +
+    </span>
   ) : (
     <span
       aria-hidden="true"
@@ -551,9 +754,11 @@ function GridCell({
   const base = "flex min-h-[34px] w-[68px] items-center justify-center rounded-md";
   const fillStyle = { background: label ? undefined : "var(--bf-surface-sunken)" };
   if (!editable) {
-    // Read grid: values only, no add affordances.
-    return label ? (
-      <span className={base}>{content}</span>
+    // Read grid: values (and present markers) only, no add affordances.
+    return label || present ? (
+      <span className={base} style={fillStyle}>
+        {content}
+      </span>
     ) : (
       <span className={base} style={fillStyle} aria-hidden="true" />
     );
@@ -562,11 +767,17 @@ function GridCell({
     <button
       type="button"
       aria-label={cellLabel}
+      aria-disabled={locked || undefined}
       onClick={onOpen}
-      className={cx(base, "cursor-pointer")}
+      className={cx(base, locked ? "cursor-not-allowed opacity-70" : "cursor-pointer")}
       style={fillStyle}
     >
       {content}
+      {locked && (
+        <span aria-hidden="true" className="ml-0.5 text-[10px] leading-none">
+          🔒
+        </span>
+      )}
     </button>
   );
 }

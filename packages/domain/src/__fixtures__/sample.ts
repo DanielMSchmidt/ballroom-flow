@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────
 // The reusable read-only SAMPLE routine + a small shared figure library
-// (PLAN.md §10.3: "a read-only sample routine + a small shared figure library
+// (docs/system/testing.md: "a read-only sample routine + a small shared figure library
 // (incl. a variant) defined once and reused").
 //
 // This is the canonical fixture every layer leans on:

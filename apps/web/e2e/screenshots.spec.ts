@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
@@ -16,6 +16,28 @@ const OUT = path.resolve(
   "../src/marketing/screenshots",
 );
 const shot = (name: string) => path.join(OUT, name);
+
+/** Prepare the empty-state create shot for a STABLE capture. Waiting for the
+ *  tour <video> to attach proves the routines query has settled (so we shoot the
+ *  real empty state, not the loading spinner). We then HIDE that video: its
+ *  poster is a GPU-scaled bitmap that jitters a few sub-pixels run-to-run, which
+ *  shows up as noise in the CI screenshot pixel-diff (and would churn the committed
+ *  landing asset) — and it isn't the subject of the "create" shot anyway. */
+async function settleEmptyStateForCreateShot(page: Page): Promise<void> {
+  const video = page.locator("video").first();
+  await video.waitFor({ state: "attached", timeout: 15_000 });
+  await video.evaluate((v) => {
+    v.style.display = "none";
+  });
+  // The sample/template rows arrive from /api/templates, whose FIRST call after
+  // resetDb also lazily seeds the sample — a separate, slower query than the
+  // routines fetch the video-attach wait proves. Without this wait the shot's
+  // background depends on which side of that race the run lands (the baseline
+  // workflow and the PR job landed on different sides — a standing false diff).
+  await expect(page.getByRole("button", { name: /start from template/i })).toBeVisible({
+    timeout: 15_000,
+  });
+}
 
 // Long Side then Short Side of the floor (the app's section model).
 const LONG_SIDE = [
@@ -46,6 +68,8 @@ test.describe("@screenshots landing imagery", () => {
     await page.getByLabel("Choreo name").fill("Bronze Waltz");
     // Waltz is the pre-selected chip in the New-choreo sheet.
     await expect(page.getByRole("dialog", { name: "New choreography" })).toBeVisible();
+    // Settle the empty state + drop the jitter-prone tour video before capturing.
+    await settleEmptyStateForCreateShot(page);
     await page.screenshot({ path: shot("create.png") });
     await page
       .getByRole("dialog")
@@ -70,8 +94,11 @@ test.describe("@screenshots landing imagery", () => {
       await expect(page.getByRole("heading", { name: section })).toBeVisible({ timeout: 15_000 });
       for (const figure of figures) {
         await page.getByRole("button", { name: "Add figure" }).last().click();
-        await page.getByLabel("Figure name").fill(figure);
-        await page.getByLabel("Figure name").press("Enter");
+        // Tap the CATALOG preset (typing the name would mint an un-charted
+        // custom figure and open its editor — create-navigates, §4.3).
+        await page.getByRole("button", { name: figure, exact: true }).click();
+        // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+        await page.getByRole("button", { name: /add to choreo/i }).click();
         await expect(page.getByText(figure).first()).toBeVisible({ timeout: 15_000 });
       }
     }
@@ -88,6 +115,21 @@ test.describe("@screenshots landing imagery", () => {
 
     // Full-page assemble view showing both Long + Short sections.
     await page.screenshot({ path: shot("sections.png"), fullPage: true });
+
+    // 2b. Add-figure picker (diff-only shots, not on the landing page): the
+    //     searchable library with the ALWAYS-PRESENT "Create my own figure"
+    //     row below it, then the compose view (name + length) the row swaps
+    //     the selection UI for. Escape closes the sheet without minting a
+    //     figure, so the built routine is untouched.
+    await page.getByRole("button", { name: "Add figure" }).last().click();
+    const createRow = page.getByRole("button", { name: /create my own figure/i });
+    await expect(createRow).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: shot("addfigure.png") });
+    await createRow.click();
+    await expect(page.getByLabel("Figure name")).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: shot("composefigure.png") });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: /add a figure/i })).not.toBeVisible();
 
     // 3. Notate the Natural Spin Turn across technique dimensions.
     //    "Edit steps: …" matches the aria-label on PlacementCard (canEdit → "Edit").
@@ -118,5 +160,22 @@ test.describe("@screenshots landing imagery", () => {
     await page.getByRole("button", { name: /reading view/i }).click();
     await expect(page.getByTestId("reading-view")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: shot("reading.png"), fullPage: true });
+
+    // 6. Figure READ view (docs/concepts/notation.md § The figure editor,
+    //    design figMode): tapping a figure on the
+    //    reading programme opens it read-only — the step grid as the content,
+    //    the notes surfaces beneath, and the pencil "Edit steps" toggle in the
+    //    header as the only route into editing.
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Natural Spin Turn", exact: true })
+      .first()
+      .click();
+    await expect(page.getByRole("table", { name: /step grid/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Edit steps", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^annotations$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.screenshot({ path: shot("figure.png") });
   });
 });

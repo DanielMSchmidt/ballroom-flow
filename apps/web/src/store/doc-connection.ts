@@ -19,17 +19,34 @@ import {
   SYNC_CAUGHT_UP,
   SYNC_FRAME_CHANGE,
   SYNC_FRAME_SNAPSHOT,
+  SYNC_PING,
+  SYNC_PONG,
   SYNC_SUBPROTOCOL_V1,
 } from "@weavesteps/contract";
+import type { DocStorage } from "./doc-storage";
 import { reconcile } from "./reconcile";
 
-/** Minimal structural view of a WebSocket (so tests can inject a fake). */
+/** Minimal structural view of a WebSocket (so tests can inject a fake).
+ *  `send` takes the ArrayBuffer-backed view lib.dom's `WebSocket.send` accepts
+ *  (its `BufferSource` excludes SharedArrayBuffer-backed views), so the global
+ *  `WebSocket` satisfies this interface as-is; {@link isBinary} re-establishes
+ *  that backing for Automerge change bytes with a real runtime check. A `string`
+ *  is also allowed for the TEXT heartbeat ping (docs/system/sync-and-offline.md
+ *  § Heartbeat); sync changes stay binary. */
 export interface SocketLike {
   binaryType: string;
-  send(data: ArrayBufferView | ArrayBuffer): void;
+  send(data: string | Uint8Array<ArrayBuffer>): void;
   close(): void;
   addEventListener(type: "message", fn: (ev: { data: unknown }) => void): void;
   addEventListener(type: "open" | "close", fn: () => void): void;
+}
+
+/** Automerge change/save bytes are always ArrayBuffer-backed at runtime, but
+ *  their `Uint8Array` type leaves the backing buffer wide (ArrayBufferLike);
+ *  this guard narrows it back so `SocketLike.send` (= `WebSocket.send`) takes
+ *  them — a checked narrowing, not an assertion. */
+function isBinary(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
+  return view.buffer instanceof ArrayBuffer;
 }
 
 /** Opens a socket to a URL, optionally offering WS subprotocols (the auth token
@@ -70,21 +87,65 @@ export interface ReconnectPolicy {
   maxColdAttempts?: number;
 }
 
+/**
+ * Heartbeat policy (docs/system/sync-and-offline.md § Heartbeat): while the socket is idle, send a SYNC_PING every
+ * `intervalMs` and expect the DO's auto-response SYNC_PONG within `deadlineMs`.
+ * ANY inbound frame counts as proof of life (a busy connection is never pinged).
+ * A missed deadline means the socket is a half-open ZOMBIE — TCP thinks it's up
+ * but nothing is delivered (an access-point reboot that never flips
+ * `navigator.onLine`) — so the client drops it into the normal warm-reconnect
+ * machinery instead of waiting minutes for the browser's own close event.
+ */
+export interface HeartbeatPolicy {
+  /** Idle time (ms) before a ping is sent. */
+  intervalMs: number;
+  /** How long (ms) after a ping to wait for life before declaring a zombie. */
+  deadlineMs: number;
+}
+
 /** Injectable timers so reconnect/backoff is deterministic under test. */
 export interface DocConnectionOptions {
   /** Fresh-token provider attached as the `ballroom.auth` subprotocol (#189). */
   getToken?: TokenProvider;
   /** Auto-reconnect policy (default: a capped exponential backoff). */
   reconnect?: ReconnectPolicy;
+  /** Zombie-socket heartbeat (docs/system/sync-and-offline.md § Heartbeat; default {@link DEFAULT_HEARTBEAT}).
+   *  `false` disables the probe (online-only unit tests that fast-forward time). */
+  heartbeat?: HeartbeatPolicy | false;
   /** Schedule a delayed callback (default: global setTimeout). */
   schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   /** Cancel a scheduled callback (default: global clearTimeout). */
   cancel?: (handle: ReturnType<typeof setTimeout>) => void;
+  /**
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): local persistence for this doc. When set (with
+   * `storageKey`), the connection hydrates from the persisted bytes BEFORE the
+   * network (state "local" — editable, visibly unsynced), persists every advance,
+   * and replays the not-yet-delivered changes through the #161 resend on
+   * reconnect. Omitted → the connection is online-only, exactly as before.
+   */
+  storage?: DocStorage | null;
+  /** The persistence key (the docRef). Required for `storage` to take effect. */
+  storageKey?: string;
+  /**
+   * Browser-connectivity probe (default: `navigator.onLine`, true where absent).
+   * A handshake that fails while OFFLINE carries no revoked/missing signal, so it
+   * never counts toward the terminal cold-failure give-up.
+   */
+  isOnline?: () => boolean;
 }
 
 const DEFAULT_RECONNECT: Required<ReconnectPolicy> = {
   delays: [1000, 2000, 5000, 10000],
   maxColdAttempts: 4,
+};
+
+/** Heartbeat defaults (docs/system/sync-and-offline.md § Heartbeat): a dead-but-open socket can impersonate "live" for at most
+ *  ~intervalMs + deadlineMs (~30 s) — versus the OS TCP timeout (minutes). One
+ *  tiny TEXT frame per idle interval; answered runtime-level, never waking the
+ *  DO, so the D23 hibernation economics are untouched. */
+export const DEFAULT_HEARTBEAT: HeartbeatPolicy = {
+  intervalMs: 25_000,
+  deadlineMs: 5_000,
 };
 
 /**
@@ -95,10 +156,15 @@ const DEFAULT_RECONNECT: Required<ReconnectPolicy> = {
  * Where one document's connection is in its lifecycle (drives the UI indicator
  * and the edit gate). "connecting" = socket opening, reconnecting, OR
  * open-but-not-yet-hydrated; "live" = the DO's full catch-up replay has been
- * APPLIED (hydrated, safe to edit, #202); "closed" = TERMINAL — either disposed
- * by the owner, or reconnect gave up after exhausting its cold attempts.
+ * APPLIED (hydrated, safe to edit, #202); "local" (docs/system/sync-and-offline.md
+ * § Offline editing) = hydrated from
+ * LOCAL persistence (or previously live) while the server is unreachable —
+ * editable, changes persist + replay on reconnect, visibly unsynced; "closed" =
+ * TERMINAL — either disposed by the owner, or reconnect gave up after
+ * exhausting its cold attempts. "live" keeps its honest meaning: it is never
+ * granted from local bytes alone.
  */
-export type SyncState = "connecting" | "live" | "closed";
+export type SyncState = "connecting" | "live" | "local" | "closed";
 
 export class DocConnection<T> {
   private doc: A.Doc<T>;
@@ -115,6 +181,11 @@ export class DocConnection<T> {
   private attempt = 0;
   /** Pending reconnect timer handle, so close()/reconnectNow() can cancel it. */
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Heartbeat (docs/system/sync-and-offline.md § Heartbeat) ──────────────
+  /** Armed while the socket is idle; fires → send a ping. */
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Armed after a ping; fires with no inbound frame → the socket is a zombie. */
+  private pongDeadline: ReturnType<typeof setTimeout> | null = null;
   // Outgoing changes produced before the socket is open (e.g. while the #189
   // token resolves, during the CONNECTING window, or while reconnecting) are
   // buffered here and flushed once it opens — otherwise a brand-new doc's seed
@@ -123,7 +194,7 @@ export class DocConnection<T> {
   // reload. This handles the socket-not-open case; the SNAPSHOT-diff resend on
   // (re)connect (#161) is the complementary belt-and-braces that recovers a
   // change which WAS sent into a socket that then died before it hit the wire.
-  private pendingSends: Uint8Array[] = [];
+  private pendingSends: Uint8Array<ArrayBuffer>[] = [];
   // Whether the current connection has received its catch-up SNAPSHOT frame yet.
   // Reset per socket (in `attach`); drives the reconnect-resend at SYNC_CAUGHT_UP
   // for the rare unseeded-server case (no snapshot ⇒ the server is missing ALL
@@ -134,8 +205,28 @@ export class DocConnection<T> {
   private readonly openSocket: SocketFactory;
   private readonly getToken?: TokenProvider;
   private readonly reconnectPolicy: Required<ReconnectPolicy>;
+  /** Heartbeat policy; `null` = disabled (docs/system/sync-and-offline.md § Heartbeat). */
+  private readonly heartbeat: HeartbeatPolicy | null;
   private readonly schedule: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   private readonly cancel: (handle: ReturnType<typeof setTimeout>) => void;
+  // ── Offline editing (docs/system/sync-and-offline.md § Offline editing) ──
+  /** Local persistence for this doc (null/undefined = online-only, pre-§11.2). */
+  private readonly storage: DocStorage | null;
+  private readonly storageKey: string;
+  private readonly isOnline: () => boolean;
+  /** The doc holds REAL content (from local persistence or a server catch-up) —
+   *  the precondition for the editable "local" state on a network drop. */
+  private hydrated = false;
+  /** Changes this client made that have NOT been handed to a live socket yet.
+   *  Persisted, so the truth-telling count survives a reload. Advisory only:
+   *  replay correctness comes from the snapshot diff (#161), never this. */
+  private pendingCount = 0;
+  /** A persist is already scheduled (debounce for the live-sync hot path). */
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Reconnect immediately when the browser regains connectivity. */
+  private readonly onBrowserOnline: (() => void) | null = null;
+  /** Drop the (zombie) socket the moment the browser goes offline. */
+  private readonly onBrowserOffline: (() => void) | null = null;
 
   /**
    * `getToken` (#189): when provided, a FRESH token is fetched at THIS
@@ -163,9 +254,60 @@ export class DocConnection<T> {
       delays: opts.reconnect?.delays ?? DEFAULT_RECONNECT.delays,
       maxColdAttempts: opts.reconnect?.maxColdAttempts ?? DEFAULT_RECONNECT.maxColdAttempts,
     };
+    this.heartbeat = opts.heartbeat === false ? null : (opts.heartbeat ?? DEFAULT_HEARTBEAT);
     this.schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
     this.cancel = opts.cancel ?? ((h) => clearTimeout(h));
-    this.connect();
+    this.storage = opts.storageKey ? (opts.storage ?? null) : null;
+    this.storageKey = opts.storageKey ?? "";
+    this.isOnline =
+      opts.isOnline ?? (() => (typeof navigator === "undefined" ? true : navigator.onLine));
+    if (this.storage && typeof window !== "undefined") {
+      // Regaining connectivity ends an offline stretch — reconnect NOW rather
+      // than riding out the backoff. Only when actually waiting (a timer armed,
+      // or terminally closed); a healthy/live socket is left alone.
+      this.onBrowserOnline = () => {
+        if (this.disposed) return;
+        if (this.reconnectTimer != null || this.syncState === "closed") this.reconnectNow();
+      };
+      window.addEventListener("online", this.onBrowserOnline);
+      // Going offline: an ESTABLISHED socket is not severed by the network
+      // stack in every browser — it becomes a zombie that swallows sends while
+      // the UI still reads "live". Close it proactively so the connection flips
+      // to the honest, editable "local" state (edits persist + count as pending).
+      this.onBrowserOffline = () => {
+        if (this.disposed) return;
+        this.socket?.close();
+      };
+      window.addEventListener("offline", this.onBrowserOffline);
+    }
+    if (this.storage) {
+      // §11.2: hydrate from local persistence BEFORE the network, then connect
+      // (offline, the connect fails and the doc stays editable as "local").
+      void this.hydrateFromStorage().finally(() => this.connect());
+    } else {
+      this.connect();
+    }
+  }
+
+  /** Load + merge the persisted doc (best-effort; a failure just goes online-only). */
+  private async hydrateFromStorage(): Promise<void> {
+    if (!this.storage) return;
+    try {
+      const persisted = await this.storage.load(this.storageKey);
+      if (this.disposed || !persisted) return;
+      // Merge INTO our handle (same in-place pattern as mergeSnapshot) so the
+      // connection KEEPS its Automerge actor id — per-actor undo depends on it.
+      const merged = A.merge(this.doc, A.load<T>(persisted.bytes));
+      this.doc = merged;
+      this.hydrated = true;
+      this.pendingCount = persisted.pendingCount;
+      // Server catch-up may have already landed (a fast connect) — never demote
+      // a live connection to "local".
+      if (this.syncState === "connecting") this.setState("local");
+      this.onChange?.();
+    } catch {
+      // Corrupt/unreadable local copy — behave as if none existed.
+    }
   }
 
   /** Open (or re-open) the socket: fetch a fresh token, then attach. */
@@ -200,9 +342,18 @@ export class DocConnection<T> {
     socket.addEventListener("open", () => {
       this.everOpened = true;
       this.coldFailures = 0; // a successful open clears the cold-failure streak
+      this.armHeartbeat(); // start the idle clock (docs/system/sync-and-offline.md § Heartbeat)
       this.flush();
     });
-    socket.addEventListener("close", () => this.onSocketClosed());
+    socket.addEventListener("close", () => {
+      // Ignore a STALE close from a socket we already replaced or dropped —
+      // e.g. the §11.2 zombie guard nulls the handle and drives the reconnect
+      // machinery itself (a zombie's close event can take tens of seconds to
+      // fire while offline). Acting on a stale close would null the handle of
+      // the LIVE replacement socket and orphan it.
+      if (this.socket !== socket) return;
+      this.onSocketClosed();
+    });
   }
 
   /**
@@ -210,6 +361,7 @@ export class DocConnection<T> {
    * persistently rejected/unreachable connection), unless the owner disposed us.
    */
   private onSocketClosed(): void {
+    this.clearHeartbeat(); // no socket, nothing to probe (docs/system/sync-and-offline.md § Heartbeat)
     if (this.disposed) {
       this.setState("closed");
       return;
@@ -227,9 +379,25 @@ export class DocConnection<T> {
       this.scheduleReconnect();
       return;
     }
+    // A handshake that failed while the browser is OFFLINE (§11.2) carries no
+    // revoked/missing signal — it's just the network being absent. Keep retrying
+    // and never count it toward the terminal give-up, so an offline stretch of
+    // any length stays "local". Spacing is CAPPED (an attempt with no network
+    // fails instantly and costs nothing) so connectivity returning is noticed
+    // within seconds even where the browser never fires the `online` event
+    // (the listener short-circuits the wait where it does fire).
+    if (!this.isOnline()) {
+      const cap = this.reconnectPolicy.delays[this.reconnectPolicy.delays.length - 1] ?? 1000;
+      this.scheduleReconnect(Math.min(3000, cap));
+      return;
+    }
     // Cold failure: the handshake never opened (missing doc, revoked access, or
     // server down). Retry a bounded number of times, then give up terminally —
-    // the store then confirms missing-vs-error via the access preflight.
+    // the store then confirms missing-vs-error via the access preflight. The
+    // retry spacing is indexed by the COLD count (not the lifetime attempt
+    // counter, which a long offline stretch grows to the cap): the bounded
+    // give-up must arrive promptly once the network is back (§11.2 — the
+    // unsyncable-edits notice hangs off it).
     this.coldFailures += 1;
     if (this.coldFailures >= this.reconnectPolicy.maxColdAttempts) {
       // Give up: terminally "closed" until a manual reconnectNow(). The store
@@ -237,20 +405,101 @@ export class DocConnection<T> {
       this.setState("closed");
       return;
     }
-    this.scheduleReconnect();
+    const { delays } = this.reconnectPolicy;
+    this.scheduleReconnect(delays[Math.min(this.coldFailures - 1, delays.length - 1)] ?? 1000);
   }
 
-  /** Arm the next reconnect after the policy's backoff for this attempt. */
-  private scheduleReconnect(): void {
-    this.setState("connecting"); // reconnecting reads as "connecting", not "closed"
+  /** Arm the next reconnect: after `delayMs` when given, else after the policy's
+   *  growing backoff for this attempt (the warm-drop path). */
+  private scheduleReconnect(delayMs?: number): void {
+    // While disconnected, a PERSISTED, hydrated doc stays editable ("local",
+    // §11.2) — edits persist locally and replay on reconnect. Without the
+    // persistence seam the pre-§11.2 behavior is unchanged ("connecting").
+    this.setState(this.storage && this.hydrated ? "local" : "connecting");
     const { delays } = this.reconnectPolicy;
-    const delay = delays[Math.min(this.attempt, delays.length - 1)] ?? 1000;
-    this.attempt += 1;
+    let delay: number;
+    if (delayMs != null) {
+      delay = delayMs;
+    } else {
+      delay = delays[Math.min(this.attempt, delays.length - 1)] ?? 1000;
+      this.attempt += 1;
+    }
     if (this.reconnectTimer != null) this.cancel(this.reconnectTimer);
     this.reconnectTimer = this.schedule(() => {
       this.reconnectTimer = null;
       this.connect();
     }, delay);
+  }
+
+  // ── Heartbeat (docs/system/sync-and-offline.md § Heartbeat) — zombie-socket detection ──
+
+  /** (Re)start the idle clock: after `intervalMs` with no inbound frame, ping. */
+  private armHeartbeat(): void {
+    if (!this.heartbeat) return;
+    if (this.heartbeatTimer != null) this.cancel(this.heartbeatTimer);
+    this.heartbeatTimer = this.schedule(() => {
+      this.heartbeatTimer = null;
+      this.sendPing();
+    }, this.heartbeat.intervalMs);
+  }
+
+  /** The idle interval elapsed: probe the socket and arm the pong deadline. */
+  private sendPing(): void {
+    if (!this.heartbeat || this.disposed || !this.socket) return;
+    try {
+      this.socket.send(SYNC_PING);
+    } catch {
+      // A socket that can't even accept the probe is already dead.
+      this.onZombie();
+      return;
+    }
+    this.pongDeadline = this.schedule(() => {
+      this.pongDeadline = null;
+      this.onZombie();
+    }, this.heartbeat.deadlineMs);
+  }
+
+  /** Any inbound frame: the socket is alive — clear the deadline, restart idle. */
+  private noteAlive(): void {
+    if (!this.heartbeat) return;
+    if (this.pongDeadline != null) {
+      this.cancel(this.pongDeadline);
+      this.pongDeadline = null;
+    }
+    this.armHeartbeat();
+  }
+
+  /** Cancel both heartbeat timers (socket gone, or owner teardown). */
+  private clearHeartbeat(): void {
+    if (this.heartbeatTimer != null) {
+      this.cancel(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    if (this.pongDeadline != null) {
+      this.cancel(this.pongDeadline);
+      this.pongDeadline = null;
+    }
+  }
+
+  /**
+   * The pong deadline passed with silence: the socket is a half-open zombie —
+   * TCP believes it's up, nothing is delivered, and `navigator.onLine` may well
+   * still read true (the practice-room dead spot: an AP reboot that never fires
+   * the `offline` event). Drop it the same way the §11.2 send-time zombie guard
+   * does: null the handle FIRST (the socket's own close event, which can be
+   * minutes away on a dead pipe, is stale-guarded in `attach`), close it
+   * best-effort, and drive the warm-drop reconnect machinery NOW.
+   */
+  private onZombie(): void {
+    this.clearHeartbeat();
+    const zombie = this.socket;
+    this.socket = null;
+    try {
+      zombie?.close();
+    } catch {
+      // already closing/closed — nothing to do
+    }
+    this.onSocketClosed();
   }
 
   /**
@@ -293,7 +542,7 @@ export class DocConnection<T> {
     // identity of every subtree that didn't — so a one-field change hands React
     // a snapshot where only the changed subtree (and its ancestors) is new, and
     // everything else bails out of re-render. See store/reconcile.ts.
-    const value = reconcile(cached?.value, A.toJS(this.doc) as T);
+    const value = reconcile(cached?.value, A.toJS(this.doc));
     this.jsCache = { key, value };
     return value;
   }
@@ -341,7 +590,7 @@ export class DocConnection<T> {
     const before = this.doc;
     const after = A.change(before, fn);
     this.doc = after;
-    for (const c of A.getChanges(before, after)) this.send(c as Uint8Array);
+    this.sendLocal(A.getChanges(before, after));
     this.onChange?.();
     return after;
   }
@@ -350,8 +599,59 @@ export class DocConnection<T> {
   commit(next: A.Doc<T>): void {
     const before = this.doc;
     this.doc = next;
-    for (const c of A.getChanges(before, next)) this.send(c as Uint8Array);
+    this.sendLocal(A.getChanges(before, next));
     this.onChange?.();
+  }
+
+  /** Send this client's fresh local changes; count the ones that could only be
+   *  buffered (not on a live socket yet) as pending (§11.2), and persist. */
+  private sendLocal(changes: A.Change[]): void {
+    // Zombie-socket guard (§11.2): when the BROWSER knows it's offline but the
+    // established socket hasn't noticed (not every browser severs it or fires
+    // the 'offline' event), a send would vanish into the dead pipe while
+    // counting as delivered. Probe isOnline() at send time: drop the zombie
+    // (its close event drives the normal reconnect machinery) and buffer.
+    if (this.storage && this.socket && !this.isOnline()) {
+      const zombie = this.socket;
+      this.socket = null; // from here on, send() buffers
+      try {
+        zombie.close();
+      } catch {
+        // already closing — nothing to do
+      }
+      // Drive the reconnect machinery NOW: while offline, the zombie's close
+      // handshake can't complete, so its close event may be tens of seconds
+      // away (it is stale-guarded in attach). This flips to "local" and arms
+      // the capped offline retry loop immediately.
+      this.onSocketClosed();
+    }
+    let undelivered = false;
+    for (const c of changes) {
+      // isBinary always holds (Automerge bytes) — see its doc; a hypothetical
+      // miss degrades to the buffered/pending path, never a dropped change.
+      const delivered = isBinary(c) && this.send(c);
+      if (!(delivered && this.syncState === "live")) {
+        this.pendingCount += 1;
+        undelivered = true;
+      }
+    }
+    // An UNDELIVERED change must hit disk NOW — the state label can still read
+    // "live" for the few ms until the dropped socket's close event lands, and
+    // an imminent reload/tab-close in that window would lose the edit (§11.2
+    // durability). Delivered changes take the debounced path.
+    if (undelivered) this.persistNow();
+    else this.persistSoon();
+  }
+
+  /**
+   * How many of this client's changes have not been handed to a live socket yet
+   * — the §11.2 truth-telling "N changes waiting to sync" number. It survives a
+   * reload (persisted) and resolves via the caught-up/snapshot path. Advisory:
+   * replay correctness comes from the reconnect snapshot diff (#161), never
+   * from this counter.
+   */
+  pendingSyncCount(): number {
+    return this.pendingCount;
   }
 
   /**
@@ -360,6 +660,12 @@ export class DocConnection<T> {
    * merge, or one CHANGE to apply. Malformed / unknown-tag frames are dropped.
    */
   private receive(data: unknown): void {
+    // ANY inbound frame is proof the socket is alive: clear a pending pong
+    // deadline and restart the idle clock (docs/system/sync-and-offline.md § Heartbeat). A busy connection is
+    // never pinged at all.
+    this.noteAlive();
+    // The heartbeat pong carries no payload — its arrival WAS the information.
+    if (data === SYNC_PONG) return;
     // The DO's catch-up-complete marker (a TEXT frame): the catch-up is done, so
     // this connection is HYDRATED → go "live" (#202).
     if (data === SYNC_CAUGHT_UP) {
@@ -369,6 +675,16 @@ export class DocConnection<T> {
       // On a fresh empty doc this is a no-op: getAllChanges is empty.)
       if (!this.snapshotSinceConnect) this.resendMissing(A.getAllChanges(this.doc));
       this.attempt = 0; // a clean hydration resets the backoff schedule
+      this.hydrated = true;
+      // Caught up on an open socket: every change we had (or just resent) has
+      // been handed to the live connection — the pending count resolves (§11.2).
+      // Advisory only; a change that still dies on the wire is recovered by the
+      // next reconnect's snapshot diff regardless of this count.
+      if (this.pendingCount !== 0) {
+        this.pendingCount = 0;
+        this.persistSoon();
+        this.onChange?.();
+      }
       this.setState("live");
       return;
     }
@@ -418,17 +734,25 @@ export class DocConnection<T> {
     // getChanges never hits its "old has changes new lacks" crash.)
     const missing = A.getChanges(serverDoc, merged);
     this.doc = merged;
+    this.hydrated = true;
+    // The snapshot diff is the ground truth for what the server lacks — adopt it
+    // as the pending count (§11.2), then resend; whatever fails to send stays
+    // buffered (and counted) for the flush on the next open.
+    this.pendingCount = missing.length;
     if (A.getHeads(merged).join() !== beforeHeads) this.onChange?.();
     this.resendMissing(missing);
+    this.pendingCount = this.pendingSends.length;
+    this.persistSoon();
   }
 
   /** Apply one incremental CHANGE frame from a peer. Drops malformed frames. */
   private applyChangeFrame(change: Uint8Array): void {
     try {
-      const [next] = A.applyChanges(this.doc, [change as A.Change]);
+      const [next] = A.applyChanges(this.doc, [change]);
       // Heads unchanged ⇒ duplicate/no-op; skip the notify.
       if (A.getHeads(next).join() === A.getHeads(this.doc).join()) return;
       this.doc = next;
+      this.persistSoon(); // keep the local copy fresh with peer edits (§11.2)
       this.onChange?.();
     } catch {
       // Malformed frame (not a valid Automerge change) — drop it.
@@ -438,14 +762,16 @@ export class DocConnection<T> {
   /** Send changes the server is missing (reconnect resend, #161). Routes through
    *  `send` so a not-yet-open socket buffers them for the flush on open. */
   private resendMissing(changes: A.Change[]): void {
-    for (const c of changes) this.send(c as Uint8Array);
+    for (const c of changes) if (isBinary(c)) this.send(c);
   }
 
-  private send(change: Uint8Array): void {
+  /** Send one change now if possible. Returns true when it went onto a socket,
+   *  false when it could only be buffered for the flush on the next open. */
+  private send(change: Uint8Array<ArrayBuffer>): boolean {
     if (this.socket) {
       try {
         this.socket.send(change);
-        return;
+        return true;
       } catch {
         // Socket attached but not open yet (CONNECTING) — fall through to buffer.
       }
@@ -454,6 +780,41 @@ export class DocConnection<T> {
     // for the flush on "open" so a brand-new doc's changes, or an edit made
     // during a reconnect gap, aren't lost before the next sync.
     this.pendingSends.push(change);
+    return false;
+  }
+
+  // ── Local persistence (§11.2) — best-effort, never blocks the edit path ──
+
+  /**
+   * Persist the doc + pending count. Immediate while NOT live (an offline edit
+   * must survive an imminent reload/tab-close — that's the §11.2 durability),
+   * debounced while live (inbound sync storms shouldn't thrash IndexedDB).
+   */
+  private persistSoon(): void {
+    if (!this.storage) return;
+    if (this.syncState !== "live") {
+      this.persistNow();
+      return;
+    }
+    if (this.persistTimer != null) return; // one write per debounce window
+    this.persistTimer = this.schedule(() => {
+      this.persistTimer = null;
+      this.persistNow();
+    }, 300);
+  }
+
+  /** Fire-and-forget write of the current doc snapshot (failures are dropped). */
+  private persistNow(): void {
+    if (!this.storage) return;
+    // NEVER write a non-hydrated doc: a connection disposed before its local
+    // hydrate (or first catch-up) resolves still holds the empty A.init — saving
+    // that would CLOBBER the good persisted copy (the 9edab0a projection-clobber
+    // class; React dev double-mount hits this on every reload).
+    if (!this.hydrated) return;
+    void this.storage.save(this.storageKey, {
+      bytes: A.save(this.doc),
+      pendingCount: this.pendingCount,
+    });
   }
 
   /** Send everything buffered while the socket was connecting, in order. */
@@ -486,12 +847,27 @@ export class DocConnection<T> {
    */
   close(): void {
     this.disposed = true;
+    this.clearHeartbeat();
     if (this.reconnectTimer != null) {
       this.cancel(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    if (this.persistTimer != null) {
+      this.cancel(this.persistTimer);
+      this.persistTimer = null;
+    }
+    if (this.onBrowserOnline && typeof window !== "undefined") {
+      window.removeEventListener("online", this.onBrowserOnline);
+    }
+    if (this.onBrowserOffline && typeof window !== "undefined") {
+      window.removeEventListener("offline", this.onBrowserOffline);
+    }
+    // §11.2: a final best-effort write so the freshest doc (incl. any buffered
+    // changes, which live inside its bytes) survives the teardown.
+    this.persistNow();
     if (this.pendingSends.length > 0) {
       // Not an error — see the note above; logged so an unexpected drop is visible.
+      // With persistence configured the changes also live on in the saved bytes.
       console.debug(
         `DocConnection.close: dropping ${this.pendingSends.length} unflushed change(s)`,
       );

@@ -4,14 +4,15 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectAbsent, openTwoUsers, openUser } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Fork + inheritance journeys (PLAN §10.2 E2E). Covers:
+// Fork + inheritance journeys (docs/system/testing.md § Layer ownership). Covers:
 //   US-037 — choreo fork → frozen/independent (origin edit does NOT appear);
 //   US-034 — edit your own shared figure → flows into a SECOND routine;
 //   US-035 — copy-on-write: edit a global/non-owned figure → frozen copy created
 //            (its own attributes, no overlay), original untouched, "copied as your
 //            variant" toast.
 //
-// @smoke includes one fork/copy-on-write journey (PLAN §10.3). All journeys in
+// @smoke includes one fork/copy-on-write journey (docs/system/testing.md §
+// Tooling & CI). All journeys in
 // this file are LIVE — the last skipped slice (the US-040 cross-dance
 // figureType-note journey) was unskipped and scripted 2026-07-03.
 // ─────────────────────────────────────────────────────────────────────────
@@ -37,6 +38,26 @@ async function addSection(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "Add section" }).click();
   await page.getByLabel("Section name").fill(name);
   await page.getByLabel("Section name").press("Enter");
+}
+
+/** Place the CATALOG "Running Spin Turn" from the picker's preset list (a live
+ *  global reference). Typing the name instead would mint a CUSTOM figure —
+ *  the custom form always creates your own, even for a catalog name (§4.3). */
+async function placeRunningSpinTurn(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Add figure" }).click();
+  await page.getByRole("button", { name: "Running Spin Turn", exact: true }).click();
+  // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+  await page.getByRole("button", { name: /add to choreo/i }).click();
+  await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+}
+
+/** Open the step editor and quick-add a sub-beat step at count 5&. */
+async function retimeFiveAnd(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+  await page.getByRole("button", { name: /^Add Step at count 5&$/i }).click();
+  await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test.describe("@smoke choreo fork is frozen / independent", () => {
@@ -118,16 +139,21 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await addSection(page, "Intro");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("Feather Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's full-screen editor and set count-1 footwork "HT" via the
-    // Step cell's single-attribute overlay, then Save to close it.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    // A typed name always mints a custom figure (§4.3) — whose full-screen
+    // editor opens IMMEDIATELY (create-navigates). Set count-1 footwork "HT" via
+    // the Step cell overlay. Builder v3 ② made an empty Step cell TWO-TAP: the
+    // first tap quick-adds a blank presence step, the second opens the overlay.
+    await expect(page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     // The summary chip beneath count 1 shows the new value immediately.
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
@@ -200,11 +226,13 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     // step timeline editor for the copy-on-write trigger.
     await page.getByRole("button", { name: /list view/i }).click();
 
-    // Open the figure's steps and trigger copy-on-write by editing count 1.
+    // Open the figure's steps and trigger copy-on-write by editing count 1 —
+    // the empty cell quick-adds a blank step (itself the first edit, Builder
+    // v3 ②), then the second tap opens the overlay to pick a footwork.
     await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
-    // "Heel-Toe" is a footwork suggestion in the Step overlay; picking it on a
-    // global figure triggers copy-on-write.
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
+    // "Heel-Toe" is a footwork suggestion in the Step overlay.
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
 
     // The FigureTimeline immediately shows "Made this figure yours" (local state).
@@ -221,6 +249,102 @@ test.describe("figure auto-update + auto-variant (copy-on-write)", () => {
     await expect(page.getByText(/^Custom$/)).toBeVisible({ timeout: 15_000 });
     // The global figure's base data is not asserted here from a second UI context
     // (no in-app path to read a raw global figure); the COW unit tests prove it.
+  });
+
+  test("re-timing a placed CATALOG figure (sub-beat quick-add) persists as your variant (US-035)", async ({
+    page,
+  }) => {
+    // Intent (the reported bug): a catalog figure placed via the Add-figure sheet is
+    //   a LIVE REFERENCE to a `global:` doc that is NOT seeded as its own DO — its
+    //   content comes from the bundled catalog (⟳v5, §4.3). Re-timing it by
+    //   quick-adding a sub-beat step (the "&" between 5 and 6 → count 5&) used to
+    //   fire the "Step placed" toast but DROP the edit: the store read the figure's
+    //   scope from the (unhydrated) live connection, missed the `global` scope, and
+    //   attempted an in-place write the DO silently rejects. It must instead spawn a
+    //   live variant that OWNS the re-timed beat, so the new step persists across a
+    //   reload (⟳v5, §4.4/§5.2). Unlike the seeded-global test above, NO figure DO is
+    //   seeded here — this is the real "add a catalog figure, then re-time it" path.
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
+    });
+    await seedAuth(page, "user_editor");
+
+    // Create a Waltz routine + section, then place the CATALOG "Running Spin Turn"
+    // from the preset list (a live reference — no figure DO is seeded).
+    const docRef = await createRoutineAsCoach(page, "Re-time Waltz");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
+
+    // Open the figure's step editor and quick-add a step at the "&" between 5 and 6
+    // (count 5&): tapping an empty Step sub-beat cell quick-adds a presence step
+    // (Builder v3 ②) — the "Step placed" toast fires here.
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await page.getByRole("button", { name: /^Add Step at count 5&$/i }).click();
+
+    // The re-timed sub-beat now carries a step: the cell flips from "Add" to "Edit".
+    // This is the discriminating check — pre-fix the edit was dropped, so the cell
+    // stayed "Add Step at count 5&" (the presence never reached a persisted doc).
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // …and it PERSISTS across a reload: the step landed on the spawned variant's own
+    // DO (a real choreo-owned figure), not on the rejected global write.
+    await page.reload();
+    await page.goto(`/routines/${docRef}`);
+    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+    // Opening an existing routine lands in READ; switch to EDIT for the step editor.
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("re-timing the SAME catalog figure again (second routine) still persists — you can own many variants of one base (migration 0017)", async ({
+    page,
+  }) => {
+    // REGRESSION (the reported production bug): re-timing a placed catalog figure
+    //   spawns a variant stamped `forkedFromRef = global:waltz:running-spin-turn`.
+    //   Once you own ONE such variant, migration 0010's UNIQUE(ownerId,
+    //   forkedFromRef) made the SECOND variant's POST /api/figures 409 →
+    //   `spawnVariantForEdit` dropped the edit AFTER the optimistic "Step placed"
+    //   toast, so the step vanished on reload. The single-routine test above passes
+    //   on a fresh account (no prior derivative), which is exactly why CI missed
+    //   this. Here we re-time the SAME catalog figure a SECOND time (a second
+    //   routine) — the account now already owns a derivative — and it must persist.
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: "user_editor", displayName: "Editor", identityColor: "#222222" }],
+    });
+    await seedAuth(page, "user_editor");
+
+    // Routine 1 → the account's FIRST variant of Running Spin Turn.
+    await createRoutineAsCoach(page, "Re-time Waltz A");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
+    await retimeFiveAnd(page);
+
+    // Routine 2 → a SECOND variant of the SAME base. Pre-0017 this 409'd and the
+    // step silently vanished; now it must land on its own variant and persist.
+    const docRef2 = await createRoutineAsCoach(page, "Re-time Waltz B");
+    await addSection(page, "Intro");
+    await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
+    await placeRunningSpinTurn(page);
+    await retimeFiveAnd(page);
+
+    // …and it PERSISTS across a reload of the second routine.
+    await page.reload();
+    await page.goto(`/routines/${docRef2}`);
+    await expect(page.getByText("Running Spin Turn")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Running Spin Turn/i }).click();
+    await expect(page.getByRole("button", { name: /^Edit Step at count 5&$/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 
@@ -300,10 +424,15 @@ test.describe("cross-dance figureType notes (US-040)", () => {
     // 1. Foxtrot routine: author the two family notes from the figure editor.
     await gotoRoutine(page, "rt_fox_notes");
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    // Opening an existing routine lands in READ; switch to the list (edit) view
-    // where the per-figure "edit steps" affordance lives.
-    await page.getByRole("button", { name: /list view/i }).click();
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // The family-notes compose surface lives in the READ lens of the figure
+    // detail (docs/concepts/notation.md § The figure editor, 2026-07-10 — notes
+    // are reading-context only). Opening an
+    // existing routine already lands in Reading view, so tap the figure name
+    // there to open its read-only detail (as figure-read-view.spec does).
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
     const foxFamily = page.getByRole("region", { name: /family notes/i });
     await foxFamily.getByRole("button", { name: /this figure family/i }).click();
     await foxFamily.getByRole("radio", { name: /all dances/i }).click();
@@ -324,8 +453,10 @@ test.describe("cross-dance figureType notes (US-040)", () => {
     //    the foxtrot-only one does not (AC-2).
     await gotoRoutine(page, "rt_waltz_notes");
     await expect(page.getByText("Waltz Feather")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: /list view/i }).click();
-    await page.getByRole("button", { name: /edit steps: Waltz Feather/i }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Waltz Feather", exact: true })
+      .click();
     const waltzFamily = page.getByRole("region", { name: /family notes/i });
     await expect(waltzFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
     await expect(waltzFamily.getByText("foxtrot only: lower earlier")).not.toBeVisible();
@@ -363,10 +494,21 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
       timeout: 15_000,
     });
     await coach.page.getByRole("button", { name: "Add figure" }).click();
+    await coach.page.getByRole("button", { name: /create my own figure/i }).click();
     await coach.page.getByLabel("Figure name").fill("Feather Step");
     await coach.page.getByLabel("Figure name").press("Enter");
-    await expect(coach.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    await coach.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // The custom mint opens its step editor immediately (create-navigates, §4.3).
+    // Notes live on the READING-lens detail (the editing lens is notation-only),
+    // so close it, switch lens, and reopen the figure by name.
+    await expect(coach.page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await coach.page.keyboard.press("Escape");
+    await coach.page.getByRole("button", { name: /reading view/i }).click();
+    await coach.page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
     const coachFamily = coach.page.getByRole("region", { name: /family notes/i });
     await coachFamily.getByRole("button", { name: /this figure family/i }).click();
     await coachFamily.getByRole("radio", { name: /all dances/i }).click();
@@ -384,10 +526,12 @@ test.describe("@smoke co-member family-note visibility (US-041)", () => {
     // Student (co-member) opens the shared routine, opens the figure → SEES the note.
     await student.page.goto(`/routines/${docRef}`);
     await expect(student.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
-    // Opening an existing routine lands in READ; switch to the list view so the
-    // per-figure step button is accessible. Commenter has no Add section even here.
-    await student.page.getByRole("button", { name: /list view/i }).click();
-    await student.page.getByRole("button", { name: /steps: Feather Step/i }).click();
+    // Opening an existing routine lands in READ — exactly where notes surface:
+    // the reading-lens figure detail. Open it by tapping the figure name.
+    await student.page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
     const studentFamily = student.page.getByRole("region", { name: /family notes/i });
     await expect(studentFamily.getByText("keep the head left")).toBeVisible({ timeout: 15_000 });
 
@@ -426,8 +570,15 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
       timeout: 15_000,
     });
     await owner.page.getByRole("button", { name: "Add figure" }).click();
+    await owner.page.getByRole("button", { name: /create my own figure/i }).click();
     await owner.page.getByLabel("Figure name").fill("Feather Step");
     await owner.page.getByLabel("Figure name").press("Enter");
+    // The custom mint opens its step editor immediately (create-navigates, §4.3) —
+    // close it; this test drives the CO-EDITOR's edit first.
+    await expect(owner.page.getByRole("dialog", { name: /steps · feather step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await owner.page.keyboard.press("Escape");
     await expect(owner.page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
     // Share EDITOR on the ROUTINE only — figure edit rights come via the cascade.
@@ -442,9 +593,10 @@ test.describe("@smoke routine editor edits a referenced figure (cascade grants e
     // step timeline editor.
     await editor.page.getByRole("button", { name: /list view/i }).click();
     await editor.page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
-    await editor.page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await editor.page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await editor.page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await editor.page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await editor.page.getByRole("button", { name: /^Save$/ }).click();
+    await editor.page.getByRole("button", { name: /^Done$/ }).click();
     await expect(editor.page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible({
       timeout: 15_000,
     });

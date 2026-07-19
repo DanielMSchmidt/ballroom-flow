@@ -1,4 +1,5 @@
-// US-010 — History-based per-user undo (PLAN §5.4, D14, Q-UNDO).
+// US-010 — History-based per-user undo (docs/concepts/collaboration.md § Undo,
+// mechanics: docs/system/architecture.md § Undo, D14, Q-UNDO).
 //
 // Automerge has NO turnkey per-user UndoManager (unlike Yjs). Undo is built from
 // history: find the user's OWN last change (filter the change log by actor id),
@@ -13,7 +14,7 @@
 // `actorId` is the Automerge actor id of the user; the app-user → actor-id
 // mapping is the store seam's concern, not this pure helper.
 //
-// SOUNDNESS (PLAN §5.4, LOCKED 2026-07-02 — the two review-verified failure
+// SOUNDNESS (docs/system/architecture.md § Undo, LOCKED 2026-07-02 — the two review-verified failure
 // modes this file must never reintroduce):
 //  1. The inverse must target list elements BY IDENTITY, never by positional
 //     index. `A.diff` patches carry HISTORICAL indices; replaying them against
@@ -29,6 +30,7 @@
 //     previous change — and is a no-op when nothing undoable remains — instead
 //     of destructively re-inverting the same change.
 import * as A from "@automerge/automerge";
+import { isRecord, stringIdOf } from "./guards";
 
 /** Message tag of an undo change; the reverted change's hash follows a colon. */
 const UNDO_TAG = "ballroom:undo";
@@ -61,7 +63,7 @@ function changesByActor<T>(doc: A.Doc<T>, actorId: string): ChangeMeta[] {
     .map((c) => ({
       actor: c.actor,
       seq: c.seq,
-      hash: c.hash as string,
+      hash: c.hash,
       deps: c.deps,
       message: c.message,
     }))
@@ -131,19 +133,14 @@ type IdentityOp =
   | { kind: "inc"; path: Seg[]; key: string; by: number };
 
 function elemKeyOf(value: unknown): ElemKey {
-  if (
-    value !== null &&
-    typeof value === "object" &&
-    typeof (value as { id?: unknown }).id === "string"
-  ) {
-    return { id: (value as { id: string }).id };
-  }
+  const id = stringIdOf(value);
+  if (id !== undefined) return { id };
   return { json: JSON.stringify(value) };
 }
 
 function matchesKey(value: unknown, key: ElemKey): boolean {
   if ("id" in key) {
-    return value !== null && typeof value === "object" && (value as { id?: unknown }).id === key.id;
+    return stringIdOf(value) === key.id;
   }
   return JSON.stringify(value) === key.json;
 }
@@ -152,8 +149,8 @@ function matchesKey(value: unknown, key: ElemKey): boolean {
 function nodeAt(root: unknown, path: A.Prop[]): unknown {
   let node = root;
   for (const prop of path) {
-    if (node == null || typeof node !== "object") return undefined;
-    node = (node as Record<string | number, unknown>)[prop];
+    if (!isRecord(node)) return undefined;
+    node = node[prop];
   }
   return node;
 }
@@ -169,8 +166,8 @@ function identityPath(sim: unknown, path: A.Prop[]): Seg[] {
     } else {
       segs.push(String(prop));
     }
-    if (node == null || typeof node !== "object") return segs;
-    node = (node as Record<string | number, unknown>)[prop];
+    if (!isRecord(node)) return segs;
+    node = node[prop];
   }
   return segs;
 }
@@ -185,14 +182,15 @@ function identityPath(sim: unknown, path: A.Prop[]): Seg[] {
 function resolveIdentity(root: unknown, path: Seg[], strict: boolean): unknown {
   let node = root;
   for (const seg of path) {
-    if (node == null || typeof node !== "object") return undefined;
+    if (!isRecord(node)) return undefined;
     if (typeof seg === "string") {
-      node = (node as Record<string, unknown>)[seg];
+      node = node[seg];
       continue;
     }
     if (!Array.isArray(node)) return undefined;
-    const list = node as unknown[];
-    let idx = seg.elem ? list.findIndex((e) => matchesKey(e, seg.elem as ElemKey)) : -1;
+    const list: unknown[] = node;
+    const elem = seg.elem;
+    let idx = elem ? list.findIndex((e) => matchesKey(e, elem)) : -1;
     if (idx < 0 && !strict) idx = seg.at < list.length ? seg.at : -1; // exact historical position
     if (idx < 0) return undefined;
     node = list[idx];
@@ -200,8 +198,11 @@ function resolveIdentity(root: unknown, path: Seg[], strict: boolean): unknown {
   return node;
 }
 
-const canonical = (path: Seg[], key: string): string =>
-  `${path.map((s) => (typeof s === "string" ? `.${s}` : `[${"id" in (s.elem ?? {}) ? (s.elem as { id: string }).id : `#${s.at}`}]`)).join("")}::${key}`;
+const segLabel = (s: Seg): string => {
+  if (typeof s === "string") return `.${s}`;
+  return `[${s.elem && "id" in s.elem ? s.elem.id : `#${s.at}`}]`;
+};
+const canonical = (path: Seg[], key: string): string => `${path.map(segLabel).join("")}::${key}`;
 
 /**
  * Simulate the inverse patches against the historical after-state and record
@@ -231,14 +232,14 @@ function recordIdentityOps(
     if (isTextEdit) {
       const field = patch.path.at(-2);
       const parentPath = patch.path.slice(0, -2);
-      const parent = nodeAt(sim, parentPath);
-      if (parent == null || typeof parent !== "object" || field === undefined) continue;
-      const obj = parent as Record<string | number, unknown>;
-      const cur = typeof obj[field] === "string" ? (obj[field] as string) : "";
+      const obj = nodeAt(sim, parentPath);
+      if (!isRecord(obj) || field === undefined) continue;
+      const curVal = obj[field];
+      const cur = typeof curVal === "string" ? curVal : "";
       if (patch.action === "splice" && typeof patch.value === "string") {
         obj[field] = cur.slice(0, rawKey) + patch.value + cur.slice(rawKey);
       } else if (patch.action === "del") {
-        const len = (patch as { length?: number }).length ?? 1;
+        const len = patch.length ?? 1;
         obj[field] = cur.slice(0, rawKey) + cur.slice(rawKey + len);
       } else {
         continue;
@@ -247,18 +248,18 @@ function recordIdentityOps(
       continue;
     }
 
-    if (container === undefined || container === null || typeof container !== "object") continue;
+    if (!isRecord(container)) continue;
 
     switch (patch.action) {
       case "put": {
         const idPath = identityPath(sim, containerPath);
-        (container as Record<string | number, unknown>)[rawKey] = patch.value as unknown;
+        container[rawKey] = patch.value;
         recordSet(idPath, String(rawKey));
         break;
       }
       case "del": {
         if (Array.isArray(container) && typeof rawKey === "number") {
-          const len = (patch as { length?: number }).length ?? 1;
+          const len = patch.length ?? 1;
           const idPath = identityPath(sim, containerPath);
           for (let i = 0; i < len && rawKey < container.length; i += 1) {
             const [removed] = container.splice(rawKey, 1);
@@ -266,7 +267,7 @@ function recordIdentityOps(
           }
         } else {
           const idPath = identityPath(sim, containerPath);
-          delete (container as Record<string | number, unknown>)[rawKey];
+          delete container[rawKey];
           recordSet(idPath, String(rawKey));
         }
         break;
@@ -276,7 +277,7 @@ function recordIdentityOps(
         const idPath = identityPath(sim, containerPath);
         const after =
           rawKey > 0 && rawKey - 1 < container.length ? elemKeyOf(container[rawKey - 1]) : null;
-        const inserted = (patch.values as unknown[]).map((v) =>
+        const inserted = patch.values.map((v) =>
           v !== null && typeof v === "object" ? structuredClone(v) : v,
         );
         container.splice(rawKey, 0, ...inserted);
@@ -293,8 +294,8 @@ function recordIdentityOps(
       }
       case "inc": {
         const idPath = identityPath(sim, containerPath);
-        const rec = container as Record<string | number, number>;
-        rec[rawKey] = (rec[rawKey] ?? 0) + patch.value;
+        const cur = container[rawKey];
+        container[rawKey] = (typeof cur === "number" ? cur : 0) + patch.value;
         ops.push({ kind: "inc", path: idPath, key: String(rawKey), by: patch.value });
         break;
       }
@@ -326,8 +327,9 @@ function applyIdentityOps(
     const list = resolveIdentity(draft, op.path, true);
     if (!Array.isArray(list)) continue;
     let at = 0;
-    if (op.after) {
-      const prev = list.findIndex((e) => matchesKey(e, op.after as ElemKey));
+    const after = op.after;
+    if (after) {
+      const prev = list.findIndex((e) => matchesKey(e, after));
       at = prev >= 0 ? prev + 1 : Math.min(op.at, list.length);
     }
     // Skip elements that already exist (idempotent under duplicate replay).
@@ -346,14 +348,14 @@ function applyIdentityOps(
   const orderedSets = [...sets.values()].sort((a, b) => a.path.length - b.path.length);
   for (const { path, key } of orderedSets) {
     const target = resolveIdentity(draft, path, true);
-    if (target == null || typeof target !== "object" || Array.isArray(target)) continue;
+    if (!isRecord(target) || Array.isArray(target)) continue;
     const simContainer = resolveIdentity(sim, path, false);
-    if (simContainer == null || typeof simContainer !== "object") continue;
-    const finalValue = (simContainer as Record<string, unknown>)[key];
+    if (!isRecord(simContainer)) continue;
+    const finalValue = simContainer[key];
     if (finalValue === undefined) {
-      delete (target as Record<string, unknown>)[key];
+      delete target[key];
     } else {
-      (target as Record<string, unknown>)[key] =
+      target[key] =
         finalValue !== null && typeof finalValue === "object"
           ? structuredClone(finalValue)
           : finalValue;
@@ -362,9 +364,9 @@ function applyIdentityOps(
   for (const op of ops) {
     if (op.kind !== "inc") continue;
     const target = resolveIdentity(draft, op.path, true);
-    if (target == null || typeof target !== "object") continue;
-    const rec = target as Record<string, number>;
-    rec[op.key] = (rec[op.key] ?? 0) + op.by;
+    if (!isRecord(target)) continue;
+    const cur = target[op.key];
+    target[op.key] = (typeof cur === "number" ? cur : 0) + op.by;
   }
 }
 
@@ -373,10 +375,10 @@ function invertChange<T>(doc: A.Doc<T>, target: ChangeMeta, message: string): A.
   // AFTER→BEFORE diff = the patches that revert this change (historical coords).
   const inverse = A.diff(doc, [target.hash], target.deps);
   // The historical state those coordinates are exact in.
-  const sim = A.toJS(A.view(doc, [target.hash])) as unknown;
+  const sim: unknown = A.toJS(A.view(doc, [target.hash]));
   const { ops, sets } = recordIdentityOps(sim, inverse);
   return A.change(doc, { message }, (draft) => {
-    applyIdentityOps(draft as unknown, sim, ops, sets);
+    applyIdentityOps(draft, sim, ops, sets);
   });
 }
 
@@ -415,7 +417,7 @@ function undoTarget<T>(doc: A.Doc<T>, actorId: string): ChangeMeta | undefined {
 }
 
 /**
- * US-038 AC-3 — the soft "superseded by others" hint (advisory, PLAN §5.4).
+ * US-038 AC-3 — the soft "superseded by others" hint (advisory, docs/concepts/collaboration.md § Undo).
  *
  * Reports whether ANOTHER actor has BUILT ON the change `undoLastChange(doc,
  * actorId)` would revert — i.e. some change by a different actor causally
@@ -459,8 +461,7 @@ export function wasSupersededByOthers<T>(doc: A.Doc<T>, actorId: string): boolea
 
   const seen = new Set<string>();
   const queue = [target.hash];
-  while (queue.length > 0) {
-    const hash = queue.pop() as string;
+  for (let hash = queue.pop(); hash !== undefined; hash = queue.pop()) {
     for (const succ of successors.get(hash) ?? []) {
       if (seen.has(succ.hash)) continue;
       seen.add(succ.hash);

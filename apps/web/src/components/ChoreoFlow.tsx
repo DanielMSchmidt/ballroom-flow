@@ -9,14 +9,15 @@
 //
 // US-045/US-046: on mount, fetch templates + wire header search + fork.
 import type { RoutineListItem, SearchResult } from "@weavesteps/contract";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppAuth } from "../auth/app-auth";
 import { useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
 import { navigate } from "../lib/router";
 import { useDocAccess } from "../store/access";
-import { useBookmarkFigure, useMineFigures } from "../store/figures";
+import { useMineFigures } from "../store/figures";
 import { useMe } from "../store/me";
+import { usePendingLocalChanges } from "../store/offline";
 import {
   isQuotaError,
   useCreateRoutine,
@@ -26,19 +27,31 @@ import {
 } from "../store/routines";
 import { search } from "../store/search";
 import { forkTemplate, listTemplates } from "../store/templates";
+import { useAccount, useLibraryRefs } from "../store/use-account";
 import { AccessDenied, Button, Spinner, useToast } from "../ui";
-import { Assemble, type MembershipRole } from "./Assemble";
+import type { MembershipRole } from "./Assemble";
 import { ChoreoList } from "./ChoreoList";
+
+// Code-split the routine editor: Assemble is the ONLY screen that pulls the
+// Automerge store (routine.ts → doc-connection.ts → @automerge/automerge), whose
+// ~2.75 MB WASM + JS glue otherwise sit in the initial chunk even though they're
+// needed only once a routine is OPEN. Lazy-loading it here (the sole render site)
+// defers that payload off the first paint of the choreo list — the mobile-first
+// win — and it loads on routine-open behind the Suspense fallback below. (The
+// journal's routine-authoring path is the other Automerge entry point; it
+// dynamic-imports routine-view for the same reason — see store/journal.ts.)
+const Assemble = lazy(() => import("./Assemble").then((m) => ({ default: m.Assemble })));
 
 /** Resolve the viewer's editing role for an open routine from their list. */
 function roleForOpen(
-  routines: { docRef: string; role: string }[],
+  routines: { docRef: string; role: "owner" | MembershipRole }[],
   routineId: string,
 ): MembershipRole {
   const found = routines.find((r) => r.docRef === routineId);
   // owner → editor; a non-owner member keeps their role; not-yet-listed (fresh
   // create / deep link) opens optimistically as editor — the DO boundary gates.
-  if (found && found.role !== "owner") return found.role as MembershipRole;
+  // The `!== "owner"` check narrows `role` to MembershipRole (no assertion).
+  if (found && found.role !== "owner") return found.role;
   return "editor";
 }
 
@@ -58,20 +71,44 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   // opening the heavy WS store, so a non-member sees the calm access-denied state
   // rather than a connectivity-looking offline flash (DP #20).
   const access = useDocAccess(openRoutineId ?? "", { enabled: Boolean(openRoutineId) });
+  // Offline editing (§11.2, Q-NEW-2): pending local changes this DEVICE holds
+  // for the open routine. A denial must NOT unmount the screen over them — the
+  // Assemble store surfaces them as the explicit unsyncable alert instead of
+  // this component silently swapping to AccessDenied. Re-probed when the access
+  // verdict changes (revocation lands exactly then).
+  const pendingLocal = usePendingLocalChanges(openRoutineId ?? "", access.state);
 
   // The viewer's library bookmarks (⟳v5, §4.2/§5.2): fetched only when a routine
-  // is open, and reduced to a figureRef set so Assemble can O(1)-test "is this
-  // placed figure already in my library" for the "add to my library" ↔ "in your
-  // library" affordance (PlacementCard / FigureTimeline).
+  // is open. `/api/figures/mine` supplies figure METADATA (title/type/dance/usage)
+  // for the Add-figure picker; docs/system/architecture.md (account docs, WEP-0002)
+  // makes the account doc the source of truth for WHICH refs are bookmarked, so
+  // bookmark state is instant + offline.
   const mineQ = useMineFigures({ enabled: Boolean(openRoutineId) });
-  const bookmarkedFigureRefs = useMemo(
-    () => new Set((mineQ.data ?? []).map((f) => f.docRef)),
-    [mineQ.data],
-  );
-  const bookmark = useBookmarkFigure();
+  // docs/system/architecture.md (account docs, WEP-0002): open the account doc
+  // LAZILY (only when a routine is open — the "add to my library" surface lives
+  // in Assemble) and read the bookmark set live.
+  const account = useAccount();
+  const libraryRefs = useLibraryRefs(account.store);
+  // The figureRef set Assemble O(1)-tests for "already in my library" — the UNION
+  // of the live account-doc refs (instant, incl. a just-added bookmark before the
+  // alarm projects) and the /mine list (covers a signed-out/idle account store).
+  const bookmarkedFigureRefs = useMemo(() => {
+    const refs = new Set(libraryRefs);
+    for (const f of mineQ.data ?? []) refs.add(f.docRef);
+    return refs;
+  }, [libraryRefs, mineQ.data]);
+  // Bookmark through the seam (instant + offline; the worker alarm projects it to
+  // library_entry for /mine). The account store is open only for a signed-in user
+  // with a resolved id — a no-op otherwise (the affordance only renders then).
+  // `alreadySaved` is derived from the live doc state (idempotent add) so the
+  // toast reads correctly without a server round-trip.
   const onAddToLibrary = useCallback(
-    (figureRef: string) => bookmark.mutateAsync(figureRef),
-    [bookmark],
+    async (figureRef: string): Promise<{ alreadySaved: boolean }> => {
+      const alreadySaved = account.store.readLibraryRefs().includes(figureRef);
+      account.store.addBookmark(figureRef);
+      return { alreadySaved };
+    },
+    [account.store],
   );
 
   // US-045: template list (app-owned sample routines).
@@ -191,7 +228,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   if (openRoutineId) {
     return (
       <div className="flex flex-col gap-3">
-        {access.state === "denied" ? (
+        {access.state === "denied" && pendingLocal === 0 ? (
           <AccessDenied
             action={
               <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
@@ -206,27 +243,41 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
             <Spinner /> <span className="text-2xs">{t.loading}</span>
           </div>
         ) : (
-          <Assemble
-            // Key per routine so each open is a fresh mount — the read/edit
-            // landing (initialMode) is applied on mount, and switching routines
-            // (e.g. fork → new copy) doesn't carry the previous lens over.
-            key={openRoutineId}
-            routineId={openRoutineId}
-            role={roleForOpen(items, openRoutineId)}
-            initialMode={initialMode}
-            currentUserId={me.data?.sub}
-            getToken={() => getToken()}
-            onBack={() => navigate("/")}
-            forking={fork.isPending}
-            onFork={() =>
-              // Fork → a new owned, frozen copy; deep-link to it once created.
-              fork.mutate(openRoutineId, {
-                onSuccess: (res) => navigate(`/routines/${res.docRef}`),
-              })
+          // Suspense fallback covers the one-time async load of the lazy Assemble
+          // chunk (+ the Automerge WASM it pulls) on routine-open — a brief spinner,
+          // matching the access-checking state above, never a blank frame.
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2 p-6 text-ink-faint" role="status">
+                <Spinner /> <span className="text-2xs">{t.loading}</span>
+              </div>
             }
-            bookmarkedFigureRefs={bookmarkedFigureRefs}
-            onAddToLibrary={onAddToLibrary}
-          />
+          >
+            <Assemble
+              // Key per routine so each open is a fresh mount — the read/edit
+              // landing (initialMode) is applied on mount, and switching routines
+              // (e.g. fork → new copy) doesn't carry the previous lens over.
+              key={openRoutineId}
+              routineId={openRoutineId}
+              role={roleForOpen(items, openRoutineId)}
+              initialMode={initialMode}
+              currentUserId={me.data?.sub}
+              getToken={() => getToken()}
+              onBack={() => navigate("/")}
+              forking={fork.isPending}
+              onFork={() =>
+                // Fork → a new owned, frozen copy; deep-link to it once created.
+                fork.mutate(openRoutineId, {
+                  onSuccess: (res) => navigate(`/routines/${res.docRef}`),
+                })
+              }
+              bookmarkedFigureRefs={bookmarkedFigureRefs}
+              onAddToLibrary={onAddToLibrary}
+              // The full library list feeds the Add-figure picker (⟳v5 §4.2: a
+              // bookmark "can be placed into your other routines").
+              libraryFigures={mineQ.data ?? []}
+            />
+          </Suspense>
         )}
       </div>
     );
@@ -235,6 +286,7 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
   return (
     <ChoreoList
       routines={items}
+      loading={routinesQ.isLoading}
       ownedCount={ownedCount}
       plan={plan}
       cap={routineCap}
@@ -249,6 +301,12 @@ export function ChoreoFlow({ openRoutineId }: { openRoutineId?: string }): React
           onSuccess: (res) => {
             justCreatedRef.current = res.docRef;
             navigate(`/routines/${res.docRef}`);
+          },
+          // Never silent (§11.2): the offline gate disables the affordance, but
+          // a race (connectivity drops mid-flight) must still surface. A 402
+          // already drives the quota upsell via `quotaBlocked`.
+          onError: (err) => {
+            if (!isQuotaError(err)) toast.show(t.toastCreateFailed, { tone: "danger" });
           },
         })
       }

@@ -1,18 +1,8 @@
-import { useSyncExternalStore } from "react";
 import { useMessages } from "../i18n";
 import { uiMessages } from "../i18n/messages/ui";
-
-// Browser connectivity as an external store — `navigator.onLine` + the
-// online/offline events. SSR/jsdom default to "online".
-function subscribe(onChange: () => void): () => void {
-  window.addEventListener("online", onChange);
-  window.addEventListener("offline", onChange);
-  return () => {
-    window.removeEventListener("online", onChange);
-    window.removeEventListener("offline", onChange);
-  };
-}
-const isOnline = (): boolean => (typeof navigator === "undefined" ? true : navigator.onLine);
+// Shared connectivity store (events + a poll safety net, §11.2) — the same
+// signal that disables the creation affordances, so banner and gates agree.
+import { useOnline } from "../lib/use-online";
 
 /**
  * OfflineBanner — the app-shell offline state (US-050 AC-2): the PWA shell
@@ -23,7 +13,7 @@ const isOnline = (): boolean => (typeof navigator === "undefined" ? true : navig
  */
 export function OfflineBanner() {
   const t = useMessages(uiMessages);
-  const online = useSyncExternalStore(subscribe, isOnline, () => true);
+  const online = useOnline();
   if (online) return null;
   return (
     <div

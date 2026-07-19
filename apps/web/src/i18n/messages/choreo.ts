@@ -42,6 +42,7 @@ const en = {
   // ChoreoFlow (screen wrapper): toasts + open-routine states.
   toastForked: "Forked — independent copy",
   toastForkFailed: "Couldn't fork this choreo. Please try again.",
+  toastCreateFailed: "Couldn't create the choreo. Check your connection and try again.",
   toastTemplateFailed: "Couldn't start from template. Please try again.",
   toastDeleted: "Choreo deleted",
   toastDeleteFailed: "Couldn't delete this choreo. Please try again.",
@@ -90,6 +91,8 @@ const de: typeof en = {
   upsellCta: "Pro-Tarife — bald verfügbar",
   toastForked: "Abgezweigt — unabhängige Kopie",
   toastForkFailed: "Diese Choreo konnte nicht abgezweigt werden. Bitte versuch es erneut.",
+  toastCreateFailed:
+    "Die Choreo konnte nicht erstellt werden. Prüfe deine Verbindung und versuch es erneut.",
   toastTemplateFailed: "Konnte nicht mit der Vorlage starten. Bitte versuch es erneut.",
   toastDeleted: "Choreo gelöscht",
   toastDeleteFailed: "Diese Choreo konnte nicht gelöscht werden. Bitte versuch es erneut.",

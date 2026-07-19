@@ -4,86 +4,37 @@
 // see wrangler.toml [env.e2e]) — never in dev/staging/prod, where the flag is
 // unset and the routes 404. They mirror the seedDb shape used by the worker
 // unit tests, but write to the live D1 binding via drizzle.
-import { CURRENT_SCHEMA_VERSION } from "@weavesteps/domain";
+import { zSeedBody } from "@weavesteps/contract";
+import { CURRENT_SCHEMA_VERSION, isDanceId, parseAttributeRead } from "@weavesteps/domain";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
-import { documentRegistry, membership, users } from "../db/schema";
+import { documentRegistry, libraryEntry, membership, users } from "../db/schema";
 import type { Env } from "../index";
 import { seedGlobalFigures } from "../seed-global-figures";
 
-interface SeedBody {
-  users?: {
-    id: string;
-    displayName: string;
-    identityColor: string;
-    plan?: "free" | "pro";
-    /** D31 admin seam — lets an E2E journey stand up an admin (global-figure editor). */
-    isAdmin?: boolean;
-    routineCapOverride?: number | null;
-  }[];
-  /** ⟳v5 — stand up the REAL global figure docs from the bundled catalog (the same
-   *  additive seeder the admin route runs) so a journey can place live catalog
-   *  references. */
-  seedGlobalFigures?: boolean;
-  docs?: {
-    docRef: string;
-    type: string;
-    ownerId: string;
-    doName?: string;
-    title?: string | null;
-    dance?: string | null;
-    figureType?: string | null;
-    /** When type==="routine" and sections are present, the routine DO is server-seeded. */
-    sections?: {
-      id: string;
-      name: string;
-      placements: { id: string; figureRef: string }[];
-    }[];
-  }[];
-  memberships?: {
-    id?: string;
-    docRef: string;
-    userId: string;
-    role: "viewer" | "commenter" | "editor";
-  }[];
-  invites?: {
-    id: string;
-    docRef: string;
-    role: "viewer" | "commenter" | "editor";
-    expiresAt: number;
-    redeemedAt?: number | null;
-  }[];
-  /** Seed figure docs: D1 registry row + figure DO CRDT content. */
-  figures?: {
-    docRef: string;
-    scope: "global" | "account";
-    ownerId: string;
-    name: string;
-    dance: string;
-    figureType: string;
-    attributes?: unknown[];
-  }[];
-  /** Direct placement_edge rows (routine→figure) for the access cascade. */
-  placementEdges?: { routineRef: string; figureRef: string }[];
-  /** Direct journal_entry rows (T6) — the routine-scoped projection, for tests
-   *  that want entries without driving the DO alarm. */
-  journalEntries?: {
-    entryId: string;
-    routineRef: string;
-    authorId: string;
-    kind: "lesson" | "practice";
-    text: string;
-    anchors?: unknown[];
-    createdAt?: number;
-    deletedAt?: number | null;
-  }[];
-}
+// The seed body's shape + runtime validator live in @weavesteps/contract
+// (`zSeedBody`) — parsed at the route below, so a malformed seed fails loudly
+// instead of being silently cast and corrupting a journey's fixtures.
 
 export const testSeed = new Hono<{ Bindings: Env }>();
 
 /** Wipe the index tables (deterministic per-run reset). */
 testSeed.post("/api/test/reset", async (c) => {
   const d = drizzle(c.env.DB);
+  // Wipe each registered doc's Durable Object storage BEFORE clearing D1. A DO's
+  // SQLite persists independently of D1 and `seedDoc` is no-clobber, so a doc
+  // mutated in one journey/project (e.g. a copy-on-write edit that re-points a
+  // routine placement) would otherwise leak into the next run — the stale
+  // placement points at a now-orphaned figure copy and the card hangs on
+  // "Loading figure…". document_registry lists every seeded/created docRef
+  // (routines, figures, and COW copies alike), so this generically resets them
+  // all. Reading it here, before the DELETE below, is intentional.
+  const registered = await c.env.DB.prepare("SELECT docRef FROM document_registry").all<{
+    docRef: string;
+  }>();
+  for (const { docRef } of registered.results ?? []) {
+    await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef)).resetForTest();
+  }
   // `invite` is created by migration 0001 but typed in drizzle only once US-023
   // lands; clear it via raw SQL so this endpoint is independent of that merge.
   await c.env.DB.prepare("DELETE FROM invite").run();
@@ -99,6 +50,13 @@ testSeed.post("/api/test/reset", async (c) => {
   await c.env.DB.prepare("DELETE FROM journal_entry").run();
   // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
   await c.env.DB.prepare("DELETE FROM placement_edge").run();
+  // Save-to-library bookmarks (T5). `alreadySaved` is decided purely by a
+  // `library_entry` row keyed on (userId, figureRef) — NOT by documentRegistry —
+  // so without this a figure saved by one journey/project leaks into the next:
+  // the next save returns `alreadySaved: true` ("Already in My figures") instead
+  // of "Saved to My figures". Because all three Playwright projects share one D1
+  // serially, chromium-desktop (first) would pass while mobile-chrome/-safari fail.
+  await d.delete(libraryEntry);
   await d.delete(membership);
   await d.delete(documentRegistry);
   await d.delete(users);
@@ -107,7 +65,7 @@ testSeed.post("/api/test/reset", async (c) => {
 
 /** Insert index rows (users / docs / memberships / invites). Idempotent upserts. */
 testSeed.post("/api/test/seed", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as SeedBody;
+  const body = zSeedBody.parse(await c.req.json().catch(() => ({})));
   const d = drizzle(c.env.DB);
   const now = Date.now();
   let seeded = 0;
@@ -154,7 +112,7 @@ testSeed.post("/api/test/seed", async (c) => {
       await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(doc.docRef)).seedDoc({
         id: doc.docRef,
         title: doc.title ?? "",
-        dance: doc.dance ?? "waltz",
+        dance: isDanceId(doc.dance) ? doc.dance : "waltz",
         ownerId: doc.ownerId,
         sections: doc.sections.map((s) => ({
           id: s.id,
@@ -215,10 +173,12 @@ testSeed.post("/api/test/seed", async (c) => {
       scope: f.scope,
       ownerId: f.ownerId,
       figureType: f.figureType,
-      dance: f.dance,
+      dance: isDanceId(f.dance) ? f.dance : "waltz",
       name: f.name,
       source: f.scope === "global" ? "library" : "custom",
-      attributes: f.attributes ?? [],
+      // Lenient-read parse (throws on structurally-invalid seed attributes —
+      // a bad fixture should fail at seed time, not corrupt the journey).
+      attributes: (f.attributes ?? []).map((a) => parseAttributeRead(a)),
       schemaVersion: CURRENT_SCHEMA_VERSION,
       deletedAt: null,
     });

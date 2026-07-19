@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Convergence helper for the Automerge property tests (PLAN.md §10.2/§10.3:
+// Convergence helper for the Automerge property tests (docs/system/testing.md:
 // "convergence asserted by exchanging changes"; US-009).
 //
 // Models two (or N) replicas of one Automerge document, lets a test apply
@@ -10,52 +10,27 @@
 //   • idempotence   — re-applying an already-seen change is a no-op.
 //
 // IMPORTANT — lazy Automerge load:
-//   `@automerge/automerge` is a heavy WASM module and (as of this writing) is
-//   NOT yet declared as a dependency of @weavesteps/domain (it ships in M1 — see
-//   TEST-MAP.md "Missing dependencies"). Importing it at the top level would
-//   (a) run the WASM on every test collection and (b) throw a resolution error
-//   today, breaking the whole (skipped) suite's collection. So we DYNAMIC-IMPORT
-//   it inside the async helpers; the helpers are only ever awaited from INSIDE
-//   skipped `it`/property bodies, so nothing loads until the suite is unskipped.
-//
-// Typed structurally to avoid a top-level `import type` from the unresolved
-// package (which `verbatimModuleSyntax` would still keep as a module specifier
-// for the type-checker to resolve). We model only the surface we use.
+//   `@automerge/automerge` is a heavy WASM module; importing it at the top
+//   level would run the WASM on every test collection. So the helpers
+//   DYNAMIC-IMPORT it inside their async bodies — they are only ever awaited
+//   from INSIDE `it`/property bodies, so nothing loads until a test runs.
+//   (Type-only imports below are erased and load nothing.)
 // ─────────────────────────────────────────────────────────────────────────
 
-/** The minimal Automerge surface this helper uses (structural, no import). */
-export interface AutomergeLike {
-  // biome-ignore lint/suspicious/noExplicitAny: Automerge docs are opaque generics by design.
-  init<T = any>(): T;
-  // `from`/`clone` optionally take an actor id (hex) so tests can author changes
-  // under a known actor — required for per-user undo (US-010), which filters the
-  // change log by actor id. Automerge actor ids must be hex strings.
-  from<T>(initial: T, actor?: string): T;
-  change<T>(doc: T, fn: (d: T) => void): T;
-  clone<T>(doc: T, opts?: { actor?: string }): T;
-  merge<T>(local: T, remote: T): T;
-  getChanges<T>(oldDoc: T, newDoc: T): Uint8Array[];
-  applyChanges<T>(doc: T, changes: Uint8Array[]): [T, unknown];
-  save<T>(doc: T): Uint8Array;
-  load<T>(bytes: Uint8Array): T;
-  getHeads<T>(doc: T): string[];
-}
+import type { Doc } from "@automerge/automerge";
+
+/** The real Automerge module surface — `@automerge/automerge` has been a
+ *  declared dependency since M1 landed, so no structural mirror is needed. */
+export type AutomergeLike = typeof import("@automerge/automerge");
 
 /**
- * The Automerge package specifier as a runtime variable (NOT a string literal
- * inside `import(...)`). WHY: the package is not yet declared as a dependency of
- * @weavesteps/domain (it ships in M1 — see TEST-MAP.md "Missing dependencies"), so
- * a literal specifier makes `tsc` fail to resolve the module even inside a
- * dynamic import. A variable specifier defers resolution to runtime — which only
- * happens when a skipped test is unskipped AND the dependency exists. Replace
- * this indirection with a normal dynamic import once the dep is added.
+ * Dynamically load Automerge. The import stays INSIDE the function body (never
+ * top-level) so the heavy WASM module is not executed on test collection —
+ * helpers are only awaited from inside `it`/property bodies. Fully typed via
+ * the real module: no cast, no drift.
  */
-const AUTOMERGE_PKG = "@automerge/automerge";
-
-/** Dynamically load Automerge (see file header for why this is lazy). */
 export async function loadAutomerge(): Promise<AutomergeLike> {
-  const mod = (await import(AUTOMERGE_PKG)) as unknown as AutomergeLike;
-  return mod;
+  return import("@automerge/automerge");
 }
 
 /** A single mutation a test wants applied to a replica. */
@@ -70,7 +45,7 @@ export type Mutation<T> = (doc: T) => void;
  * base for ANOTHER replica — Automerge 3.x marks a doc "outdated" once it has
  * been changed/merged, so the same base reference can't be mutated twice.
  */
-export async function applyMutations<T>(doc: T, mutations: Mutation<T>[]): Promise<T> {
+export async function applyMutations<T>(doc: Doc<T>, mutations: Mutation<T>[]): Promise<Doc<T>> {
   const A = await loadAutomerge();
   let next = A.clone(doc);
   for (const m of mutations) {
@@ -90,9 +65,9 @@ export async function applyMutations<T>(doc: T, mutations: Mutation<T>[]): Promi
  * byte comparison would spuriously fail here; heads are the right invariant.
  */
 export async function exchangeAndAssertConverged<T>(
-  left: T,
-  right: T,
-): Promise<{ left: T; right: T; converged: T }> {
+  left: Doc<T>,
+  right: Doc<T>,
+): Promise<{ left: Doc<T>; right: Doc<T>; converged: Doc<T> }> {
   const A = await loadAutomerge();
   // Clone each replica before merging — merge marks its local arg outdated, and
   // both `left` and `right` are merged twice (once per direction).
@@ -106,14 +81,14 @@ export async function exchangeAndAssertConverged<T>(
  * Assert that applying `changes` in two different orders converges to the same
  * logical state (commutativity, US-009). `base` is the common ancestor.
  */
-export async function assertCommutative<T>(base: T, changes: Uint8Array[]): Promise<void> {
+export async function assertCommutative<T>(base: Doc<T>, changes: Uint8Array[]): Promise<void> {
   const A = await loadAutomerge();
   // Each fold consumes its accumulator and reuses `base`, so clone `base` per
   // fold (Automerge 3.x: a doc is outdated after applyChanges).
-  const forward = changes.reduce<T>((d, c) => A.applyChanges(d, [c])[0], A.clone(base));
+  const forward = changes.reduce<Doc<T>>((d, c) => A.applyChanges(d, [c])[0], A.clone(base));
   const reversed = [...changes]
     .reverse()
-    .reduce<T>((d, c) => A.applyChanges(d, [c])[0], A.clone(base));
+    .reduce<Doc<T>>((d, c) => A.applyChanges(d, [c])[0], A.clone(base));
   assertHeadsEqual(A, forward, reversed);
 }
 
@@ -121,7 +96,7 @@ export async function assertCommutative<T>(base: T, changes: Uint8Array[]): Prom
  * Assert that applying the SAME change set twice leaves the doc unchanged
  * (idempotence on duplicate delivery — US-009, also the WS-sync invariant US-015).
  */
-export async function assertIdempotent<T>(doc: T, changes: Uint8Array[]): Promise<void> {
+export async function assertIdempotent<T>(doc: Doc<T>, changes: Uint8Array[]): Promise<void> {
   const A = await loadAutomerge();
   const once = A.applyChanges(A.clone(doc), changes)[0];
   const twice = A.applyChanges(once, changes)[0];
@@ -133,7 +108,7 @@ export async function assertIdempotent<T>(doc: T, changes: Uint8Array[]): Promis
  * heads (the set of current change hashes — order-independent). Throws so it
  * works inside fast-check predicates.
  */
-export function assertHeadsEqual<T>(A: AutomergeLike, a: T, b: T): void {
+export function assertHeadsEqual<T>(A: AutomergeLike, a: Doc<T>, b: Doc<T>): void {
   const ha = [...A.getHeads(a)].sort();
   const hb = [...A.getHeads(b)].sort();
   const equal = ha.length === hb.length && ha.every((h, i) => h === hb[i]);

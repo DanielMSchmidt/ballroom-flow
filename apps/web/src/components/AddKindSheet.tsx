@@ -3,6 +3,7 @@ import { isReservedKind, slugifyKind } from "@weavesteps/domain";
 import { useCallback, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { attributesMessages } from "../i18n/messages/attributes";
+import { onSelectValue } from "../lib/select-value";
 import {
   Button,
   CheckIcon,
@@ -51,8 +52,9 @@ function appendValues(list: string[], tokens: string[]): string[] {
  * calls onCreate (an upsert, so it doubles as the edit save).
  *
  * Beyond the core shape it also captures the data-driven RegistryKind fields
- * (#111 / PLAN §3): a one-line `description` + per-value definitions (which power
- * the registry-derived info-sheet, §4.9), and `roleAware`/`required` flags (which
+ * (#111 / docs/concepts/notation.md § Kinds): a one-line `description` + per-value
+ * definitions (which power the registry-derived info-sheet, docs/concepts/collaboration.md),
+ * and `roleAware`/`required` flags (which
  * drive Profile's attribute-types manager affordances, frame 1.17). All optional
  * — a kind left blank simply omits them and degrades gracefully.
  *
@@ -69,6 +71,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
   const editing = initial != null;
   // Stored values ("single"/"enum"/…) are locale-independent; only the labels
   // the user sees are translated.
+  const CARDINALITIES = ["single", "multi"] as const;
   const cardinalityOptions = [
     { value: "single", label: t.cardinalitySingle },
     { value: "multi", label: t.cardinalityMulti },
@@ -239,6 +242,20 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
           required
           error={error?.field === "label" ? error.msg : undefined}
         />
+        {/* Edit mode (wireframe 1.16b): the derived slug is held stable across a
+            rename — attributes reference a kind by slug, so surfacing it (locked)
+            explains why existing data stays linked. */}
+        {editing && (
+          <div className="-mt-1 flex flex-col gap-1">
+            <span
+              className="self-start rounded-[5px] px-1.5 py-0.5 text-2xs font-semibold text-ink-muted"
+              style={{ background: "var(--bf-surface-sunken)" }}
+            >
+              {t.slugLocked(initial.kind)}
+            </span>
+            <p className="text-2xs italic text-ink-faint">{t.slugStableHint}</p>
+          </div>
+        )}
         <Input
           label={t.descriptionField}
           placeholder={t.descriptionPlaceholder}
@@ -282,7 +299,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
           label={t.cardinalityField}
           options={cardinalityOptions}
           value={cardinality}
-          onChange={(e) => setCardinality(e.target.value as "single" | "multi")}
+          onChange={onSelectValue(CARDINALITIES, setCardinality)}
         />
         <Select
           label={t.valueTypeField}

@@ -1,9 +1,9 @@
 import { env, runInDurableObject, SELF } from "cloudflare:test";
 import * as A from "@automerge/automerge";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { uniqueDocName } from "../test-support/do-id";
-import type { DocNamespace } from "../test-support/doc-do-api";
 import { expectIndexedQuery } from "../test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
@@ -28,7 +28,7 @@ async function seedOwnedRoutine(userId: string): Promise<string> {
 
 describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
   let kp2: TestKeypair;
-  const docs2 = env.DOC_DO as unknown as DocNamespace;
+  const docs2 = env.DOC_DO;
 
   beforeAll(async () => {
     await applyMigrations();
@@ -76,25 +76,18 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
     // and crashes on figure docs). Instead, use runInDurableObject to read the raw Automerge
     // doc content directly from the DO's SQLite change log and decode it.
     const stub = docs2.get(docs2.idFromName(figureRef));
-    const attrCount = await runInDurableObject(
-      stub as unknown as DurableObjectStub<import("../doc-do").DocDO>,
-      async (instance) => {
-        // Access ctx via a type assertion — ctx is protected on DurableObject but
-        // accessible at runtime; the cast is safe in this test-only context.
-        const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
-        const rows = doState.storage.sql
-          .exec("SELECT data FROM changes ORDER BY seq")
-          .toArray() as Array<{ data: ArrayBuffer }>;
-        if (rows.length === 0) return 0;
-        // Replay changes to reconstruct the Automerge doc and count attributes.
-        let doc = A.init<Record<string, unknown>>();
-        const changes = rows.map((r) => new Uint8Array(r.data) as A.Change);
-        [doc] = A.applyChanges(doc, changes);
-        const plain = A.toJS(doc) as Record<string, unknown>;
-        const attrs = plain.attributes as Array<unknown> | undefined;
-        return attrs?.length ?? 0;
-      },
-    );
+    const attrCount = await runInDurableObject(stub, async (_instance, state) => {
+      const rows = state.storage.sql
+        .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq")
+        .toArray();
+      if (rows.length === 0) return 0;
+      // Replay changes to reconstruct the Automerge doc and count attributes.
+      let doc = A.init<Record<string, unknown>>();
+      const changes = rows.map((r) => new Uint8Array(r.data));
+      [doc] = A.applyChanges(doc, changes);
+      const attrs = A.toJS(doc).attributes;
+      return Array.isArray(attrs) ? attrs.length : 0;
+    });
     expect(attrCount).toBe(1);
   });
 
@@ -179,7 +172,7 @@ describe("WDSF attr-seed: figure attribute forwarding + validation", () => {
 // test PEM, so the minted tokens verify networklessly.
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 let kp: TestKeypair;
 
 beforeAll(async () => {
@@ -241,6 +234,51 @@ describe("#187 figure-doc projection", () => {
     // Owner elevation now resolves → the fail-closed connect accepts (101, not 403).
     const conn = await tryConnect(figureRef, ctx.authHeaders());
     expect(conn.status).toBe(101);
+  });
+
+  it("allows a SECOND account-figure derived from the SAME base by the same owner (⟳v5 variants; migration 0017)", async () => {
+    // REGRESSION (the reported "toast shows but the step vanishes" bug): editing a
+    // placed CATALOG figure spawns a variant via POST /api/figures, stamped with
+    // `baseFigureRef = global:<dance>:<figureType>`. Re-timing the SAME catalog
+    // figure a second time (another routine, or after a prior variant) minted
+    // another variant with the SAME base. Migration 0010's UNIQUE(ownerId,
+    // forkedFromRef) swallowed the second INSERT → 409 → the client dropped the
+    // edit behind an optimistic toast. Migration 0017 drops that index: a user may
+    // own MANY variants of the same base, so BOTH creates must 201.
+    const base = "global:waltz:running-spin-turn";
+    const ctx = await authedContext({ keypair: kp, userId: "u_mv", docRef: base, role: null });
+    await seedDb({
+      users: [{ id: "u_mv", displayName: "MV", identityColor: "#111", plan: "free" }],
+    });
+    const rt = await seedOwnedRoutine("u_mv");
+
+    const spawnVariant = (figureRef: string) =>
+      SELF.fetch("https://x/api/figures", {
+        method: "POST",
+        headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+        body: JSON.stringify({
+          figureRef,
+          name: "Running Spin Turn",
+          dance: "waltz",
+          figureType: "running-spin-turn",
+          routineId: rt,
+          baseFigureRef: base,
+        }),
+      });
+
+    const firstRef = uniqueDocName("fig_var");
+    const secondRef = uniqueDocName("fig_var");
+    expect((await spawnVariant(firstRef)).status).toBe(201);
+    // Pre-0017 this second create 409'd on the (owner, base) unique index.
+    expect((await spawnVariant(secondRef)).status).toBe(201);
+
+    // Both variants are real, independent, owner-owned rows sharing the one base.
+    const derivatives = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND forkedFromRef = ? AND type = 'account-figure' AND deletedAt IS NULL",
+    )
+      .bind("u_mv", base)
+      .first<{ n: number }>();
+    expect(derivatives?.n).toBe(2);
   });
 
   it("the projection is what UNBLOCKS the connect (owner 403 before, 101 after)", async () => {
@@ -330,7 +368,7 @@ describe("#187 figure-doc projection", () => {
     });
     // The figure is NOT a routine: the routine list (and thus the quota count) excludes it.
     const list = await SELF.fetch("https://x/api/routines", { headers: ctx.authHeaders() });
-    const { routines } = (await list.json()) as { routines: Array<{ docRef: string }> };
+    const { routines } = zRoutineList.parse(await list.json());
     expect(routines.some((r) => r.docRef === figureRef)).toBe(false);
   });
 
@@ -384,8 +422,20 @@ async function unsaveFromLibrary(
 
 async function mineDocRefs(headers: Record<string, string>): Promise<string[]> {
   const res = await SELF.fetch("https://x/api/figures/mine", { headers });
-  const { figures } = (await res.json()) as { figures: Array<{ docRef: string }> };
+  const { figures } = await res.json<{ figures: Array<{ docRef: string }> }>();
   return figures.map((f) => f.docRef);
+}
+
+/**
+ * WEP-0002 phase 3 (docs/system/architecture.md § D1 — the index & projections):
+ * save/un-save now write THROUGH the user's account DO, and the
+ * DO alarm is the single writer of the `library_entry` D1 projection `/mine` reads.
+ * Drive that alarm so a test can assert the projected rows synchronously (in prod
+ * the alarm fires shortly after the edit off the request path).
+ */
+async function runAccountAlarm(userId: string): Promise<void> {
+  const stub = env.DOC_DO.get(env.DOC_DO.idFromName(`account:${userId}`));
+  await stub.runAlarmForTest();
 }
 
 describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, legacy triple)", () => {
@@ -397,8 +447,10 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
 
     const res = await saveToLibrary(ctx.authHeaders(), NAT_TURN);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { alreadySaved: boolean };
+    const body = await res.json<{ alreadySaved: boolean }>();
     expect(body.alreadySaved).toBe(false);
+    // The bookmark now lands in the account doc; the alarm projects library_entry.
+    await runAccountAlarm("u_save");
 
     // NO account-figure doc/registry row was created for this bookmark.
     const row = await env.DB.prepare("SELECT docRef FROM document_registry WHERE forkedFromRef = ?")
@@ -416,9 +468,9 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
 
     // It surfaces in "mine" resolved from the bundled catalog (no D1 registry row).
     const mine = await SELF.fetch("https://x/api/figures/mine", { headers: ctx.authHeaders() });
-    const { figures } = (await mine.json()) as {
+    const { figures } = await mine.json<{
       figures: Array<{ docRef: string; title: string | null; baseFigureRef: string | null }>;
-    };
+    }>();
     const saved = figures.find((f) => f.docRef === NAT_TURN_REF);
     expect(saved).toMatchObject({
       docRef: NAT_TURN_REF,
@@ -482,6 +534,9 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
     });
     await saveToLibrary(a.authHeaders(), NAT_TURN);
     await saveToLibrary(b.authHeaders(), NAT_TURN);
+    // Each user's account-doc alarm projects their own library_entry row.
+    await runAccountAlarm("u_a");
+    await runAccountAlarm("u_b");
 
     // ONE shared figureRef, TWO independent LibraryEntry rows (one per user). D1
     // is SHARED across the whole worker test run (isolatedStorage: false, per
@@ -513,6 +568,7 @@ describe("v5 library bookmark — POST /api/figures/save-to-library (catalog, le
     ]);
     expect(r1.status).toBe(200);
     expect(r2.status).toBe(200);
+    await runAccountAlarm("u_race");
 
     const cnt = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM library_entry WHERE userId = 'u_race' AND figureRef = 'global:waltz:reverse-turn' AND deletedAt IS NULL",
@@ -547,6 +603,9 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
     const res = await saveToLibrary(ctx.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ alreadySaved: false });
+    // The bookmark lands in the account doc; /mine reads the alarm-projected
+    // library_entry row, so drive the alarm before asserting (WEP-0002).
+    await runAccountAlarm("u_own");
     expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
   });
 
@@ -590,7 +649,7 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
   });
 
   it("bookmarking works via the ROUTINE CASCADE — a co-member can bookmark a figure they don't own", async () => {
-    // PLAN §5.1 cascade: a routine member's role extends to the figures that
+    // docs/concepts/collaboration.md § Roles cascade: a routine member's role extends to the figures that
     // routine references — resolveEffectiveRole resolves non-null for the
     // co-member too, so they CAN bookmark a partner's shared-choreo figure.
     const owner = await authedContext({ keypair: kp, userId: "u_co1", docRef: "x", role: null });
@@ -621,6 +680,12 @@ describe("v5 library bookmark — direct { figureRef } (account/choreo-local fig
 
     const res = await saveToLibrary(partner.authHeaders(), { figureRef });
     expect(res.status).toBe(200);
+    // /mine reads the alarm-projected library_entry row — drive the partner's
+    // account-doc alarm before asserting (WEP-0002). The owner's alarm runs too,
+    // so the not-bookmarked assertion below checks a projected list, not a
+    // vacuously empty one.
+    await runAccountAlarm("u_co2");
+    await runAccountAlarm("u_co1");
     expect(await mineDocRefs(partner.authHeaders())).toContain(figureRef);
     // The owner's own library is untouched by the partner's bookmark.
     expect(await mineDocRefs(owner.authHeaders())).not.toContain(figureRef);
@@ -656,10 +721,12 @@ describe("v5 library un-bookmark — DELETE /api/figures/save-to-library", () =>
       }),
     });
     await saveToLibrary(ctx.authHeaders(), { figureRef });
+    await runAccountAlarm("u_un");
     expect(await mineDocRefs(ctx.authHeaders())).toContain(figureRef);
 
     const del = await unsaveFromLibrary(ctx.authHeaders(), figureRef);
     expect(del.status).toBe(200);
+    await runAccountAlarm("u_un");
     expect(await mineDocRefs(ctx.authHeaders())).not.toContain(figureRef);
 
     // The figure doc's registry row + its routine placement edge survive —
@@ -689,8 +756,11 @@ describe("v5 library un-bookmark — DELETE /api/figures/save-to-library", () =>
     });
     await saveToLibrary(a.authHeaders(), NAT_TURN);
     await saveToLibrary(b.authHeaders(), NAT_TURN);
+    await runAccountAlarm("u_del_a");
+    await runAccountAlarm("u_del_b");
 
     await unsaveFromLibrary(a.authHeaders(), NAT_TURN_REF);
+    await runAccountAlarm("u_del_a");
     expect(await mineDocRefs(a.authHeaders())).not.toContain(NAT_TURN_REF);
     expect(await mineDocRefs(b.authHeaders())).toContain(NAT_TURN_REF);
   });

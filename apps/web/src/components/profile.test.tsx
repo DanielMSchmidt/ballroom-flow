@@ -7,7 +7,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // US-053 — Account / profile + plan status [M3, user]
 // US-038 — Per-user undo / redo UX [M5, user] (toast surface)
 //
-// PLAN §4.8, §4.9, §10.2 component layer: profile (plan/owned count); toasts
+// docs/concepts/collaboration.md, docs/system/testing.md component layer:
+// profile (plan/owned count); toasts
 // incl. "Undone". Built by the frontend agent → dynamic import behind it.skip.
 // (Two-client undo convergence is the E2E test; here we pin the UI surface.)
 // ─────────────────────────────────────────────────────────────────────────
@@ -106,9 +107,10 @@ describe("T7 Profile design parity (frame 4.1)", () => {
 // and any custom (choreo-scoped) kinds, with a "＋ new type" affordance.
 // ─────────────────────────────────────────────────────────────────────────
 describe("T4 Profile attribute-types manager (frame 1.17)", () => {
-  const headKind = {
-    kind: "head",
-    label: "Head",
+  // `head` is a reserved builtin slug since the WDSF charting — use a custom slug.
+  const energyKind = {
+    kind: "energy",
+    label: "Energy",
     color: "#4a9d9a",
     cardinality: "single" as const,
     valueType: "enum",
@@ -118,7 +120,7 @@ describe("T4 Profile attribute-types manager (frame 1.17)", () => {
 
   it("keeps the identity area AND lists standard + custom attribute types", async () => {
     const { Profile } = await importComponent<ProfileModule>("../components/Profile");
-    renderUi(<Profile plan="free" ownedRoutineCount={0} customKinds={[headKind]} />);
+    renderUi(<Profile plan="free" ownedRoutineCount={0} customKinds={[energyKind]} />);
     // The identity area is still present (not clobbered).
     expect(screen.getByText(/profile colour/i)).toBeInTheDocument();
     // The new manager section.
@@ -128,7 +130,7 @@ describe("T4 Profile attribute-types manager (frame 1.17)", () => {
     expect(screen.getByText("Position")).toBeInTheDocument();
     expect(screen.getAllByText(/standard/i).length).toBeGreaterThan(0);
     // The custom kind is listed and marked as choreo-scoped.
-    expect(screen.getByText("Head")).toBeInTheDocument();
+    expect(screen.getByText("Energy")).toBeInTheDocument();
     expect(screen.getByText(/this choreo/i)).toBeInTheDocument();
   });
 
@@ -182,4 +184,5 @@ describe("D7 Quota status in Profile (design 1.18)", () => {
 // the Profile — so the component coverage is in `assemble.test.tsx` (describe
 // "US-038 Per-user undo / redo UX"). The two-client "only my change reverts;
 // redo restores" proof is the E2E test (`undo.spec.ts`). AC-3 (the soft
-// "superseded" hint) is deferred — see PLAN.md §5.4 (US-038).
+// "superseded" hint) is deferred — see docs/concepts/collaboration.md § Undo
+// (US-038).

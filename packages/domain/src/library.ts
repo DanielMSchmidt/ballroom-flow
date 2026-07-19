@@ -8,9 +8,8 @@
 // Picking a preset seeds an owned figure with this canonical name + figureType —
 // the cross-routine identity that later enables figure-level features;
 // notation is then entered on the timeline (US-028).
-import type { DanceId } from "./dances";
-import type { Alignment, Attribute } from "./doc-types";
-import { authoredAlignment } from "./figure-steps";
+import { type DanceId, isDanceId } from "./dances";
+import type { Attribute } from "./doc-types";
 import { LIBRARY_FIGURE_DATA } from "./library-data";
 import { buildWdsfAttributes } from "./wdsf-timing";
 
@@ -25,10 +24,6 @@ export interface LibraryFigure {
   notes?: string[];
   /** Per-step timeline parsed from the WDSF timing + start/finish actions. */
   attributes?: Attribute[];
-  /** Figure-level entry alignment (per-figure, leader's perspective), where charted. */
-  entryAlignment?: Alignment;
-  /** Figure-level exit alignment (per-figure, leader's perspective), where charted. */
-  exitAlignment?: Alignment;
 }
 
 /** A figureType family within one dance (for the grouped library browse). */
@@ -39,14 +34,11 @@ export interface LibraryGroup {
 
 /** The whole catalog. WDSF-enriched figures carry a parsed `attributes` timeline. */
 export const LIBRARY_FIGURES: readonly LibraryFigure[] = LIBRARY_FIGURE_DATA.map((d) => {
-  const align = authoredAlignment(d.dance, d.figureType);
   if (!d.timing) {
     return {
       dance: d.dance,
       figureType: d.figureType,
       name: d.name,
-      ...(align?.entry && { entryAlignment: align.entry }),
-      ...(align?.exit && { exitAlignment: align.exit }),
     };
   }
   return {
@@ -62,8 +54,6 @@ export const LIBRARY_FIGURES: readonly LibraryFigure[] = LIBRARY_FIGURE_DATA.map
       start: d.start,
       finish: d.finish,
     }),
-    ...(align?.entry && { entryAlignment: align.entry }),
-    ...(align?.exit && { exitAlignment: align.exit }),
   };
 });
 
@@ -88,7 +78,7 @@ export function libraryGroupsForDance(dance: DanceId): LibraryGroup[] {
 }
 
 /**
- * The canonical provenance ref for a global-catalog figure (T5 / PLAN §5.2). A
+ * The canonical provenance ref for a global-catalog figure (T5 / docs/concepts/figures.md § Variants). A
  * bundled catalog figure has no Automerge URL of its own (it's reference data, not
  * a DO), so the cross-dance identity `(dance × figureType)` is its stable id.
  * ⟳v5: this is now also a directly BOOKMARKABLE ref — "add to my library" on an
@@ -113,8 +103,10 @@ export function parseGlobalFigureRef(ref: string): { dance: DanceId; figureType:
   if (sep === -1) return null;
   const dance = rest.slice(0, sep);
   const figureType = rest.slice(sep + 1);
-  if (!dance || !figureType) return null;
-  return { dance: dance as DanceId, figureType };
+  // Validate the dance segment instead of trusting it — a `global:bogus:x` ref must
+  // return null, not a `FigureDoc` with an invalid `dance` (CLAUDE.md §4).
+  if (!isDanceId(dance) || !figureType) return null;
+  return { dance, figureType };
 }
 
 /**
@@ -156,6 +148,47 @@ export function libraryGroupsForFilter(filter: DanceId | "all"): LibraryGroup[] 
 const attrKey = (a: Attribute): string =>
   `${a.kind}|${a.count}|${a.role ?? ""}|${JSON.stringify(a.value)}`;
 
+/** The catalog entry a figure's (dance, figureType, name) identity resolves to,
+ *  or undefined for a from-scratch custom. */
+function libraryOriginOf(figure: {
+  dance: DanceId;
+  figureType: string;
+  name: string;
+}): LibraryFigure | undefined {
+  return LIBRARY_FIGURES.find(
+    (l) => l.dance === figure.dance && l.figureType === figure.figureType && l.name === figure.name,
+  );
+}
+
+/**
+ * True when the figure carries a catalog identity at all — the same (dance,
+ * figureType, name) lookup {@link figureMatchesLibraryOrigin} uses, WITHOUT the
+ * content comparison. Distinguishes a library-derived figure (it has an origin
+ * it can be "adjusted" away from) from a from-scratch custom (no origin —
+ * nothing was ever adjusted). Drives the editor's identity-reassurance chip.
+ */
+export function figureHasLibraryOrigin(figure: {
+  dance: DanceId;
+  figureType: string;
+  name: string;
+}): boolean {
+  return libraryOriginOf(figure) !== undefined;
+}
+
+/**
+ * True when `figureType` names a real catalog family — i.e. a `figureType` family
+ * note authored against it would have siblings to surface on. Family matching is
+ * purely figureType-based ({@link matchesFigureType} in figuretype.ts), so this is
+ * a figureType-only membership check. A from-scratch custom figure carries a
+ * slugged figureType that names no catalog family (nothing shares it), so the
+ * journal link picker gates the family-scope options behind this: with no family
+ * there is nothing to pin a family note to, and the note falls through to a
+ * this-choreo annotation.
+ */
+export function figureTypeHasCatalogFamily(figureType: string): boolean {
+  return figureType !== "" && LIBRARY_FIGURES.some((f) => f.figureType === figureType);
+}
+
 /**
  * True when a placed figure still matches the library figure it was picked from — same
  * (dance, figureType, name) AND the same live attributes. Used to decide whether a figure is
@@ -169,9 +202,7 @@ export function figureMatchesLibraryOrigin(figure: {
   name: string;
   attributes: Attribute[];
 }): boolean {
-  const origin = LIBRARY_FIGURES.find(
-    (l) => l.dance === figure.dance && l.figureType === figure.figureType && l.name === figure.name,
-  );
+  const origin = libraryOriginOf(figure);
   if (!origin) return false;
   const live = figure.attributes
     .filter((a) => a.deletedAt == null)

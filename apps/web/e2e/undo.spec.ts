@@ -4,8 +4,8 @@ import { resetDb, seedDb } from "./support/fixtures";
 import { closeUsers, expectConverged, openTwoUsers } from "./support/two-users";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Per-user undo across two clients (PLAN §10.2 E2E: "per-user undo across two
-// clients"). Covers US-038 (undo reverts only YOUR change; the other client's
+// Per-user undo across two clients (docs/system/testing.md § Layer ownership:
+// "per-user undo across two clients"). Covers US-038 (undo reverts only YOUR change; the other client's
 // concurrent edit survives; redo). The domain primitive (history-based per-actor
 // undo, US-010) is proven in packages/domain; this proves it end-to-end through
 // the store seam + live sync, in two real browsers.
@@ -93,7 +93,8 @@ test.describe("@smoke per-user undo across two clients", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Figure-editor undo — "undo follows the surface being edited" (PLAN §5.4). The
+// Figure-editor undo — "undo follows the surface being edited"
+// (docs/concepts/collaboration.md § Undo). The
 // full-screen figure editor auto-saves with no Save button; its honesty rests on
 // an undo existing THERE, targeting the figure's OWN doc (store.undoFigure). This
 // drives the real journey: open the editor → set an attribute → undo → the cell
@@ -112,30 +113,36 @@ test.describe("@smoke figure-editor undo (targets the figure doc, §5.4)", () =>
     });
     await seedAuth(page, user);
 
-    // Create a routine → a section → a NON-catalog custom figure (an empty figure
-    // to notate by hand; a catalog name would arrive pre-filled and spawn a variant).
+    // Create a routine → a section → a typed custom figure (an empty figure to
+    // notate by hand; typed names always mint a custom — §4.3).
     const docRef = await createRoutineAsOwner(page, "Undo Figure Waltz");
     expect(docRef).toBeTruthy();
     await addSection(page, "Steps");
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's full-screen editor and set a single attribute at count 1:
-    // tap the Step cell → the overlay → DIRECTION "Forward" → Save (closes overlay).
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    // Creating the custom figure opens its full-screen editor immediately
+    // (create-navigates, §4.3). Set a single attribute at count 1: tap the Step
+    // cell → the overlay → DIRECTION "Forward" → Done (closes overlay).
     const editor = page.getByRole("dialog", { name: /steps · my step/i });
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    await expect(editor).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     // The edit landed: count 1 now carries the "forward" headline.
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i, { timeout: 15_000 });
 
     // Undo from the EDITOR HEADER (scoped to the dialog so it's the figure's undo,
-    // not the routine toolbar's) → "Undone" toast, and count 1 empties again (§5.4).
+    // not the routine toolbar's) → "Undone" toast (§5.4). The notate flow was TWO
+    // changes (Builder v3 ②: the quick-added blank step, then the Forward pick),
+    // so the first undo reverts the pick and a second removes the blank step —
+    // count 1 empties again.
     await editor.getByRole("button", { name: /^undo$/i }).click();
     await expect(page.getByText(/^undone$/i)).toBeVisible();
+    await editor.getByRole("button", { name: /^undo$/i }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveCount(0, { timeout: 15_000 });
   });
 });

@@ -136,10 +136,12 @@ deployed production auth fails closed. Staging is live and sign-in works.
 
 ## 4. D1 migrations (`apps/worker/migrations/`)
 
-**15 migrations exist as of 2026-07-02, HEAD `c9622c9`** (`0001_d1_index.sql` …
-`0014_admin.sql` — the D31 `isAdmin`/`routineCapOverride` columns — and
-`0015_library_entry.sql` — the per-user library-bookmark projection).
-Ignore DEVELOPMENT.md's "migrations dir is empty until M2" — stale.
+**17 migrations exist as of 2026-07-13** (`0001_d1_index.sql` …
+`0014_admin.sql` — the D31 `isAdmin`/`routineCapOverride` columns —
+`0015_library_entry.sql` — the per-user library-bookmark projection —
+`0016_app_meta.sql`, and `0017_drop_account_figure_base_idx.sql` — dropping the
+"one derivative per base" index so a user can own many variants of one base).
+DEVELOPMENT.md's "migrations dir is empty until M2" was stale and has been fixed.
 
 Where they get applied (three places, same files):
 
@@ -206,24 +208,53 @@ drifted (someone hand-edited the output, or the generator changed) — treat as 
 
 ## 6. Screenshot pipeline & nightly matrix
 
-### Screenshot bot (`.github/workflows/screenshots.yml`)
+### Screenshot comparison (`.github/workflows/ci.yml`, the `screenshots` job)
 
-Regenerates the committed landing-page marketing screenshots on PRs into `development`,
-auto-commits them to the PR branch, and upserts a before/after comment.
+Renders the landing-page marketing screenshots fresh from the PR's code, pixel-diffs
+them against the base branch's committed images, and upserts a **before / after** PR
+comment with both inline. **It does NOT commit the rendered images back to the PR
+branch** — that is the deliberate change (2026-07-14) from the old standalone
+`screenshots.yml`, whose bot commit carried `[skip ci]` and became the PR HEAD with no CI on
+it, so a red PR could show no failing checks on its HEAD. With no bot commit there is exactly
+one commit per push and the fast-gate/full-e2e always run on the PR's real HEAD. The committed
+landing PNGs (`apps/web/src/marketing/screenshots/`, bundled into the SPA by `Landing.tsx`)
+are updated by hand: regenerate locally with `pnpm --filter web screenshots` and commit when
+you intentionally change that UI; the PR comment surfaces any drift.
 
-- **Trigger:** `pull_request` path-filtered to `apps/web/**`, `apps/worker/**`,
-  `packages/**`, the workflow itself, and `scripts/screenshot-diff.mjs`; plus
-  `workflow_dispatch`. Excluded from the smoke critical path.
+To inline the after image **without a commit** (a comment can only embed an image it can fetch
+by URL — GitHub strips `data:` URIs), the job hosts those PNGs as assets on a dedicated
+`ci-screenshots` **prerelease** and links their `releases/download/…` URLs. A release tag
+points at an existing commit, so this adds no git history and never touches the PR HEAD — the
+no-bot-commit guarantee holds. It needs `contents: write` (release create + asset upload).
+Assets are namespaced `pr-<n>-<headSha>-<key>.after.png` (the head SHA busts GitHub's camo
+image cache); stale per-PR assets are pruned on each push and, on PR close, by
+`.github/workflows/screenshot-cleanup.yml`. The "before" column stays a `raw.githubusercontent`
+URL at the base SHA (it is committed).
+
+- **Trigger:** part of `ci.yml` (`pull_request` + `workflow_dispatch`). The heavy steps
+  are step-level path-filtered (a `git diff` against the merge-base for `apps/web/**`,
+  `apps/worker/**`, `packages/**`, `scripts/screenshot-diff.mjs`), so doc-only PRs skip
+  them. Informational: the job never gates the merge and runs independently of fast-gate.
 - **Journey:** `pnpm --filter web screenshots` =
   `playwright test --grep @screenshots --project=chromium-desktop` — a deterministic
   E2E journey (`apps/web/e2e/screenshots.spec.ts`, tagged `@screenshots`, deliberately
   NOT `@smoke`) that drives the real app via the e2e harness and captures
-  `apps/web/src/marketing/screenshots/`.
-- **Loop guard:** skips when HEAD's author is `screenshot-bot` or the subject contains
-  `[skip ci]` (the bot commits as `chore(screenshots): regenerate landing imagery [skip ci]`).
-- **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> <headSha>`
-  pixel-diffs (pixelmatch, threshold 0.1) against the PR base and writes
-  `screenshot-comment.md`, upserted under the `<!-- screenshot-bot -->` marker.
+  `apps/web/src/marketing/screenshots/` into the workspace.
+- **Diff comment:** `node scripts/screenshot-diff.mjs <baseSha> <owner> <repo> [artifactUrl]`
+  pixel-diffs (pixelmatch, threshold 0.1) the freshly-rendered images against the PR base's
+  committed ones and writes `screenshot-comment.md`, upserted under the `<!-- screenshot-bot -->`
+  marker. It stages the after PNGs into `screenshot-artifacts/` under their exact
+  release-asset names (`$SCREENSHOT_ASSET_PREFIX<key>.after.png`) so the workflow's
+  upload step can dumb-upload each by basename; the two env vars `SCREENSHOT_ASSET_PREFIX` +
+  `SCREENSHOT_ASSET_URL_BASE` (set by CI) also tell the script the `releases/download/…` URLs
+  to inline. Absent those env vars (a local run) it falls back to a before-only comment with an
+  artifact link. The staged PNGs are also uploaded as the `screenshots` run artifact (a durable
+  full-res copy, independent of release-asset pruning).
+
+> **Note:** `.github/workflows/video.yml` still uses the old auto-commit + `[skip ci]`
+> bot-push pattern for the explainer MP4, so it still carries the same HEAD-with-no-CI
+> footgun. Left as-is (an MP4 can't be inlined in a comment, though the same release-asset
+> trick could host a poster/preview); revisit if it bites.
 
 **`scripts/screenshot-diff.mjs` is CI-only** — its `main()` needs PR context (base SHA,
 repo coordinates) and git history. Don't run it locally expecting useful output; the pure
@@ -236,7 +267,8 @@ a vitest import; known orphan).
 Cron `0 5 * * *` UTC + `workflow_dispatch`. Runs the **full 3-project Playwright matrix**
 (chromium-desktop, mobile-chrome/Pixel 7, mobile-safari/iPhone 14 — installs chromium +
 webkit) against the real e2e harness, uploads the Playwright report artifact (7 days),
-plus a Lighthouse **stub** job (real budgets are M9, PLAN §7). This is the "full" gate;
+plus a Lighthouse **stub** job (real budgets are M9, formerly PLAN §7, now
+`docs/system/architecture.md` § Non-functional requirements). This is the "full" gate;
 PRs only run `@smoke` chromium.
 
 ---
@@ -246,7 +278,7 @@ PRs only run `@smoke` chromium.
 Things done by an operator (Cloudflare/Clerk dashboards, `wrangler` CLI, direct D1
 statements) rather than through app UI.
 
-### Admin seams — SHIPPED (PR #137, migration 0014; PLAN §9 step 6 ✅)
+### Admin seams — SHIPPED (PR #137, migration 0014; v5 milestone step 6 ✅, formerly PLAN §9)
 
 v1 admin is two columns on `users` (D31, `0014_admin.sql`, in `db/schema.ts`):
 
@@ -271,17 +303,12 @@ pnpm exec wrangler d1 execute DB --env staging --remote \
 ```
 
 **Elevation** (`account → global` re-scope, same docRef so placements survive) likewise
-remains ops-driven, admin-approved (queue UI is v1.1, PLAN §11).
+remains ops-driven, admin-approved (queue UI is v1.1, formerly PLAN §11, now tracked as a
+research-frontier item — see **ballroom-flow-research-frontier**).
 
-### Seeding the global figure catalog — admin-only route (PR #137, D30)
+### Seeding the global figure catalog — self-healing (PR #137, D30 ⟳2026-07-07)
 
-`POST /api/admin/seed-global-figures` (caller must be `isAdmin`; non-admin → 403) imports
-the bundled catalog into **real, admin-owned global figure docs** via `seedGlobalFigures`
-(`apps/worker/src/seed-global-figures.ts`). **Additive + idempotent** (D30): re-running only
-creates missing figures — an existing doc is never overwritten, so admin in-app edits are
-safe from a re-seed. Response reports `{ ok, created, skipped }`. This is the per-environment
-ops action that stands up the catalog (staging/production) until the admin UI lands; seed
-semantics live in **ballroom-flow-figure-data-pipeline** §7.
+**Global-figure seeding is SELF-HEALING (D30 ⟳2026-07-07)** — no ops action. `ensureGlobalFigures` (`apps/worker/src/seed-global-figures.ts`) runs fire-and-forget on the `/api/*` seam of deployed envs (wrangler.toml `SELF_SEED="1"` on staging/production; unit/E2E harnesses carry no var). It is hash-guarded by an `app_meta` row: when the bundled catalog content changes (a deploy), the next API request reconciles every seeded doc to the seed (seeded `fig-`/`wdsf-` attribute ids updated/added/tombstoned; user-added ULID attributes and variant-owned beats preserved). The former admin route `POST /api/admin/seed-global-figures` is REMOVED. Local `wrangler dev` does not self-seed (no var); the store's bundled-catalog fallback renders figures regardless
 
 ### Sample/template self-healing — no ops action needed
 
@@ -311,18 +338,22 @@ member names, D1 creation) lives in `PROVISIONING.md` — follow it, don't impro
 
 Verified 2026-07-02 against repo HEAD `70eed7e`; **admin/migrations sections refreshed
 2026-07-02 — verified at HEAD `c9622c9`** (PR #137: migration 0014 + admin route; PR #136:
-migration 0015) on `development`, by reading:
+migration 0015) on `development` (the trunk at the time — merged into `main` and deleted
+from the remote 2026-07-05, PR #161), by reading:
 `apps/worker/wrangler.toml` (all four envs, D1 ids, committed e2e PEM, dist-e2e comment),
 `.github/workflows/deploy.yml` / `screenshots.yml` / `nightly.yml`, `apps/web/e2e/serve.sh`,
 commit `e71d06d` (the staging auth-bypass incident, full message), root + worker
 `package.json`, `apps/web/vite.config.ts` (:8787 proxy), `apps/web/src/main.tsx`
 (Clerk-key notice), `apps/worker/drizzle.config.ts`, the 15 files in
 `apps/worker/migrations/` (hand-written SQL, no drizzle `meta/`; 0014/0015 read in full),
-`apps/worker/src/db/admin.ts` + `src/seed-global-figures.ts` + the `/api/me` and
-`/api/admin/seed-global-figures` routes, `apps/worker/src/sample.ts`
+`apps/worker/src/db/admin.ts` + `src/seed-global-figures.ts` + the `/api/me` route,
+`apps/worker/src/sample.ts`
 + `src/index.ts` `ensureSample`, `scripts/gen-library.mjs` / `gen-figure-charts.mjs`
 (both executed earlier this cycle: 204 figures / 147 charts, clean diff), `PROVISIONING.md`
-(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅).
+(production `CLERK_SECRET_KEY` ⬜ TODO), and `docs/PLAN.md` D31/§9 step 6 (✅) — that document
+was dissolved 2026-07-15 into `docs/README.md` + `docs/concepts/` + `docs/system/`; D31 now
+lives in `docs/system/architecture.md` § Non-functional requirements area / the admin seams
+described above (see `docs/README.md` § For historians for the full citation map).
 
 Re-verify drift with:
 
@@ -332,6 +363,6 @@ grep -n "wrangler d1 migrations apply\|wrangler deploy" .github/workflows/deploy
 ls apps/worker/migrations/                                       # migration count (15)
 node scripts/gen-library.mjs && node scripts/gen-figure-charts.mjs && git diff --stat  # counts + determinism
 grep -n "isAdmin\|routineCapOverride" apps/worker/src/db/schema.ts   # admin columns present
-grep -n "seed-global-figures" apps/worker/src/index.ts           # admin seeder route present
+grep -n "ensureGlobalFigures" apps/worker/src/index.ts           # self-healing seed armed on /api/*
 grep -n "CLERK_SECRET_KEY" PROVISIONING.md                       # production secret still TODO?
 ```

@@ -1,4 +1,5 @@
-// US-005 — Document-graph types (PLAN §2.2–2.6).
+// US-005 — Document-graph types (docs/concepts/choreography.md, docs/concepts/figures.md,
+// docs/concepts/notation.md, docs/concepts/annotations.md).
 //
 // The logical shapes of the Automerge document graph: a routine doc (sections →
 // placements + annotations) and a figure doc (metadata + a float-count attribute
@@ -8,6 +9,12 @@
 // Every entity carries an optional `deletedAt` tombstone — removal is ALWAYS a
 // mergeable flip, never a hard delete (§2.1), so a concurrent edit on a deleted
 // entity still merges cleanly and the deletion is itself a CRDT value.
+//
+// These are `type` aliases, NOT `interface`s, on purpose: an object-literal type
+// alias gets an implicit index signature and therefore satisfies Automerge's
+// `from<T extends Record<string, unknown>>` constraint directly — an interface
+// does not, and forces a cast at every doc-build site (CLAUDE.md §4). Don't
+// convert them back.
 import type { DanceId } from "./dances";
 import type { RegistryKind } from "./vocabulary";
 
@@ -19,7 +26,7 @@ export type DocScope = "global" | "account";
 export type FigureSource = "library" | "custom";
 
 /** An attribute placed on a figure's float-count timeline (§2.5). */
-export interface Attribute {
+export type Attribute = {
   id: string;
   kind: string;
   /** Float count relative to figure start; fraction → e/&/a (US-004). */
@@ -27,15 +34,10 @@ export interface Attribute {
   role?: Role;
   value: unknown;
   deletedAt?: number | null;
-}
-
-export interface Alignment {
-  qualifier: "facing" | "backing" | "pointing";
-  direction: "LOD" | "ALOD" | "wall" | "centre" | "DW" | "DC" | "DW_against" | "DC_against";
-}
+};
 
 /** A figure document — global library entry or account variant/custom (§2.2). */
-export interface FigureDoc {
+export type FigureDoc = {
   id: string;
   scope: DocScope;
   ownerId: string;
@@ -43,14 +45,20 @@ export interface FigureDoc {
   dance: DanceId;
   name: string;
   source: FigureSource;
-  entryAlignment?: Alignment;
-  exitAlignment?: Alignment;
   /**
-   * The figure's length in musical bars (§2.5). Authored explicitly — chosen on
-   * creation and adjustable in the editor — and drives the editor's timing grid
-   * (every bar → beat → e/&/a slot). Optional for lenient reads of pre-bars docs;
-   * `resolveFigureBars` falls back to `defaultFigureBars` (⌈whole-beat steps ÷
-   * beatsPerBar⌉) when absent, so a legacy figure still renders a full grid.
+   * The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①,
+   * 2026-07-07): chosen on creation and adjustable in the editor's LENGTH
+   * stepper, it drives the timing grid (every count → e/&/a slot) and every
+   * derived bar display (`resolveFigureBars` = ⌈counts / beatsPerBar⌉).
+   * Optional for lenient reads of pre-v5 docs, which authored `bars` instead —
+   * `resolveFigureCounts` reads `bars × beatsPerBar` for those until the v4→v5
+   * migration converts them in storage.
+   */
+  counts?: number;
+  /**
+   * LEGACY (pre-v5): the figure's authored length in whole bars. Superseded by
+   * `counts` (the v4→v5 migration converts + drops this); kept optional so a
+   * not-yet-migrated doc still reads leniently. Never write this field.
    */
   bars?: number;
   attributes: Attribute[];
@@ -65,9 +73,9 @@ export interface FigureDoc {
   baseFigureRef?: string | null;
   schemaVersion: number;
   deletedAt?: number | null;
-}
+};
 
-export interface Placement {
+export type Placement = {
   id: string;
   /**
    * The figure this placement references. Present for a normal figure placement;
@@ -83,7 +91,15 @@ export interface Placement {
   source?: "break";
   /** A break's duration in whole beats (`source === "break"` only; min 1). */
   beats?: number;
-  perPlacementAlignment?: Alignment;
+  /**
+   * Portion window (Builder v3 ③, 2026-07-07): dance only counts
+   * [fromCount, toCount] of the referenced figure. The figure doc stays whole
+   * and LIVE — reads window the resolved timeline (`windowAttributes`), a
+   * catalog edit inside the window flows in, and the placement's bar
+   * contribution is the window's whole-beat span (`partBeatSpan`). Absent →
+   * the whole figure.
+   */
+  part?: { fromCount: number; toCount: number } | null;
   /**
    * Fractional-index ordering key (#63, §5.3). Reads order placements by this;
    * reorder sets it between the new neighbours (no remove-and-reinsert). Optional
@@ -92,33 +108,44 @@ export interface Placement {
    */
   sortKey?: string;
   deletedAt?: number | null;
-}
+};
 
-export interface Section {
+export type Section = {
   id: string;
   name: string;
   placements: Placement[];
   /** Fractional-index ordering key (#63, §5.3) — see {@link Placement.sortKey}. */
   sortKey?: string;
   deletedAt?: number | null;
-}
+};
 
 export type AnnotationKind = "note" | "lesson" | "practice";
 
 export type Anchor =
   | { type: "point"; figureRef: string; count: number; role?: Role }
   | { type: "figure"; figureRef: string }
-  | { type: "figureType"; figureType: FigureType; danceScope: DanceId | "all" };
+  | {
+      type: "figureType";
+      figureType: FigureType;
+      danceScope: DanceId | "all";
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors): pin the note to one
+       *  count of every matching figure. Only
+       *  valid with a CONCRETE danceScope — counts don't align across dances
+       *  (zAnchor enforces this; absent = the whole figure, the v1 shape). */
+      count?: number;
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors): narrow a timed note to one side (absent/null = both). */
+      role?: Role;
+    };
 
-export interface Reply {
+export type Reply = {
   id: string;
   authorId: string;
   text: string;
   createdAt: number;
   deletedAt?: number | null;
-}
+};
 
-export interface Annotation {
+export type Annotation = {
   id: string;
   authorId: string;
   kind: AnnotationKind;
@@ -128,7 +155,7 @@ export interface Annotation {
   replies: Reply[];
   createdAt: number;
   deletedAt?: number | null;
-}
+};
 
 /**
  * A per-user account document (US-040). Holds the user's figure-FAMILY notes
@@ -136,7 +163,7 @@ export interface Annotation {
  * the same per-document DO machinery (DO name `account:<userId>`); its alarm
  * projects a content-free index row per family note to D1 (US-041).
  */
-export interface AccountDoc {
+export type AccountDoc = {
   id: string;
   ownerId: string;
   annotations: Annotation[];
@@ -153,10 +180,10 @@ export interface AccountDoc {
   libraryFigureRefs?: string[];
   schemaVersion: number;
   deletedAt?: number | null;
-}
+};
 
 /** A routine document — sections → placements + routine-scoped annotations. */
-export interface RoutineDoc {
+export type RoutineDoc = {
   id: string;
   title: string;
   dance: DanceId;
@@ -168,13 +195,13 @@ export interface RoutineDoc {
   customKinds?: RegistryKind[];
   schemaVersion: number;
   deletedAt?: number | null;
-}
+};
 
 /** An opaque in-memory Automerge document handle. */
 export type DocHandle<T> = T;
 
 /** Options shared by the typed readers. */
-export interface ReadOptions {
+export type ReadOptions = {
   /** Include soft-deleted entities (default: false — tombstoned entities omitted). */
   includeDeleted?: boolean;
-}
+};

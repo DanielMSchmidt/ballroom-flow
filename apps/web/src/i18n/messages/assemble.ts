@@ -1,9 +1,7 @@
 // Assemble screen catalog (see i18n/messages.ts for the pattern: `de: typeof en`
 // makes a missing/extra German key a compile error). Covers the Assemble screen
 // plus its pure timeline-ops helpers. Figure names from the domain library are
-// canonical syllabus names and are NEVER translated; alignment qualifiers/
-// directions are localized for DISPLAY only — the stored values stay English.
-import type { Alignment } from "@weavesteps/domain";
+// canonical syllabus names and are NEVER translated.
 
 const en = {
   // Header / editing toolbar
@@ -17,12 +15,18 @@ const en = {
   listView: "List view",
   share: "Share",
   syncing: "Syncing…",
+  // Offline editing (docs/system/sync-and-offline.md § Offline editing) — the pending chip + the unsyncable alert
+  offlinePending: (n: number) =>
+    `${n} change${n === 1 ? "" : "s"} saved on this device — they'll sync when you're back online`,
+  unsyncedChanges: (n: number) =>
+    `${n} offline change${n === 1 ? "" : "s"} couldn't be saved — your access to this choreo was removed. They stay readable here but won't sync.`,
   undo: "Undo",
   redo: "Redo",
   undoneToast: "Undone",
   undoneSupersededToast: "Undone — others had built on this change",
   makeACopy: "Make a copy",
   madeFigureYours: "Made this figure yours",
+  makingFigureYours: "Making this figure yours…",
   shareSheetTitle: "Share this choreo",
   // Read-mode fork banner + quick-note FAB
   readOnlyBanner: "Viewing a read-only choreo",
@@ -32,6 +36,11 @@ const en = {
   addedToLibrary: "Added to your library",
   alreadyInLibrary: "Already in your library",
   addToLibraryFailed: "Couldn't add to your library",
+  // Variant-spawn (copy-on-write) failure toasts — the optimistic "Step placed"
+  // toast already fired, so a failed save must say so rather than vanish silently.
+  editSaveFailed: "Couldn't save your change — please try again",
+  editSaveQuota: "You've reached your figure limit — that change wasn't saved",
+  editSaveDenied: "You don't have permission to make that change",
   // Thread sheet
   threadSheetTitle: "Thread",
   stepThreadTitle: (figureName: string, count: number) => `${figureName} · step ${count}`,
@@ -39,6 +48,9 @@ const en = {
   // Figure step editor (FullScreen)
   addFigureSheetTitle: "Add a figure",
   stepsTitle: (figureName: string) => `Steps · ${figureName}`,
+  // The detail's read⇄edit pencil toggle (design figMode) — editors only.
+  editSteps: "Edit steps",
+  viewSteps: "View steps",
   figureFallback: "Figure",
   back: "Back",
   loadingFigure: "Loading figure…",
@@ -94,6 +106,7 @@ const en = {
   scopeSr: (isCustom: boolean) => `${isCustom ? "Custom" : "Library"} figure`,
   openSteps: (canEdit: boolean, name: string) => `${canEdit ? "Edit" : "View"} steps: ${name}`,
   openDetail: (name: string) => `Open ${name} figure detail`,
+  emptyAddSteps: "empty — add steps",
   customPill: "Custom",
   inYourLibrary: "In your library",
   addToLibraryAria: (name: string) => `Add ${name} to my library`,
@@ -103,41 +116,30 @@ const en = {
   // Add-a-figure picker
   filterFigures: "Filter figures",
   searchLibraryPlaceholder: "Search the library…",
-  noLibraryMatches: "No library figures match — create your own below.",
+  noLibraryMatches: "No figures match — create your own below.",
   libraryFiguresAria: "Library figures",
+  createMyOwnFigure: "Create my own figure",
+  newCustomFigureTitle: "New custom figure",
   figureNameLabel: "Figure name",
-  createYourOwnPlaceholder: "…or create your own",
+  figureNamePlaceholder: "e.g. Open Telemark",
+  composeHint:
+    "Added empty — place steps on the timeline as you go. Footwork, direction & detail are all optional; add them whenever.",
+  newFigureName: "New figure",
   length: "Length",
-  barsLabel: "Bars",
-  barsUnit: "bars",
-  addCustom: "Add custom",
-  // Alignment editor + chips (US-031). Display labels only — stored qualifier/
-  // direction values stay English.
-  alignment: "Alignment",
-  entry: "Entry",
-  exit: "Exit",
-  edgeAlignmentAria: (label: string) => `${label} alignment`,
-  qualifier: "Qualifier",
-  direction: "Direction",
-  notSet: "— not set",
-  qualifierLabel: {
-    facing: "facing",
-    backing: "backing",
-    pointing: "pointing",
-  } as Record<Alignment["qualifier"], string>,
-  directionLabel: {
-    LOD: "LOD",
-    ALOD: "against LOD",
-    wall: "wall",
-    centre: "centre",
-    DW: "diag wall",
-    DC: "diag centre",
-    DW_against: "diag wall ↩",
-    DC_against: "diag centre ↩",
-  } as Record<Alignment["direction"], string>,
-  entryChip: (qualifier: string, direction: string) => `entry ${qualifier} ${direction}`,
-  exitChip: (qualifier: string, direction: string) => `exit ${qualifier} ${direction}`,
-  hereChip: (qualifier: string, direction: string) => `here ${qualifier} ${direction}`,
+  breakFigureName: "Break",
+  countsLabel: "Counts",
+  countsUnit: "counts",
+  partSub: (from: number, to: number) => `steps ${from}–${to}`,
+  howMuchOf: (name: string) => `How much of ${name}?`,
+  portionHint: (name: string) =>
+    `Add just the part you dance — it stays “${name},” the same figure, only a section of it.`,
+  portionRangeAria: "Select the count range",
+  portionCountAria: (n: number) => `Count ${n}`,
+  portionToLabel: (from: number, to: number) => `steps ${from}–${to}`,
+  wholeFigureLabel: "whole figure",
+  wholeFigureAction: "whole figure ›",
+  portionBack: "Back",
+  portionConfirm: "Add to choreo",
   // Timeline durations (timeline-ops.ts)
   durationOneBeat: "1 beat",
   durationFractionBeat: (glyph: string) => `${glyph} beat`,
@@ -156,12 +158,21 @@ const de: typeof en = {
   listView: "Listenansicht",
   share: "Teilen",
   syncing: "Synchronisiert …",
+  offlinePending: (n: number) =>
+    n === 1
+      ? "1 Änderung auf diesem Gerät gespeichert — sie wird synchronisiert, sobald du wieder online bist"
+      : `${n} Änderungen auf diesem Gerät gespeichert — sie werden synchronisiert, sobald du wieder online bist`,
+  unsyncedChanges: (n: number) =>
+    n === 1
+      ? "1 Offline-Änderung konnte nicht gespeichert werden — dein Zugriff auf diese Choreo wurde entfernt. Sie bleibt hier lesbar, wird aber nicht synchronisiert."
+      : `${n} Offline-Änderungen konnten nicht gespeichert werden — dein Zugriff auf diese Choreo wurde entfernt. Sie bleiben hier lesbar, werden aber nicht synchronisiert.`,
   undo: "Rückgängig",
   redo: "Wiederholen",
   undoneToast: "Rückgängig gemacht",
   undoneSupersededToast: "Rückgängig gemacht — andere hatten auf dieser Änderung aufgebaut",
   makeACopy: "Kopie erstellen",
   madeFigureYours: "Diese Figur gehört jetzt dir",
+  makingFigureYours: "Diese Figur wird deine …",
   shareSheetTitle: "Diese Choreo teilen",
   readOnlyBanner: "Du siehst eine schreibgeschützte Choreo",
   makeItMine: "Zu meiner machen",
@@ -169,11 +180,16 @@ const de: typeof en = {
   addedToLibrary: "Zu deiner Bibliothek hinzugefügt",
   alreadyInLibrary: "Schon in deiner Bibliothek",
   addToLibraryFailed: "Konnte nicht zu deiner Bibliothek hinzugefügt werden",
+  editSaveFailed: "Änderung konnte nicht gespeichert werden — bitte versuch es erneut",
+  editSaveQuota: "Du hast dein Figuren-Limit erreicht — die Änderung wurde nicht gespeichert",
+  editSaveDenied: "Du hast keine Berechtigung für diese Änderung",
   threadSheetTitle: "Thread",
   stepThreadTitle: (figureName, count) => `${figureName} · Schritt ${count}`,
   wholeFigure: "ganze Figur",
   addFigureSheetTitle: "Figur hinzufügen",
   stepsTitle: (figureName) => `Schritte · ${figureName}`,
+  editSteps: "Schritte bearbeiten",
+  viewSteps: "Schritte ansehen",
   figureFallback: "Figur",
   back: "Zurück",
   loadingFigure: "Figur lädt …",
@@ -224,6 +240,7 @@ const de: typeof en = {
   scopeSr: (isCustom) => (isCustom ? "Eigene Figur" : "Bibliotheksfigur"),
   openSteps: (canEdit, name) => `Schritte ${canEdit ? "bearbeiten" : "ansehen"}: ${name}`,
   openDetail: (name) => `Figurdetails von ${name} öffnen`,
+  emptyAddSteps: "leer — Schritte hinzufügen",
   customPill: "Eigene",
   inYourLibrary: "In deiner Bibliothek",
   addToLibraryAria: (name) => `${name} zu meiner Bibliothek hinzufügen`,
@@ -232,39 +249,30 @@ const de: typeof en = {
   attributeSummary: (n, kinds) => (n === 1 ? `1 Attribut · ${kinds}` : `${n} Attribute · ${kinds}`),
   filterFigures: "Figuren filtern",
   searchLibraryPlaceholder: "Bibliothek durchsuchen …",
-  noLibraryMatches: "Keine Bibliotheksfiguren passen — erstelle unten deine eigene.",
+  noLibraryMatches: "Keine Figuren passen — erstelle unten deine eigene.",
   libraryFiguresAria: "Bibliotheksfiguren",
+  createMyOwnFigure: "Eigene Figur erstellen",
+  newCustomFigureTitle: "Neue eigene Figur",
   figureNameLabel: "Figurname",
-  createYourOwnPlaceholder: "… oder erstelle deine eigene",
+  figureNamePlaceholder: "z. B. Open Telemark",
+  composeHint:
+    "Wird leer hinzugefügt — setze Schritte auf die Timeline, während du arbeitest. Fußtechnik, Richtung & Details sind optional; ergänze sie jederzeit.",
+  newFigureName: "Neue Figur",
   length: "Länge",
-  barsLabel: "Takte",
-  barsUnit: "Takte",
-  addCustom: "Eigene hinzufügen",
-  alignment: "Ausrichtung",
-  entry: "Einstieg",
-  exit: "Ausstieg",
-  edgeAlignmentAria: (label) => `Ausrichtung ${label}`,
-  qualifier: "Qualifikator",
-  direction: "Richtung",
-  notSet: "— nicht gesetzt",
-  qualifierLabel: {
-    facing: "Front",
-    backing: "Rücken",
-    pointing: "zeigend",
-  } as Record<Alignment["qualifier"], string>,
-  directionLabel: {
-    LOD: "Tanzrichtung",
-    ALOD: "gegen die Tanzrichtung",
-    wall: "Wand",
-    centre: "Mitte",
-    DW: "diagonal zur Wand",
-    DC: "diagonal zur Mitte",
-    DW_against: "diagonal zur Wand ↩",
-    DC_against: "diagonal zur Mitte ↩",
-  } as Record<Alignment["direction"], string>,
-  entryChip: (qualifier, direction) => `Einstieg ${qualifier} ${direction}`,
-  exitChip: (qualifier, direction) => `Ausstieg ${qualifier} ${direction}`,
-  hereChip: (qualifier, direction) => `hier ${qualifier} ${direction}`,
+  breakFigureName: "Break",
+  countsLabel: "Zählzeiten",
+  countsUnit: "Zählzeiten",
+  partSub: (from, to) => `Schritte ${from}–${to}`,
+  howMuchOf: (name) => `Wie viel von ${name}?`,
+  portionHint: (name) =>
+    `Füge nur den getanzten Teil hinzu — es bleibt „${name}“, dieselbe Figur, nur ein Ausschnitt.`,
+  portionRangeAria: "Zählzeiten-Bereich wählen",
+  portionCountAria: (n) => `Zählzeit ${n}`,
+  portionToLabel: (from, to) => `Schritte ${from}–${to}`,
+  wholeFigureLabel: "ganze Figur",
+  wholeFigureAction: "ganze Figur ›",
+  portionBack: "Zurück",
+  portionConfirm: "Zur Choreo hinzufügen",
   durationOneBeat: "1 Schlag",
   durationFractionBeat: (glyph) => `${glyph} Schlag`,
   durationWholeFractionBeats: (whole, glyph) => `${whole}${glyph} Schläge`,

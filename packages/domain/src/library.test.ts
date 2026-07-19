@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
 import {
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
+  figureTypeHasCatalogFamily,
   globalFigureRef,
   LIBRARY_FIGURES,
-  type LibraryFigure,
   libraryFigureByRef,
   libraryFiguresForDance,
   libraryGroupsForDance,
@@ -14,7 +15,8 @@ import {
 import { parseAttributeWrite } from "./schemas";
 
 // US-032 — the application-global figure library (client-bundled catalog shaped
-// from the ISTD Standard syllabus seed). PLAN §4.2, D30. The catalog is pure
+// from the ISTD Standard syllabus seed). docs/concepts/figures.md § The library screen,
+// D30 (docs/system/architecture.md § The catalog seed pipeline). The catalog is pure
 // reference data; these prove the dance-scoped read + figureType grouping the
 // picker and Library browse rely on.
 
@@ -31,24 +33,9 @@ describe("figure library catalog", () => {
     // The Feather Step is the canonical Foxtrot opener (figureType is its slug).
     const feather = foxtrot.find((f) => /feather step/i.test(f.name));
     expect(feather).toBeTruthy();
-    expect((feather as LibraryFigure).figureType).toBe("feather-step");
+    expect(feather?.figureType).toBe("feather-step");
     // A waltz-only figure must not leak into the foxtrot list.
     expect(foxtrot.some((f) => /natural spin turn/i.test(f.name))).toBe(false);
-  });
-
-  it("carries the charted figure-level entry/exit alignment (Waltz closed changes)", () => {
-    // The closed change doesn't turn, so its alignment is constant — entry == exit,
-    // from the leader's perspective. RF change faces Diagonal Centre; LF faces
-    // Diagonal Wall (dancecentral.info). Figures with no charted alignment carry none.
-    const rf = LIBRARY_FIGURES.find(
-      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-rf",
-    );
-    expect(rf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    expect(rf?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    const lf = LIBRARY_FIGURES.find(
-      (f) => f.dance === "waltz" && f.figureType === "closed-change-on-lf",
-    );
-    expect(lf?.entryAlignment).toEqual({ qualifier: "facing", direction: "DW" });
   });
 
   it("groups a dance's figures by figureType for the library browse", () => {
@@ -65,10 +52,10 @@ describe("figure library catalog", () => {
   });
 
   it("includes the net-new WDSF figures with parsed step attributes", () => {
-    // ~204 figures: the ISTD identity set + WDSF-timed figures, after the re-chart
-    // dropped entries with no verifiable per-step source or mis-catalogued by dance
-    // (real-data charting, no fabrication — see figure-charts.generated.ts).
-    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(200);
+    // ~266 figures: the ISTD identity set + the full WDSF Technique Book syllabus
+    // (all five books charted, incl. the 37-figure Viennese Waltz set), with
+    // unverifiable entries removed rather than guessed (no fabrication).
+    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(260);
 
     const natural = libraryFiguresForDance("waltz").find(
       (f) => f.figureType === "natural-turn" && f.name === "Natural Turn",
@@ -85,7 +72,7 @@ describe("figure library catalog", () => {
     const leaderS1Foot = natural?.attributes?.find(
       (a) => a.count === 1 && a.role === "leader" && a.kind === "footwork",
     );
-    expect(leaderS1Foot?.value).toBe("HT");
+    expect(leaderS1Foot?.value).toBe("H flat"); // WDSF book Foot Action for the drive step
 
     // An un-charted figure still falls back to the WDSF start/finish scaffold (footwork-only,
     // role:null). Find any such figure in the catalog and assert the fallback shape.
@@ -111,7 +98,7 @@ describe("figure library catalog", () => {
 describe("globalFigureRef — canonical provenance ref for a catalog figure (T5)", () => {
   it("encodes (dance, figureType) as a stable global: ref", () => {
     // The save-to-library promotion records this as the frozen copy's baseFigureRef
-    // (PLAN §5.2, provenance only). It must be deterministic for idempotency.
+    // (docs/concepts/figures.md § Variants, provenance only). It must be deterministic for idempotency.
     expect(globalFigureRef("waltz", "natural-turn")).toBe("global:waltz:natural-turn");
     expect(globalFigureRef("foxtrot", "feather-step")).toBe("global:foxtrot:feather-step");
   });
@@ -195,7 +182,7 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
     dance: "waltz" as const,
     figureType: "natural-turn",
     name: "Natural Turn",
-    attributes: (origin.attributes ?? []).map((a) => ({ ...a })) as Attribute[],
+    attributes: (origin.attributes ?? []).map((a) => ({ ...a })),
   };
 
   it("matches when the placed figure equals its catalog origin", () => {
@@ -213,13 +200,15 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
   });
 
   it("does NOT match once a new attribute is added", () => {
-    const added = {
-      ...picked,
-      attributes: [
-        ...picked.attributes,
-        { id: "extra", kind: "sway", count: 1, role: "leader", value: "left", deletedAt: null },
-      ] as Attribute[],
+    const extra: Attribute = {
+      id: "extra",
+      kind: "sway",
+      count: 1,
+      role: "leader",
+      value: "left",
+      deletedAt: null,
     };
+    const added = { ...picked, attributes: [...picked.attributes, extra] };
     expect(figureMatchesLibraryOrigin(added)).toBe(false);
   });
 
@@ -227,9 +216,7 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
     // Deleting an attribute diverges from the origin → no longer a pristine pick.
     const withDeletion = {
       ...picked,
-      attributes: picked.attributes.map((a, i) =>
-        i === 0 ? { ...a, deletedAt: 123 } : a,
-      ) as Attribute[],
+      attributes: picked.attributes.map((a, i) => (i === 0 ? { ...a, deletedAt: 123 } : a)),
     };
     expect(figureMatchesLibraryOrigin(withDeletion)).toBe(false);
   });
@@ -243,5 +230,46 @@ describe("figureMatchesLibraryOrigin — an unchanged library pick isn't custom"
         attributes: [],
       }),
     ).toBe(false);
+  });
+});
+
+describe("figureHasLibraryOrigin — does the figure have a catalog identity at all?", () => {
+  // The "adjusted for this choreo — still X" chip needs to tell a DIVERGED
+  // library figure (has an origin it was adjusted away from) apart from a
+  // from-scratch custom (no origin — nothing was ever "adjusted").
+  it("is true for a figure carrying a catalog (dance, figureType, name) identity", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "natural-turn", name: "Natural Turn" }),
+    ).toBe(true);
+  });
+
+  it("is false for a from-scratch custom (name/figureType not in the catalog)", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "right-lunge", name: "Right Lunge" }),
+    ).toBe(false);
+  });
+
+  it("is false when only the name matches but the figureType doesn't (a renamed custom)", () => {
+    expect(
+      figureHasLibraryOrigin({ dance: "waltz", figureType: "my-move", name: "Natural Turn" }),
+    ).toBe(false);
+  });
+});
+
+describe("figureTypeHasCatalogFamily — does a shared syllabus family exist for this figureType?", () => {
+  // A journal note can be pinned to a figure FAMILY (a `figureType` note) only when
+  // that figureType names a real catalog family — otherwise there is nothing to
+  // pin to. A from-scratch custom figure's slugged figureType has no family, so the
+  // link picker must not offer the family-scope options for it (the note falls
+  // through to a this-choreo annotation). Family matching (figuretype.ts) is purely
+  // figureType-based, so membership is a figureType-only question.
+  it("is true for a figureType present in the catalog (family-note-eligible)", () => {
+    expect(figureTypeHasCatalogFamily("natural-turn")).toBe(true);
+    expect(figureTypeHasCatalogFamily("feather-step")).toBe(true);
+  });
+
+  it("is false for a from-scratch custom slug that names no catalog family", () => {
+    expect(figureTypeHasCatalogFamily("my-signature-lunge")).toBe(false);
+    expect(figureTypeHasCatalogFamily("")).toBe(false);
   });
 });

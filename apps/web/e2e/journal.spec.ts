@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// T6 Journal journey (PLAN §2.6/§2.7/§4.6 E2E). Runs against the REAL worker
+// T6 Journal journey (docs/concepts/annotations.md § Anchors, § The Journal;
+// docs/system/architecture.md § D1 — the index & projections). Runs against the REAL worker
 // (D1 + per-document Durable Objects + the cross-routine journal_entry index)
 // via the #191 harness — no live Clerk, a real test JWT, the real DO alarm
 // projection. Proves the projection + read end-to-end: a lesson authored in a
@@ -23,7 +24,11 @@ test.describe("@smoke journal journey", () => {
     await seedAuth(page, user);
     await page.goto("/");
 
-    const rail = page.getByRole("navigation", { name: /primary navigation/i });
+    // The nav is a labelled <nav> that swaps by viewport: the desktop side rail
+    // ("Primary navigation") vs the mobile bottom bar ("Tab bar"). Only one is in
+    // the a11y tree at a time (the other is display:hidden), so matching EITHER
+    // label keeps the journey viewport-agnostic (was desktop-only → mobile red).
+    const rail = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
 
     // Journal tab starts on the designed empty state (frame 3.2).
     await rail.getByRole("button", { name: "Journal" }).click();
@@ -42,13 +47,21 @@ test.describe("@smoke journal journey", () => {
     await addSection.click();
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
+    // Place the CATALOG "Natural Turn" from the preset list (typing the name
+    // would mint a custom figure and open its editor — create-navigates, §4.3).
     await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Natural Turn");
-    await page.getByLabel("Figure name").press("Enter");
+    await page.getByRole("button", { name: "Natural Turn", exact: true }).click();
+    // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+    await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Natural Turn")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's step sheet → the annotation panel; author a LESSON.
-    await page.getByRole("button", { name: /edit steps: Natural Turn/i }).click();
+    // Notes live on the figure detail opened from the READING lens (the editing
+    // lens is notation-only): switch lens, open the figure by name, author a LESSON.
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Natural Turn", exact: true })
+      .click();
     const panel = page.getByRole("region", { name: /^annotations$/i });
     await panel.getByLabel("Kind").selectOption("lesson");
     await panel.getByRole("textbox", { name: /^note$/i }).fill("heads stay left");

@@ -1,17 +1,18 @@
 import { env, runInDurableObject, SELF } from "cloudflare:test";
 import * as A from "@automerge/automerge";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { DocDO } from "../doc-do";
+import { readFigureSnapshot } from "../figure-snapshot";
 import { authedContext } from "../test-support/authed-context";
 import { uniqueDocName } from "../test-support/do-id";
-import type { DocNamespace } from "../test-support/doc-do-api";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-037 — Choreo fork ("make it your own") [M4, user]
 //
-// PLAN §2.4, §4.1, §5.2: forking a routine yields an OWNED, independent copy (a
+// docs/concepts/choreography.md § Forking / § The choreo list; docs/concepts/figures.md
+// § Variants: forking a routine yields an OWNED, independent copy (a
 // new doc, no shared history) with `forkedFromRef` provenance; a later
 // STRUCTURAL edit to the origin does NOT appear in the fork; the fork counts
 // against the forker's quota. The domain primitive for the routine clone
@@ -22,7 +23,7 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 // stays live).
 // ─────────────────────────────────────────────────────────────────────────
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 let kp: TestKeypair;
 
 beforeAll(async () => {
@@ -50,7 +51,7 @@ describe("US-037 Choreo fork", () => {
       body: JSON.stringify({ dance: "waltz", title: "Origin" }),
     });
     expect(created.status).toBe(201);
-    const { docRef: originRef } = (await created.json()) as { docRef: string };
+    const { docRef: originRef } = await created.json<{ docRef: string }>();
     await docs.get(docs.idFromName(originRef)).applyChange({ op: "addSection", name: "Intro" });
 
     // Fork it.
@@ -59,15 +60,13 @@ describe("US-037 Choreo fork", () => {
       headers: owner.authHeaders(),
     });
     expect(forkRes.status).toBe(201);
-    const fork = (await forkRes.json()) as { docRef: string; forkedFromRef: string };
+    const fork = await forkRes.json<{ docRef: string; forkedFromRef: string }>();
     expect(fork.forkedFromRef).toBe(originRef);
     expect(fork.docRef).not.toBe(originRef);
 
     // The fork is OWNED and appears in the forker's list.
     const list = await SELF.fetch("https://x/api/routines", { headers: owner.authHeaders() });
-    const { routines } = (await list.json()) as {
-      routines: Array<{ docRef: string; role: string }>;
-    };
+    const { routines } = zRoutineList.parse(await list.json());
     expect(routines).toContainEqual(
       expect.objectContaining({ docRef: fork.docRef, role: "owner" }),
     );
@@ -145,26 +144,14 @@ describe("US-037 Choreo fork", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 fork — account figures are copied for the forker (PLAN §2.4/§5.2, D12
-// ⟳v5, milestone §9 step 5). The fork must be independent of its ORIGIN, not
+// v5 fork — account figures are copied for the forker (docs/concepts/figures.md
+// § Variants, D12 ⟳v5, milestone step 5 — see docs/README.md). The fork must be independent of its ORIGIN, not
 // just its routine content: a placement referencing an ACCOUNT figure is
 // re-pointed at a fresh copy the forker owns (a variant copied AS a variant —
 // `copyFigureForFork` keeps `baseFigureRef`, so catalog flow-in continues);
 // a GLOBAL (catalog) reference, and a reference with no registry row at all,
 // stay untouched. See apps/worker/src/fork.ts.
 // ─────────────────────────────────────────────────────────────────────────
-
-interface FigureSnapshotForTest {
-  id?: string;
-  ownerId?: string;
-  name?: string;
-  baseFigureRef?: string | null;
-  attributes?: Array<{ id: string; kind: string; count: number; value: unknown }>;
-}
-
-interface RoutineSnapshotForTest {
-  sections: Array<{ placements: Array<{ figureRef?: string }> }>;
-}
 
 /** Seed an origin routine (owned by `ownerId`, with `ownerId` as an editor
  *  member so they can fork it) placing exactly one figure, and register +
@@ -248,25 +235,21 @@ type SeedMembershipForTest = { id: string; docRef: string; userId: string; role:
  * high-level-op RPC, whose `DocOp` union only covers routine-doc ops.
  */
 async function editFigureNameForTest(figureRef: string, name: string): Promise<void> {
-  const stub = docs.get(docs.idFromName(figureRef)) as unknown as DurableObjectStub<DocDO>;
-  await runInDurableObject(stub, async (instance) => {
-    const doState = (instance as unknown as { ctx: DurableObjectState }).ctx;
-    const rows = doState.storage.sql
-      .exec("SELECT data FROM changes ORDER BY seq")
-      .toArray() as Array<{ data: ArrayBuffer }>;
+  const stub = docs.get(docs.idFromName(figureRef));
+  await runInDurableObject(stub, async (instance, state) => {
+    const rows = state.storage.sql
+      .exec<{ data: ArrayBuffer }>("SELECT data FROM changes ORDER BY seq")
+      .toArray();
     let doc = A.init<Record<string, unknown>>();
     [doc] = A.applyChanges(
       doc,
-      rows.map((r) => new Uint8Array(r.data) as A.Change),
+      rows.map((r) => new Uint8Array(r.data)),
     );
     const edited = A.change(doc, (d: Record<string, unknown>) => {
       d.name = name;
     });
     const changeBytes = A.getChanges(doc, edited);
-    const applyRaw = (
-      instance as unknown as { applyRawChange: (c: Uint8Array) => Promise<boolean> }
-    ).applyRawChange;
-    for (const ch of changeBytes) await applyRaw.call(instance, ch);
+    for (const ch of changeBytes) await instance.applyRawChange(ch);
   });
 }
 
@@ -297,18 +280,15 @@ describe("v5 fork: account figures are copied for the forker", () => {
       headers: kpCtx.authHeaders(),
     });
     expect(forkRes.status).toBe(201);
-    const fork = (await forkRes.json()) as { docRef: string };
+    const fork = await forkRes.json<{ docRef: string }>();
 
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
     const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef;
     expect(copyRef).toBeDefined();
+    if (!copyRef) throw new Error("expected the fork's placement to reference the copied figure");
     expect(copyRef).not.toBe(figureRef); // a NEW doc, not the origin's
 
-    const copy = (await docs
-      .get(docs.idFromName(copyRef as string))
-      .getFigureSnapshot()) as FigureSnapshotForTest | null;
+    const copy = await readFigureSnapshot(docs.get(docs.idFromName(copyRef)));
     expect(copy?.ownerId).toBe(forkerId); // owned by the FORKER
     expect(copy?.name).toBe("My Feather");
     expect(copy?.attributes).toEqual([
@@ -350,22 +330,17 @@ describe("v5 fork: account figures are copied for the forker", () => {
       method: "POST",
       headers: kpCtx.authHeaders(),
     });
-    const fork = (await forkRes.json()) as { docRef: string };
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
-    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef as string;
+    const fork = await forkRes.json<{ docRef: string }>();
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
+    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef;
+    if (!copyRef) throw new Error("expected the fork's placement to reference the copied figure");
 
     // A LIVE edit to the ORIGIN figure, via the real change-ingest path.
     await editFigureNameForTest(figureRef, "My Feather (edited after fork)");
-    const originFigureAfter = (await docs
-      .get(docs.idFromName(figureRef))
-      .getFigureSnapshot()) as FigureSnapshotForTest | null;
+    const originFigureAfter = await readFigureSnapshot(docs.get(docs.idFromName(figureRef)));
     expect(originFigureAfter?.name).toBe("My Feather (edited after fork)");
 
-    const copyAfter = (await docs
-      .get(docs.idFromName(copyRef))
-      .getFigureSnapshot()) as FigureSnapshotForTest | null;
+    const copyAfter = await readFigureSnapshot(docs.get(docs.idFromName(copyRef)));
     // The copy is untouched by the origin's later edit (v5 independence point).
     expect(copyAfter?.name).toBe("My Feather");
   });
@@ -402,27 +377,26 @@ describe("v5 fork: account figures are copied for the forker", () => {
       method: "POST",
       headers: kpCtx.authHeaders(),
     });
-    const fork = (await forkRes.json()) as { docRef: string };
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
-    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef as string;
+    const fork = await forkRes.json<{ docRef: string }>();
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
+    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef;
+    if (!copyRef) throw new Error("expected the fork's placement to reference the copied variant");
     expect(copyRef).not.toBe(figureRef);
 
-    const copy = (await docs
-      .get(docs.idFromName(copyRef))
-      .getFigureSnapshot()) as FigureSnapshotForTest | null;
+    const copy = await readFigureSnapshot(docs.get(docs.idFromName(copyRef)));
     expect(copy?.ownerId).toBe(forkerId); // owned by the FORKER
     expect(copy?.baseFigureRef).toBe(baseRef); // still a variant of the SAME base
   });
 
-  it("reuses the forker's own existing derivative of a base instead of failing when a fresh copy would collide (account_figure_base_idx, migration 0010)", async () => {
+  it("mints an INDEPENDENT copy when the forker already owns a derivative of the same base (many variants per base — migration 0017)", async () => {
     // The forker ALREADY owns a variant of `baseRef` (from unrelated prior
     // activity — e.g. a variant-spawn in a different routine). The origin
     // places a DIFFERENT figure that is ALSO a variant of the SAME base, owned
-    // by someone else. A fresh copy for the forker would collide with D1's
-    // "at most one account-figure per (owner, base)" constraint — the fork
-    // must not 500; it reuses the forker's pre-existing derivative instead.
+    // by someone else. Pre-#0017 a fresh copy collided with the (owner, base)
+    // unique index and the fork REUSED the pre-existing derivative. That index
+    // was wrong (it silently broke variant-on-edit — see migration 0017), so a
+    // user may now own MANY derivatives of the same base: the fork mints a fresh
+    // INDEPENDENT copy, and the pre-existing variant is left untouched.
     const forkerId = "u_v5_owner_f";
     const baseRef = uniqueDocName("fig_base_v5f");
     const myExistingVariantRef = uniqueDocName("fig_mine_v5f");
@@ -481,15 +455,33 @@ describe("v5 fork: account figures are copied for the forker", () => {
       method: "POST",
       headers: kpCtx.authHeaders(),
     });
-    expect(forkRes.status).toBe(201); // no 500 — the D1 conflict was handled
-    const fork = (await forkRes.json()) as { docRef: string };
+    expect(forkRes.status).toBe(201); // no 409/500 — a second derivative is allowed now
+    const fork = await forkRes.json<{ docRef: string }>();
 
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
-    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef as string;
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
+    const copyRef = forkSnap.sections[0]?.placements[0]?.figureRef;
+    if (!copyRef) throw new Error("expected the fork's placement to reference the fresh copy");
     expect(copyRef).not.toBe(figureRef); // re-pointed away from the shared origin figure
-    expect(copyRef).toBe(myExistingVariantRef); // reused the forker's OWN existing derivative
+    expect(copyRef).not.toBe(myExistingVariantRef); // a FRESH independent copy, not a reuse
+
+    // Both derivatives of the same base now coexist, both owned by the forker —
+    // the (owner, base) uniqueness that used to forbid this is gone.
+    const copyRow = await env.DB.prepare(
+      "SELECT ownerId, type, forkedFromRef FROM document_registry WHERE docRef = ?",
+    )
+      .bind(copyRef)
+      .first<{ ownerId: string; type: string; forkedFromRef: string | null }>();
+    expect(copyRow).toMatchObject({
+      ownerId: forkerId,
+      type: "account-figure",
+      forkedFromRef: baseRef,
+    });
+    const derivatives = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM document_registry WHERE ownerId = ? AND forkedFromRef = ? AND deletedAt IS NULL",
+    )
+      .bind(forkerId, baseRef)
+      .first<{ n: number }>();
+    expect(derivatives?.n).toBe(2); // the pre-existing variant + the fresh fork copy
   });
 
   it("leaves a GLOBAL figure reference untouched (placement keeps pointing at the catalog doc)", async () => {
@@ -518,11 +510,9 @@ describe("v5 fork: account figures are copied for the forker", () => {
       headers: kpCtx.authHeaders(),
     });
     expect(forkRes.status).toBe(201);
-    const fork = (await forkRes.json()) as { docRef: string };
+    const fork = await forkRes.json<{ docRef: string }>();
 
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
     // The GLOBAL ref stays live — the fork's placement is untouched.
     expect(forkSnap.sections[0]?.placements[0]?.figureRef).toBe(figureRef);
 
@@ -562,11 +552,9 @@ describe("v5 fork: account figures are copied for the forker", () => {
       headers: kpCtx.authHeaders(),
     });
     expect(forkRes.status).toBe(201);
-    const fork = (await forkRes.json()) as { docRef: string };
+    const fork = await forkRes.json<{ docRef: string }>();
 
-    const forkSnap = (await docs
-      .get(docs.idFromName(fork.docRef))
-      .getSnapshot()) as unknown as RoutineSnapshotForTest;
+    const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
     expect(forkSnap.sections[0]?.placements[0]?.figureRef).toBe(figureRef);
   });
 });

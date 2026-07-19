@@ -1,8 +1,9 @@
-// US-012 — Zod schemas: lenient read / strict write (PLAN §3, D7, §10.2).
+// US-012 — Zod schemas: lenient read / strict write (docs/concepts/notation.md
+// § Kinds, D7, docs/system/testing.md).
 //
 // One vocabulary, two postures (D7 "forward-compatible reads, strict writes"):
 //   • READ is LENIENT — a future/unknown value survives (no data loss); aliases
-//     normalize (the split diagonal diag_forward/diag_back → diagonal). This
+//     normalize (the legacy diag_forward/diag_back → diagonal_forward/_back). This
 //     keeps old clients reading new data.
 //   • WRITE is STRICT — a value written to a KNOWN enum kind must be in that
 //     kind's registry enum, and (when a dance meter is given) the count must be a
@@ -13,10 +14,63 @@
 // so adding a registry value or a dance automatically widens what writes accept —
 // the schema is data, not a hand-maintained enum.
 import { z } from "zod";
-import type { DanceId } from "./dances";
-import type { Attribute, Role } from "./doc-types";
+import { type DanceId, isDanceId } from "./dances";
+import type { Anchor, Attribute } from "./doc-types";
 import { isOnEighthGrid } from "./timing";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
+
+/**
+ * Runtime validator for the {@link Anchor} union — the honest way to accept an
+ * anchor arriving UNTYPED (an RPC op payload, a JSON body): `zAnchor.parse(x)`
+ * yields a compiler-checked `Anchor` backed by a runtime check, where an
+ * `x as Anchor` would just silence the compiler (CLAUDE.md §4). The explicit
+ * `z.ZodType<Anchor>` annotation pins this schema to the domain type — if the
+ * union gains a member, this fails to compile until the schema follows.
+ */
+/**
+ * Parse an UNTYPED value as an anchor list (lenient read posture): returns the
+ * validated anchors, or `null` when the value is not a valid anchor array —
+ * the caller picks its own fallback. Exists so RPC/JSON consumers (e.g. the
+ * worker's DocOp path) get runtime-validated anchors without importing zod.
+ */
+export function parseAnchors(input: unknown): Anchor[] | null {
+  const result = z.array(zAnchor).safeParse(input);
+  return result.success ? result.data : null;
+}
+
+export const zAnchor: z.ZodType<Anchor> = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("point"),
+      figureRef: z.string(),
+      count: z.number(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+    z.object({ type: z.literal("figure"), figureRef: z.string() }),
+    z.object({
+      type: z.literal("figureType"),
+      figureType: z.string(),
+      danceScope: z.union([z.custom<DanceId>(isDanceId), z.literal("all")]),
+      // WEP-0004 (docs/concepts/annotations.md § Anchors): a timed family note. Optional + additive — the whole v1
+      // corpus keeps parsing. The superRefine below carries the invariant.
+      count: z.number().optional(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+  ])
+  .superRefine((anchor, ctx) => {
+    // Counts don't align across dances (a Waltz Whisk's 1-2-3 vs its Quickstep
+    // sibling's S-Q-Q), so a pinned/roled family note requires a concrete dance.
+    if (
+      anchor.type === "figureType" &&
+      anchor.danceScope === "all" &&
+      (anchor.count != null || anchor.role != null)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a timed figureType anchor cannot span all dances",
+      });
+    }
+  });
 
 /** The structural shape shared by read + write (value validity differs). */
 const baseAttribute = z.object({
@@ -42,7 +96,7 @@ function toAttribute(parsed: z.infer<typeof baseAttribute>): Attribute {
     id: parsed.id,
     kind: parsed.kind,
     count: parsed.count,
-    role: (parsed.role ?? null) as Role,
+    role: parsed.role ?? null,
     value: parsed.value,
     deletedAt: parsed.deletedAt ?? null,
   };
@@ -87,7 +141,10 @@ export function parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): 
       // free-text kind (step, §3/#83) treats `values` as suggestions, so any
       // string passes — only its non-string/empty shape would be invalid.
       const kind = ATTRIBUTE_REGISTRY[attr.kind];
-      if (kind?.valueType === "enum" && kind.values && !kind.freeText) {
+      // Presence attribute (Builder v3 ②): `value: null` is always a legal
+      // write — the attribute exists with no value yet (the editor's dashed
+      // ring). Enum membership applies only once a value is actually set.
+      if (kind?.valueType === "enum" && kind.values && !kind.freeText && attr.value !== null) {
         if (typeof attr.value !== "string" || !kind.values.includes(attr.value)) {
           refineCtx.addIssue({
             code: "custom",

@@ -4,7 +4,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-002 — Dance metadata registry [M1, system/developer]
-// PLAN §3, §10.2 invariant: timing/phrasing derive from ONE `DANCES` source.
+// docs/concepts/notation.md § Kinds, docs/system/testing.md invariant: timing/phrasing derive from ONE `DANCES` source.
 //
 // Product `DANCES` (dances.ts, M1 §9 1.2) does not exist yet → dynamic import,
 // suite skipped. RED→GREEN: export `DANCES` keyed by DanceId with the metadata
@@ -32,11 +32,11 @@ describe("US-002 Dance metadata registry", () => {
     // Assert: Waltz/Viennese = 3 beats/bar & 6 phrase beats; rest = 4 & 8.
     // Covers AC-2 (beatsPerBar/phraseBeats), and the §10.2 single-source rule.
     const { DANCES } = await importDomain();
-    for (const id of ["waltz", "viennese_waltz"] as DanceId[]) {
+    for (const id of ["waltz", "viennese_waltz"] as const) {
       expect(DANCES[id].beatsPerBar).toBe(3);
       expect(DANCES[id].phraseBeats).toBe(6);
     }
-    for (const id of ["quickstep", "foxtrot", "tango"] as DanceId[]) {
+    for (const id of ["quickstep", "foxtrot", "tango"] as const) {
       expect(DANCES[id].beatsPerBar).toBe(4);
       expect(DANCES[id].phraseBeats).toBe(8);
     }

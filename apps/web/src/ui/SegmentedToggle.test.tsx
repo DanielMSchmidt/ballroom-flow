@@ -3,9 +3,9 @@ import { axeCheck, renderUi, screen, userEvent } from "../test-support/render";
 import { SegmentedToggle } from "./SegmentedToggle";
 
 type Role = "leader" | "follower";
-const OPTIONS = [
-  { value: "leader" as Role, label: "Leader" },
-  { value: "follower" as Role, label: "Follower" },
+const OPTIONS: { value: Role; label: string }[] = [
+  { value: "leader", label: "Leader" },
+  { value: "follower", label: "Follower" },
 ];
 
 describe("SegmentedToggle", () => {

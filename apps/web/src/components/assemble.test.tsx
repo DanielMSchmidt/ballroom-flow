@@ -13,15 +13,22 @@ import { axeCheck, renderUi, screen, userEvent, within } from "../test-support/r
 // US-018 — Open & view a routine [M2, user]
 // US-026 — Add / rename / reorder / delete sections [M3, user]
 // US-027 — Add / reorder / delete figure placements [M3, user]
-// US-031 — Edit per-figure alignment [M4, user]
 //
-// PLAN §4.3, §10.2 component layer: "section rename; placement cards; viewer/
-// commenter gating; alignment chips". Assemble screen built by the frontend
+// docs/concepts/choreography.md § Assembling, docs/system/testing.md component
+// layer: "section rename; placement cards; viewer/
+// commenter gating". Assemble screen built by the frontend
 // agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface AssembleModule {
   Assemble: ComponentType<Record<string, unknown>>;
+}
+
+/** First match, asserted present (getAllByRole already throws when empty). */
+function firstOf<T>(items: T[]): T {
+  const first = items[0];
+  if (first === undefined) throw new Error("expected at least one match");
+  return first;
 }
 
 // The store seam is the component's ONLY data source (CLAUDE.md §3). We inject a
@@ -42,13 +49,14 @@ function fakeStore(
     moveSection: () => {},
     deleteSection: () => {},
     addPlacement: () => {},
+    placeFigure: () => {},
     movePlacement: () => {},
     deletePlacement: () => {},
     addBreak: () => {},
     setBreakBeats: () => {},
     setFigureAttributes: () => {},
-    setFigureBars: () => {},
-    setFigureAlignment: () => {},
+    setFigureCounts: () => {},
+    renameFigure: () => {},
     readAnnotations: () => [],
     createAnnotation: () => {},
     addReply: () => {},
@@ -82,7 +90,6 @@ const figure = (id: string, name: string): FigureDoc => ({
   name,
   source: "library",
   attributes: [{ id: `${id}-a1`, kind: "rise", count: 1, value: "rise", deletedAt: null }],
-  entryAlignment: { qualifier: "facing", direction: "DW" },
   schemaVersion: 1,
   deletedAt: null,
 });
@@ -160,6 +167,49 @@ describe("Reading view (read-only routine timeline)", () => {
     await userEvent.click(screen.getByRole("button", { name: /list view/i }));
     expect(screen.queryByTestId("reading-view")).toBeNull();
     expect(screen.getByTestId("section-list")).toBeInTheDocument();
+  });
+
+  it("shares a section's collapsed state across the edit and reading lenses", async () => {
+    // Intent: collapsing works while EDITING and while VIEWING, and it's ONE
+    //   state — fold a section in the builder, it stays folded in the reading
+    //   programme (and vice versa). Both lenses live in Assemble, which owns
+    //   the shared Set.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    // Collapse in the builder: the placement card folds away, meta reads figs.
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Intro" }));
+    expect(screen.queryByText("Feather")).toBeNull();
+    expect(screen.getByText("1 fig")).toBeInTheDocument();
+    // Switch to the reading programme: the SAME section arrives folded.
+    await userEvent.click(screen.getByRole("button", { name: /reading view/i }));
+    expect(screen.getByTestId("reading-view")).toBeInTheDocument();
+    expect(screen.queryByText("Feather")).toBeNull();
+    // Expand it in the reading view…
+    await userEvent.click(screen.getByRole("button", { name: "Expand Intro" }));
+    expect(screen.getByText("Feather")).toBeInTheDocument();
+    // …and the builder sees the expansion too.
+    await userEvent.click(screen.getByRole("button", { name: /list view/i }));
+    expect(screen.getByText("Feather")).toBeInTheDocument();
   });
 });
 
@@ -280,7 +330,7 @@ describe("US-018 Open & view a routine", () => {
     // Intent: opening a routine renders sections → placement cards from the synced docs.
     // Arrange: a sample routine — sections "Intro" (Feather) then "Body" (Three Step).
     // Act: render <Assemble> bound to it. Assert: sections in order as headings; each
-    //   placement card shows the figure name + attribute summary + alignment chip.
+    //   placement card shows the figure name + attribute summary.
     // Covers US-018 AC-1 (sections in order with placement cards).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const routine: RoutineDoc = {
@@ -320,7 +370,6 @@ describe("US-018 Open & view a routine", () => {
     // The placement card shows the figure's attributes as chips (US-018): the
     // fixture's rise value renders as a "rise" chip on both cards.
     expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
-    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
     expect(await axeCheck(container)).toHaveNoViolations(); // a11y smoke (DESIGN-PRINCIPLES)
   });
 
@@ -444,8 +493,8 @@ describe("US-027 Add / reorder / delete figure placements", () => {
   it("lets an editor add a placement, reorder within a section, and soft-delete", async () => {
     // Intent: editors sequence figures via placements (figureRef) within a section.
     // Arrange: an editor on a section with two resolved placements; mutations spied.
-    // Act/Assert: the card shows figure name + scope badge + attribute summary +
-    //   alignment chip; Add opens a dialog → addPlacement; move down → movePlacement;
+    // Act/Assert: the card shows figure name + scope badge + attribute summary;
+    //   Add opens a dialog → addPlacement; move down → movePlacement;
     //   remove → a confirm dialog → deletePlacement.
     // Covers US-027 AC-1 (add/reorder/soft-delete) + AC-3 (card content).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
@@ -463,16 +512,26 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     expect(screen.getByText("Feather")).toBeInTheDocument();
     expect(screen.getAllByText(/library|custom|variant/i).length).toBeGreaterThan(0); // scope badge
     expect(screen.getAllByText("rise").length).toBeGreaterThan(0); // attribute chip
-    expect(screen.getAllByText(/entry/i).length).toBeGreaterThan(0); // alignment chip
 
-    // Add a figure → the picker sheet; create a custom one (no figureType).
-    await userEvent.click(screen.getAllByRole("button", { name: /add figure/i })[0] as HTMLElement);
+    // Add a figure → the picker sheet; create a custom one (no figureType) via
+    // the always-present create row → compose view.
+    await userEvent.click(firstOf(screen.getAllByRole("button", { name: /add figure/i })));
     expect(screen.getByRole("dialog", { name: /add.*figure/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Reverse Wave");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form carries a bars stepper (default 2 — PLAN §2.5).
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    // The compose view carries a COUNTS stepper (Builder v3 ① — defaults to the
+    // dance's beatsPerBar, 4 for this Foxtrot; §2.5.2).
     // Appended (no insert anchor) → trailing beforePlacementId is undefined.
-    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Reverse Wave", undefined, 2, undefined);
+    expect(spies.addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "Reverse Wave",
+      undefined,
+      4,
+      undefined,
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
 
     // Reorder: move "Feather" down within the section
     await userEvent.click(screen.getByRole("button", { name: /move feather down/i }));
@@ -503,17 +562,26 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     // One insert spot for the two placements (before the 2nd only — index 0 has none).
     const spots = screen.getAllByRole("button", { name: /insert figure here/i });
     expect(spots).toHaveLength(1);
-    await userEvent.click(spots[0] as HTMLElement);
+    await userEvent.click(firstOf(spots));
 
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
     await userEvent.type(screen.getByLabelText(/figure name/i), "Hover");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     // The anchor is p2 (the placement the ＋ sits before) → inserted before it.
-    expect(addPlacement).toHaveBeenCalledWith("s1", "Hover", undefined, 2, "p2");
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "Hover",
+      undefined,
+      4, // the counts stepper's default — this Foxtrot's beatsPerBar (§2.5.2)
+      "p2",
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
   });
 
   it("lets an editor add a break and step its beats (US-004a)", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const spies = { addBreak: vi.fn(), setBreakBeats: vi.fn() };
+    const spies = { addPlacement: vi.fn(), setBreakBeats: vi.fn() };
     const brk: Placement = { id: "b1", source: "break", beats: 4, deletedAt: null };
     const routine: RoutineDoc = {
       id: "rt_sample",
@@ -533,9 +601,11 @@ describe("US-027 Add / reorder / delete figure placements", () => {
     const card = screen.getByTestId("break-card");
     expect(card).toHaveTextContent(/4 beats/i);
 
-    // The "add break" affordance appends a break to the section.
-    await userEvent.click(screen.getAllByRole("button", { name: /add break/i })[0] as HTMLElement);
-    expect(spies.addBreak).toHaveBeenCalledWith("s1");
+    // The "add break" affordance now MINTS a choreo-local Break FIGURE
+    // (Builder v3 ④): a Foxtrot bar's worth of empty counts, editable like any
+    // figure — legacy break placements above keep rendering as cards.
+    await userEvent.click(firstOf(screen.getAllByRole("button", { name: /add break/i })));
+    expect(spies.addPlacement).toHaveBeenCalledWith("s1", "Break", undefined, 4);
 
     // The −/＋ stepper changes the beat count.
     await userEvent.click(screen.getByRole("button", { name: /more beats/i }));
@@ -611,6 +681,31 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     expect(await screen.findByText(/added to your library/i)).toBeInTheDocument();
   });
 
+  it("keeps the 'add to library' affordance off the name's header row so the name isn't crowded to a stub", async () => {
+    // Regression: a custom figure crammed the "Custom" pill + the long "add to
+    // library" button into the same flex row as the name, collapsing the name to
+    // a single truncated character on a narrow screen. The affordances now ride
+    // their own row, so the name button and the add button no longer share a parent.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+
+    const nameButton = screen.getByRole("button", { name: /edit steps: glue step/i });
+    const addButton = screen.getByRole("button", { name: /add glue step to my library/i });
+    expect(nameButton.parentElement).not.toBe(addButton.parentElement);
+    // The pill lives with the button on the affordance row, not on the name row.
+    const customPill = screen.getByText("Custom");
+    expect(nameButton.parentElement?.contains(customPill)).toBe(false);
+  });
+
   it("shows 'in your library' (no button) once the figure is bookmarked", async () => {
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const onAddToLibrary = vi.fn();
@@ -644,6 +739,58 @@ describe("v5 library bookmark — 'add to my library' affordance (PLAN §4.2/§5
     );
     await userEvent.click(screen.getByRole("button", { name: /add glue step to my library/i }));
     expect(await screen.findByText(/already in your library/i)).toBeInTheDocument();
+  });
+
+  it("step editor: no 'adjusted — still X' chip for a from-scratch custom (nothing was adjusted)", async () => {
+    // A custom figure has no base/origin — the identity-reassurance chip is a
+    // variant's, not a custom's. Add-to-library still shows.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = seededAccount();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved)}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: glue step/i }));
+    expect(screen.getByRole("button", { name: /add to my library/i })).toBeInTheDocument();
+    expect(screen.queryByText(/adjusted for this choreo/i)).toBeNull();
+  });
+
+  it("step editor: the chip shows for a VARIANT (baseFigureRef set) that diverged from its base", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p1 = placement("p1", "var1");
+    const variant: FigureDoc = {
+      ...accountFigure("var1", "Feather Step"),
+      baseFigureRef: "global:foxtrot:feather-step",
+      attributes: [
+        { id: "x1", kind: "sway", count: 1, value: "left", role: null, deletedAt: null },
+      ],
+    };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: variant, status: "live" }])}
+        bookmarkedFigureRefs={new Set()}
+        onAddToLibrary={vi.fn(async () => ({ alreadySaved: false }))}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather step/i }));
+    expect(screen.getByText(/adjusted for this choreo — still Feather Step/i)).toBeInTheDocument();
   });
 
   it("hides the affordance for a non-editor (viewer)", async () => {
@@ -903,6 +1050,73 @@ describe("§5.4 figure-editor undo — 'undo follows the surface being edited'",
   });
 });
 
+describe("Builder v3 ③ portion window — the editor windows to the placed slice (§4.3/§4.4)", () => {
+  // A 6-count Natural Turn placed as ONLY counts 4–6: the editor must show and
+  // edit just that slice — not the whole figure — the reported confusion ("I added
+  // 3 steps but the editor gives me all 6").
+  const portioned = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
+    const p: Placement = {
+      id: "p1",
+      figureRef: "nt",
+      part: { fromCount: 4, toCount: 6 },
+      deletedAt: null,
+    };
+    const fig: FigureDoc = {
+      id: "nt",
+      scope: "global",
+      ownerId: "app",
+      figureType: "natural-turn",
+      dance: "foxtrot",
+      name: "Natural Turn",
+      source: "library",
+      counts: 6,
+      attributes: [{ id: "b1", kind: "step", count: 1, value: "HT", role: null, deletedAt: null }],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    return {
+      routine: {
+        id: "rt_sample",
+        title: "Sample",
+        dance: "foxtrot",
+        ownerId: "u",
+        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+        annotations: [],
+        schemaVersion: 1,
+        deletedAt: null,
+      },
+      resolved: [{ placement: p, figure: fig, status: "live" }],
+    };
+  };
+  const editor = () => within(screen.getByRole("dialog", { name: /steps · natural turn/i }));
+
+  it("shows only counts 4–6 (not the un-placed 1–3) and labels the portion", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = portioned();
+    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*natural turn/i }));
+    expect(editor().getByRole("button", { name: /^Add Step at count 4$/i })).toBeInTheDocument();
+    expect(editor().getByRole("button", { name: /^Add Step at count 6$/i })).toBeInTheDocument();
+    expect(editor().queryByRole("button", { name: /^Add Step at count 1$/i })).toBeNull();
+    expect(editor().queryByRole("button", { name: /^Add Step at count 3$/i })).toBeNull();
+    expect(editor().getByText(/4–6 of 6/)).toBeInTheDocument();
+  });
+
+  it("surfaces the inline 'making this figure yours…' pending state while the fork is in flight", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const { routine, resolved } = portioned();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, resolved, { isForking: () => true })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /steps:\s*natural turn/i }));
+    expect(editor().getByText(/making this figure yours/i)).toBeInTheDocument();
+  });
+});
+
 describe("US-027 Add a figure from the library picker", () => {
   const emptySectionRoutine = (): RoutineDoc => ({
     id: "rt_sample",
@@ -929,19 +1143,197 @@ describe("US-027 Add a figure from the library picker", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
     await userEvent.click(screen.getByRole("button", { name: /feather step/i }));
-    // A library pick keeps its catalog-derived default length (no explicit bars).
+    // The portion picker (Builder v3 ③) opens; the default range is the whole
+    // figure — confirming adds a live catalog reference with no part window.
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
     expect(addPlacement).toHaveBeenCalledWith(
       "s1",
       "Feather Step",
       "feather-step",
       undefined,
       undefined,
+      null,
+      expect.any(Function), // onCreated — the STORE decides it never fires for a catalog pick
     );
   });
 
-  it("still supports creating a custom figure by name", async () => {
+  it("lists the user's library figures (dance-scoped, deduped) and places a live reference on tap", async () => {
+    // Intent: a figure the user added to their library/catalog must surface in
+    //   the choreo's add-figure search (docs/concepts/figures.md § The library
+    //   screen: a bookmark "can be placed
+    //   into your other routines"). Bookmarked CATALOG figures dedupe into the
+    //   preset rows; other-dance figures stay out.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const placeFigure = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [], { placeFigure })}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+          {
+            docRef: "global:foxtrot:feather-step",
+            title: "Feather Step",
+            figureType: "feather-step",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 1,
+          },
+          {
+            docRef: "fig_other",
+            title: "Waltz Thing",
+            figureType: "waltz-thing",
+            dance: "waltz",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /waltz thing/i })).toBeNull();
+    // The bookmarked catalog figure is NOT duplicated — the preset row is it.
+    expect(screen.getAllByRole("button", { name: /^feather step$/i })).toHaveLength(1);
+    // Tapping places the existing figure by ref — whole figure, no portion step.
+    await userEvent.click(screen.getByRole("button", { name: /my lunge/i }));
+    expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
+  });
+
+  it("surfaces a just-bookmarked figure placed in THIS choreo before /mine catches up", async () => {
+    // Intent: "add to my library" lands in the live account doc instantly, but
+    //   /api/figures/mine reads the alarm-written library_entry projection — a
+    //   picker fed only by that REST list misses the figure the user JUST
+    //   bookmarked (read-your-writes, the same gap PR #255 closed for the
+    //   Journal). The picker merges live bookmarks resolved from this routine's
+    //   placed figures, so the bookmark and the placement are the same figure
+    //   underneath (placing it references the SAME doc by ref — never a copy).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const placeFigure = vi.fn();
+    const mineFig: FigureDoc = {
+      ...figure("fig_mine", "My Lunge"),
+      scope: "account",
+      source: "custom",
+      figureType: "my-lunge",
+    };
+    const glueFig: FigureDoc = {
+      ...figure("fig_glue", "Glue Step"),
+      scope: "account",
+      source: "custom",
+      figureType: "glue-step",
+    };
+    const p1 = placement("p1", "fig_mine");
+    const p2 = placement("p2", "fig_glue");
+    const routine: RoutineDoc = {
+      ...emptySectionRoutine(),
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1, p2] }],
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(
+          routine,
+          [
+            { placement: p1, figure: mineFig, status: "live" },
+            { placement: p2, figure: glueFig, status: "live" },
+          ],
+          { placeFigure },
+        )}
+        // The stale REST list: the library_entry projection hasn't caught up.
+        libraryFigures={[]}
+        // The live account doc already carries the bookmark.
+        bookmarkedFigureRefs={new Set(["fig_mine"])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    const list = within(screen.getByRole("list", { name: /library figures/i }));
+    // A placed figure that was NOT bookmarked stays choreo-local — out of the
+    // picker (docs/concepts/figures.md § Scopes: glue steps stay out of every
+    // library).
+    expect(list.queryByRole("button", { name: /glue step/i })).toBeNull();
+    // Tapping the just-bookmarked figure places the SAME live doc by ref.
+    await userEvent.click(list.getByRole("button", { name: /my lunge/i }));
+    expect(placeFigure).toHaveBeenCalledWith("s1", "fig_mine", undefined);
+  });
+
+  it("dedupes a live bookmark against its /mine row once the projection catches up", async () => {
+    // Intent: once library_entry has projected, the same figure arrives via BOTH
+    //   the live account-doc set and the REST list — it must list exactly once
+    //   (the REST row wins, mirroring the Journal merge's dedupe rule).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const mineFig: FigureDoc = {
+      ...figure("fig_mine", "My Lunge"),
+      scope: "account",
+      source: "custom",
+      figureType: "my-lunge",
+    };
+    const p1 = placement("p1", "fig_mine");
+    const routine: RoutineDoc = {
+      ...emptySectionRoutine(),
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p1] }],
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p1, figure: mineFig, status: "live" }])}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 1,
+          },
+        ]}
+        bookmarkedFigureRefs={new Set(["fig_mine"])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    const list = within(screen.getByRole("list", { name: /library figures/i }));
+    expect(list.getAllByRole("button", { name: /my lunge/i })).toHaveLength(1);
+  });
+
+  it("the picker's search filter finds library figures too", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(emptySectionRoutine(), [])}
+        libraryFigures={[
+          {
+            docRef: "fig_mine",
+            title: "My Lunge",
+            figureType: "my-lunge",
+            dance: "foxtrot",
+            baseFigureRef: null,
+            usedInCount: 0,
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/filter figures/i), "lunge");
+    expect(screen.getByRole("button", { name: /my lunge/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^feather step$/i })).toBeNull();
+  });
+
+  it("creates a custom figure via the 'Create my own figure' row → compose view", async () => {
     // Intent: the picker keeps a 'create your own' escape hatch (no figureType →
-    //   the store slugs one). Covers US-027 custom-add alongside the library.
+    //   the store slugs one) — reached through the always-present create row,
+    //   which SWAPS the selection UI for the compose form (design add-figure
+    //   sheet: library view ⇄ compose view). Covers US-027 custom-add.
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
     const addPlacement = vi.fn();
     renderUi(
@@ -952,10 +1344,149 @@ describe("US-027 Add a figure from the library picker", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
+    // The compose view replaces the selection parts: no filter, no library list.
+    expect(screen.queryByLabelText(/filter figures/i)).toBeNull();
+    expect(screen.queryByRole("list", { name: /library figures/i })).toBeNull();
     await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
-    await userEvent.click(screen.getByRole("button", { name: /add custom/i }));
-    // The custom form's bars stepper defaults to 2 (PLAN §2.5).
-    expect(addPlacement).toHaveBeenCalledWith("s1", "My Move", undefined, 2, undefined);
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    // The compose view's counts stepper defaults to the dance's beatsPerBar
+    // (§2.5.2) — 4 for this Foxtrot routine.
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "My Move",
+      undefined,
+      4,
+      undefined,
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
+  });
+
+  it("defaults the compose view's counts to the dance's beatsPerBar (Waltz → 3)", async () => {
+    // Intent: a fresh custom figure defaults to one bar of ITS dance (§2.5.2) —
+    //   3 counts for Waltz/Viennese, 4 for the 4/4 dances — not a hardcoded 3.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const addPlacement = vi.fn();
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore({ ...emptySectionRoutine(), dance: "waltz" }, [], { addPlacement })}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
+    await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    expect(addPlacement).toHaveBeenCalledWith(
+      "s1",
+      "My Move",
+      undefined,
+      3,
+      undefined,
+      undefined,
+      expect.any(Function), // onCreated — create-navigates (§4.3)
+    );
+  });
+
+  it("keeps the create row visible when the filter matches nothing, and cancel returns to the list", async () => {
+    // Intent: "create my own figure" is ALWAYS reachable from the picker — even
+    //   a filter with zero matches leaves the row in place (design: the create
+    //   button sits below the list, outside it). Backing out of the compose view
+    //   restores the selection UI.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble routineId="rt_sample" role="editor" store={fakeStore(emptySectionRoutine(), [])} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.type(screen.getByLabelText(/filter figures/i), "zzz no such figure");
+    expect(screen.getByText(/no figures match/i)).toBeInTheDocument();
+    const createRow = screen.getByRole("button", { name: /create my own figure/i });
+    expect(createRow).toBeInTheDocument();
+    await userEvent.click(createRow);
+    expect(screen.getByLabelText(/figure name/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    expect(screen.getByLabelText(/filter figures/i)).toBeInTheDocument();
+  });
+});
+
+describe("placement-card count sub-line wraps at the dance phrase", () => {
+  it("shows Waltz counts past 6 wrapped — steps at 1,2,7,8,9 read '1 2 1 2 3'", async () => {
+    // Intent: Waltz is counted 1–6; a figure whose steps run past the phrase
+    //   must not show raw "7 8 9" on its card (display wraps, floats untouched).
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const fig: FigureDoc = {
+      ...figure("right-lunge", "Right Lunge"),
+      dance: "waltz",
+      scope: "account",
+      attributes: [1, 2, 7, 8, 9].map((c) => ({
+        id: `s${c}`,
+        kind: "direction",
+        count: c,
+        value: "fwd",
+        role: null,
+        deletedAt: null,
+      })),
+    };
+    const p = placement("p1", "right-lunge");
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "waltz",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    expect(screen.getByText(/^1 2 1 2 3$/)).toBeInTheDocument();
+  });
+});
+
+describe("Builder v3 ③ — a portioned placement shows ONLY its window", () => {
+  it("windows the placement card's timing + technique chips to [fromCount, toCount]", async () => {
+    // Intent: adding "the last 3 steps of a Natural Turn" must show only those
+    //   steps in the builder card — not the whole figure with a "steps 4–6" label
+    //   bolted on. The card's chips must match the reading view's windowing.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    // A charted figure with a distinctive direction on counts 1 and 5.
+    const fig: FigureDoc = {
+      ...figure("natural-turn", "Natural Turn"),
+      attributes: [
+        { id: "n1", kind: "direction", count: 1, value: "zzz1", role: null, deletedAt: null },
+        { id: "n5", kind: "direction", count: 5, value: "zzz5", role: null, deletedAt: null },
+      ],
+    };
+    // Place only counts 4–6 (the last 3).
+    const p: Placement = { ...placement("p1", "natural-turn"), part: { fromCount: 4, toCount: 6 } };
+    const routine: RoutineDoc = {
+      id: "rt_sample",
+      title: "Sample",
+      dance: "foxtrot",
+      ownerId: "u",
+      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    };
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
+      />,
+    );
+    // The in-window step (count 5) renders; the out-of-window step (count 1) does not.
+    expect(screen.getByText("zzz5")).toBeInTheDocument();
+    expect(screen.queryByText("zzz1")).toBeNull();
   });
 });
 
@@ -1051,7 +1582,8 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     //   taps a count, picks a value, and the edit is written to THAT figure's doc.
     // Covers US-028 AC-1 wired end-to-end through the store seam (setFigureAttributes).
     const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const setFigureAttributes = vi.fn();
+    // Typed on the store contract so mock.calls hands the args back typed.
+    const setFigureAttributes = vi.fn<(figureRef: string, attrs: Attribute[]) => void>();
     const { routine, resolved } = oneFigureRoutine();
     renderUi(
       <Assemble
@@ -1062,14 +1594,14 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     );
     // Open the step editor for the Feather placement.
     await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // The bars-driven grid shows; tap the Step cell at count 1 → the single-attribute
-    // overlay → pick footwork "HT".
+    // The counts-driven grid shows; tap the empty Step cell at count 1 — the
+    // Builder v3 ② quick-add places a blank step (presence direction attr)
+    // straight through the store, no overlay needed.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(setFigureAttributes).toHaveBeenCalled();
-    const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) as [string, Attribute[]];
+    const [figureRef, attrs] = setFigureAttributes.mock.calls.at(-1) ?? ["", []];
     expect(figureRef).toBe("feather");
-    expect(attrs.some((a) => a.kind === "footwork" && a.value === "HT" && a.count === 1)).toBe(
+    expect(attrs.some((a) => a.kind === "direction" && a.value === null && a.count === 1)).toBe(
       true,
     );
   });
@@ -1104,112 +1636,6 @@ describe("US-028 Notate a figure from the Assemble screen (the hero flow)", () =
     expect(screen.getByRole("table", { name: /step grid/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /at count/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /increase bars/i })).toBeNull();
-  });
-});
-
-describe("US-031 Edit per-figure alignment", () => {
-  /** A routine with one placement → a Feather figure carrying entry = facing/DW. */
-  const alignedRoutine = (): { routine: RoutineDoc; resolved: ResolvedPlacement[] } => {
-    const p = placement("p1", "feather");
-    return {
-      routine: {
-        id: "rt_sample",
-        title: "Sample",
-        dance: "foxtrot",
-        ownerId: "u",
-        sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
-        annotations: [],
-        schemaVersion: 1,
-        deletedAt: null,
-      },
-      resolved: [{ placement: p, figure: figure("feather", "Feather"), status: "live" }],
-    };
-  };
-
-  it("edits a figure's entry alignment (qualifier + direction) via the store (AC-1)", async () => {
-    // Intent: an editor sets a figure's entry/exit facing-direction from the step
-    //   sheet; the change writes to the figure's doc through the store seam.
-    //   D6: alignment editor now uses chip toggles (QUALIFIER + DIRECTION rows).
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const setFigureAlignment = vi.fn();
-    const { routine, resolved } = alignedRoutine();
-    renderUi(
-      <Assemble
-        routineId="rt_sample"
-        role="editor"
-        store={fakeStore(routine, resolved, { setFigureAlignment })}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    const entryGroup = screen.getByRole("group", { name: /entry alignment/i });
-    expect(entryGroup).toBeInTheDocument();
-    // Click the "LOD" direction chip inside the entry alignment fieldset.
-    await userEvent.click(within(entryGroup).getByRole("button", { name: /^LOD$/i }));
-    expect(setFigureAlignment).toHaveBeenCalledWith("feather", "entry", {
-      qualifier: "facing",
-      direction: "LOD",
-    });
-  });
-
-  it("renders an alignment chip on the placement card (AC-2)", async () => {
-    // Intent: a figure's set alignment shows as a read-only chip on its card.
-    //   D6: chip shows qualifier + readable direction label ("entry facing diag wall").
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
-    // entryAlignment = { qualifier: "facing", direction: "DW" } → "entry facing diag wall"
-    expect(screen.getByText(/entry facing diag wall/i)).toBeInTheDocument();
-  });
-
-  it("has no separate floor / long / short / corner concept (AC-3)", async () => {
-    // Intent: per-figure alignment replaces any floor/side model.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="editor" store={fakeStore(routine, resolved)} />);
-    expect(screen.queryByText(/long side|short side|corner/i)).toBeNull();
-  });
-
-  it("hides alignment editing from a viewer", async () => {
-    // Intent: alignment editing is editor-only; a viewer sees chips, not selects.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const { routine, resolved } = alignedRoutine();
-    renderUi(<Assemble routineId="rt_sample" role="viewer" store={fakeStore(routine, resolved)} />);
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    expect(screen.queryByRole("group", { name: /entry alignment/i })).toBeNull();
-  });
-
-  it("D6: shows alignment header summary chips ('facing DW → backing LOD') in the step sheet", async () => {
-    // Intent (D6 design 1.20 pin 1): when a figure has entry + exit alignment set,
-    //   the notation sheet shows a compact "facing X → backing Y" header summary.
-    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
-    const p = placement("p1", "feather");
-    const fig: FigureDoc = {
-      ...figure("feather", "Feather"),
-      entryAlignment: { qualifier: "facing", direction: "DW" },
-      exitAlignment: { qualifier: "backing", direction: "LOD" },
-    };
-    const routine: RoutineDoc = {
-      id: "rt_sample",
-      title: "Sample",
-      dance: "foxtrot",
-      ownerId: "u",
-      sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
-      annotations: [],
-      schemaVersion: 1,
-      deletedAt: null,
-    };
-    renderUi(
-      <Assemble
-        routineId="rt_sample"
-        role="editor"
-        store={fakeStore(routine, [{ placement: p, figure: fig, status: "live" }])}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /steps:\s*Feather/i }));
-    // Header summary chips appear in the notation sheet (may also appear on placement card).
-    // Use getAllByText to tolerate both occurrences (placement card + header summary).
-    expect(screen.getAllByText(/facing diag wall/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/backing LOD/i).length).toBeGreaterThan(0);
   });
 });
 
@@ -1302,5 +1728,358 @@ describe("D7 Undo/redo glyphs (design 1.21)", () => {
     // Glyphs are present in the button text content.
     expect(undoBtn.textContent).toContain("↶");
     expect(redoBtn.textContent).toContain("↷");
+  });
+});
+
+describe("Offline editing states (PLAN §11.2, design 1.24)", () => {
+  const offlineRoutine = (): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Offline Waltz",
+    dance: "waltz",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("keeps editing ENABLED while hydrated from local persistence ('local')", async () => {
+    // Intent (§11.2): the edit gate is live ∨ local — a doc hydrated from
+    //   IndexedDB while disconnected stays editable; edits persist + replay.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore({ ...offlineRoutine(), sections: [] }, [], {
+          syncState: () => "local",
+        })}
+      />,
+    );
+    // The editor affordances render: the empty-state add-section CTA and the
+    // per-user Undo — both gated on canEdit, which must hold in "local".
+    expect(screen.getByRole("button", { name: "Add section" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+  });
+
+  it("shows the pending chip (slate, role=status) with the live §11.2 count", async () => {
+    // Intent (§11.2 truth-telling / design 1.24 pin 1): ≥1 undelivered change
+    //   while unsynced → the visible "will sync" chip with the count.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "local",
+          pendingSyncCount: () => 2,
+        })}
+      />,
+    );
+    const chip = screen.getByTestId("pending-sync");
+    expect(chip).toHaveAttribute("role", "status");
+    expect(chip.textContent).toMatch(/2 changes saved on this device/i);
+  });
+
+  it("hides the pending chip once everything synced (live, 0 pending)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "live",
+          pendingSyncCount: () => 0,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("pending-sync")).toBeNull();
+  });
+
+  it("surfaces terminally-rejected offline edits as an ALERT and keeps content readable", async () => {
+    // Intent (§11.2 forbidden outcome, Q-NEW-2 / design 1.24 pin 2): reconnect
+    //   terminally rejected (access revoked) with pending edits → an unmissable
+    //   role=alert notice; the local content stays on screen (read-only), it is
+    //   NOT blanked away behind the full-screen offline state.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "closed",
+          pendingSyncCount: () => 2,
+        })}
+      />,
+    );
+    const alert = screen.getByTestId("unsynced-changes");
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(alert.textContent).toMatch(/couldn't be saved/i);
+    // Content readable; editing disabled (closed is not an editable state).
+    expect(screen.getByText("Offline Waltz")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add section" })).toBeNull();
+  });
+
+  it("disables the fork affordance while offline (creation is a server action, §11.2)", async () => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
+    try {
+      const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+      renderUi(
+        <Assemble
+          routineId="rt_sample"
+          role="editor"
+          onFork={() => {}}
+          store={fakeStore(offlineRoutine(), [], { syncState: () => "local" })}
+        />,
+      );
+      expect(screen.getByRole("button", { name: /make a copy/i })).toBeDisabled();
+    } finally {
+      Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
+    }
+  });
+
+  it("keeps the calm full-screen offline state when closed with NOTHING pending", async () => {
+    // Terminal close with no local edits at stake — the pre-§11.2 behavior.
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(offlineRoutine(), [], {
+          syncState: () => "closed",
+          pendingSyncCount: () => 0,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("unsynced-changes")).toBeNull();
+    expect(screen.queryByText("Offline Waltz")).toBeNull(); // replaced by OfflineState
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Steps-overlay lens split + create-navigates (2026-07-08 owner request):
+//  • EDIT lens → the figure detail is notation-only: no annotation/family-notes
+//    panels (they stay on the reading-lens-opened detail), recap text present.
+//  • READING lens → the detail keeps the notes surfaces but drops the per-count
+//    text recap (the grid/chips are the reading content).
+//  • Creating a NEW custom figure opens its step editor immediately.
+// ─────────────────────────────────────────────────────────────────────────
+describe("Steps overlay — lens-dependent notes/recap + create-opens-editor", () => {
+  const overlayRoutine = (p: Placement): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+
+  it("EDIT lens: the step editor hides the notes panels but keeps the per-count recap", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(overlayRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather/i }));
+    // The authoring summary (the readable per-count recap) stays in the edit lens…
+    expect(screen.getByTestId("step-detail-1")).toBeInTheDocument();
+    // …but the notes surfaces don't render while editing the choreo.
+    expect(screen.queryByRole("region", { name: /^annotations$/i })).toBeNull();
+    expect(screen.queryByRole("region", { name: /family notes/i })).toBeNull();
+  });
+
+  it("READING lens: the step editor shows the notes panels but hides the recap text", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        initialMode="read"
+        store={fakeStore(overlayRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    // Open the figure detail from the reading programme (tap the figure name).
+    await userEvent.click(
+      within(screen.getByTestId("reading-view")).getByRole("button", { name: /^feather$/i }),
+    );
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /family notes/i })).toBeInTheDocument();
+    // The text recap is an authoring aid — not shown when viewing.
+    expect(screen.queryByTestId("step-detail-1")).toBeNull();
+  });
+
+  it("creating a custom figure opens its step editor immediately", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    // The store invokes onCreated synchronously (the real store fires it as soon
+    // as a NEW custom figure doc is minted; a catalog pick never fires it).
+    const addPlacement = vi.fn(
+      (
+        _sectionId: string,
+        _name: string,
+        _figureType?: string,
+        _counts?: number,
+        _before?: string | null,
+        _part?: { fromCount: number; toCount: number } | null,
+        onCreated?: (created: { figureRef: string; placementId: string }) => void,
+      ) => {
+        onCreated?.({ figureRef: "fig_new", placementId: "p_new" });
+      },
+    );
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(
+          {
+            id: "rt_sample",
+            title: "Sample",
+            dance: "foxtrot",
+            ownerId: "u",
+            sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [] }],
+            annotations: [],
+            schemaVersion: 1,
+            deletedAt: null,
+          },
+          [],
+          { addPlacement },
+        )}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^add figure$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /create my own figure/i }));
+    await userEvent.type(screen.getByLabelText(/figure name/i), "My Move");
+    await userEvent.click(screen.getByRole("button", { name: /add to choreo/i }));
+    // The new figure's full-screen step editor opens without another tap (it
+    // shows the loading state until the figure doc hydrates).
+    expect(await screen.findByRole("dialog", { name: /steps ·/i })).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Figure detail read view (design `figMode`, Builder v3 — openFigure picks the
+// detail lens from the assemble lens): the READING programme opens a figure
+// READ-ONLY — comments stay (addable per role), but nothing is editable until
+// the explicit pencil toggle (editors only) flips the open detail into the
+// editing lens. The builder's placement card still opens the editor directly.
+// ─────────────────────────────────────────────────────────────────────────
+describe("Figure detail read view — reading lens opens read-only, edit is explicit", () => {
+  const detailRoutine = (p: Placement): RoutineDoc => ({
+    id: "rt_sample",
+    title: "Sample",
+    dance: "foxtrot",
+    ownerId: "u",
+    sections: [{ id: "s1", name: "Intro", deletedAt: null, placements: [p] }],
+    annotations: [],
+    schemaVersion: 1,
+    deletedAt: null,
+  });
+  const detail = () => within(screen.getByRole("dialog", { name: /steps · feather/i }));
+  const openFromReading = async () =>
+    userEvent.click(
+      within(screen.getByTestId("reading-view")).getByRole("button", { name: /^feather$/i }),
+    );
+  const renderReading = async (role: string) => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role={role}
+        initialMode="read"
+        store={fakeStore(detailRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+  };
+
+  it("an EDITOR's reading-lens detail is read-only, with an explicit Edit toggle", async () => {
+    await renderReading("editor");
+    await openFromReading();
+    // The notes surfaces are the read view's content…
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+    // …and NOTHING is editable: no cell add/edit affordances, no editing chrome.
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^undo$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^redo$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^add kind$/i })).toBeNull();
+    // The explicit route into editing is the pencil toggle (design figMode).
+    expect(detail().getByRole("button", { name: /^edit steps$/i })).toBeInTheDocument();
+  });
+
+  it("the Edit toggle flips the OPEN detail into the editing lens (and back)", async () => {
+    await renderReading("editor");
+    await openFromReading();
+    await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
+    // Editable now: cell affordances + undo/redo + add-kind arrive…
+    expect(detail().getAllByRole("button", { name: /at count/i }).length).toBeGreaterThan(0);
+    expect(detail().getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+    // …the per-count recap (authoring aid) shows, and the notes surfaces leave
+    // (the editing lens is notation-only, §4.4).
+    expect(detail().getByTestId("step-detail-1")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /^annotations$/i })).toBeNull();
+    // The toggle flips back to viewing (design onToggleEdit).
+    await userEvent.click(detail().getByRole("button", { name: /^view steps$/i }));
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+    expect(await screen.findByRole("region", { name: /^annotations$/i })).toBeInTheDocument();
+  });
+
+  it("the read view offers no fork-into-variant — forking a figure EDITS the choreo", async () => {
+    // Forking a global figure spawns a variant and re-points the placement — a
+    // routine edit — so the affordance belongs to the EDIT lens only. The test
+    // figure is scope "global", exactly the case where the fork bar renders.
+    await renderReading("editor");
+    await openFromReading();
+    expect(detail().queryByRole("button", { name: /fork into variant/i })).toBeNull();
+    await userEvent.click(detail().getByRole("button", { name: /^edit steps$/i }));
+    expect(detail().getByRole("button", { name: /fork into variant/i })).toBeInTheDocument();
+  });
+
+  it("a COMMENTER can add a note from the read view but gets no Edit toggle", async () => {
+    await renderReading("commenter");
+    await openFromReading();
+    const panel = await screen.findByRole("region", { name: /^annotations$/i });
+    expect(within(panel).getByRole("textbox", { name: /^note$/i })).toBeInTheDocument();
+    expect(detail().queryByRole("button", { name: /^edit steps$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /at count/i })).toBeNull();
+  });
+
+  it("a VIEWER's read view is fully read-only: no compose, no Edit toggle", async () => {
+    await renderReading("viewer");
+    await openFromReading();
+    const panel = await screen.findByRole("region", { name: /^annotations$/i });
+    expect(within(panel).queryByRole("textbox", { name: /^note$/i })).toBeNull();
+    expect(detail().queryByRole("button", { name: /^edit steps$/i })).toBeNull();
+  });
+
+  it("the BUILDER's placement card still opens the editor directly (edit lens)", async () => {
+    const { Assemble } = await importComponent<AssembleModule>("../components/Assemble");
+    const p = placement("p1", "feather");
+    renderUi(
+      <Assemble
+        routineId="rt_sample"
+        role="editor"
+        store={fakeStore(detailRoutine(p), [
+          { placement: p, figure: figure("feather", "Feather"), status: "live" },
+        ])}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /edit steps: feather/i }));
+    // Immediately editable — no extra toggle tap needed from the builder…
+    expect(detail().getAllByRole("button", { name: /at count/i }).length).toBeGreaterThan(0);
+    expect(detail().getByRole("button", { name: /^undo$/i })).toBeInTheDocument();
+    // …and the pencil offers the way BACK to viewing (design shows it in both modes).
+    expect(detail().getByRole("button", { name: /^view steps$/i })).toBeInTheDocument();
   });
 });

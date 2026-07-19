@@ -2,22 +2,38 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import topLevelAwait from "vite-plugin-top-level-await";
-import wasm from "vite-plugin-wasm";
 
 export default defineConfig({
+  // Resolve Automerge to its SLIM build, which does NOT auto-initialize the WASM
+  // via a top-level await. The full build's top-level await was hoisted by
+  // vite-plugin-top-level-await into the ENTRY chunk (blocking first paint on the
+  // 2.75 MB WASM), which is what prevented code-splitting it off the initial load.
+  // With slim, the store initializes the WASM explicitly + lazily (store/automerge-
+  // init.ts, awaited by openRoutine) so it loads only on routine-open. This also
+  // removes the need for vite-plugin-wasm / vite-plugin-top-level-await entirely
+  // (the WASM is fetched via an `?url` asset + initializeWasm, not a bare import).
+  resolve: {
+    // EXACT match only (anchored regex) — a bare `@automerge/automerge` resolves to
+    // slim, while `@automerge/automerge/slim` and `.../automerge.wasm?url` (the init
+    // module's own imports) must pass through unrewritten.
+    alias: [{ find: /^@automerge\/automerge$/, replacement: "@automerge/automerge/slim" }],
+  },
   plugins: [
-    // Automerge ships its core as WASM (imported via the ESM-integration
-    // proposal Vite/Rollup can't bundle natively). US-025 is the first screen to
-    // mount the routine editor (Assemble → store → @automerge/automerge) in the
-    // production bundle, so the web build now needs these plugins.
-    wasm(),
-    topLevelAwait(),
     react(),
     tailwindcss(),
     VitePWA({
+      // Registration happens in src/lib/sw-update.ts (wired from main.tsx), not
+      // via an injected registerSW.js — the app drives periodic update checks
+      // and the update-takeover reload itself (docs/system/sync-and-offline.md
+      // § Version skew). With
+      // injectRegister off, the plugin no longer auto-enables the autoUpdate
+      // worker behaviors, so skipWaiting/clientsClaim are set explicitly below:
+      // a new SW takes control as soon as it's installed.
       registerType: "autoUpdate",
+      injectRegister: false,
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         // The Automerge core WASM (~3 MB) is part of the installable editor
         // shell, so allow it past Workbox's 2 MiB default precache cap.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
@@ -43,6 +59,33 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Keep the Automerge core (~2.75 MB WASM + its JS glue) and the store
+        // modules that pull it in their OWN async chunk, so it loads only when a
+        // routine is opened — the lazy Assemble editor (ChoreoFlow.tsx) and the
+        // journal's dynamic routine-view import (store/journal.ts) are its only
+        // reachers. Without this, rollup HOISTS the shared store code into the
+        // entry chunk (the journal dynamic-import originates there, making the
+        // entry the common ancestor), which drags the WASM back onto the initial
+        // load. The SW still precaches this chunk for the offline editor; the win
+        // is keeping it off the first paint of the choreo list (mobile-first NFR).
+        // doc-storage.ts is deliberately EXCLUDED — it carries no Automerge and is
+        // reached statically from the entry via the offline cache (store/offline.ts).
+        manualChunks(id) {
+          if (id.includes("@automerge/automerge")) return "automerge";
+          const automergeStore = [
+            "routine.ts",
+            "routine-view.ts",
+            "routine-snapshot.ts",
+            "doc-connection.ts",
+          ];
+          if (automergeStore.some((f) => id.endsWith(`/store/${f}`))) return "automerge";
+        },
+      },
+    },
+  },
   // Local dev: proxy API calls to `wrangler dev` (default port 8787).
   server: {
     proxy: {

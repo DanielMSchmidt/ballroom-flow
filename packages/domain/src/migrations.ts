@@ -1,4 +1,5 @@
-// US-013 — Migration ladder (schemaVersion envelope) (PLAN §2.1, §7, §10.2).
+// US-013 — Migration ladder (schemaVersion envelope) (docs/system/architecture.md
+// § Global constraints, § Persistence & the DO lifecycle, docs/system/testing.md).
 //
 // Every document carries a `schemaVersion`. `migrate` walks an ORDERED ladder of
 // per-version upgrade steps from the doc's version up to CURRENT_SCHEMA_VERSION,
@@ -14,22 +15,26 @@
 // (US-041) depend on them being stable for life. The ladder enforces this — a
 // step that changes either throws.
 //
-// CURRENT is 4 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
-// v3→v4: backfill section/placement `sortKey`). A future v5 step adds TWO
-// localized edits here (add a `MIGRATIONS[4]` entry AND bump
-// CURRENT_SCHEMA_VERSION = 5), with no caller changes.
+// CURRENT is 6 (v1→v2: step→footwork retag; v2→v3: strip legacy `overlay` key;
+// v3→v4: backfill section/placement `sortKey`; v4→v5: legacy `bars` → `counts`;
+// v5→v6: lift a figure's `counts` to cover its step span, §2.5.2). A future step
+// adds TWO localized edits here (add a `MIGRATIONS[n]` entry AND bump
+// CURRENT_SCHEMA_VERSION), with no caller changes.
 //
-// WIRED (2026-07-02, v5 milestone step 1, PLAN §7): the DO load path
+// WIRED (2026-07-02, v5 milestone step 1, docs/system/architecture.md § Persistence
+// & the DO lifecycle): the DO load path
 // (`apps/worker/src/doc-do.ts` `loadPersisted`) runs this ladder on every
 // persisted doc via {@link migrateDraft} below and PERSISTS the upgrade as a
 // normal (migration-actor-attributed) change, so an older doc is brought
 // current in storage — not just lenient-read-shimmed on the way out. Every
 // fresh-doc call site stamps `CURRENT_SCHEMA_VERSION` (never a literal `1`).
 
+import { DANCES, isDanceId } from "./dances";
+import { isPlainRecord } from "./guards";
 import { sequentialKeys } from "./order";
 
 /** The schema version every freshly-built document is tagged with. */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** A document envelope: an opaque record that at least carries a schemaVersion. */
 type VersionedDoc = { schemaVersion: number } & Record<string, unknown>;
@@ -43,7 +48,7 @@ type MigrationStep = (doc: VersionedDoc) => VersionedDoc;
 
 /**
  * The ordered ladder, keyed by source version. `MIGRATIONS[n]` upgrades a v`n`
- * doc to v`n+1`. A v5 step adds `MIGRATIONS[4]` here (see the file header).
+ * doc to v`n+1`. A new step adds the next `MIGRATIONS[n]` here (see the file header).
  */
 const MIGRATIONS: Record<number, MigrationStep> = {
   // v1 → v2 (2026-06-28 notation parity): the `step` attribute kind is renamed
@@ -55,9 +60,7 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   // unchanged but for the version bump.
   1: (doc) => {
     const retag = (a: unknown): unknown =>
-      a && typeof a === "object" && (a as { kind?: unknown }).kind === "step"
-        ? { ...(a as object), kind: "footwork" }
-        : a;
+      isPlainRecord(a) && a.kind === "step" ? { ...a, kind: "footwork" } : a;
     // Only touch keys that already exist — NEVER spread back an absent key as
     // `undefined` (Automerge cannot store `undefined`; doing so corrupts routine
     // docs and broke template forks).
@@ -74,13 +77,13 @@ const MIGRATIONS: Record<number, MigrationStep> = {
   2: (doc) => {
     if (!("overlay" in doc)) return doc;
     const { overlay: _dropped, ...rest } = doc;
-    return rest as VersionedDoc;
+    return rest;
   },
 
   // v3 → v4 (#63 same-section reorder convergence): assign a fractional-index
   // `sortKey` to every section and to every placement within each section, IN
   // THEIR CURRENT ARRAY ORDER, so reorder becomes a per-field update that
-  // converges under concurrency (PLAN §5.3). Deterministic — every replica that
+  // converges under concurrency (docs/system/architecture.md § Ordering). Deterministic — every replica that
   // migrates the same persisted bytes assigns identical keys, so the backfill
   // itself converges. STRUCTURE-ONLY: only ADD `sortKey` (never rewrite an
   // existing one), never write `undefined` back (Automerge can't store it — so a
@@ -91,20 +94,67 @@ const MIGRATIONS: Record<number, MigrationStep> = {
     if (!Array.isArray(doc.sections)) return { ...doc };
     const sectionKeys = sequentialKeys(doc.sections.length);
     const sections = doc.sections.map((section, i) => {
-      if (!section || typeof section !== "object") return section;
-      const s = section as Record<string, unknown>;
-      const out: Record<string, unknown> = { ...s };
-      if (Array.isArray(s.placements)) {
-        const placementKeys = sequentialKeys(s.placements.length);
-        out.placements = (s.placements as unknown[]).map((p, j) => {
-          if (!p || typeof p !== "object" || "sortKey" in (p as object)) return p;
-          return { ...(p as object), sortKey: placementKeys[j] };
+      if (!isPlainRecord(section)) return section;
+      const out: Record<string, unknown> = { ...section };
+      const placements: unknown = section.placements;
+      if (Array.isArray(placements)) {
+        const placementKeys = sequentialKeys(placements.length);
+        out.placements = placements.map((p: unknown, j) => {
+          if (!isPlainRecord(p) || "sortKey" in p) return p;
+          return { ...p, sortKey: placementKeys[j] };
         });
       }
-      if (!("sortKey" in s)) out.sortKey = sectionKeys[i];
+      if (!("sortKey" in section)) out.sortKey = sectionKeys[i];
       return out;
     });
     return { ...doc, sections };
+  },
+
+  // v4 → v5 (Builder v3 ①, owner decision 2026-07-07): counts-based figure
+  // length. A figure doc's authored `bars` becomes `counts = bars × the dance's
+  // beatsPerBar`, and the legacy `bars` key is dropped — `bars` is DERIVED from
+  // counts everywhere after this (⌈counts / beatsPerBar⌉, figure-grid.ts).
+  // DETERMINISTIC (the meter comes from the doc's own immutable `dance`);
+  // STRUCTURE-ONLY otherwise; a doc without `bars` (routine/account docs, or a
+  // figure authored counts-first by a newer client) passes through unchanged —
+  // except that a figure carrying BOTH keeps its authored `counts` and only
+  // drops the stale `bars` (never double-converts).
+  4: (doc) => {
+    if (typeof doc.bars !== "number") return { ...doc };
+    const { bars, ...rest } = doc;
+    if (typeof doc.counts === "number") return rest; // counts wins
+    const dance = isDanceId(doc.dance) ? doc.dance : undefined;
+    const meter = dance ? DANCES[dance] : undefined;
+    if (!meter) return { ...doc }; // not a figure doc we can meter — leave as-is
+    // Clamp to the authored 1–64 ceiling the create schema + LENGTH stepper both
+    // enforce (§2.5.2) — a legacy figure with an out-of-range `bars` must not
+    // migrate to a counts value the rest of the system treats as impossible.
+    const counts = Math.min(64, Math.max(1, Math.floor(bars)) * meter.beatsPerBar);
+    return { ...rest, counts };
+  },
+
+  // v5 → v6 (figure-length invariant, 2026-07-14): a figure's authored `counts`
+  // must cover its step SPAN — the highest whole beat any live step occupies.
+  // The pre-fix default computed length as the NUMBER of distinct steps, which
+  // undershoots whenever a figure holds a Slow (2 beats, 1 count → a gap): the
+  // Foxtrot Feather Step "SQQ" steps on counts 1, 3, 4 but was seeded counts:3,
+  // so its count-4 step fell off the grid (§2.5.2). Lift a too-short `counts` to
+  // its span so every existing production figure — and the choreos referencing
+  // it — renders every step. STRUCTURE-ONLY, DETERMINISTIC (the span comes from
+  // the doc's own attributes); a doc with no numeric `counts` (routine/account
+  // docs, or a figure whose length derives live from its base) and a figure
+  // already long enough pass through with the version bump alone. The span floor
+  // wins over the §2.5.2 1–64 ceiling — an orphaned step is worse than an
+  // over-long figure (real seed spans are far under 64).
+  5: (doc) => {
+    if (typeof doc.counts !== "number" || !Array.isArray(doc.attributes)) return { ...doc };
+    let span = 0;
+    for (const a of doc.attributes) {
+      if (!isPlainRecord(a) || a.deletedAt != null) continue;
+      if (typeof a.count === "number") span = Math.max(span, Math.floor(a.count));
+    }
+    if (span <= doc.counts) return { ...doc };
+    return { ...doc, counts: span };
   },
 };
 
@@ -124,12 +174,17 @@ export function runLadder(
   ladder: Record<number, MigrationStep>,
   target: number,
 ): VersionedDoc {
-  const input = doc as VersionedDoc;
-  let current: VersionedDoc = input;
-  const startVersion = typeof input.schemaVersion === "number" ? input.schemaVersion : 1;
+  if (!isPlainRecord(doc)) {
+    throw new Error("cannot migrate a non-object document");
+  }
+  const startVersion = typeof doc.schemaVersion === "number" ? doc.schemaVersion : 1;
+  // Normalizing the envelope up front (untagged ⇒ v1) is what keeps this
+  // cast-free: `{ ...doc, schemaVersion }` IS a VersionedDoc by construction.
+  let current: VersionedDoc = { ...doc, schemaVersion: startVersion };
 
   // A doc already at — or NEWER than — `target` skips the loop and is returned
-  // unchanged: an older client must not hard-fail on a doc from a newer schema
+  // value-unchanged (as the normalized shallow copy above): an older client
+  // must not hard-fail on a doc from a newer schema
   // (forward-compat, pairs with US-012 lenient read), and re-migrating a current
   // doc is a no-op.
   for (let version = startVersion; version < target; version++) {
@@ -181,13 +236,16 @@ export function migrate(doc: unknown): VersionedDoc {
 export type { MigrationStep };
 
 /**
- * A live, mutable document — same shape as {@link VersionedDoc}, but a caller
- * passes an Automerge DRAFT (the object inside an `A.change` callback), not a
- * detached plain object. Kept as a structural type (no `@automerge/automerge`
- * import here) — a draft behaves like a plain object for reads/writes/deletes,
- * which is all this file needs.
+ * A live, mutable document — a caller passes an Automerge DRAFT (the object
+ * inside an `A.change` callback), not a detached plain object. Kept as a
+ * structural type (no `@automerge/automerge` import here) — a draft behaves
+ * like a plain object for reads/writes/deletes, which is all this file needs.
+ * The envelope is NOT required statically: a pre-envelope doc has no
+ * `schemaVersion` at runtime and is treated as v1 (same leniency as
+ * {@link runLadder}), so demanding it in the type would just force casts at
+ * every call site that migrates an untyped draft.
  */
-type MutableVersionedDoc = { schemaVersion: number } & Record<string, unknown>;
+type MutableVersionedDoc = Record<string, unknown>;
 
 /**
  * Bring an Automerge DRAFT up to `CURRENT_SCHEMA_VERSION`, mutating it in
@@ -208,9 +266,10 @@ type MutableVersionedDoc = { schemaVersion: number } & Record<string, unknown>;
  * A doc already at or above `CURRENT_SCHEMA_VERSION` is left COMPLETELY
  * untouched (no field writes) — the caller can therefore tell "nothing to do"
  * apart from "migrated" by checking whether the enclosing `A.change` produced
- * any changes at all (PLAN §7: no empty change, no version downgrade).
+ * any changes at all (docs/system/architecture.md § Persistence & the DO lifecycle:
+ * no empty change, no version downgrade).
  *
- * DETERMINISM (PLAN §5.3): `migrate` is pure and the v3→v4 sortKey backfill
+ * DETERMINISM (docs/system/architecture.md § Ordering): `migrate` is pure and the v3→v4 sortKey backfill
  * assigns keys from array order alone, so two callers who migrate the same
  * starting doc bytes compute byte-identical `after` values — the ladder's
  * existing convergence guarantee carries over unchanged; this function adds
@@ -220,7 +279,9 @@ export function migrateDraft(draft: MutableVersionedDoc): void {
   const from = typeof draft.schemaVersion === "number" ? draft.schemaVersion : 1;
   if (from >= CURRENT_SCHEMA_VERSION) return; // already current — untouched.
 
-  const before = JSON.parse(JSON.stringify(draft)) as VersionedDoc;
+  const parsed: unknown = JSON.parse(JSON.stringify(draft));
+  if (!isPlainRecord(parsed)) return; // unreachable: a draft serializes to an object
+  const before = parsed;
   const after = migrate(before);
 
   // Drop any key the ladder removed (e.g. the v2→v3 `overlay` strip). NEVER

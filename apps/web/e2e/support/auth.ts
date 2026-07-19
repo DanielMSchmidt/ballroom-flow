@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Deterministic E2E auth (PLAN §10.3: "deterministic auth+seed"). Establishes a
+// Deterministic E2E auth (docs/system/testing.md § Tooling & CI: "deterministic
+// auth+seed"). Establishes a
 // signed-in session for a seeded user WITHOUT live Clerk, so journeys are
 // reproducible offline.
 //

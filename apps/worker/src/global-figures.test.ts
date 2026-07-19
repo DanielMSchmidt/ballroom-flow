@@ -1,4 +1,6 @@
-// ⟳v5 global figure docs (PLAN §9 step 3, D28/D30/D31): the additive seeder, the
+// ⟳v5 global figure docs (milestone step 3 — docs/README.md; D28 —
+// docs/concepts/figures.md; D30 — docs/system/architecture.md § The catalog
+// seed pipeline; D31 — docs/concepts/collaboration.md § Who uses this): the additive seeder, the
 // global-figure read/write boundary (resolveEffectiveRole), and the admin-gated
 // seed route.
 import { env, SELF } from "cloudflare:test";
@@ -6,14 +8,16 @@ import type { LibraryFigure } from "@weavesteps/domain";
 import { globalFigureRef } from "@weavesteps/domain";
 import { beforeAll, describe, expect, it } from "vitest";
 import { resolveEffectiveRole } from "./db/membership";
-import type { DocNamespace } from "./test-support/doc-do-api";
+import { readFigureSnapshot } from "./figure-snapshot";
+import type { Env } from "./index";
 import { generateTestKeypair, makeTestJWT, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
+import { asTestPeek } from "./test-support/test-peek";
 
-const docs = env.DOC_DO as unknown as DocNamespace;
-// The seeder takes the worker Env; cast the test env (same bindings) to it.
-// biome-ignore lint/suspicious/noExplicitAny: the test env structurally satisfies Env.
-const seedEnv = env as any;
+const docs = env.DOC_DO;
+// The seeder takes the worker Env; the test env structurally satisfies it
+// (db-env.d.ts types DB/DOC_DO on ProvidedEnv; every other Env field is optional).
+const seedEnv: Env = env;
 
 let kp: TestKeypair;
 beforeAll(async () => {
@@ -58,17 +62,120 @@ describe("seedGlobalFigures — additive, idempotent import (D30)", () => {
     });
 
     // DO content: scope global + the charted attributes.
-    const fig = (await docs.get(docs.idFromName(ref)).getFigureSnapshot()) as {
-      scope?: string;
-      attributes?: unknown[];
-    } | null;
+    const fig = await readFigureSnapshot(docs.get(docs.idFromName(ref)));
     expect(fig?.scope).toBe("global");
-    expect(fig?.attributes?.length).toBe(2);
+    expect(fig?.attributes.length).toBe(2);
 
-    // Re-run: additive → nothing new created, existing doc untouched (D30).
+    // Re-run with the SAME content: nothing created, nothing rewritten (D30 ⟳:
+    // the reconcile is a no-op when the doc already matches the seed).
     const second = await seedGlobalFigures(seedEnv, { figures: SAMPLE });
     expect(second.created).toBe(0);
-    expect(second.skipped).toBe(1);
+    expect(second.updated).toBe(0);
+    expect(second.unchanged).toBe(1);
+  });
+
+  it("reconcileSeed on an unseeded figure DO does NOT materialize a routine (regression)", async () => {
+    // Regression: reconcileSeed read via getDoc(), which auto-materializes AND
+    // persists an empty ROUTINE when nothing is seeded — corrupting an unseeded or
+    // D1-vs-DO-diverged figure DO. It now reads via loadPersisted() (no materialize)
+    // and no-ops, leaving the DO's SQLite storage untouched.
+    const ref = globalFigureRef("waltz", "gf_unseeded_reconcile_regression");
+    const stub = docs.get(docs.idFromName(ref));
+
+    // Nothing seeded → snapshot null and zero rows in the change log.
+    expect(await stub.getFigureSnapshot()).toBeNull();
+    expect(await stub.debugChangeRowCount()).toBe(0);
+
+    const { changed } = await stub.reconcileSeed({
+      name: "Never Seeded",
+      counts: 8,
+      attributes: [],
+    });
+    expect(changed).toBe(false);
+
+    // The bug persisted a bogus empty routine here; the fix persists nothing.
+    expect(await stub.debugChangeRowCount()).toBe(0);
+    expect(await stub.getFigureSnapshot()).toBeNull();
+  });
+
+  it("re-seeding is AUTHORITATIVE for seeded content but preserves user-added attributes (D30 ⟳)", async () => {
+    const { seedGlobalFigures } = await import("./seed-global-figures");
+    const family = "gf_reconcile_family";
+    const ref = globalFigureRef("waltz", family);
+    const s1 = {
+      id: "fig-reconcile-s1-foot",
+      kind: "footwork",
+      count: 1,
+      role: "leader" as const,
+      value: "HT",
+      deletedAt: null,
+    };
+    const s2 = {
+      id: "fig-reconcile-s2-foot",
+      kind: "footwork",
+      count: 2,
+      role: "leader" as const,
+      value: "T",
+      deletedAt: null,
+    };
+    // The doc also carries a user-added (ULID) attribute — attribute edits arrive
+    // over the WS sync in production; here it ships in the initial doc content,
+    // which is equivalent for the reconcile (it only owns fig-/wdsf- ids).
+    const userAttr = {
+      id: "01JUSERADDEDATTRIBUTE0000",
+      kind: "sway",
+      count: 1,
+      role: "leader" as const,
+      value: "to_L",
+      deletedAt: null,
+    };
+    const base = {
+      dance: "waltz" as const,
+      figureType: family,
+      name: "Reconcile Figure",
+      timing: "1 2 3",
+    };
+    const v1: LibraryFigure[] = [{ ...base, attributes: [s1, s2, userAttr] }];
+    await seedGlobalFigures(seedEnv, { figures: v1 });
+    const stub = docs.get(docs.idFromName(ref));
+
+    // The catalog is refined: s1 corrected to the book's "H flat", s2 dropped,
+    // s3 added, and the figure renamed.
+    const v2: LibraryFigure[] = [
+      {
+        ...base,
+        name: "Reconcile Figure (Book)",
+        attributes: [
+          { ...s1, value: "H flat" }, // the seeded s1 row, corrected by the book
+          {
+            id: "fig-reconcile-s3-foot",
+            kind: "footwork",
+            count: 3,
+            role: "leader",
+            value: "TH",
+            deletedAt: null,
+          },
+        ],
+      },
+    ];
+    const run = await seedGlobalFigures(seedEnv, { figures: v2 });
+    expect(run.created).toBe(0);
+    expect(run.updated).toBe(1);
+
+    const fig = await readFigureSnapshot(stub);
+    expect(fig?.name).toBe("Reconcile Figure (Book)");
+    const byId = new Map((fig?.attributes ?? []).map((a) => [a.id, a]));
+    expect(byId.get("fig-reconcile-s1-foot")?.value).toBe("H flat"); // corrected
+    expect(byId.get("fig-reconcile-s3-foot")?.value).toBe("TH"); // added
+    // Dropped seeded attribute is TOMBSTONED (soft-delete), never removed.
+    expect(byId.get("fig-reconcile-s2-foot")?.deletedAt).not.toBeNull();
+    // The user's own attribute survives untouched.
+    expect(byId.get("01JUSERADDEDATTRIBUTE0000")?.value).toBe("to_L");
+    // The registry row's display name follows the seed too.
+    const row = await env.DB.prepare("SELECT title FROM document_registry WHERE docRef = ?")
+      .bind(ref)
+      .first<{ title: string }>();
+    expect(row?.title).toBe("Reconcile Figure (Book)");
   });
 });
 
@@ -143,28 +250,77 @@ describe("resolveEffectiveRole — global figure boundary (⟳v5, §5.1)", () =>
   });
 });
 
-describe("POST /api/admin/seed-global-figures — admin-gated (D31)", () => {
-  async function post(userId: string): Promise<Response> {
-    const token = await makeTestJWT(kp, { sub: userId });
-    return SELF.fetch("https://example.com/api/admin/seed-global-figures", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  }
+describe("ensureGlobalFigures — hash-guarded self-healing seed (D30 ⟳)", () => {
+  // The catalog reconcile runs itself: a cheap app_meta hash check on the API
+  // seam, the full seeder only when the bundled catalog actually changed (a
+  // deploy with new seed content, a fresh environment, or a wiped D1).
+  const family = "gf_ensure_family";
+  const mk = (value: string, name = "Ensure Figure"): LibraryFigure[] => [
+    {
+      dance: "waltz",
+      figureType: family,
+      name,
+      timing: "1 2 3",
+      attributes: [
+        {
+          id: "fig-ensure-s1-foot",
+          kind: "footwork",
+          count: 1,
+          role: "leader",
+          value,
+          deletedAt: null,
+        },
+      ],
+    },
+  ];
 
-  it("rejects an unauthenticated caller (401)", async () => {
-    const res = await SELF.fetch("https://example.com/api/admin/seed-global-figures", {
-      method: "POST",
-    });
-    expect(res.status).toBe(401);
+  it("seeds when the stored hash is absent, then short-circuits, then reconciles on change", async () => {
+    const { ensureGlobalFigures } = await import("./seed-global-figures");
+    const ref = globalFigureRef("waltz", family);
+
+    // 1) Fresh environment: no hash row → the seeder runs and the hash persists.
+    const first = await ensureGlobalFigures(seedEnv, { figures: mk("HT") });
+    expect(first.ran).toBe(true);
+    expect(first.result?.created).toBe(1);
+    const row = await env.DB.prepare("SELECT value FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .first<{ value: string }>();
+    expect(row?.value).toBeTruthy();
+
+    // 2) Same catalog: the hash matches → nothing runs (one PK SELECT, no writes).
+    const second = await ensureGlobalFigures(seedEnv, { figures: mk("HT") });
+    expect(second.ran).toBe(false);
+
+    // 3) The catalog changes (a deploy with refined seed content): the hash
+    //    differs → the reconcile runs and the doc follows the seed.
+    const third = await ensureGlobalFigures(seedEnv, { figures: mk("H flat") });
+    expect(third.ran).toBe(true);
+    expect(third.result?.updated).toBe(1);
+    const fig = await readFigureSnapshot(docs.get(docs.idFromName(ref)));
+    expect(fig?.attributes.find((a) => a.id === "fig-ensure-s1-foot")?.value).toBe("H flat");
   });
 
-  it("rejects a non-admin caller (403) before doing any work", async () => {
-    await seedDb({
-      users: [{ id: "u_nonadmin", displayName: "N", identityColor: "#111", plan: "free" }],
-    });
-    const res = await post("u_nonadmin");
-    expect(res.status).toBe(403);
+  it("does not persist the hash when figures errored, so the next check retries", async () => {
+    const { ensureGlobalFigures } = await import("./seed-global-figures");
+    // Reset the stored hash so this test is order-independent.
+    await env.DB.prepare("DELETE FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .run();
+    // An invalid figure makes the per-figure work throw → counted skipped; the
+    // hash must NOT be written. An `undefined` name is the deterministic trigger:
+    // createGlobalFigureRow's D1 `.bind(undefined)` rejects. (The previous
+    // bad-dance fixture stopped erroring when Builder v3 ① switched the seeder
+    // from defaultFigureBars(attrs, dance) to the dance-free defaultFigureCounts.)
+    // asTestPeek: deliberately MALFORMED input (name: undefined is intentionally
+    // NOT a LibraryFigure) — the assertions below on skipped/no-hash are the point.
+    const bad = [asTestPeek<LibraryFigure>({ ...mk("HT")[0], name: undefined })];
+    const run = await ensureGlobalFigures(seedEnv, { figures: bad });
+    expect(run.ran).toBe(true);
+    expect((run.result?.skipped ?? 0) > 0).toBe(true);
+    const row = await env.DB.prepare("SELECT value FROM app_meta WHERE key = ?")
+      .bind("global_figure_seed_hash")
+      .first<{ value: string }>();
+    expect(row).toBeNull();
   });
 });
 
@@ -226,8 +382,22 @@ describe("snapshot fans out variant BASES (⟳v5, §5.2)", () => {
     });
     await seedDb({
       users: [{ id: uid, displayName: "S", identityColor: "#111", plan: "free" }],
-      docs: [{ docRef: rt, type: "routine", ownerId: uid, doName: rt, dance: "waltz" }],
+      docs: [
+        { docRef: rt, type: "routine", ownerId: uid, doName: rt, dance: "waltz" },
+        // The base is a world-readable global catalog doc (registry row → the
+        // snapshot's per-figure access gate resolves it to `viewer`).
+        {
+          docRef: globalRef,
+          type: "global-figure",
+          ownerId: "app",
+          doName: globalRef,
+          dance: "waltz",
+        },
+      ],
       memberships: [{ id: "m_snap", docRef: rt, userId: uid, role: "editor" }],
+      // The account variant is reachable via the routine's placement edge (as in
+      // production — linkPlacement mints it when the figure is added).
+      placementEdges: [{ routineRef: rt, figureRef: variantRef }],
     });
 
     const token = await makeTestJWT(kp, { sub: uid });
@@ -235,10 +405,10 @@ describe("snapshot fans out variant BASES (⟳v5, §5.2)", () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       figures: Record<string, { baseFigureRef?: string }>;
       bases: Record<string, { attributes: unknown[] }>;
-    };
+    }>();
     // The variant is present, still carrying its live base link + only its owned beat.
     expect(body.figures[variantRef]?.baseFigureRef).toBe(globalRef);
     // The base is fanned out so the client can resolve beat 1 live.

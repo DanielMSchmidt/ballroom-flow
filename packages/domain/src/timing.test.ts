@@ -3,7 +3,7 @@ import { importDomain } from "./__fixtures__";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-004 — Float-count timing [M1, system/developer]
-// PLAN §2.5, Q-D3, §10.2 invariant: "float-count timing; count fraction
+// docs/concepts/notation.md § Timing, Q-D3, docs/system/testing.md invariant: "float-count timing; count fraction
 // e/&/a". Counts render in conventional ballroom notation modulo the phrase.
 //
 // Product helpers `countLabel`/`countToPhrase`/`barsForFigure` (timing.ts, M1 §9
@@ -97,6 +97,25 @@ describe("US-004 Float-count timing", () => {
     expect(barsForFigure([1, 7], "waltz")).toBe(2); // 7 lands in phrase 2
     expect(barsForFigure([], "foxtrot")).toBe(1); // empty → 1
   });
+
+  it("phraseCountLabel wraps the beat number at the dance phrase (Waltz never counts past 6)", async () => {
+    // Intent: the dance-aware display label — a Waltz figure's 7th beat is
+    //   counted "1" (phrase 2), never "7"; 6 is the highest Waltz count.
+    const { phraseCountLabel } = await importDomain();
+    expect(phraseCountLabel(6, "waltz")).toBe("6");
+    expect(phraseCountLabel(7, "waltz")).toBe("1");
+    expect(phraseCountLabel(9, "waltz")).toBe("3");
+    expect(phraseCountLabel(8, "foxtrot")).toBe("8");
+    expect(phraseCountLabel(9, "foxtrot")).toBe("1");
+  });
+
+  it("phraseCountLabel keeps the sub-beat suffix on wrapped counts (Waltz 7.5 → '1&')", async () => {
+    // Intent: only the whole-beat number wraps; e/&/a suffixes ride along.
+    const { phraseCountLabel } = await importDomain();
+    expect(phraseCountLabel(7.5, "waltz")).toBe("1&");
+    expect(phraseCountLabel(8.25, "waltz")).toBe("2e");
+    expect(phraseCountLabel(2.75, "waltz")).toBe("2a"); // within-phrase: unchanged
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -167,6 +186,68 @@ describe("US-004a continuous routine numbering", () => {
     const { numberRoutineBeats } = await importDomain();
     const [brk] = numberRoutineBeats([{ kind: "break", beats: 1 }], "waltz");
     expect(brk).toMatchObject({ kind: "break", span: "beat 1", bars: 1 });
+  });
+
+  // ── Length-driven progression (2026-07-14 fix): the counter advances by each
+  // figure's LENGTH in beats, never by how many steps it happens to carry — a
+  // held Slow still occupies its beats, so the next figure starts after them. ──
+
+  it("advances by the figure's LENGTH, not its step count (Feather SQQ occupies 4 beats)", async () => {
+    // The reported bug: a Foxtrot Feather Step (steps on 1, 3, 4 — the Slow
+    // holds beats 1–2) is a 4-beat figure, so the NEXT figure must start on 5.
+    // Previously each whole-beat step advanced the counter by one: the Feather
+    // read a compressed "1 2 3" and the next figure mis-started on 4.
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 3, 4], beats: 4 },
+        { kind: "figure", counts: [1, 1.5, 2, 3, 4], beats: 4 },
+      ],
+      "foxtrot",
+    );
+    // Steps read their REAL beats within the block (1 3 4), not 1 2 3…
+    expect(out[0]).toMatchObject({ kind: "figure", tokens: ["1", "3", "4"] });
+    // …and the next figure starts on 5 (its own off-beat still symbol-only).
+    expect(out[1]).toMatchObject({ kind: "figure", tokens: ["5", "&", "6", "7", "8"] });
+  });
+
+  it("covers a trailing hold — QQS ends its bar even though the last step lands on 3", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 2, 3], beats: 4 }, // QQS: the S holds beat 4
+        { kind: "figure", counts: [1, 2], beats: 2 },
+      ],
+      "quickstep",
+    );
+    expect(out[1]).toMatchObject({ kind: "figure", tokens: ["5", "6"] });
+  });
+
+  it("advances a step-less figure by its beats (a Break is an ordinary figure — PLAN §2.3)", async () => {
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [], beats: 3 },
+        { kind: "figure", counts: [1, 2, 3], beats: 3 },
+      ],
+      "waltz",
+    );
+    expect(out[0]).toMatchObject({ kind: "figure", tokens: [] });
+    expect(out[1]).toMatchObject({ kind: "figure", tokens: ["4", "5", "6"] });
+  });
+
+  it("without an authored length, falls back to the last whole beat a step covers", async () => {
+    // A sparse [1, 3, 4] figure still spans 4 beats even when `beats` is absent
+    // — the fallback is the last covered whole beat, not the step count.
+    const { numberRoutineBeats } = await importDomain();
+    const out = numberRoutineBeats(
+      [
+        { kind: "figure", counts: [1, 3, 4] },
+        { kind: "figure", counts: [1] },
+      ],
+      "foxtrot",
+    );
+    expect(out[1]).toMatchObject({ kind: "figure", tokens: ["5"] });
   });
 });
 

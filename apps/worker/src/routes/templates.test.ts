@@ -2,14 +2,12 @@
 // POST /api/routines/:id/fork on an app-owned template also covered here.
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { Env } from "../index";
 import { seedSampleRoutine } from "../sample";
 import { authedContext } from "../test-support/authed-context";
-import type { DocNamespace } from "../test-support/doc-do-api";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
 import { applyMigrations, seedDb } from "../test-support/seed";
 
-const docs = env.DOC_DO as unknown as DocNamespace;
+const docs = env.DOC_DO;
 let kp: TestKeypair;
 beforeAll(async () => {
   await applyMigrations();
@@ -23,7 +21,8 @@ beforeAll(async () => {
   // seedDoc no-clobber, D1 onConflictDoNothing) makes this file deterministic
   // regardless of cross-file ordering. Production is unaffected (D1 + DO are one
   // globally-consistent store there, so the D1-row gate is correct).
-  await seedSampleRoutine(env as unknown as Env);
+  // The test env structurally satisfies the worker's Env (db-env.d.ts).
+  await seedSampleRoutine(env);
 });
 
 describe("US-045 templates", () => {
@@ -42,7 +41,7 @@ describe("US-045 templates", () => {
     const body = await res.json<{ templates: Array<{ title: string; dance: string }> }>();
     expect(body.templates.length).toBeGreaterThan(0);
     // Task 6: template is Golden Waltz Basic, not Sample Foxtrot
-    expect(body.templates.at(0) as { title: string; dance: string }).toMatchObject({
+    expect(body.templates.at(0)).toMatchObject({
       title: "Golden Waltz Basic",
       dance: "waltz",
     });
@@ -61,7 +60,8 @@ describe("US-045 templates", () => {
       templates: Array<{ docRef: string; title: string }>;
     }>();
     expect(templates.length).toBeGreaterThan(0);
-    const templateRef = (templates[0] as { docRef: string; title: string }).docRef;
+    const templateRef = templates[0]?.docRef;
+    if (!templateRef) throw new Error("expected at least one listed template");
 
     // Fork it — even though u_tpl2 has no membership row on the app template
     const forkRes = await SELF.fetch(`https://x/api/routines/${templateRef}/fork`, {
@@ -90,10 +90,8 @@ describe("US-045 templates", () => {
     );
 
     // The fork's DO content has the same sections/placements as the template.
-    // SectionSnapshot only types `name`; cast to access placements for this assertion.
     const forkSnap = await docs.get(docs.idFromName(fork.docRef)).getSnapshot();
-    const section = forkSnap.sections?.[0] as { placements?: unknown[] } | undefined;
-    expect(section?.placements?.length).toBe(6);
+    expect(forkSnap.sections[0]?.placements.length).toBe(6);
   }, 15_000);
 
   it("re-seeds the template after a D1 reset wipes it (self-healing ensureSample)", async () => {

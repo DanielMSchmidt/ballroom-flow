@@ -12,8 +12,7 @@
 // the start/finish scaffold rather than carrying invented footwork.
 
 import type { DanceId } from "./dances";
-import type { Alignment } from "./doc-types";
-import { GENERATED_FIGURE_ALIGNMENTS, GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
+import { GENERATED_FIGURE_STEPS } from "./figure-charts.generated";
 
 /**
  * One role's step content. `direction` (headline) + `footwork` are required; the
@@ -34,8 +33,6 @@ export interface AuthoredFootwork {
   turn?: string;
   /** Body actions (`bodyActions` vocab, e.g. ["CBM"]) — role-aware, set when known. */
   bodyActions?: string[];
-  /** Foot position (`footPosition` vocab: first/second/…/fifth) — set when charted. */
-  footPosition?: string;
 }
 
 /**
@@ -47,8 +44,11 @@ export interface AuthoredFootwork {
  * to one of those, else left unset rather than written as an unknown.
  */
 export interface AuthoredStep {
-  leader: AuthoredFootwork;
-  follower: AuthoredFootwork;
+  /** Absent when this count is the other role's alone — the WDSF books chart
+   *  role-asymmetric figures (e.g. the Double Reverse Spin's follower "&" step). */
+  leader?: AuthoredFootwork;
+  /** Absent when this count is the leader's alone. */
+  follower?: AuthoredFootwork;
   /** Rise & fall for this count (`rise` vocab) — shared by the couple. */
   rise?: string;
   /** Dance position for this count (`position` vocab) — shared by the couple. */
@@ -69,16 +69,4 @@ export function authoredSteps(
   figureType: string,
 ): readonly AuthoredStep[] | undefined {
   return FIGURE_STEPS[`${dance}:${figureType}`];
-}
-
-/**
- * Figure-level entry/exit alignment (per-figure, from the leader's perspective) for a
- * charted figure, or `undefined` when the source doesn't chart it. Constant-alignment
- * figures (e.g. a Waltz closed change, which doesn't turn) carry the same entry + exit.
- */
-export function authoredAlignment(
-  dance: DanceId,
-  figureType: string,
-): { entry?: Alignment; exit?: Alignment } | undefined {
-  return GENERATED_FIGURE_ALIGNMENTS[`${dance}:${figureType}`];
 }

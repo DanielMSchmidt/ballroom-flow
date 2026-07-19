@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// authedContext(role) (PLAN §10.3: "authedContext(role)"). Produces everything
+// authedContext(role) (docs/system/testing.md: "authedContext(role)"). Produces everything
 // a permission test needs for ONE actor against ONE doc:
 //   • a seeded user,
 //   • a seeded Membership with the requested role (or none → non-member),

@@ -8,14 +8,14 @@
  * styles/tokens.css; here we only name them.
  */
 
-/** The standard attribute-kind ids with a token color family (PLAN §3;
+/** The standard attribute-kind ids with a token color family
+ *  (docs/concepts/notation.md § Kinds;
  *  2026-06-28 parity adds `direction`, renames `step`→`footwork`). User-defined
  *  kinds extend the registry at runtime; the UI must not hardcode this list for
  *  rendering — it's here only to type the standard palette. */
 export const ATTRIBUTE_KINDS = [
   "direction",
   "footwork",
-  "footPosition",
   "rise",
   "position",
   "bodyActions",
@@ -23,6 +23,13 @@ export const ATTRIBUTE_KINDS = [
   "turn",
 ] as const;
 export type AttributeKind = (typeof ATTRIBUTE_KINDS)[number];
+
+/** Runtime narrowing to a STANDARD attribute kind. User-defined kinds extend the
+ *  registry at runtime and are NOT in this list, so this is a real membership test —
+ *  use it instead of asserting `kind as AttributeKind` (CLAUDE.md §4). */
+export function isAttributeKind(kind: string): kind is AttributeKind {
+  return ATTRIBUTE_KINDS.some((k) => k === kind);
+}
 
 /** CSS-variable names for an attribute kind's color family. Use with
  *  `var(...)`, e.g. `style={{ color: kindVar(kind, "ink") }}`. For a
@@ -33,7 +40,8 @@ export function kindVar(kind: AttributeKind, role: "base" | "ink" | "tint" | "bo
   return `var(--bf-kind-${kind}${suffix})`;
 }
 
-/** The two figure scopes — by content divergence (PLAN §4.3, DESIGN-PRINCIPLES #11):
+/** The two figure scopes — by content divergence (docs/concepts/figures.md
+ *  § The custom badge, DESIGN-PRINCIPLES #11):
  *  - `library` — matches the app-owned catalog (global or account copy that still agrees)
  *  - `custom`  — diverged from or unrelated to the catalog (user's own edits) */
 export const FIGURE_SCOPES = ["library", "custom"] as const;

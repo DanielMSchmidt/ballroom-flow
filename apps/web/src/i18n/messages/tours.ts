@@ -90,7 +90,7 @@ const en = {
     typeChips: {
       title: "Show only what you're working on",
       description:
-        "Tap a chip to tuck that column away — across the whole routine, and every choreo. Step always stays. “+N hidden” on a figure peeks at what's tucked; your picks are remembered.",
+        "Tap the chips to pick up to 4 technique columns — laid side-by-side across the whole routine. Notes live in the right margin. Your picks are remembered on this device.",
     },
     quickNote: {
       title: "Quick note",
@@ -189,7 +189,7 @@ const de: typeof en = {
     typeChips: {
       title: "Zeig nur, woran du gerade arbeitest",
       description:
-        "Tippe auf einen Chip, um diese Spalte auszublenden — in der ganzen Choreo und in jeder anderen. Step bleibt immer sichtbar. „+N ausgeblendet“ an einer Figur zeigt kurz, was verborgen ist; deine Auswahl wird gemerkt.",
+        "Tippe auf die Chips und wähle bis zu 4 Technik-Spalten — nebeneinander in der ganzen Choreo. Notizen stehen rechts am Rand. Deine Auswahl wird auf diesem Gerät gemerkt.",
     },
     quickNote: {
       title: "Schnelle Notiz",

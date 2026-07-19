@@ -14,7 +14,7 @@ figure-model reversals, a wrong-branch disaster, and a dozen root-caused flakes.
 | You actually want | Use instead |
 |---|---|
 | Concrete proof recipes (convergence proofs, property tests, EXPLAIN gates, repeat-each flake hunting) | `ballroom-flow-proof-and-analysis` |
-| The mechanics of landing a change (branch, TDD loop, PR, PLAN.md-in-same-change, review tiers as process) | `ballroom-flow-change-control` |
+| The mechanics of landing a change (branch, TDD loop, PR, docs/concepts+docs/system-in-same-change, review tiers as process) | `ballroom-flow-change-control` |
 | Diagnosing a live failure right now | `ballroom-flow-debugging-playbook` |
 | The catalog of past incidents and their lessons | `ballroom-flow-failure-archaeology` |
 | What the current architecture/model IS | `ballroom-flow-architecture-contract`, `ballroom-flow-crdt-reference` |
@@ -108,7 +108,7 @@ wholesale (critique-sync's "per-cell CRDT rejection is incoherent — gate at th
 connection" is now the permission architecture; critique-testing's EXPLAIN CI guard
 shipped). One was **overridden**: critique-scope argued to drop the CRDT/DO layer for a
 D1-only v1, and the owner overrode it because fork/document-graph is the deliberate
-investment (PLAN §1). **Being overridden is a valid outcome** — the critique still
+investment (formerly PLAN §1, now `docs/README.md` § What this is). **Being overridden is a valid outcome** — the critique still
 sharpened the decision and lives in the repo as the recorded counter-argument.
 
 ```text
@@ -126,26 +126,27 @@ When you propose a change to an invariant (permissions, undo, sync, CRDT schema,
 When two models both "sound right," write one **named, concrete end-to-end scenario**,
 derive what each model observably does in it, and let the derivation decide. Then —
 **this is a requirement of the method, not a nicety** — record the *rejected* alternative
-inline in `docs/PLAN.md` next to the decision, so the next person who re-derives the
+inline in the owning `docs/concepts/` or `docs/system/` doc (formerly `docs/PLAN.md`)
+next to the decision, so the next person who re-derives the
 losing idea finds the refutation waiting.
 
 **Case — Passing Tumble Turn → the v5 reversal** (PR #132, `e27bca6`): the frozen-copy
 vs live-figure dispute was settled by the owner's canonical scenario, now written
-verbatim into PLAN §5.2: a Slowfox choreo places the catalog Tumble Turn twice — once
+verbatim into `docs/concepts/figures.md` § Variants (formerly PLAN §5.2): a Slowfox choreo places the catalog Tumble Turn twice — once
 plain, once re-choreographed as a *Passing* Tumble Turn for the last ~3 beats. Derive:
 when the catalog figure later gains a new attribute kind, the plain placement must show
 it on every beat, and the Passing variant on its **untouched beats only**. Frozen copies
 cannot produce that observation; live-overlay-with-per-beat-ownership can. Decision:
 D12 ⟳v5; the scenario itself is pinned by domain tests (`packages/domain/src/fork.ts`
-per PLAN §9 step 2).
+per the v5 milestone, formerly PLAN §9 step 2).
 
 **Case — US-015 journeys → the D10 rejection** (PR #95, same-day commits `9416875` →
 `01365dc`): the first cut made *everyone* read via polled REST snapshot, upgrading to WS
 on first edit. The already-written US-015 convergence journeys were the scenario: a
 passive co-editor on a ~20s poll cannot see a collaborator's edit live — 5 @smoke
 journeys broke. Rejected **within the same PR**; the final model is the role-aware hybrid
-(viewers zero sockets; editors one eager routine WS; figure WS on editor open). PLAN §8
-D10 records the rejected alternative inline: "(An earlier 'read-by-default for everyone,
+(viewers zero sockets; editors one eager routine WS; figure WS on editor open).
+`docs/system/sync-and-offline.md` § The read/edit split (formerly PLAN §8 D10) records the rejected alternative inline: "(An earlier 'read-by-default for everyone,
 upgrade on first edit' variant was rejected: a passive co-editor on a polled snapshot
 can't receive another editor's edits live — it broke the US-015 convergence journeys.)"
 
@@ -160,7 +161,8 @@ Adjudication recipe:
 2. For each competing model, DERIVE the observable behavior in that scenario. No adjectives — observations.
 3. The model whose derived observations match the requirement wins. If both match, the scenario was
    too weak — sharpen it until it discriminates.
-4. Write the decision into docs/PLAN.md (§8 row and/or the owning section) WITH the rejected
+4. Write the decision into the owning `docs/concepts/` or `docs/system/` doc (formerly
+   docs/PLAN.md §8 row and/or the owning section) WITH the rejected
    alternative and why it fails the scenario, in the same change (CLAUDE.md rule).
 5. If tests can pin the scenario, pin it (the Passing Tumble Turn is a domain test, not just prose).
 ```
@@ -176,12 +178,12 @@ produce the artifacts in order; if you're auditing one, walk the trail backwards
 |---|---|---|
 | 1. Deep-dive or critique | `research/*.md` | `research/extensibility-crdt.md` (load-bearing), the 5 `critique-*.md` |
 | 2. Owner review on a PR | PR discussion driving plan versions | PR #9 ("docs/consolidated-plan", merged `6954651`): v2 `94187e4` "redesign from PR review" → v3 `de89e00` → v4 `370de7c` → v4.3 `8f49169` |
-| 3. Locked decision | `docs/PLAN.md` §8 (D1–D31), with resolved Q-ids in §12 (Q-COW-TRIGGER, Q-OVERLAY-GRAIN, Q-FORK-UX, …) | D10's inline rejection; D12 ⟳v5 |
+| 3. Locked decision | formerly `docs/PLAN.md` §8 (D1–D31), with resolved Q-ids in §12 (Q-COW-TRIGGER, Q-OVERLAY-GRAIN, Q-FORK-UX, …) — now the rationale woven into the owning `docs/concepts/`/`docs/system/` doc (full ledger in git history) | D10's inline rejection; D12 ⟳v5 |
 | 4. Feature spec | `docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md` — frontmatter (Date/Status/Branch/Stories/ship gate) + a dated "## Locked decisions" section | `2026-06-27-fe3-variants-cow-design.md` |
 | 5. Plan | `docs/superpowers/plans/YYYY-MM-DD-<slug>.md` — TDD checkbox tasks, agentic-worker banner, global constraints | `2026-06-29-design-parity.md` |
 | 6. Code + tests | TDD RED→GREEN→REFACTOR (see `ballroom-flow-change-control`) | — |
 | 7. Coverage row | `docs/TEST-MAP.md` story-key → test files | US-001…US-054 matrix |
-| 8. (Sometimes) documented reversal | PLAN edited **in place** with lineage kept | figure model: live-overlay v4 → frozen-copy v4.4 (`9f0357d`) → live-overlay-with-per-beat-ownership v5.0 (`e27bca6`); PLAN §12 keeps the superseded 2026-06 answers under a "supersedes" header |
+| 8. (Sometimes) documented reversal | PLAN used to be edited **in place** with lineage kept; that role now belongs to the owning `docs/concepts/`/`docs/system/` doc | figure model: live-overlay v4 → frozen-copy v4.4 (`9f0357d`) → live-overlay-with-per-beat-ownership v5.0 (`e27bca6`, now `docs/concepts/figures.md` § Variants); PLAN §12 used to keep the superseded 2026-06 answers under a "supersedes" header |
 
 **Retirement is documented, never silent.** When an idea dies, its grave is marked where
 the next person will look:
@@ -211,7 +213,7 @@ Know the productive sources; invest in them deliberately.
 |---|---|---|
 | **Adversarial critiques** | 5 commissioned attacks on the plan; adopted where they held, overridden where the product scenario beat them — both outcomes valuable | `research/critique-*.md`; critique-sync → connection-gated permissions; critique-scope overridden (fork investment) |
 | **The timeboxed throwaway spike** | M0.5: prove the riskiest assumption (Automerge-in-DO) on real workerd before committing; code deleted, findings + sharp edges kept | `docs/spike/SPIKE-FINDINGS.md`; deletion `b09d5e5`; the isolatedStorage and incremental-persistence findings still govern every DO test |
-| **Owner scenario-walking** | The owner works the model against a concrete dance scenario until it breaks or holds | Passing Tumble Turn → v5 (PLAN §5.2); PR #9 review → v2 flat roles/float-count timeline |
+| **Owner scenario-walking** | The owner works the model against a concrete dance scenario until it breaks or holds | Passing Tumble Turn → v5 (formerly PLAN §5.2, now `docs/concepts/figures.md` § Variants); PR #9 review → v2 flat roles/float-count timeline |
 | **Failing journeys** | An already-written E2E journey refutes a design before it ships | US-015 → D10 rejection (`01365dc`); `--repeat-each` exposing the durability gap (`4ef16ac`) |
 | **Root-caused flakes** | Every flake investigation produced a durable engineering rule | axe O(nodes) → render-minimal-equivalent-markup; hydration marker → explicit-signal rule; shared-D1 collisions → per-suite migrations |
 
@@ -225,8 +227,8 @@ named scenario, a failing assertion.
 
 | Anti-pattern | Incident | Rule |
 |---|---|---|
-| **Building on the wrong base** | PR #83 built on stale `main` instead of `development` and was fully reverted (`720103d`); PR #90 built against a retired architecture and died unmerged — right idea, wrong base, both times (full accounts: `ballroom-flow-failure-archaeology`). | Before building, verify the base: `git branch --show-current` must trace to `development` (CLAUDE.md §7), and read the *current* PLAN §6 architecture — the seam you're patching may no longer exist. |
-| **Silent divergence from PLAN** | The whole reversal machinery (§4 above) exists so this never happens; CLAUDE.md declares a PLAN/code divergence a bug. | If the code needs to differ from PLAN, change PLAN **in the same change** with the rationale and the rejected alternative. A locked decision that feels wrong goes through PLAN §8/§12 — surface it, don't route around it. |
+| **Building on the wrong base** | PR #83 built on stale `main` instead of `development` (the trunk at the time) and was fully reverted (`720103d`); PR #90 built against a retired architecture and died unmerged — right idea, wrong base, both times (full accounts: `ballroom-flow-failure-archaeology`). | Before building, verify the base: `git branch --show-current` must trace to `main` (the sole trunk since `development` was deleted 2026-07-05, PR #161 — CLAUDE.md §7), and read the *current* `docs/system/architecture.md` (formerly PLAN §6) — the seam you're patching may no longer exist. |
+| **Silent divergence from the docs** | The whole reversal machinery (§4 above) exists so this never happens; CLAUDE.md declares a docs/code divergence a bug. | If the code needs to differ from `docs/concepts/`/`docs/system/`, change those docs **in the same change** with the rationale and the rejected alternative (formerly "change PLAN"). A locked decision that feels wrong goes through the owning doc's rationale (formerly PLAN §8/§12) — surface it, don't route around it. |
 | **Retry-until-green** | Never once used: the axe flake got an O(nodes) mechanism + prediction (`ad22e16`); the hydration flake got a protocol marker (`97e7fea`); shared-D1 collisions got per-suite migrations; stale skipped convergence journeys were unskipped the moment the machinery existed (`d49fb52`, PR #61) rather than left "flaky". | A flake is a bug with a timing-shaped reproduction. Root-cause it (Rules 1–3 above; recipes in `ballroom-flow-proof-and-analysis`). Weakening or re-running a test to pass is a methodology violation, not a fix. |
 
 Two corollaries from the same history: **fixes can be silently lost in squash/merge races**
@@ -240,9 +242,12 @@ step B", it fails Rule 2.
 
 ## Provenance and maintenance
 
-Authored 2026-07-02 against repo HEAD `70eed7e` on `development` (via branch
+Authored 2026-07-02 against repo HEAD `70eed7e` on `development` (the trunk at the time —
+merged into `main` and deleted from the remote 2026-07-05, PR #161; via branch
 `claude/skill-library-handoff-bidyjh`). All commit hashes, PR numbers, quoted commit-message
-fragments, PLAN.md section contents (§5.2 Passing Tumble Turn, §8 D10/D12/D14, §12 Q-ids),
+fragments, PLAN.md section contents (§5.2 Passing Tumble Turn, §8 D10/D12/D14, §12 Q-ids —
+that document was dissolved 2026-07-15 into `docs/README.md` + `docs/concepts/` +
+`docs/system/` + `docs/ideas/`, see `docs/README.md` § For historians for the citation map),
 spec/plan file structure, TEST-MAP retirement entries, and research/ file inventory were
 verified directly against the repo and `git log`/`git show` on that date. PR-state claims
 (#90, #83/#84 closed-unmerged status) come from the project's verified history corpus of
@@ -254,12 +259,13 @@ Re-verification one-liners for drift-prone claims:
 git show 97e7fea -s --format='%B' | grep -n "DISTINCT residual"        # Rule 1 case
 git show ad22e16 -s --format='%B' | grep -n "13–17s"                   # Rule 3 case
 git show 58a11f6 -s --format='%B' | grep -n "160 CONFIRM"              # §2 verifier verdicts
-grep -n "Passing Tumble Turn" docs/PLAN.md                              # §3 canonical scenario
-grep -n "was rejected" docs/PLAN.md | head -3                           # D10 inline rejection
+grep -n "Passing Tumble Turn" docs/concepts/figures.md                  # §3 canonical scenario
+grep -n "Rejected alternative" docs/system/sync-and-offline.md          # D10 inline rejection
 grep -n "retired" docs/TEST-MAP.md                                      # §4 retirement entries
 ls docs/superpowers/specs docs/superpowers/plans research               # §4 pipeline artifacts
 git log -1 --format='%h %s' b09d5e5                                     # spike deletion, findings kept
 ```
 
-If PLAN.md moves past v5.0, re-check §8/§12 anchors (D-numbers and Q-ids are stable keys,
-but new ⟳ markers may supersede the v5 entries the same way v5 superseded v4.4).
+If the docs move past this structure again, re-check the concept/system docs' locked-decision
+sections (D-numbers and Q-ids are stable keys, but new lineage may supersede the v5 entries
+the same way v5 superseded v4.4).

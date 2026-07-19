@@ -1,4 +1,4 @@
-// #63 — Fractional-index ordering keys for sections & placements (PLAN §5.3).
+// #63 — Fractional-index ordering keys for sections & placements (docs/system/architecture.md § Ordering).
 //
 // A `sortKey` is an opaque, lexicographically-ordered string. Giving every
 // section and placement one turns a reorder into a FIELD UPDATE — set the moved
@@ -97,8 +97,10 @@ export function sortByOrder<T extends Ordered>(items: readonly T[]): T[] {
     return items.slice();
   }
   return items.slice().sort((x, y) => {
-    const xk = x.sortKey as string;
-    const yk = y.sortKey as string;
+    // Past the `every(... typeof === "string")` guard above, both keys are strings;
+    // `?? ""` re-expresses that for the closure without an assertion.
+    const xk = x.sortKey ?? "";
+    const yk = y.sortKey ?? "";
     if (xk !== yk) return xk < yk ? -1 : 1;
     return x.id < y.id ? -1 : x.id > y.id ? 1 : 0;
   });
@@ -143,5 +145,36 @@ export function keyForMove<T extends Ordered>(
   const upper = to < from ? to : to + 1;
   const prevKey = lower >= 0 ? (sorted[lower]?.sortKey ?? null) : null;
   const nextKey = upper < sorted.length ? (sorted[upper]?.sortKey ?? null) : null;
-  return keyBetween(prevKey, nextKey);
+
+  // Happy path: an open end, or two distinct ordered bounds — `keyBetween` has a
+  // strict interval to subdivide.
+  if (prevKey === null || nextKey === null || prevKey < nextKey) {
+    return keyBetween(prevKey, nextKey);
+  }
+
+  // COLLISION: the two straddling neighbours share a `sortKey`. This is real, not
+  // a bug: two clients that concurrently append to the same list deterministically
+  // mint byte-identical keys (that determinism is what makes the append converge),
+  // so a run of equal keys can exist, and `sortByOrder` renders it fine by
+  // tie-breaking on `id`. But feeding an equal pair to `keyBetween` would throw
+  // (`a` is not before `b`). Since `sorted` is ascending, prevKey >= nextKey here
+  // means prevKey === nextKey — a run of equal keys around the destination. Widen
+  // OUTWARD past the whole run to the nearest STRICTLY-distinct key on the side the
+  // move is heading, giving `keyBetween` a valid interval; the moved item lands just
+  // beyond the run on that side and its fresh distinct key breaks the tie for good.
+  const runKey = prevKey; // === nextKey
+  if (to > from) {
+    // Moving down: land just AFTER the run — between runKey and the first key above
+    // it that is strictly greater (or the open end).
+    let u = upper;
+    while (u < sorted.length && (sorted[u]?.sortKey ?? "") <= runKey) u++;
+    const above = u < sorted.length ? (sorted[u]?.sortKey ?? null) : null;
+    return keyBetween(runKey, above);
+  }
+  // Moving up: land just BEFORE the run — between the first key below it that is
+  // strictly smaller (or the open end) and runKey.
+  let l = lower;
+  while (l >= 0 && (sorted[l]?.sortKey ?? "") >= runKey) l--;
+  const below = l >= 0 ? (sorted[l]?.sortKey ?? null) : null;
+  return keyBetween(below, runKey);
 }

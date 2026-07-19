@@ -8,7 +8,10 @@
 // told a tab it was stale: the PWA service worker auto-updates its precache,
 // while the RUNNING page keeps its old JS indefinitely.
 //
-// This module is that signal. The deploy bakes the git SHA into the bundle
+// This module is that signal's FALLBACK half (since 2026-07-14 the fast path
+// is SW-driven — lib/sw-update.ts reloads the moment an updated service worker
+// activates; this build-id handshake stays to catch a broken/stale service
+// worker that path can't see). The deploy bakes the git SHA into the bundle
 // (VITE_BUILD_ID) and into the worker (BUILD_ID, surfaced on /api/health).
 // Whenever the tab becomes VISIBLE — the user returning to a backgrounded tab
 // is exactly the stale case, and a reload at that instant can't interrupt
@@ -103,8 +106,14 @@ export function initStaleBundleReload(): void {
     fetchServerBuildId: async () => {
       const res = await fetch("/api/health");
       if (!res.ok) return null;
-      const body = (await res.json()) as { buildId?: string | null };
-      return body.buildId ?? null;
+      const body: unknown = await res.json();
+      // Narrow the untrusted health payload — anything else reads as "unknown".
+      return typeof body === "object" &&
+        body !== null &&
+        "buildId" in body &&
+        typeof body.buildId === "string"
+        ? body.buildId
+        : null;
     },
     reload: () => window.location.reload(),
     updateServiceWorker: async () => {

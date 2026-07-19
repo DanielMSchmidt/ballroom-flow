@@ -3,7 +3,8 @@ import { seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// FE-6 annotations journey (PLAN §4.6 E2E). Runs against the REAL worker (D1 +
+// FE-6 annotations journey (docs/concepts/annotations.md § Where notes appear).
+// Runs against the REAL worker (D1 +
 // per-document Durable Objects + the fail-closed auth/sync boundary) via the
 // #191 harness — no live Clerk, a real test JWT, the real permission boundary.
 // Covers US-039 (create a note on a figure + reply thread) and US-042 (filter
@@ -36,13 +37,22 @@ test.describe("@smoke annotations journey", () => {
     await addSection.click();
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
+    // Place the CATALOG "Feather Step" from the preset list (typing the name
+    // would mint a custom figure and open its editor — create-navigates, §4.3).
     await page.getByRole("button", { name: "Add figure" }).click();
-    await page.getByLabel("Figure name").fill("Feather Step");
-    await page.getByLabel("Figure name").press("Enter");
+    await page.getByRole("button", { name: "Feather Step", exact: true }).click();
+    // Portion picker (Builder v3 ③): whole figure pre-selected — confirm.
+    await page.getByRole("button", { name: /add to choreo/i }).click();
     await expect(page.getByText("Feather Step")).toBeVisible({ timeout: 15_000 });
 
-    // Open the figure's step sheet — the annotation panel lives here.
-    await page.getByRole("button", { name: /edit steps: Feather Step/i }).click();
+    // Notes live on the figure detail opened from the READING lens (the editing
+    // lens is notation-only, owner request 2026-07-08): switch lens, then open
+    // the figure by tapping its name in the reading programme.
+    await page.getByRole("button", { name: /reading view/i }).click();
+    await page
+      .getByTestId("reading-view")
+      .getByRole("button", { name: "Feather Step", exact: true })
+      .click();
 
     // Scope to the per-figure Annotations panel (the family-notes panel below also
     // has a "… note" textbox, so unscoped role queries would be ambiguous).

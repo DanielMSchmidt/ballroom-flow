@@ -7,7 +7,10 @@ import { applyMigrations, seedDb } from "./test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-041 — Co-member visibility of family notes (option 2) [M6, system]
-// PLAN §2.6, §2.7, §5.1, Q-FIGNOTE-VIS option 2, §10.2: a figureType note is
+// docs/concepts/annotations.md § Anchors / § Ownership & visibility;
+// docs/system/architecture.md § D1 — the index & projections;
+// docs/concepts/collaboration.md § Roles; Q-FIGNOTE-VIS option 2; docs/system/testing.md:
+// a figureType note is
 // OWNED in the author's account doc but VISIBLE to co-members of a shared
 // routine where the figure appears — via the FigureTypeNoteIndex + a
 // co-membership gate. A NON-member sees NONE. A viewer never browses another
@@ -23,6 +26,20 @@ beforeAll(async () => {
   await applyMigrations();
   kp = await generateTestKeypair();
 });
+
+/**
+ * WEP-0002 phase 3 (docs/system/architecture.md § D1 — the index & projections):
+ * POST /api/account/family-notes now authors the note in the
+ * author's account DO; the DO alarm is the single writer of the
+ * `figure_type_note_index` projection the co-member GET reads. Drive that alarm
+ * (for the AUTHOR's account doc) so the projected row is visible synchronously —
+ * the co-member visibility guarantee still holds end to end (author writes →
+ * alarm projects → co-member reads).
+ */
+async function runAccountAlarm(userId: string): Promise<void> {
+  const stub = env.DOC_DO.get(env.DOC_DO.idFromName(`account:${userId}`));
+  await stub.runAlarmForTest();
+}
 
 /** Seed: coach authors a "feather/all" family note; coach+student co-own a
  *  Foxtrot routine referencing a Feather; stranger is NOT a member.
@@ -89,7 +106,7 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       headers: student.authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { notes: Array<{ authorId: string; figureType: string }> };
+    const body = await res.json<{ notes: Array<{ authorId: string; figureType: string }> }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ authorId: "coach", figureType: "feather" }),
@@ -139,14 +156,16 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       }),
     });
     expect(created.status).toBe(201);
+    // The note lives in author1's account doc; its alarm projects figure_type_note_index.
+    await runAccountAlarm("author1");
 
     const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
       headers: ctx.authHeaders(),
     });
     expect(got.status).toBe(200);
-    const body = (await got.json()) as {
+    const body = await got.json<{
       notes: Array<{ figureType: string; text: string; kind: string }>;
-    };
+    }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ figureType: "natural_turn", text: "rise later", kind: "lesson" }),
@@ -183,14 +202,15 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
       }),
     });
     expect(created.status).toBe(201);
+    await runAccountAlarm("solo_owner");
 
     const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
       headers: ctx.authHeaders(),
     });
     expect(got.status).toBe(200);
-    const body = (await got.json()) as {
+    const body = await got.json<{
       notes: Array<{ figureType: string; text: string; authorId: string }>;
-    };
+    }>();
     expect(body.notes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -200,6 +220,78 @@ describe("US-041 Co-member visibility of family notes (option 2)", () => {
         }),
       ]),
     );
+  });
+
+  it("round-trips a TIMED family note (count + role) and rejects 'all'-scope timing (WEP-0004)", async () => {
+    // Intent: the rushed Whisk — "count 3 of every Whisk in my Waltz choreos"
+    //   persists count/role (migration 0018 columns) and the co-member read
+    //   returns them on the note AND its figureType anchor, so the client can
+    //   pin the note in the grid. The invariant (no cross-dance timing) is
+    //   enforced at the REST boundary: danceScope "all" + count → 400.
+    const docRef = "rt_timed_note";
+    await seedDb({
+      users: [{ id: "timed_author", displayName: "T", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "timed_author", doName: docRef, dance: "waltz" }],
+      memberships: [{ id: "m_t1", docRef, userId: "timed_author", role: "editor" }],
+    });
+    const ctx = await authedContext({
+      keypair: kp,
+      userId: "timed_author",
+      docRef,
+      role: "editor",
+    });
+    const created = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "practice",
+        text: "settle before the chassé",
+        figureType: "whisk",
+        danceScope: "waltz",
+        count: 3,
+        role: "leader",
+      }),
+    });
+    expect(created.status).toBe(201);
+    await runAccountAlarm("timed_author");
+
+    const got = await SELF.fetch(`https://x/api/routines/${docRef}/family-notes`, {
+      headers: ctx.authHeaders(),
+    });
+    expect(got.status).toBe(200);
+    const body = await got.json<{
+      notes: Array<{
+        figureType: string;
+        count?: number | null;
+        role?: string | null;
+        anchors: Array<Record<string, unknown>>;
+      }>;
+    }>();
+    const note = body.notes.find((n) => n.figureType === "whisk");
+    expect(note).toBeDefined();
+    expect(note?.count).toBe(3);
+    expect(note?.role).toBe("leader");
+    expect(note?.anchors[0]).toMatchObject({
+      type: "figureType",
+      figureType: "whisk",
+      danceScope: "waltz",
+      count: 3,
+      role: "leader",
+    });
+
+    // The boundary invariant: a timed note cannot span all dances.
+    const rejected = await SELF.fetch("https://x/api/account/family-notes", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "practice",
+        text: "x",
+        figureType: "whisk",
+        danceScope: "all",
+        count: 3,
+      }),
+    });
+    expect(rejected.status).toBe(400);
   });
 
   it("uses an INDEX for the FigureTypeNoteIndex lookup (EXPLAIN, no SCAN)", async () => {

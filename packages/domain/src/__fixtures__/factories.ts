@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Pure domain factories / builders (PLAN.md §10.3 "pure factories").
+// Pure domain factories / builders (docs/system/testing.md "pure factories").
 //
 // These build the plain logical shapes of the document graph (types.ts) for
 // use as test inputs and as the expected/asserted shape. They are POJO
@@ -12,12 +12,9 @@
 // are legible; pass a real ULID where monotonicity matters (US-001 tests do).
 // ─────────────────────────────────────────────────────────────────────────
 import type {
-  Alignment,
   Anchor,
   Annotation,
-  AnnotationKind,
   Attribute,
-  AttributeKind,
   DanceId,
   FigureDoc,
   FigureType,
@@ -42,18 +39,11 @@ export function resetTestIds(): void {
 export function makeAttribute(overrides: Partial<Attribute> = {}): Attribute {
   return {
     id: overrides.id ?? testId("attr"),
-    kind: overrides.kind ?? ("footwork" as AttributeKind),
+    kind: overrides.kind ?? "footwork",
     count: overrides.count ?? 1,
     role: overrides.role ?? null,
     value: "value" in overrides ? overrides.value : "HT",
     deletedAt: overrides.deletedAt ?? null,
-  };
-}
-
-export function makeAlignment(overrides: Partial<Alignment> = {}): Alignment {
-  return {
-    qualifier: overrides.qualifier ?? "facing",
-    direction: overrides.direction ?? "LOD",
   };
 }
 
@@ -67,8 +57,6 @@ export function makeFigureDoc(overrides: Partial<FigureDoc> = {}): FigureDoc {
     dance: overrides.dance ?? "foxtrot",
     name: overrides.name ?? "Feather",
     source: overrides.source ?? "library",
-    entryAlignment: overrides.entryAlignment,
-    exitAlignment: overrides.exitAlignment,
     attributes: overrides.attributes ?? [
       makeAttribute({ kind: "footwork", count: 1, value: "HT" }),
       makeAttribute({ kind: "footwork", count: 2, value: "T" }),
@@ -104,7 +92,6 @@ export function makePlacement(figureRef: string, overrides: Partial<Placement> =
   return {
     id: overrides.id ?? testId("plc"),
     figureRef,
-    perPlacementAlignment: overrides.perPlacementAlignment,
     deletedAt: overrides.deletedAt ?? null,
   };
 }
@@ -127,15 +114,27 @@ export function makeAnchor(overrides: Partial<Extract<Anchor, { type: "point" }>
   };
 }
 
-export function makeFigureTypeAnchor(figureType: FigureType, danceScope: DanceId | "all"): Anchor {
-  return { type: "figureType", figureType, danceScope };
+export function makeFigureTypeAnchor(
+  figureType: FigureType,
+  danceScope: DanceId | "all",
+  opts: { count?: number; role?: Role } = {},
+): Anchor {
+  // Conditional spread: an Automerge doc can't store `undefined`, so absent
+  // opts must stay ABSENT keys (WEP-0004 timed anchors are additive; docs/concepts/annotations.md § Anchors).
+  return {
+    type: "figureType",
+    figureType,
+    danceScope,
+    ...(opts.count != null ? { count: opts.count } : {}),
+    ...(opts.role != null ? { role: opts.role } : {}),
+  };
 }
 
 export function makeAnnotation(overrides: Partial<Annotation> = {}): Annotation {
   return {
     id: overrides.id ?? testId("ann"),
     authorId: overrides.authorId ?? "user_author",
-    kind: overrides.kind ?? ("note" as AnnotationKind),
+    kind: overrides.kind ?? "note",
     text: overrides.text ?? "keep the head left",
     tags: overrides.tags ?? [],
     anchors: overrides.anchors ?? [makeAnchor()],

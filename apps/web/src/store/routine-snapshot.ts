@@ -1,4 +1,4 @@
-// Read-only snapshot model (the read/edit split — PLAN §6, extends D10).
+// Read-only snapshot model (the read/edit split — docs/system/sync-and-offline.md § The read/edit split).
 //
 // Opening a routine to *read* it (the common case) shouldn't cost one live
 // WebSocket per routine + per figure. This model hydrates the whole routine + its
@@ -12,7 +12,7 @@
 import {
   type Annotation,
   CURRENT_SCHEMA_VERSION,
-  defaultFigureBars,
+  defaultFigureCounts,
   type FigureDoc,
   isReservedKind,
   libraryFigureByRef,
@@ -49,14 +49,7 @@ function resolveSnapshotFigure(fig: FigureDoc, snap: RoutineSnapshot): FigureDoc
   if (liveBase) return resolveVariantOverlay(liveBase, fig);
   const cat = libraryFigureByRef(fig.baseFigureRef);
   if (cat) {
-    return resolveVariantOverlay(
-      {
-        attributes: cat.attributes ?? [],
-        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
-      },
-      fig,
-    );
+    return resolveVariantOverlay({ attributes: cat.attributes ?? [] }, fig);
   }
   return fig; // base unavailable → the variant's own (owned) beats
 }
@@ -79,10 +72,8 @@ function catalogSnapshotFigure(ref: string): FigureDoc | null {
     dance: cat.dance,
     name: cat.name,
     source: "library",
-    bars: defaultFigureBars(attributes, cat.dance),
+    counts: defaultFigureCounts(attributes),
     attributes,
-    ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-    ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
     schemaVersion: 1,
     deletedAt: null,
   };
@@ -246,9 +237,12 @@ export function openRoutineSnapshot(
           // reference points directly at the global doc (present in `figures`), so it
           // resolves to itself. A ref absent from the snapshot that IS a `global:`
           // catalog ref still renders from the bundle (pre-filled, §4.3).
-          const figure = raw
-            ? resolveSnapshotFigure(raw, snap as RoutineSnapshot)
-            : (catalogSnapshotFigure(placement.figureRef) ?? null);
+          // `raw` non-null ⇒ it came out of `snap.figures`, so `snap` is non-null;
+          // the && just states that for the compiler.
+          const figure =
+            raw && snap
+              ? resolveSnapshotFigure(raw, snap)
+              : (catalogSnapshotFigure(placement.figureRef) ?? null);
           // present → live; absent → genuinely missing (deleted / no access). Before
           // the first snapshot lands the whole view reads "connecting" (syncState).
           const status: FigureLoadStatus = figure ? "live" : snap ? "missing" : "loading";

@@ -1,43 +1,64 @@
-// US-018 — Open & view a routine (the Assemble screen). PLAN §4.3, §6.2.
+// US-018 — Open & view a routine (the Assemble screen). docs/concepts/choreography.md
+// § Assembling; docs/system/architecture.md.
 //
 // Opens a routine through the store seam (the ONLY way a component reaches
 // Automerge/the worker — CLAUDE.md §3, enforced by the store boundary test) and
 // renders its sections in order with placement cards (figure name, scope badge,
-// attribute summary, alignment chips). Reads are reactive: a synced edit from
+// attribute summary). Reads are reactive: a synced edit from
 // another client re-renders without reload (US-018 AC-2). An offline data state
 // is shown honestly rather than presenting stale content as live (AC-3).
 //
 // Editing is gated by the `role`/capability table: editors manage sections
-// (US-026) and placements (US-027), notate a figure's steps (US-028) and its
-// alignment (US-031) via the step sheet, and add figures from the library picker
+// (US-026) and placements (US-027), notate a figure's steps (US-028) via the
+// step sheet, and add figures from the library picker
 // (US-027/US-032); viewers/commenters see it all read-only.
 
 import {
-  type Alignment,
   barsForFigure,
   can,
-  countLabel,
   DANCES,
   type DanceId,
   type FigureDoc,
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
   type Placement,
+  type PlacementPart,
+  parseGlobalFigureRef,
+  partBeatSpan,
+  phraseCountLabel,
   type RegistryKind,
   type Section,
+  windowAttributes,
 } from "@weavesteps/domain";
-import { type FormEvent, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { pickMessages, useMessages } from "../i18n";
 import { assembleMessages } from "../i18n/messages/assemble";
 import { timelineMessages } from "../i18n/messages/timeline";
 import { buildMemberColorMap, type ColorableMember } from "../lib/identity-colors";
+import { useOnline } from "../lib/use-online";
 import { listAccountKinds } from "../store/custom-kinds";
 import type { TokenProvider } from "../store/doc-connection";
-import { createFamilyNote, type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import { type FamilyNote, loadFamilyNotes } from "../store/family-notes";
+import { type MineFigure, mergeLiveBookmarkedFigures } from "../store/figures";
 import { useMe } from "../store/me";
-import type { FigureLoadStatus, ResolvedPlacement, RoutineStore } from "../store/routine";
+import type {
+  CopyOnWriteErrorReason,
+  FigureLoadStatus,
+  ResolvedPlacement,
+  RoutineStore,
+} from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
+import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   AttrChip,
@@ -45,8 +66,6 @@ import {
   Card,
   ChevronDownIcon,
   ChevronRightIcon,
-  Chip,
-  CountPill,
   cx,
   EditIcon,
   FullScreen,
@@ -72,7 +91,7 @@ import { RoutineReadingView } from "./RoutineReadingView";
 import { cellValue, isOffBeatCount, usedColumns } from "./reading-columns";
 import { useStoredRoleView } from "./reading-columns-role";
 import { supportsSlowQuick, useStoredTimingView } from "./reading-timing";
-import { filterByRoleView, type RoleView } from "./role-view";
+import { asReadView, filterByRoleView, type RoleView } from "./role-view";
 import { Share } from "./Share";
 
 /** Per-document membership role (NOT an ARIA role). */
@@ -149,7 +168,8 @@ export interface AssembleProps {
    */
   initialMode?: "edit" | "read";
   /**
-   * The caller's library bookmark set (⟳v5, PLAN §4.2/§5.2): figureRefs already
+   * The caller's library bookmark set (⟳v5, docs/concepts/figures.md § The library
+   * screen / § Variants): figureRefs already
    * "added to my library". Drives the placement-card / figure-editor "add to my
    * library" ↔ "in your library" affordance for a choreo-local ACCOUNT figure.
    * Omitted → the affordance hides (e.g. offline, or a test that doesn't wire it).
@@ -157,6 +177,15 @@ export interface AssembleProps {
   bookmarkedFigureRefs?: ReadonlySet<string>;
   /** Bookmark a figure into the caller's library (a REFERENCE, never a copy). */
   onAddToLibrary?: (figureRef: string) => Promise<{ alreadySaved: boolean }>;
+  /**
+   * The caller's library figures (⟳v5, docs/concepts/figures.md § The library screen:
+   * a bookmark "can be placed
+   * into your other routines") — surfaced by the Add-figure picker alongside
+   * the catalog presets. Account-scope entries list as tappable rows (placed
+   * by ref via `store.placeFigure`); bookmarked CATALOG refs dedupe into the
+   * preset rows. Omitted → the picker shows the catalog only.
+   */
+  libraryFigures?: MineFigure[];
 }
 
 /**
@@ -172,25 +201,36 @@ function useRoutineStore(
   getToken: TokenProvider | undefined,
   currentUserId: string | undefined,
   onCopyOnWrite?: (variantRef: string) => void,
+  onCopyOnWriteError?: (info: { figureRef: string; reason: CopyOnWriteErrorReason }) => void,
 ): RoutineStore | null {
   const [store, setStore] = useState<RoutineStore | null>(injected ?? null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
+
+  // The token provider is consumed LAZILY (a fresh token per call), so its
+  // IDENTITY must never restart the store: callers pass inline arrows
+  // (`getToken={() => getToken()}`), and with it in the effect deps every
+  // parent re-render tore the store down and reopened it. Under an offline
+  // retry storm (queries failing/refetching re-render ChoreoFlow constantly)
+  // that left a perpetually half-hydrated newborn store on screen — the
+  // "content vanished while offline" class. A ref keeps calls current while
+  // the store's lifetime tracks only the real inputs (routine, role, enabled).
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
 
   useEffect(() => {
     if (injected || !enabled) return;
     let live: RoutineStore | null = null;
     let cancelled = false;
+    const latestToken: TokenProvider = async () => (await getTokenRef.current?.()) ?? null;
     const doOpen = async () => {
       // Fetch account-wide custom kinds for cross-routine reuse (US-043 AC-2).
       // Best-effort: a failure must never block the routine open.
       let accountKinds: RegistryKind[] = [];
-      if (getToken) {
-        try {
-          const token = await getToken();
-          accountKinds = await listAccountKinds(token);
-        } catch {
-          // Non-blocking; reload-persistence works via the routine-embedded copy.
-        }
+      try {
+        const token = await latestToken();
+        accountKinds = await listAccountKinds(token);
+      } catch {
+        // Non-blocking; reload-persistence works via the routine-embedded copy.
       }
       if (cancelled) return;
       // Read/edit split: open in read-only snapshot mode (one REST read, zero
@@ -199,10 +239,11 @@ function useRoutineStore(
       // opens a socket. A viewer never triggers the upgrade (the UI gates edits).
       const opened = openRoutineView(routineId, {
         editable,
-        getToken,
+        getToken: latestToken,
         currentUserId,
         accountKinds,
         onCopyOnWrite,
+        onCopyOnWriteError,
         // Escalate a figure that hasn't hydrated within ~12s to a retryable error
         // (with a Retry affordance) so it's never a forever skeleton; reconnect +
         // the access preflight then settle it on live / error / missing.
@@ -220,7 +261,7 @@ function useRoutineStore(
       cancelled = true;
       live?.close();
     };
-  }, [routineId, injected, enabled, editable, getToken, currentUserId, onCopyOnWrite]);
+  }, [routineId, injected, enabled, editable, currentUserId, onCopyOnWrite, onCopyOnWriteError]);
 
   // Re-render whenever the (current) store advances.
   useEffect(() => store?.subscribe(bump), [store]);
@@ -241,14 +282,29 @@ export function Assemble({
   initialMode = "edit",
   bookmarkedFigureRefs,
   onAddToLibrary,
+  libraryFigures,
 }: AssembleProps) {
   const offlineProp = connection === "offline";
   const t = useMessages(assembleMessages);
+  const toast = useToast();
   // The header's L·F role lens shares the reading/timeline "Steps for" copy
   // (Leader/Follower stay untranslated by glossary convention).
   const roleT = useMessages(timelineMessages);
   // The figureRef whose step timeline is open in the notation sheet (US-028), or null.
   const [notating, setNotating] = useState<string | null>(null);
+  // The placement whose editor is open (Builder v3 ③): tracked ALONGSIDE the
+  // figure id so the editor windows to THIS placement's `part` — a figure placed
+  // in two different portions must open at the exact slice the user tapped, not
+  // whichever placement matches the shared figure id first. Stable across the
+  // COW re-point (the placement id never changes), so no need to update it there.
+  const [notatingPlacementId, setNotatingPlacementId] = useState<string | null>(null);
+  // The lens the open figure detail is in (design `figMode`, Builder v3: the
+  // prototype's openFigure picks it from the assemble lens). "read" = the
+  // read-only figure view — static grid + the notes surfaces, nothing editable;
+  // "edit" = the step editor (notation-only). The surface that opens the detail
+  // sets it — reading programme → "read", builder/create-navigates → "edit" —
+  // and the header's pencil toggle (editors only) flips the OPEN detail.
+  const [notatingLens, setNotatingLens] = useState<"read" | "edit">("edit");
   // Toast shown when editing a global figure spawns a variant (⟳v5): "Made this
   // figure yours".
   const [copiedToast, setCopiedToast] = useState(false);
@@ -259,10 +315,30 @@ export function Assemble({
     setCopiedToast(true);
     setNotating(variantRef);
   }, []);
+  // The variant spawn FAILED — the optimistic "Step placed" toast already fired, so
+  // tell the user their change didn't save instead of leaving a silent vanish. The
+  // store reports `unexpected` failures to Sentry; here we only word the toast.
+  const onCopyOnWriteError = useCallback(
+    ({ reason }: { figureRef: string; reason: CopyOnWriteErrorReason }) => {
+      const msg =
+        reason === "quota"
+          ? t.editSaveQuota
+          : reason === "denied"
+            ? t.editSaveDenied
+            : t.editSaveFailed;
+      toast.show(msg, {
+        tone: reason === "unexpected" || reason === "offline" ? "danger" : "warning",
+      });
+    },
+    [t, toast],
+  );
   // Editable = can write to the routine doc (editor/owner edits, or commenter
   // annotations). Drives the read/edit split: editable opens ONE live routine WS
   // for live convergence; a pure viewer stays on the zero-socket snapshot.
   const editable = can(role, "canEdit") || can(role, "canAnnotate");
+  // §11.2 creation gate: fork ("make a copy") and new attribute kinds are
+  // SERVER actions — disabled while offline (design 1.24); doc edits stay on.
+  const online = useOnline();
   const store = useRoutineStore(
     routineId,
     injected,
@@ -271,13 +347,20 @@ export function Assemble({
     getToken,
     currentUserId,
     onCopyOnWrite,
+    onCopyOnWriteError,
   );
   // Section management is editor-only — gated on the SHARED capability table, not
   // an ad-hoc role check, so the UI and the DO boundary agree (#169, principle #26).
-  // Also require the doc to be hydrated ("live" — the DO's catch-up has arrived):
-  // editing an as-yet-unsynced (empty A.init) doc would push onto a missing
-  // `sections` list and be lost on merge, so we wait for the seed to land.
-  const canEdit = can(role, "canEdit") && store?.syncState() === "live";
+  // Also require the doc to be HYDRATED: "live" (the DO's catch-up has arrived) or
+  // "local" (§11.2 — hydrated from local persistence while disconnected; edits
+  // persist on-device and replay on reconnect). Editing an as-yet-unhydrated
+  // (empty A.init) doc would push onto a missing `sections` list and be lost on
+  // merge, so we wait for real content from either source.
+  const syncStateNow = store?.syncState();
+  const canEdit = can(role, "canEdit") && (syncStateNow === "live" || syncStateNow === "local");
+  // The figure detail is editable only in its EDIT lens — a reading-lens-opened
+  // detail is read-only even for an editor until the explicit pencil toggle.
+  const figureEditing = canEdit && notatingLens === "edit";
   // Sharing (invite/remove) is an editor/owner capability — gated on the SHARED
   // table (principle #26); the worker still enforces it server-side (US-024).
   const canShare = can(role, "canInvite");
@@ -313,12 +396,21 @@ export function Assemble({
   // Stable handler identities for the memoized reading view (FigureReadout is
   // React.memo'd): an inline closure here would re-bust every row's props on
   // each background sync re-render. useState setters are stable, so [] is right.
-  const openFigureFromReading = useCallback((figureId: string) => setNotating(figureId), []);
+  const openFigureFromReading = useCallback((figureId: string) => {
+    // Opened by figure id from the reading view — no placement context, so the
+    // portion falls back to the first placement of that figure (below). The
+    // reading programme opens the detail READ-ONLY (design figMode: 'view').
+    setNotating(figureId);
+    setNotatingPlacementId(null);
+    setNotatingLens("read");
+  }, []);
   const openThreadFromReading = useCallback(
     (anchor: { figureRef: string; count?: number }) => setThreadAnchor(anchor),
     [],
   );
-  // Which sections are collapsed in the editing view (frame 1.9: ▾/▸).
+  // Which sections are folded (frame 1.9: ▾/▸) — ONE Set shared by both
+  // lenses, so a section collapsed while editing stays collapsed in the
+  // reading programme and vice versa.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleCollapsed = useCallback((sectionId: string) => {
     setCollapsed((prev) => {
@@ -332,9 +424,9 @@ export function Assemble({
     sectionId: string;
     placement: Placement;
   } | null>(null);
-  const toast = useToast();
 
-  // "Add to my library" (⟳v5, PLAN §4.2/§5.2): bookmark a placed/notated ACCOUNT
+  // "Add to my library" (⟳v5, docs/concepts/figures.md § The library screen /
+  // § Variants): bookmark a placed/notated ACCOUNT
   // figure. Wraps the caller's mutation with the same toast contract as the
   // global-library "↟ save" card (FigureLibrary.tsx) — "Added"/"Already in your
   // library" on success, a danger toast on failure; never throws into the caller.
@@ -375,14 +467,14 @@ export function Assemble({
     [membersQ.data, me.data, currentUserId],
   );
 
-  // Family notes (US-040/041) come from the worker (co-member visibility gate),
-  // not the routine doc — load them for this routine + reload after authoring one.
+  // Family notes (US-040/041): CO-MEMBER notes (about-others) come from the worker
+  // (co-member visibility gate) unchanged — load them + reload after authoring one.
   // No-ops without a token (tests / open boundary) → an empty list.
-  const [familyNotes, setFamilyNotes] = useState<FamilyNote[]>([]);
+  const [coMemberNotes, setCoMemberNotes] = useState<FamilyNote[]>([]);
   const reloadFamilyNotes = useCallback(async () => {
     if (!getToken) return;
     try {
-      setFamilyNotes(await loadFamilyNotes(routineId, await getToken()));
+      setCoMemberNotes(await loadFamilyNotes(routineId, await getToken()));
     } catch {
       // Surfacing family notes is best-effort; a failure must not block authoring.
     }
@@ -390,6 +482,40 @@ export function Assemble({
   useEffect(() => {
     void reloadFamilyNotes();
   }, [reloadFamilyNotes]);
+  // docs/system/architecture.md (account docs / § D1 projections): the user's OWN
+  // family notes read live from the account doc (instant +
+  // offline), so a note the user just authored appears immediately — before the
+  // alarm projects it into the co-member REST read. The account doc opens LAZILY
+  // here (the compose surface). Merge own ∪ co-member, deduped by note id (the
+  // account doc reuses the D1 noteId, so a note appears once once both agree).
+  const account = useAccount();
+  const ownNotes = useOwnFamilyNotes(account.store);
+  const familyNotes = useMemo<FamilyNote[]>(() => {
+    const seen = new Set(coMemberNotes.map((n) => n.id));
+    const ownAsFamily: FamilyNote[] = ownNotes
+      .filter((n) => !seen.has(n.id))
+      .map((n) => ({
+        id: n.id,
+        authorId: currentUserId ?? "",
+        kind: n.kind,
+        text: n.text,
+        figureType: n.figureType,
+        danceScope: n.danceScope,
+        createdAt: n.createdAt,
+        anchors: [
+          {
+            type: "figureType" as const,
+            figureType: n.figureType,
+            danceScope: n.danceScope,
+            ...(n.count != null ? { count: n.count } : {}),
+            ...(n.role != null ? { role: n.role } : {}),
+          },
+        ],
+        ...(n.count != null ? { count: n.count } : {}),
+        ...(n.role != null ? { role: n.role } : {}),
+      }));
+    return [...coMemberNotes, ...ownAsFamily];
+  }, [coMemberNotes, ownNotes, currentUserId]);
 
   // Read/edit split: opening a figure's step editor connects THAT figure's own
   // live WS (lazy figures) so its notation converges while open; until then it
@@ -398,7 +524,14 @@ export function Assemble({
     if (notating && store) store.openFigure(notating);
   }, [notating, store]);
 
-  const offline = offlineProp || store?.syncState() === "closed";
+  // Offline editing (§11.2): changes not yet handed to the server. While merely
+  // disconnected ("local") they show as the slate pending chip; when the
+  // connection is TERMINALLY rejected ("closed" — access revoked / doc gone)
+  // with pending changes, the content stays readable with the danger alert
+  // (the Q-NEW-2 rule: rejected offline edits are surfaced, never dropped).
+  const pendingSync = store?.pendingSyncCount?.() ?? 0;
+  const terminallyClosed = store?.syncState() === "closed";
+  const offline = offlineProp || (terminallyClosed && pendingSync === 0);
   if (offline) return <OfflineState />;
   if (!store) {
     return (
@@ -411,7 +544,7 @@ export function Assemble({
   const routine = store.readRoutine();
   // The S/Q lens is only meaningful (and only shown) for Tango/Foxtrot/Quickstep;
   // every other dance always reads in numeric counts even if `bb_timing` is stale.
-  const slowQuickEligible = supportsSlowQuick(routine.dance as DanceId);
+  const slowQuickEligible = supportsSlowQuick(routine.dance);
   const effectiveTimingView = slowQuickEligible ? timingView : "counts";
   const resolvedByPlacement = new Map<string, ResolvedPlacement>(
     store.readPlacements().map((rp: ResolvedPlacement) => [rp.placement.id, rp]),
@@ -424,13 +557,27 @@ export function Assemble({
   // (`fromLiveDoc`) or is still the read-only snapshot fallback. Match on the
   // placement's figureRef too, so the open sheet still resolves during the brief
   // window where the figure has no content yet (loading) and after a COW re-point.
+  const resolvedPlacements = store.readPlacements();
   const notatingRP =
-    notating !== null
-      ? (store
-          .readPlacements()
-          .find((rp) => rp.figure?.id === notating || rp.placement.figureRef === notating) ?? null)
-      : null;
+    notating === null
+      ? null
+      : // Prefer the EXACT placement the user opened (Builder v3 ③) so the editor
+        // windows to its portion; fall back to a figure-id match for the reading-view
+        // open path and to keep resolving during the brief COW re-point window.
+        ((notatingPlacementId !== null
+          ? resolvedPlacements.find((rp) => rp.placement.id === notatingPlacementId)
+          : undefined) ??
+        resolvedPlacements.find(
+          (rp) => rp.figure?.id === notating || rp.placement.figureRef === notating,
+        ) ??
+        null);
   const notatingFigure = notatingRP?.figure ?? null;
+  // The placement's portion window (Builder v3 ③): windows the editor grid to the
+  // placed slice. Undefined for a whole-figure placement.
+  const notatingPart = notatingRP?.placement.part ?? null;
+  // The implicit fork (⟳v5, §5.2) is async — surface an inline "making this figure
+  // yours…" pending state so the first edit of a global figure doesn't look inert.
+  const figureForking = notating !== null && (store.isForking?.(notating) ?? false);
   // "Load on open, then live without flicker" (C/E): in editable mode the editor
   // waits for the figure's own live doc rather than rendering — then swapping out —
   // stale snapshot content. A viewer reads the snapshot directly, and an injected
@@ -462,7 +609,7 @@ export function Assemble({
                 <SegmentedToggle
                   ariaLabel={roleT.stepsFor}
                   tone="muted"
-                  value={roleView}
+                  value={asReadView(roleView)}
                   onChange={setRoleView}
                   options={[
                     { value: "leader", label: "L", ariaLabel: roleT.leader },
@@ -512,6 +659,43 @@ export function Assemble({
       />
 
       <div className="flex flex-col gap-3 p-4">
+        {/* §11.2 unsyncable alert (design 1.24 pin 2): the reconnect was
+            TERMINALLY rejected while offline edits were pending — say so
+            unmissably and keep the local content readable (read-only). */}
+        {terminallyClosed && pendingSync > 0 && (
+          <div
+            role="alert"
+            data-testid="unsynced-changes"
+            className="flex items-center gap-2 rounded-md border px-3 py-2 text-2xs font-semibold"
+            style={{
+              background: "var(--bf-danger-tint)",
+              borderColor: "var(--bf-danger-border)",
+              color: "var(--bf-danger-ink)",
+            }}
+          >
+            <span aria-hidden="true">!</span>
+            {t.unsyncedChanges(pendingSync)}
+          </div>
+        )}
+        {/* §11.2 pending chip (design 1.24 pin 1): offline edits saved on this
+            device, visible until they sync — slate (offline family), never
+            danger. Purely count-driven: any undelivered change shows it, and the
+            caught-up reset clears it (incl. through the reconnect replay). */}
+        {!terminallyClosed && pendingSync > 0 && (
+          <div
+            role="status"
+            data-testid="pending-sync"
+            className="flex items-center gap-2 rounded-md border px-3 py-2 text-2xs font-semibold"
+            style={{
+              background: "var(--bf-offline-tint)",
+              borderColor: "var(--bf-offline)",
+              color: "var(--bf-offline-ink)",
+            }}
+          >
+            <span aria-hidden="true">⌁</span>
+            {t.offlinePending(pendingSync)}
+          </div>
+        )}
         {/* Editing-only toolbar: undo/redo (editor) + make-a-copy (any member). */}
         {mode === "edit" && (onFork || canEdit || syncing) && (
           <div className="flex items-center gap-2">
@@ -532,7 +716,8 @@ export function Assemble({
                   onClick={() => {
                     // Undo always proceeds (CRDT merges). When another actor had
                     // built on the reverted change, soften the toast — advisory
-                    // only, no modal, no refusal (US-038 AC-3, PLAN §5.4).
+                    // only, no modal, no refusal (US-038 AC-3, docs/concepts/collaboration.md
+                    // § Undo).
                     const supersededByOthers = store.undo()?.supersededByOthers ?? false;
                     if (supersededByOthers) {
                       toast.show(t.undoneSupersededToast, {
@@ -559,6 +744,7 @@ export function Assemble({
                 className="ml-auto"
                 loading={forking}
                 onClick={onFork}
+                disabled={!online}
               >
                 {t.makeACopy}
               </Button>
@@ -602,7 +788,13 @@ export function Assemble({
                 <p className="flex-1 text-xs" style={{ color: "var(--bf-scope-custom-ink)" }}>
                   {t.readOnlyBanner}
                 </p>
-                <Button variant="primary" size="sm" loading={forking} onClick={onFork}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={forking}
+                  onClick={onFork}
+                  disabled={!online}
+                >
                   {t.makeItMine}
                 </Button>
               </div>
@@ -611,14 +803,17 @@ export function Assemble({
               routine={routine}
               placements={store.readPlacements()}
               annotations={store.readAnnotations()}
+              familyNotes={familyNotes}
               canComment={can(role, "canAnnotate")}
               memberColors={memberColorMap}
               memberNames={memberNameMap}
               customKinds={store.customKinds()}
-              roleView={roleView}
+              roleView={asReadView(roleView)}
               timingView={effectiveTimingView}
               onOpenFigure={openFigureFromReading}
               onOpenThread={openThreadFromReading}
+              collapsedSections={collapsed}
+              onToggleSection={toggleCollapsed}
             />
             {/* Quick-note FAB (Builder v2): a floating "✎ note" pill on the
                 reading programme that jumps straight into a note on the first
@@ -663,12 +858,7 @@ export function Assemble({
                     <SectionHeader
                       section={section}
                       collapsed={isCollapsed}
-                      meta={sectionMeta(
-                        section,
-                        resolvedByPlacement,
-                        routine.dance as DanceId,
-                        isCollapsed,
-                      )}
+                      meta={sectionMeta(section, resolvedByPlacement, routine.dance, isCollapsed)}
                       canEdit={canEdit}
                       isFirst={index === 0}
                       isLast={index === routine.sections.length - 1}
@@ -685,9 +875,7 @@ export function Assemble({
                           const card =
                             placement.source === "break" ? (
                               <BreakCard
-                                beats={
-                                  placement.beats ?? DANCES[routine.dance as DanceId].beatsPerBar
-                                }
+                                beats={placement.beats ?? DANCES[routine.dance].beatsPerBar}
                                 canEdit={canEdit}
                                 onChangeBeats={(next) =>
                                   store.setBreakBeats(section.id, placement.id, next)
@@ -700,8 +888,8 @@ export function Assemble({
                               <PlacementCard
                                 placement={placement}
                                 figure={placementFigure}
-                                dance={routine.dance as DanceId}
-                                roleView={roleView}
+                                dance={routine.dance}
+                                roleView={asReadView(roleView)}
                                 status={resolvedByPlacement.get(placement.id)?.status ?? "loading"}
                                 canEdit={canEdit}
                                 isFirst={pIndex === 0}
@@ -711,7 +899,14 @@ export function Assemble({
                                   placement.figureRef && store.retryFigure(placement.figureRef)
                                 }
                                 onOpen={() => {
-                                  if (placementFigure) setNotating(placementFigure.id);
+                                  if (placementFigure) {
+                                    // The builder opens the detail straight
+                                    // into the step editor (design figMode:
+                                    // openFigure from assembleEdit → 'edit').
+                                    setNotating(placementFigure.id);
+                                    setNotatingPlacementId(placement.id);
+                                    setNotatingLens("edit");
+                                  }
                                 }}
                                 onDelete={() =>
                                   setPendingDeletePlacement({ sectionId: section.id, placement })
@@ -770,7 +965,18 @@ export function Assemble({
                               className="flex-1"
                               label={t.addBreak}
                               tone="break"
-                              onClick={() => store.addBreak(section.id)}
+                              onClick={() =>
+                                // Builder v3 ④: a Break is a real (choreo-local)
+                                // figure — a bar's worth of empty counts, sized/
+                                // edited like any figure. Legacy break placements
+                                // keep the BreakCard until the DO migrates them.
+                                store.addPlacement(
+                                  section.id,
+                                  t.breakFigureName,
+                                  undefined,
+                                  DANCES[routine.dance].beatsPerBar,
+                                )
+                              }
                             />
                           </div>
                         )}
@@ -830,15 +1036,46 @@ export function Assemble({
         title={t.addFigureSheetTitle}
       >
         <AddFigurePicker
-          dance={routine.dance as DanceId}
-          onAdd={(name, figureType, bars) => {
+          dance={routine.dance}
+          // Read-your-writes (mirrors PR #255's Journal merge): the REST /mine
+          // list trails a just-added bookmark by a WS round-trip + alarm tick,
+          // so merge live-bookmarked figures resolved from THIS routine's
+          // placed figure docs — the bookmark and the placement stay the same
+          // figure underneath (placing it references the same doc by ref).
+          libraryFigures={mergeLiveBookmarkedFigures(
+            libraryFigures ?? [],
+            bookmarkedFigureRefs ?? new Set(),
+            resolvedPlacements,
+          )}
+          onAddFromLibrary={(figureRef) => {
+            // Assembly of an existing library figure (⟳v5 §4.2): the placement
+            // just references the live doc — whole figure, no portion step (the
+            // figure's chart isn't bundled client-side to size a range from).
+            if (addingFigureTo)
+              store.placeFigure(
+                addingFigureTo.sectionId,
+                figureRef,
+                addingFigureTo.beforePlacementId,
+              );
+            setAddingFigureTo(null);
+          }}
+          onAdd={(name, figureType, counts, part) => {
             if (addingFigureTo)
               store.addPlacement(
                 addingFigureTo.sectionId,
                 name,
                 figureType,
-                bars,
+                counts,
                 addingFigureTo.beforePlacementId,
+                part,
+                // Create-navigates (§4.3): a NEW custom figure opens its step
+                // editor immediately (a catalog pick stays on the builder —
+                // the store fires this only for a true custom mint).
+                ({ figureRef, placementId }) => {
+                  setNotating(figureRef);
+                  setNotatingPlacementId(placementId);
+                  setNotatingLens("edit");
+                },
               );
             setAddingFigureTo(null);
           }}
@@ -850,12 +1087,16 @@ export function Assemble({
           doc via the store and auto-saves — there is no figure-level Save; the
           safety net is the header Undo/Redo, which (§5.4, "undo follows the surface
           being edited") targets THIS figure's own doc via store.undoFigure, so a
-          mis-tap in the step grid is recoverable. A viewer sees it read-only.
-          Re-reads live so a collaborator's edit flows in. */}
+          mis-tap in the step grid is recoverable. The detail is LENS-AWARE
+          (design figMode): opened from the reading programme it is the READ-ONLY
+          figure view (notes surfaces, nothing editable) until the pencil toggle;
+          opened from the builder it is the step editor. A viewer/commenter sees
+          it read-only always. Re-reads live so a collaborator's edit flows in. */}
       <FullScreen
         open={notating !== null}
         onClose={() => {
           setNotating(null);
+          setNotatingPlacementId(null);
           setLanesOpen(false);
           setAddKindOpen(false);
           setCopiedToast(false);
@@ -863,43 +1104,56 @@ export function Assemble({
         title={t.stepsTitle(notatingFigure?.name ?? t.figureFallback)}
         backLabel={t.back}
         actions={
-          // Figure-scoped undo/redo (§5.4): editor-only, and disabled until the
-          // figure's own live doc has hydrated (the same "load on open" gate the
-          // body uses — an edit/undo must never land pre-replay). Same primitives
-          // + "Undone" toast contract (incl. the soft superseded variant) as the
-          // Assemble editing toolbar's routine-level undo/redo.
+          // Figure-scoped undo/redo (§5.4): edit-lens only, and disabled until
+          // the figure's own live doc has hydrated (the same "load on open" gate
+          // the body uses — an edit/undo must never land pre-replay). Same
+          // primitives + "Undone" toast contract (incl. the soft superseded
+          // variant) as the Assemble editing toolbar's routine-level undo/redo.
+          // The trailing pencil (design figMode toggle, filled while editing)
+          // is the explicit read⇄edit switch for the OPEN detail — editors only.
           canEdit ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t.undo}
-                disabled={!notatingFigureReady}
-                onClick={() => {
-                  const ref = notatingFigure?.id ?? notating;
-                  if (!ref) return;
-                  const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
-                  if (supersededByOthers) {
-                    toast.show(t.undoneSupersededToast, { tone: "warning" });
-                  } else {
-                    toast.show(t.undoneToast);
-                  }
-                }}
+              {figureEditing && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t.undo}
+                    disabled={!notatingFigureReady}
+                    onClick={() => {
+                      const ref = notatingFigure?.id ?? notating;
+                      if (!ref) return;
+                      const supersededByOthers = store.undoFigure(ref)?.supersededByOthers ?? false;
+                      if (supersededByOthers) {
+                        toast.show(t.undoneSupersededToast, { tone: "warning" });
+                      } else {
+                        toast.show(t.undoneToast);
+                      }
+                    }}
+                  >
+                    <span aria-hidden="true">↶</span> {t.undo}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t.redo}
+                    disabled={!notatingFigureReady}
+                    onClick={() => {
+                      const ref = notatingFigure?.id ?? notating;
+                      if (ref) store.redoFigure(ref);
+                    }}
+                  >
+                    <span aria-hidden="true">↷</span> {t.redo}
+                  </Button>
+                </>
+              )}
+              <IconButton
+                label={notatingLens === "edit" ? t.viewSteps : t.editSteps}
+                variant={notatingLens === "edit" ? "filled" : "plain"}
+                onClick={() => setNotatingLens(notatingLens === "edit" ? "read" : "edit")}
               >
-                <span aria-hidden="true">↶</span> {t.undo}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t.redo}
-                disabled={!notatingFigureReady}
-                onClick={() => {
-                  const ref = notatingFigure?.id ?? notating;
-                  if (ref) store.redoFigure(ref);
-                }}
-              >
-                <span aria-hidden="true">↷</span> {t.redo}
-              </Button>
+                <EditIcon size={16} />
+              </IconButton>
             </>
           ) : undefined
         }
@@ -912,36 +1166,31 @@ export function Assemble({
           </div>
         )}
         {notatingFigure && notatingFigureReady && (
-          <div className="flex flex-col gap-4 p-4">
-            {/* D6: alignment header summary (frame 1.20 pin 1) — "facing DW → backing LOD"
-                chips above the timeline when either entry or exit alignment is set. */}
-            {(notatingFigure.entryAlignment || notatingFigure.exitAlignment) && (
-              <div className="flex items-center gap-2">
-                {notatingFigure.entryAlignment && (
-                  <Chip tone="accent" asStatic>
-                    {t.qualifierLabel[notatingFigure.entryAlignment.qualifier]}{" "}
-                    {t.directionLabel[notatingFigure.entryAlignment.direction]}
-                  </Chip>
-                )}
-                {notatingFigure.entryAlignment && notatingFigure.exitAlignment && (
-                  <span aria-hidden="true" className="text-xs text-ink-faint">
-                    →
-                  </span>
-                )}
-                {notatingFigure.exitAlignment && (
-                  <Chip tone="accent" asStatic>
-                    {t.qualifierLabel[notatingFigure.exitAlignment.qualifier]}{" "}
-                    {t.directionLabel[notatingFigure.exitAlignment.direction]}
-                  </Chip>
-                )}
+          <div className="flex flex-col gap-4 p-4" aria-busy={figureForking}>
+            {/* Implicit-fork feedback (⟳v5, §5.2): editing a global figure spawns a
+                live variant asynchronously. Without a cue the first edit looks
+                inert ("my click did nothing"), so show an inline pending banner
+                until the variant lands (then the "made this figure yours" toast). */}
+            {figureForking && (
+              <div
+                className="flex items-center gap-2 rounded-md bg-surface-sunken px-3 py-2 text-ink-muted"
+                role="status"
+                aria-live="polite"
+              >
+                <Spinner /> <span className="text-2xs">{t.makingFigureYours}</span>
               </div>
             )}
             <FigureTimeline
-              role={canEdit ? role : "viewer"}
-              dance={routine.dance as DanceId}
+              role={figureEditing ? role : "viewer"}
+              dance={routine.dance}
+              part={notatingPart}
+              // The prose per-count recap is an authoring aid — the detail's
+              // read lens hides it (the grid/chips are the reading content).
+              showStepRecap={notatingLens === "edit"}
               attributes={notatingFigure.attributes}
-              bars={notatingFigure.bars}
-              onBarsChange={(next) => store.setFigureBars(notatingFigure.id, next)}
+              counts={notatingFigure.counts}
+              legacyBars={notatingFigure.bars}
+              onCountsChange={(next) => store.setFigureCounts(notatingFigure.id, next)}
               roleView={roleView}
               onRoleViewChange={setRoleView}
               scopeLabel={routine.title || notatingFigure.name}
@@ -951,6 +1200,17 @@ export function Assemble({
                 store.setFigureAttributes(notatingFigure.id, notatingFigure.attributes)
               }
               onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
+              figureName={notatingFigure.name}
+              // The design's variantBar.adjusted flag: the figure has an origin
+              // it was adjusted AWAY from — a spawned variant (baseFigureRef) or
+              // a legacy copy still carrying a catalog identity. A from-scratch
+              // custom has neither and must not claim to be "adjusted".
+              adjusted={
+                notatingFigure.baseFigureRef != null || figureHasLibraryOrigin(notatingFigure)
+              }
+              onRenameFigure={
+                figureEditing ? (name) => store.renameFigure(notatingFigure.id, name) : undefined
+              }
               isBookmarked={
                 notatingFigure.scope === "account" &&
                 (bookmarkedFigureRefs?.has(notatingFigure.id) ?? false)
@@ -958,7 +1218,8 @@ export function Assemble({
               onAddToLibrary={
                 // Diverged/custom account figures only — not a pool figure that still
                 // matches the catalog (see the placement-card note above, §2.5.1 #19).
-                canEdit &&
+                // Edit lens only: the design's variant bar renders in figMode 'edit'.
+                figureEditing &&
                 onAddToLibrary &&
                 notatingFigure.scope === "account" &&
                 !figureMatchesLibraryOrigin(notatingFigure)
@@ -966,60 +1227,81 @@ export function Assemble({
                   : undefined
               }
             />
-            {canEdit && (
-              <AlignmentEditor
-                figure={notatingFigure}
-                onSet={(edge, alignment) =>
-                  store.setFigureAlignment(notatingFigure.id, edge, alignment)
-                }
-              />
-            )}
             {/* Annotations on this figure (US-039/042): notes/lessons/practice +
-                replies, gated by role. Commenter+ may add; viewer is read-only. */}
-            <AnnotationPanel
-              role={role}
-              currentUserId={currentUserId}
-              annotations={store
-                .readAnnotations()
-                .filter((a) =>
-                  a.anchors.some(
-                    (an) =>
-                      (an.type === "figure" || an.type === "point") &&
-                      an.figureRef === notatingFigure.id,
-                  ),
-                )}
-              composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
-              figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
-              onCreate={({ kind, text }) =>
-                store.createAnnotation({
-                  kind,
-                  text,
-                  anchors: [{ type: "figure", figureRef: notatingFigure.id }],
-                })
-              }
-              onReply={(annotationId, text) => store.addReply(annotationId, text)}
-              onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
-            />
-            {/* Figure-family notes (US-040/041): "every Feather" notes from this
-                routine's members, surfaced on the matching figure; commenter+ may
-                author one (server-mediated, co-membership-gated). */}
-            <FamilyNotes
-              figureType={notatingFigure.figureType}
-              dance={routine.dance as DanceId}
-              notes={familyNotes}
-              canAnnotate={can(role, "canAnnotate")}
-              onCreate={async (input) => {
-                if (!getToken) return;
-                await createFamilyNote(input, await getToken());
-                await reloadFamilyNotes();
-              }}
-            />
+                replies, gated by role. Commenter+ may add; viewer is read-only.
+                Notes surfaces belong to the READING context (owner request
+                2026-07-08): the detail opened from the editing lens is
+                notation-only, so the panels render only while the detail is in
+                its READ lens (opened from the reading programme, or flipped
+                back via the pencil toggle). */}
+            {notatingLens === "read" && (
+              <>
+                <AnnotationPanel
+                  role={role}
+                  currentUserId={currentUserId}
+                  annotations={store
+                    .readAnnotations()
+                    .filter((a) =>
+                      a.anchors.some(
+                        (an) =>
+                          (an.type === "figure" || an.type === "point") &&
+                          an.figureRef === notatingFigure.id,
+                      ),
+                    )}
+                  composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
+                  figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
+                  onCreate={({ kind, text }) =>
+                    store.createAnnotation({
+                      kind,
+                      text,
+                      anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                    })
+                  }
+                  onReply={(annotationId, text) => store.addReply(annotationId, text)}
+                  onDeleteReply={(annotationId, replyId) =>
+                    store.deleteReply(annotationId, replyId)
+                  }
+                />
+                {/* Figure-family notes (US-040/041): "every Feather" notes from this
+                    routine's members, surfaced on the matching figure; commenter+ may
+                    author one (server-mediated, co-membership-gated). */}
+                <FamilyNotes
+                  figureType={notatingFigure.figureType}
+                  dance={routine.dance}
+                  figure={notatingFigure}
+                  notes={familyNotes}
+                  canAnnotate={can(role, "canAnnotate")}
+                  onCreate={(input) => {
+                    // docs/system/architecture.md (account docs): author through the
+                    // account-doc seam — the note is a
+                    // CRDT edit (instant, offline-capable, undoable) that the alarm
+                    // projects into the D1 index for co-member reads. `danceScope`
+                    // is "all" or a DanceId (never count/role from this surface).
+                    account.store.createFamilyNote({
+                      figureType: input.figureType,
+                      danceScope: input.danceScope === "all" ? "all" : routine.dance,
+                      kind: input.kind,
+                      text: input.text,
+                    });
+                    // Re-pull co-member notes so the projection catches up (best-effort).
+                    void reloadFamilyNotes();
+                  }}
+                />
+              </>
+            )}
             {/* Custom kinds + Lanes (US-043/044): Add-kind (editor only) + a lane
                 grid view for one attribute kind across all counts. */}
             <div className="flex flex-col gap-3 border-t border-line pt-3">
               <div className="flex items-center gap-2">
-                {canEdit && (
-                  <Button variant="secondary" size="sm" onClick={() => setAddKindOpen(true)}>
+                {figureEditing && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAddKindOpen(true)}
+                    // §11.2: creating an attribute KIND is a hybrid CRDT + account
+                    // REST flow — creation stays live-gated (design 1.24).
+                    disabled={!online}
+                  >
                     {t.addKind}
                   </Button>
                 )}
@@ -1030,10 +1312,10 @@ export function Assemble({
               {lanesOpen && (
                 <Lanes
                   kind={store.customKinds()[0]?.kind ?? "footwork"}
-                  role={canEdit ? role : "viewer"}
+                  role={figureEditing ? role : "viewer"}
                   counts={8}
                   attributes={notatingFigure.attributes}
-                  roleView={roleView}
+                  roleView={asReadView(roleView)}
                   onRoleViewChange={setRoleView}
                   customKinds={store.customKinds()}
                   onChange={(next) => store.setFigureAttributes(notatingFigure.id, next)}
@@ -1054,7 +1336,7 @@ export function Assemble({
       <AddKindPicker
         open={addKindOpen}
         onClose={() => setAddKindOpen(false)}
-        dance={routine.dance as DanceId}
+        dance={routine.dance}
         customKinds={store.customKinds()}
         onSelectKind={() => setAddKindOpen(false)}
         onCreate={(k) => store.createCustomKind(k)}
@@ -1145,18 +1427,26 @@ function sectionMeta(
       bars += Math.max(1, Math.round((pl.beats ?? beatsPerBar) / beatsPerBar));
       continue;
     }
+    // A portioned placement spans its WINDOW, not the figure's full length
+    // (Builder v3 ③) — no figure load needed.
+    if (pl.part) {
+      bars += Math.max(1, Math.ceil(partBeatSpan(pl.part) / beatsPerBar));
+      continue;
+    }
     const fig = resolved.get(pl.id)?.figure;
     if (!fig) continue;
     // Mirror the routine-card projection (worker doc-do.ts §2.7): a figure's bar
-    // span is its AUTHORED `bars` when set, else the phrase span of its steps
-    // (`barsForFigure`). The old code summed only `barsForFigure` and skipped any
-    // figure with no notated steps — so a section of freshly-placed figures (which
-    // carry an authored `bars` but empty `attributes` until notated) read "0 bars".
-    const counts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
+    // span is its AUTHORED `counts` when set (Builder v3 ① — ⌈counts ÷
+    // beatsPerBar⌉), else a legacy authored `bars`, else the phrase span of its
+    // steps (`barsForFigure`) — a freshly-placed figure with an authored length
+    // but no notated steps still counts.
+    const stepCounts = fig.attributes.filter((a) => a.deletedAt == null).map((a) => a.count);
     bars +=
-      typeof fig.bars === "number" && fig.bars >= 1
-        ? Math.floor(fig.bars)
-        : barsForFigure(counts, dance);
+      typeof fig.counts === "number" && fig.counts >= 1
+        ? Math.max(1, Math.ceil(Math.floor(fig.counts) / beatsPerBar))
+        : typeof fig.bars === "number" && fig.bars >= 1
+          ? Math.floor(fig.bars)
+          : barsForFigure(stepCounts, dance);
   }
   return t.barCount(bars);
 }
@@ -1506,7 +1796,7 @@ function EmptyState({ canEdit, onAdd }: { canEdit: boolean; onAdd: (name: string
 }
 
 /** One placement → a card (frame 1.7): scope dot + figure name + count pill +
- *  (custom) pill + drag handle; editors get reorder/remove + alignment chips. */
+ *  (custom) pill + drag handle; editors get reorder/remove. */
 function PlacementCard({
   placement,
   figure,
@@ -1592,7 +1882,14 @@ function PlacementCard({
 
   const label = figure.name;
   const isCustom = figure.scope === "account" && !figureMatchesLibraryOrigin(figure);
-  const live = figure.attributes.filter((a) => a.deletedAt == null);
+  // Window the summary to the placement's portion (Builder v3 ③): a partial
+  // placement dances only [fromCount, toCount], so the card must show ONLY those
+  // counts/chips — matching the reading view — not the whole figure with a "steps
+  // N–M" label bolted on. Absent part → whole figure passes through.
+  const live = windowAttributes(
+    figure.attributes.filter((a) => a.deletedAt == null),
+    placement.part,
+  );
   const counts = [...new Set(live.map((a) => a.count))].sort((a, b) => a - b);
   return (
     <div
@@ -1618,53 +1915,23 @@ function PlacementCard({
           type="button"
           aria-label={t.openSteps(canEdit, label)}
           onClick={onOpen}
-          className="min-w-0 flex-1 truncate text-left text-[13px] font-bold"
-          style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
+          className="min-w-0 flex-1 text-left"
         >
-          {label}
-        </button>
-        {counts.length > 0 && <CountPill counts={counts.map((c) => countLabel(c))} />}
-        {isCustom && (
+          {/* Two-line card (Builder v3): the name over its timing sub — the
+              figure's counts, or an honest "empty — add steps" nudge. */}
           <span
-            className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
-            style={{
-              background: "var(--bf-scope-custom-tint)",
-              color: "var(--bf-scope-custom-ink)",
-            }}
+            className="block truncate text-[13px] font-bold"
+            style={{ color: isCustom ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
           >
-            {t.customPill}
+            {label}
           </span>
-        )}
-        {/* "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a choreo-local
-            ACCOUNT figure only; a bookmark is a REFERENCE, never a copy. */}
-        {figure.scope === "account" &&
-          (isBookmarked ? (
-            <span
-              className="flex-none rounded-pill px-2 py-0.5 text-[9px] font-semibold"
-              style={{
-                background: "var(--bf-scope-global-tint)",
-                color: "var(--bf-scope-global-ink)",
-              }}
-            >
-              {t.inYourLibrary}
-            </span>
-          ) : (
-            onAddToLibrary && (
-              <button
-                type="button"
-                aria-label={t.addToLibraryAria(label)}
-                onClick={onAddToLibrary}
-                className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
-                style={{
-                  borderColor: "var(--bf-scope-custom-border)",
-                  color: "var(--bf-scope-custom-ink)",
-                  background: "var(--bf-surface)",
-                }}
-              >
-                <span aria-hidden="true">↟</span> {t.addToLibrary}
-              </button>
-            )
-          ))}
+          <span className="block truncate text-2xs font-semibold text-ink-faint">
+            {counts.length > 0
+              ? counts.map((c) => phraseCountLabel(c, figure.dance)).join(" ")
+              : t.emptyAddSteps}
+            {placement.part && ` · ${t.partSub(placement.part.fromCount, placement.part.toCount)}`}
+          </span>
+        </button>
         {/* Drag handle affordance (frame 1.7 ⠿). Reorder is the up/down controls. */}
         <span
           aria-hidden="true"
@@ -1695,6 +1962,54 @@ function PlacementCard({
           </div>
         )}
       </div>
+      {/* Scope + library affordances ride their OWN row (indented under the name,
+          past the scope dot) so the "Custom" pill and the long "add to library"
+          button never crowd the figure name down to a truncated stub on a narrow
+          screen. "Add to my library" ↔ "in your library" (⟳v5, §4.2/§5.2) — a
+          choreo-local ACCOUNT figure only; a bookmark is a REFERENCE, never a copy. */}
+      {(isCustom || (figure.scope === "account" && (isBookmarked || onAddToLibrary))) && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-4">
+          {isCustom && (
+            <span
+              className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
+              style={{
+                background: "var(--bf-scope-custom-tint)",
+                color: "var(--bf-scope-custom-ink)",
+              }}
+            >
+              {t.customPill}
+            </span>
+          )}
+          {figure.scope === "account" &&
+            (isBookmarked ? (
+              <span
+                className="flex-none rounded-pill px-2 py-0.5 text-[9px] font-semibold"
+                style={{
+                  background: "var(--bf-scope-global-tint)",
+                  color: "var(--bf-scope-global-ink)",
+                }}
+              >
+                {t.inYourLibrary}
+              </span>
+            ) : (
+              onAddToLibrary && (
+                <button
+                  type="button"
+                  aria-label={t.addToLibraryAria(label)}
+                  onClick={onAddToLibrary}
+                  className="flex-none rounded-pill border px-2 py-0.5 text-[9px] font-semibold"
+                  style={{
+                    borderColor: "var(--bf-scope-custom-border)",
+                    color: "var(--bf-scope-custom-ink)",
+                    background: "var(--bf-surface)",
+                  }}
+                >
+                  <span aria-hidden="true">↟</span> {t.addToLibrary}
+                </button>
+              )
+            ))}
+        </div>
+      )}
       {/* The figure's technique at a glance (US-018) — the same per-step chips the
           reading view shows, filtered to the current L·F lens. Tapping the strip
           opens the full-screen figure detail (step editor / read-only view), so an
@@ -1705,9 +2020,13 @@ function PlacementCard({
         onClick={onOpen}
         className="w-full text-left"
       >
-        <PlacementAttributes figure={figure} dance={dance} roleView={roleView} />
+        <PlacementAttributes
+          figure={figure}
+          dance={dance}
+          roleView={roleView}
+          part={placement.part ?? null}
+        />
       </button>
-      <AlignmentChips placement={placement} figure={figure} />
     </div>
   );
 }
@@ -1715,27 +2034,207 @@ function PlacementCard({
 /**
  * The "Add a figure" picker (US-027 + US-032): browse the dance's library
  * presets (filterable) and tap one to place it with its canonical name +
- * figureType, OR create your own custom figure by name. A preset carries the
+ * figureType, place a figure from YOUR library (⟳v5 §4.2 — a bookmark "can be
+ * placed into your other routines"; the design mock rides them in the same
+ * list with the amber dot + "custom" badge), OR create your own custom figure.
+ * The create path is an ALWAYS-PRESENT "Create my own figure" row below the
+ * list — visible even when the filter matches nothing — that swaps the
+ * selection UI for a compose view (name + length), matching the design's
+ * add-figure sheet (library view ⇄ compose view). A preset carries the
  * catalog's figureType (cross-routine identity); a custom omits it.
  */
 function AddFigurePicker({
   dance,
+  libraryFigures,
   onAdd,
+  onAddFromLibrary,
 }: {
   dance: DanceId;
-  onAdd: (name: string, figureType?: string, bars?: number) => void;
+  /** The caller's library entries: account-scope figures list as tappable rows;
+   *  bookmarked CATALOG refs dedupe out (their preset row already lists them). */
+  libraryFigures?: MineFigure[];
+  onAdd: (
+    name: string,
+    figureType?: string,
+    counts?: number,
+    part?: { fromCount: number; toCount: number } | null,
+  ) => void;
+  /** Place an existing library figure by ref — whole figure, no portion step
+   *  (its chart isn't bundled client-side to size a range from). */
+  onAddFromLibrary?: (figureRef: string) => void;
 }) {
   const t = useMessages(assembleMessages);
   const [filter, setFilter] = useState("");
+  // The compose view is open (design `composeFigure`): the create-my-own-figure
+  // row swapped the selection UI (filter + list) for the name/length form.
+  const [composing, setComposing] = useState(false);
   const [name, setName] = useState("");
-  // The new custom figure's authored length (PLAN §2.5) — chosen here on creation
-  // and adjustable later in the editor header. Library picks keep their catalog
-  // default (their charted steps), so the stepper applies to the custom form only.
-  const [bars, setBars] = useState(2);
+  // The new custom figure's authored length in COUNTS (Builder v3 ①) — chosen
+  // here on creation and adjustable later in the editor header. Library picks
+  // keep their catalog default (their charted steps), so the stepper applies to
+  // the compose view only. Defaults to one bar of the routine's dance (§2.5.2):
+  // 3 for Waltz/Viennese, 4 for the 4/4 dances.
+  const [counts, setCounts] = useState(DANCES[dance].beatsPerBar);
+  // The in-flight portion pick (Builder v3 ③): which counts of the tapped
+  // catalog figure to dance. `to < from` never happens (taps clamp).
+  const [portion, setPortion] = useState<{
+    name: string;
+    figureType: string;
+    total: number;
+    from: number;
+    to: number;
+  } | null>(null);
   const q = filter.trim().toLowerCase();
   const presets = libraryFiguresForDance(dance).filter(
     (f) => q === "" || f.name.toLowerCase().includes(q),
   );
+  // The user's own library figures for this dance (⟳v5 §4.2). A bookmarked
+  // CATALOG figure's ref parses as a global ref — its preset row already lists
+  // it, so it dedupes out; an untitled registry row has nothing to list by.
+  const mine = (libraryFigures ?? []).filter(
+    (f): f is MineFigure & { title: string } =>
+      f.dance === dance &&
+      f.title != null &&
+      f.title.trim() !== "" &&
+      parseGlobalFigureRef(f.docRef) == null &&
+      (q === "" || f.title.toLowerCase().includes(q)),
+  );
+  if (portion) {
+    const whole = portion.from === 1 && portion.to === portion.total;
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-bold text-ink">{t.howMuchOf(portion.name)}</p>
+        <p className="text-[14px] text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
+          {t.portionHint(portion.name)}
+        </p>
+        <fieldset aria-label={t.portionRangeAria} className="flex flex-wrap items-center gap-1">
+          {Array.from({ length: portion.total }, (_, i) => i + 1).map((n) => {
+            const inRange = n >= portion.from && n <= portion.to;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={inRange}
+                aria-label={t.portionCountAria(n)}
+                onClick={() =>
+                  setPortion((p) => {
+                    if (!p) return p;
+                    // First tap anchors the start; a second tap extends to the
+                    // end (v3: tap a start, then an end). Tapping below the
+                    // anchor re-anchors.
+                    if (n < p.from || (p.from !== p.to && n >= p.from)) {
+                      return { ...p, from: n, to: n };
+                    }
+                    return { ...p, to: Math.max(p.from, n) };
+                  })
+                }
+                className="min-h-[40px] min-w-[36px] rounded-[8px] border-[1.5px] px-2 text-[12px] font-bold tabular-nums"
+                style={
+                  inRange
+                    ? {
+                        background: "var(--bf-accent)",
+                        color: "var(--bf-ink-inverse)",
+                        borderColor: "var(--bf-accent)",
+                      }
+                    : { color: "var(--bf-ink-muted)", borderColor: "var(--bf-border-strong)" }
+                }
+              >
+                {n}
+              </button>
+            );
+          })}
+        </fieldset>
+        <div className="flex items-center gap-2">
+          <span className="rounded-[7px] bg-accent-tint px-2 py-1 text-2xs font-bold text-accent">
+            {whole ? t.wholeFigureLabel : t.portionToLabel(portion.from, portion.to)}
+          </span>
+          {!whole && (
+            <button
+              type="button"
+              className="ml-auto min-h-[36px] text-2xs font-semibold text-accent"
+              onClick={() => setPortion((p) => (p ? { ...p, from: 1, to: p.total } : p))}
+            >
+              {t.wholeFigureAction}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setPortion(null)}>
+            {t.portionBack}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex-1"
+            onClick={() =>
+              onAdd(
+                portion.name,
+                portion.figureType,
+                undefined,
+                whole ? null : { fromCount: portion.from, toCount: portion.to },
+              )
+            }
+          >
+            {t.portionConfirm}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (composing) {
+    // Compose view (design `composeFigure`): the selection parts are gone —
+    // just name + length, cancel/back, and the confirm that mints the figure.
+    return (
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          // An empty name still creates (design onSaveCompose): the figure is
+          // rename-able any time in the editor header, so don't block the flow.
+          onAdd(name.trim() || t.newFigureName, undefined, counts);
+          setName("");
+        }}
+      >
+        <p className="text-sm font-bold text-ink">{t.newCustomFigureTitle}</p>
+        <Input
+          label={t.figureNameLabel}
+          placeholder={t.figureNamePlaceholder}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          // The compose view opens for exactly one purpose — naming the figure —
+          // so focus follows the user's explicit "create" tap into the field.
+          autoFocus
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
+            {t.length}
+          </span>
+          <Stepper
+            label={t.countsLabel}
+            hideLabel
+            unit={t.countsUnit}
+            min={1}
+            max={32}
+            value={counts}
+            onChange={setCounts}
+          />
+        </div>
+        <p className="text-[14px] text-ink-faint" style={{ fontFamily: "var(--bf-font-note)" }}>
+          {t.composeHint}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setComposing(false)}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" variant="primary" size="sm" className="flex-1">
+            {t.portionConfirm}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <Input
@@ -1744,13 +2243,42 @@ function AddFigurePicker({
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
-      {presets.length === 0 ? (
+      {presets.length === 0 && mine.length === 0 ? (
         <p className="text-2xs text-ink-faint">{t.noLibraryMatches}</p>
       ) : (
         <ul
           className="flex max-h-64 flex-col gap-1 overflow-y-auto"
           aria-label={t.libraryFiguresAria}
         >
+          {/* The user's own library figures ride in the same list (design mock:
+              amber dot + "custom" badge), listed first — they were bookmarked
+              deliberately. Tapping places the live doc by ref. */}
+          {mine.map((f) => (
+            <li key={f.docRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => onAddFromLibrary?.(f.docRef)}
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 flex-none rounded-full"
+                  style={{ background: kindVar("footwork") }}
+                />
+                <span className="min-w-0 flex-1 truncate text-left">{f.title}</span>
+                <span
+                  className="flex-none rounded-[5px] px-1.5 py-0.5 text-[8px] font-semibold"
+                  style={{
+                    background: "var(--bf-scope-custom-tint)",
+                    color: "var(--bf-scope-custom-ink)",
+                  }}
+                >
+                  {t.customPill}
+                </span>
+              </Button>
+            </li>
+          ))}
           {presets.map((f) => (
             // figureType is NOT unique within a dance (figure families repeat it —
             // e.g. foxtrot's base + "incorporating Feather Finish" Reverse Turns),
@@ -1762,7 +2290,19 @@ function AddFigurePicker({
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start"
-                onClick={() => onAdd(f.name, f.figureType)}
+                onClick={() => {
+                  // Portion picker (Builder v3 ③): choose how much of the
+                  // figure to dance before it lands.
+                  const canon = [
+                    ...new Set(
+                      (f.attributes ?? [])
+                        .filter((a) => a.deletedAt == null && Number.isInteger(a.count))
+                        .map((a) => a.count),
+                    ),
+                  ].sort((x, y) => x - y);
+                  const total = canon[canon.length - 1] ?? 3;
+                  setPortion({ name: f.name, figureType: f.figureType, total, from: 1, to: total });
+                }}
               >
                 {f.name}
               </Button>
@@ -1770,153 +2310,28 @@ function AddFigurePicker({
           ))}
         </ul>
       )}
-      <form
-        className="flex flex-col gap-2 border-t border-line pt-3"
-        onSubmit={(e: FormEvent) => {
-          e.preventDefault();
-          const next = name.trim();
-          if (!next) return;
-          onAdd(next, undefined, bars);
+      {/* The always-present create route (design: an amber row BELOW the list,
+          outside it — it survives an empty filter result, so "create my own"
+          is never more than one tap away). Swaps in the compose view. */}
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        leadingIcon={<EditIcon size={14} />}
+        onClick={() => {
+          setComposing(true);
           setName("");
+          setCounts(DANCES[dance].beatsPerBar);
+        }}
+        style={{
+          background: "var(--bf-scope-custom-tint)",
+          borderColor: "var(--bf-scope-custom-border)",
+          color: "var(--bf-scope-custom-ink)",
         }}
       >
-        <Input
-          label={t.figureNameLabel}
-          placeholder={t.createYourOwnPlaceholder}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className="flex items-center justify-between">
-          <span className="text-2xs font-bold uppercase tracking-wider text-ink-muted">
-            {t.length}
-          </span>
-          <Stepper
-            label={t.barsLabel}
-            hideLabel
-            unit={t.barsUnit}
-            min={1}
-            max={32}
-            value={bars}
-            onChange={setBars}
-          />
-        </div>
-        <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-          {t.addCustom}
-        </Button>
-      </form>
+        {t.createMyOwnFigure}
+      </Button>
     </div>
-  );
-}
-
-const ALIGNMENT_QUALIFIERS: Alignment["qualifier"][] = ["facing", "backing", "pointing"];
-const ALIGNMENT_DIRECTIONS: Alignment["direction"][] = [
-  "LOD",
-  "ALOD",
-  "wall",
-  "centre",
-  "DW",
-  "DC",
-  "DW_against",
-  "DC_against",
-];
-
-/** Edit a figure's entry/exit alignment (US-031): no floor/side model, just the
- *  facing-direction the figure starts and ends on. Editor-only. */
-function AlignmentEditor({
-  figure,
-  onSet,
-}: {
-  figure: FigureDoc;
-  onSet: (edge: "entry" | "exit", alignment: Alignment | null) => void;
-}) {
-  const t = useMessages(assembleMessages);
-  return (
-    <div className="flex flex-col gap-3 border-t border-line pt-3">
-      <h3 className="text-sm font-bold text-ink">{t.alignment}</h3>
-      <AlignmentEdge
-        label={t.entry}
-        current={figure.entryAlignment ?? null}
-        onChange={onSet}
-        edge="entry"
-      />
-      <AlignmentEdge
-        label={t.exit}
-        current={figure.exitAlignment ?? null}
-        onChange={onSet}
-        edge="exit"
-      />
-    </div>
-  );
-}
-
-/**
- * One edge (entry/exit) of the alignment editor: qualifier + direction chip rows
- * (design 1.20 — selected chip filled accent, others outlined).
- * Keeps the fieldset/aria-label structure for accessibility.
- */
-function AlignmentEdge({
-  label,
-  edge,
-  current,
-  onChange,
-}: {
-  label: string;
-  edge: "entry" | "exit";
-  current: Alignment | null;
-  onChange: (edge: "entry" | "exit", alignment: Alignment | null) => void;
-}) {
-  const t = useMessages(assembleMessages);
-  const qualifier = current?.qualifier ?? "facing";
-  const direction = current?.direction ?? "";
-  return (
-    <fieldset aria-label={t.edgeAlignmentAria(label)} className="flex flex-col gap-2">
-      {/* QUALIFIER row */}
-      <div>
-        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          {t.qualifier}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {ALIGNMENT_QUALIFIERS.map((q) => (
-            <Chip
-              key={q}
-              tone="accent"
-              // Only show selected when a direction is also set (full alignment exists).
-              selected={qualifier === q && direction !== ""}
-              onClick={() =>
-                onChange(edge, {
-                  qualifier: q,
-                  // Default to LOD if no direction yet (matches existing Select behaviour).
-                  direction: (direction || "LOD") as Alignment["direction"],
-                })
-              }
-            >
-              {t.qualifierLabel[q]}
-            </Chip>
-          ))}
-        </div>
-      </div>
-      {/* DIRECTION row */}
-      <div>
-        <div className="mb-1 text-2xs font-bold uppercase tracking-wide text-ink-faint">
-          {t.direction}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Chip tone="neutral" selected={direction === ""} onClick={() => onChange(edge, null)}>
-            {t.notSet}
-          </Chip>
-          {ALIGNMENT_DIRECTIONS.map((d) => (
-            <Chip
-              key={d}
-              tone="accent"
-              selected={direction === d}
-              onClick={() => onChange(edge, { qualifier, direction: d })}
-            >
-              {t.directionLabel[d]}
-            </Chip>
-          ))}
-        </div>
-      </div>
-    </fieldset>
   );
 }
 
@@ -1933,14 +2348,21 @@ function PlacementAttributes({
   figure,
   dance,
   roleView,
+  part,
 }: {
   figure: FigureDoc;
   dance: DanceId;
   roleView: RoleView;
+  /** The placement's portion window (Builder v3 ③) — chips render only these
+   *  counts, matching the reading view. Null → the whole figure. */
+  part?: PlacementPart | null;
 }) {
   const t = pickMessages(assembleMessages);
   const forRole = filterByRoleView(
-    figure.attributes.filter((a) => a.deletedAt == null),
+    windowAttributes(
+      figure.attributes.filter((a) => a.deletedAt == null),
+      part,
+    ),
     roleView,
   );
   if (forRole.length === 0) {
@@ -1972,52 +2394,12 @@ function PlacementAttributes({
                 dimmed ? "text-[10px]" : "text-[11px]",
               )}
             >
-              {countLabel(count)}
+              {phraseCountLabel(count, dance)}
             </span>
             <div className="flex flex-wrap gap-1">{chips}</div>
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Entry/exit + per-placement alignment as read-only chips (editing is US-031).
- * D6: shows qualifier + readable direction label, e.g. "entry facing diag wall".
- */
-function AlignmentChips({ placement, figure }: { placement: Placement; figure: FigureDoc | null }) {
-  const t = useMessages(assembleMessages);
-  const chips: Array<{ key: string; label: string }> = [];
-  if (figure?.entryAlignment) {
-    const { qualifier, direction } = figure.entryAlignment;
-    chips.push({
-      key: "entry",
-      label: t.entryChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (figure?.exitAlignment) {
-    const { qualifier, direction } = figure.exitAlignment;
-    chips.push({
-      key: "exit",
-      label: t.exitChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (placement.perPlacementAlignment) {
-    const { qualifier, direction } = placement.perPlacementAlignment;
-    chips.push({
-      key: "here",
-      label: t.hereChip(t.qualifierLabel[qualifier], t.directionLabel[direction]),
-    });
-  }
-  if (chips.length === 0) return null;
-  return (
-    <div className="mt-2 flex flex-wrap gap-1">
-      {chips.map(({ key, label }) => (
-        <Chip key={key} tone="neutral" asStatic>
-          {label}
-        </Chip>
-      ))}
     </div>
   );
 }
@@ -2089,12 +2471,12 @@ function ThreadSheetContents({
 
   // Thread title (frame 1.14 header): "Figure Name · step N" for a per-step
   // thread; the figure name + a "whole figure" subtitle for a figure-level one.
-  const isWholeFigure = anchor.count == null;
+  // `stepCount` is read once so its null-check narrows for both uses below.
+  const stepCount = anchor.count;
+  const isWholeFigure = stepCount == null;
   const figure = placements.find((p) => p.figure?.id === anchor.figureRef)?.figure;
   const figureName = figure?.name ?? anchor.figureRef;
-  const threadTitle = isWholeFigure
-    ? figureName
-    : t.stepThreadTitle(figureName, anchor.count as number);
+  const threadTitle = stepCount == null ? figureName : t.stepThreadTitle(figureName, stepCount);
   const threadSubtitle = isWholeFigure ? t.wholeFigure : undefined;
 
   // A whole-figure thread keys on a `figure` anchor (no count); a per-step thread
@@ -2115,9 +2497,9 @@ function ThreadSheetContents({
       currentUserId={currentUserId}
       annotations={threadAnnotations}
       composeAnchor={
-        isWholeFigure
+        stepCount == null
           ? { type: "figure", figureRef: anchor.figureRef }
-          : { type: "point", figureRef: anchor.figureRef, count: anchor.count as number }
+          : { type: "point", figureRef: anchor.figureRef, count: stepCount }
       }
       threadTitle={threadTitle}
       threadSubtitle={threadSubtitle}

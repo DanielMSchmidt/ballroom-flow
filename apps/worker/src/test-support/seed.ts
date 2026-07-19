@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// seedDb(...) — seed an isolated per-suite D1 (PLAN §10.3: "Per-suite isolated
+// seedDb(...) — seed an isolated per-suite D1 (docs/system/testing.md: "Per-suite isolated
 // D1 + applyD1Migrations(); seedDb(...) for D1 + seeded Automerge docs").
 //
 // HOW IT FITS THE HARNESS:
@@ -9,10 +9,12 @@
 //     empty until M2 — `applyD1Migrations` is a no-op for [] today, which is why
 //     the seed/insert SQL only runs inside SKIPPED test bodies for now.
 //   • `seedDb` then inserts the D1 INDEX rows (users, memberships, document
-//     registry, invites — the §2.7 tables). It does NOT write CRDT content:
+//     registry, invites — the docs/system/architecture.md § D1 — the index &
+//     projections tables). It does NOT write CRDT content:
 //     canonical doc state lives in each DO's SQLite (seed that via the DO stub).
 //
-// The D1 table/column names below mirror PLAN §2.7 / the §9 ER diagram. When M2
+// The D1 table/column names below mirror docs/system/architecture.md § D1 —
+// the index & projections (and its ER summary). When M2
 // lands the Drizzle schema, implementers can swap these raw inserts for typed
 // Drizzle inserts; the shape is the contract.
 // ─────────────────────────────────────────────────────────────────────────
@@ -120,6 +122,23 @@ export interface SeedSpec {
  * migration throws "duplicate column name" on the 2nd+ suite (shared D1). We
  * swallow ONLY that exact re-add — a safe no-op — and rethrow everything else, so
  * a genuinely missing schema (e.g. "no such table") still surfaces (#203).
+ *
+ * We ALSO swallow a `UNIQUE constraint failed` from a re-run migration. Because
+ * this function only ever executes migration DDL (never data inserts), that error
+ * can arise from exactly one thing: re-creating a UNIQUE INDEX that a LATER
+ * migration drops, over data an intervening suite seeded. The concrete case is
+ * `0010_account_figure_base_idx` (a partial unique index on
+ * `document_registry(ownerId, forkedFromRef)`) which `0017` drops because ⟳v5
+ * lets a user own MANY variants of one base: suite 1 applies 0010→0017 on an empty
+ * D1 (index created, then dropped) and seeds several such variants; suite 2 then
+ * re-runs 0010's `CREATE UNIQUE INDEX` over that data and the constraint fails.
+ * Swallowing it is provably safe — the FIRST (real) apply runs on an empty D1 so it
+ * never masks a genuine first-apply conflict, the superseded index is dropped by a
+ * later migration anyway (so the final schema is correct either way), and a missing
+ * table still throws "no such table" and surfaces. Root-causes the intermittent
+ * shared-D1 `starter.test.ts` flake that only fired under heavy CI load (colliding
+ * suite order). Do NOT broaden this to swallow "no such table" — that WOULD mask a
+ * missing schema (#203).
  */
 export async function applyMigrations(): Promise<void> {
   for (const migration of env.TEST_MIGRATIONS) {
@@ -128,7 +147,10 @@ export async function applyMigrations(): Promise<void> {
       try {
         await env.DB.prepare(query).run();
       } catch (err) {
-        if (!/duplicate column name/i.test(String(err))) throw err;
+        const msg = String(err);
+        const benignReapply =
+          /duplicate column name/i.test(msg) || /UNIQUE constraint failed/i.test(msg);
+        if (!benignReapply) throw err;
       }
     }
   }

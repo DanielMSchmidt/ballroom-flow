@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Playwright helpers for MULTI-USER E2E (PLAN §10.3: "two live contexts (two
-// users)"). Two isolated browser contexts = two real clients with independent
+// Playwright helpers for MULTI-USER E2E (docs/system/testing.md § Tooling & CI:
+// "two live contexts (two users)"). Two isolated browser contexts = two real clients with independent
 // storage/session, so convergence/permission/undo tests mimic real co-editing.
 //
-// No arbitrary sleeps anywhere (PLAN §10.3 "No sleeps"): waiting is done by
+// No arbitrary sleeps anywhere (docs/system/testing.md § Tooling & CI "No sleeps"): waiting is done by
 // `expectConverged` / Playwright web-first assertions on OBSERVABLE state.
 // ─────────────────────────────────────────────────────────────────────────
 import { type Browser, type BrowserContext, expect, type Page } from "@playwright/test";

@@ -1,7 +1,15 @@
-// US-004 / US-028 — bars-driven figure timing grid (PLAN §2.5, §4.4).
+// US-004 / US-028 — bars-driven figure timing grid (docs/concepts/notation.md § Figure length, § The figure editor).
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "./doc-types";
-import { defaultFigureBars, figureGridSlots, resolveFigureBars } from "./figure-grid";
+import {
+  defaultFigureBars,
+  figureCountSlots,
+  figureGridSlots,
+  partBeatSpan,
+  resolveFigureBars,
+  resolveFigureCounts,
+  windowAttributes,
+} from "./figure-grid";
 
 const step = (count: number, kind = "footwork"): Attribute => ({
   id: `${kind}-${count}`,
@@ -87,5 +95,102 @@ describe("figureGridSlots — every timing a bar count allows", () => {
 
   it("clamps a non-positive bar count to one bar", () => {
     expect(figureGridSlots(0, "waltz").filter((s) => s.whole)).toHaveLength(3);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ① — counts-based length: `counts` is the authored figure length
+// (beats); bars are DERIVED (⌈counts / beatsPerBar⌉) for every bar display.
+// ─────────────────────────────────────────────────────────────────────────
+describe("counts-based figure length (Builder v3 ①)", () => {
+  it("resolveFigureCounts prefers authored counts, then legacy bars × bpb, then the step default", () => {
+    expect(resolveFigureCounts({ counts: 5, attributes: [], dance: "waltz" })).toBe(5);
+    expect(resolveFigureCounts({ bars: 2, attributes: [], dance: "waltz" })).toBe(6);
+    expect(resolveFigureCounts({ attributes: [step(1), step(2)], dance: "waltz" })).toBe(2);
+    expect(resolveFigureCounts({ attributes: [], dance: "waltz" })).toBe(1);
+  });
+
+  // The figure-length invariant (bug 2026-07-14): a figure's length is its SPAN
+  // — the highest whole beat any live step occupies — NOT the number of distinct
+  // steps. They differ whenever a figure contains a Slow (2 beats, 1 count → a
+  // gap): the Foxtrot Feather Step "SQQ" places steps on counts 1, 3, 4 (nothing
+  // on 2, held by the Slow), so it is 3 STEPS but spans 4 beats and must have
+  // length 4 — otherwise the count-4 step lands off the grid.
+  it("resolveFigureCounts is the step SPAN, not the step count, across a Slow's gap", () => {
+    // Feather Step SQQ → steps on 1, 3, 4 → length 4 (not 3).
+    const feather = [1, 3, 4].map((c) => step(c));
+    expect(resolveFigureCounts({ attributes: feather, dance: "foxtrot" })).toBe(4);
+    // A trailing Slow (SS → 1, 3, held through 4) still spans to its last beat.
+    expect(resolveFigureCounts({ attributes: [step(1), step(3)], dance: "foxtrot" })).toBe(3);
+    // Sub-beats belong to their whole beat: a step on 4.5 spans to beat 4, not 5.
+    expect(resolveFigureCounts({ attributes: [step(1), step(4.5)], dance: "foxtrot" })).toBe(4);
+  });
+
+  it("resolveFigureCounts self-heals a stored length that is too short for its steps", () => {
+    // A production doc migrated from the buggy default carries counts:3 but a
+    // live step on count 4 — reads must never orphan it. Length lifts to 4.
+    const feather = [1, 3, 4].map((c) => step(c));
+    expect(resolveFigureCounts({ counts: 3, attributes: feather, dance: "foxtrot" })).toBe(4);
+    // A stored length that already covers the steps is respected as-is (can be
+    // longer than the last step — trailing empty beats are legal).
+    expect(resolveFigureCounts({ counts: 6, attributes: feather, dance: "foxtrot" })).toBe(6);
+    // A legacy `bars` length too short for its steps heals the same way.
+    expect(resolveFigureCounts({ bars: 1, attributes: [step(5)], dance: "foxtrot" })).toBe(5);
+  });
+
+  it("resolveFigureBars derives ⌈counts / beatsPerBar⌉ (a 4-count Waltz figure spans 2 bars)", () => {
+    expect(resolveFigureBars({ counts: 4, attributes: [], dance: "waltz" })).toBe(2);
+    expect(resolveFigureBars({ counts: 3, attributes: [], dance: "waltz" })).toBe(1);
+    // Legacy docs keep their exact bar count (bars 2 → counts 6 → bars 2).
+    expect(resolveFigureBars({ bars: 2, attributes: [], dance: "waltz" })).toBe(2);
+  });
+
+  it("wraps grid labels at the dance phrase — bar 3 of a 9-count Waltz reads 1/2/3", () => {
+    // Intent: Waltz is counted 1–6 (two-bar phrases); the grid's DISPLAY labels
+    //   must wrap after 6 while the underlying float counts stay continuous.
+    const slots = figureCountSlots(9, "waltz");
+    const bar3 = slots.filter((s) => s.bar === 3);
+    expect(bar3.filter((s) => s.whole).map((s) => s.label)).toEqual(["1", "2", "3"]);
+    expect(bar3.filter((s) => s.whole).map((s) => s.count)).toEqual([7, 8, 9]);
+    // Sub-beats wrap with their beat: 7.5 reads "1&".
+    expect(slots.find((s) => s.count === 7.5)).toMatchObject({ label: "1&", bar: 3 });
+  });
+
+  it("wraps grid labels at 8 for a 4/4 dance (Foxtrot count 9 reads '1')", () => {
+    const slots = figureCountSlots(9, "foxtrot");
+    expect(slots.find((s) => s.count === 8)?.label).toBe("8");
+    expect(slots.find((s) => s.count === 9)?.label).toBe("1");
+  });
+
+  it("figureCountSlots generates one whole + e/&/a rows per count, grouped into bars", () => {
+    const slots = figureCountSlots(4, "waltz");
+    // 4 counts × (1 whole + 3 sub-beats) rows.
+    expect(slots).toHaveLength(16);
+    expect(slots[0]).toMatchObject({ count: 1, bar: 1, whole: true });
+    // Count 4 starts bar 2 in 3/4.
+    const four = slots.find((s) => s.count === 4);
+    expect(four).toMatchObject({ bar: 2, whole: true });
+    const fourAnd = slots.find((s) => s.count === 4.5);
+    expect(fourAnd).toMatchObject({ bar: 2, whole: false, label: "4&" });
+  });
+});
+
+// Builder v3 ③ — portion window: a placement may carry part {fromCount,toCount};
+// reads window the live timeline, the bar span comes from the window itself.
+describe("portion window (Builder v3 ③)", () => {
+  it("windowAttributes keeps counts inside [from, to] including the last beat's sub-beats", () => {
+    const attrs = [1, 2, 2.5, 3, 3.5, 4].map((c) => step(c));
+    const windowed = windowAttributes(attrs, { fromCount: 2, toCount: 3 });
+    expect(windowed.map((a) => a.count)).toEqual([2, 2.5, 3, 3.5]);
+  });
+
+  it("windowAttributes passes through with no part", () => {
+    const attrs = [1, 2].map((c) => step(c));
+    expect(windowAttributes(attrs, null)).toEqual(attrs);
+  });
+
+  it("partBeatSpan is the whole-beat span of the window (min 1)", () => {
+    expect(partBeatSpan({ fromCount: 2, toCount: 4 })).toBe(3);
+    expect(partBeatSpan({ fromCount: 1, toCount: 1 })).toBe(1);
   });
 });

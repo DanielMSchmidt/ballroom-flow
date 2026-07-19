@@ -5,7 +5,7 @@
 // count/list see a new routine immediately (#129) — edits stay alarm-projected.
 
 import type { RoutineListItem } from "@weavesteps/contract";
-import type { DanceId } from "@weavesteps/domain";
+import { isDanceId } from "@weavesteps/domain";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
@@ -166,7 +166,7 @@ export async function listRoutines(db: D1Database, userId: string): Promise<Rout
     items.push({
       docRef: row.docRef,
       title: row.title ?? "Untitled routine",
-      dance: (row.dance ?? "waltz") as DanceId,
+      dance: isDanceId(row.dance) ? row.dance : "waltz",
       role,
       updatedAt: row.updatedAt,
       // Omit eventually-consistent fields entirely when unprojected (null → absent),
@@ -282,7 +282,8 @@ export async function getDocOwner(db: D1Database, docRef: string): Promise<strin
 
 /**
  * Soft-delete a routine (US-025 delete flow): set the registry row's `deletedAt`
- * tombstone — never a hard removal (PLAN §2.1: all deletes are tombstones). Once
+ * tombstone — never a hard removal (docs/system/architecture.md § Global
+ * constraints: all deletes are tombstones). Once
  * tombstoned the routine drops out of the list/count/search (every read filters
  * `deletedAt IS NULL`), and the DO alarm's projection upsert leaves `deletedAt`
  * untouched (it's absent from the ON CONFLICT update), so it never resurrects.

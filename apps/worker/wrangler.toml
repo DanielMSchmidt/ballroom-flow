@@ -31,8 +31,9 @@ database_name = "weave-steps-dev"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
-# Per-document Automerge host (US-014, PLAN §6/D23): one SQLite-backed DO per
-# routine/figure document. The DocDO class is exported from src/index.ts.
+# Per-document Automerge host (US-014, docs/system/architecture.md § Persistence
+# & the DO lifecycle): one SQLite-backed DO per routine/figure document. The
+# DocDO class is exported from src/index.ts.
 [[durable_objects.bindings]]
 name = "DOC_DO"
 class_name = "DocDO"
@@ -120,6 +121,11 @@ class_name = "DocDO"
 binding = "ANALYTICS"
 dataset = "weave_steps_staging"
 
+# D30 ⟳ self-healing catalog: opt-in per deployed env (unit tests + e2e have no
+# var, so nothing implicitly seeds 260+ DOs under a test harness).
+[env.staging.vars]
+SELF_SEED = "1"
+
 # --- Production (deployed from the `main` branch).
 [env.production]
 name = "weave-steps-production"
@@ -139,6 +145,9 @@ run_worker_first = ["/api/*"]
 
 # database_id binds the D1 instance (name is only a label); this id is the
 # existing production index.
+[env.production.vars]
+SELF_SEED = "1"
+
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "weave-steps-production"

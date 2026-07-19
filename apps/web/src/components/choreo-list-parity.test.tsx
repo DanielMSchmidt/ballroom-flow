@@ -1,0 +1,288 @@
+import type { ComponentType } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { importComponent } from "../test-support/import-component";
+import { renderUi, screen, userEvent, within } from "../test-support/render";
+
+// ─────────────────────────────────────────────────────────────────────────
+// T2 — Choreo list design parity (frames 1.1–1.5).
+//   1.1 list · 1.2 empty · 1.3 forked card · 1.4 Open/Fork sheet · 1.5 new-choreo
+// These cover the parity-specific behaviors layered on the US-022/025/045/046
+// coverage in `choreo-list.test.tsx`.
+// ─────────────────────────────────────────────────────────────────────────
+
+interface ChoreoListModule {
+  ChoreoList: ComponentType<Record<string, unknown>>;
+}
+
+const load = () => importComponent<ChoreoListModule>("../components/ChoreoList");
+
+describe("T2 Choreo header (frame 1.1)", () => {
+  it('renders the "My Choreos" title and a New-choreo action', async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    expect(screen.getByRole("heading", { name: "My Choreos" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /new choreo/i })).toBeInTheDocument();
+  });
+});
+
+describe("T2 Routine card (frame 1.1)", () => {
+  const baseRoutine = {
+    docRef: "rt1",
+    title: "Gold Waltz",
+    dance: "waltz",
+    role: "owner",
+    updatedAt: Date.UTC(2025, 5, 15),
+  };
+
+  it("shows the dance + a human date in the meta line", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={[baseRoutine]} />);
+    expect(screen.getByText("Gold Waltz")).toBeInTheDocument();
+    // Meta line: dance label + human month/year (not a raw locale date).
+    expect(screen.getByText(/Waltz · Jun 2025/)).toBeInTheDocument();
+  });
+
+  it('shows "no figures yet" when the routine has zero figures', async () => {
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList ownedCount={1} plan="free" routines={[{ ...baseRoutine, figureCount: 0 }]} />,
+    );
+    expect(screen.getByText(/no figures yet/i)).toBeInTheDocument();
+  });
+
+  it('shows a derived "N bars" when available', async () => {
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList
+        ownedCount={1}
+        plan="free"
+        routines={[{ ...baseRoutine, figureCount: 3, bars: 7 }]}
+      />,
+    );
+    expect(screen.getByText(/7 bars/)).toBeInTheDocument();
+  });
+
+  it("exposes a per-card overflow menu that opens the Open/Fork sheet", async () => {
+    const { ChoreoList } = await load();
+    const onOpen = vi.fn();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={[baseRoutine]} onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getByText(/choose what to do with this choreo/i)).toBeInTheDocument();
+    // Opening the menu must NOT navigate (menu is separate from the card tap).
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe("T2 Forked card (frame 1.3)", () => {
+  it("renders the forked-from lineage line when lineage is present", async () => {
+    const { ChoreoList } = await load();
+    const routines = [
+      {
+        docRef: "rt_fork",
+        title: "Gold Waltz (my copy)",
+        dance: "waltz",
+        role: "owner",
+        updatedAt: Date.UTC(2025, 5, 15),
+        forkedFromTitle: "Gold Waltz",
+      },
+    ];
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={routines} />);
+    expect(screen.getByText(/forked from Gold Waltz/i)).toBeInTheDocument();
+  });
+});
+
+describe("T2 Empty state (frame 1.2)", () => {
+  it("shows the designed empty copy + a create action", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    expect(screen.getByText(/no choreos yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/each dance gets its own choreo — plus extras for practice/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create choreo/i })).toBeInTheDocument();
+  });
+});
+
+describe("T2 Open/Fork sheet (frame 1.4)", () => {
+  const routines = [
+    {
+      docRef: "rt1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      role: "owner",
+      updatedAt: Date.UTC(2025, 5, 15),
+    },
+  ];
+
+  it("Open → opens the routine", async () => {
+    const { ChoreoList } = await load();
+    const onOpen = vi.fn();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={routines} onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^open/i }));
+    expect(onOpen).toHaveBeenCalledWith("rt1");
+  });
+
+  it("Fork → forks the routine", async () => {
+    const { ChoreoList } = await load();
+    const onFork = vi.fn();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={routines} onFork={onFork} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    await userEvent.click(within(sheet).getByRole("button", { name: /fork — make it your own/i }));
+    expect(onFork).toHaveBeenCalledWith("rt1");
+  });
+});
+
+describe("D7 Quota label (design 1.18)", () => {
+  it("shows 'Free · N of M' in the header when on free plan with a known cap", async () => {
+    // Intent (D7 design 1.18): a free-plan user at quota sees 'Free · 2 of 3' in the
+    //   'My Choreos' header so they know how many owned routines they have left.
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={2} plan="free" cap={3} />);
+    expect(screen.getByText(/free · 2 of 3/i)).toBeInTheDocument();
+  });
+
+  it("does not show the quota label when cap is unknown", async () => {
+    // Intent: cap is sourced from /api/me which may not have loaded yet — don't show
+    //   stale UI while it resolves.
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={2} plan="free" />);
+    expect(screen.queryByText(/free · /i)).toBeNull();
+  });
+
+  it("does not show the quota label for a pro user", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={5} plan="pro" cap={3} />);
+    expect(screen.queryByText(/free · /i)).toBeNull();
+  });
+});
+
+describe("Delete a routine (owner-only, confirmed)", () => {
+  const owned = [
+    {
+      docRef: "rt1",
+      title: "Gold Waltz",
+      dance: "waltz",
+      role: "owner",
+      updatedAt: Date.UTC(2025, 5, 15),
+    },
+  ];
+
+  it("Delete → confirms, then deletes the routine", async () => {
+    // Intent: an owner's ⋯ sheet offers Delete, which opens a destructive confirm;
+    // confirming calls onDelete with the routine's docRef (the store soft-deletes).
+    const { ChoreoList } = await load();
+    const onDelete = vi.fn();
+    renderUi(<ChoreoList ownedCount={1} plan="free" routines={owned} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^delete/i }));
+    // A confirm dialog appears BEFORE anything is deleted.
+    const confirm = await screen.findByRole("alertdialog", { name: /delete this choreo/i });
+    expect(onDelete).not.toHaveBeenCalled();
+    await userEvent.click(within(confirm).getByRole("button", { name: /^delete$/i }));
+    expect(onDelete).toHaveBeenCalledWith("rt1");
+  });
+
+  it("does NOT offer Delete on a routine the viewer does not own", async () => {
+    // Intent: delete is owner-only — a shared-in (non-owner) routine's ⋯ sheet has
+    // no Delete affordance (the server also enforces ownership).
+    const { ChoreoList } = await load();
+    const onDelete = vi.fn();
+    const shared = [{ ...owned[0], role: "editor" }];
+    renderUi(<ChoreoList ownedCount={0} plan="free" routines={shared} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /more options for gold waltz/i }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).queryByRole("button", { name: /^delete/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("T2 New-choreo sheet (frame 1.5)", () => {
+  it("creates with the dance picked from chips", async () => {
+    const { ChoreoList } = await load();
+    const onCreate = vi.fn();
+    renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
+    const sheet = await screen.findByRole("dialog", { name: /new choreography/i });
+    // Pick a non-default dance via its chip.
+    await userEvent.click(within(sheet).getByRole("button", { name: "Quickstep" }));
+    await userEvent.type(within(sheet).getByLabelText(/choreo name/i), "Silver Quickstep");
+    await userEvent.click(within(sheet).getByRole("button", { name: /create choreo/i }));
+    expect(onCreate).toHaveBeenCalledWith({ title: "Silver Quickstep", dance: "quickstep" });
+  });
+
+  it("cancel closes the sheet without creating", async () => {
+    const { ChoreoList } = await load();
+    const onCreate = vi.fn();
+    renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
+    const sheet = await screen.findByRole("dialog", { name: /new choreography/i });
+    await userEvent.click(within(sheet).getByRole("button", { name: /cancel/i }));
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: /new choreography/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Offline creation gate (PLAN §11.2, design 1.24)", () => {
+  /** Force `navigator.onLine` for the render (restored per test by vitest). */
+  const goOffline = (): void => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
+  };
+  afterEach(() => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
+  });
+
+  it("disables the New-choreo action, empty-state CTA, and template start while offline", async () => {
+    // Intent (§11.2 scope boundary): creating a choreo is a SERVER action —
+    //   offline it is a visibly disabled affordance, never a silent failure.
+    goOffline();
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList
+        ownedCount={0}
+        plan="free"
+        templates={[{ docRef: "tpl1", title: "Sample Waltz", dance: "waltz", role: "viewer" }]}
+        onStartFromTemplate={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /new choreo/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^create choreo$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /start from template/i })).toBeDisabled();
+  });
+
+  it("disables the fork action in the ⋯ sheet while offline (open stays available)", async () => {
+    goOffline();
+    const { ChoreoList } = await load();
+    renderUi(
+      <ChoreoList
+        ownedCount={1}
+        plan="free"
+        routines={[
+          { docRef: "rt1", title: "Gold Waltz", dance: "waltz", role: "owner", updatedAt: 1 },
+        ]}
+        onFork={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /more options/i }));
+    expect(screen.getByRole("button", { name: /fork/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^open/i })).toBeEnabled();
+  });
+
+  it("disables the new-choreo sheet's submit if connectivity drops with the sheet open", async () => {
+    const { ChoreoList } = await load();
+    renderUi(<ChoreoList ownedCount={0} plan="free" onCreate={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /new choreo/i }));
+    await userEvent.type(screen.getByLabelText(/choreo name/i), "Doomed Create");
+    goOffline();
+    // The poll notices the flip (no browser event fires in emulated offline).
+    const dialog = screen.getByRole("dialog");
+    await vi.waitFor(
+      () => expect(within(dialog).getByRole("button", { name: /create choreo/i })).toBeDisabled(),
+      { timeout: 4000 },
+    );
+  });
+});

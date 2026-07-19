@@ -13,7 +13,8 @@ import { renderUi, screen, userEvent, within } from "../test-support/render";
 // US-030 — Timeline role-view toggle [M2, user]
 // US-044 — Lanes (one kind across all counts) [M7, user]
 //
-// PLAN §4.4/§4.5, §10.2 component layer: "attribute editor (registry-derived;
+// docs/concepts/notation.md § The figure editor, docs/system/testing.md component
+// layer: "attribute editor (registry-derived;
 // Tango hides rise; new user-defined kind appears); timeline role flip; Lanes".
 //
 // The Timeline/AttributeEditor/Lanes components are built by the frontend agent
@@ -51,14 +52,23 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const { FigureTimeline } = await importComponent<TimelineModule>(
       "../components/FigureTimeline",
     );
-    const onChange = vi.fn();
-    renderUi(<FigureTimeline role="editor" dance="waltz" bars={1} onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 2$/i }));
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        attributes={[
+          { id: "d2", kind: "direction", count: 2, value: null, role: null, deletedAt: null },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 2$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(onChange).toHaveBeenCalled();
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork" && a.count === 2,
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
+    const added = lastAttrs.find((a) => a.kind === "footwork" && a.count === 2);
     expect(added?.value).toBe("HT");
   });
 
@@ -70,7 +80,7 @@ describe("US-028 Figure timeline: place/edit/remove attributes (hero flow)", () 
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor count={2} role="editor" value={[footworkBall(2)]} onChange={onChange} />,
     );
@@ -113,81 +123,165 @@ const roleAttr = (kind: string, value: string, role: Attribute["role"], c = 1): 
   deletedAt: null,
 });
 
-describe("Attribute editor ROLES toggle (frame 1.12)", () => {
-  it("offers a 'Same for both | Per role' roles toggle, defaulting to Same for both", async () => {
+describe("WEP-0008 role-scoped writes — the edit lens is the write scope", () => {
+  it("under Both, a direction pick writes the leader verbatim + the mirrored follower", async () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" />);
-    expect(screen.getByRole("radio", { name: /same for both/i })).toHaveAttribute(
-      "aria-checked",
-      "true",
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor count={1} dance="foxtrot" role="editor" view="both" onChange={onChange} />,
     );
-    expect(screen.getByRole("radio", { name: /per role/i })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
-  });
-
-  it("in 'Same for both' a chosen value is written to both roles (role=null)", async () => {
-    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
-      "../components/AttributeEditor",
-    );
-    const onChange = vi.fn();
-    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     await userEvent.click(screen.getByRole("button", { name: /^forward$/i }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "direction",
-    );
-    expect(added?.role).toBeNull();
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
+    const directions = lastAttrs.filter((a) => a.kind === "direction");
+    expect(directions).toHaveLength(2);
+    expect(directions.find((a) => a.role === "leader")?.value).toBe("forward");
+    expect(directions.find((a) => a.role === "follower")?.value).toBe("back");
   });
 
-  it("'Per role' splits into a Leader + Follower section; a follower pick is role-scoped", async () => {
+  it("under Both, a symmetric direction collapses to one shared attribute", async () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
-    renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
-    await userEvent.click(screen.getByRole("radio", { name: /per role/i }));
-    // Two rails appear.
-    expect(screen.getByRole("group", { name: /leader/i })).toBeInTheDocument();
-    const follower = screen.getByRole("group", { name: /follower/i });
-    // Picking a direction inside the Follower rail writes role="follower".
-    await userEvent.click(within(follower).getByRole("button", { name: /^back$/i }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor count={1} dance="foxtrot" role="editor" view="both" onChange={onChange} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^side$/i }));
+    const directions = (onChange.mock.calls.at(-1)?.[0] ?? []).filter(
       (a) => a.kind === "direction",
     );
-    expect(added?.role).toBe("follower");
+    expect(directions).toHaveLength(1);
+    expect(directions[0]?.role).toBeNull();
+    expect(directions[0]?.value).toBe("side");
   });
 
-  it("defaults to 'Per role' when the count already has role-scoped values", async () => {
+  it("under Both, footwork is written for the leader only (never derived)", async () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor count={1} dance="foxtrot" role="editor" view="both" onChange={onChange} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
+    const footworks = (onChange.mock.calls.at(-1)?.[0] ?? []).filter((a) => a.kind === "footwork");
+    expect(footworks).toHaveLength(1);
+    expect(footworks[0]?.role).toBe("leader");
+    expect(footworks[0]?.value).toBe("HT");
+  });
+
+  it("under Both, a technique value (rise) stays one shared attribute", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor count={1} dance="foxtrot" role="editor" view="both" onChange={onChange} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^commence$/i }));
+    const rises = (onChange.mock.calls.at(-1)?.[0] ?? []).filter((a) => a.kind === "rise");
+    expect(rises).toHaveLength(1);
+    expect(rises[0]?.role).toBeNull();
+  });
+
+  it("under a single role, a pick is scoped to that role only", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor
         count={1}
         dance="foxtrot"
         role="editor"
-        value={[roleAttr("direction", "forward", "leader")]}
+        view="follower"
+        onChange={onChange}
       />,
     );
-    expect(screen.getByRole("radio", { name: /per role/i })).toHaveAttribute(
-      "aria-checked",
-      "true",
+    await userEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    const directions = (onChange.mock.calls.at(-1)?.[0] ?? []).filter(
+      (a) => a.kind === "direction",
     );
+    expect(directions).toHaveLength(1);
+    expect(directions[0]?.role).toBe("follower");
   });
 
-  it("'remove attribute' clears this count's values for the active role scope", async () => {
+  it("editing a shared value under Leader splits it — the follower keeps the old value", async () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor
         count={1}
         dance="foxtrot"
         role="editor"
+        view="leader"
+        value={[roleAttr("direction", "side", null)]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^forward$/i }));
+    const directions = (onChange.mock.calls.at(-1)?.[0] ?? []).filter(
+      (a) => a.kind === "direction",
+    );
+    expect(directions.find((a) => a.role === "leader")?.value).toBe("forward");
+    expect(directions.find((a) => a.role === "follower")?.value).toBe("side");
+    expect(directions.some((a) => a.role == null)).toBe(false);
+  });
+
+  it("shows only the active lens's values while editing (a leader value hides under Follower)", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        view="follower"
+        value={[
+          roleAttr("direction", "forward", "leader"),
+          roleAttr("direction", "back", "follower"),
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^back$/i })).toHaveAttribute("aria-pressed", "true");
+    // The leader's value must NOT read as selected under the Follower lens.
+    expect(screen.queryByRole("button", { name: /^forward$/i, pressed: true })).toBeNull();
+  });
+
+  it("read-only chips respect the lens too (no cross-role leak)", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="commenter"
+        view="follower"
+        value={[roleAttr("footwork", "TH", "leader"), roleAttr("footwork", "H flat", "follower")]}
+      />,
+    );
+    expect(screen.getByText(/H Flat/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Toe-Heel$/)).toBeNull();
+  });
+
+  it("'remove attribute' under Both clears the shared slot", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        view="both"
         value={[roleAttr("direction", "forward", null), roleAttr("footwork", "ball", null)]}
         onChange={onChange}
       />,
@@ -196,7 +290,29 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it("hides the roles toggle + remove from a non-editor (read-only)", async () => {
+  it("'remove attribute' under Leader keeps the follower's split of a shared value", async () => {
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        view="leader"
+        value={[roleAttr("direction", "side", null)]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /remove attribute/i }));
+    const next = onChange.mock.calls.at(-1)?.[0] ?? [];
+    expect(next).toHaveLength(1);
+    expect(next[0]?.role).toBe("follower");
+    expect(next[0]?.value).toBe("side");
+  });
+
+  it("hides remove from a non-editor (read-only)", async () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
@@ -208,9 +324,122 @@ describe("Attribute editor ROLES toggle (frame 1.12)", () => {
         value={[roleAttr("footwork", "ball", null)]}
       />,
     );
-    expect(screen.queryByRole("radio", { name: /per role/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /remove attribute/i })).toBeNull();
     expect(screen.getByText("ball")).toBeInTheDocument(); // still shown read-only
+  });
+});
+
+describe("WEP-0008 the STEPS FOR lens gains Both in edit mode; diverged cells lock", () => {
+  const dir = (value: string, role: Attribute["role"], c = 1): Attribute => ({
+    id: `direction-${c}-${value}-${role ?? "both"}`,
+    kind: "direction",
+    count: c,
+    value,
+    role,
+    deletedAt: null,
+  });
+
+  it("edit mode offers Leader | Follower | Both; read mode only Leader | Follower", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const editor = renderUi(<FigureTimeline role="editor" dance="waltz" counts={3} />);
+    expect(screen.getByRole("radio", { name: /both/i })).toBeInTheDocument();
+    editor.unmount();
+    renderUi(<FigureTimeline role="commenter" dance="waltz" counts={3} />);
+    expect(screen.queryByRole("radio", { name: /both/i })).toBeNull();
+  });
+
+  it("quick-add under a single role writes a role-scoped presence attribute", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        roleView="follower"
+        attributes={[]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 1$/i }));
+    const added = (onChange.mock.calls.at(-1)?.[0] ?? []).find((a) => a.kind === "direction");
+    expect(added?.role).toBe("follower");
+  });
+
+  it("quick-add under Both stays shared (presence has no side)", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        roleView="both"
+        attributes={[]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Add Step at count 1$/i }));
+    const added = (onChange.mock.calls.at(-1)?.[0] ?? []).find((a) => a.kind === "direction");
+    expect(added?.role).toBeNull();
+  });
+
+  it("a hand-diverged cell is locked under Both (no editor opens); its own mirrored pair stays editable", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    const diverged = renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        roleView="both"
+        attributes={[dir("forward", "leader"), dir("side", "follower")]}
+      />,
+    );
+    const locked = screen.getByRole("button", { name: /Step at count 1.*locked/i });
+    await userEvent.click(locked);
+    // The single-attribute overlay must NOT open for a locked cell.
+    expect(screen.queryByRole("radio", { name: /^count 1$/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /direction/i })).toBeNull();
+    diverged.unmount();
+
+    // The exact mirror pair (Both's own output) is NOT locked — it opens.
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        roleView="both"
+        attributes={[dir("forward", "leader"), dir("back", "follower")]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Edit Step at count 1$/i }));
+    expect(screen.getByRole("group", { name: /direction/i })).toBeInTheDocument();
+  });
+
+  it("under Both the grid shows the leader's projection of a mirrored pair", async () => {
+    const { FigureTimeline } = await importComponent<TimelineModule>(
+      "../components/FigureTimeline",
+    );
+    renderUi(
+      <FigureTimeline
+        role="editor"
+        dance="waltz"
+        counts={3}
+        roleView="both"
+        attributes={[dir("forward", "leader"), dir("back", "follower")]}
+      />,
+    );
+    const summary = screen.getByLabelText(/count 1 attributes/i);
+    expect(screen.getByTestId("step-headline-1")).toHaveTextContent(/forward/i);
+    expect(summary).not.toHaveTextContent(/back/i);
   });
 });
 
@@ -228,10 +457,10 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     for (const name of [/direction/i, /footwork/i]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
-    // Technique kinds appear once "More attributes" is expanded. Exact names so
-    // "Position" doesn't also match the "Foot Position" heading.
+    // Technique kinds appear once "More attributes" is expanded (footPosition
+    // removed ⟳2026-07-10 — no "Foot Position" section anymore).
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
-    for (const name of ["Turn", "Sway", "Position", "Foot Position"]) {
+    for (const name of ["Turn", "Sway", "Position"]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });
@@ -262,7 +491,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
       "../components/AttributeEditor",
     );
     // SINGLE (position): start with "closed"; picking "promenade" replaces it.
-    const onSingle = vi.fn();
+    const onSingle = vi.fn<(attrs: Attribute[]) => void>();
     const single = renderUi(
       <AttributeEditor
         count={1}
@@ -275,7 +504,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     // position is a technique kind — reveal it first.
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^promenade$/i }));
-    const afterSingle = onSingle.mock.calls.at(-1)?.[0] as Attribute[];
+    const afterSingle = onSingle.mock.calls.at(-1)?.[0] ?? [];
     expect(afterSingle.filter((a) => a.kind === "position")).toHaveLength(1);
     expect(afterSingle.find((a) => a.kind === "position")?.value).toBe("promenade");
     single.unmount();
@@ -290,7 +519,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
       values: ["L", "R"],
       builtin: false,
     };
-    const onMulti = vi.fn();
+    const onMulti = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(
       <AttributeEditor
         count={1}
@@ -303,7 +532,7 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
     await userEvent.click(screen.getByRole("button", { name: /^R$/ }));
-    const afterMulti = onMulti.mock.calls.at(-1)?.[0] as Attribute[];
+    const afterMulti = onMulti.mock.calls.at(-1)?.[0] ?? [];
     expect(
       afterMulti
         .filter((a) => a.kind === "hands")
@@ -342,15 +571,14 @@ describe("US-029 Attribute editor (registry-derived sections)", () => {
     const { AttributeEditor } = await importComponent<AttributeEditorModule>(
       "../components/AttributeEditor",
     );
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     renderUi(<AttributeEditor count={1} dance="foxtrot" role="editor" onChange={onChange} />);
     // No free-text add for footwork.
     expect(screen.queryByPlaceholderText(/custom footwork/i)).toBeNull();
     // A footwork value is still pickable from the closed set.
     await userEvent.click(screen.getByRole("button", { name: "Heel-Toe" }));
-    const added = (onChange.mock.calls.at(-1)?.[0] as Attribute[]).find(
-      (a) => a.kind === "footwork",
-    );
+    const lastAttrs = onChange.mock.calls.at(-1)?.[0] ?? [];
+    const added = lastAttrs.find((a) => a.kind === "footwork");
     expect(added?.value).toBe("HT");
   });
 
@@ -544,7 +772,7 @@ describe("US-044 Lanes (one kind across all counts)", () => {
     // Assert: a cell per count; editing updates the underlying attribute (onChange).
     // Covers US-044 AC-1 (one kind across counts) + AC-2 (same attributes).
     const { Lanes } = await importComponent<LanesModule>("../components/Lanes");
-    const onChange = vi.fn();
+    const onChange = vi.fn<(attrs: Attribute[]) => void>();
     const sway = (c: number, v: string): Attribute => ({
       id: `sway-${c}`,
       kind: "sway",

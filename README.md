@@ -16,6 +16,20 @@ notes — anchored to a count, a figure, or a whole cross-dance figure *family*.
 It's built on a **CRDT document graph** (Automerge) so collaboration, offline-capability,
 and forking are first-class rather than retrofitted.
 
+## See it in action
+
+An **auto-generated** product tour — a slow, hand-held walkthrough of one real
+authoring journey (create → build → notate → annotation reference → overview → note
+→ share), recorded straight from the running app so it never goes stale. Click to play:
+
+<a href="apps/web/src/marketing/video/explainer.mp4">
+  <img src="apps/web/src/marketing/video/explainer-poster.png" alt="A guided tour of Weave Steps: building a routine, notating steps, and sharing it" width="720" />
+</a>
+
+> ▶ **[Watch the tour](apps/web/src/marketing/video/explainer.mp4)** — regenerate it any
+> time with `pnpm video:generate` (records the clips via Playwright, then renders the MP4
+> with Remotion). See [`docs/TOOLING.md`](docs/TOOLING.md#explainer-video).
+
 ## Goals & constraints
 
 - **Collaborative & local-first** — concurrent editing merges cleanly; fork/inheritance is the v1 centerpiece.
@@ -57,13 +71,14 @@ packages/domain/    pure TS domain logic (Automerge doc schemas, overlay, fork, 
 packages/contract/  Zod schemas + Hono RPC types shared by web & worker
 apps/worker/        Hono Worker + per-document Durable Object + D1 index
 apps/web/           React PWA: design system (src/ui), store seam, screens
-docs/               PLAN.md (source of truth) + design, tooling, testing, stories
-research/           deep-dive research behind the plan's decisions
+docs/               README.md (the index) + concepts/ (mental model) + system/ (how it works) + ideas/ (future work) + design, tooling, testing
+research/           deep-dive research behind the architecture's decisions
 ```
 
 ## Where to read more
 
-- **[`docs/PLAN.md`](docs/PLAN.md)** — the single source of truth (domain model, architecture, milestones, locked decisions).
-- **[`CLAUDE.md`](CLAUDE.md)** — the working guide that routes contributors (human or agent) to the right doc for their task.
+- **[`docs/README.md`](docs/README.md)** — the documentation index: the product's mental model in one screen, routing into **`docs/concepts/`** (the world view) and **`docs/system/`** (how it works underneath).
+- **[`docs/ideas/`](docs/ideas/README.md)** — designed-but-not-built future work, each idea explicit about the mental-model delta it would make and deleted when shipped.
+- **[`CLAUDE.md`](CLAUDE.md)** — the working guide for contributors (human or agent): the standing rules and the same-change doc-update discipline.
 
-> **Status:** Foundations laid (M0 done; design, backlog, test harness, design system, and a full skipped-test scaffold in place). Building starts at **M1 — domain core**.
+> **Status:** the **v1 roadmap is complete end-to-end** (v5 live-figure migration 2026-07-02; ops/PWA close-outs 2026-07-03; offline editing 2026-07-05; Builder-v3 model changes 2026-07-07) and staging is live. New work starts in [`docs/ideas/`](docs/ideas/README.md).

@@ -1,5 +1,6 @@
 import type { FigureDoc, RoutineDoc } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
+import { asTestDouble } from "../test-support/test-double";
 import { openRoutineSnapshot, type RoutineSnapshot } from "./routine-snapshot";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -48,7 +49,8 @@ function wiring(data: RoutineSnapshot) {
     fetchSnapshot,
     schedule: (fn: () => void) => {
       pollFn = fn;
-      return 1 as unknown as ReturnType<typeof setInterval>;
+      // Opaque timer handle the fake never inspects (cancel is a spy too).
+      return asTestDouble<ReturnType<typeof setInterval>>(1);
     },
     cancel: vi.fn(),
     onFocusRefetch: (fn: () => void) => {

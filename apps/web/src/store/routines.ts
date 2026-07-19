@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CreateRoutine, RoutineList } from "@weavesteps/contract";
 import { useAppAuth } from "../auth/app-auth";
 import { ApiError, apiDelete, apiGet, apiPost } from "../lib/rpc";
+import { withOfflineCache } from "./offline";
 
 /** Whether a create failure is the server's quota refusal (402) — drives the
  *  upsell. Lives in the store so components branch on it without importing
@@ -14,12 +15,19 @@ export function isQuotaError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 402;
 }
 
-/** The viewer's routines (owned + shared-in) for the Choreo list. */
+/** The viewer's routines (owned + shared-in) for the Choreo list. Offline, the
+ *  last-good list serves from the on-device cache (§11.2 offline app open) —
+ *  `networkMode: "always"` so the attempt (and with it the cache fallback)
+ *  runs even when react-query believes the browser is offline. */
 export function useRoutines() {
   const { getToken } = useAppAuth();
   return useQuery({
     queryKey: ["routines"],
-    queryFn: async () => apiGet<RoutineList>("/api/routines", await getToken()),
+    networkMode: "always",
+    queryFn: async () =>
+      withOfflineCache<RoutineList>("bf_routines", async () =>
+        apiGet<RoutineList>("/api/routines", await getToken()),
+      ),
   });
 }
 

@@ -28,7 +28,7 @@ export function useOverlay(
   useEffect(() => {
     if (!open) return;
 
-    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previouslyFocused = document.activeElement;
     const panel = panelRef.current;
 
     // Move focus into the panel (first focusable, else the panel).
@@ -96,7 +96,11 @@ export function useOverlay(
       window.scrollTo(0, scrollY);
       // preventScroll: refocusing the opener must not scroll it into view —
       // that would re-lose the position the lock above just preserved.
-      previouslyFocused?.focus?.({ preventScroll: true });
+      // (instanceof stands in for the old "has a focus method" probe — only
+      // HTML/SVG elements are focusable.)
+      if (previouslyFocused instanceof HTMLElement || previouslyFocused instanceof SVGElement) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
     };
   }, [open, panelRef]);
 }

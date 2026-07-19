@@ -1,0 +1,124 @@
+name: Explainer video
+
+# Regenerate the auto-generated explainer video on PRs, auto-commit it when the
+# running app actually changed the tour (poster pixel-diff over a threshold, not
+# a byte compare — the MP4 is non-deterministic), and post a before/after
+# comment. Heavy job → path-filtered + manual dispatch; excluded from the smoke
+# critical path. Mirrors screenshots.yml.
+on:
+  pull_request:
+    branches: [main, development]
+    paths:
+      - "apps/web/**"
+      - "apps/worker/**"
+      - "packages/**"
+      - "apps/web/remotion/**"
+      - ".github/workflows/video.yml"
+      - "scripts/render-explainer.mjs"
+      - "scripts/video-diff.mjs"
+  workflow_dispatch:
+
+# Push the regenerated video to the PR branch and upsert a comment.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: video-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      # Loop guard: skip if HEAD is the bot's own regeneration commit. (The bot
+      # commits with [skip ci], which also stops GitHub re-triggering this run.)
+      - name: Should run?
+        id: guard
+        run: |
+          author="$(git log -1 --format='%an')"
+          subject="$(git log -1 --format='%s')"
+          if [ "$author" = "video-bot" ] || echo "$subject" | grep -q '\[skip ci\]'; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.guard.outputs.run == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.guard.outputs.run == 'true'
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+        if: steps.guard.outputs.run == 'true'
+
+      # Record the real-app clips (@video journey) + render the MP4/poster.
+      # Remotion downloads its own managed Chromium when none is preinstalled.
+      - name: Generate explainer video
+        if: steps.guard.outputs.run == 'true'
+        run: pnpm video:generate
+
+      # Decide whether this is a MEANINGFUL change (poster pixel-diff > threshold).
+      - name: Diff the poster
+        id: diff
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request'
+        run: node scripts/video-diff.mjs decide
+
+      - name: Commit & push regenerated video
+        id: commit
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'pull_request' && steps.diff.outputs.changed == 'true'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          prev="$(git rev-parse HEAD)"
+          echo "prev=$prev" >> "$GITHUB_OUTPUT"
+          git config user.name "video-bot"
+          git config user.email "video-bot@users.noreply.github.com"
+          git add apps/web/src/marketing/video/explainer.mp4 apps/web/src/marketing/video/explainer-poster.png
+          if git diff --cached --quiet; then
+            echo "Poster changed but tree is clean — nothing to commit."
+            echo "did_commit=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore(video): regenerate explainer video [skip ci]"
+            git push origin "HEAD:$BRANCH"
+            echo "new=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            echo "did_commit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build before/after comment
+        if: steps.commit.outputs.did_commit == 'true'
+        run: |
+          node scripts/video-diff.mjs report \
+            "${{ github.repository_owner }}" \
+            "${{ github.event.repository.name }}" \
+            "${{ steps.diff.outputs.status == 'new' && '-' || steps.commit.outputs.prev }}" \
+            "${{ steps.commit.outputs.new }}" \
+            "${{ steps.diff.outputs.status }}" \
+            "${{ steps.diff.outputs.ratio }}"
+
+      - name: Upsert PR comment
+        if: steps.commit.outputs.did_commit == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('video-comment.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const marker = '<!-- video-bot -->';
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

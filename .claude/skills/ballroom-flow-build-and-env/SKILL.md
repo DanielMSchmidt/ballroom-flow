@@ -42,8 +42,9 @@ Use the `packageManager` pin, not the docs.
   `lefthook.yml`:
   - **pre-commit**: `biome check --write` on staged JS/TS (re-stages autofixes) +
     full-monorepo `pnpm -r typecheck`, in parallel.
-  - **pre-push**: blocks direct pushes to `main` **and** `development` — branch off
-    `development` and open a PR (see **ballroom-flow-change-control**).
+  - **pre-push**: blocks direct pushes to `main` **and** `development` (the latter no
+    longer exists as a branch — deleted 2026-07-05, `lefthook.yml`'s rule just hasn't been
+    trimmed) — branch off `main` and open a PR (see **ballroom-flow-change-control**).
 
 ### The pnpm 11 build-script allowlist trap
 
@@ -84,7 +85,7 @@ order-of-magnitude, not SLA.
 lines, web none) — docs claiming they're "commented out" are stale;
 `pnpm --filter @weavesteps/domain coverage` and `pnpm --filter worker coverage` fail
 below them. CLAUDE.md's "domain ≥95%, worker ≥90%" figures are NOT stale numbers:
-they are the **PLAN §10.3 ratchet TARGETS** — ratchet the config floors *up* toward
+they are the **`docs/system/testing.md` § Tooling & CI ratchet TARGETS** — ratchet the config floors *up* toward
 them as coverage rises, never down. The full per-metric table, measured actuals, and
 ratchet semantics live in **ballroom-flow-validation-and-qa** §6.
 
@@ -105,7 +106,8 @@ Secrets matter only for real sign-in in dev, deployed environments, and deploys:
 | `CLERK_SECRET_KEY` | `apps/worker/.dev.vars` (local); `wrangler secret put CLERK_SECRET_KEY --env staging\|production` | Worker auth positive path / deployed API |
 | `CLERK_JWT_KEY` (PEM, optional) | `.dev.vars` / wrangler secret; a **committed throwaway test key** lives in `apps/worker/wrangler.toml` `[env.e2e.vars]` | Networkless JWT verify; E2E |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub Environments `staging` / `production` | `deploy.yml` only (it skips deploy with a notice if unset) |
-| `VITE_SENTRY_DSN` / `SENTRY_DSN` | future (M8) | **not wired yet** |
+| `SENTRY_DSN` | wrangler secret per env (worker reporter `apps/worker/src/ops.ts`) | Worker error reporting (US-049); silent no-op unset |
+| `VITE_SENTRY_DSN` | GitHub env **variable**, baked by `deploy.yml` (web reporter `apps/web/src/lib/ops.ts`, added 2026-07-05) | Client error reporting (US-049 web half); silent no-op unset |
 
 **There is no `.env.example` or `.dev.vars.example`.** Write `apps/web/.env.local`
 and `apps/worker/.dev.vars` by hand following `PROVISIONING.md`. Dev-server and
@@ -188,7 +190,8 @@ same toolchain as §1, so "works locally, fails in CI" is almost never a version
 Related workflows: `deploy.yml` re-runs lint/typecheck/build/`pnpm -r test`/chromium
 smoke, then `wrangler d1 migrations apply DB --env <env> --remote` + `wrangler deploy
 --env <env>` (skips gracefully without `CLOUDFLARE_API_TOKEN`); `nightly.yml` runs
-the full 3-device E2E matrix; `screenshots.yml` is a path-filtered PR screenshot bot.
+the full 3-device E2E matrix; the `screenshots` job in `ci.yml` renders + pixel-diffs the
+landing screenshots and posts an artifact-backed before/after PR comment (no auto-commit).
 Operating deploys → **ballroom-flow-run-and-operate**.
 
 ---
@@ -201,8 +204,8 @@ Operating deploys → **ballroom-flow-run-and-operate**.
 one, `git diff --stat` must be empty unless you changed the inputs. Details →
 **ballroom-flow-figure-data-pipeline**.
 
-`scripts/screenshot-diff.mjs` is CI-only (needs PR context; used by
-`screenshots.yml`). `scripts/screenshot-diff.test.mjs` is a vitest test wired into
+`scripts/screenshot-diff.mjs` is CI-only (needs PR context; used by the `screenshots`
+job in `ci.yml`). `scripts/screenshot-diff.test.mjs` is a vitest test wired into
 **no runner** — `node --test` on it fails with `ERR_MODULE_NOT_FOUND vitest`; that
 is a known orphan, not your breakage.
 
@@ -217,7 +220,7 @@ re-verify with the one-liner if you suspect drift.
 | # | Doc claim | Reality (verified 2026-07-02) | Re-verify |
 |---|---|---|---|
 | 1 | `docs/DEVELOPMENT.md:10` + CLAUDE.md: **pnpm 10** | Pin is **pnpm 11.9.0** | `grep packageManager package.json` |
-| 2 | `docs/TOOLING.md:56` / `DEVELOPMENT.md:73`: coverage thresholds "commented out"; CLAUDE.md: "uncomment when suites land" | **Armed** at the measured floors: domain 90 lines, worker 88 lines. (CLAUDE.md's 95/90 figures are the PLAN §10.3 ratchet *targets*, not stale claims — full table: **ballroom-flow-validation-and-qa** §6) | `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts` |
+| 2 | `docs/TOOLING.md:56` / `DEVELOPMENT.md:73`: coverage thresholds "commented out"; CLAUDE.md: "uncomment when suites land" | **Armed** at the measured floors: domain 90 lines, worker 88 lines. (CLAUDE.md's 95/90 figures are the `docs/system/testing.md` § Tooling & CI ratchet *targets*, not stale claims — full table: **ballroom-flow-validation-and-qa** §6) | `grep -A5 thresholds packages/domain/vitest.config.ts apps/worker/vitest.config.ts` |
 | 3 | `docs/DEVELOPMENT.md:123`: "migrations dir is empty until M2" | **15 migrations** exist | `ls apps/worker/migrations \| wc -l` |
 | 4 | `DEVELOPMENT.md:78` / `TOOLING.md:40`: E2E webServer is `vite preview`, "build first" | webServer is **`e2e/serve.sh`** — self-building, real wrangler-dev backend | `grep -n serve.sh apps/web/playwright.config.ts` |
 | 5 | `docs/TEST-MAP.md:11`: domain 154 / web 114 / worker 101 tests | **245 / 355 / 180** (as of 2026-07-02, HEAD `759b3a8`) | `pnpm test` and read the summaries |

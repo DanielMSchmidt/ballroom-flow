@@ -31,7 +31,7 @@ const keyOf = (e: { sortKey?: string } | undefined, what: string): string =>
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-009 — Automerge convergence invariants [M1, system/developer]
-// PLAN §5.3, §10.2 invariant: "Automerge convergence/commutativity/idempotence
+// docs/system/architecture.md § Ordering, docs/system/testing.md invariant: "Automerge convergence/commutativity/idempotence
 // (fast-check, shuffled/partitioned changes incl. across forks)".
 //
 // These are PROPERTY tests (fast-check) over real in-memory Automerge docs via
@@ -43,9 +43,9 @@ const keyOf = (e: { sortKey?: string } | undefined, what: string): string =>
 // for a figure's attribute set); the M1 version swaps in real buildFigureDoc.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface CountsDoc {
+type CountsDoc = {
   counts: Record<string, number>;
-}
+};
 
 describe("US-009 Automerge convergence invariants", () => {
   it("converges regardless of edit order (commutative) — property", async () => {
@@ -113,7 +113,7 @@ describe("US-009 Automerge convergence invariants", () => {
     await assertIdempotent(base, change);
   });
 
-  // ── US-026 / #63 — sortKey reorder convergence (PLAN §5.3) ────────────────
+  // ── US-026 / #63 — sortKey reorder convergence (docs/system/architecture.md § Ordering) ────────────────
   // Reorder is now a per-field `sortKey` update, not a JSON-copy splice. The
   // splice removed the moved Automerge object and re-inserted a plain copy, so a
   // concurrent edit to the moved item (or a second concurrent splice) was lost.
@@ -183,7 +183,7 @@ describe("US-009 Automerge convergence invariants", () => {
   it("keeps a concurrent edit to a MOVED placement (the object is never deleted)", async () => {
     // The splice deleted the moved placement's object and re-inserted a copy — a
     // concurrent edit to it was lost. sortKey moves it in place, so a concurrent
-    // perPlacementAlignment edit on the SAME, moved placement survives the merge.
+    // `part`-window edit on the SAME, moved placement survives the merge.
     const base = buildRoutineDoc(seedReorderRoutine());
     const k2 = keyOf(sectionById(readRoutine(base), "s2").placements[2], "p3");
 
@@ -193,24 +193,18 @@ describe("US-009 Automerge convergence invariants", () => {
         placementById(sectionById(d, "s2"), "p1").sortKey = keyBetween(k2, null);
       },
     ]);
-    // R: edit that SAME placement's alignment concurrently.
+    // R: edit that SAME placement's portion window concurrently.
     const right = await applyMutations(base, [
       (d: RoutineDoc) => {
-        placementById(sectionById(d, "s2"), "p1").perPlacementAlignment = {
-          qualifier: "facing",
-          direction: "LOD",
-        };
+        placementById(sectionById(d, "s2"), "p1").part = { fromCount: 1, toCount: 3 };
       },
     ]);
 
     const { converged } = await exchangeAndAssertConverged(left, right);
     const s2 = sectionById(readRoutine(converged), "s2");
-    // p1 moved to the end (L) AND carries R's alignment edit (no lost edit).
+    // p1 moved to the end (L) AND carries R's window edit (no lost edit).
     expect(s2.placements.map((p) => p.id)).toEqual(["p2", "p3", "p1"]);
-    expect(placementById(s2, "p1").perPlacementAlignment).toEqual({
-      qualifier: "facing",
-      direction: "LOD",
-    });
+    expect(placementById(s2, "p1").part).toEqual({ fromCount: 1, toCount: 3 });
   });
 
   it("converges two replicas moving the SAME placement (LWW on sortKey, no divergence)", async () => {

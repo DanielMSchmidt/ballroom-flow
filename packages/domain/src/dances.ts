@@ -1,4 +1,5 @@
-// US-002 — Dance metadata registry (PLAN §3, §10.2).
+// US-002 — Dance metadata registry (docs/concepts/notation.md § Kinds,
+// docs/system/testing.md).
 //
 // One source of truth for the 5 Standard *travelling* dances of v1. Timing,
 // phrasing, and applicability rules (e.g. float-count timing in US-004, the
@@ -18,6 +19,17 @@ export const DANCE_IDS = ["waltz", "viennese_waltz", "quickstep", "foxtrot", "ta
 
 /** The 5 Standard travelling dances of v1 (no Latin/spot). */
 export type DanceId = (typeof DANCE_IDS)[number];
+
+/**
+ * Runtime narrowing for a `DanceId`. Use this instead of asserting `x as DanceId`
+ * on a raw string from D1/CRDT/a parsed ref — it keeps the type honest (a bogus
+ * value is rejected, not silently trusted). See CLAUDE.md §4 (keep types honest).
+ */
+export function isDanceId(x: unknown): x is DanceId {
+  // Plain widening ASSIGNMENT (checked by the compiler), not an assertion.
+  const ids: readonly string[] = DANCE_IDS;
+  return typeof x === "string" && ids.includes(x);
+}
 
 /** Per-dance metadata driving timing, phrasing, and applicability. */
 export interface DanceMeta {

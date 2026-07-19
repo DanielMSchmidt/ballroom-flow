@@ -2,7 +2,10 @@ import {
   SYNC_SUBPROTOCOL_V1,
   zCreateFigure,
   zCreateRoutine,
+  zFamilyNoteBody,
+  zFigureRefBody,
   zIssueInvite,
+  zProfileBody,
   zRegistryKind,
   zSaveToLibrary,
 } from "@weavesteps/contract";
@@ -19,15 +22,14 @@ import {
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
-import { authenticate } from "./auth";
+import { authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
-import { familyNotesForMembers, insertFamilyNote } from "./db/family-notes";
+import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
-import { bookmarkFigure, unbookmarkFigure } from "./db/library";
-import { listMembers, removeMember, resolveEffectiveRole } from "./db/membership";
+import { listMembers, ownerInfoFor, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
 import {
   countOwnedRoutines,
@@ -41,11 +43,13 @@ import {
 } from "./db/routines";
 import { userNameCache, users } from "./db/schema";
 import type { DocDO } from "./doc-do";
+import { accountDocRef, ensureAccountDoc } from "./ensure-account-doc";
+import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
 import { reportError, writeMetric } from "./ops";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
-import { seedGlobalFigures } from "./seed-global-figures";
+import { ensureGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
@@ -66,7 +70,8 @@ async function ensureSample(env: Env): Promise<void> {
 
 export type Env = {
   DB: D1Database;
-  // Per-document Automerge host (US-014, PLAN §6/D23): one DO per routine/figure
+  // Per-document Automerge host (US-014, docs/system/architecture.md
+  // § Persistence & the DO lifecycle): one DO per routine/figure
   // document, SQLite-backed, the sync + permission boundary. Typed with the DO
   // class so the create routes can call its RPC (seedDoc, #205).
   DOC_DO: DurableObjectNamespace<DocDO>;
@@ -76,6 +81,9 @@ export type Env = {
   // "1" ONLY in the E2E wrangler run (wrangler.toml [env.e2e]); mounts the
   // /api/test/* fixtures routes. Unset everywhere else → those routes 404.
   E2E_TEST_ROUTES?: string;
+  // "1" on deployed envs (wrangler.toml [env.*.vars]): arms the self-healing
+  // catalog reconcile on the /api/* seam (D30 ⟳). Unset in unit/E2E harnesses.
+  SELF_SEED?: string;
   // US-049 (M8) observability — both optional so dev/test run with neither:
   // errors→Sentry (a Wrangler secret; see ops.ts) and product metrics→the
   // Analytics Engine dataset bound in wrangler.toml.
@@ -91,17 +99,76 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// The request URL WITHOUT its query string — for error reporting. `c.req.url`
+// carries the raw query (e.g. `/api/search?q=<user text>`), which is user content
+// / potential PII; we never forward it to a third party (Sentry). Origin + path
+// only.
+// A JSON object with string keys — the shape a request body narrows to before we
+// read fields off it. Type guard (never a cast) so field access stays `unknown`.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function safeReportUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    u.search = "";
+    return u.toString();
+  } catch {
+    return rawUrl.split("?")[0] ?? rawUrl;
+  }
+}
+
+// Defense-in-depth response headers on every worker response (the /api/* + WS
+// surface). The SPA HTML is served by the assets binding, NOT the worker, so its
+// headers live in apps/web/public/_headers; these cover what the worker itself
+// returns. No Content-Security-Policy here — a CSP has to be validated against
+// Clerk / Sentry / the Automerge WASM loader and is a separate, owner-gated
+// change; these three are safe, non-breaking, standard hardening.
+app.use("*", async (c, next) => {
+  await next();
+  // A 101 WebSocket-upgrade response carries immutable headers — never touch it.
+  if (c.res.status === 101) return;
+  try {
+    c.res.headers.set("X-Content-Type-Options", "nosniff");
+    c.res.headers.set("X-Frame-Options", "DENY");
+    c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  } catch {
+    // Some responses expose immutable headers (streamed/cached) — skip them.
+  }
+});
+
 // US-049 AC-1: unhandled route errors are reported to Sentry (fire-and-forget —
 // waitUntil so the 500 isn't held up) and the client gets a structured 500.
 app.onError((err, c) => {
+  const url = safeReportUrl(c.req.url);
   try {
-    c.executionCtx.waitUntil(reportError(c.env, err, { url: c.req.url, method: c.req.method }));
+    c.executionCtx.waitUntil(reportError(c.env, err, { url, method: c.req.method }));
   } catch {
     // No execution context (some test harnesses): report best-effort instead.
-    void reportError(c.env, err, { url: c.req.url, method: c.req.method });
+    void reportError(c.env, err, { url, method: c.req.method });
   }
   console.error("unhandled route error", err);
   return c.json({ error: "internal" }, 500);
+});
+
+// D30 ⟳ (self-healing catalog): keep the global figure docs reconciled to the
+// bundled seed — fire-and-forget, hash-guarded (one PK SELECT per throttle
+// window per isolate), so a deploy with refined seed content reaches every
+// already-seeded doc within seconds of the first request, and a fresh
+// environment stands its catalog up on its own. Explicitly OPT-IN per deployed
+// environment (wrangler.toml `SELF_SEED="1"` on staging/production): the unit
+// harness and the E2E env carry no var, so nothing implicitly seeds the full
+// catalog under a test — the E2E /api/test/seed fixtures drive it explicitly.
+app.use("/api/*", async (c, next) => {
+  if (c.env.SELF_SEED === "1") {
+    try {
+      c.executionCtx.waitUntil(ensureGlobalFigures(c.env));
+    } catch {
+      // No execution context (some unit harnesses) — the next request retries.
+    }
+  }
+  await next();
 });
 
 // US-049 AC-1: one product metric per API request (method, route, status,
@@ -119,7 +186,20 @@ app.use("/api/*", async (c, next) => {
 // buildId is the stale-bundle handshake (always present, null when not a real
 // deploy): the SPA compares it against its own baked-in VITE_BUILD_ID and
 // reloads onto the new bundle on mismatch — see apps/web/src/lib/stale-bundle.ts.
-app.get("/api/health", (c) => c.json({ ok: true, buildId: c.env.BUILD_ID ?? null }));
+//
+// clerkConfigured / sentryConfigured are provisioning diagnostics (US-049,
+// 2026-07-05 incident): a deployed env with missing or mismatched secrets fails
+// closed AND silently — every API call 401s and nothing reports. These booleans
+// only say whether the secrets are SET (never their values), so a provisioning
+// gap is one `curl /api/health` away instead of a production mystery.
+app.get("/api/health", (c) =>
+  c.json({
+    ok: true,
+    buildId: c.env.BUILD_ID ?? null,
+    clerkConfigured: Boolean(c.env.CLERK_SECRET_KEY || c.env.CLERK_JWT_KEY),
+    sentryConfigured: Boolean(c.env.SENTRY_DSN),
+  }),
+);
 
 // E2E-only test fixtures (#191). Guarded so these routes exist ONLY when the
 // E2E wrangler run sets E2E_TEST_ROUTES=1 — in dev/staging/prod the flag is
@@ -192,15 +272,9 @@ app.post("/api/onboarding", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const body = (await c.req.json().catch(() => null)) as {
-    displayName?: unknown;
-    identityColor?: unknown;
-  } | null;
-  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
-  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
-  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
-    return c.json({ error: "invalid_profile" }, 400);
-  }
+  const parsed = zProfileBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_profile" }, 400);
+  const { displayName, identityColor } = parsed.data;
 
   const db = drizzle(c.env.DB);
   // Detect a genuine first onboarding (no prior users row) so the starter routine
@@ -256,15 +330,9 @@ app.get("/api/profile", async (c) => {
 app.patch("/api/profile", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
-  const body = (await c.req.json().catch(() => null)) as {
-    displayName?: unknown;
-    identityColor?: unknown;
-  } | null;
-  const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
-  const identityColor = typeof body?.identityColor === "string" ? body.identityColor.trim() : "";
-  if (!displayName || !/^#[0-9a-fA-F]{3,8}$/.test(identityColor)) {
-    return c.json({ error: "invalid_profile" }, 400);
-  }
+  const parsed = zProfileBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_profile" }, 400);
+  const { displayName, identityColor } = parsed.data;
   const db = drizzle(c.env.DB);
   const existing = await db
     .select({ id: users.id })
@@ -327,7 +395,8 @@ app.post("/api/routines", async (c) => {
 // MEMBER of the origin (resolveEffectiveRole non-null; non-member 403) may fork
 // it into a NEW owned routine. App-owned templates (ownerId="app") may also be
 // forked by any authenticated user without a membership row (US-045/Task 6).
-// The fork is INDEPENDENT of its ORIGIN (v5, PLAN §2.4/§5.2, D12): we snapshot
+// The fork is INDEPENDENT of its ORIGIN (v5, docs/concepts/choreography.md
+// § Forking, docs/concepts/figures.md § Variants, D12): we snapshot
 // the origin's CRDT content and seed a brand-new doc with it (no shared
 // history), so later origin STRUCTURAL edits never appear in the fork, AND we
 // copy every referenced ACCOUNT figure for the forker (a variant copied as a
@@ -367,14 +436,14 @@ app.post("/api/routines/:id/fork", async (c) => {
 });
 
 // DELETE /api/routines/:id — delete a routine from the Choreo overview (US-025
-// delete flow). DELETE is OWNER-ONLY (PLAN §4.0: only the owner can delete the
+// delete flow). DELETE is OWNER-ONLY (docs/concepts/collaboration.md: only the owner can delete the
 // doc — `canDelete`). Ownership is the registry `ownerId`, NOT the effective role:
 // an owner carries an EDITOR membership row (createOwnedRoutine, #168), so
 // resolveEffectiveRole would resolve them to "editor" and never "owner" — gating
 // on that would lock the real owner out. So we compare ownerId to the verified
 // sub. A non-owner member (editor/commenter/viewer) or non-member → 403; an
 // unknown routine → 404. Soft-delete only: the registry row is tombstoned
-// (deletedAt), never hard-removed (PLAN §2.1), so the routine drops out of the
+// (deletedAt), never hard-removed (docs/system/architecture.md § Global constraints), so the routine drops out of the
 // list/count/search while its CRDT doc and shared-in members' history survive.
 // A re-delete (already tombstoned) matches zero rows → 404.
 app.delete("/api/routines/:id", async (c) => {
@@ -408,20 +477,6 @@ app.get("/api/figures/mine", async (c) => {
   return c.json({ figures });
 });
 
-// POST /api/admin/seed-global-figures — import the bundled catalog into REAL
-// global figure docs (⟳v5, D30). ADMIN-ONLY (D31): a non-admin gets 403 before
-// any work. Additive + idempotent — it only creates docs that don't exist yet and
-// never overwrites one (the doc is the source of truth after import), so re-running
-// is safe and only fills gaps. Returns the created/skipped counts. This is the
-// ops action that stands up the catalog until the admin UI (§11) lands.
-app.post("/api/admin/seed-global-figures", async (c) => {
-  const user = await authenticate(c);
-  if (!user) return c.json({ error: "unauthenticated" }, 401);
-  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
-  const result = await seedGlobalFigures(c.env);
-  return c.json({ ok: true, ...result });
-});
-
 // POST /api/figures — project a client-minted figure doc to the D1 index (#187).
 // The client mints the figureRef + metadata; the SERVER stamps ownerId from the
 // verified JWT (never a client field). Projecting the registry row + owner
@@ -436,18 +491,8 @@ app.post("/api/figures", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid_figure", issues: parsed.error.flatten() }, 400);
   }
-  const {
-    figureRef,
-    name,
-    dance,
-    figureType,
-    routineId,
-    attributes,
-    bars,
-    baseFigureRef,
-    entryAlignment,
-    exitAlignment,
-  } = parsed.data;
+  const { figureRef, name, dance, figureType, routineId, attributes, counts, bars, baseFigureRef } =
+    parsed.data;
 
   // Strict write-validate every seeded attribute (count on the 1/8 grid ≥ 1,
   // known-enum kinds in range) so the catalog/seed can't inject bad timeline data.
@@ -498,14 +543,11 @@ app.post("/api/figures", async (c) => {
     name,
     source: "custom",
     attributes,
-    // The authored bar length (PLAN §2.5) — omitted when the client didn't send
-    // one (buildDoc drops undefined optionals); the DO then falls back to the
-    // whole-beat-derived default when projecting the card count.
-    ...(bars != null ? { bars } : {}),
-    // Figure-level entry/exit alignment (per-figure, where the catalog charts it) —
-    // buildDoc drops undefined optionals, so an uncharted figure carries neither.
-    ...(entryAlignment ? { entryAlignment } : {}),
-    ...(exitAlignment ? { exitAlignment } : {}),
+    // The authored COUNT length (Builder v3 ① — beats; bar displays derive
+    // ⌈counts / beatsPerBar⌉). A legacy client may still send `bars`; counts
+    // wins when both arrive. Omitted → the DO falls back to the whole-beat
+    // default when projecting the card count.
+    ...(counts != null ? { counts } : bars != null ? { bars } : {}),
     // The client-forwarded attributes are stored RAW — a ⟳v5 variant carries only
     // its OWNED beats; overlay resolution against the live `baseFigureRef` happens
     // CLIENT-side (§5.2). The worker never resolves; it persists what it's given.
@@ -517,7 +559,7 @@ app.post("/api/figures", async (c) => {
 });
 
 // POST /api/figures/save-to-library — "↟ Save to my library" (T5; ⟳v5 — a
-// BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). Records `figureRef` in the
+// BOOKMARK, never a copy, docs/concepts/figures.md § The library screen / § Variants, D28). Records `figureRef` in the
 // CALLER'S `library_entry` projection (+ their account doc, once it is wired to
 // a live DO — see doc-account.ts's STORAGE NOTE). Supersedes the v4.x
 // frozen-copy promotion: no figure doc is minted or seeded here.
@@ -561,8 +603,15 @@ app.post("/api/figures/save-to-library", async (c) => {
     if (role == null) return c.json({ error: "forbidden" }, 403);
   }
 
-  const { alreadySaved } = await bookmarkFigure(c.env.DB, user.sub, figureRef);
-  return c.json({ alreadySaved }, 200);
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): write THROUGH the account DO — the canonical bookmark set lives in
+  // the account doc's `libraryFigureRefs`; the DO alarm is the single writer of
+  // the `library_entry` D1 projection. A re-add is an idempotent no-op, so the
+  // v1 `{ alreadySaved }` shape is derived from whether the edit changed the doc.
+  await ensureAccountDoc(c.env, user.sub);
+  const r = await c.env.DOC_DO.get(
+    c.env.DOC_DO.idFromName(accountDocRef(user.sub)),
+  ).applyAccountEdit({ op: "addLibraryRef", figureRef });
+  return c.json({ alreadySaved: !r.changed }, 200);
 });
 
 // DELETE /api/figures/save-to-library — un-bookmark (⟳v5). Body-based (not a
@@ -574,10 +623,17 @@ app.post("/api/figures/save-to-library", async (c) => {
 app.delete("/api/figures/save-to-library", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
-  const body = (await c.req.json().catch(() => null)) as { figureRef?: unknown } | null;
-  const figureRef = typeof body?.figureRef === "string" ? body.figureRef : null;
-  if (!figureRef) return c.json({ error: "invalid_request" }, 400);
-  await unbookmarkFigure(c.env.DB, user.sub, figureRef);
+  const parsed = zFigureRefBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_request" }, 400);
+  const { figureRef } = parsed.data;
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): un-bookmark THROUGH the account DO (the alarm tombstones the
+  // `library_entry` row). Idempotent — removing an absent ref is a no-op — so
+  // this still 200s regardless of whether the doc changed.
+  await ensureAccountDoc(c.env, user.sub);
+  await c.env.DOC_DO.get(c.env.DOC_DO.idFromName(accountDocRef(user.sub))).applyAccountEdit({
+    op: "removeLibraryRef",
+    figureRef,
+  });
   return c.json({ ok: true }, 200);
 });
 
@@ -617,7 +673,10 @@ app.get("/api/routines/:id/family-notes", async (c) => {
   ];
   const rows = await familyNotesForMembers(c.env.DB, authorIds, dance);
   // Shape each row as an Annotation-like note (with a figureType anchor) so the
-  // client can match it to the routine's figures (resolveFamilyNotesFor).
+  // client can match it to the routine's figures (resolveFamilyNotesFor). A
+  // TIMED note (WEP-0004 — docs/concepts/annotations.md § Anchors) carries count/role on the note AND its anchor so the
+  // client can pin it in the figure grid; keys are conditionally spread — an
+  // untimed row keeps the exact v1 shape.
   const notes = rows.map((r) => ({
     id: r.noteId,
     authorId: r.authorId,
@@ -625,7 +684,20 @@ app.get("/api/routines/:id/family-notes", async (c) => {
     text: r.text,
     figureType: r.figureType,
     danceScope: r.danceScope,
-    anchors: [{ type: "figureType", figureType: r.figureType, danceScope: r.danceScope }],
+    // Surface the note's timestamp so the reading-view margin orders co-members'
+    // notes newest-first (v1 index tracks only updatedAt → it is the createdAt).
+    createdAt: r.updatedAt,
+    ...(r.count != null ? { count: r.count } : {}),
+    ...(r.role != null ? { role: r.role } : {}),
+    anchors: [
+      {
+        type: "figureType",
+        figureType: r.figureType,
+        danceScope: r.danceScope,
+        ...(r.count != null ? { count: r.count } : {}),
+        ...(r.role != null ? { role: r.role } : {}),
+      },
+    ],
   }));
   return c.json({ notes });
 });
@@ -638,41 +710,48 @@ app.post("/api/account/family-notes", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
 
-  const body = (await c.req.json().catch(() => null)) as {
-    kind?: unknown;
-    text?: unknown;
-    figureType?: unknown;
-    danceScope?: unknown;
-  } | null;
-  const kind = body?.kind;
-  const text = typeof body?.text === "string" ? body.text.trim() : "";
-  const figureType = body?.figureType;
-  const danceScope = body?.danceScope;
-  if (
-    (kind !== "note" && kind !== "lesson" && kind !== "practice") ||
-    !text ||
-    typeof figureType !== "string" ||
-    !figureType ||
-    typeof danceScope !== "string" ||
-    !danceScope
-  ) {
-    return c.json({ error: "invalid_family_note" }, 400);
-  }
+  const parsed = zFamilyNoteBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_family_note" }, 400);
+  // count/role are the WEP-0004 (docs/concepts/annotations.md § Anchors) timed-note fields; zFamilyNoteBody has already
+  // rejected them with danceScope "all" (counts don't align across dances).
+  const { kind, text, figureType, danceScope, count, role } = parsed.data;
 
-  const noteId = newId();
-  await insertFamilyNote(c.env.DB, {
-    noteId,
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): author THROUGH the account DO — the note lands in the account doc's
+  // annotations (server-minted id), and the DO alarm is the single writer of the
+  // `figure_type_note_index` D1 projection co-members read (US-041). Response
+  // shape is unchanged from the direct-insert path; `id` is now the DO-minted id.
+  await ensureAccountDoc(c.env, user.sub);
+  const r = await c.env.DOC_DO.get(
+    c.env.DOC_DO.idFromName(accountDocRef(user.sub)),
+  ).applyAccountEdit({
+    op: "addFamilyNote",
     authorId: user.sub,
-    figureType,
-    danceScope,
     kind,
     text,
+    figureType,
+    danceScope,
+    ...(count != null ? { count } : {}),
+    ...(role != null ? { role } : {}),
   });
-  return c.json({ id: noteId, authorId: user.sub, figureType, danceScope, kind, text }, 201);
+  if (r.id == null) return c.json({ error: "family_note_failed" }, 500);
+  return c.json(
+    {
+      id: r.id,
+      authorId: user.sub,
+      figureType,
+      danceScope,
+      kind,
+      text,
+      ...(count != null ? { count } : {}),
+      ...(role != null ? { role } : {}),
+    },
+    201,
+  );
 });
 
-// GET /api/journal — the signed-in user's cross-routine Journal (T6, PLAN §2.6/
-// §2.7/§4.6). The UNION of routine-scoped lesson/practice annotations (projected
+// GET /api/journal — the signed-in user's cross-routine Journal (T6,
+// docs/concepts/annotations.md § Anchors / § The Journal; docs/system/architecture.md
+// § D1 — the index & projections). The UNION of routine-scoped lesson/practice annotations (projected
 // to journal_entry by the routine DO alarm) and account-scoped figureType
 // lesson/practice notes (figure_type_note_index), newest-first, tombstones
 // excluded, author display/colour joined. VISIBILITY (T6 LOCKED): both arms are
@@ -781,15 +860,22 @@ app.post("/api/invites/:token/redeem", async (c) => {
   );
 });
 
-// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Any
-// MEMBER may read the roster (resolveEffectiveRole → non-null); a non-member 403s.
+// GET /api/docs/:id/members — the Share screen's member list (US-024 AC-1). Only
+// roles that can manage membership (editor/owner, can(role,"canInvite")) may read
+// the roster — the Share button is already hidden from viewer/commenter in the UI,
+// and the API enforces the same gate. Returns the membership rows PLUS the doc owner
+// (who has no membership row but must appear in the roster).
 app.get("/api/docs/:id/members", async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const docRef = c.req.param("id");
   const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
-  if (!role) return c.json({ error: "forbidden" }, 403);
-  return c.json({ members: await listMembers(c.env.DB, docRef) });
+  if (!role || !can(role, "canInvite")) return c.json({ error: "forbidden" }, 403);
+  const [members, owner] = await Promise.all([
+    listMembers(c.env.DB, docRef),
+    ownerInfoFor(c.env.DB, docRef),
+  ]);
+  return c.json({ members, owner });
 });
 
 // DELETE /api/docs/:id/members/:userId — remove a member (US-024 AC-2). Only a
@@ -868,12 +954,24 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   // Fan out figure reads in parallel. A figure's snapshot is its OWN attributes (a
   // variant carries only its owned beats). A never-seeded/empty figure is omitted →
   // the client renders it missing.
+  //
+  // PER-FIGURE AUTHORIZATION (security): a routine's placements are caller-controlled
+  // CRDT content — a caller can add a placement referencing ANY figure docRef they've
+  // learned (nothing at the WS/CRDT layer validates the ref against access). So the
+  // routine's role does NOT imply the right to read every ref it lists; without a
+  // per-figure gate this REST path leaks any figure whose ref an authenticated user
+  // can obtain, bypassing the cascade-revocation the WS figure-doc boundary enforces.
+  // Gate each ref on the caller's ACTUAL effective role — ownership, global (world-
+  // readable), or the placement_edge cascade (a routine they're a member of that
+  // legitimately references it) — the same resolver the DO boundary uses, and drop
+  // the ones they can't read (rendered missing). Every legitimately-referenced figure
+  // has a server-minted placement_edge (POST /api/figures, fork, break-migration), so
+  // this never drops a figure a member is entitled to.
   const figures: Record<string, FigureDoc> = {};
   await Promise.all(
     [...figureRefs].map(async (ref) => {
-      // Cast: the DO RPC stub degrades the `FigureDoc | null` return type — we
-      // own getFigureSnapshot, so re-assert the real shape here.
-      const fig = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
+      const fig = await readFigureSnapshot(doc(ref));
       if (!fig?.figureType) return;
       figures[ref] = fig;
     }),
@@ -888,10 +986,14 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   for (const fig of Object.values(figures)) {
     if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
   }
+  // Bases are gated the same way (a base is typically a world-readable global
+  // catalog doc; the gate returns `viewer` for those, so legitimate bases are never
+  // dropped, while an unreadable base a caller isn't entitled to is omitted).
   const bases: Record<string, FigureDoc> = {};
   await Promise.all(
     [...baseRefs].map(async (ref) => {
-      const base = (await doc(ref).getFigureSnapshot()) as FigureDoc | null;
+      if (!(await resolveEffectiveRole(c.env.DB, ref, user.sub))) return; // unauthorized → omit
+      const base = await readFigureSnapshot(doc(ref));
       if (!base?.figureType) return;
       bases[ref] = base;
     }),
@@ -948,15 +1050,65 @@ app.get("/api/search", async (c) => {
     // Map to the contract-valid types ("global-figure" / "account-figure") here so
     // the web client's zSearchResults.parse never sees the raw "figure" value and
     // silently empties the results list via a ZodError that .catch swallows.
-    type: (r.type === "figure"
-      ? r.ownerId === "app"
-        ? "global-figure"
-        : "account-figure"
-      : r.type) as "routine" | "global-figure" | "account-figure",
+    // The registry column is a plain TEXT, so the union is established by a
+    // RUNTIME check (never asserted): an unexpected stored value falls back to
+    // "routine" rather than leaking an invalid type to the client.
+    type:
+      r.type === "figure"
+        ? r.ownerId === "app"
+          ? "global-figure"
+          : "account-figure"
+        : r.type === "global-figure" || r.type === "account-figure"
+          ? r.type
+          : "routine",
     title: r.title ?? "",
     dance: r.dance,
   }));
   return c.json({ results });
+});
+
+// POST /api/admin/docs/:id/restore — OPS disaster-recovery: rewind ONE document
+// to a past point using Cloudflare's Durable Object Point-in-Time Recovery
+// (PITR). Cloudflare retains ~30 days of the DO's SQLite history automatically,
+// so this is a pure RESTORE — no backup job of ours. ADMIN-ONLY (users.isAdmin):
+// this is destructive (changes after the recovery point are discarded) and
+// operates on ANY document by ref, so it is gated on the platform-admin flag,
+// NOT on document membership — a doc owner must not be able to rewind their own
+// (or a shared) doc through this seam. Runbook: OPS.md.
+//
+// PRODUCTION-ONLY behaviour: the bookmark API is a real-Cloudflare capability
+// (miniflare has no PITR), so only this route's auth gate + validation are
+// unit-tested; the rewind itself is verified against a deployed DO. The DO
+// restart (phase 2) intentionally aborts the session, so the phase-2 RPC
+// rejects by design — we swallow that and report the recovery point.
+//
+// Body: { at: <ISO 8601 string> } or { timestamp: <epoch ms> }. The time must be
+// in the past; Cloudflare clamps/rejects times outside the retention window.
+app.post("/api/admin/docs/:id/restore", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
+
+  const docRef = c.req.param("id");
+  const body: unknown = await c.req.json().catch(() => null);
+  // Narrow via a type guard (not a cast): `{ at }` and `{ timestamp }` fields read
+  // as `unknown`, then typeof-checked below — no claim the compiler can't verify.
+  const at = isRecord(body) ? body.at : undefined;
+  const ts = isRecord(body) ? body.timestamp : undefined;
+  const timestamp =
+    typeof ts === "number" ? ts : typeof at === "string" ? Date.parse(at) : Number.NaN;
+  if (!Number.isFinite(timestamp)) {
+    return c.json({ error: "provide { at: ISO-8601 } or { timestamp: epoch-ms }" }, 400);
+  }
+  if (timestamp > Date.now()) return c.json({ error: "recovery point must be in the past" }, 400);
+
+  const stub = c.env.DOC_DO.get(c.env.DOC_DO.idFromName(docRef));
+  // Phase 1: resolve + arm the bookmark (returns cleanly so we can report it).
+  const { bookmark } = await stub.prepareRestore(timestamp);
+  // Phase 2: restart the DO to apply it. abort() rejects this RPC by design, so a
+  // rejection here means the restart is underway — expected, not an error.
+  await stub.commitRestore().catch(() => {});
+  return c.json({ ok: true, docRef, restoredTo: new Date(timestamp).toISOString(), bookmark }, 200);
 });
 
 // Public WebSocket sync entrypoint for a document (US-017 Phase 1). Routes a
@@ -1008,6 +1160,19 @@ app.get("/api/docs/:id/connect", async (c) => {
     ? offered.find((p) => p !== AUTH_SUBPROTOCOL && p !== SYNC_SUBPROTOCOL_V1)
     : undefined;
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  // WEP-0002 (docs/system/architecture.md § D1 — the index & projections): an account doc is minted on its owner's FIRST connect. Ensure it
+  // exists (seeded + registered) BEFORE forwarding, so the owner boundary resolves
+  // (resolveEffectiveRole needs the registry row) and the first connect finds real
+  // content. Gated on the authenticated user OWNING this ref — a forged connect to
+  // someone else's, or a junk, `account:*` ref never mints a doc; it just 403s at
+  // the DO boundary.
+  if (id.startsWith("account:") && token) {
+    const user = await authenticateToken(`Bearer ${token}`, c.env);
+    if (user && id === accountDocRef(user.sub)) {
+      await ensureAccountDoc(c.env, user.sub);
+    }
+  }
 
   const res = await stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
 

@@ -1,4 +1,4 @@
-// US-005 — Routine document schema (PLAN §2.6).
+// US-005 — Routine document schema (docs/concepts/annotations.md § The Journal).
 //
 // A routine doc holds sections → ordered placements + routine-scoped
 // annotations. Build it from a plain RoutineDoc, read it back (dropping
@@ -12,7 +12,7 @@ import { ensureSortKeys, keyBetween, sortByOrder } from "./order";
 
 /** Build an in-memory Automerge routine doc from its logical shape. */
 export function buildRoutineDoc(routine: RoutineDoc): A.Doc<RoutineDoc> {
-  return buildDoc(routine as unknown as Record<string, unknown>) as A.Doc<RoutineDoc>;
+  return buildDoc(routine);
 }
 
 /**

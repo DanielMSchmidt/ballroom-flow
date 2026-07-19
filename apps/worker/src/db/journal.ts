@@ -1,4 +1,5 @@
-// T6 — the cross-routine Journal index query + projection (PLAN §2.6/§2.7/§6).
+// T6 — the cross-routine Journal index query + projection
+// (docs/concepts/annotations.md § Anchors; docs/system/architecture.md § D1 — the index & projections).
 //
 // `journal_entry` (migration 0009) is the DERIVED projection of a routine doc's
 // lesson/practice annotations, written by the routine DO's alarm (projectJournal
@@ -13,6 +14,7 @@
 //     any routine the user can access), symmetric with familyNotesForMembers.
 //
 // D1 stays a pure index; the routine doc (DO SQLite) is the source of truth.
+import { figureTypeAnchorLabel } from "@weavesteps/contract";
 
 /** One row to upsert into `journal_entry` (the DO projection's output). */
 export interface JournalEntryProjection {
@@ -78,22 +80,9 @@ export async function projectJournalEntries(
   await db.batch(stmts);
 }
 
-/** Title-case a figureType/dance slug for a chip label ("natural_turn" → "Natural Turn"). */
-function humanize(slug: string): string {
-  return slug
-    .replace(/[_-]+/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-/** The chip label for a figureType anchor: "all Whisks · all Waltz" / "· all dances". */
-export function figureTypeLabel(figureType: string, danceScope: string): string {
-  const family = `all ${humanize(figureType)}s`;
-  const scope = danceScope === "all" ? "all dances" : `all ${humanize(danceScope)}`;
-  return `${family} · ${scope}`;
-}
+// (The figureType chip-label composer moved to @weavesteps/contract as
+// `figureTypeAnchorLabel` — the web's live account-doc read composes the same
+// label for read-your-writes parity, so it must be shared, never duplicated.)
 
 /** Parse a stored anchors JSON blob defensively (bad/empty → []). */
 function parseAnchors(raw: string): Array<Record<string, unknown>> {
@@ -125,6 +114,9 @@ interface AccountNoteRow {
   text: string;
   figureType: string;
   danceScope: string;
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed-note fields (migration 0018); NULL = untimed v1 note. */
+  count: number | null;
+  role: string | null;
   createdAt: number;
   displayName: string | null;
   identityColor: string | null;
@@ -182,7 +174,8 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
   const ownNotes = await bindAll<AccountNoteRow>(
     db,
     `SELECT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
-            f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
+            f.figureType, f.danceScope, f.count, f.role, f.updatedAt AS createdAt,
+            u.displayName, u.identityColor
      FROM figure_type_note_index f
      LEFT JOIN users u ON u.id = f.authorId
      WHERE f.deletedAt IS NULL AND f.kind IN ('lesson','practice') AND f.authorId = ?`,
@@ -191,7 +184,8 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
   const sharedNotes = await bindAll<AccountNoteRow>(
     db,
     `SELECT DISTINCT f.noteId AS id, f.accountDocRef AS routineRef, f.authorId, f.kind, f.text,
-            f.figureType, f.danceScope, f.updatedAt AS createdAt, u.displayName, u.identityColor
+            f.figureType, f.danceScope, f.count, f.role, f.updatedAt AS createdAt,
+            u.displayName, u.identityColor
      FROM figure_type_note_index f
      JOIN membership ma ON ma.userId = f.authorId AND ma.deletedAt IS NULL
      JOIN membership me ON me.docRef = ma.docRef AND me.userId = ? AND me.deletedAt IS NULL
@@ -231,7 +225,11 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
           type: "figureType",
           figureType: r.figureType,
           danceScope: r.danceScope,
-          label: figureTypeLabel(r.figureType, r.danceScope),
+          // WEP-0004 (docs/concepts/annotations.md § Anchors): a timed note carries its count/role so the client can pin
+          // it; keys stay absent on the untimed v1 corpus.
+          ...(r.count != null ? { count: r.count } : {}),
+          ...(r.role != null ? { role: r.role } : {}),
+          label: figureTypeAnchorLabel(r.figureType, r.danceScope, r.count),
         },
       ],
       createdAt: r.createdAt,

@@ -12,7 +12,7 @@ the harness conventions that break the suite if ignored, per-layer recipes, and 
 - A test is *failing* and you're diagnosing it → `ballroom-flow-debugging-playbook`.
 - Automerge/CRDT semantics (clone-before-reuse, undefined, heads-vs-bytes) in depth → `ballroom-flow-crdt-reference` (this skill only states the test-facing rules).
 - Toolchain, sandbox setup, Playwright browser install traps, CI/env wiring → `ballroom-flow-build-and-env` and `ballroom-flow-diagnostics-and-tooling`.
-- Branching, PR flow, keeping PLAN.md in sync → `ballroom-flow-change-control`.
+- Branching, PR flow, keeping the docs (`docs/concepts/`/`docs/system/`) in sync → `ballroom-flow-change-control`.
 - Why past incidents shaped these rules (full history) → `ballroom-flow-failure-archaeology`.
 
 ---
@@ -52,7 +52,7 @@ if it belongs in the PR gate, and passes.
 | Contract | vitest (types + Zod) | Shared API shapes; drift fails `tsc` | `packages/contract/src/*.test.ts` | `pnpm --filter @weavesteps/contract test` |
 | E2E journeys | Playwright, 3 projects (`chromium-desktop`, `mobile-chrome`, `mobile-safari`) | Real browsers against real workerd: authoring, two-client convergence, fork independence, permissions/quota/invite, undo, PWA/a11y | `apps/web/e2e/*.spec.ts` | `pnpm test:e2e` (all) / `pnpm test:e2e:smoke` |
 
-Push correctness **down** the pyramid (PLAN.md §10.1): CRDT/fork/undo logic is proven exhaustively
+Push correctness **down** the pyramid (formerly PLAN.md §10.1, now `docs/system/testing.md` § Philosophy): CRDT/fork/undo logic is proven exhaustively
 in `domain`; the worker layer proves the boundary; E2E proves the journey, not the algebra.
 
 ### Fixture/helper inventory (use these — do not reinvent)
@@ -121,7 +121,7 @@ in `domain`; the worker layer proves the boundary; E2E proves the journey, not t
    skipped**. Use `import type` (erased at compile time) or a dynamic `await import(...)`
    *inside* the test body. The blessed shims: `importDomain()` (domain), the structural
    `DocStub`/`DocNamespace` types + `SELF.fetch` (worker), `importComponent<T>()` (web).
-4. **No sleeps — determinism by construction** (PLAN.md §10.3: "No sleeps; deterministic
+4. **No sleeps — determinism by construction** (formerly PLAN.md §10.3, now `docs/system/testing.md` § Tooling & CI: "No sleeps; deterministic
    auth+seed; convergence asserted by exchanging changes; `retries:1` + trace"). Domain
    convergence is asserted by *exchanging changes* and comparing sorted heads
    (`exchangeAndAssertConverged`), never by waiting. E2E uses Playwright auto-retrying
@@ -150,7 +150,7 @@ These are also documented in `docs/DEVELOPMENT.md` ("Conventions the test engine
 ## 4. Recipes: adding a test at each layer
 
 Every test in this repo carries a header comment: US-key(s), intent, scenario,
-arrange/act/assert, and the PLAN §10.2 invariant it pins. Keep that convention.
+arrange/act/assert, and the invariant it pins (formerly PLAN §10.2, now `docs/system/testing.md` § Layer ownership). Keep that convention.
 
 ### Domain (model: `packages/domain/src/fork.test.ts`)
 
@@ -294,7 +294,7 @@ worker **180 passed / 7 skipped**. The earlier migrateOnLoad red tip was fixed b
 (903d109); a red suite at or past this HEAD is your change or a genuine regression — see
 **ballroom-flow-failure-archaeology** before weakening anything.)
 
-**Ratchet plan (PLAN.md §10.3 + the config comments):** thresholds sit at the *measured floor*
+**Ratchet plan (formerly PLAN.md §10.3, now `docs/system/testing.md` § Tooling & CI, + the config comments):** thresholds sit at the *measured floor*
 so coverage can't silently regress; ratchet them **up** as the v5 milestone lands — domain
 toward **95** (lines), worker toward **90**. When your change raises actuals meaningfully, bump
 the thresholds in the same PR. Never lower a threshold to merge; if coverage drops, cover the
@@ -302,7 +302,7 @@ new branches. (Worker's all-files number is dragged by `routes/test-seed.ts`, th
 fixture route exercised by Playwright, not vitest — a constant drag, not a regression.)
 Note: older doc text claiming thresholds are "commented out" (CLAUDE.md's "uncomment when
 suites land") is stale — they are armed. CLAUDE.md's "domain ≥95%, worker ≥90%" figures are
-NOT stale, though: they are exactly the PLAN §10.3 ratchet **targets** above, not the armed
+NOT stale, though: they are exactly the ratchet **targets** above (formerly PLAN §10.3, now `docs/system/testing.md` § Tooling & CI), not the armed
 floors. The configs are ground truth for what CI enforces today.
 
 ## 7. TEST-MAP.md maintenance
@@ -325,9 +325,12 @@ floors. The configs are ground truth for what CI enforces today.
 ## Provenance and maintenance
 
 Written 2026-07-02 against repo HEAD `70eed7e`; test counts refreshed same day — **verified
-at HEAD `c9622c9`** (post-#139/#136/#137; all suites green) on `development`. Verified directly against:
+at HEAD `c9622c9`** (post-#139/#136/#137; all suites green) on `development` (the trunk at
+the time — merged into `main` and deleted from the remote 2026-07-05, PR #161). Verified directly against:
 `packages/domain/vitest.config.ts`, `apps/worker/vitest.config.ts`, `apps/web/vitest.config.ts`,
-`apps/web/playwright.config.ts`, `.github/workflows/{ci,nightly}.yml`, `docs/PLAN.md` §9/§10,
+`apps/web/playwright.config.ts`, `.github/workflows/{ci,nightly}.yml`, `docs/PLAN.md` §9/§10
+(since dissolved 2026-07-15 — §10 now lives in `docs/system/testing.md`, see `docs/README.md`
+§ For historians for the full citation map),
 `docs/TEST-MAP.md`, `docs/DEVELOPMENT.md`, CLAUDE.md, the fixture/helper sources listed in §2,
 model tests (`fork.test.ts`, `permissions.test.ts`, `attribute-editor.test.tsx`,
 `convergence.spec.ts`), a fresh `pnpm coverage` run, and `git show d49fb52 / b419e0a / 1563bae`.

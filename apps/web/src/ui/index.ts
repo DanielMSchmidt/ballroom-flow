@@ -14,6 +14,7 @@ export { CountLabel, type CountLabelProps } from "./CountLabel";
 export { CountPill, type CountPillProps } from "./CountPill";
 export { cx } from "./cx";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { ErrorBoundary, type ErrorBoundaryProps, ErrorFallback } from "./ErrorBoundary";
 export { Field, type FieldProps, type FieldRenderArgs } from "./Field";
 export { FullScreen, type FullScreenProps } from "./FullScreen";
 export { IconButton, type IconButtonProps, type IconButtonVariant } from "./IconButton";
@@ -44,5 +45,6 @@ export {
   type FigureScope,
   IDENTITY_COLORS,
   IDENTITY_HEX,
+  isAttributeKind,
   kindVar,
 } from "./tokens";

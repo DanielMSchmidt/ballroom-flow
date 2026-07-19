@@ -1,18 +1,20 @@
 # Test Map — feature/story key → test file × layer
 
 > **Note (2026-07-02):** the `USER-STORIES.md` backlog was removed. The `US-…` ids
-> below survive as **stable keys** (in test names, headers, and PLAN.md) — this map
-> and each test's header comment are now their only definition. Roadmap/status
-> live in `PLAN.md` §9.
+> below survive as **stable keys** (in test names and headers) — this map and each
+> test's header comment are now their only definition. (The `PLAN §…` citations in
+> older rows below refer to the dissolved `docs/PLAN.md` — decode via the
+> historians table in [`README.md`](README.md).)
 
 **Status (updated 2026-07-03):** the TDD suite was authored ahead of the build as
 fully `describe.skip` / `test.skip` (RED→GREEN→REFACTOR); **it has since been
 unskipped and is executing green** as the product modules landed (M1–M9).
-On `development` HEAD the suite runs — **domain 245 passed / 3 skipped, web 382
-passed / 0 skipped, worker 191 passed / 0 skipped** — with exactly ONE story
-still skipped: **US-054** (the book-verified full-syllabus ISTD seed), blocked
-on an external dependency (the paid ISTD/WDSF technique books — PLAN §9 content
-workstream), not on engineering. US-049 Ops, US-053 `/api/profile`, and the M9
+On `development` HEAD the suite runs — **domain 265 passed / 0 skipped, web 449
+passed / 0 skipped, worker 205 passed / 0 skipped** — with NO story still
+skipped: **US-054** (the book-verified full-syllabus seed) was unskipped
+2026-07-06 when the owner's WDSF Technique Books (2nd ed., May 2013) arrived
+and the full five-book syllabus was charted from them (PLAN §9 content
+workstream). US-049 Ops, US-053 `/api/profile`, and the M9
 PWA / all-dances-annotation E2E slices were unskipped and shipped 2026-07-03.
 Source of truth for "what GREEN means" per story is each test's header comment
 (US-ID, intent, multi-user scenario, arrange/act/assert, acceptance criteria +
@@ -48,7 +50,7 @@ imports through small shims that defer module resolution to runtime:
 | US-001 | ULID id generation | domain | `packages/domain/src/ids.test.ts` |
 | US-002 | Dance metadata registry | domain | `packages/domain/src/dances.test.ts` |
 | US-003 | ATTRIBUTE_REGISTRY + merge | domain | `packages/domain/src/vocabulary.test.ts` |
-| US-004 | Float-count timing | domain | `packages/domain/src/timing.test.ts` |
+| US-004 | Float-count timing (incl. US-004a continuous routine numbering — length-driven since 2026-07-14: a placement advances the counter by its figure's beat length / portion span, not its step count) | domain + component | `packages/domain/src/timing.test.ts`, `apps/web/src/components/reading-view.test.tsx` ("continuous beat numbering + breaks" describe) |
 | US-005 | Routine + figure doc schemas | domain | `packages/domain/src/doc-schemas.test.ts` |
 | US-006 | ~~Overlay resolution~~ *(retired + removed 2026-06-30)* | — | `packages/domain/src/overlay.test.ts` **does not exist and was never created**. `resolve()` does not exist. The `Overlay` type, `overlay?` field on `FigureDoc`, and the overlay retag branch in `migrations.ts` are all deleted. Old docs carrying a stray `overlay` key are stripped by v2→v3 migration (proven in `migrations.test.ts`). *(Reconciled 2026-06)* |
 | US-007 | Choreo fork (clone) | domain | `packages/domain/src/fork.test.ts` |
@@ -70,12 +72,13 @@ imports through small shims that defer module resolution to runtime:
 | US-023 | Invite by link (issue + redeem) | worker + E2E | `apps/worker/src/routes/invite.test.ts`, `apps/web/e2e/permission-quota-invite.spec.ts` |
 | US-024 | Share screen (member list + roles) | worker | `apps/worker/src/routes/share.test.ts` |
 | US-025 | Create a routine | worker + E2E | `apps/worker/src/routes/quota.test.ts`, `apps/web/e2e/authoring.spec.ts` |
-| US-026 | Add / rename / reorder / delete sections | component + E2E | `apps/web/src/components/assemble.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
+| US-026 | Add / rename / reorder / delete sections; collapse/expand a section in BOTH lenses (one fold state shared by the builder and the reading programme, 2026-07-15) | component + E2E | `apps/web/src/components/assemble.test.tsx` (incl. "shares a section's collapsed state across the edit and reading lenses"), `apps/web/src/components/reading-view.test.tsx` ("collapsible sections" describe), `apps/web/src/ui/SectionDivider.test.tsx` ("collapse toggle" describe), `apps/web/e2e/authoring.spec.ts` (@smoke step 5d) |
 | US-027 | Add / reorder / delete placements | component + E2E | `apps/web/src/components/assemble.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-028 | Figure timeline: place/edit/remove attributes | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
 | US-029 | Attribute editor (registry-derived) | component | `apps/web/src/components/attribute-editor.test.tsx` |
 | US-030 | Timeline role-view toggle | component + E2E | `apps/web/src/components/attribute-editor.test.tsx`, `apps/web/e2e/authoring.spec.ts` |
-| US-031 | Edit per-figure alignment | component | `apps/web/src/components/assemble.test.tsx` |
+| WEP-0008 | Role-scoped step editing (Both write mode: mirrored direction/sway, leader-only footwork, shared copy kinds; split-on-single-role-edit; diverged cells lock under Both) | domain + component + E2E | `packages/domain/src/role-write.test.ts`, `apps/web/src/components/attribute-editor.test.tsx` ("WEP-0008" describes ×2), `apps/web/e2e/role-steps.spec.ts` (@smoke ship gate) |
+| US-031 | ~~Edit per-figure alignment~~ *(REMOVED 2026-07-12 — entry/exit alignment dropped from the model with the top-down view; D33 reversed, PLAN §3.8/§12)* | — | Feature + tests removed (`assemble.test.tsx` US-031 describe, `e2e/figure-alignment.spec.ts`, `domain/alignment.test.ts`) |
 | US-032 | Global figure library browse | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-033 | Personal-library figures + custom figures (two-scope badge: `library`/`custom`) *(reconciled 2026-06: "account variants" retired)* | worker + component | `apps/worker/src/routes/search.test.ts`, `apps/web/src/components/figure-library.test.tsx` |
 | US-034 | Editing your own figure flows everywhere | worker + E2E | `apps/worker/src/figures.test.ts`, `apps/web/e2e/fork-and-figures.spec.ts` |
@@ -94,18 +97,34 @@ imports through small shims that defer module resolution to runtime:
 | US-047 | _retired — JSON export superseded by forking_ | — | — |
 | US-048 | _retired — JSON import superseded by forking_ | — | — |
 | US-049 | Ops: Sentry + AE + EXPLAIN gate + Smart Placement | worker | `apps/worker/src/ops.test.ts` |
+| US-049 | Ops: auth-verification-failure reporting + health provisioning flags (2026-07-05 incident) | worker | `apps/worker/src/auth/failure-reporting.test.ts`, `apps/worker/src/index.test.ts` (health) |
+| US-049 | Ops: web-half error reporting (client Sentry envelope + API-failure classes) | unit (jsdom) | `apps/web/src/lib/ops.test.ts`, `apps/web/src/lib/rpc.test.ts` |
 | US-050 | PWA install + offline app shell | E2E | `apps/web/e2e/pwa-a11y.spec.ts` |
 | US-051 | Accessibility WCAG AA | component (axe) + E2E | `apps/web/src/components/a11y.test.tsx`, `apps/web/e2e/pwa-a11y.spec.ts` |
 | US-052 | Cross-browser E2E | E2E (3 projects) | the whole `apps/web/e2e/` matrix (chromium-desktop / mobile-chrome / mobile-safari) |
 | US-053 | Account / profile + plan status | worker + component | `apps/worker/src/routes/me-profile.test.ts`, `apps/web/src/components/profile.test.tsx` |
 | US-054 | Full Standard syllabus library seed (ISTD) | domain | `packages/domain/src/seed-library.test.ts` |
+| §11.2 *(2026-07-05, no US-id)* | Offline editing — local persistence + replay-on-reconnect, `local` sync state, pending chip, unsyncable-edits alert (Q-NEW-2), live-gated creation, offline app open | store + component + E2E | `apps/web/src/store/doc-connection.test.ts` ("offline persistence" describe: local-first hydrate, reload-rehydrate + resend, warm-drop stays local, offline cold-failures never terminal, zombie-socket guard, pre-hydration clobber guard), `apps/web/src/store/offline.test.ts` (`withOfflineCache`), `apps/web/src/auth/app-auth.test.tsx` (offline auth fail-open — component-only: the E2E harness is Clerk-less), `apps/web/src/components/assemble.test.tsx` ("Offline editing states": edit gate live∨local, pending chip, alert + readable content, calm closed state, fork disabled offline), `apps/web/src/components/ChoreoList.test.tsx` ("Offline creation gate"), `apps/web/e2e/offline-editing.spec.ts` (@smoke ×4: offline edit → offline reload survives from IndexedDB → converge exactly-once; creation affordances disable offline; offline app OPEN lands on the cached list; revoked-while-offline surfaces the unsyncable edits) |
+
+| WEP-0002 *(2026-07-15)* | Account doc wired to a live DO: `importAccountDoc` builder (domain); the per-user account DO — owner-only boundary (owner 101, other authenticated user 403 pre-upgrade, admin no special access, routine→figure cascade inert for account refs), `ensureAccountDoc` lazy import (mints registry row + seeded doc from D1, idempotent, never re-imports when the row exists), persistence/`migrateOnLoad`, and the alarm projection to `library_entry`/`figure_type_note_index` (doc→D1 parity, tombstone transitions both ways, idempotent re-run, `applyAccountEdit` REST shims, `expectIndexedQuery`); the offline family-note + bookmark + visibility ship gate (E2E) | domain + worker + E2E | `packages/domain/src/doc-account.test.ts` (`importAccountDoc`: deterministic, reuses noteIds, tombstone-safe, stamps `CURRENT_SCHEMA_VERSION`), `apps/worker/src/doc-do.test.ts` ("WEP-0002 account doc" describe: the DO hosts + round-trips library/family-note edits and survives a cold reload; owner-only boundary — owner 101, a different authenticated user 403 pre-upgrade), `apps/worker/src/ensure-account-doc.test.ts` (`ensureAccountDoc`: mints registry row + seeded doc from the user's D1 rows reusing noteIds, idempotent, never re-imports over an existing registry row, index-backed import reads; **alarm projection** — doc→`library_entry`/`figure_type_note_index` parity, tombstones both ways, idempotent re-run), `apps/web/e2e/account-doc.spec.ts` (@smoke ship gate: offline family note survives reload + replays exactly once; offline bookmark shows instantly + round-trips to `GET /api/figures/mine`; co-member sees the family note, non-member does not) |
+| Builder v3 *(2026-07-07, no US-id — PLAN §12 Q-V3-DEFERRED resolution)* | The five model changes: ① authored `counts` + schema v5 migration; ② presence attributes (`value: null`); ③ placement portions (`part` windows); ④ breaks as choreo-local figures + legacy-break alarm migration; ⑤ named variant on add-to-library | domain + worker + component + E2E | `packages/domain/src/migrations.test.ts` (v5 bars→counts), `packages/domain/src/figure-grid.test.ts` (`resolveFigureCounts`/`defaultFigureCounts`/`figureCountSlots`, `windowAttributes`/`partBeatSpan`), `packages/domain/src/schemas.test.ts` (null-value carve-out), `apps/worker/src/doc-do.test.ts` ("legacy break → Break-figure migration" describe + part-aware card bars), `apps/web/src/components/figure-timeline-beats.test.tsx` (LENGTH counts stepper, quick-add, naming flow), `apps/web/src/components/assemble.test.tsx` (Break mints a figure; portion confirm), `apps/web/src/components/reading-columns.test.ts` (`cellPresent`), `apps/web/src/components/reading-view.test.tsx` (windowed readout, presence present-dot), `apps/web/e2e/authoring.spec.ts` + `library.spec.ts` + `fork-and-figures.spec.ts` (quick-add, portion picker, counts journeys) |
+
+| D33 *(2026-07-10, no US-id; **derivation REVERSED 2026-07-12** — alignment removed outright, PLAN §3.8)* | What survives of the 2026-07-10 pass: footPosition + rotation + head kind removal (the WDSF prose columns stay seed-only provenance) + ISTD split-diagonal direction values. The derivation slice (`alignment.test.ts`, the frozen oracle fixture) was deleted with the feature; `alignment-derivation-report.md` stays as historical/§D provenance. | domain + component | `packages/domain/src/vocabulary.test.ts` + `schemas.test.ts` + `notation-parity.test.ts` (nine-kind registry, split-diagonal enum + aliases), `apps/web/src/components/reading-columns.test.ts` + `attribute-editor.test.tsx` + `attribute-display.test.tsx` (no Feet column/section; split-diagonal labels) |
+
+| Figure read view *(2026-07-10, no US-id — PLAN §4.4 lens-aware detail / design `figMode`)* | The reading-lens figure detail opens READ-ONLY even for an editor (static grid, no undo/add-kind/rename/variant-bar) with the notes surfaces (compose per role); the explicit "Edit steps" pencil (editors only) flips the open detail into the step editor and back; the builder's placement card still opens the editor directly | component + E2E | `apps/web/src/components/assemble.test.tsx` ("Figure detail read view" describe ×5), `apps/web/e2e/figure-read-view.spec.ts` (@smoke journey) |
+
+| REST resilience *(2026-07-13, no US-id — PLAN §7 Connectivity)* | Spotty-network hardening of the fetch seam: per-request timeout (`ApiTimeoutError`, no indefinite hang), GET-only transient retry (network throw / timeout / 502-503-504; jittered backoff; never mutations; skipped while offline; Sentry reports only the final failure), and the status-aware TanStack Query retry default (`shouldRetryQuery`: 4xx refusals fail fast) | unit (jsdom) | `apps/web/src/lib/rpc.test.ts` ("transient-failure retry", "request timeout", "shouldRetryQuery" describes) |
+
+| WEP-0006 *(2026-07-13 — WS heartbeat, PLAN §8 D10)* | Zombie-socket detection: idle `SYNC_PING` → DO auto-response `SYNC_PONG` (no DO wake); any inbound frame counts as life; a missed pong deadline drops the socket into the warm-reconnect machinery ("live" can lie for ~30 s max); §11.2 interplay (drop lands in editable `local`, gap edits replay via the #161 resend) | store + worker/DO + E2E | `apps/web/src/store/doc-connection.test.ts` ("heartbeat" describe ×6), `apps/worker/src/doc-do.test.ts` ("WEP-0006 heartbeat auto-response"), `apps/web/e2e/zombie-socket.spec.ts` (@smoke ship-gate journey: E2E socket seam manufactures the half-open state, convergence on a second live client proves the replay) |
+
+| Rollout-skew reload *(2026-07-05 build-id fallback; 2026-07-14 SW fast path — PLAN §7 Version evolution)* | A tab running a pre-deploy bundle reloads onto the current one: the SW-driven path (periodic/visible/online `sw.js` re-checks with a burst throttle; reload when an updated SW **takes control** (`controllerchange` with a prior controller; first-install claims ignored) — immediate while hidden or pre-interaction, deferred to the next visibility change after interaction, at most once) and the `/api/health` build-id fallback (visible-again check, SW nudge first, sessionStorage reload-loop guard, no-op without a build id) | unit (jsdom) | `apps/web/src/lib/sw-update.test.ts` (reload policy ×5, check scheduling ×3), `apps/web/src/lib/stale-bundle.test.ts` (×8) |
 
 **Every live story (US-001…US-054, minus the retired US-047/US-048) is covered.** No story is left untested.
 
 ## Reusable test abstractions built (signatures + locations)
 
 ### Domain (`packages/domain/src/__fixtures__/`)
-- `factories.ts` — pure POJO builders: `makeAttribute`, `makeAlignment`,
+- `factories.ts` — pure POJO builders: `makeAttribute`,
   `makeFigureDoc`, `makeVariantDoc(base, byUser)`, `makePlacement`,
   `makeSection`, `makeAnnotation`, `makeAnchor`, `makeFigureTypeAnchor`,
   `makeRoutineDoc`, `pointAnchor`, `testId`/`resetTestIds`.
@@ -162,13 +181,16 @@ web 52 skipped (9 files); typecheck + lint clean; `playwright test --list` → 5
 tests across 3 projects.
 
 **Current (`development` HEAD, 2026-07-03):** the suite executes for real —
-- `pnpm --filter @weavesteps/domain test` → **245 passed, 3 skipped** (only US-054 ISTD seed — blocked on the external technique books, PLAN §9).
+- `pnpm --filter @weavesteps/domain test` → **265 passed, 0 skipped** (US-054 unskipped 2026-07-06 — the technique books arrived and the syllabus is book-charted).
 - `pnpm --filter web test` → **382 passed, 0 skipped**.
 - `pnpm --filter worker test` → **191 passed, 0 skipped** (US-049 ops + US-053 `/api/profile` unskipped and green 2026-07-03); worker `coverage` meets its armed thresholds (lines 89.7 / branches 71.1 / fns 88.2 / stmts 85.9).
 - `pnpm -r typecheck` → 4 workspaces pass; `pnpm lint` → Biome clean (294 files).
-- E2E: `@smoke` Playwright runs as the CI gate (per-PR `ci.yml` + on-push `deploy.yml`); the full 3-device matrix runs nightly. **No `test.skip` remains in `apps/web/e2e/`** — `pwa-a11y.spec` (US-050/051) and the all-dances family-note slice (US-040, `fork-and-figures.spec`) were unskipped + fully scripted 2026-07-03; chromium runs **30 passed** (25 of them `@smoke`).
+- E2E: `@smoke` Playwright runs as the CI gate (per-PR `ci.yml` + on-push `deploy.yml`); the full 3-device matrix runs nightly. `pwa-a11y.spec` (US-050/051) and the all-dances family-note slice (US-040, `fork-and-figures.spec`) were unskipped + fully scripted 2026-07-03; chromium runs **30 passed** (25 of them `@smoke`).
+  - **Project-scoped skips (deferred flakes, added 2026-07-14 — the only `test.skip` in `apps/web/e2e/`):** each is a *conditional* skip on the failing device project only; the test still runs (and gates) on the others.
+    - `pwa-a11y.spec` (US-050 offline shell) + `offline-editing.spec` (§11.2 core journey + offline-open) → **skipped on `mobile-safari`**: `page.reload()` while offline throws "WebKit encountered an internal error" (a Playwright/WebKit offline-emulation limitation, not a product bug); kept on chromium-desktop + mobile-chrome.
+    - `fork-and-figures.spec` US-035 seeded-global COW + `library.spec` (US-032) → **skipped on both mobile projects**: an intermittent client figure-hydration race (lazy read view, `store/routine.ts` `figureStatus`) leaves the seeded global figure on "Loading figure…", and a `library` save-toast timing flake; kept on chromium-desktop. Root-causing tracked for follow-up.
 
-Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 were split into one
+Per-AC splitting for gradual adoption: US-029 / US-030 / US-031 *(US-031 since removed)* were split into one
 `it` per acceptance criterion, and a US-009 AC-4 "convergence across a fork (cloned
 doc)" property test was added. Inline
 gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
@@ -180,15 +202,26 @@ gaps flagged (none leave a US-key uncovered): US-024 AC-4 role microcopy
   `apps/web/e2e/convergence.spec.ts`.
 - **US-038 AC-3** soft "superseded" hint — **SHIPPED**: `wasSupersededByOthers(doc,
   actorId)` in `packages/domain/src/undo.ts` + store seam + `Assemble.tsx` toast
-  variant. See PLAN.md §5.4 for the full spec.
+  variant. See [system/architecture.md](system/architecture.md) § Undo for the full spec.
 
 **New surfaces shipped in the design-parity program (reconciled 2026-06):**
 - **Journal tab** (US-039/040/041/042 cross-routine view): `apps/web/e2e/journal.spec.ts`
   (`@smoke`); `GET /api/journal` UNIONs `journal_entry` D1 index + `FigureTypeNoteIndex`
   account rows; DO alarm projects lesson/practice annotations to `journal_entry`.
+- **Choreo-first journal links + timed figureType anchors (WEP-0004, 2026-07-14)**:
+  ship gate `apps/web/e2e/journal-link-picker.spec.ts` (`@smoke`). Layers: domain
+  `anchor-schema.test.ts` (zAnchor timed arm + the no-cross-dance invariant) and
+  `figuretype-notes.test.ts` (figureTypeNoteCount pinning/soft fallback); contract
+  `index.test.ts` (zFamilyNoteBody count/role); worker `figuretype-visibility.test.ts`
+  (timed round-trip + 400 on "all"+count, migration 0018); component
+  `journal.test.tsx` (choreo-first picker: type-ahead, grid, gated scopes — incl.
+  a **custom figure** offering no family scope, the note falling through to a
+  routine annotation). Custom-figure family gating: domain `library.test.ts`
+  (`figureTypeHasCatalogFamily`) + the ship gate's custom-figure case.
 - **Save-to-library** (`POST /api/figures/save-to-library`, migration 0010): covered by
   `apps/worker/src/figures.test.ts`; idempotent on `(owner, baseFigureRef)`, auth-gated,
-  server-resolves catalog figure from bundled reference data. See PLAN.md §4.2 + §5.2.
+  server-resolves catalog figure from bundled reference data. See
+  [concepts/figures.md](concepts/figures.md) § Scopes.
 - **Tango-Rise write gate** (`dance_not_applicable`): the DO seed route + store seam reject
   a `rise` attribute on a Tango figure with a `dance_not_applicable` error; vocabulary
   `appliesToDances` enforced on the write path. Covered in `vocabulary.test.ts` /

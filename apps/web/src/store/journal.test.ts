@@ -1,10 +1,11 @@
 // T6 — pure journal list helpers (no I/O). Filters + by-figure grouping.
 import { describe, expect, it } from "vitest";
+import type { OwnFamilyNote } from "./account";
 import {
   applyJournalFilter,
   chipLabel,
-  figureFamilies,
   type JournalEntry,
+  mergeLiveFamilyNotes,
   relativeDate,
 } from "./journal";
 
@@ -74,6 +75,11 @@ describe("chipLabel", () => {
   it("falls back to a generic step label for a point anchor with no label", () => {
     expect(chipLabel({ type: "point", figureRef: "f", count: 1 })).toBe("step 2");
   });
+  it("appends the pinned count to an unlabelled TIMED figureType anchor (WEP-0004)", () => {
+    expect(
+      chipLabel({ type: "figureType", figureType: "whisk", danceScope: "waltz", count: 3 }),
+    ).toBe("whisk · count 3");
+  });
 });
 
 describe("relativeDate", () => {
@@ -86,14 +92,57 @@ describe("relativeDate", () => {
   });
 });
 
-describe("figureFamilies", () => {
-  it("returns distinct families from the catalog with a count", () => {
-    const families = figureFamilies();
-    expect(families.length).toBeGreaterThan(3);
-    // No duplicate figureType.
-    const types = families.map((f) => f.figureType);
-    expect(new Set(types).size).toBe(types.length);
-    expect(families[0]).toHaveProperty("name");
-    expect(families[0]).toHaveProperty("dance");
+// (The `figureFamilies` catalog helper was removed (docs/concepts/annotations.md
+// § The Journal) — every journal link now starts from one of the user's
+// choreos, so there is no catalog step.)
+
+describe("mergeLiveFamilyNotes (WEP-0002 read-your-writes)", () => {
+  const liveNote = (over: Partial<OwnFamilyNote>): OwnFamilyNote => ({
+    id: "n1",
+    kind: "lesson",
+    text: "settle before the chassé",
+    figureType: "whisk",
+    danceScope: "waltz",
+    createdAt: 100,
+    ...over,
+  });
+
+  it("surfaces a live note the D1 projection has not caught up on, with the worker-parity label", () => {
+    const merged = mergeLiveFamilyNotes([entry({ id: "r1", createdAt: 50 })], [liveNote({})], "u1");
+    expect(merged.map((e) => e.id)).toEqual(["n1", "r1"]); // newest-first
+    const note = merged[0];
+    expect(note?.source).toBe("account");
+    expect(note?.routineRef).toBe("account:u1");
+    expect(note?.authorId).toBe("u1");
+    expect(note?.anchors[0]?.label).toBe("all Whisks · all Waltz");
+  });
+
+  it("a TIMED live note (WEP-0004) carries count/role and the count-suffixed label", () => {
+    const merged = mergeLiveFamilyNotes([], [liveNote({ count: 3, role: "leader" })], "u1");
+    expect(merged[0]?.anchors[0]).toMatchObject({
+      type: "figureType",
+      figureType: "whisk",
+      danceScope: "waltz",
+      count: 3,
+      role: "leader",
+      label: "all Whisks · all Waltz · count 3",
+    });
+  });
+
+  it("dedupes by id — a projection row that already caught up wins (it carries author display)", () => {
+    const restRow = entry({ id: "n1", source: "account", displayName: "Dani", createdAt: 100 });
+    const merged = mergeLiveFamilyNotes([restRow], [liveNote({})], "u1");
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.displayName).toBe("Dani");
+  });
+
+  it("keeps plain 'note' kinds out of the journal (lesson/practice only, matching the read)", () => {
+    expect(mergeLiveFamilyNotes([], [liveNote({ kind: "note" })], "u1")).toEqual([]);
+  });
+
+  it("no user id or no live notes → the REST list passes through untouched", () => {
+    const rest = [entry({ id: "r1" })];
+    expect(mergeLiveFamilyNotes(rest, [liveNote({})], undefined)).toBe(rest);
+    expect(mergeLiveFamilyNotes(rest, [], "u1")).toBe(rest);
   });
 });

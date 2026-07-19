@@ -4,9 +4,10 @@
 // reuse the exact same snapshot-clone logic without duplicating it.
 import { copyFigureForFork, type FigureDoc, newId } from "@weavesteps/domain";
 import { routineCapFor } from "./db/admin";
-import { createFigureRows, findSavedLibraryFigure, getRegistryTypes } from "./db/figures";
+import { createFigureRows, getRegistryTypes } from "./db/figures";
 import { linkPlacement } from "./db/placement-edge";
 import { countOwnedRoutines, createOwnedRoutine } from "./db/routines";
+import { readFigureSnapshot } from "./figure-snapshot";
 import type { Env } from "./index";
 import { APP_OWNER } from "./sample";
 
@@ -61,7 +62,8 @@ export async function forkRoutineFor(
   const title = origin.title ?? "Untitled routine";
   const dance = origin.dance ?? "waltz";
 
-  // v5 (PLAN §2.4/§5.2, D12): a fork must be independent of its ORIGIN, so
+  // v5 (docs/concepts/choreography.md § Forking; docs/concepts/figures.md
+  // § Variants; D12): a fork must be independent of its ORIGIN, so
   // every ACCOUNT figure it places is copied for the forker BEFORE the routine
   // doc is seeded — the fork is born with the correct refs, never re-pointed by
   // post-hoc CRDT surgery. A variant is copied AS a variant (`copyFigureForFork`
@@ -116,7 +118,8 @@ export async function forkRoutineFor(
 }
 
 /**
- * Copy every ACCOUNT figure in `figureRefs` for the forker (v5, PLAN §2.4/§5.2)
+ * Copy every ACCOUNT figure in `figureRefs` for the forker (v5,
+ * docs/concepts/choreography.md § Forking; docs/concepts/figures.md § Variants)
  * and return a map of origin figureRef → the forker's new copy. Left OUT of the
  * returned map (placement stays live) for three cases:
  *   • a GLOBAL (catalog) ref (registry `type='global-figure'`);
@@ -147,11 +150,7 @@ async function copyAccountFiguresForFork(
   for (const ref of figureRefs) {
     if (types.get(ref) !== "account-figure") continue; // global, or unregistered — leave live
 
-    // The DO RPC stub degrades the `FigureDoc | null` return type — reassert it
-    // (same cast the GET /api/routines/:id/snapshot route uses for the same call).
-    const figure = (await env.DOC_DO.get(
-      env.DOC_DO.idFromName(ref),
-    ).getFigureSnapshot()) as FigureDoc | null;
+    const figure = await readFigureSnapshot(env.DOC_DO.get(env.DOC_DO.idFromName(ref)));
     if (!figure) continue; // never-seeded/dangling doc — nothing to copy
     if (figure.ownerId === APP_OWNER) continue; // app-owned template content — see above
 
@@ -165,20 +164,13 @@ async function copyAccountFiguresForFork(
  * eager-project its D1 rows (`createFigureRows` — mirrors POST /api/figures'
  * #205 seed), and seed its DO durably.
  *
- * `createFigureRows` fails closed with `owner_conflict` for TWO different D1
- * reasons that both surface identically:
- *   1. a genuine `newId()` docRef collision (vanishingly unlikely) — retried
- *      below with a fresh id (`copyFigureForFork` mints one each call);
- *   2. for a VARIANT copy, the `account_figure_base_idx` partial unique index
- *      (migration 0010: at most ONE account-figure per `(ownerId,
- *      forkedFromRef)`, written for save-to-library idempotency) — this fires
- *      when the forker ALREADY owns some derivative of the SAME base (from
- *      unrelated prior activity, or because the figure being forked is
- *      already theirs). That derivative is itself an independent figure the
- *      forker fully controls, so reusing it keeps the fork independent of the
- *      ORIGIN just as well as minting a redundant new copy would — resolved
- *      via `findSavedLibraryFigure` (a same-shape (owner, base) → docRef
- *      lookup) rather than failing the whole fork.
+ * `createFigureRows` fails closed with `owner_conflict` only on a genuine
+ * `newId()` docRef collision (a fresh-ULID clash with a row owned by someone
+ * else — vanishingly unlikely), retried below with a fresh id
+ * (`copyFigureForFork` mints one each call). A forker may own MANY derivatives of
+ * the same base (one per placement/fork), so each fork mints its own INDEPENDENT
+ * copy — the `account_figure_base_idx` unique index that used to force reuse here
+ * was dropped in migration 0017 (it broke variant-on-edit; see that migration).
  */
 async function copyOneAccountFigureForFork(
   env: Env,
@@ -197,11 +189,7 @@ async function copyOneAccountFigureForFork(
       baseFigureRef: copy.baseFigureRef,
     });
     if (created === "owner_conflict") {
-      if (copy.baseFigureRef) {
-        const existing = await findSavedLibraryFigure(env.DB, forkerId, copy.baseFigureRef);
-        if (existing) return existing; // reuse the forker's own existing derivative
-      }
-      continue; // no existing derivative found — a genuine id collision, retry fresh
+      continue; // genuine fresh-id docRef clash — retry with a new id
     }
     await env.DOC_DO.get(env.DOC_DO.idFromName(copy.id)).seedDoc({
       ...copy,

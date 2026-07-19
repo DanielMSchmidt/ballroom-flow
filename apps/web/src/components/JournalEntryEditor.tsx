@@ -1,6 +1,6 @@
 // T6 — the Journal entry editor (frame 3.3). A Lesson/Practice toggle, a
 // handwritten-style text area, the LINKS section (chips + the link picker), and a
-// disabled "media coming soon" affordance (PLAN §4.0 media = v1.1).
+// disabled "media coming soon" affordance (docs/ideas/annotation-media-embeds.md).
 //
 // Per the LOCKED full-parity decision the SAVE path is determined by the entry's
 // links: a routine-scoped link (point/figure) saves via createRoutineEntry on
@@ -25,12 +25,16 @@ export interface JournalEntryEditorProps {
   onBack: () => void;
   /** Called after a successful save so the list refreshes + the editor closes. */
   onSaved: () => void;
-  /** Author an account-scoped figureType lesson/practice (createFamilyNote). */
+  /** Author an account-scoped figureType lesson/practice (createFamilyNote).
+   *  docs/concepts/annotations.md § Anchors (WEP-0004): a TIMED link passes
+   *  count/role through (never with "all"). */
   createFamilyEntry: (input: {
     figureType: string;
     danceScope: string;
     kind: AnnotationKind;
     text: string;
+    count?: number;
+    role?: "leader" | "follower";
   }) => Promise<void>;
   /** Author a routine-scoped lesson/practice (createAnnotation on the routine). */
   createRoutineEntry: (
@@ -58,37 +62,49 @@ export function JournalEntryEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = text.trim().length > 0 && links.length > 0 && !saving;
+  const canSave = text.trim().length > 0 && !saving;
 
   const save = async (): Promise<void> => {
     if (!canSave) return;
     setSaving(true);
     setError(null);
     try {
-      // A routine-scoped link wins the entry's home: its annotation carries every
-      // routine anchor on the (single) chosen routine. Otherwise the entry is an
-      // account figureType note (the first figureType link).
       const routineLinks = links.filter((l) => l.home === "routine");
-      if (routineLinks.length > 0) {
-        const routineRef = routineLinks[0]?.routineRef as string;
-        const sameRoutine = routineLinks.filter(
-          (l) => l.home === "routine" && l.routineRef === routineRef,
-        );
+      const accountLinks = links.filter(
+        (l): l is Extract<JournalLink, { home: "account" }> => l.home === "account",
+      );
+      const [firstRoutine] = routineLinks;
+      if (firstRoutine) {
+        // A routine-scoped link wins the entry's home: all same-routine anchors
+        // collapse into one annotation.
+        const routineRef = firstRoutine.routineRef;
+        const sameRoutine = routineLinks.filter((l) => l.routineRef === routineRef);
         await createRoutineEntry(routineRef, {
           kind,
           text: text.trim(),
           anchors: sameRoutine.map((l) => l.anchor),
         });
-      } else {
-        const acct = links.find((l) => l.home === "account");
-        if (acct && acct.home === "account") {
+      } else if (accountLinks.length > 0) {
+        // docs/concepts/annotations.md § Anchors (WEP-0004): one family note per
+        // linked figureType (each carries its own scope + optional timed anchor).
+        for (const acct of accountLinks) {
           await createFamilyEntry({
             figureType: acct.figureType,
             danceScope: acct.danceScope,
             kind,
             text: text.trim(),
+            ...(acct.count != null ? { count: acct.count } : {}),
+            ...(acct.role ? { role: acct.role } : {}),
           });
         }
+      } else {
+        // No link — save as a general account note (unanchored to a specific figure).
+        await createFamilyEntry({
+          figureType: "general",
+          danceScope: "all",
+          kind,
+          text: text.trim(),
+        });
       }
       onSaved();
     } catch {

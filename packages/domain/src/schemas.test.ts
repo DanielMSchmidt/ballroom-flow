@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { importDomain } from "./__fixtures__";
+import { isPlainRecord } from "./guards";
+
+/** The first issue's `params` bag — domain-rule ZodErrors carry a stable
+ *  `code` (+ the offending data) there. Runtime-narrowed, no casts. */
+function firstIssueParams(e: unknown): Record<string, unknown> | undefined {
+  const issue = e instanceof z.ZodError ? e.issues[0] : undefined;
+  return isPlainRecord(issue) && isPlainRecord(issue.params) ? issue.params : undefined;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-012 — Zod schemas (lenient read / strict write) [M1, system/developer]
-// PLAN §3, D7, §10.2 invariant: "unknown passthrough-on-read vs reject-on-write;
+// docs/concepts/notation.md § Kinds, D7, docs/system/testing.md invariant: "unknown passthrough-on-read vs reject-on-write;
 // diag_*→diagonal; timing range per meter". Schemas are derived from the merged registry.
 //
 // Product `schemas.ts` (M1 §9 1.10) doesn't exist yet → dynamic import, skipped.
@@ -86,10 +94,10 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toBe(9);
   });
 
-  it("normalizes the split diagonal → `diagonal` on read", async () => {
+  it("normalizes the legacy diag_back → `diagonal_back` on read (⟳2026-07-10)", async () => {
     // Intent: alias normalization happens at the schema boundary too.
-    // Arrange: a direction attribute with the legacy value "diag_forward".
-    // Act: parse with the read schema. Assert: normalized to "diagonal".
+    // Arrange: a direction attribute with the legacy value "diag_back".
+    // Act: parse with the read schema. Assert: normalized to the ISTD split value.
     const { parseAttributeRead } = await importDomain();
     const parsed = parseAttributeRead({
       id: "a1",
@@ -97,7 +105,7 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       count: 1,
       value: "diag_back",
     });
-    expect(parsed.value).toBe("diagonal");
+    expect(parsed.value).toBe("diagonal_back");
   });
 
   it("passes a legacy CBP value through on read (CBP is no longer recognized)", async () => {
@@ -143,20 +151,24 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
     ).toThrow();
   });
 
-  it("validates footPosition as a closed enum on write (accepts a ballet position, rejects junk)", async () => {
-    // Intent: the new `footPosition` kind is a closed enum, so the strict write
-    // check accepts an enumerated value (fourth_closed) and rejects an unknown one.
+  it("accepts the ISTD split diagonals on the closed direction enum (⟳2026-07-10)", async () => {
+    // Intent: direction is the step's relative translation — the ISTD set includes
+    // diagonal_forward/diagonal_back as first-class closed-enum members; junk that
+    // was never a direction (a removed footPosition ballet value) is rejected.
     const { parseAttributeWrite } = await importDomain();
     expect(
-      parseAttributeWrite({ id: "a1", kind: "footPosition", count: 1, value: "fourth_closed" })
+      parseAttributeWrite({ id: "a1", kind: "direction", count: 1, value: "diagonal_forward" })
         .value,
-    ).toBe("fourth_closed");
+    ).toBe("diagonal_forward");
+    expect(
+      parseAttributeWrite({ id: "a2", kind: "direction", count: 1, value: "diagonal_back" }).value,
+    ).toBe("diagonal_back");
     expect(() =>
-      parseAttributeWrite({ id: "a2", kind: "footPosition", count: 1, value: "sixth" }),
+      parseAttributeWrite({ id: "a3", kind: "direction", count: 1, value: "fourth_closed" }),
     ).toThrow();
   });
 
-  it("normalizes the split diagonal → `diagonal` on write, then accepts it", async () => {
+  it("normalizes the legacy diag_forward → `diagonal_forward` on write, then accepts it", async () => {
     // Intent: the alias normalizes before the strict enum check, so writing a
     // legacy diag_forward to the closed `direction` enum succeeds, stored canonical.
     const { parseAttributeWrite } = await importDomain();
@@ -166,7 +178,7 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       count: 1,
       value: "diag_forward",
     });
-    expect(ok.value).toBe("diagonal");
+    expect(ok.value).toBe("diagonal_forward");
   });
 
   it("rejects a kind whose appliesToDances EXCLUDES the figure's dance on write (rise omits Tango)", async () => {
@@ -180,12 +192,10 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as {
-        params?: { code?: string; kind?: string; dance?: string };
-      };
-      expect(issue.params?.code).toBe("dance_not_applicable");
-      expect(issue.params?.kind).toBe("rise");
-      expect(issue.params?.dance).toBe("tango");
+      const params = firstIssueParams(e);
+      expect(params?.code).toBe("dance_not_applicable");
+      expect(params?.kind).toBe("rise");
+      expect(params?.dance).toBe("tango");
     }
   });
 
@@ -240,9 +250,9 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string; kind?: string } };
-      expect(issue.params?.code).toBe("unknown_value");
-      expect(issue.params?.kind).toBe("position");
+      const params = firstIssueParams(e);
+      expect(params?.code).toBe("unknown_value");
+      expect(params?.kind).toBe("position");
     }
 
     // (c) off-grid count → ZodError with params.code "count_off_grid"
@@ -251,8 +261,40 @@ describe("US-012 Zod schemas (lenient read / strict write)", () => {
       throw new Error("expected throw");
     } catch (e) {
       expect(e).toBeInstanceOf(z.ZodError);
-      const issue = (e as z.ZodError).issues[0] as { params?: { code?: string } };
-      expect(issue.params?.code).toBe("count_off_grid");
+      expect(firstIssueParams(e)?.code).toBe("count_off_grid");
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ② (owner-approved 2026-07-07) — presence attributes: `value: null`
+// is a legal WRITE for any kind ("present, no value yet" — the editor's dashed
+// ring). The enum-membership check applies only once a value is actually set.
+// ─────────────────────────────────────────────────────────────────────────
+describe("presence attributes — value:null writes (Builder v3 ②)", () => {
+  it("accepts a null value for a closed enum kind (rise)", async () => {
+    const { parseAttributeWrite } = await importDomain();
+    const attr = parseAttributeWrite(
+      { id: "a1", kind: "rise", count: 1, value: null },
+      { dance: "waltz" },
+    );
+    expect(attr.value).toBeNull();
+  });
+
+  it("still rejects a non-null unknown value for a closed enum kind", async () => {
+    const { parseAttributeWrite } = await importDomain();
+    expect(() =>
+      parseAttributeWrite({ id: "a1", kind: "rise", count: 1, value: "bogus" }, { dance: "waltz" }),
+    ).toThrow();
+  });
+
+  it("a presence attribute still counts toward the figure's default length", async () => {
+    const { defaultFigureCounts } = await importDomain();
+    expect(
+      defaultFigureCounts([
+        { id: "a1", kind: "rise", count: 1, value: null, role: null, deletedAt: null },
+        { id: "a2", kind: "rise", count: 2, value: null, role: null, deletedAt: null },
+      ]),
+    ).toBe(2);
   });
 });

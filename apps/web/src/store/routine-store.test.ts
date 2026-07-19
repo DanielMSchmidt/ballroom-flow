@@ -3,13 +3,26 @@ import { join } from "node:path";
 import * as A from "@automerge/automerge";
 import { SYNC_CAUGHT_UP, SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
 import type { Attribute, FigureDoc, RegistryKind, RoutineDoc } from "@weavesteps/domain";
-import { buildFigureDoc, buildRoutineDoc, globalFigureRef } from "@weavesteps/domain";
+import {
+  buildFigureDoc,
+  buildRoutineDoc,
+  globalFigureRef,
+  libraryFiguresForDance,
+} from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
+import { reportError } from "../lib/ops";
+import { ApiError } from "../lib/rpc";
+import type { SocketLike } from "./doc-connection";
 import { type OpenOptions, openRoutine } from "./routine";
+
+// The store reports bug-shaped variant-spawn failures to Sentry via lib/ops —
+// stub it so the failure-surfacing test can assert the call without a real DSN.
+vi.mock("../lib/ops", () => ({ reportError: vi.fn() }));
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-017 — store/ seam (multi-doc) [M2, system]
-// PLAN §6.1/§6.2, D6, §10.2: the typed store seam wraps Automerge: opening a
+// docs/system/architecture.md § Module boundaries / § The shape,
+// docs/system/testing.md § Layer ownership: the typed store seam wraps Automerge: opening a
 // routine connects to the routine doc's DO then to each referenced figure
 // doc's DO; each figure carries its own attributes (frozen copies — no overlay);
 // exposes typed reactive reads + mutations + history-based undo. Components import
@@ -23,26 +36,34 @@ import { type OpenOptions, openRoutine } from "./routine";
 // ─────────────────────────────────────────────────────────────────────────
 
 /** A fake socket the test can push frames into (stands in for the DO). */
-class FakeSocket {
+class FakeSocket implements SocketLike {
   binaryType = "blob";
+  // Every listener is stored under the widest registered shape ((ev) => void);
+  // open/close listeners take no parameter, so firing them with a dummy event
+  // is invisible to them — this keeps addEventListener's overloads honest.
   private msg: ((ev: { data: unknown }) => void) | null = null;
-  private open: (() => void) | null = null;
-  private closed: (() => void) | null = null;
+  private open: ((ev: { data: unknown }) => void) | null = null;
+  private closed: ((ev: { data: unknown }) => void) | null = null;
   sent: Uint8Array[] = [];
-  addEventListener(type: string, fn: (ev: { data: unknown }) => void): void {
+  addEventListener(type: string, fn: ((ev: { data: unknown }) => void) | (() => void)): void {
     if (type === "message") this.msg = fn;
-    else if (type === "open") this.open = fn as () => void;
-    else if (type === "close") this.closed = fn as () => void;
+    else if (type === "open") this.open = fn;
+    else if (type === "close") this.closed = fn;
   }
-  send(data: ArrayBufferView | ArrayBuffer): void {
-    this.sent.push(new Uint8Array(data as ArrayBuffer));
+  send(data: string | ArrayBufferView | ArrayBuffer): void {
+    if (typeof data === "string") return; // heartbeat ping (docs/concepts/annotations.md § Anchors) — ignored here
+    this.sent.push(
+      data instanceof ArrayBuffer
+        ? new Uint8Array(data)
+        : new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+    );
   }
   close(): void {
-    this.closed?.();
+    this.closed?.({ data: undefined });
   }
   /** Signal the socket is open (the runtime fires this; the DO then replays). */
   fireOpen(): void {
-    this.open?.();
+    this.open?.({ data: undefined });
   }
   /** Deliver the DO's catch-up-complete marker — the doc is now hydrated (#202). */
   fireCaughtUp(): void {
@@ -68,26 +89,25 @@ function fakeWiring(): { opts: OpenOptions; sockets: Map<string, FakeSocket> } {
       const id = decodeURIComponent(url.split("/docs/")[1]?.replace("/connect", "") ?? url);
       const s = new FakeSocket();
       sockets.set(id, s);
-      return s as unknown as ReturnType<NonNullable<OpenOptions["openSocket"]>>;
+      return s;
     },
   };
   return { opts, sockets };
 }
 
-const aFigure = (over: Partial<FigureDoc>): RoutineDoc | FigureDoc =>
-  ({
-    id: "f",
-    scope: "global",
-    ownerId: "u",
-    figureType: "natural_turn",
-    dance: "waltz",
-    name: "Natural Turn",
-    source: "library",
-    attributes: [],
-    schemaVersion: 1,
-    deletedAt: null,
-    ...over,
-  }) as FigureDoc;
+const aFigure = (over: Partial<FigureDoc>): FigureDoc => ({
+  id: "f",
+  scope: "global",
+  ownerId: "u",
+  figureType: "natural_turn",
+  dance: "waltz",
+  name: "Natural Turn",
+  source: "library",
+  attributes: [],
+  schemaVersion: 1,
+  deletedAt: null,
+  ...over,
+});
 
 describe("#189 store attaches the auth token to the connect", () => {
   it("calls getToken at the connection-open and rides it as the ballroom.auth subprotocol", async () => {
@@ -99,7 +119,7 @@ describe("#189 store attaches the auth token to the connect", () => {
       openSocket: (url, protocols) => {
         const id = decodeURIComponent(url.split("/docs/")[1]?.replace("/connect", "") ?? url);
         captured.push({ id, protocols });
-        return new FakeSocket() as unknown as ReturnType<NonNullable<OpenOptions["openSocket"]>>;
+        return new FakeSocket();
       },
     };
     await openRoutine("rt_sample", opts);
@@ -257,6 +277,64 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(attrs.filter((a) => a.kind === "direction" || a.kind === "footwork")).toHaveLength(24);
   });
 
+  it("fires onCreated for a custom mint — and never for a catalog pick (create-navigates)", async () => {
+    // The Assemble screen opens the new figure's step editor immediately after a
+    // CREATE (owner request 2026-07-08). The hook is addPlacement's onCreated
+    // callback: it fires synchronously with the fresh custom figure's refs, and
+    // NOT for a catalog pick (placing an already-charted figure is assembly, not
+    // creation — no auto-navigation).
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
+
+    const onCreated = vi.fn<(created: { figureRef: string; placementId: string }) => void>();
+    store.addPlacement("s1", "My Glue Step", undefined, undefined, undefined, undefined, onCreated);
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    const created = onCreated.mock.calls[0]?.[0];
+    expect(created).toBeDefined();
+    // The refs point at the real just-placed placement/figure pair.
+    const rp = store.readPlacements().find((p) => p.placement.id === created?.placementId);
+    expect(rp?.placement.figureRef).toBe(created?.figureRef);
+
+    const preset = libraryFiguresForDance("waltz")[0];
+    if (!preset) throw new Error("waltz catalog unexpectedly empty");
+    const onCatalog = vi.fn();
+    store.addPlacement(
+      "s1",
+      preset.name,
+      preset.figureType,
+      undefined,
+      undefined,
+      undefined,
+      onCatalog,
+    );
+    expect(onCatalog).not.toHaveBeenCalled();
+  });
+
+  it("placeFigure appends a placement referencing an EXISTING figure — assembly, not creation", async () => {
+    // ⟳v5 §4.2: a library bookmark "can be placed into your other routines".
+    // Placing an existing (account) figure by ref must not POST /api/figures —
+    // the doc already exists; the placement just points at it.
+    const createFigure = vi.fn(async () => {});
+    const { store } = await openWithSection(createFigure);
+    store.placeFigure("s1", "fig_mine");
+    expect(createFigure).not.toHaveBeenCalled();
+    expect(store.readPlacements().find((p) => p.placement.figureRef === "fig_mine")).toBeDefined();
+  });
+
+  it("placeFigure inserts BEFORE an anchor via sortKey (insert-between parity with addPlacement)", async () => {
+    const { store } = await openWithSection();
+    store.placeFigure("s1", "fig_a");
+    store.placeFigure("s1", "fig_b");
+    const anchor = store.readPlacements().find((p) => p.placement.figureRef === "fig_b");
+    if (!anchor) throw new Error("anchor placement missing");
+    store.placeFigure("s1", "fig_between", anchor.placement.id);
+    expect(store.readPlacements().map((p) => p.placement.figureRef)).toEqual([
+      "fig_a",
+      "fig_between",
+      "fig_b",
+    ]);
+  });
+
   it("a catalog reference is EDITOR-READY with zero figure sockets (openFigure is a no-op)", async () => {
     // Regression (screenshots/e2e CI, 2026-07-02): opening the step editor on a
     // catalog live-reference used to open a WS to the global doc and gate the
@@ -276,26 +354,79 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
     expect(rp?.fromLiveDoc).toBe(true); // the editor's load-on-open gate releases
   });
 
-  it("resolves a TYPED multi-word catalog name to its canonical global ref", async () => {
-    const createFigure = vi.fn(async () => {});
-    const { store } = await openWithSection(createFigure);
-    // Typed name, NO figureType — resolved by name; a name-slug ("natural_turn")
-    // can't reproduce the hyphenated catalog "natural-turn", so the name lookup must.
-    store.addPlacement("s1", "Natural Turn");
-    expect(createFigure).not.toHaveBeenCalled();
-    const rp = store.readPlacements()[0];
-    expect(rp?.placement.figureRef).toBe(globalFigureRef("waltz", "natural-turn"));
+  it("editing a catalog reference opens ONLY the variant socket — never the catalog global DO", async () => {
+    // Connection frugality (companion to the COW-for-a-catalog-ref fix): editing a
+    // placed catalog figure spawns a variant, and ONE socket is sufficient — the
+    // variant's own DO. The catalog base needs no live connection (its content is
+    // bundled; admin edits arrive via poll/snapshot, §6.2). The write path must
+    // therefore resolve the figure's scope from the bundled catalog (`figureOwnDoc`),
+    // NOT a bare `figureConn(ref)` read — the latter would open a doomed connection
+    // to the unseeded global DO (immediate 403 + reconnect/backoff churn) on every
+    // edit. This guards against reintroducing that second, redundant connection.
+    const created: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string }) => {
+      created.push(m);
+    });
+    const onCopyOnWrite = vi.fn();
+    const { opts, sockets } = fakeWiring();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      createFigure,
+      onCopyOnWrite,
+      currentUserId: "me",
+      eagerFigures: false,
+    });
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [{ id: "s1", name: "Intro", placements: [], deletedAt: null }],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+
+    store.addPlacement("s1", "Natural Turn", "natural-turn");
+    const ref = globalFigureRef("waltz", "natural-turn");
+    store.openFigure(ref);
+    // Re-time it: quick-add a sub-beat presence step (the "&" between 5 and 6).
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    store.setFigureAttributes(ref, [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ]);
+
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    const variantRef = created[0]?.figureRef ?? ""; // "" would fail the asserts below
+    // The catalog global DO was NEVER connected…
+    expect(sockets.has(ref)).toBe(false);
+    // …exactly the routine + the spawned variant have sockets (one figure socket).
+    expect([...sockets.keys()].sort()).toEqual(["rt_sample", variantRef].sort());
+    store.close();
   });
 
-  it("a charted catalog pick renders its entry/exit alignment (from the live reference)", async () => {
-    // The Waltz Closed Change is charted with constant alignment (facing Diagonal
-    // Centre). The live reference renders it straight from the bundled catalog.
-    const { store } = await openWithSection();
-    store.addPlacement("s1", "Closed Change on RF", "closed-change-on-rf");
-    const ref = globalFigureRef("waltz", "closed-change-on-rf");
-    const rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
-    expect(rp?.figure?.entryAlignment).toEqual({ qualifier: "facing", direction: "DC" });
-    expect(rp?.figure?.exitAlignment).toEqual({ qualifier: "facing", direction: "DC" });
+  it("a TYPED name that collides with a catalog name still mints the user's OWN figure", async () => {
+    // Owner decision 2026-07-11 (REVERSES the earlier name-alone catalog match):
+    // the custom form always creates YOUR figure — typing "Natural Turn" must not
+    // silently place the global catalog doc. Only an explicit preset pick (which
+    // carries the canonical figureType) places a live global reference.
+    const seen: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn((meta: { figureRef: string }) => {
+      seen.push(meta);
+      return Promise.resolve();
+    });
+    const { store } = await openWithSection(createFigure);
+    store.addPlacement("s1", "Natural Turn"); // typed, NO figureType
+    expect(createFigure).toHaveBeenCalledTimes(1);
+    const rp = store.readPlacements()[0];
+    // The placement points at the freshly-minted account figure, not the catalog.
+    expect(rp?.placement.figureRef).toBe(seen[0]?.figureRef);
+    expect(rp?.placement.figureRef).not.toBe(globalFigureRef("waltz", "natural-turn"));
+    expect(rp?.placement.figureRef?.startsWith("global:")).toBe(false);
   });
 
   it("mints a custom figure (POST, empty attributes) for a non-catalog name", async () => {
@@ -304,7 +435,7 @@ describe("⟳v5 addPlacement places a live catalog reference (no POST)", () => {
       seen.push(meta);
       return Promise.resolve();
     });
-    const { store } = await openWithSection(createFigure as OpenOptions["createFigure"]);
+    const { store } = await openWithSection(createFigure);
     store.addPlacement("s1", "My Move"); // no catalog match → a choreo-local custom
     expect(createFigure).toHaveBeenCalledTimes(1);
     expect((seen[0]?.attributes ?? []).length).toBe(0);
@@ -364,7 +495,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
         scope: "account",
         baseFigureRef: "fbase",
         attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
-      }) as FigureDoc,
+      }),
     );
     sockets.get("fv")?.load(varFull);
 
@@ -420,8 +551,8 @@ describe("US-017 store/ seam (multi-doc)", () => {
         attributes: [
           { id: "s1", kind: "direction", count: 1, role: null, value: "forward", deletedAt: null },
         ],
-      }) as FigureDoc,
-    ) as A.Doc<FigureDoc>;
+      }),
+    );
     sockets.get(ref)?.load(base);
     let rp = store.readPlacements().find((p) => p.placement.figureRef === ref);
     expect(rp?.figure?.attributes.filter((a) => a.deletedAt == null)).toHaveLength(1);
@@ -492,7 +623,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
         scope: "account",
         name: "Turn",
         attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
-      }) as FigureDoc,
+      }),
     );
     sockets.get("fg")?.load(figFull);
     sockets.get("fg")?.fireCaughtUp();
@@ -663,10 +794,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
       deletedAt: null,
     };
     // A authors the undo target; B merges A's change THEN edits → B depends on A.
-    let aDoc = A.from(
-      base as unknown as Record<string, unknown>,
-      ACTOR_A,
-    ) as unknown as A.Doc<RoutineDoc>;
+    let aDoc = A.from(base, ACTOR_A);
     aDoc = A.change(aDoc, (d) => {
       const s = d.sections[0];
       if (s) s.name = "Verse";
@@ -701,10 +829,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
       schemaVersion: 1,
       deletedAt: null,
     };
-    let aDoc = A.from(
-      base as unknown as Record<string, unknown>,
-      ACTOR_A,
-    ) as unknown as A.Doc<RoutineDoc>;
+    let aDoc = A.from(base, ACTOR_A);
     aDoc = A.change(aDoc, (d) => {
       const s = d.sections[0];
       if (s) s.name = "Verse";
@@ -801,9 +926,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.readPlacements();
 
     // Load "fig1" as account-owned by the current user → edits in place (no COW).
-    const figDoc = buildFigureDoc(
-      aFigure({ id: "fig1", scope: "account", ownerId: "me" }) as FigureDoc,
-    );
+    const figDoc = buildFigureDoc(aFigure({ id: "fig1", scope: "account", ownerId: "me" }));
     sockets.get("fig1")?.fireOpen();
     sockets.get("fig1")?.load(figDoc);
     sockets.get("fig1")?.fireCaughtUp();
@@ -848,7 +971,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
     store.readPlacements();
 
     const figDoc = buildFigureDoc(
-      aFigure({ id: "figT", scope: "account", ownerId: "me", dance: "tango" }) as FigureDoc,
+      aFigure({ id: "figT", scope: "account", ownerId: "me", dance: "tango" }),
     );
     sockets.get("figT")?.fireOpen();
     sockets.get("figT")?.load(figDoc);
@@ -919,7 +1042,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
         name: "Feather",
         source: "library",
         attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
-      }) as FigureDoc,
+      }),
     );
     sockets.get("fg")?.fireOpen();
     sockets.get("fg")?.load(fg);
@@ -932,7 +1055,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // createFigure is called before its .then()).
     expect(createFigure).toHaveBeenCalledTimes(1);
     expect(created[0]?.baseFigureRef).toBe("fg");
-    const variantRef = created[0]?.figureRef as string;
+    const variantRef = created[0]?.figureRef ?? ""; // "" would fail the asserts below
 
     // The re-point + toast now happen INSIDE createFigure's .then() (only on
     // success), so wait for the async completion before asserting them.
@@ -945,22 +1068,29 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
   });
 
-  it("⟳v5: a spawned variant does NOT copy the base's alignment (it resolves live)", async () => {
-    // Intent (⟳v5, §2.5.2): editing a global figure's STEPS spawns a live overlay
-    //   variant. A variant resolves bars/alignment LIVE from its base until it
-    //   authors its own — so the spawn must NOT copy the base's entry/exit alignment
-    //   into the variant's POST (that would freeze it, defeating catalog flow-in).
+  it("exposes isForking while a variant spawn is in flight, cleared on completion (fork feedback)", async () => {
+    // Intent: the implicit fork is async (POST → onceLive → re-point); the editor
+    //   needs a reactive signal to show an inline "making this figure yours…"
+    //   pending state so the user isn't confused that their click "did nothing".
     const { opts, sockets } = fakeWiring();
-    const created: Array<{ entryAlignment?: unknown; exitAlignment?: unknown }> = [];
-    const createFigure = vi.fn(async (m: { entryAlignment?: unknown; exitAlignment?: unknown }) => {
-      created.push({ entryAlignment: m.entryAlignment, exitAlignment: m.exitAlignment });
+    const created: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string }) => {
+      created.push({ figureRef: m.figureRef });
     });
-    const store = await openRoutine("rt_sample", { ...opts, currentUserId: "me", createFigure });
+    const onCopyOnWrite = vi.fn();
+    const notified = vi.fn();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+    store.subscribe(notified);
 
     const routine = buildRoutineDoc({
       id: "rt_sample",
       title: "R",
-      dance: "waltz",
+      dance: "foxtrot",
       ownerId: "me",
       sections: [
         {
@@ -979,32 +1109,173 @@ describe("US-017 store/ seam (multi-doc)", () => {
     sockets.get("rt_sample")?.fireCaughtUp();
     store.readPlacements();
 
-    // A GLOBAL base figure that carries figure-level alignment (a charted catalog pick).
     const fg = buildFigureDoc(
       aFigure({
         id: "fg",
         scope: "global",
         ownerId: "app",
-        figureType: "closed-change-on-rf",
-        dance: "waltz",
-        name: "Closed Change on RF",
+        figureType: "feather",
+        dance: "foxtrot",
+        name: "Feather",
         source: "library",
         attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
-        entryAlignment: { qualifier: "facing", direction: "DC" },
-        exitAlignment: { qualifier: "facing", direction: "DC" },
-      }) as FigureDoc,
+      }),
     );
     sockets.get("fg")?.fireOpen();
     sockets.get("fg")?.load(fg);
     sockets.get("fg")?.fireCaughtUp();
 
-    // Edit the footwork on the non-owned figure → spawns a variant.
-    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+    expect(store.isForking?.("fg")).toBe(false);
+    notified.mockClear();
 
+    // The edit kicks off the fork — synchronously in flight, and it notified
+    // subscribers so the editor re-renders into its pending state.
+    store.setFigureAttributes("fg", [{ id: "b1", kind: "step", count: 1, role: null, value: "T" }]);
+    expect(store.isForking?.("fg")).toBe(true);
+    expect(notified).toHaveBeenCalled();
+
+    const variantRef = created[0]?.figureRef ?? ""; // "" would fail the asserts below
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalledWith(variantRef));
+
+    // Cleared once the variant is live + the placement is re-pointed.
+    expect(store.isForking?.("fg")).toBe(false);
+  });
+
+  it("copy-on-write fires for a placed CATALOG reference whose global DO is NOT seeded (US-035)", async () => {
+    // Intent (the bug this guards): a catalog figure placed via the Add-figure sheet
+    //   is a LIVE REFERENCE to a `global:<dance>:<figureType>` doc (⟳v5, §4.3) that
+    //   has NO seeded DO of its own — its content comes from the BUNDLED catalog.
+    //   Editing it (e.g. quick-adding a sub-beat step to re-time the figure) must
+    //   still spawn a variant. The earlier scope read looked ONLY at the (unhydrated,
+    //   403-ing) live connection → it saw `null`, missed the `global` scope, and
+    //   fell through to an in-place write the DO silently rejects: the "Step placed"
+    //   toast fired but nothing persisted. `figureOwnDoc` resolves the bundled
+    //   catalog first, so the global scope is detected and a variant is spawned.
+    const ref = globalFigureRef("waltz", "running-spin-turn");
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string; baseFigureRef?: string; attributes?: Attribute[] }> =
+      [];
+    const createFigure = vi.fn(async (m: (typeof created)[number]) => {
+      created.push(m);
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_cat", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    // The routine references the CATALOG figure directly — no figure DO is seeded.
+    const routine = buildRoutineDoc({
+      id: "rt_cat",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: ref, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_cat")?.fireOpen();
+    sockets.get("rt_cat")?.load(routine);
+    sockets.get("rt_cat")?.fireCaughtUp();
+    store.readPlacements();
+    store.openFigure(ref); // opening a catalog reference is a no-op (bundled content)
+
+    // Re-time the figure: quick-add a presence step at the "&" between 5 and 6
+    // (count 5.5) — the FigureTimeline sends the RESOLVED (catalog) timeline plus
+    // the new presence attribute, exactly as its onCellTap quick-add does.
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    expect(resolved?.scope).toBe("global"); // the editor sees it as a catalog figure
+    const edited: Attribute[] = [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ];
+    store.setFigureAttributes(ref, edited);
+
+    // A variant is projected with the catalog ref as its LIVE base — NOT dropped.
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
     expect(createFigure).toHaveBeenCalledTimes(1);
-    // The variant's POST does NOT carry the base's alignment — it resolves live.
-    expect(created[0]?.entryAlignment).toBeUndefined();
-    expect(created[0]?.exitAlignment).toBeUndefined();
+    expect(created[0]?.baseFigureRef).toBe(ref);
+    // The variant OWNS the re-timed beat, carrying the new sub-beat presence (5.5).
+    expect(created[0]?.attributes?.some((a) => a.count === 5.5)).toBe(true);
+    // The placement re-points to the variant…
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(created[0]?.figureRef);
+    // …and NOTHING was ever written to the (unseeded) global DO connection: the old
+    // bug's silently-rejected in-place write must not happen.
+    expect(sockets.get(ref)?.sent.length ?? 0).toBe(0);
+    store.close();
+  });
+
+  it("surfaces a FAILED variant spawn (error callback + Sentry) instead of dropping it silently", async () => {
+    // Intent (the reported bug's second half): when the variant POST fails, the
+    //   store used to only `console.warn` and drop the edit — but FigureTimeline had
+    //   already fired the optimistic "Step placed" toast, so the user saw success
+    //   then a vanished step. The store must now (a) tell the screen via
+    //   `onCopyOnWriteError` so it can toast the failure, and (b) report a bug-shaped
+    //   failure (a 409 the DB shouldn't produce) to Sentry — while NEVER re-pointing
+    //   the placement (no dangling variant) or firing the success callback.
+    const ref = globalFigureRef("waltz", "running-spin-turn");
+    const { opts, sockets } = fakeWiring();
+    const createFigure = vi.fn(async () => {
+      throw new ApiError(409, { error: "figure_ref_conflict" }, "POST /api/figures -> 409");
+    });
+    const onCopyOnWrite = vi.fn();
+    const onCopyOnWriteError = vi.fn();
+    const store = await openRoutine("rt_fail", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+      onCopyOnWriteError,
+    });
+    const routine = buildRoutineDoc({
+      id: "rt_fail",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: ref, deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_fail")?.fireOpen();
+    sockets.get("rt_fail")?.load(routine);
+    sockets.get("rt_fail")?.fireCaughtUp();
+    const resolved = store.readPlacements().find((p) => p.placement.figureRef === ref)?.figure;
+    store.setFigureAttributes(ref, [
+      ...(resolved?.attributes ?? []),
+      { id: "p55", kind: "direction", count: 5.5, role: null, value: null, deletedAt: null },
+    ]);
+
+    // The screen is told (so it can toast) — classified as a bug, not a refusal.
+    await vi.waitFor(() =>
+      expect(onCopyOnWriteError).toHaveBeenCalledWith({ figureRef: ref, reason: "unexpected" }),
+    );
+    // …and the bug is reported to Sentry (deduped per figureRef).
+    expect(vi.mocked(reportError)).toHaveBeenCalled();
+    // It must NOT masquerade as success: no "made yours" callback, no re-point —
+    // the placement stays on the base rather than pointing at an uncreated variant.
+    expect(onCopyOnWrite).not.toHaveBeenCalled();
+    const rp = store.readPlacements().find((p) => p.placement.id === "p1");
+    expect(rp?.placement.figureRef).toBe(ref);
+    store.close();
   });
 
   it("C1: onceLive defers the copy's attribute write until after the DO seed replay, preventing silent edit loss", async () => {
@@ -1061,7 +1332,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
         name: "Feather",
         source: "library",
         attributes: [{ id: "b1", kind: "step", count: 1, role: null, value: "HT" }],
-      }) as FigureDoc,
+      }),
     );
     sockets.get("fg")?.fireOpen();
     sockets.get("fg")?.load(fg);
@@ -1072,7 +1343,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
 
     // Wait for createFigure + re-point + onCopyOnWrite to fire.
     await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
-    const variantRef = created[0]?.figureRef as string;
+    const variantRef = created[0]?.figureRef ?? ""; // "" would fail the asserts below
 
     // Simulate the server seed of the copy DO: POST /api/figures seeds the DO as a
     // FROZEN copy carrying its OWN attributes (the forwarded edit — count-1 "T"),
@@ -1143,9 +1414,7 @@ describe("US-017 store/ seam (multi-doc)", () => {
     // Open the figure connection so we can load its doc.
     store.readPlacements();
 
-    const fa = buildFigureDoc(
-      aFigure({ id: "fa", scope: "account", ownerId: "coach" }) as FigureDoc,
-    );
+    const fa = buildFigureDoc(aFigure({ id: "fa", scope: "account", ownerId: "coach" }));
     sockets.get("fa")?.fireOpen();
     sockets.get("fa")?.load(fa);
     sockets.get("fa")?.fireCaughtUp();
@@ -1175,7 +1444,7 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
   const SEED_ACTOR = "00cc00cc00cc00cc"; // stands in for the server-side DO seed
 
   /** A routine (owned by "me") whose one section places `figureRef`. */
-  const routineWith = (figureRef: string): RoutineDoc =>
+  const routineWith = (figureRef: string): A.Doc<RoutineDoc> =>
     buildRoutineDoc({
       id: "rt_sample",
       title: "R",
@@ -1192,7 +1461,7 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
       annotations: [],
       schemaVersion: 1,
       deletedAt: null,
-    }) as RoutineDoc;
+    });
 
   const beat = (id: string, count: number, value: string): Attribute => ({
     id,
@@ -1219,7 +1488,7 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
 
     // fig1 is account-owned by the current user → edits in place (no COW spawn).
     const figDoc = buildFigureDoc(
-      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }),
     );
     sockets.get("fig1")?.fireOpen();
     sockets.get("fig1")?.load(figDoc);
@@ -1254,7 +1523,7 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
     sockets.get("rt_sample")?.fireCaughtUp();
     store.readPlacements();
     const figDoc = buildFigureDoc(
-      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }),
     );
     sockets.get("fig1")?.fireOpen();
     sockets.get("fig1")?.load(figDoc);
@@ -1277,12 +1546,9 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
     // Intent: per-actor undo on the figure doc inherits the domain guarantee —
     //   undoFigure reverts only MY beat; B's concurrent beat survives.
     const root = A.from(
-      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as unknown as Record<
-        string,
-        unknown
-      >,
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }),
       SEED_ACTOR,
-    ) as unknown as A.Doc<FigureDoc>;
+    );
     // A and B fork the same seed and each add a distinct beat — genuinely concurrent.
     const aDoc = A.change(A.clone(root, { actor: ACTOR_A }), (d) => {
       d.attributes.push(beat("beatA", 1, "A"));
@@ -1327,7 +1593,7 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
     sockets.get("rt_sample")?.fireCaughtUp();
     store.readPlacements();
     const figDoc = buildFigureDoc(
-      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }) as FigureDoc,
+      aFigure({ id: "fig1", scope: "account", ownerId: "me", attributes: [] }),
     );
     sockets.get("fig1")?.fireOpen();
     sockets.get("fig1")?.load(figDoc);
@@ -1388,9 +1654,9 @@ describe("§5.4 figure-scoped undo/redo — 'undo follows the surface being edit
         dance: "waltz",
         baseFigureRef: baseRef,
         attributes: [],
-      }) as unknown as Record<string, unknown>,
+      }),
       SEED_ACTOR,
-    ) as unknown as A.Doc<FigureDoc>;
+    );
     // The USER's FIRST edit: own count 1 with a leader direction that overrides the
     // base's (the catalog's leader count-1 direction is "forward"; owning the beat
     // hides ALL of the base's count-1 attributes — per-beat ownership, §2.5.1).
@@ -1496,7 +1762,7 @@ describe("US-043 createCustomKind (routine CRDT + account REST) + customKinds()"
 
 describe("figure load status — loading vs missing vs error (the 'unknown figure' fix)", () => {
   /** A routine with one section + one placement referencing `figureRef`. */
-  const routineWithFigure = (figureRef: string): RoutineDoc =>
+  const routineWithFigure = (figureRef: string): A.Doc<RoutineDoc> =>
     buildRoutineDoc({
       id: "rt_status",
       title: "",
@@ -1513,7 +1779,7 @@ describe("figure load status — loading vs missing vs error (the 'unknown figur
       annotations: [],
       schemaVersion: 1,
       deletedAt: null,
-    }) as RoutineDoc;
+    });
 
   const statusOf = (store: Awaited<ReturnType<typeof openRoutine>>, figureRef: string) =>
     store.readPlacements().find((p) => p.placement.figureRef === figureRef)?.status;
@@ -1559,7 +1825,7 @@ describe("figure load status — loading vs missing vs error (the 'unknown figur
 
       // Retry forces a fresh connection; this time the figure hydrates → live.
       store.retryFigure("fslow");
-      const figDoc = buildFigureDoc(aFigure({ id: "fslow", name: "Slow Turn" }) as FigureDoc);
+      const figDoc = buildFigureDoc(aFigure({ id: "fslow", name: "Slow Turn" }));
       sockets.get("fslow")?.fireOpen();
       sockets.get("fslow")?.load(figDoc);
       sockets.get("fslow")?.fireCaughtUp();
@@ -1653,7 +1919,7 @@ describe("structural sharing — an annotation add must not churn structural ide
           name: "My Turn",
           scope: "account",
           attributes: [{ id: "a1", kind: "rise", count: 1, value: "rise", deletedAt: null }],
-        }) as FigureDoc,
+        }),
       ),
     );
 

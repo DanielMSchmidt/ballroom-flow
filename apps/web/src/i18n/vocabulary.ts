@@ -58,9 +58,12 @@ const DE_KINDS: Record<string, KindProse> = {
       forward: "Vorwärts — Schritt vorwärts entlang deiner Linie",
       back: "Rückwärts — Schritt rückwärts",
       side: "Seite — Schritt zur Seite",
+      diagonal_forward: "Diagonal vorwärts — Bewegung vorwärts auf einer Diagonale",
+      diagonal_back: "Diagonal rückwärts — Bewegung rückwärts auf einer Diagonale",
       behind: "Hinter — kreuzt hinter dem Standbein",
       close: "Schließen — Füße schließen, kein Raumgewinn",
-      diagonal: "Diagonal — Bewegung auf einer Diagonale",
+      in_front: "Vorgekreuzt — kreuzt vor dem Standbein (z. B. Lockstep)",
+      diagonal: "Diagonal — Bewegung auf einer Diagonale (alter, ungeteilter Wert)",
       in_place: "Am Platz — Gewichtswechsel ohne Raumgewinn",
     },
   },
@@ -82,6 +85,16 @@ const DE_KINDS: Record<string, KindProse> = {
         "Fersendrehung — auf dem Ballen ansetzen, Gewicht auf die Ferse, der schließende Fuß parallel",
       "heel pull":
         "Fersenzug — Drehung auf der Ferse des Standbeins, der freie Fuß wird zurück und zur Seite gezogen",
+      "H flat": "H Flat — Ferse, dann der ganze Fuß flach (WDSF-Vorwärtsschritt)",
+      HB: "HB — Ferse-Ballen: erst Ferse, dann Ballen (z. B. WDSF-Fersendrehung)",
+      BT: "BT — Ballen-Spitze: erst Ballen, dann Spitze",
+      TB: "TB — Spitze-Ballen: erst Spitze, dann Ballen",
+      THB: "THB — Spitze-Ferse-Ballen abgerollt",
+      BHB: "BHB — Ballen-Ferse-Ballen abgerollt (z. B. Pivots)",
+      HBH: "HBH — Ferse-Ballen-Ferse abgerollt",
+      "I/E of B": "I/E of B — Innenkante des Ballens",
+      "I/E of BH": "I/E of BH — Innenkante des Ballens, dann Ferse",
+      "O/E of T, BH": "O/E of T, BH — Außenkante der Spitze, dann Ballen-Ferse",
       BH: "BH — Ballen-Ferse: erst Ballen, dann Ferse",
       HTH: "HTH — Ferse-Spitze-Ferse abgerollt",
       THT: "THT — Spitze-Ferse-Spitze abgerollt",
@@ -91,18 +104,6 @@ const DE_KINDS: Record<string, KindProse> = {
       "T/H": "T/H — Spitze, dann Ferse auf aufeinanderfolgenden Schlägen",
       "T/TH": "T/TH — Spitze, dann Spitze-Ferse",
       "TH/T": "TH/T — Spitze-Ferse, dann Spitze",
-    },
-  },
-  footPosition: {
-    label: "Fußposition",
-    description: "Die aus dem Ballett stammende Position der Füße zueinander.",
-    valueDefs: {
-      first: "Erste — Fersen zusammen, Fußspitzen nach außen",
-      second: "Zweite — Füße seitlich geöffnet, etwa ein Fuß Abstand zwischen den Fersen",
-      third: "Dritte — die Ferse des vorderen Fußes berührt die Mitte des hinteren Fußes",
-      fourth_open: "Vierte (offen) — ein Fuß vorn, etwa ein Fuß Abstand, mit Lücke",
-      fourth_closed: "Vierte (geschlossen) — ein Fuß vorn, in Kontakt, ohne Lücke",
-      fifth: "Fünfte — die Ferse des vorderen Fußes berührt die Spitze des hinteren Fußes",
     },
   },
   rise: {
@@ -127,11 +128,13 @@ const DE_KINDS: Record<string, KindProse> = {
       closed: "Geschlossen — geschlossene Tanzhaltung, die Partner frontal zueinander",
       promenade: "Promenade — eine V-Form, die offenen Seiten des Paares zueinander",
       counter_promenade: "Gegenpromenade — eine V-Form, zur anderen (geschlossenen) Seite geöffnet",
+      fallaway: "Fallaway — Promenadenform in Rückwärtsbewegung",
       outside_partner: "Außenseitlich — Schritt außen am Partner vorbei, meist rechts",
       left_side: "Linksseitlich — die Partner nach links versetzt",
       right_side: "Rechtsseitlich — die Partner nach rechts versetzt",
       tandem: "Tandem — ein Partner direkt vor dem anderen, beide in dieselbe Richtung",
       wing: "Wing — Wing-Position",
+      left_angle: "Linkswinkel — die WDSF-Left-Angle-Position (z. B. Twist Turns, Rondes)",
       CBMP: "CBMP — CBM-Position: der Fuß kreuzt die Linie ohne die Körperdrehung",
     },
   },
@@ -207,9 +210,21 @@ export function localizedRegistry(locale: Locale): StandardRegistry {
   if (locale === "en") return ATTRIBUTE_REGISTRY;
   let reg = cache.get(locale);
   if (!reg) {
-    reg = Object.fromEntries(
-      Object.entries(ATTRIBUTE_REGISTRY).map(([id, kind]) => [id, localizeKind(kind, locale)]),
-    ) as StandardRegistry;
+    const l = (kind: RegistryKind): RegistryKind => localizeKind(kind, locale);
+    // The entries spread localizes EVERY kind (incl. any future additions beyond
+    // the named seven); re-stating the named keys after it is what proves the
+    // StandardRegistry shape to the compiler (Object.fromEntries only knows a
+    // string index). `l` is pure, so the double call is content-identical.
+    reg = {
+      ...Object.fromEntries(Object.entries(ATTRIBUTE_REGISTRY).map(([id, kind]) => [id, l(kind)])),
+      direction: l(ATTRIBUTE_REGISTRY.direction),
+      footwork: l(ATTRIBUTE_REGISTRY.footwork),
+      rise: l(ATTRIBUTE_REGISTRY.rise),
+      position: l(ATTRIBUTE_REGISTRY.position),
+      bodyActions: l(ATTRIBUTE_REGISTRY.bodyActions),
+      sway: l(ATTRIBUTE_REGISTRY.sway),
+      turn: l(ATTRIBUTE_REGISTRY.turn),
+    };
     cache.set(locale, reg);
   }
   return reg;

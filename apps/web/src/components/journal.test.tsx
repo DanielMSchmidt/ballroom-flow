@@ -21,9 +21,12 @@ const entry = (over: Partial<JournalEntry>): JournalEntry => ({
 });
 
 const noop = async (): Promise<void> => {};
+// createRoutineEntry resolves to the created entry (WEP-0002 optimistic echo);
+// null = "nothing to echo", the untested default.
+const nullNoop = async (): Promise<null> => null;
 const baseProps = {
   createFamilyEntry: vi.fn(noop),
-  createRoutineEntry: vi.fn(noop),
+  createRoutineEntry: vi.fn(nullNoop),
   loadRoutineOptions: vi.fn(async () => []),
   loadRoutineFigures: vi.fn(async () => []),
 };
@@ -78,7 +81,77 @@ describe("Journal list (frames 3.1 / 3.2)", () => {
   });
 });
 
-describe("Journal editor + link picker (frames 3.3 / 3.4)", () => {
+// docs/concepts/annotations.md § The Journal (WEP-0004) — the choreo-first link
+// picker: choreo → figure (type-ahead) →
+// placement grid (entire figure / one count, role lens) → scope LAST, gated by
+// the placement (a timed note never spans dances).
+const whiskFigures = [
+  {
+    figureRef: "f1",
+    name: "Whisk",
+    figureType: "whisk",
+    counts: [1, 2, 3],
+    hasFamily: true,
+    attributes: [
+      { id: "a1", kind: "footwork", count: 1, role: null, value: "HT", deletedAt: null },
+      { id: "a2", kind: "rise", count: 2, role: null, value: "body rise", deletedAt: null },
+      {
+        id: "a3",
+        kind: "footwork",
+        count: 3,
+        role: "leader" as const,
+        value: "TH",
+        deletedAt: null,
+      },
+    ],
+  },
+  {
+    figureRef: "f2",
+    name: "Chassé",
+    figureType: "chasse",
+    counts: [1, 2],
+    hasFamily: true,
+    attributes: [],
+  },
+];
+
+// A from-scratch custom figure: its slugged figureType names no catalog family,
+// so the scope step must not offer the family (figureType) options.
+const customFigures = [
+  {
+    figureRef: "cf1",
+    name: "My Signature Move",
+    figureType: "my-signature-move",
+    counts: [1, 2],
+    hasFamily: false,
+    attributes: [
+      { id: "c1", kind: "footwork", count: 1, role: null, value: "flat", deletedAt: null },
+    ],
+  },
+];
+const goldWaltz = [{ docRef: "rt1", title: "Gold Waltz", dance: "waltz" }];
+
+/** Typed create-mocks so `mock.calls[0]?.[0]` keeps a real tuple type. */
+const familyEntryMock = () =>
+  vi.fn(
+    async (_input: {
+      figureType: string;
+      danceScope: string;
+      kind: "note" | "lesson" | "practice";
+      text: string;
+      count?: number;
+      role?: "leader" | "follower";
+    }) => {},
+  );
+const routineEntryMock = () =>
+  vi.fn(
+    async (
+      _routineRef: string,
+      _input: { kind: "note" | "lesson" | "practice"; text: string; anchors: unknown[] },
+    ) => null,
+  );
+
+describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
   it("opens the editor with a Lesson/Practice toggle and a disabled media affordance", async () => {
     renderUi(<Journal loadEntries={async () => []} {...baseProps} />);
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
@@ -90,103 +163,246 @@ describe("Journal editor + link picker (frames 3.3 / 3.4)", () => {
     expect(screen.getByRole("button", { name: /Add media \(coming soon\)/i })).toBeDisabled();
   });
 
-  it("shows the link picker with a DISABLED attribute row (coming later · v1.1)", async () => {
-    renderUi(<Journal loadEntries={async () => []} {...baseProps} />);
+  it("opens the picker ON the choreo list (choreo-first, no link-type fork)", async () => {
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+      />,
+    );
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
-    expect(screen.getByText("Link to…")).toBeInTheDocument();
-    expect(screen.getByText("An attribute")).toBeInTheDocument();
-    expect(screen.getByText(/coming later · v1\.1/i)).toBeInTheDocument();
-    // Specific place is NOT disabled (full-parity LOCKED #1).
-    const specific = screen.getByText("Specific place").closest("button");
-    expect(specific).not.toBeDisabled();
+    expect(screen.getByText("Which choreo?")).toBeInTheDocument();
+    expect(await screen.findByText("Gold Waltz")).toBeInTheDocument();
+    // The old type fork is gone — no catalog path, no attribute teaser.
+    expect(screen.queryByText("Link to…")).toBeNull();
+    expect(screen.queryByText("A figure")).toBeNull();
+    expect(screen.queryByText("An attribute")).toBeNull();
   });
 
-  it("builds a figureType link and saves it via createFamilyEntry", async () => {
-    const createFamilyEntry = vi.fn(
-      async (_input: {
-        figureType: string;
-        danceScope: string;
-        kind: "note" | "lesson" | "practice";
-        text: string;
-      }) => {},
-    );
+  it("type-ahead filters the choreo's figures; the grid shows the figure's chips", async () => {
     renderUi(
-      <Journal loadEntries={async () => []} {...baseProps} createFamilyEntry={createFamilyEntry} />,
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    // Type-ahead: "whis" narrows the list down to the Whisk.
+    await userEvent.type(await screen.findByLabelText("Search figures"), "whis");
+    expect(screen.queryByText("Chassé")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /whisk/i }));
+    // The placement grid renders the figure's real attribute values (detail-view
+    // style) so the right count is easy to find.
+    expect(await screen.findByText("Where on Whisk?")).toBeInTheDocument();
+    expect(screen.getByText("HT")).toBeInTheDocument();
+    expect(screen.getByText("body rise")).toBeInTheDocument();
+  });
+
+  it("a TIMED placement offers this-dance/this-choreo only, and saves count+role (WEP-0004)", async () => {
+    const createFamilyEntry = familyEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "settle before the chassé");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
+    // Narrow to the leader's side, then pick count 3 from the grid.
+    await userEvent.click(await screen.findByRole("radio", { name: "Leader" }));
+    await userEvent.click(screen.getByRole("button", { name: /^count 3/i }));
+    // Scope LAST — a timed note never spans dances: no "Every dance" row.
+    expect(await screen.findByText("All Waltz choreos")).toBeInTheDocument();
+    expect(screen.queryByText("Every dance")).toBeNull();
+    await userEvent.click(screen.getByText("All Waltz choreos"));
+    // Chip carries family + dance + count + side; Done saves a timed family entry.
+    await waitFor(() =>
+      expect(screen.getByText(/↳ all Whisks · all Waltz · count 3 · Leader/)).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
+      figureType: "whisk",
+      danceScope: "waltz",
+      count: 3,
+      role: "leader",
+      kind: "lesson",
+      text: "settle before the chassé",
+    });
+  });
+
+  it("a whole-figure placement offers all three scopes; Every dance saves danceScope 'all'", async () => {
+    const createFamilyEntry = familyEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
+      />,
     );
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
     await userEvent.type(screen.getByLabelText("entry text"), "whisk more cross");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
-    // TYPE → A figure
-    await userEvent.click(screen.getByText("A figure"));
-    // FIGURE → pick the first family
-    const families = await screen.findAllByLabelText("Figure families");
-    const firstFamily = families[0]?.querySelector("button");
-    if (firstFamily) await userEvent.click(firstFamily);
-    // SCOPE → Every dance (figureType, danceScope all)
-    await userEvent.click(await screen.findByText("Every dance"));
-    // The chip appears in the editor; Done saves the family entry.
-    await waitFor(() => expect(screen.getByText(/^↳ all /)).toBeInTheDocument());
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
+    await userEvent.click(await screen.findByText("The entire figure"));
+    // Whole-figure → the cross-dance scope IS offered.
+    expect(await screen.findByText("Every dance")).toBeInTheDocument();
+    expect(screen.getByText("All Waltz choreos")).toBeInTheDocument();
+    expect(screen.getByText("This choreo only")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Every dance"));
+    await waitFor(() =>
+      expect(screen.getByText(/^↳ all Whisks · all dances$/)).toBeInTheDocument(),
+    );
     await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
     await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
     expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
-      kind: "lesson",
+      figureType: "whisk",
       danceScope: "all",
       text: "whisk more cross",
     });
+    expect(createFamilyEntry.mock.calls[0]?.[0]).not.toHaveProperty("count");
   });
 
-  it("links to a specific count via the search + grain steps (US-004a)", async () => {
-    const createRoutineEntry = vi.fn(noop);
+  it("a CUSTOM figure offers no family scope — only this-choreo (the note falls through)", async () => {
+    // A from-scratch custom figure has no catalog family, so there is nothing to
+    // pin a family (figureType) note to. The scope step must drop both family
+    // rows and offer only "This choreo only" — even for a whole-figure placement,
+    // which for a library figure would show all three scopes.
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => customFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "keep the frame quiet here");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
+    await userEvent.click(await screen.findByText("The entire figure"));
+    // No family scopes — the choreo-wide (a real DanceId) and cross-dance rows are gone.
+    expect(await screen.findByText("This choreo only")).toBeInTheDocument();
+    expect(screen.queryByText("Every dance")).toBeNull();
+    expect(screen.queryByText("All Waltz choreos")).toBeNull();
+    // Falls through to a routine annotation (a whole-figure anchor), never a family note.
+    await userEvent.click(screen.getByText("This choreo only"));
+    await userEvent.click(await screen.findByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+    expect(createRoutineEntry.mock.calls[0]?.[0]).toBe("rt1");
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "figure", figureRef: "cf1" }],
+      text: "keep the frame quiet here",
+    });
+  });
+
+  it("a CUSTOM figure with a picked count offers only this-choreo (no this-dance family row)", async () => {
+    // A timed placement on a library figure offers "this dance" (a family note);
+    // on a custom figure that family row must also drop, leaving only this-choreo,
+    // which saves a point anchor via createRoutineEntry.
+    const createFamilyEntry = familyEntryMock();
+    const createRoutineEntry = routineEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={createRoutineEntry}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => customFigures)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "settle on the second beat");
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    await userEvent.click(await screen.findByText("Gold Waltz"));
+    await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^count 2/i }));
+    expect(await screen.findByText("This choreo only")).toBeInTheDocument();
+    expect(screen.queryByText("All Waltz choreos")).toBeNull();
+    expect(screen.queryByText("Every dance")).toBeNull();
+    await userEvent.click(screen.getByText("This choreo only"));
+    await userEvent.click(await screen.findByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry).not.toHaveBeenCalled();
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "point", figureRef: "cf1", count: 2 }],
+    });
+  });
+
+  it("saves without a link when text is present (no link required)", async () => {
+    const createFamilyEntry = familyEntryMock();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        createFamilyEntry={createFamilyEntry}
+        loadRoutineOptions={vi.fn(async () => [])}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    const done = screen.getByRole("button", { name: /^done$/i });
+    // done is disabled with no text…
+    expect(done).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("entry text"), "worked on posture today");
+    // …enabled with text, even without a link.
+    expect(done).not.toBeDisabled();
+    await userEvent.click(done);
+    await waitFor(() => expect(createFamilyEntry).toHaveBeenCalledTimes(1));
+    expect(createFamilyEntry.mock.calls[0]?.[0]).toMatchObject({
+      figureType: "general",
+      danceScope: "all",
+      kind: "lesson",
+      text: "worked on posture today",
+    });
+  });
+
+  it("this-choreo-only with a count builds a point anchor and saves via createRoutineEntry", async () => {
+    const createRoutineEntry = routineEntryMock();
     renderUi(
       <Journal
         loadEntries={async () => []}
         {...baseProps}
         createRoutineEntry={createRoutineEntry}
-        loadRoutineOptions={vi.fn(async () => [
-          { docRef: "rt1", title: "Gold Waltz", dance: "waltz" },
-        ])}
-        loadRoutineFigures={vi.fn(async () => [
-          { figureRef: "f1", name: "Whisk", figureType: "whisk", counts: [1, 2, 3] },
-          { figureRef: "f2", name: "Chassé", figureType: "chasse", counts: [1, 2] },
-        ])}
+        loadRoutineOptions={vi.fn(async () => goldWaltz)}
+        loadRoutineFigures={vi.fn(async () => whiskFigures)}
       />,
     );
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
     await userEvent.type(screen.getByLabelText("entry text"), "commit to the side step");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
-    // TYPE → Specific place → pick the choreo.
-    await userEvent.click(screen.getByText("Specific place"));
     await userEvent.click(await screen.findByText("Gold Waltz"));
-    // Search filters the figure list down to "Whisk", then pick it.
-    await userEvent.type(await screen.findByLabelText("Search figures"), "whis");
-    expect(screen.queryByText("Chassé")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /whisk/i }));
-    // GRAIN → "On count 2" builds a point anchor labelled "Whisk · count 2".
-    await userEvent.click(await screen.findByText("On count 2"));
+    await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^count 2/i }));
+    await userEvent.click(await screen.findByText("This choreo only"));
     await waitFor(() => expect(screen.getByText("↳ Whisk · count 2")).toBeInTheDocument());
-  });
-
-  it("links to a whole figure via the grain step (US-004a)", async () => {
-    renderUi(
-      <Journal
-        loadEntries={async () => []}
-        {...baseProps}
-        loadRoutineOptions={vi.fn(async () => [
-          { docRef: "rt1", title: "Gold Waltz", dance: "waltz" },
-        ])}
-        loadRoutineFigures={vi.fn(async () => [
-          { figureRef: "f1", name: "Whisk", figureType: "whisk", counts: [1, 2, 3] },
-        ])}
-      />,
-    );
-    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
-    await userEvent.type(screen.getByLabelText("entry text"), "note on the whole whisk");
-    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
-    await userEvent.click(screen.getByText("Specific place"));
-    await userEvent.click(await screen.findByText("Gold Waltz"));
-    await userEvent.click(await screen.findByRole("button", { name: /whisk/i }));
-    await userEvent.click(await screen.findByText("The entire figure"));
-    await waitFor(() => expect(screen.getByText("↳ Whisk · whole figure")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await waitFor(() => expect(createRoutineEntry).toHaveBeenCalledTimes(1));
+    expect(createRoutineEntry.mock.calls[0]?.[0]).toBe("rt1");
+    expect(createRoutineEntry.mock.calls[0]?.[1]).toMatchObject({
+      anchors: [{ type: "point", figureRef: "f1", count: 2 }],
+      text: "commit to the side step",
+    });
   });
 });

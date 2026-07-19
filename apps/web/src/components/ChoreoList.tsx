@@ -15,6 +15,8 @@ import { DANCE_IDS, type DanceId } from "@weavesteps/domain";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { danceName, getLocale, pickMessages, useLocale, useMessages } from "../i18n";
 import { choreoMessages } from "../i18n/messages/choreo";
+import { useOnline } from "../lib/use-online";
+import { ExplainerVideo, WatchTour } from "../marketing/ExplainerVideo";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   Badge,
@@ -26,6 +28,7 @@ import {
   Modal,
   ScreenHeader,
   Sheet,
+  Spinner,
 } from "../ui";
 import { BranchIcon, EditIcon, PlusIcon, StepsIcon, TrashIcon } from "../ui/icons";
 
@@ -84,6 +87,11 @@ export interface ChoreoRoutineItem extends RoutineListItem {
 export interface ChoreoListProps {
   /** The viewer's routines (owned + shared-in). */
   routines?: ChoreoRoutineItem[];
+  /** The routines query is still loading (no data yet). While true we show a
+   *  neutral placeholder instead of the empty state — otherwise the empty state
+   *  (and its inline product-tour video) flashes in during the load and is then
+   *  replaced by the list, which also destabilises the marketing screenshot. */
+  loading?: boolean;
   /** How many routines the viewer OWNS (drives the quota gate). */
   ownedCount: number;
   /** The viewer's plan; only "free" is capped. */
@@ -133,6 +141,7 @@ function GlyphTile({ color }: { color: string }) {
 
 export function ChoreoList({
   routines = [],
+  loading = false,
   ownedCount,
   plan,
   cap,
@@ -151,6 +160,10 @@ export function ChoreoList({
 }: ChoreoListProps) {
   const t = useMessages(choreoMessages);
   const locale = useLocale();
+  // §11.2 creation gate: creating/forking a choreo is a SERVER action (quota +
+  // registry + DO seeding) — while offline those affordances DISABLE (design
+  // 1.24) instead of silently failing. Editing an open choreo stays offline-able.
+  const online = useOnline();
   // First-visit tour: orient the user on the choreo list + the tab bar.
   useFirstVisitTour("choreos");
   const [upsellOpen, setUpsellOpen] = useState(false);
@@ -211,6 +224,7 @@ export function ChoreoList({
               label={t.newChoreo}
               data-tour="new-choreo"
               onClick={onNew}
+              disabled={!online}
               style={{
                 background: "var(--bf-accent)",
                 color: "var(--bf-ink-inverse)",
@@ -262,7 +276,14 @@ export function ChoreoList({
         </ul>
       )}
 
-      {routines.length === 0 ? (
+      {loading ? (
+        // Don't commit to the empty state until the list has loaded — otherwise
+        // the empty state (with its inline product-tour <video>) flashes in and
+        // is immediately replaced once the routines arrive. (Spinner is role=status.)
+        <div className="flex items-center gap-2 p-6 text-ink-faint">
+          <Spinner /> <span className="text-2xs">{t.loading}</span>
+        </div>
+      ) : routines.length === 0 ? (
         <div className="flex flex-col gap-3">
           {/* Frame 1.2 — the designed empty state. */}
           <EmptyState
@@ -270,11 +291,19 @@ export function ChoreoList({
             title={t.emptyTitle}
             description={t.emptyDescription}
             actions={
-              <Button variant="primary" leadingIcon={<PlusIcon size={16} />} onClick={onNew}>
+              <Button
+                variant="primary"
+                leadingIcon={<PlusIcon size={16} />}
+                onClick={onNew}
+                disabled={!online}
+              >
                 {t.emptyCreate}
               </Button>
             }
           />
+          {/* No choreos yet → show the product tour inline so a first-time user
+              sees what they're about to build. */}
+          <ExplainerVideo className="max-w-xl self-center" />
           {/* US-045: read-only sample + start-from-template, when the app publishes one. */}
           {sample && (
             <button
@@ -296,70 +325,75 @@ export function ChoreoList({
             <Button
               variant="secondary"
               onClick={() => onStartFromTemplate?.(templateTarget.docRef)}
+              disabled={!online}
             >
               {t.startFromTemplate}
             </Button>
           )}
         </div>
       ) : (
-        <ul className="flex flex-col gap-2.5">
-          {routines.map((r) => {
-            const forked = Boolean(r.forkedFromTitle);
-            // Meta segments (frame 1.1): Dance · <bars|no figures> · <date>.
-            // Bars/figure-count come from the OPTIONAL parity fields; absent until
-            // the store exposes them, in which case the segment is simply omitted.
-            const barsLabel =
-              r.figureCount === 0 ? t.noFiguresYet : r.bars != null ? t.bars(r.bars) : undefined;
-            const meta = [danceName(r.dance, locale), barsLabel, formatUpdated(r.updatedAt)]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li key={r.docRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => onOpen?.(r.docRef)}
-                  className="flex min-h-[64px] w-full items-center gap-3 rounded-lg border bg-surface py-3 pl-3 pr-12 text-left"
-                  style={
-                    forked
-                      ? {
-                          background: "var(--bf-scope-custom-tint)",
-                          borderColor: "var(--bf-scope-custom-border)",
-                        }
-                      : { borderColor: "var(--bf-border)" }
-                  }
-                >
-                  <GlyphTile color={forked ? "var(--bf-scope-custom)" : DANCE_COLOR[r.dance]} />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span
-                      className="truncate text-xs font-bold"
-                      style={{ color: forked ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
-                    >
-                      {r.title}
-                    </span>
-                    {forked ? (
+        <>
+          {/* Already have choreos → keep the tour a click away, not in the way. */}
+          <WatchTour className="self-start" />
+          <ul className="flex flex-col gap-2.5">
+            {routines.map((r) => {
+              const forked = Boolean(r.forkedFromTitle);
+              // Meta segments (frame 1.1): Dance · <bars|no figures> · <date>.
+              // Bars/figure-count come from the OPTIONAL parity fields; absent until
+              // the store exposes them, in which case the segment is simply omitted.
+              const barsLabel =
+                r.figureCount === 0 ? t.noFiguresYet : r.bars != null ? t.bars(r.bars) : undefined;
+              const meta = [danceName(r.dance, locale), barsLabel, formatUpdated(r.updatedAt)]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li key={r.docRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => onOpen?.(r.docRef)}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-lg border bg-surface py-3 pl-3 pr-12 text-left"
+                    style={
+                      forked
+                        ? {
+                            background: "var(--bf-scope-custom-tint)",
+                            borderColor: "var(--bf-scope-custom-border)",
+                          }
+                        : { borderColor: "var(--bf-border)" }
+                    }
+                  >
+                    <GlyphTile color={forked ? "var(--bf-scope-custom)" : DANCE_COLOR[r.dance]} />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span
-                        className="truncate text-2xs"
-                        style={{ color: "var(--bf-scope-custom-ink)" }}
+                        className="truncate text-xs font-bold"
+                        style={{ color: forked ? "var(--bf-scope-custom-ink)" : "var(--bf-ink)" }}
                       >
-                        <span aria-hidden="true">⑂ </span>
-                        {t.forkedFrom(r.forkedFromTitle ?? "")}
+                        {r.title}
                       </span>
-                    ) : (
-                      <span className="truncate text-2xs text-ink-muted">{meta}</span>
-                    )}
-                  </span>
-                </button>
-                <IconButton
-                  label={t.moreOptionsFor(r.title)}
-                  onClick={() => setMenuFor(r)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2"
-                >
-                  <span className="text-base leading-none">⋯</span>
-                </IconButton>
-              </li>
-            );
-          })}
-        </ul>
+                      {forked ? (
+                        <span
+                          className="truncate text-2xs"
+                          style={{ color: "var(--bf-scope-custom-ink)" }}
+                        >
+                          <span aria-hidden="true">⑂ </span>
+                          {t.forkedFrom(r.forkedFromTitle ?? "")}
+                        </span>
+                      ) : (
+                        <span className="truncate text-2xs text-ink-muted">{meta}</span>
+                      )}
+                    </span>
+                  </button>
+                  <IconButton
+                    label={t.moreOptionsFor(r.title)}
+                    onClick={() => setMenuFor(r)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
+                  >
+                    <span className="text-base leading-none">⋯</span>
+                  </IconButton>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {/* New-choreo sheet (frame 1.5) */}
@@ -393,7 +427,9 @@ export function ChoreoList({
               type="submit"
               variant="primary"
               loading={creating}
-              disabled={!title.trim()}
+              // Also gate on connectivity: it can drop while the sheet is open,
+              // and a submit then would be the silent-failure path (§11.2).
+              disabled={!title.trim() || !online}
               className="flex-1"
             >
               {t.createChoreoCta}
@@ -437,7 +473,8 @@ export function ChoreoList({
               if (menuFor) onFork?.(menuFor.docRef);
               closeMenu();
             }}
-            className="flex w-full items-center gap-3 rounded-lg border p-3 text-left"
+            disabled={!online}
+            className="flex w-full items-center gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background: "var(--bf-scope-custom-tint)",
               borderColor: "var(--bf-scope-custom-border)",
@@ -489,7 +526,7 @@ export function ChoreoList({
         </div>
       </Sheet>
 
-      {/* Delete confirm (destructive) — PLAN §4.0: deletes are confirmed. */}
+      {/* Delete confirm (destructive) — docs/concepts/collaboration.md: deletes are confirmed. */}
       <Modal
         open={confirmDelete != null}
         onClose={closeConfirmDelete}

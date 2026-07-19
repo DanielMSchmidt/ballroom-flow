@@ -7,7 +7,7 @@ description: Load BEFORE re-designing, re-litigating, or re-investigating anythi
 
 The complete record of what already went wrong, why, and how it was settled. **Check here before investigating a symptom or proposing a design** — most battles in this repo have been fought once already, and several were fought twice.
 
-**When NOT to use this:** for *how to fix a live bug now*, use **ballroom-flow-debugging-playbook** (symptom→action runbooks). For the current binding rules and locked decisions, use **ballroom-flow-architecture-contract** and docs/PLAN.md §8 — this skill explains *why* they're locked. For executing the active migration, use **ballroom-flow-v5-migration-campaign**. For process rules (TDD, branching, PLAN sync), use **ballroom-flow-change-control**.
+**When NOT to use this:** for *how to fix a live bug now*, use **ballroom-flow-debugging-playbook** (symptom→action runbooks). For the current binding rules and locked decisions, use **ballroom-flow-architecture-contract** and `docs/system/architecture.md` § Global constraints — this skill explains *why* they're locked. For executing the active migration, use **ballroom-flow-v5-migration-campaign**. For process rules (TDD, branching, doc sync), use **ballroom-flow-change-control**.
 
 ## 60-second triage checklist
 
@@ -15,9 +15,9 @@ Before investigating anything:
 
 1. **Grep this file for the symptom** (e.g. "Unknown figure", "flicker", "Untitled routine", "flake", "reload"). If it's here and FIXED, look for a regression of the recorded fix, not a new cause.
 2. **Scan the 11 recurring patterns** (bottom of this file) — new bugs almost always land in an existing pattern; the pattern's rule tells you where to look.
-3. **Check Still-OPEN items** — if the "bug" is an unchecked PLAN §9 box, it's known work, not a regression.
-4. **If it's a design debate**, read the oscillation timeline and PLAN §8 D10/D12 first — the alternative you're about to propose may already be recorded as rejected, with the scenario that killed it.
-5. **Check the base branch** (`git branch --show-current`; work starts from `development`) — the single most expensive mistake in this repo's history was building on `main`.
+3. **Check Still-OPEN items** — if the "bug" is known tracked follow-up work (task board), it's known work, not a regression.
+4. **If it's a design debate**, read the oscillation timeline and the locked-decision history (`docs/system/architecture.md` § Global constraints, D10/D12 lineage) first — the alternative you're about to propose may already be recorded as rejected, with the scenario that killed it.
+5. **Check the base branch** (`git branch --show-current`; work starts from `main`, the sole trunk since `development` was deleted 2026-07-05, PR #161) — the single most expensive mistake in this repo's history was building on a stale/wrong base (see the #83/#85 incident below).
 
 ## How to read this chronicle
 
@@ -38,9 +38,9 @@ The figure-sharing model reversed **twice**. Each position is recorded with its 
 | 2 | **Reversed to Automerge** | v4 plan, `370de7c` (2026-06-25) | The owner chose full-power cross-routine **forking** as the v1 centerpiece; Automerge's history/clone model serves it. A library recommendation was overturned by a *product* requirement, not tech merit. |
 | 3 | **Live overlay variants** (`resolve(base, overlay)`, flow-up) | v4/v4.3 plan, `8f49169` | Original inheritance design. |
 | 4 | **Reversed to frozen choreo-owned copies** | 2026-06-29, `9f0357d` + `7f6d811` (PRs #97/#99/#100/#104); overlay leftovers scrubbed `64e6441`, vestigial `Overlay` type removed with v2→v3 strip migration `edc4c82`; TEST-MAP reconciled `322f42c`/`33aff06` (PLAN v4.4) | Copy-on-write triggered by *location*: editing a figure that lives outside this choreo makes a frozen snapshot; `baseFigureRef` demoted to provenance-only. "An edit in one choreo never changes another." |
-| 5 | **Reversed back to live figures with per-beat-ownership overlay variants** | **PLAN v5.0**, 2026-07-02, `e27bca6` (PR #132) — current model | Settled by working the model against a named concrete scenario: the ***Passing Tumble Turn*** (catalog Tumble Turn placed twice in a Slowfox; one placement re-choreographed for its last ~3 beats; a new catalog attribute must flow into *untouched* beats only). Frozen copies can't do that. **Per-beat ownership** (`resolveFigure(base, variant)` — variant owns exactly the beats it carries content on) is the precision the v4 overlay lacked. PLAN §5.2, D12. |
+| 5 | **Reversed back to live figures with per-beat-ownership overlay variants** | **PLAN v5.0** (now `docs/concepts/figures.md` § Variants), 2026-07-02, `e27bca6` (PR #132) — current model | Settled by working the model against a named concrete scenario: the ***Passing Tumble Turn*** (catalog Tumble Turn placed twice in a Slowfox; one placement re-choreographed for its last ~3 beats; a new catalog attribute must flow into *untouched* beats only). Frozen copies can't do that. **Per-beat ownership** (`resolveFigure(base, variant)` — variant owns exactly the beats it carries content on) is the precision the v4 overlay lacked. Formerly PLAN §5.2, D12 — see `docs/concepts/figures.md` § Variants. |
 
-**The lesson (applies to every future architecture debate):** oscillation stops when someone names a **concrete end-to-end scenario** — Passing Tumble Turn (frozen vs live), the US-015 convergence journeys (read/edit split), the forking requirement (Yjs vs Automerge). PLAN.md records rejected alternatives **inline** in the locked decisions (see D10 and D12 in docs/PLAN.md §8) precisely so they don't get re-proposed. If you want to reverse a decision, bring a scenario that beats the recorded one, and update PLAN.md in the same change.
+**The lesson (applies to every future architecture debate):** oscillation stops when someone names a **concrete end-to-end scenario** — Passing Tumble Turn (frozen vs live), the US-015 convergence journeys (read/edit split), the forking requirement (Yjs vs Automerge). The rejected alternatives that used to sit **inline** in PLAN.md's locked decisions (D10, D12) are now woven into `docs/system/architecture.md` § Global constraints and the matching `docs/concepts/` docs (D10's read/edit-split rejection → `docs/system/sync-and-offline.md` § The read/edit split; D12's frozen-copy rejection → `docs/concepts/figures.md` § Variants) precisely so they don't get re-proposed. If you want to reverse a decision, bring a scenario that beats the recorded one, and update the concept/system docs in the same change.
 
 ---
 
@@ -82,7 +82,7 @@ Four intertwined causes behind one symptom:
 PR #83 (merged to `main` as `9106f63`): a whole skeleton-based `packages/domain` figure library, built by branching from **`main` (a stale skeleton) instead of `development` (the live app)** — it duplicated overlay.ts/fork.ts/library-data.ts/FigureTimeline that already existed on development. PR #85 (`720103d`) reverted it entirely; PR #84 was closed unmerged for the same reason. ~**1269 lines thrown away**; the work was redone from development as PR #86 (`3ff2d8c`) + #87. Institutional fix: the CLAUDE.md git-flow warning (PR #88/#89 on both branches). `main` still permanently diverges from development by exactly these commits: `10fc692 015c984 f3f5e46 720103d 9106f63 c0dd903 a9f115a f6e3ff0 b4880de`. **Status: FIXED (process). Always branch from `development`.**
 
 ### 2026-06-28 — read/edit split: rejected *within its own PR* (PR #95 → PLAN D10)
-First cut (`9416875`): read via REST snapshot + polling for EVERYONE, upgrade to a WS only on first edit. **Rejected before merge**: a passive co-editor on a polled snapshot only saw a collaborator's edits on the ~20s poll — it broke 5 @smoke US-015 convergence journeys. *"Polling can't deliver live convergence."* Final (`01365dc`): **role-aware hybrid** — viewers get snapshot-only, zero sockets; editors/commenters open ONE eager routine WS; a figure's own WS opens only when its step editor opens. The rejected alternative is recorded inline in PLAN.md §8 D10. **Status: FIXED / alternative REJECTED — do not re-propose read-by-default.**
+First cut (`9416875`): read via REST snapshot + polling for EVERYONE, upgrade to a WS only on first edit. **Rejected before merge**: a passive co-editor on a polled snapshot only saw a collaborator's edits on the ~20s poll — it broke 5 @smoke US-015 convergence journeys. *"Polling can't deliver live convergence."* Final (`01365dc`): **role-aware hybrid** — viewers get snapshot-only, zero sockets; editors/commenters open ONE eager routine WS; a figure's own WS opens only when its step editor opens. The rejected alternative — formerly recorded inline in PLAN.md §8 D10 — now lives in `docs/system/sync-and-offline.md` § The read/edit split. **Status: FIXED / alternative REJECTED — do not re-propose read-by-default.**
 
 ### 2026-06-29 → 07-01 — frozen-copy interlude (PRs #97/#99/#100/#104)
 See oscillation table row 4. `resolve(base, overlay)`/"flow-up" retired; copy-on-write on *location*; `Overlay` type removed with a v2→v3 strip migration. **Status: REVERSED by PLAN v5.0** — but the hardening/cleanup work done during it (migrations, TEST-MAP reconciliation) stands.
@@ -115,18 +115,18 @@ Staging served the `VITE_E2E=1` build: `e2e/serve.sh` built into the **same `app
 **Status: FIXED.** The owner-has-no-membership-row asymmetry (pattern 4) will bite again anywhere that enumerates members.
 
 ### 2026-07-02 — the architecture review + v5 reversal (PR #132, merge `70eed7e` — the biggest single event)
-Docs: `e27bca6` (PLAN v5.0, see oscillation table) + `17eee40` (USER-STORIES.md deleted; PLAN §9 + TEST-MAP are the roadmap/test index). Four review-verified criticals fixed in the same PR:
+Docs: `e27bca6` (PLAN v5.0, see oscillation table) + `17eee40` (USER-STORIES.md deleted; PLAN §9 — now closed history, folded into `docs/system/testing.md` — + TEST-MAP are the roadmap/test index). Four review-verified criticals fixed in the same PR:
 1. **Undo soundness** (`3725ec9`): (a) inverse patches carried **historical list indices**; positional replay against the current doc deleted a concurrent peer's element — fix: simulate the inverse against the historical state at the target's heads and record identity-anchored ops (element ids); (b) a second undo press re-selected and re-inverted the **same** change destructively — fix: undo/redo messages carry the reverted change hash (`ballroom:undo:<hash>`); a change is reverted at most once; (c) text-deletion inverse silently no-opped.
 2. **`POST /api/figures` authorization hole** (`089dbc0`): any authenticated caller + upsert semantics meant posting an *existing* figureRef rewrote the victim's registry title AND inserted the caller as editor; an unchecked `routineId` allowed self-escalation via the membership cascade. Fix: caller must resolve editor/owner on the routineId; guarded insert (`onConflictDoNothing` + owner re-read); cross-owner → 409 with zero writes.
 3. **Alarm D1-projection clobber** (`9edab0a`): production never called `setMetadata`, so once a doc hit the compaction threshold (or gained one annotation) the alarm upserted `ownerId=''` / `title=NULL` / `type='routine'` over the eagerly-created registry row — the owner lost DELETE rights and routines vanished from quota/owned lists. Fix: project identity **from the loaded doc**; non-destructive upsert (CASE/COALESCE).
 4. **Boundary enforcement past the handshake** (`99fa1b9`): the role was resolved once at connect and frozen in the hibernation attachment — a **removed editor kept live write access** until reconnect. Fix: `refreshConnectedRoles()` (re-resolve from D1; close revoked sockets with 1008), invoked by member-removal/invite-redeem. Plus: commenters could edit/tombstone ANY author's annotation (client-controlled `authorId`) — authorship is now checked against the socket-verified `sub`.
-**Status: all four FIXED (✅ items in PLAN §9 v5 step 1). The rest of the milestone landed the same day (entries below); only figure-editor undo remains.**
+**Status: all four FIXED (✅ items in the v5 milestone, formerly PLAN §9 step 1). The rest of the milestone landed the same day (entries below); only figure-editor undo remains.**
 
 ### 2026-07-02 — three v5 boxes shipped in one afternoon (PRs #134/#135/#133)
 Landed after the #132 review, in merge order:
 - **PR #134 sync-hardening** (`84c3eea`, `cd06daa`, `df24778`, `054d91e`): the three D10 leftovers. Connect catch-up became **ONE `SYNC_FRAME_SNAPSHOT`** (`A.save` blob; client `A.load`s + **merges**, so unacked edits survive) instead of the unbounded per-change replay; the client **re-sends unacknowledged local changes on reconnect** (diffs `getChanges(serverDoc, merged)` after the snapshot merge; idempotent server-side); a **broadcast send failure closes the socket** with `SYNC_RESYNC_CLOSE_CODE` (4001) so the client warm-reconnects to a fresh snapshot instead of silently diverging. New wire envelope in `@weavesteps/contract`: server→client binary frames carry a 1-byte type tag (`SYNC_FRAME_SNAPSHOT`/`SYNC_FRAME_CHANGE`); client→server frames stay raw (asymmetric). **Deliberate hard protocol cutover** — old client ⇄ new server drops frames until reload; a WS-subprotocol version is the recorded escape hatch.
 - **PR #135 migration-ladder-wiring** (`eee3f5b`, `8146621`, `2fc7371`, `b2e494f`): the ladder finally **runs on the DO load path** — `loadPersisted` → `migrateOnLoad` runs `migrateDraft` inside an `A.change` attributed to a fixed `MIGRATION_ACTOR` (per-user undo can never select it) and persists the upgrade; every seed site (`starter-routine.ts`, `doc-do.ts` `emptyRoutine`, worker `index.ts`, `sample.ts`, `test-seed.ts`, the web store placeholders) stamps `CURRENT_SCHEMA_VERSION`. The old "ladder defined but not wired into any runtime path" state is history.
-- **PR #133 v5-fork-copy** (`8cb646c`, `0e65912`, `0a3f841`): PLAN §9 v5 **step 5 ✅** — fork re-points every placement whose ref resolves to a registry `type='account-figure'` at a fresh forker-owned `copyFigureForFork` copy (D1-projected + DO-seeded **before** the fork's routine doc is seeded), `placement_edge` per copy; global/dangling/app-template refs stay live; an `account_figure_base_idx` collision reuses the forker's existing derivative.
+- **PR #133 v5-fork-copy** (`8cb646c`, `0e65912`, `0a3f841`): v5 milestone **step 5 ✅** (formerly PLAN §9; see `docs/concepts/choreography.md` § Forking) — fork re-points every placement whose ref resolves to a registry `type='account-figure'` at a fresh forker-owned `copyFigureForFork` copy (D1-projected + DO-seeded **before** the fork's routine doc is seeded), `placement_edge` per copy; global/dangling/app-template refs stay live; an `account_figure_base_idx` collision reuses the forker's existing derivative.
 **Status: all three FIXED/shipped — but the #133/#135 interaction caused the lineage incident below (itself now fixed).**
 
 ### 2026-07-02 — the migrateOnLoad lineage divergence (found post-merge; FIXED by PR #139)
@@ -138,16 +138,16 @@ Landed after the #132 review, in merge order:
 
 ### 2026-07-02 (afternoon) — the v5 milestone lands: steps 3, 4, 6 in two PRs
 With the lineage fix in, the remaining v5 model work merged the same afternoon:
-- **PR #136 library-as-bookmark** (merge `b910dc0`; `ed59aa9`, `315c819`, `f83883f`, `7962b93`, `f4aef0e`): PLAN §9 **step 4 ✅**. Account-doc `libraryFigureRefs` (domain `addLibraryRef`/`removeLibraryRef`) + the `library_entry` D1 projection (migration 0015, `apps/worker/src/db/library.ts`); `POST /api/figures/save-to-library` became a **bookmark** (accepts `{ figureRef }` or the legacy triple resolved to `globalFigureRef` — no copy), DELETE un-bookmarks (tombstone), `GET /api/figures/mine` is bookmark-driven; "add to my library" affordance in Assemble + FigureTimeline. The account doc is still not DO-wired — `library_entry` is the persisted state today (recorded in PLAN §9 step 4).
-- **PR #137 global figure docs + admin seams** (merge `c9622c9`; `71b7aa2`, `1e71cec`, `6c371b8`, `26e8e8b`, `3b50802`, `60bfb70`): PLAN §9 **steps 3 + 6 ✅**. Additive idempotent `seedGlobalFigures` into real admin-owned docs + admin-only `POST /api/admin/seed-global-figures`; the `resolveEffectiveRole` global-figure boundary (any user → viewer, admin → editor); catalog placements became **live references**; the snapshot fans out variant **bases**; the store's edit-global path became `spawnVariant` + per-beat overlay resolution on read (the frozen-style store read is gone); `isAdmin` + `routineCapOverride` (migration 0014) with the `routineCapFor` quota seam on create AND fork, surfaced via `/api/me`.
-- **PR #141 figure-editor undo** (merge `759b3a8`; `e14c5cb`, `d9072a8`): the FINAL PLAN §9 box ✅ — `undoFigure`/`redoFigure` on the store seam invert this tab's actor's last change on the figure's own `DocConnection` (per-tab actor seeding makes figure edits attributable); the full-screen editor header carries the affordance (undo follows the surface being edited, §5.4).
-**Result:** the v5 milestone is COMPLETE — zero `☐` boxes in PLAN §9. Audit: **ballroom-flow-v5-migration-campaign** §2. **Status: shipped.**
+- **PR #136 library-as-bookmark** (merge `b910dc0`; `ed59aa9`, `315c819`, `f83883f`, `7962b93`, `f4aef0e`): v5 milestone **step 4 ✅** (formerly PLAN §9; see `docs/concepts/figures.md` § The library screen). Account-doc `libraryFigureRefs` (domain `addLibraryRef`/`removeLibraryRef`) + the `library_entry` D1 projection (migration 0015, `apps/worker/src/db/library.ts`); `POST /api/figures/save-to-library` became a **bookmark** (accepts `{ figureRef }` or the legacy triple resolved to `globalFigureRef` — no copy), DELETE un-bookmarks (tombstone), `GET /api/figures/mine` is bookmark-driven; "add to my library" affordance in Assemble + FigureTimeline. The account doc is still not DO-wired — `library_entry` is the persisted state today (recorded in `docs/system/architecture.md` § D1 — the index & projections).
+- **PR #137 global figure docs + admin seams** (merge `c9622c9`; `71b7aa2`, `1e71cec`, `6c371b8`, `26e8e8b`, `3b50802`, `60bfb70`): v5 milestone **steps 3 + 6 ✅** (formerly PLAN §9). Additive idempotent `seedGlobalFigures` into real admin-owned docs + admin-only `POST /api/admin/seed-global-figures`; the `resolveEffectiveRole` global-figure boundary (any user → viewer, admin → editor); catalog placements became **live references**; the snapshot fans out variant **bases**; the store's edit-global path became `spawnVariant` + per-beat overlay resolution on read (the frozen-style store read is gone); `isAdmin` + `routineCapOverride` (migration 0014) with the `routineCapFor` quota seam on create AND fork, surfaced via `/api/me`.
+- **PR #141 figure-editor undo** (merge `759b3a8`; `e14c5cb`, `d9072a8`): the FINAL v5 milestone box ✅ (formerly PLAN §9) — `undoFigure`/`redoFigure` on the store seam invert this tab's actor's last change on the figure's own `DocConnection` (per-tab actor seeding makes figure edits attributable); the full-screen editor header carries the affordance (undo follows the surface being edited — `docs/concepts/collaboration.md` § Undo).
+**Result:** the v5 milestone is COMPLETE — zero open boxes remained (see `docs/README.md` § For historians for where the old PLAN §9 roadmap now lives). Audit: **ballroom-flow-v5-migration-campaign** §2. **Status: shipped.**
 
 ### Smaller settled battles
 | What | Evidence | Resolution |
 |---|---|---|
 | Tango-omits-Rise enforced on the **write** path, not just UI | `5657c62` | `dance_not_applicable` rejection. FIXED |
-| Undo "superseded by others" | `8bea829`, `d50690f`, `713f71b` | **Soft hint, never a refusal** (US-038 AC-3, PLAN §5.4). FIXED |
+| Undo "superseded by others" | `8bea829`, `d50690f`, `713f71b` | **Soft hint, never a refusal** (US-038 AC-3, `docs/concepts/collaboration.md` § Undo). FIXED |
 | T6 journal privacy | `17ed37e` | Viewer phantom-success closed; account arm tightened to co-member symmetry; hot-path per-change JSON double-serialization replaced by an Automerge patchCallback touch-signal. FIXED |
 
 ---
@@ -178,8 +178,8 @@ Each pattern is a rule earned by ≥1 incident above. When triaging a new bug, s
 4. **Authorization checked once / by label / asymmetrically.** Gate by verified identity + observed effect; re-check on membership change; remember **owners are not in the members table**. Incidents: `99fa1b9` (frozen role + client authorId), `eb04a33` (effect-based gate), `089dbc0` (upsert-as-escalation), `92ace53` (owner asymmetry).
 5. **React re-render churn from unstable identities on sync frames.** Heads-keyed memoization at the store seam; never key effects on caller-supplied closures. Incidents: `42f7d39`, `90bed2d`.
 6. **Two-state models collapsing "loading" into "missing".** Loading / resolved / missing / error must be distinct states. Incident: the whole "Unknown figure" saga (`621721e`, `2cdeee8`).
-7. **Model oscillation is resolved by concrete scenarios.** Named end-to-end scenarios or failing journeys settle architecture debates; PLAN.md records the rejected alternative inline (D10, D12). Incidents: the whole oscillation table.
-8. **Branch-discipline failures are expensive.** ~1269 lines thrown away in #83/#85; #90 built on a retired architecture. Check the base branch (`development`, never `main`) before building.
+7. **Model oscillation is resolved by concrete scenarios.** Named end-to-end scenarios or failing journeys settle architecture debates; the rejected alternative (D10, D12) is recorded in `docs/system/architecture.md` § Global constraints and the matching `docs/concepts/` doc. Incidents: the whole oscillation table.
+8. **Branch-discipline failures are expensive.** ~1269 lines thrown away in #83/#85 (built on a stale `main` instead of the then-trunk `development`); #90 built on a retired architecture. Check the base branch — today that means `main`, the sole trunk since `development` was deleted 2026-07-05 — before building.
 9. **Build/test artifacts leaking into production paths — and fixes lost in squashes.** Fix by output isolation, not step ordering (`e71d06d`); re-verify fixes after merge races (`79b927d`).
 10. **Data integrity by verification, not generation.** Catalog re-charted from sources, adversarially re-verified (160/18/23), unverifiable entries deleted, designer errors pushed back (PRs #117/#118).
 11. **Flakes get root-caused, not retried.** axe O(nodes), shared-D1 collisions, wrangler cold-start, hydration-vs-durability flake classes distinguished. Never weaken a test to pass; audit stale skip reasons (`d49fb52`).
@@ -188,8 +188,9 @@ Each pattern is a rule earned by ≥1 incident above. When triaging a new bug, s
 
 ## Still-OPEN items (as of 2026-07-02, HEAD `759b3a8`)
 
-**The v5 milestone is COMPLETE — zero ☐ boxes in docs/PLAN.md §9** (the last one,
-figure-editor undo, shipped in PR #141). Remaining work is the tracked follow-up tail and
+**The v5 milestone is COMPLETE — zero ☐ boxes remained in the old PLAN.md §9** (the last one,
+figure-editor undo, shipped in PR #141; that roadmap is now closed history — see
+`docs/README.md` § For historians). Remaining work is the tracked follow-up tail and
 the watch-items below — known, tracked work, not regressions. Consult
 **ballroom-flow-v5-migration-campaign** §2/§4 before building on any shipped step. The
 suite is fully green at this HEAD
@@ -198,8 +199,10 @@ change or a genuine regression, not a known incident.
 
 Beyond that box: the tracked **follow-up tail** (security comments, perf, a11y, sortKey
 convergence, reconnect — CLAUDE.md §6) lives in the task board, and three standing
-**watch-items** (PLAN §12): per-document DO fan-out at scale; full-syllabus content effort;
-notation-loop validation with the primary persona. All OPEN (watch), none started.
+**watch-items** (formerly PLAN §12, now candidate items in `docs/ideas/` / the research
+frontier — see **ballroom-flow-research-frontier**): per-document DO fan-out at scale;
+full-syllabus content effort; notation-loop validation with the primary persona. All OPEN
+(watch), none started.
 
 Source-code TODO/FIXME count is effectively zero — debt lives in the PLAN boxes, not in comments.
 
@@ -210,17 +213,27 @@ Source-code TODO/FIXME count is effectively zero — debt lives in the PLAN boxe
 Compiled 2026-07-02 against repo HEAD `70eed7e`; refreshed at `3693ff6`; **refreshed again
 2026-07-02 (afternoon) — verified at HEAD `759b3a8` (PR #141 figure-editor undo included)** (adds the #139 lineage fix — closing the
 migrateOnLoad incident — and the #136/#137 v5-completion landings; PR #140 closed as
-superseded by #139) on `development`, from git history (`git log origin/development`), the divergent `main` history, PR merge commits, docs/PLAN.md v5.0, and docs/spike/SPIKE-FINDINGS.md. Every commit hash above was verified to exist via `git show -s <hash>`; every merged PR number was verified against the merge-commit log; #83/#85/#89 verified on `origin/main`. Closed-unmerged PR dispositions (#78–#80, #84, #90) and the "GitHub has one real issue" claim come from the handoff investigation and match the absence of those PRs in local merge history, but were not re-checked against the GitHub API here — treat as **verified-by-absence**.
+superseded by #139) on `development` (the trunk at the time — merged into `main` and
+deleted from the remote 2026-07-05, PR #161; `main` is the sole trunk now), from git
+history (`git log origin/development`, run before the deletion), the divergent `main`
+history, PR merge commits, docs/PLAN.md v5.0 (dissolved 2026-07-15 into `docs/README.md` +
+`docs/concepts/` + `docs/system/` — see `docs/README.md` § For historians for the old→new
+citation map), and docs/spike/SPIKE-FINDINGS.md. Every commit hash above was verified to
+exist via `git show -s <hash>`; every merged PR number was verified against the
+merge-commit log; #83/#85/#89 verified on `origin/main`. Closed-unmerged PR dispositions
+(#78–#80, #84, #90) and the "GitHub has one real issue" claim come from the handoff
+investigation and match the absence of those PRs in local merge history, but were not
+re-checked against the GitHub API here — treat as **verified-by-absence**.
 
 Re-verification commands for anything that may drift:
 
 ```bash
 git show -s <hash>                                   # any hash cited above
-git log origin/development --merges --format='%s' | grep -oE '#[0-9]+' | sort -u   # merged PR set
-grep -n '☐' docs/PLAN.md                             # the still-OPEN v5 boxes (§9)
-git log origin/main --not origin/development --oneline   # the permanent main-only divergence
+git log origin/main --merges --format='%s' | grep -oE '#[0-9]+' | sort -u   # merged PR set
+                                                      # (development is deleted; its history is now in main)
+grep -rn 'v5' docs/README.md docs/concepts docs/system  # is the v5 milestone still described as complete?
 grep -n 'superpowers' .gitignore                     # the internal ledger is still gitignored
-grep -n 'v5.0' docs/PLAN.md | head -2                # PLAN version — if >v5.0, this chronicle needs a new entry
 ```
 
-If PLAN.md's version advances past v5.0 or the §9 boxes change, append a dated chronicle entry here **in the same change** — this skill rots exactly as fast as the plan does.
+If the docs move past this structure again, or the v5 status changes, append a dated
+chronicle entry here **in the same change** — this skill rots exactly as fast as the docs do.

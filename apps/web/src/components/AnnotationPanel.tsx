@@ -1,6 +1,6 @@
 // US-039 / US-042 — the annotation panel: a kinded note/lesson/practice thread
 // for a selected anchor (a point or a figure), with replies and kind/figure
-// filters. PLAN §4.6.
+// filters. docs/concepts/annotations.md § The Journal.
 //
 // Presentational: data + handlers as props (the §3 seam). The screen (Task 8)
 // feeds it `annotations` + `onCreate/onReply/onDeleteReply` wired to the store;
@@ -17,6 +17,7 @@ import type { Annotation, AnnotationKind, Role } from "@weavesteps/domain";
 import { useState } from "react";
 import { getLocale, pickMessages, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import { onSelectValue } from "../lib/select-value";
 import { Button, Chip } from "../ui";
 
 /** A point or figure anchor the panel is composing against (Task 8 supplies it). */
@@ -272,7 +273,7 @@ export function AnnotationPanel({
           <select
             aria-label={t.kindSelect}
             value={kind}
-            onChange={(e) => setKind(e.target.value as AnnotationKind)}
+            onChange={onSelectValue(KINDS, setKind)}
             className="w-full appearance-none rounded-md border border-border-strong bg-surface-sunken px-3.5 text-sm text-ink min-h-[var(--bf-touch-target)] outline-none"
           >
             {KINDS.map((k) => (

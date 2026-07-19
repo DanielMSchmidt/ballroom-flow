@@ -1,7 +1,7 @@
-// US-005 — Figure document schema (PLAN §2.2–2.5).
+// US-005 — Figure document schema (docs/concepts/figures.md, docs/concepts/notation.md).
 //
-// A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source,
-// optional alignment), a float-count attribute timeline, an optional
+// A figure doc carries its metadata (scope/ownerId/figureType/dance/name/source),
+// a float-count attribute timeline, an optional
 // `baseFigureRef` provenance pointer (a frozen copy carries its own attributes —
 // no overlay), and a schemaVersion. Build it from a plain FigureDoc, read it
 // back (dropping tombstoned attributes by default), and soft-delete an attribute
@@ -12,7 +12,7 @@ import type { FigureDoc, ReadOptions } from "./doc-types";
 
 /** Build an in-memory Automerge figure doc from its logical shape. */
 export function buildFigureDoc(figure: FigureDoc): A.Doc<FigureDoc> {
-  return buildDoc(figure as unknown as Record<string, unknown>) as A.Doc<FigureDoc>;
+  return buildDoc(figure);
 }
 
 /**
@@ -23,7 +23,12 @@ export function readFigure(doc: A.Doc<FigureDoc>, opts?: ReadOptions): FigureDoc
   const plain = materialize(doc);
   return {
     ...plain,
-    attributes: filterDeleted(plain.attributes, opts),
+    // Defensive: a figure-typed DO whose content was never seeded as a FigureDoc
+    // (e.g. a `figureRef` resolving to a doc with no `attributes`) materializes
+    // with `attributes === undefined` — treat it as an empty timeline rather than
+    // letting `filterDeleted` throw (`Cannot read properties of undefined (reading
+    // 'filter')`) and 500 the whole snapshot read. Mirrors the guard in doc-do.ts.
+    attributes: filterDeleted(plain.attributes ?? [], opts),
   };
 }
 

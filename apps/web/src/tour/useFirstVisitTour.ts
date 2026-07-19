@@ -19,7 +19,7 @@ import { type Driver, driver } from "driver.js";
 import { useCallback, useEffect } from "react";
 import { pickMessages } from "../i18n/messages";
 import { tourMessages } from "../i18n/messages/tours";
-import { TOURS, type TourPageId, type TourStepDef } from "./tours";
+import { TOUR_PAGE_IDS, TOURS, type TourPageId, type TourStepDef } from "./tours";
 
 /** The per-page "already shown" localStorage key. */
 export function tourSeenKey(page: TourPageId): string {
@@ -158,7 +158,7 @@ export function useFirstVisitTour(page: TourPageId, ready = true): void {
  *  every seen flag, then immediately replays the current page's tour. */
 export function useReplayTours(currentPage: TourPageId): () => void {
   return useCallback(() => {
-    resetAllTours(Object.keys(TOURS) as TourPageId[]);
+    resetAllTours(TOUR_PAGE_IDS);
     startTour(currentPage);
   }, [currentPage]);
 }

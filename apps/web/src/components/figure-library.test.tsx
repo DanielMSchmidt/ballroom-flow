@@ -12,7 +12,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // US-035 — Auto-variant on editing a non-owned figure (toast) [M4, user]
 // US-036 — Fork a figure into a variant explicitly [M4, user]
 //
-// PLAN §4.2, §10.2 component layer: "figure library screen (variant badge,
+// docs/concepts/figures.md § The library screen, docs/system/testing.md
+// component layer: "figure library screen (variant badge,
 // 'used in N'); fork/variant affordances + copy-on-write prompt; toasts incl.
 // 'copied as your variant'". Screens built by the frontend agent → dynamic
 // import behind it.skip.
@@ -55,7 +56,8 @@ describe("US-032 Application-global figure library browse", () => {
 describe("T5 — ↟ Save to my library (promote a global figure)", () => {
   it("calls onSaveToLibrary with the figure identity + toasts on success", async () => {
     // Intent: each global card carries a "↟ save" affordance that promotes the figure
-    // into the user's personal library (PLAN §5.2). Act: click the first save button.
+    // into the user's personal library (docs/concepts/figures.md § Variants).
+    // Act: click the first save button.
     // Assert: the mutation is invoked and a success toast shows.
     const { FigureLibrary } = await importComponent<FigureLibraryModule>(
       "../components/FigureLibrary",
@@ -146,6 +148,32 @@ describe("US-033 Personal library (saved copies + custom) — lineage + badge", 
     expect(screen.getByText(/nothing in My figures for this dance yet/i)).toBeInTheDocument();
     expect(screen.getByText(/save a catalog figure and it lands here/i)).toBeInTheDocument();
   });
+
+  it("surfaces a just-bookmarked catalog figure before the /mine projection catches up", async () => {
+    // Intent: the Library's "↟ save" writes the bookmark into the live account
+    //   doc instantly, but /api/figures/mine reads the alarm-written
+    //   library_entry projection — so the "My figures" tab must merge the live
+    //   ref set (read-your-writes, docs/system/architecture.md § D1 — the index
+    //   & projections) over the REST list. A catalog `global:` ref resolves its
+    //   metadata from the bundled catalog; the REST row wins once projected.
+    const { FigureLibrary } = await importComponent<FigureLibraryModule>(
+      "../components/FigureLibrary",
+    );
+    renderUi(
+      <FigureLibrary
+        tab="mine"
+        // The stale REST list already carries one row — ALSO in the live set,
+        // so the merge must not duplicate it.
+        loadMine={loadMine}
+        liveBookmarkedRefs={["global:foxtrot:feather-step", "v1"]}
+      />,
+    );
+    // The just-bookmarked catalog figure lists from the live set alone.
+    expect(await screen.findByText("Feather Step")).toBeInTheDocument();
+    expect(screen.getByText(/not in a choreo yet/i)).toBeInTheDocument();
+    // The ref the projection already carries lists exactly once (REST row wins).
+    expect(screen.getAllByText("My Feather")).toHaveLength(1);
+  });
 });
 
 describe("US-035 Auto-variant on editing a global figure (⟳v5 variant-spawn toast)", () => {
@@ -159,9 +187,9 @@ describe("US-035 Auto-variant on editing a global figure (⟳v5 variant-spawn to
       "../components/FigureTimeline",
     );
     renderUi(<FigureTimeline role="editor" figureScope="global" />);
-    // Editing a global figure via a cell overlay spawns a variant.
+    // The Builder v3 ② quick-add (blank step) is itself the first edit of the
+    // global figure — it spawns the variant immediately.
     await userEvent.click(screen.getByRole("button", { name: /Step at count 1$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /^Heel-Toe$/ }));
     expect(await screen.findByText(/made this figure yours/i)).toBeInTheDocument();
   });
 });

@@ -76,6 +76,50 @@ export async function unbookmarkFigure(
   return (res.meta.changes ?? 0) > 0;
 }
 
+/**
+ * Project the account doc's live `libraryFigureRefs` set to `library_entry`
+ * (WEP-0002 — docs/system/architecture.md § D1 — the index & projections —
+ * the alarm-written inversion of bookmarkFigure/unbookmarkFigure).
+ * Non-destructive + idempotent: each live ref is upserted to a live row (reviving
+ * a tombstone, preserving the original `createdAt`), and any currently-live row
+ * whose ref left the set is TOMBSTONED (never hard-deleted). A doc already
+ * matching its projection converges to the same rows.
+ */
+export async function projectLibraryEntries(
+  db: D1Database,
+  userId: string,
+  liveRefs: string[],
+): Promise<void> {
+  const now = Date.now();
+  const stmts = liveRefs.map((figureRef) =>
+    db
+      .prepare(
+        `INSERT INTO library_entry (userId, figureRef, createdAt, deletedAt) VALUES (?1, ?2, ?3, NULL)
+         ON CONFLICT(userId, figureRef) DO UPDATE SET deletedAt = NULL`,
+      )
+      .bind(userId, figureRef, now),
+  );
+  // Tombstone live rows the doc no longer bookmarks. `NOT IN ()` is invalid SQL,
+  // so an empty set tombstones every live row for the user.
+  if (liveRefs.length === 0) {
+    stmts.push(
+      db
+        .prepare("UPDATE library_entry SET deletedAt = ?2 WHERE userId = ?1 AND deletedAt IS NULL")
+        .bind(userId, now),
+    );
+  } else {
+    const ph = liveRefs.map(() => "?").join(",");
+    stmts.push(
+      db
+        .prepare(
+          `UPDATE library_entry SET deletedAt = ? WHERE userId = ? AND deletedAt IS NULL AND figureRef NOT IN (${ph})`,
+        )
+        .bind(now, userId, ...liveRefs),
+    );
+  }
+  await db.batch(stmts);
+}
+
 /** The live (non-tombstoned) figureRefs `userId` has bookmarked, in no particular order. */
 export async function listLibraryFigureRefs(db: D1Database, userId: string): Promise<string[]> {
   const res = await db

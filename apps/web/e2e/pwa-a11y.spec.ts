@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { seedAuth } from "./support/auth";
 
 // ─────────────────────────────────────────────────────────────────────────
-// PWA install/offline shell + accessibility/cross-browser (PLAN §10.2 E2E:
-// "PWA install/app-shell-offline; nav"). Covers:
+// PWA install/offline shell + accessibility/cross-browser (docs/system/testing.md
+// § Layer ownership: "PWA install/app-shell-offline; nav"). Covers:
 //   US-050 — installable PWA; shell loads offline with a clear "you're offline";
 //   US-051 — keyboard/SR/reduced-motion + ≥44px (real-browser a11y);
 //   US-052 — runs across chromium-desktop / mobile-chrome / mobile-safari (the
@@ -30,11 +30,12 @@ test.describe("@smoke PWA install + offline app shell", () => {
     // array is NOT installable); the service worker registers and takes control.
     await page.goto("/");
     await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
-    const manifest = (await page.evaluate(async () => {
+    // Annotated (not asserted): the in-page fetch hands back untyped JSON.
+    const manifest: { name?: string; icons?: unknown[] } = await page.evaluate(async () => {
       const href = document.querySelector('link[rel="manifest"]')?.getAttribute("href");
       if (!href) throw new Error("no manifest link");
       return (await fetch(href)).json();
-    })) as { name?: string; icons?: unknown[] };
+    });
     expect(manifest.name).toBe("Weave Steps");
     expect((manifest.icons ?? []).length).toBeGreaterThanOrEqual(2);
     await serviceWorkerControls(page);
@@ -44,6 +45,21 @@ test.describe("@smoke PWA install + offline app shell", () => {
     page,
     context,
   }) => {
+    // EXCLUDED on mobile-safari: this test asserts the SERVICE WORKER serves the
+    // shell from cache with ZERO network, which requires a genuine offline reload.
+    // In WebKit, `context.setOffline(true)` + any navigation throws "WebKit
+    // encountered an internal error" — a reproduced Playwright/WebKit limitation
+    // (a standalone repro throws even when a controlling SW would serve the page
+    // wholly from cache; goto fails the same way as reload). Unlike the sync-layer
+    // offline journeys (offline-editing #1, which isolates only the WS via
+    // installOfflineControl), the SW-serves-offline claim CANNOT be faithfully
+    // exercised on WebKit — any stand-in (live network + faked navigator.onLine)
+    // would go green without testing it. Kept honest as a skip; covered on
+    // chromium-desktop + mobile-chrome.
+    test.skip(
+      test.info().project.name === "mobile-safari",
+      "WebKit cannot navigate offline (Playwright limitation) — SW-cache serving is untestable here",
+    );
     // Intent: online-first — the shell loads offline; the UI shows an explicit
     // offline state instead of failing quietly (US-050 AC-2).
     // Steps/asserts:
@@ -92,7 +108,7 @@ test.describe("accessibility: keyboard navigation + targets (real browser)", () 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seedAuth(page, "user_solo");
     await page.goto("/");
-    await expect(page).toHaveTitle(/ballroom/i);
+    await expect(page).toHaveTitle(/weave steps/i);
     const fast = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--bf-motion-fast").trim(),
     );

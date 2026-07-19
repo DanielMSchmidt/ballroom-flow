@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────
-// EXPLAIN QUERY PLAN seam (PLAN.md §7, §10.3) — SET UP BY DEVOPS, FILLED BY THE
+// EXPLAIN QUERY PLAN seam (docs/system/architecture.md § Non-functional
+// requirements; docs/system/testing.md) — SET UP BY DEVOPS, FILLED BY THE
 // TEST ENGINEER.
 //
 // NFR: "Index every D1 query (EXPLAIN in CI)." Every list/search/registry/
@@ -63,7 +64,7 @@ export async function expectIndexedQuery(
 
   if (offending.length > 0) {
     throw new Error(
-      `EXPLAIN QUERY PLAN found a full-table SCAN (index every D1 query — PLAN §7):\n` +
+      `EXPLAIN QUERY PLAN found a full-table SCAN (index every D1 query — docs/system/architecture.md § Global constraints):\n` +
         `  SQL: ${sql}\n` +
         offending.map((d) => `  ✗ ${d}`).join("\n") +
         `\n  full plan:\n` +

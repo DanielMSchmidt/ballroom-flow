@@ -65,21 +65,75 @@ describe("renderComment", () => {
     owner: "o",
     repo: "r",
     baseSha: "BASE",
-    headSha: "HEAD",
     basePath: "apps/web/src/marketing/screenshots",
+    artifactUrl: "https://gh/actions/runs/1",
   };
-  it("shows a before/after table for changed rows and a marker", () => {
+  // With release-asset env, "after" inlines from a stable download URL.
+  const assetCtx = {
+    ...ctx,
+    assetUrlBase: "https://github.com/o/r/releases/download/ci-screenshots",
+    assetPrefix: "pr-7-SHA-",
+  };
+  it("inlines the committed BASE image, links the artifact, and keeps the marker (no asset env)", () => {
     const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], ctx);
     expect(md).toContain("<!-- screenshot-bot -->");
+    // "Before" is committed, so it inlines from the base SHA.
     expect(md).toContain(
       "raw.githubusercontent.com/o/r/BASE/apps/web/src/marketing/screenshots/hero.png",
     );
+    // Without release assets there is no after URL, and the artifact is linked.
+    expect(md).not.toContain("/HEAD/");
+    expect(md).not.toContain("releases/download");
+    expect(md).toContain("https://gh/actions/runs/1");
+  });
+  it("inlines before and after from release-asset URLs when the env is set (no diff, no Δ)", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], assetCtx);
+    // "before" inlines the exact bytes that were diffed (staged as a release
+    // asset) — NOT a raw.githubusercontent URL, which only exists for committed
+    // images and diverges once the baseline comes from the main-run artifact.
     expect(md).toContain(
-      "raw.githubusercontent.com/o/r/HEAD/apps/web/src/marketing/screenshots/hero.png",
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.before.png",
+    );
+    // "after" inlines from the prerelease's asset download URL; no diff image or Δ column.
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
+    );
+    expect(md).not.toContain("raw.githubusercontent.com");
+    expect(md).not.toContain(".diff.png");
+    expect(md).not.toContain("Δ pixels");
+  });
+  it("names the main baseline run when the baseline came from the artifact", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], {
+      ...assetCtx,
+      baselineSha: "abcdef0123456789abcdef0123456789abcdef01",
+    });
+    expect(md).toContain("abcdef0");
+    expect(md).toContain("screenshots-baseline");
+  });
+  it("falls back to describing the committed baseline when no baseline sha is set", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "changed" }], assetCtx);
+    expect(md).toContain("committed");
+    expect(md).not.toContain("screenshots-baseline");
+  });
+  it("inlines the before release asset for a REMOVED screenshot", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "removed" }], assetCtx);
+    expect(md).toContain("### Removed");
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.before.png",
     );
   });
+  it("inlines the after image for a NEW screenshot (no before) under release assets", () => {
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "new" }], assetCtx);
+    expect(md).toContain("### New");
+    expect(md).toContain(
+      "https://github.com/o/r/releases/download/ci-screenshots/pr-7-SHA-hero.after.png",
+    );
+    // A brand-new screenshot has no base, so no before/diff image.
+    expect(md).not.toContain("raw.githubusercontent.com");
+    expect(md).not.toContain(".diff.png");
+  });
   it("reports no changes when all unchanged", () => {
-    const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], ctx);
+    const md = renderComment([{ key: "hero", file: "hero.png", status: "unchanged" }], assetCtx);
     expect(md).toContain("No screenshot changes");
   });
 });

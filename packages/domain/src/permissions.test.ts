@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { can, capabilitiesFor } from "./permissions";
 
 // ─────────────────────────────────────────────────────────────────────────
-// US-020 — per-document capability model [M3, system]. PLAN §5.1.
+// US-020 — per-document capability model [M3, system]. docs/concepts/collaboration.md § Roles.
 // The pure role → capability table the worker REST surface, the DO sync
 // boundary (US-021), and the web affordance-gating (#26) all share.
 // ─────────────────────────────────────────────────────────────────────────

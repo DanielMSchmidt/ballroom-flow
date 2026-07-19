@@ -1,4 +1,4 @@
-// US-004 / US-028 — bars-driven figure timing grid (PLAN §2.5, §4.4).
+// US-004 / US-028 — bars-driven figure timing grid (docs/concepts/notation.md § Figure length, § The figure editor).
 //
 // A figure carries an explicit length in musical bars (`FigureDoc.bars`). The
 // figure editor renders EVERY possible timing that length allows — not just the
@@ -13,7 +13,7 @@
 // so a Waltz bar 2 beat 1 is count 4, its "&" is 4.5 → label "4&" (countLabel).
 import { DANCES, type DanceId } from "./dances";
 import type { Attribute } from "./doc-types";
-import { countLabel } from "./timing";
+import { phraseCountLabel } from "./timing";
 
 /** The in-between subdivisions of a beat, in order: e (¼), & (½), a (¾). */
 export const SUB_BEATS = [0.25, 0.5, 0.75] as const;
@@ -23,7 +23,9 @@ export const SUB_BEATS = [0.25, 0.5, 0.75] as const;
 export interface GridSlot {
   /** The float count this slot sits on (relative to figure start, 1-indexed). */
   count: number;
-  /** Conventional ballroom label, e.g. "1", "1e", "1&", "1a", "4" (countLabel). */
+  /** Conventional ballroom label, e.g. "1", "1e", "1&", "1a", "4" — the beat
+   *  number wraps at the dance's counted phrase (phraseCountLabel): a Waltz
+   *  never labels past 6, so its 7th beat reads "1" again. */
   label: string;
   /** 1-indexed bar this slot belongs to (drives the "bar N" divider). */
   bar: number;
@@ -34,34 +36,100 @@ export interface GridSlot {
 }
 
 /**
- * The default bar count for a figure: ⌈(number of whole-beat steps) ÷
- * beatsPerBar⌉, at least 1. A "whole-beat step" is a distinct integer count that
- * carries ≥1 live (non-tombstoned) attribute — i.e. how many on-beat steps the
- * figure already has. Used to seed a new figure's length and as the fallback when
- * a doc has no explicit `bars` (see {@link resolveFigureBars}).
+ * The highest whole beat any LIVE step occupies — a figure's step SPAN. A step
+ * on count `c` (whole or sub-beat) sits in whole beat `⌊c⌋`, so the span is the
+ * max `⌊count⌋` over non-deleted attributes (0 for an empty timeline). This is
+ * the load-bearing quantity behind the figure-length invariant: a figure's
+ * length in counts must be ≥ its span, or a step lands off the grid.
  */
-export function defaultFigureBars(attributes: Attribute[], dance: DanceId): number {
-  const { beatsPerBar } = DANCES[dance];
-  const wholeBeats = new Set<number>();
+export function stepSpan(attributes: Attribute[]): number {
+  let span = 0;
   for (const a of attributes) {
     if (a.deletedAt != null) continue;
-    if (Number.isInteger(a.count)) wholeBeats.add(a.count);
+    span = Math.max(span, Math.floor(a.count));
   }
-  return Math.max(1, Math.ceil(wholeBeats.size / beatsPerBar));
+  return span;
 }
 
 /**
- * A figure's effective bar count: its explicit `bars` when set (the authored
- * length), else {@link defaultFigureBars} over its attributes. Tolerates a
- * non-positive stored value (clamps to ≥1) so a corrupt/legacy doc still renders.
+ * The default COUNT length for a figure: its step {@link stepSpan} — the highest
+ * whole beat a live step occupies — at least 1. Used to seed a new figure's
+ * length and as the fallback when a doc has neither an authored `counts` nor a
+ * legacy `bars` (see {@link resolveFigureCounts}).
+ *
+ * NOTE this is the SPAN, not the number of steps: a figure with a Slow (2 beats,
+ * 1 count) has a gap, so "count of distinct steps" would undershoot the length
+ * and orphan the trailing step (the Foxtrot Feather Step "SQQ" steps on 1, 3, 4
+ * — 3 steps but length 4). Fixed 2026-07-14; see docs/concepts/notation.md § Figure length.
  */
-export function resolveFigureBars(figure: {
+export function defaultFigureCounts(attributes: Attribute[]): number {
+  return Math.max(1, stepSpan(attributes));
+}
+
+/**
+ * The default bar count for a figure: ⌈{@link defaultFigureCounts} ÷
+ * beatsPerBar⌉, at least 1. Retained for count-less callers (catalog charts);
+ * length-aware callers go through {@link resolveFigureCounts}.
+ */
+export function defaultFigureBars(attributes: Attribute[], dance: DanceId): number {
+  const { beatsPerBar } = DANCES[dance];
+  return Math.max(1, Math.ceil(defaultFigureCounts(attributes) / beatsPerBar));
+}
+
+/**
+ * A figure's effective length in COUNTS (Builder v3 ①, 2026-07-07): the
+ * authored `counts` when set, else a legacy authored `bars × beatsPerBar`
+ * (pre-v5 docs — the v4→v5 migration converts them in storage, this is the
+ * lenient read), else {@link defaultFigureCounts} over its attributes.
+ * Non-positive stored values clamp to ≥1 so a corrupt doc still renders.
+ *
+ * SELF-HEALING (figure-length invariant, 2026-07-14): whatever length is stored,
+ * the result is lifted to at least the step {@link stepSpan} so a doc whose
+ * `counts`/`bars` is too short for its steps (a pre-fix figure, or one edited by
+ * an old client) never orphans a trailing step off the grid. The durable repair
+ * is the schema v6 migration; this is the read-time safety net.
+ */
+export function resolveFigureCounts(figure: {
+  counts?: number;
   bars?: number;
   attributes: Attribute[];
   dance: DanceId;
 }): number {
-  if (typeof figure.bars === "number" && figure.bars >= 1) return Math.floor(figure.bars);
-  return defaultFigureBars(figure.attributes, figure.dance);
+  const authored = authoredFigureCounts(figure);
+  return Math.max(authored, stepSpan(figure.attributes));
+}
+
+/** The figure's AUTHORED length before the step-span floor is applied: explicit
+ *  `counts`, else legacy `bars × beatsPerBar`, else the step-span default. Split
+ *  out of {@link resolveFigureCounts} so the migration can lift a stored value
+ *  without re-deriving the whole precedence chain. */
+function authoredFigureCounts(figure: {
+  counts?: number;
+  bars?: number;
+  attributes: Attribute[];
+  dance: DanceId;
+}): number {
+  if (typeof figure.counts === "number" && figure.counts >= 1) return Math.floor(figure.counts);
+  const { beatsPerBar } = DANCES[figure.dance];
+  if (typeof figure.bars === "number" && figure.bars >= 1) {
+    return Math.floor(figure.bars) * beatsPerBar;
+  }
+  return defaultFigureCounts(figure.attributes);
+}
+
+/**
+ * A figure's effective bar count — DERIVED: ⌈{@link resolveFigureCounts} ÷
+ * beatsPerBar⌉. Every bar display (routine cards, section sums, numbering
+ * ends) reads through here; `bars` is no longer authored (Builder v3 ①).
+ */
+export function resolveFigureBars(figure: {
+  counts?: number;
+  bars?: number;
+  attributes: Attribute[];
+  dance: DanceId;
+}): number {
+  const { beatsPerBar } = DANCES[figure.dance];
+  return Math.max(1, Math.ceil(resolveFigureCounts(figure) / beatsPerBar));
 }
 
 /**
@@ -73,17 +141,56 @@ export function resolveFigureBars(figure: {
  */
 export function figureGridSlots(bars: number, dance: DanceId): GridSlot[] {
   const { beatsPerBar } = DANCES[dance];
-  const barCount = Math.max(1, Math.floor(bars));
+  return figureCountSlots(Math.max(1, Math.floor(bars)) * beatsPerBar, dance);
+}
+
+/**
+ * Every timing slot a `counts`-long figure in `dance` can hold, in count order:
+ * each whole beat then its e/&/a sub-beats, tagged with the bar it falls in
+ * (⌈beat / beatsPerBar⌉ — drives the "bar N" divider). The COUNT-length
+ * counterpart to {@link figureGridSlots} (Builder v3 ①): a figure's length is
+ * authored in beats, not whole bars, so the grid may end mid-bar. `counts` is
+ * clamped to ≥1.
+ */
+export function figureCountSlots(counts: number, dance: DanceId): GridSlot[] {
+  const { beatsPerBar } = DANCES[dance];
+  const countTotal = Math.max(1, Math.floor(counts));
   const slots: GridSlot[] = [];
-  for (let bar = 1; bar <= barCount; bar++) {
-    for (let k = 1; k <= beatsPerBar; k++) {
-      const beat = (bar - 1) * beatsPerBar + k;
-      slots.push({ count: beat, label: countLabel(beat), bar, beat, whole: true });
-      for (const frac of SUB_BEATS) {
-        const count = beat + frac;
-        slots.push({ count, label: countLabel(count), bar, beat, whole: false });
-      }
+  for (let beat = 1; beat <= countTotal; beat++) {
+    const bar = Math.ceil(beat / beatsPerBar);
+    slots.push({ count: beat, label: phraseCountLabel(beat, dance), bar, beat, whole: true });
+    for (const frac of SUB_BEATS) {
+      const count = beat + frac;
+      slots.push({ count, label: phraseCountLabel(count, dance), bar, beat, whole: false });
     }
   }
   return slots;
+}
+
+/** A placement's portion window (Builder v3 ③): dance just the counts
+ *  [fromCount, toCount] of the referenced figure. The figure doc stays whole
+ *  and LIVE — reads window the resolved timeline, so a catalog edit inside the
+ *  window flows in. Whole counts, 1-indexed relative to figure start. */
+export interface PlacementPart {
+  fromCount: number;
+  toCount: number;
+}
+
+/** The live attributes inside a portion window — the last beat's e/&/a
+ *  sub-beats ride with it. No part → the timeline passes through whole. */
+export function windowAttributes<T extends { count: number }>(
+  attributes: T[],
+  part?: PlacementPart | null,
+): T[] {
+  if (!part) return attributes;
+  const from = Math.max(1, Math.ceil(part.fromCount));
+  const toExclusive = Math.floor(part.toCount) + 1;
+  return attributes.filter((a) => a.count >= from && a.count < toExclusive);
+}
+
+/** The whole-beat span a portion window occupies (min 1) — a placement's beat
+ *  contribution is the WINDOW's span, whether or not every beat carries steps. */
+export function partBeatSpan(part: PlacementPart): number {
+  const from = Math.max(1, Math.ceil(part.fromCount));
+  return Math.max(1, Math.floor(part.toCount) - from + 1);
 }

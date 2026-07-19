@@ -21,6 +21,7 @@
 // Types reference the TEST-OWNED structural shapes (./types) — see that file's
 // header for why those are test-owned rather than imported from product code.
 // ─────────────────────────────────────────────────────────────────────────
+import type { Doc as AmDoc } from "@automerge/automerge";
 import type {
   Anchor,
   Attribute,
@@ -52,9 +53,10 @@ export interface RegistryKind {
   builtin: boolean;
 }
 
-/** One entry in a routine's ordered beat stream (US-004a continuous numbering). */
+/** One entry in a routine's ordered beat stream (US-004a continuous numbering).
+ *  A figure carries block-local counts + its length in whole beats. */
 export type RoutineBeatEntry =
-  | { kind: "figure"; counts: number[] }
+  | { kind: "figure"; counts: number[]; beats?: number }
   | { kind: "break"; beats: number };
 
 /** A numbered entry aligned 1:1 with the {@link RoutineBeatEntry} input. */
@@ -73,7 +75,6 @@ export type NumberedBeatEntry =
 export interface StandardRegistry extends Record<string, RegistryKind> {
   direction: RegistryKind;
   footwork: RegistryKind;
-  footPosition: RegistryKind;
   rise: RegistryKind;
   position: RegistryKind;
   bodyActions: RegistryKind;
@@ -117,8 +118,16 @@ export interface DomainApi {
 
   // US-004 timing.ts
   countLabel(count: number): string;
+  phraseCountLabel(count: number, dance: DanceId): string;
   countToPhrase(count: number, dance: DanceId): { phrase: number; countInPhrase: number };
   barsForFigure(counts: number[], dance: DanceId): number;
+  defaultFigureCounts(attributes: Attribute[]): number;
+  resolveFigureCounts(figure: {
+    counts?: number;
+    bars?: number;
+    attributes: Attribute[];
+    dance: DanceId;
+  }): number;
   offBeatSymbol(count: number): string | null;
   numberRoutineBeats(entries: RoutineBeatEntry[], dance: DanceId): NumberedBeatEntry[];
   slowQuickTokens(counts: number[], endCount: number): string[];
@@ -141,10 +150,10 @@ export interface DomainApi {
     byUser: string,
   ): { variant: FigureDoc | null; placement: Placement };
 
-  // ⟳v5 — live overlay variants (PLAN §5.2, §2.5.1 #14–18, 2026-07-02)
+  // ⟳v5 — live overlay variants (docs/concepts/figures.md § Variants, 2026-07-02)
   ownedBeats(variant: Pick<FigureDoc, "attributes">): Set<number>;
   resolveFigure(
-    base: Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment">,
+    base: Pick<FigureDoc, "attributes" | "counts" | "bars">,
     variant: FigureDoc,
   ): FigureDoc;
   variantAttributesForEdit(
@@ -161,40 +170,45 @@ export interface DomainApi {
   ): { variant: FigureDoc; placement: Placement };
   copyFigureForFork(figure: FigureDoc, byUser: string): FigureDoc;
 
-  // US-010 undo.ts
-  undoLastChange<T>(doc: T, actorId: string): T;
-  redoLastChange<T>(doc: T, actorId: string): T;
+  // US-010 undo.ts — `AmDoc<T>` is Automerge's readonly view of T, matching the
+  // real exports (which operate on live docs, not detached POJOs).
+  undoLastChange<T>(doc: AmDoc<T>, actorId: string): AmDoc<T>;
+  redoLastChange<T>(doc: AmDoc<T>, actorId: string): AmDoc<T>;
   // US-038 AC-3 — soft "superseded" hint: did another actor build on (causally
   // depend on) my next undo target? Advisory only; undo still always proceeds.
-  wasSupersededByOthers<T>(doc: T, actorId: string): boolean;
+  wasSupersededByOthers<T>(doc: AmDoc<T>, actorId: string): boolean;
 
-  // US-011 figureType note matching
+  // US-011 figureType note matching (+ WEP-0004 timed-note count pinning; docs/concepts/annotations.md § Anchors)
   matchesFigureType(anchor: Anchor, figure: FigureDoc): boolean;
+  figureTypeNoteCount(anchor: Anchor, figure: FigureDoc): number | null;
 
   // US-012 schemas.ts
   parseAttributeRead(input: unknown): Attribute;
   parseAttributeWrite(input: unknown, ctx?: { dance?: DanceId }): Attribute;
+  parseAnchors(input: unknown): Anchor[] | null;
 
   // US-013 migration ladder
   CURRENT_SCHEMA_VERSION: number;
   migrate(doc: unknown): { schemaVersion: number } & Record<string, unknown>;
-  // v5 milestone step 1 (PLAN §7) — the DO-load-path draft-mutating counterpart
+  // v5 milestone step 1 (docs/system/architecture.md § Persistence & the DO
+  // lifecycle) — the DO-load-path draft-mutating counterpart
   // of `migrate`, called inside an Automerge `A.change`.
-  migrateDraft(draft: { schemaVersion: number } & Record<string, unknown>): void;
+  migrateDraft(draft: Record<string, unknown>): void;
 
   // US-020 (re-exported permission helpers, used by the worker layer too)
   capabilitiesFor?(role: MembershipRole): { canEdit: boolean; canAnnotate: boolean };
 }
 
-const DOMAIN_PKG = "@weavesteps/domain";
-
 /**
- * Dynamically load the M1 domain module, typed as `DomainApi`. The specifier is
- * a runtime variable so the type-checker uses the `DomainApi` cast (below)
- * rather than resolving the real — currently empty — module shape. Replace with
- * a direct typed import once M1 exports exist.
+ * Dynamically load the domain module, typed as `DomainApi`. M1 has long since
+ * landed, so the real module satisfies the contract interface directly — the
+ * assignment below is CHECKED by the compiler (no cast): if the domain's public
+ * surface drifts from this contract, `pnpm typecheck` fails right here rather
+ * than in some far-away destructure. The import stays dynamic (inside the
+ * function body) so skipped suites never pay module-load cost — the
+ * `importDomain()` convention from CLAUDE.md §4 is unchanged for callers.
  */
 export async function importDomain(): Promise<DomainApi> {
-  const mod = (await import(DOMAIN_PKG)) as unknown as DomainApi;
+  const mod: DomainApi = await import("@weavesteps/domain");
   return mod;
 }

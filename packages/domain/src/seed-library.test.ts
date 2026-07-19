@@ -1,67 +1,86 @@
 import { describe, expect, it } from "vitest";
-import { importDomain } from "./__fixtures__";
+import { DANCE_IDS } from "./dances";
+import { defaultFigureCounts } from "./figure-grid";
+import { FIGURE_STEPS } from "./figure-steps";
+import { LIBRARY_FIGURES } from "./library";
 
 // ─────────────────────────────────────────────────────────────────────────
-// US-054 — Full Standard syllabus library seed (ISTD) [Content, system]
-// PLAN §9 Content workstream, D30, Q-LIBSEED: global FigureDocs authored per
-// figureType × dance, app-owned, validated against the schema; the FigureType
-// catalog (families × dances) is bundled; seed values are DATA (refinable).
+// US-054 — Full Standard syllabus library seed [Content, system]
+// the Content workstream (docs/README.md), D30, Q-LIBSEED (docs/system/architecture.md
+// § The catalog seed pipeline): the full Standard syllabus is
+// seeded per figureType × dance, app-owned, validated against the schema.
 //
-// The seed module + FigureType catalog (bundled reference data) land with the
-// content workstream → dynamic import, skipped. These tests pin that the seed
-// is well-formed (schema-valid, tagged figureType+dance, app-owned, versioned),
-// NOT the notation accuracy (which is refined with testers — Q-LIBSEED).
+// UNSKIPPED 2026-07-06: the owner's WDSF Technique Books (2nd ed., May 2013)
+// arrived and the whole five-book syllabus was charted from them (the external
+// dependency the roadmap named). Reshaped from the original draft to the AS-BUILT
+// v5 architecture: there is no GLOBAL_FIGURE_SEED module — the bundled catalog
+// (LIBRARY_FIGURES) + charted steps (FIGURE_STEPS) are the seed data, and the
+// worker's additive-only `seedGlobalFigures` imports them into real app-owned
+// global docs (covered by the worker suite). These tests pin that the seed
+// data is well-formed and full-syllabus, NOT notation accuracy (refined with
+// testers — Q-LIBSEED).
 // ─────────────────────────────────────────────────────────────────────────
 
-interface SeedModule {
-  GLOBAL_FIGURE_SEED: Array<{
-    scope: string;
-    ownerId: string;
-    figureType: string;
-    dance: string;
-    schemaVersion: number;
-  }>;
-  FIGURE_TYPE_CATALOG: Record<string, string[]>; // figureType → dances it exists in
-}
-const SEED_PKG = "@weavesteps/domain";
-
-describe.skip("US-054 Full Standard syllabus library seed (ISTD)", () => {
-  it("authors global FigureDocs tagged figureType + dance, app-owned, schema-valid", async () => {
-    // Intent: every seed figure is a global (app-owned) doc tagged with figureType +
-    //   dance and validates against the figure write schema.
-    // Arrange: import the seed + the Zod figure validator. Act: validate each seed doc.
-    // Assert: all scope:global, ownerId:app, figureType+dance present, schema-valid.
-    // Covers US-054 AC-1 (global FigureDocs by figureType×dance, app-owned).
-    const seed = (await import(SEED_PKG)) as unknown as SeedModule;
-    const { parseAttributeRead } = await importDomain();
-    expect(parseAttributeRead).toBeTypeOf("function");
-    for (const fig of seed.GLOBAL_FIGURE_SEED) {
-      expect(fig.scope).toBe("global");
-      expect(fig.ownerId).toBe("app");
-      expect(fig.figureType).toBeTruthy();
-      expect(fig.dance).toBeTruthy();
+describe("US-054 Full Standard syllabus library seed (WDSF technique books)", () => {
+  it("seeds the full syllabus: every figure tagged figureType × dance, unique per dance", () => {
+    // Covers US-054 AC-1 (figures organized by figureType × dance).
+    const seen = new Set<string>();
+    for (const fig of LIBRARY_FIGURES) {
+      expect(fig.figureType, `${fig.name} has a figureType`).toBeTruthy();
+      expect(DANCE_IDS, `${fig.figureType} dance`).toContain(fig.dance);
+      const key = `${fig.dance}:${fig.figureType}`;
+      expect(seen.has(key), `${key} unique`).toBe(false);
+      seen.add(key);
     }
   });
 
-  it("bundles a FigureType catalog mapping each family to the dances it exists in", async () => {
-    // Intent: the FigureType catalog (families × dances) is bundled reference data
-    //   that drives all-dances annotation scope + library browsing.
-    // Arrange: import the catalog. Act: read it. Assert: e.g. "feather" lists multiple
-    //   dances (Foxtrot/Quickstep/Waltz); every catalog dance is a Standard dance.
-    // Covers US-054 AC-4 (FigureType catalog bundled).
-    const seed = (await import(SEED_PKG)) as unknown as SeedModule;
-    expect(Object.keys(seed.FIGURE_TYPE_CATALOG).length).toBeGreaterThan(0);
-    expect(seed.FIGURE_TYPE_CATALOG.feather?.length ?? 0).toBeGreaterThan(1);
+  it("covers all five Standard dances at technique-book breadth", () => {
+    // The WDSF books chart 37-40 figures per dance (Waltz 37, VW 37, Tango 40,
+    // Foxtrot 39, Quickstep 39); merged with the ISTD identity set the catalog
+    // carries 260+ figures, and no dance — Viennese Waltz included — is thin.
+    expect(LIBRARY_FIGURES.length).toBeGreaterThanOrEqual(260);
+    for (const dance of DANCE_IDS) {
+      const n = LIBRARY_FIGURES.filter((f) => f.dance === dance).length;
+      expect(n, `${dance} breadth`).toBeGreaterThanOrEqual(35);
+    }
   });
 
-  it("versions seed docs by schemaVersion (corrections are data edits)", async () => {
-    // Intent: seed docs carry schemaVersion so the migration ladder applies (US-013);
-    //   notation values are data, refinable without code changes (Q-LIBSEED).
-    // Arrange: import the seed. Act: read schemaVersion of each. Assert: all present (≥1).
-    // Covers US-054 AC-3 (values are data) + AC-4 (versioned by schemaVersion).
-    const seed = (await import(SEED_PKG)) as unknown as SeedModule;
-    for (const fig of seed.GLOBAL_FIGURE_SEED) {
-      expect(fig.schemaVersion).toBeGreaterThanOrEqual(1);
+  it("carries verified per-step both-role charts for the technique-book figures", () => {
+    // Covers US-054 AC-2/AC-3 (book-verified content; values are data). Every
+    // charted figure is keyed dance:figureType; the step-count guard
+    // (figure-steps.test.ts) keeps each chart aligned to its timing.
+    expect(Object.keys(FIGURE_STEPS).length).toBeGreaterThanOrEqual(210);
+  });
+
+  it("gives every seeded figure a length that covers its last step (figure-length invariant)", () => {
+    // The figure-length invariant (§2.5.2, fixed 2026-07-14): a figure's default
+    // length must be its step SPAN, not the number of distinct steps — else a
+    // figure with a Slow (2 beats, 1 count → a gap) has a trailing step off the
+    // grid. Assert the SEED-TIME default (`defaultFigureCounts`, what the worker
+    // seeds each global doc with) covers the span — NOT the self-healed read, so
+    // this bites if the default ever regresses to the old "#distinct steps": the
+    // Foxtrot Feather Step "SQQ" (steps on 1, 3, 4) seeded length 3 < span 4.
+    // Compute the span INDEPENDENTLY here (max whole beat of any live step) so
+    // this guard bites even if the production `stepSpan`/default is reverted.
+    const offenders: string[] = [];
+    for (const fig of LIBRARY_FIGURES) {
+      const attributes = fig.attributes ?? [];
+      const span = attributes
+        .filter((a) => a.deletedAt == null)
+        .reduce((m, a) => Math.max(m, Math.floor(a.count)), 0);
+      const length = defaultFigureCounts([...attributes]);
+      if (length < span)
+        offenders.push(`${fig.dance}:${fig.figureType} (seeded length ${length} < span ${span})`);
     }
+    expect(offenders, `figures whose length omits a step:\n${offenders.join("\n")}`).toEqual([]);
+  });
+
+  it("keeps figureType a cross-dance family key (all-dances annotation scope)", () => {
+    // Covers US-054 AC-4 (the figureType catalog spans dances — e.g. the
+    // Natural Turn family exists in several Standard dances).
+    const naturalTurnDances = new Set(
+      LIBRARY_FIGURES.filter((f) => f.figureType === "natural-turn").map((f) => f.dance),
+    );
+    expect(naturalTurnDances.size).toBeGreaterThanOrEqual(3);
   });
 });

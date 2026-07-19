@@ -1,4 +1,6 @@
--- D31 (⟳v5) — the admin seam (PLAN §2.7, §5.2, D31).
+-- D31 (⟳v5) — the admin seam (docs/system/architecture.md § D1 — the index &
+-- projections; docs/concepts/figures.md § Variants; docs/concepts/collaboration.md
+-- § Who uses this; D31).
 --
 -- Two nullable/defaulted columns on `users` so the admin concept lands without a
 -- new table:

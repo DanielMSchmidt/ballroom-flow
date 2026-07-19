@@ -8,7 +8,8 @@ import { renderUi, screen, userEvent, within } from "../test-support/render";
 // US-037 — Choreo fork ("make it your own") affordance [M4, user]
 // US-045 — Sample routine + start-from-template [M7, user]
 //
-// PLAN §4.1, §10.2 component layer: quota upsell toast; fork action; empty →
+// docs/concepts/choreography.md § The choreo list, docs/system/testing.md
+// component layer: quota upsell toast; fork action; empty →
 // sample + template. Choreo List screen built by the frontend agent → dynamic
 // import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
@@ -66,6 +67,24 @@ describe("US-025 Create a routine (UI)", () => {
     await userEvent.type(within(sheet).getByLabelText(/choreo name/i), "Showcase");
     await userEvent.click(within(sheet).getByRole("button", { name: /create choreo/i }));
     expect(onCreate).toHaveBeenCalledWith({ title: "Showcase", dance: "waltz" });
+  });
+});
+
+describe("routines list loading state", () => {
+  it("shows a loading placeholder — NOT the empty-state tour video — while routines load", async () => {
+    // Intent: the empty state (and its inline product-tour <video>) must not
+    // render before the list has loaded, or it flashes in and is immediately
+    // replaced once routines arrive (which also destabilises the marketing shot).
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    renderUi(<ChoreoList ownedCount={0} plan="free" loading />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  it("shows the empty state with the tour video once loaded and empty", async () => {
+    const { ChoreoList } = await importComponent<ChoreoListModule>("../components/ChoreoList");
+    renderUi(<ChoreoList ownedCount={0} plan="free" />);
+    expect(document.querySelector("video")).not.toBeNull();
   });
 });
 

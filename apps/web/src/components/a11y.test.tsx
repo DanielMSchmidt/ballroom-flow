@@ -13,17 +13,22 @@ import { Profile } from "./Profile";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-051 — Accessibility WCAG AA [M9, user]
-// PLAN §7, §10.3: "axe reports no violations on each screen (component-level
+// docs/system/architecture.md § Non-functional requirements, docs/system/testing.md:
+// "axe reports no violations on each screen (component-level
 // vitest-axe)"; color never the sole signal; ≥44px; keyboard + SR; reduced-motion.
 //
 // One axe sweep per primary PRESENTATIONAL screen, rendered with minimal real
 // props (the previous version rendered every screen prop-less, which is why the
 // whole suite was skipped — most screens need props/providers to mount).
 //
-// Assemble and Share are intentionally NOT here: they need a live store / doc
-// connection (routineId → WebSocket store, docRef → members fetch), so their a11y
-// is covered by the real-browser E2E a11y journey (e2e/pwa-a11y.spec.ts, US-052),
-// which is where real color-contrast + keyboard + cross-browser checks live anyway.
+// Assemble and Share are NOT swept here: they need a live store / doc connection
+// (routineId → WebSocket store, docRef → members fetch) to mount. The real-browser
+// E2E a11y journey (e2e/pwa-a11y.spec.ts, US-052) exercises keyboard navigation,
+// ≥44px targets, and reduced-motion on the running app — but it does NOT run axe,
+// so the editor's markup-level a11y (heading order, aria labels, color-contrast)
+// currently has NO automated sweep. KNOWN GAP: add an injected-store component
+// axe test for Assemble (or an axe pass in the E2E journey) so the most complex
+// screen isn't the one screen without an axe check. Tracked in the readiness backlog.
 // ─────────────────────────────────────────────────────────────────────────
 
 const SCREENS: { name: string; ui: ReactElement }[] = [

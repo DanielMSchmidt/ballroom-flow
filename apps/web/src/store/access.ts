@@ -8,11 +8,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppAuth } from "../auth/app-auth";
 import { ApiError, apiGet } from "../lib/rpc";
 
-/** The viewer's access to a document: still checking, allowed (+role), or denied. */
+/**
+ * The viewer's access to a document: still checking, allowed (+role), denied —
+ * or UNKNOWN (the check itself failed: offline / 5xx). Unknown is NOT a denial:
+ * the screen proceeds optimistically (offline editing, §11.2, needs the locally
+ * persisted doc to open with no network) and the fail-closed DO boundary stays
+ * the real gate.
+ */
 export type DocAccess =
   | { state: "checking" }
   | { state: "allowed"; role: "owner" | "editor" | "commenter" | "viewer" }
-  | { state: "denied" };
+  | { state: "denied" }
+  | { state: "unknown" };
 
 interface AccessResponse {
   role: "owner" | "editor" | "commenter" | "viewer";
@@ -30,6 +37,11 @@ export function useDocAccess(docRef: string, opts: { enabled?: boolean } = {}): 
   const q = useQuery({
     queryKey: ["access", docRef],
     enabled,
+    // §11.2 offline app open: run the attempt even when react-query believes
+    // the browser is offline — the failure resolves to "unknown" below, which
+    // is what lets an offline launch reach the locally persisted doc instead
+    // of pausing on "checking" forever.
+    networkMode: "always",
     queryFn: async (): Promise<DocAccess> => {
       try {
         const { role } = await apiGet<AccessResponse>(
@@ -44,5 +56,9 @@ export function useDocAccess(docRef: string, opts: { enabled?: boolean } = {}): 
     },
     retry: false,
   });
+  // A failed check (offline / 5xx) resolves to "unknown" rather than spinning on
+  // "checking" forever — an offline reload must reach the locally-persisted doc
+  // (§11.2). Never "denied": denial requires the server's explicit 403.
+  if (q.isError) return { state: "unknown" };
   return q.data ?? { state: "checking" };
 }

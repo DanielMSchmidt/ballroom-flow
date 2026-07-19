@@ -1,7 +1,6 @@
 // GENERATED from docs/seed/figure-charts.json by scripts/gen-figure-charts.mjs.
 // Real per-step both-role technique (WDSF-first, dancecentral.info primary), researched
 // per figure with source attribution in the seed. Do not edit by hand — regenerate instead.
-import type { Alignment } from "./doc-types";
 import type { AuthoredStep } from "./figure-steps";
 
 export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
@@ -12,31 +11,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
         sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        sway: "to_R",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "back",
@@ -47,7 +49,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "TH",
-        sway: "to_R",
+        sway: "to_L",
         turn: "eighth_R",
       },
     },
@@ -59,62 +61,59 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_R",
-        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "diagonal",
         footwork: "T",
-        sway: "to_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
-        sway: "to_R",
         turn: "eighth_R",
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "promenade",
       leader: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:basic-weave": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -125,6 +124,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "quarter_L",
       },
     },
     {
@@ -132,8 +132,9 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "T",
         sway: "to_L",
+        turn: "eighth_L",
       },
       follower: {
         direction: "forward",
@@ -143,45 +144,51 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of T, B",
+        sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
-        direction: "forward",
+        direction: "side",
         footwork: "TH",
+        sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
-      },
-      follower: {
-        direction: "side",
-        footwork: "TH",
-        sway: "to_L",
-        turn: "eighth_L",
-      },
-    },
-    {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -291,33 +298,112 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "foxtrot:change-of-direction": [
     {
+      rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "H",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "I/E of T, H",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T, IE of TH",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "IE of T",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "IE of T",
+        sway: "to_R",
         turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "diagonal",
-        footwork: "H/T",
-        sway: "to_L",
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
-        direction: "diagonal",
-        footwork: "H/T",
-        sway: "to_R",
+        direction: "forward",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:closed-telemark": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
-      position: "CBMP",
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "outside_partner",
       leader: {
         direction: "forward",
         footwork: "H",
@@ -333,210 +419,239 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "foxtrot:curved-feather": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "T",
+        direction: "diagonal",
+        footwork: "BT",
         sway: "to_R",
         turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "T",
-        sway: "to_L",
+        sway: "to_R",
         turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
-        bodyActions: ["CBM"],
+        turn: "eighth_R",
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        sway: "to_L",
-        bodyActions: ["CBM"],
+        sway: "to_R",
+        turn: "eighth_R",
       },
     },
   ],
   "foxtrot:curved-feather-from-p-p": [
     {
       rise: "commence",
-      position: "promenade",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "HT",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "forward",
-        footwork: "T",
-        sway: "to_R",
-        turn: "eighth_R",
-      },
-      follower: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_L",
-        turn: "eighth_R",
-      },
-    },
-    {
-      rise: "up",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
-        sway: "to_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BT",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BT",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-        bodyActions: ["CBM"],
+        turn: "eighth_R",
       },
     },
   ],
   "foxtrot:curved-three-step": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        sway: "to_L",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "T",
+        footwork: "HB",
         sway: "to_L",
-        turn: "half_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
-        turn: "half_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_L",
       },
     },
   ],
   "foxtrot:double-reverse-spin": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BT",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
         turn: "half_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
-      leader: {
+      rise: "continue",
+      position: "closed",
+      follower: {
         direction: "side",
         footwork: "T",
-        turn: "half_L",
-      },
-      follower: {
-        direction: "close",
-        footwork: "HT",
         turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T",
+        footwork: "TH",
+        turn: "half_L",
       },
       follower: {
-        direction: "forward",
+        direction: "in_front",
         footwork: "TH",
-        turn: "quarter_L",
+        turn: "eighth_L",
       },
     },
   ],
   "foxtrot:fallaway-reverse-and-slip-pivot": [
     {
       rise: "commence",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "fallaway",
       leader: {
-        direction: "back",
+        direction: "side",
         footwork: "T",
+        turn: "quarter_L",
       },
       follower: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
       position: "CBMP",
       leader: {
         direction: "back",
@@ -546,22 +661,22 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "back",
         footwork: "T",
-        turn: "half_L",
-        bodyActions: ["CBM"],
+        turn: "five_eighth_L",
       },
     },
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T/H/T",
-        turn: "eighth_L",
+        footwork: "THT",
+        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        turn: "quarter_L",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
@@ -569,23 +684,24 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "foxtrot:feather-ending": [
     {
       rise: "commence",
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "T",
+        direction: "diagonal",
+        footwork: "B",
         sway: "to_R",
       },
       follower: {
@@ -596,74 +712,79 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
-        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:feather-finish": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T/H/T",
-        turn: "three_eighth_L",
+        footwork: "THT",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of T, B",
         sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:feather-step": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -673,24 +794,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
       },
       follower: {
@@ -702,41 +826,46 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "foxtrot:heel-pull-finish": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "H, I/E of F, Flat F (RF) and I/E of F (LF)",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH, I/E of T (RF)",
+        sway: "to_R",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      leader: {
-        direction: "side",
-        footwork: "heel pull",
-        sway: "to_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "TH",
-        sway: "to_R",
-      },
-    },
-    {
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
-        bodyActions: ["CBM"],
+        footwork: "TH",
       },
     },
   ],
@@ -787,87 +916,88 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "foxtrot:hover-cross": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
-        turn: "half_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
         turn: "quarter_R",
       },
     },
     {
       rise: "up",
+      position: "CBMP",
       leader: {
-        direction: "side",
-        footwork: "T",
+        direction: "forward",
+        footwork: "O/E of T, B",
+        sway: "to_L",
       },
       follower: {
-        direction: "side",
-        footwork: "T",
+        direction: "back",
+        footwork: "B",
+        sway: "to_R",
         turn: "eighth_R",
       },
     },
     {
       rise: "up",
-      position: "CBMP",
+      position: "wing",
       leader: {
-        direction: "forward",
-        footwork: "T",
-        sway: "to_L",
+        direction: "in_place",
+        footwork: "TB",
       },
       follower: {
-        direction: "back",
-        footwork: "T",
-        sway: "to_R",
+        direction: "in_place",
+        footwork: "B",
       },
     },
     {
       rise: "up",
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "T",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "T",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of T, B",
         sway: "to_R",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
-        sway: "to_L",
+        sway: "to_R",
         turn: "eighth_L",
       },
     },
@@ -876,173 +1006,194 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        sway: "to_L",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:hover-telemark": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        direction: "diagonal",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "T and I/E of T (LF)",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "T and I/E of T (RF)",
         sway: "to_R",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "side",
+        direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:hover-telemark-to-p-p": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        direction: "diagonal",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "T and I/E of T (LF)",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "T and I/E of T (RF)",
         sway: "to_R",
-        turn: "eighth_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
       position: "promenade",
       leader: {
-        direction: "diagonal",
-        footwork: "TH",
+        direction: "side",
+        footwork: "I/E of T, H",
+        sway: "to_L",
       },
       follower: {
         direction: "side",
-        footwork: "TH",
-        turn: "quarter_R",
+        footwork: "I/E of T, H",
+        sway: "to_R",
       },
     },
   ],
   "foxtrot:impetus": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:impetus-to-p-p": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1051,81 +1202,94 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
   "foxtrot:natural-hover-telemark": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "TH",
-        sway: "to_R",
+        footwork: "I/E of F, Flat",
+        sway: "to_L",
         turn: "half_R",
       },
       follower: {
-        direction: "close",
-        footwork: "HT",
-        sway: "to_L",
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
         turn: "three_eighth_R",
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
-        direction: "side",
-        footwork: "heel pull",
+        direction: "in_place",
+        footwork: "I/E of B",
         sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
-        direction: "side",
-        footwork: "T",
+        direction: "close",
+        footwork: "I/E of B",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
-      leader: {
-        direction: "in_place",
-        footwork: "T",
-        sway: "to_L",
-      },
-      follower: {
-        direction: "in_place",
-        footwork: "T",
-        sway: "to_R",
-      },
-    },
-    {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "B",
+        sway: "to_R",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        sway: "to_R",
+        sway: "to_L",
       },
     },
     {
@@ -1133,67 +1297,77 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_L",
       },
     },
   ],
   "foxtrot:natural-telemark": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
-        turn: "half_R",
-      },
-      follower: {
-        direction: "close",
-        footwork: "HT",
-        sway: "to_L",
-        turn: "three_eighth_R",
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-      },
-      follower: {
-        direction: "side",
-        footwork: "T",
-      },
-    },
-    {
-      rise: "up",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1201,50 +1375,55 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_L",
       },
     },
   ],
   "foxtrot:natural-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "half_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
@@ -1255,83 +1434,93 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "foxtrot:natural-twist-turn": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "half_R",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "body_rise",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
     },
     {
+      rise: "body_rise",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
-        sway: "to_R",
-        turn: "three_eighth_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
+      rise: "body_rise",
+      position: "CBMP",
       leader: {
         direction: "in_place",
-        footwork: "T/H",
-        turn: "three_eighth_R",
+        footwork: "B (RF) and H (LF)",
       },
       follower: {
         direction: "forward",
         footwork: "T",
         turn: "eighth_R",
-        bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "in_place",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "Flat (RF) and I/E of T (LF)",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
-        sway: "to_R",
+        footwork: "BH (LF) and I/E of T (RF)",
         turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "From Flat to B (RF) B (LF)",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
-        sway: "to_R",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
       },
     },
     {
@@ -1339,11 +1528,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_L",
       },
     },
   ],
@@ -1353,33 +1544,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
+        turn: "quarter_R",
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
@@ -1407,31 +1599,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "diagonal",
         footwork: "T",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of T, B",
         sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1439,71 +1634,74 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:natural-zig-zag-from-p-p": [
     {
       rise: "commence",
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
+        turn: "eighth_R",
       },
       follower: {
-        direction: "forward",
-        footwork: "T",
+        direction: "diagonal",
+        footwork: "B",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
+        footwork: "TB",
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
+        footwork: "B",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of T, B",
         sway: "to_R",
+        turn: "quarter_L",
       },
       follower: {
-        direction: "side",
+        direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
     },
     {
@@ -1511,42 +1709,189 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
-  "foxtrot:open-natural-turn": [
+  "foxtrot:natural-zig-zag-from-pp": [
     {
       rise: "commence",
       position: "promenade",
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
-      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         turn: "eighth_R",
       },
       follower: {
-        direction: "forward",
+        direction: "diagonal_forward",
         footwork: "T",
         turn: "eighth_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "outside_partner",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+    {
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:open-impetus": [
+    {
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      leader: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "promenade",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:open-natural-turn": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1555,27 +1900,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
       },
     },
   ],
   "foxtrot:outside-swivel": [
     {
+      rise: "lowering",
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
-        turn: "quarter_R",
-        bodyActions: ["CBM"],
+        footwork: "TH with pressure on B (RF)",
+        sway: "to_L",
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
-        footwork: "HTH",
-        turn: "half_R",
-        bodyActions: ["CBM"],
+        footwork: "HB (F Flat) and I/E of B (LF)",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
@@ -1686,37 +2038,39 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
       follower: {
         direction: "forward",
@@ -1731,60 +2085,67 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
+        turn: "half_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "TH",
-        sway: "to_R",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "TH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "H",
-        turn: "eighth_L",
+        footwork: "TH",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
@@ -1792,12 +2153,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         sway: "to_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
@@ -1810,29 +2172,35 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "body_rise",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "heel pull",
+        footwork: "H, I/E of F, Flat F (RF) and I/E of F (LF)",
         sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH (LF) I/E of T (RF)",
         sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1840,12 +2208,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
-        bodyActions: ["CBM"],
+        footwork: "TH",
       },
     },
   ],
@@ -1855,28 +2221,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
-        turn: "three_eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
       },
@@ -1887,10 +2252,15 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "half_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -1900,29 +2270,30 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
-        turn: "half_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1931,23 +2302,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "half_L",
       },
       follower: {
-        direction: "forward",
+        direction: "side",
         footwork: "TH",
+        sway: "to_R",
       },
     },
   ],
   "foxtrot:three-step": [
     {
+      rise: "lowering",
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "H",
+        footwork: "H flat",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -1955,25 +2334,22 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         sway: "to_L",
-        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
-        bodyActions: ["side_leading"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_L",
-        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
@@ -1988,43 +2364,47 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "B",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
-        direction: "back",
-        footwork: "T",
+        direction: "diagonal",
+        footwork: "B",
         turn: "eighth_L",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
         turn: "eighth_L",
-        bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of T, B",
         sway: "to_R",
         turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -2032,18 +2412,135 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "O/E of T, BH",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
         turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "foxtrot:weave-from-p-p": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "up",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of T, B",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:weave-from-pp": [
     {
       rise: "commence",
       position: "promenade",
@@ -2054,7 +2551,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
@@ -2063,7 +2559,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "T",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -2076,24 +2571,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       rise: "up",
       leader: {
         direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "up",
+      position: "outside_partner",
+      leader: {
+        direction: "back",
         footwork: "T",
         sway: "to_L",
         turn: "eighth_L",
       },
       follower: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "back",
-        footwork: "T",
-        sway: "to_L",
-      },
-      follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
@@ -2104,33 +2602,32 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
         turn: "three_eighth_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "T",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
       },
       follower: {
         direction: "side",
         footwork: "TH",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
-      position: "CBMP",
+      position: "outside_partner",
       leader: {
         direction: "forward",
         footwork: "TH",
@@ -2140,6 +2637,19 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -2149,26 +2659,26 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
-        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
-        direction: "diagonal",
+        direction: "side",
         footwork: "T",
-        sway: "to_R",
       },
     },
     {
@@ -2177,12 +2687,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_L",
       },
       follower: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_R",
+        turn: "quarter_R",
       },
     },
   ],
@@ -2197,22 +2706,20 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "T",
-        sway: "to_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
-        sway: "to_R",
         turn: "eighth_R",
       },
     },
@@ -2222,12 +2729,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -2242,12 +2750,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
@@ -2259,8 +2768,9 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
       follower: {
@@ -2270,6 +2780,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "TH",
@@ -2280,9 +2791,64 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
-  "quickstep:cross-chasse": [
+  "quickstep:change-of-direction": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "IE of TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "diagonal_back",
+        footwork: "T, IE of TH",
+        turn: "quarter_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "IE of T (LF)",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "IE of T (RF)",
+        sway: "to_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:chasse-reverse-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "HT",
@@ -2296,19 +2862,187 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "quickstep:closed-impetus": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:closed-telemark": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:cross-chasse": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
@@ -2323,71 +3057,88 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "quickstep:cross-swivel": [
     {
+      rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "H",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
+        direction: "close",
+        footwork: "Flat F (LF), and light pressure on I/E of T (RF)",
+        sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
-        direction: "back",
-        footwork: "T",
-        bodyActions: ["CBM"],
+        direction: "close",
+        footwork: "Flat F (RF), and light pressure on I/E of T (LF)",
+        sway: "to_R",
+        turn: "quarter_L",
       },
     },
   ],
   "quickstep:double-reverse-spin": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BT",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
         turn: "half_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "side",
-        footwork: "T",
+        direction: "close",
+        footwork: "TH",
         turn: "half_L",
       },
       follower: {
-        direction: "close",
-        footwork: "HT",
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
-      leader: {
-        direction: "close",
-        footwork: "T",
-      },
+      position: "closed",
       follower: {
-        direction: "side",
-        footwork: "T/TH",
-        turn: "three_eighth_L",
+        direction: "in_front",
+        footwork: "TH",
+        turn: "eighth_L",
       },
     },
   ],
@@ -2397,19 +3148,106 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "TH (LF), ET (RF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "outside_partner",
+      leader: {
+        direction: "behind",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "B",
+        sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "B",
+        turn: "eighth_R",
+      },
+    },
+    {
       rise: "up",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "T",
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+      },
+    },
+  ],
+  "quickstep:fishtail": [
+    {
+      rise: "commence",
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
@@ -2417,7 +3255,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         turn: "eighth_R",
       },
       follower: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
         sway: "to_L",
         turn: "eighth_R",
@@ -2425,48 +3263,65 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "T",
+        turn: "eighth_R",
       },
       follower: {
         direction: "back",
         footwork: "T",
+        turn: "eighth_R",
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "diagonal_forward",
         footwork: "T",
-        bodyActions: ["side_leading"],
       },
       follower: {
-        direction: "diagonal",
+        direction: "diagonal_back",
         footwork: "T",
-        bodyActions: ["side_leading"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
       },
       follower: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "diagonal_forward",
         footwork: "TH",
       },
       follower: {
-        direction: "diagonal",
+        direction: "diagonal_back",
         footwork: "TH",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -2476,7 +3331,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -2487,6 +3342,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "T",
@@ -2498,17 +3354,19 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
       },
       follower: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "TH",
@@ -2522,38 +3380,51 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "quickstep:four-quick-run": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "THT",
-        turn: "three_eighth_L",
+        footwork: "THB",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_L",
+        footwork: "B",
+        turn: "quarter_L",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "T",
+        footwork: "B",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
         turn: "eighth_L",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "T",
       },
       follower: {
         direction: "back",
@@ -2562,34 +3433,25 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
-      leader: {
-        direction: "diagonal",
-        footwork: "T",
-      },
-      follower: {
-        direction: "diagonal",
-        footwork: "T",
-      },
-    },
-    {
-      rise: "up",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
       },
       follower: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "forward",
         footwork: "TH",
       },
       follower: {
-        direction: "diagonal",
+        direction: "back",
         footwork: "TH",
       },
     },
@@ -2639,75 +3501,85 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "quickstep:impetus": [
     {
+      rise: "lowering",
       position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_L",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "quickstep:impetus-to-pp": [
     {
+      rise: "lowering",
       position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "heel turn",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -2716,26 +3588,94 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
   "quickstep:natural-pivot": [
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "HT",
+        footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "TH",
+        footwork: "HBH",
         turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:natural-pivot-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "THT",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HTH",
+        turn: "half_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -2745,38 +3685,39 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "close",
@@ -2785,43 +3726,51 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "THT",
+        footwork: "BHB",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HB",
         turn: "half_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
-      position: "CBMP",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_R",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
-        turn: "three_eighth_R",
+        footwork: "BT",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "side",
+        direction: "back",
         footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
@@ -2831,38 +3780,39 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "close",
@@ -2877,29 +3827,29 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "half_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
@@ -2909,11 +3859,75 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_R",
+      },
+    },
+  ],
+  "quickstep:progressive-chasse": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_L",
+      },
+    },
+    {
+      leader: {
+        direction: "close",
+        footwork: "T",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -2924,21 +3938,21 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
@@ -2947,7 +3961,8 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
@@ -2955,10 +3970,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
+        turn: "eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
@@ -2975,19 +3992,18 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -2996,13 +4012,16 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "side",
         footwork: "T",
+        turn: "quarter_L",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
+        turn: "eighth_L",
       },
       follower: {
         direction: "close",
@@ -3011,6 +4030,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
@@ -3027,19 +4047,18 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -3050,14 +4069,18 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "quarter_R",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
         sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
@@ -3067,63 +4090,129 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:quick-open-reverse": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "half_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "outside_partner",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+      },
+    },
+    {
+      leader: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "quickstep:reverse-pivot": [
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "back",
-        footwork: "TH",
-        turn: "half_L",
+        direction: "diagonal",
+        footwork: "BHB",
+        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "half_L",
+        footwork: "BH",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "quickstep:reverse-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
@@ -3187,37 +4276,41 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "T",
-        bodyActions: ["CBM"],
+        footwork: "B",
       },
       follower: {
         direction: "back",
-        footwork: "T",
-        bodyActions: ["CBM"],
+        footwork: "B",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -3227,11 +4320,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -3241,58 +4336,223 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T",
-        turn: "three_eighth_R",
+        footwork: "TH",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
         turn: "quarter_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
-        turn: "eighth_R",
-      },
-    },
-    {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
       },
     },
   ],
   "quickstep:running-natural-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
         turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HBH",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "quickstep:running-right-turn": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
         bodyActions: ["CBM"],
       },
     },
@@ -3302,12 +4562,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
     },
     {
@@ -3316,6 +4577,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "close",
@@ -3343,7 +4605,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -3358,11 +4619,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "close",
-        footwork: "heel turn",
+        footwork: "HT",
         sway: "to_L",
         turn: "half_R",
       },
@@ -3373,26 +4634,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
     },
     {
       rise: "commence",
-      position: "CBMP",
+      position: "outside_partner",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
@@ -3402,6 +4664,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
@@ -3416,11 +4679,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "forward",
         footwork: "TH",
         sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -3486,35 +4765,49 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "quickstep:six-quick-run": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T",
-        turn: "half_L",
+        footwork: "B",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "T",
-        turn: "quarter_L",
+        footwork: "B",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
+        turn: "quarter_L",
       },
     },
     {
-      rise: "up",
+      rise: "continue",
       position: "CBMP",
       leader: {
         direction: "forward",
+        footwork: "B",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "forward",
         footwork: "T",
       },
       follower: {
@@ -3524,34 +4817,25 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
-      leader: {
-        direction: "diagonal",
-        footwork: "T",
-      },
-      follower: {
-        direction: "diagonal",
-        footwork: "T",
-      },
-    },
-    {
-      rise: "up",
+      position: "closed",
       leader: {
         direction: "behind",
         footwork: "T",
       },
       follower: {
-        direction: "forward",
+        direction: "in_front",
         footwork: "T",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "forward",
         footwork: "TH",
       },
       follower: {
-        direction: "diagonal",
+        direction: "back",
         footwork: "TH",
       },
     },
@@ -3562,41 +4846,46 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
         turn: "three_eighth_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -3606,30 +4895,30 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
-        turn: "three_eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
         sway: "to_R",
         turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -3638,10 +4927,113 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "half_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "quickstep:tipple-chasse-to-r": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "close",
+        footwork: "T",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "behind",
+        footwork: "T",
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "diagonal_back",
+        footwork: "TH",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -3652,34 +5044,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
-        turn: "eighth_R",
       },
       follower: {
         direction: "close",
@@ -3688,14 +5080,21 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "TH (RF) then I/E of T (LF)",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "TH (LF) then I/E of T (RF)",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -3706,29 +5105,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
+        turn: "quarter_R",
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
@@ -3736,18 +5137,24 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
-        turn: "eighth_R",
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "TH (RF) then I/E of T (LF)",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "TH (LF) then I/E of T (RF)",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -3829,6 +5236,41 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
+  "quickstep:tipsy-to-r-or-l": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "side",
+        footwork: "T",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "close",
+        footwork: "T",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "side",
+        footwork: "IE of T and IE of T of LF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "IE of T and IE of T of RF",
+      },
+    },
+  ],
   "quickstep:v6": [
     {
       rise: "commence",
@@ -3840,26 +5282,29 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "back",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
       follower: {
-        direction: "diagonal",
+        direction: "forward",
         footwork: "T",
         bodyActions: ["side_leading"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
       follower: {
@@ -3869,12 +5314,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
       },
       follower: {
-        direction: "forward",
+        direction: "diagonal",
         footwork: "TH",
       },
     },
@@ -3884,24 +5330,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
     },
@@ -3911,10 +5360,14 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
     },
   ],
@@ -4007,28 +5460,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        sway: "to_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        sway: "to_R",
-        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
-        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
-        direction: "diagonal",
+        direction: "side",
         footwork: "T",
-        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4037,12 +5489,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_L",
       },
       follower: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_R",
+        turn: "quarter_R",
       },
     },
   ],
@@ -4138,30 +5589,35 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "quickstep:zig-zag": [
     {
+      rise: "commence",
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "TH",
-        turn: "eighth_L",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_L",
       },
       follower: {
         direction: "close",
-        footwork: "heel turn",
-        turn: "eighth_L",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "three_eighth_L",
       },
     },
     {
@@ -4170,6 +5626,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -4180,19 +5637,21 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
       },
       follower: {
-        direction: "diagonal",
+        direction: "forward",
         footwork: "T",
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
       },
       follower: {
@@ -4208,7 +5667,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "TH",
       },
       follower: {
-        direction: "diagonal",
+        direction: "forward",
         footwork: "TH",
       },
     },
@@ -4217,14 +5676,18 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       position: "closed",
       leader: {
-        direction: "back",
-        footwork: "BH",
-        bodyActions: ["side_leading"],
+        direction: "side",
+        footwork: "I/E of BH",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["side_leading"],
+        direction: "side",
+        footwork: "I/E of BH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4232,24 +5695,25 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "IE",
+        turn: "eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "BH",
+        footwork: "I/E of BH",
+        turn: "eighth_L",
       },
     },
     {
@@ -4257,10 +5721,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -4277,27 +5743,85 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
-        turn: "quarter_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "BH",
-        turn: "eighth_R",
+        sway: "to_L",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "BH",
+        sway: "to_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "WF",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:basic-reverse-turn": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "WF",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "WF",
       },
     },
     {
@@ -4305,54 +5829,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "BH",
-      },
-    },
-  ],
-  "tango:basic-reverse-turn": [
-    {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-        turn: "three_eighth_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-        turn: "three_eighth_L",
-      },
-    },
-    {
-      leader: {
-        direction: "forward",
-        footwork: "WF",
-      },
-      follower: {
-        direction: "close",
-        footwork: "WF",
-      },
-    },
-    {
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "BH",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -4362,6 +5838,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "IE",
@@ -4369,65 +5846,72 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "side",
-        footwork: "BH",
-        turn: "three_eighth_L",
+        footwork: "I/E of BH",
+        turn: "quarter_L",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "tango:brush-tap": [
     {
-      position: "CBMP",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "H",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "BH",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "BH",
+        turn: "eighth_L",
       },
       follower: {
         direction: "side",
         footwork: "WF",
+        turn: "eighth_L",
       },
     },
     {
+      position: "closed",
       leader: {
-        direction: "close",
-        footwork: "T",
+        direction: "in_place",
+        footwork: "F slightly off the floor",
       },
       follower: {
-        direction: "close",
-        footwork: "T",
+        direction: "in_place",
+        footwork: "F slightly off the floor",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "IE",
+        footwork: "I/E of B",
       },
       follower: {
         direction: "side",
-        footwork: "IE",
+        footwork: "I/E of B",
       },
     },
   ],
@@ -4444,25 +5928,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of BH",
         turn: "eighth_L",
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "IE",
-      },
-      follower: {
-        direction: "side",
-        footwork: "IE",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -4470,12 +5960,12 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "BH",
-        bodyActions: ["CBM"],
+        turn: "quarter_R",
       },
       follower: {
         direction: "back",
         footwork: "BH",
-        bodyActions: ["CBM"],
+        turn: "quarter_R",
       },
     },
     {
@@ -4483,23 +5973,26 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
-        bodyActions: ["CBM"],
+        turn: "eighth_R",
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
+        turn: "eighth_R",
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "side",
-        footwork: "BH",
+        footwork: "BH (RF) and I/E of B (LF)",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "BH",
+        footwork: "BH (LF) and I/E of B (RF)",
+        turn: "three_eighth_R",
       },
     },
   ],
@@ -4509,22 +6002,23 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "BH",
+        bodyActions: ["CBM"],
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "side",
-        footwork: "IE",
-        turn: "quarter_R",
+        footwork: "I/E of F (RF) and I/E of B (LF)",
       },
       follower: {
         direction: "side",
-        footwork: "IE",
+        footwork: "I/E of BH (LF) and I/E of B (RF)",
         turn: "quarter_R",
       },
     },
@@ -4542,10 +6036,11 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
@@ -4554,13 +6049,447 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "IE",
       },
       follower: {
         direction: "side",
+        footwork: "I/E of BH",
+        turn: "quarter_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "WF",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "WF",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:fallaway-four-step": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
         footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_L",
+      },
+    },
+  ],
+  "tango:fallaway-in-promenade": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "back",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "I/E of BH",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "WF",
+      },
+    },
+  ],
+  "tango:fallaway-promenade": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "back",
+        footwork: "IE of BH",
+        turn: "quarter_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "IE of BH",
+        turn: "quarter_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "Whole foot",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "tango:fallaway-reverse-and-slip-pivot": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "five_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:five-step": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+    },
+  ],
+  "tango:four-step": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+        turn: "quarter_L",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "tango:four-step-change": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
         turn: "quarter_L",
       },
     },
@@ -4575,200 +6504,43 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         footwork: "WF",
       },
     },
-  ],
-  "tango:fallaway-four-step": [
     {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        turn: "eighth_R",
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "side",
-        footwork: "BH",
-      },
-    },
-    {
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "BH",
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "close",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "close",
-        footwork: "BH",
-      },
-    },
-  ],
-  "tango:fallaway-in-promenade": [
-    {
-      position: "promenade",
-      leader: {
-        direction: "side",
-        footwork: "H",
-        turn: "quarter_R",
-      },
-      follower: {
-        direction: "side",
-        footwork: "H",
-        turn: "quarter_R",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "forward",
-        footwork: "H",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "H",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "side",
         footwork: "BH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "BH",
-        turn: "eighth_L",
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        turn: "eighth_L",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "close",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "close",
-        footwork: "WF",
-      },
-    },
-  ],
-  "tango:fallaway-reverse-and-slip-pivot": [
-    {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "TH",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "T",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-      },
-    },
-    {
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "TH",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-      },
-    },
-    {
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "TH/T",
-        turn: "three_quarter_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "TH",
-        turn: "three_quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
     },
   ],
-  "tango:five-step": [
+  "tango:lf-and-rf-rocks": [
     {
       position: "CBMP",
       leader: {
-        direction: "forward",
-        footwork: "H",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
         direction: "back",
         footwork: "BH",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
       },
     },
     {
+      position: "CBMP",
       leader: {
-        direction: "side",
-        footwork: "BH",
+        direction: "in_place",
+        footwork: "H",
       },
       follower: {
-        direction: "side",
-        footwork: "WF",
+        direction: "in_place",
+        footwork: "BH",
       },
     },
     {
@@ -4785,228 +6557,67 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     {
       leader: {
         direction: "back",
-        footwork: "B",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "B",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "side",
-        footwork: "IE",
-      },
-      follower: {
-        direction: "side",
-        footwork: "IE",
-      },
-    },
-  ],
-  "tango:four-step": [
-    {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        turn: "eighth_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-      },
-    },
-    {
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "close",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "close",
-        footwork: "BH",
-      },
-    },
-  ],
-  "tango:four-step-change": [
-    {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-      },
-    },
-    {
-      leader: {
-        direction: "close",
-        footwork: "WF",
-      },
-      follower: {
-        direction: "close",
-        footwork: "WF",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "BH",
-      },
-    },
-  ],
-  "tango:mini-five-step": [
-    {
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-      },
-    },
-    {
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "BH",
+        footwork: "IE of BH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "B",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "B",
-      },
-    },
-    {
-      position: "promenade",
-      leader: {
-        direction: "side",
-        footwork: "H/T",
-      },
-      follower: {
-        direction: "side",
-        footwork: "H",
-      },
-    },
-  ],
-  "tango:natural-rock-turn": [
-    {
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        turn: "quarter_R",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "BH",
-        turn: "quarter_R",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "BH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "in_place",
-        footwork: "BH",
+        footwork: "H",
         bodyActions: ["side_leading"],
       },
       follower: {
-        direction: "back",
-        footwork: "BH",
+        direction: "in_place",
+        footwork: "IE of BH",
         bodyActions: ["side_leading"],
       },
     },
     {
       leader: {
         direction: "back",
-        footwork: "BH",
-        turn: "quarter_L",
+        footwork: "IE of BH",
         bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        turn: "quarter_L",
         bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "tango:mini-five-step": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+        turn: "quarter_L",
       },
     },
     {
@@ -5014,6 +6625,150 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "BH",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "tango:natural-promenade-turn": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      leader: {
+        direction: "side",
+        footwork: "BHB",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H then IE of B of LF",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH then IE of B of RF",
+      },
+    },
+  ],
+  "tango:natural-rock-turn": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "H",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "I/E of BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -5023,23 +6778,29 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "IE",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "BH",
+        footwork: "I/E of BH",
+        turn: "quarter_L",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -5060,35 +6821,41 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "TH",
-        turn: "half_R",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
-        turn: "half_R",
+        turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      position: "CBMP",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BHB",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "promenade",
       leader: {
         direction: "forward",
-        footwork: "H/T",
+        footwork: "H (RF) then I/E of B (LF)",
+        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "TH/T",
+        footwork: "BH (LF) then I/E of B (RF)",
+        turn: "five_eighth_R",
       },
     },
   ],
@@ -5109,16 +6876,21 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
+        turn: "quarter_R",
       },
       follower: {
         direction: "forward",
@@ -5126,36 +6898,46 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "behind",
-        footwork: "T",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "in_place",
-        footwork: "T",
-        turn: "half_R",
+        footwork: "B (RF) and H (LF)",
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HB",
+        turn: "quarter_R",
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "close",
-        footwork: "WF",
+        footwork: "End onto whole F (RF), I/E of B (LF)",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH (LF) and I/E of B (RF)",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -5176,6 +6958,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
@@ -5184,14 +6967,17 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of BH",
         turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5202,50 +6988,43 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
       },
     },
   ],
   "tango:open-reverse-turn": [
     {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+        turn: "three_eighth_L",
+      },
+    },
+    {
       position: "CBMP",
       leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-      follower: {
         direction: "back",
-        footwork: "TH",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "T",
-        turn: "three_eighth_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-        turn: "three_eighth_L",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "TH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "TH",
+        footwork: "BH",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -5255,25 +7034,43 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
         turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
-        turn: "three_eighth_L",
+        footwork: "I/E of BH",
+        turn: "quarter_L",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -5282,39 +7079,43 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH (LF) with pressure on B (RF)",
+        sway: "to_L",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "HB (F Flat) and I/E of B (LF)",
+        sway: "to_R",
+        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "WF",
-        turn: "three_eighth_L",
+        footwork: "HB",
+        bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_R",
+        footwork: "I/E of B",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of B",
+        turn: "three_eighth_L",
       },
     },
   ],
@@ -5323,104 +7124,150 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH (LF) with light pressure on T (RF)",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "HB (Flat F) and I/E of B (LF)",
+        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "WF",
-        turn: "three_eighth_L",
+        footwork: "HB",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_L",
+        footwork: "I/E of B",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of B",
+        turn: "three_eighth_L",
       },
     },
   ],
   "tango:outside-swivel-method-3-reverse-outside-swivel": [
     {
-      position: "CBMP",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "H",
-        turn: "half_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "TH",
-        turn: "half_L",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "TH",
+        footwork: "BH",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "WF",
+        turn: "three_eighth_L",
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
-        turn: "eighth_L",
+        footwork: "BH (LF) with light pressure on T (RF)",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HB (Flat F) and I/E of B (LF)",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "tango:outside-swivels": [
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "back",
+        footwork: "BH with pressure on B of RF",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB (Foot flat) and IE of B of LF",
         turn: "quarter_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["CBM"],
+        turn: "eighth_L",
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "HB (Foot flat)",
         bodyActions: ["CBM"],
       },
     },
     {
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE of B",
+        turn: "eighth_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE of B",
+        turn: "three_eighth_L",
       },
     },
   ],
@@ -5430,22 +7277,23 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
+        bodyActions: ["CBM"],
       },
     },
     {
       position: "promenade",
       leader: {
         direction: "side",
-        footwork: "T",
-        turn: "quarter_R",
+        footwork: "I/E of F (RF) and I/E of B (LF)",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of BH and I/E of B (RF)",
         turn: "quarter_R",
       },
     },
@@ -5456,21 +7304,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -5478,15 +7332,43 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "forward",
         footwork: "H",
+        turn: "eighth_L",
       },
       follower: {
         direction: "back",
-        footwork: "T",
+        footwork: "BH",
+        turn: "eighth_L",
       },
     },
   ],
   "tango:progressive-side-step-reverse-turn": [
     {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "IE",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "IE",
+        turn: "quarter_L",
+      },
+    },
+    {
       position: "CBMP",
       leader: {
         direction: "forward",
@@ -5495,86 +7377,73 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
     {
-      leader: {
-        direction: "side",
-        footwork: "T",
-        turn: "quarter_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "T",
-        turn: "quarter_L",
-      },
-    },
-    {
-      position: "CBMP",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "H",
+        sway: "to_R",
         turn: "eighth_L",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "I/E of BH",
+        sway: "to_L",
         turn: "eighth_L",
-        bodyActions: ["CBM"],
+        bodyActions: ["side_leading"],
       },
     },
     {
+      position: "closed",
       leader: {
-        direction: "forward",
+        direction: "in_place",
+        footwork: "I/E of BH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "H",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
         footwork: "H",
         bodyActions: ["side_leading"],
       },
       follower: {
-        direction: "back",
-        footwork: "T",
+        direction: "in_place",
+        footwork: "I/E of BH",
         bodyActions: ["side_leading"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-      },
-    },
-    {
-      leader: {
-        direction: "forward",
-        footwork: "H",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-      },
-    },
-    {
-      leader: {
-        direction: "back",
-        footwork: "T",
-        bodyActions: ["side_leading"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "T",
-        bodyActions: ["side_leading"],
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
@@ -5586,25 +7455,68 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
         turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of BH",
         turn: "quarter_L",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:promenade-link": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_L",
       },
     },
   ],
@@ -5614,7 +7526,6 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "H",
-        turn: "eighth_L",
       },
       follower: {
         direction: "side",
@@ -5622,27 +7533,28 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "HB",
         bodyActions: ["CBM"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of B",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "I/E of B",
+        turn: "quarter_L",
       },
     },
   ],
@@ -5659,15 +7571,41 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        bodyActions: ["CBM"],
+        footwork: "HB",
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HB",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "tango:quick-reverse-turn": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
     },
@@ -5675,55 +7613,32 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_R",
+        footwork: "B",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "WF",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "WF",
         turn: "eighth_L",
       },
-    },
-  ],
-  "tango:quick-reverse-turn": [
-    {
-      leader: {
-        direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "TH",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      leader: {
-        direction: "side",
-        footwork: "TH",
-        turn: "three_eighth_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "WF",
-        turn: "three_eighth_L",
-      },
-    },
-    {
-      leader: {
-        direction: "forward",
-        footwork: "WF",
-      },
       follower: {
         direction: "close",
         footwork: "WF",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -5733,25 +7648,30 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "IE",
         turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "TH",
-        turn: "three_eighth_L",
+        footwork: "I/E of BH",
+        turn: "quarter_L",
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "WF",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
         footwork: "WF",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -5774,9 +7694,10 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "tango:rock-on-left-foot": [
     {
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "I/E of BH",
         bodyActions: ["side_leading"],
       },
       follower: {
@@ -5786,27 +7707,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
+      position: "closed",
       leader: {
-        direction: "forward",
+        direction: "in_place",
         footwork: "H",
         bodyActions: ["side_leading"],
       },
       follower: {
-        direction: "back",
-        footwork: "TH",
+        direction: "in_place",
+        footwork: "I/E of BH",
         bodyActions: ["side_leading"],
       },
     },
     {
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "TH",
-        bodyActions: ["side_leading"],
+        footwork: "I/E of BH",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
-        bodyActions: ["side_leading"],
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
   ],
@@ -5815,7 +7740,59 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "H",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "tango:rock-turn": [
+    {
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      leader: {
+        direction: "side",
+        footwork: "IE of BH",
       },
       follower: {
         direction: "forward",
@@ -5823,25 +7800,64 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "CBMP",
       leader: {
-        direction: "forward",
-        footwork: "H",
+        direction: "in_place",
+        footwork: "IE of BH",
+        turn: "quarter_R",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
-        footwork: "TH",
+        footwork: "IE of BH",
+        turn: "quarter_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      leader: {
+        direction: "back",
+        footwork: "IE of BH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["side_leading"],
       },
     },
     {
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      leader: {
+        direction: "side",
+        footwork: "IE of foot",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "IE of BH",
+        turn: "quarter_L",
+      },
+    },
+    {
+      leader: {
+        direction: "close",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "close",
+        footwork: "WF",
       },
     },
   ],
@@ -5873,6 +7889,96 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
+  "viennese_waltz:backward-change-step": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "diagonal_back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "viennese_waltz:forward-change-step": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "diagonal_back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+  ],
   "viennese_waltz:lf-backward-change-step-natural-to-reverse": [
     {
       rise: "commence",
@@ -5885,36 +7991,38 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "B",
+        sway: "to_R",
         turn: "eighth_R",
       },
       follower: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "TH",
-        sway: "to_L",
+        footwork: "BH",
+        sway: "to_R",
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
       },
     },
@@ -5925,8 +8033,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -5938,29 +8045,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
         turn: "eighth_L",
       },
       follower: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_L",
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
       },
     },
@@ -5971,7 +8080,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
@@ -5984,24 +8093,26 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "quarter_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
         turn: "eighth_R",
       },
@@ -6013,36 +8124,39 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "TH",
+        footwork: "BH",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "body_rise",
+      rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
         turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "quarter_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "flat",
@@ -6050,7 +8164,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
         turn: "eighth_R",
       },
@@ -6062,37 +8176,41 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "continue",
+      rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
         turn: "quarter_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "close",
-        footwork: "TH",
+        direction: "in_front",
+        footwork: "BH",
         sway: "to_L",
         turn: "eighth_L",
       },
@@ -6104,45 +8222,50 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
+        sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        sway: "to_R",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "body_rise",
+      rise: "up",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
-        sway: "to_R",
+        footwork: "B",
+        sway: "to_L",
         turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "B",
+        sway: "to_R",
         turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "flat",
-        sway: "to_R",
+        sway: "to_L",
       },
       follower: {
-        direction: "close",
-        footwork: "TH",
-        sway: "to_L",
+        direction: "in_front",
+        footwork: "BH",
+        sway: "to_R",
         turn: "eighth_L",
       },
     },
@@ -6159,36 +8282,37 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "eighth_L",
       },
       follower: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_L",
         turn: "eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
       },
       follower: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_L",
       },
     },
@@ -6199,7 +8323,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         turn: "eighth_R",
         bodyActions: ["CBM"],
       },
@@ -6212,30 +8336,81 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "up",
+      position: "closed",
       leader: {
         direction: "diagonal",
-        footwork: "T",
+        footwork: "B",
         sway: "to_R",
         turn: "eighth_R",
       },
       follower: {
         direction: "diagonal",
-        footwork: "T",
-        sway: "to_L",
+        footwork: "B",
+        sway: "to_R",
         turn: "eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "TH",
+        footwork: "BH",
         sway: "to_R",
       },
       follower: {
         direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "waltz:back-lock": [
+    {
+      rise: "commence",
+      position: "outside_partner",
+      leader: {
+        direction: "back",
         footwork: "TH",
-        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "back",
+        footwork: "T",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "in_front",
+        footwork: "T",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "diagonal_back",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "TH",
       },
     },
   ],
@@ -6250,37 +8425,35 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "T",
-        sway: "to_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
-        sway: "to_R",
         turn: "eighth_R",
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "promenade",
       leader: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "behind",
         footwork: "TH",
-        sway: "to_R",
+        turn: "eighth_R",
       },
     },
   ],
@@ -6295,12 +8468,13 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
@@ -6312,8 +8486,9 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "diagonal",
+        direction: "in_front",
         footwork: "T",
       },
       follower: {
@@ -6322,7 +8497,8 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "TH",
@@ -6335,34 +8511,36 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   ],
   "waltz:basic-weave": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "H",
-        bodyActions: ["CBM"],
+        footwork: "TH",
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_L",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
@@ -6371,6 +8549,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "side",
         footwork: "TH",
+        turn: "quarter_L",
       },
     },
     {
@@ -6379,57 +8558,66 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_L",
       },
     },
   ],
   "waltz:chasse-from-pp": [
     {
       rise: "commence",
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -6442,6 +8630,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
@@ -6449,27 +8638,31 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "T",
+        turn: "eighth_L",
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
       position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
       },
     },
   ],
   "waltz:closed-change-on-lf": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
@@ -6480,19 +8673,21 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "side",
+        direction: "diagonal",
         footwork: "T",
         sway: "to_L",
       },
       follower: {
-        direction: "side",
+        direction: "diagonal",
         footwork: "T",
         sway: "to_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
@@ -6508,6 +8703,50 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "waltz:closed-change-on-rf": [
     {
       rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "T",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "T",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+  ],
+  "waltz:closed-changes": [
+    {
+      rise: "commence",
       leader: {
         direction: "forward",
         footwork: "HT",
@@ -6541,6 +8780,131 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
       follower: {
         direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+  ],
+  "waltz:closed-impetus": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "waltz:closed-telemark": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "waltz:closed-wing": [
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+      },
+    },
+    {
+      rise: "body_rise",
+      leader: {
+        direction: "close",
+        footwork: "WF, pressure on IE of T of LF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "wing",
+      leader: {
+        direction: "close",
+        footwork: "WF, pressure on IE of T of LF",
+      },
+      follower: {
+        direction: "forward",
         footwork: "TH",
         sway: "to_L",
       },
@@ -6549,22 +8913,25 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "waltz:cross-hesitation-from-pp": [
     {
       rise: "commence",
-      position: "promenade",
+      position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T",
+        footwork: "Toes of both feet",
+        sway: "to_R",
       },
       follower: {
         direction: "side",
@@ -6575,132 +8942,156 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "in_place",
         footwork: "TH",
+        sway: "to_R",
       },
       follower: {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
     },
   ],
   "waltz:double-reverse-spin": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "half_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
-        turn: "half_L",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "close",
-        footwork: "HT",
+        footwork: "HB",
+        turn: "half_L",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      follower: {
+        direction: "side",
+        footwork: "T",
         turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T",
+        footwork: "TH",
+        turn: "half_L",
       },
       follower: {
-        direction: "forward",
+        direction: "in_front",
         footwork: "TH",
-        turn: "quarter_L",
+        turn: "eighth_L",
       },
     },
   ],
   "waltz:drag-hesitation": [
     {
+      rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "commence",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_L",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
-        footwork: "T",
-        turn: "eighth_L",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
-      rise: "up",
+      rise: "body_rise",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T/TH",
+        footwork: "I/E of T (LF), Flat F (RF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
-        footwork: "T/TH",
+        footwork: "I/E of T (RF), Flat F (LF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "waltz:fallaway-reverse-and-slip-pivot": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "fallaway",
       leader: {
-        direction: "back",
+        direction: "side",
         footwork: "T",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "back",
         footwork: "T",
+        bodyActions: ["side_leading"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
       position: "CBMP",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
+        turn: "eighth_L",
       },
       follower: {
         direction: "back",
@@ -6710,60 +9101,108 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T/TH",
-        turn: "quarter_L",
+        footwork: "THT",
+        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
+        turn: "three_eighth_L",
       },
     },
   ],
-  "waltz:hesitation-change": [
+  "waltz:fallaway-whisk": [
     {
+      rise: "commence",
       leader: {
         direction: "back",
-        footwork: "H",
-        turn: "three_eighth_R",
+        footwork: "TH",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "NFR",
+      rise: "continue",
       leader: {
         direction: "side",
-        footwork: "heel pull",
-        sway: "to_L",
+        footwork: "TH",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "behind",
+        footwork: "TH",
         sway: "to_R",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "waltz:hesitation-change": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "H then I/E of F and Whole F",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "body_rise",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T",
+        footwork: "I/E of B",
         sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
-        footwork: "T",
+        footwork: "I/E of B",
         sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
@@ -6774,110 +9213,128 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "in_place",
         footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "waltz:impetus": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "H",
+        footwork: "HB",
         sway: "to_L",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
-        turn: "quarter_R",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_R",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
       },
     },
   ],
   "waltz:impetus-to-pp": [
     {
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "H",
+        footwork: "HB",
         sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
-        footwork: "T",
+        footwork: "BT",
         sway: "to_R",
         turn: "three_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -6886,10 +9343,14 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
@@ -6899,78 +9360,92 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "close",
         footwork: "TH",
+        sway: "to_L",
       },
     },
     {
-      position: "CBMP",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "back",
-        footwork: "T/H/T",
+        footwork: "BHB",
         turn: "half_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "HB",
         turn: "half_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "commence",
-      position: "CBMP",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_R",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "T",
-        turn: "three_eighth_R",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "side",
+        direction: "back",
         footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_R",
       },
     },
   ],
@@ -6980,37 +9455,39 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
         sway: "to_R",
+        turn: "eighth_R",
       },
       follower: {
         direction: "close",
@@ -7020,34 +9497,37 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_R",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
-        turn: "eighth_R",
+        turn: "quarter_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
@@ -7056,45 +9536,60 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "close",
         footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
       },
     },
   ],
   "waltz:natural-turning-lock": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_R",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "quarter_R",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "forward",
+        direction: "in_front",
         footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
       },
       follower: {
         direction: "behind",
         footwork: "T",
+        sway: "to_L",
+        turn: "quarter_R",
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
+        sway: "to_R",
         turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "side",
         footwork: "T",
+        sway: "to_L",
         turn: "eighth_R",
+        bodyActions: ["CBM"],
       },
     },
     {
@@ -7103,11 +9598,181 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "diagonal",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "waltz:open-impetus-and-wing": [
+    {
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      leader: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "side",
         footwork: "TH",
         turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "NFR",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on T of RF with foot flat, and pressure on IE of T (LF)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "wing",
+      leader: {
+        direction: "close",
+        footwork: "same as step 5",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:open-telemark-and-wing": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "NFR",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on T of RF with foot flat, and pressure on IE of T (LF)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "wing",
+      leader: {
+        direction: "close",
+        footwork: "same as step 5",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
     },
   ],
@@ -7118,24 +9783,27 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "quarter_L",
+        sway: "to_R",
         bodyActions: ["CBM"],
       },
     },
@@ -7145,78 +9813,82 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_L",
       },
     },
   ],
   "waltz:outside-spin": [
     {
-      rise: "commence",
       position: "CBMP",
       leader: {
         direction: "back",
-        footwork: "T/H/T",
+        footwork: "THT",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "half_R",
+        footwork: "HB",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "continue",
+      rise: "commence",
       position: "CBMP",
       leader: {
         direction: "forward",
         footwork: "HT",
-        turn: "three_eighth_R",
-        bodyActions: ["CBM"],
       },
       follower: {
         direction: "close",
-        footwork: "T",
-        turn: "quarter_R",
-        bodyActions: ["CBM"],
+        footwork: "BT",
+        turn: "five_eighth_R",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
-        turn: "quarter_R",
+        sway: "to_L",
+        turn: "seven_eighth_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
-        turn: "eighth_R",
+        sway: "to_R",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
       },
     },
   ],
   "waltz:progressive-chasse-to-r": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "quarter_L",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -7225,13 +9897,16 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       follower: {
         direction: "side",
         footwork: "T",
+        turn: "quarter_L",
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "T",
+        turn: "eighth_L",
       },
       follower: {
         direction: "close",
@@ -7240,6 +9915,7 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
@@ -7307,18 +9983,62 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
   ],
-  "waltz:reverse-pivot": [
+  "waltz:reverse-corte": [
     {
-      position: "CBMP",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "half_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      leader: {
+        direction: "close",
+        footwork: "H(LF) then toes both feet",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "in_place",
+        footwork: "TH(RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:reverse-pivot": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "BHB",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
         turn: "half_L",
         bodyActions: ["CBM"],
       },
@@ -7327,39 +10047,42 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "waltz:reverse-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
       follower: {
         direction: "close",
@@ -7369,35 +10092,37 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
     },
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "TH",
-        turn: "three_eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
         sway: "to_R",
+        turn: "three_eighth_L",
       },
       follower: {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_L",
+        turn: "quarter_L",
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "close",
         footwork: "TH",
@@ -7407,29 +10132,32 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "close",
         footwork: "TH",
         sway: "to_L",
+        turn: "eighth_L",
       },
     },
   ],
   "waltz:reverse-turning-lock": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
         sway: "to_L",
-        bodyActions: ["side_leading"],
+        bodyActions: ["CBM", "side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_R",
-        bodyActions: ["side_leading"],
+        bodyActions: ["CBM", "side_leading"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "back",
+        direction: "in_front",
         footwork: "T",
         sway: "to_L",
       },
@@ -7440,28 +10168,34 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "back",
         footwork: "T",
-        turn: "eighth_L",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
-        turn: "eighth_L",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "lowering",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "TH",
+        sway: "to_L",
         turn: "quarter_L",
       },
       follower: {
         direction: "side",
         footwork: "TH",
+        sway: "to_R",
         turn: "quarter_L",
       },
     },
@@ -7472,15 +10206,18 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "HT",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "T",
@@ -7491,25 +10228,35 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
       },
     },
     {
-      rise: "up",
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "diagonal",
         footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "diagonal",
         footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
+      position: "closed",
       leader: {
         direction: "forward",
         footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
       },
     },
   ],
@@ -7561,22 +10308,4824 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
   "waltz:running-spin-turn": [
     {
       rise: "commence",
+      position: "closed",
       leader: {
         direction: "forward",
-        footwork: "H",
-        turn: "quarter_R",
+        footwork: "H flat",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "back",
         footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BT",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "BT",
         sway: "to_L",
         turn: "three_eighth_R",
         bodyActions: ["CBM"],
       },
     },
     {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "waltz:telemark": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
       rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "waltz:telemark-to-pp": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:turning-lock": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "in_front",
+        footwork: "T",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "T",
+        sway: "to_R",
+      },
+    },
+    {
+      leader: {
+        direction: "back",
+        footwork: "T",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_L",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:turning-lock-to-r": [
+    {
+      rise: "commence",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "continue",
+      leader: {
+        direction: "in_front",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+    },
+    {
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "diagonal_forward",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_R",
+      },
+    },
+  ],
+  "waltz:weave-from-pp": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "waltz:whisk": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "TH",
+      },
+    },
+  ],
+  "waltz:wing": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Whole F (RF) and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "close",
+        footwork: "Whole F (RF) and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:wing-from-pp": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Whole F and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "close",
+        footwork: "Whole F and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:open-natural-turn": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "waltz:fallaway-natural-turn": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:running-weave-from-pp": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BT",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "TH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:overturned-running-spin-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        turn: "seven_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Flat F (RF) and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "close",
+        footwork: "Flat F (RF) and pressure on I/E of T (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:left-whisk": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B Flat",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "left_angle",
+      leader: {
+        direction: "behind",
+        footwork: "B (RF) and Flat (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:contra-check": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TB",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "tango:contra-check": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "Flat F",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "viennese_waltz:chasse-change-step": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "foot_rise",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "viennese_waltz:continuous-spin": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:reverse-pivots": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_R",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        sway: "to_L",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:hesitation-change": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B, Flat F",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "I/E of B (LF), Flat F (RF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "IE of B (RF), Flat F (LF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:drag-hesitation": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B, H",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B, H",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "I/E of B (LF), Flat F (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "I/E of B (RF), Flat F (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "viennese_waltz:natural-spin-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "viennese_waltz:telemark": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        turn: "half_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "viennese_waltz:natural-spin-turn-reverse-pivot": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:checked-natural-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:natural-back-check": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:checked-reverse-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:reverse-back-check": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:contra-check": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+    },
+  ],
+  "viennese_waltz:left-whisk": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B then Flat F",
+        sway: "to_R",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "left_angle",
+      leader: {
+        direction: "behind",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH (LF), O/E of T (RF)",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:running-weave": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "B",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "viennese_waltz:natural-fleckerl": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "HB",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_R",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "B",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "HB",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "B",
+        turn: "half_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_R",
+      },
+    },
+  ],
+  "viennese_waltz:reverse-fleckerl": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "B",
+        turn: "half_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "B",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        turn: "half_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "viennese_waltz:check-from-reverse-to-natural-fleckerl": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:overturned-natural-spin-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:throwaway-oversway": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "H flat",
+        sway: "to_R",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B, Flat F",
+        sway: "to_L",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "I/E of T (RF), Flat F (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "T (LF), Flat F (RF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:throwaway-oversway-taken-after-1-3-of-reverse-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B, Flat F",
+        sway: "to_L",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "I/E of T (RF), Flat F (LF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "ET (LF), Flat F (RF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:hover-reverse-turn": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "B",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "foot_rise",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "viennese_waltz:running-feather": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "three_quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:running-feather-opening-to-promenade-position": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TB",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "forward",
+        footwork: "B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:double-reverse-spin-overspin": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "half_L",
+      },
+    },
+    {
+      rise: "foot_rise",
+      position: "closed",
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "foot_rise",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "T",
+        sway: "to_L",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_front",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_R",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "THB",
+        sway: "to_L",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "half_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:reverse-impetus-into-right-lunge": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "H flat",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "IE of B (RF) then Whole F, IE of T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH (LF), I/E of T (RF)",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:rudolph-fallaway": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH (LF), I/E of T (RF) during Ronde",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:ronde-twist-turn": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "HB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "B",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "left_angle",
+      leader: {
+        direction: "behind",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "H (LF), B (RF). End BH (RF)",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "viennese_waltz:double-leg-ronde": [
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "HB",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "B",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "outside_partner",
+      leader: {
+        direction: "side",
+        footwork: "BH (LF), I/E of T (RF)",
+        sway: "to_R",
+        turn: "full_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "CBMP",
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "commence",
+      position: "outside_partner",
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+      },
+    },
+  ],
+  "viennese_waltz:swivel-to-promenade-pivot": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "back",
+        footwork: "BH (LF), I/E of B (RF)",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BHB",
+        turn: "half_L",
+      },
+    },
+  ],
+  "viennese_waltz:swivel-to-promenade-link": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "up",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "flat",
+        sway: "to_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "back",
+        footwork: "BH (LF), I/E of B (RF)",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "half_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B (LF), Flat F (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B (RF), Flat F (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "tango:tap-alternative-entries-to-pp": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "Flat F (RF), and I/E of B (LF)",
+      },
+      follower: {
+        direction: "side",
+        footwork: "Flat F (LF), and I/E of B (RF)",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "tango:the-chase": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      leader: {
+        direction: "side",
+        footwork: "IE of BH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "IE of BH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "forward",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "outside_partner",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "BH and IE of B of LF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH and IE of B of RF",
+      },
+    },
+  ],
+  "tango:whisk": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:back-whisk": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:telemark-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "three_eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+        turn: "half_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+  ],
+  "tango:open-natural-turn": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B Flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B Flat",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "tango:outside-spin": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BHB",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+        turn: "five_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BHB",
+        turn: "seven_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:natural-twist-turn": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "B",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "B (RF) and H (LF)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "End whole F (RF), I/E of B (LF)",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH (LF) and I/E of B (RF)",
+        turn: "half_R",
+      },
+    },
+  ],
+  "tango:chase-alternative-endings-chase-chasse-common-steps-1-8": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "H",
+      },
+      follower: {
+        direction: "side",
+        footwork: "H",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of BH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "BH",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "BH",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+      },
+    },
+  ],
+  "tango:chase-alternative-endings-method-1-whisk-fwd-step-to-pp": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+    },
+  ],
+  "tango:chase-alternative-endings-method-2-whisk-promenade-link": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "tango:chase-alternative-endings-method-3-whisk-close-step-to-pp": [
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "close",
+        footwork: "WF",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+    },
+  ],
+  "tango:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "I/E of B",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "I/E of B",
+        sway: "to_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "Flat (LF) and I/E of B (RF)",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "Flat (RF) and I/E of B (LF)",
+        sway: "to_L",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "tango:drop-oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "BH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BHB",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "quarter_L",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "Flat F (LF) and I/E of B (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "Flat F (RF) and I/E of B (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-1-transfer-weight-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "BH",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_R",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-2-close-step-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "B",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "B",
+        sway: "to_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "Flat F (RF) I/E of B (LF)",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "Flat F (LF) I/E of B (RF)",
+        turn: "eighth_R",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-3-chasse-whisk-fwd-step-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-4-chasse-whisk-promenade-link": [
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+    },
+    {
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HB",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-5-chasse-whisk-close-step-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "BH",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BH",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "side",
+        footwork: "WF",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_L",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "BH",
+        turn: "eighth_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "close",
+        footwork: "B",
+      },
+      follower: {
+        direction: "close",
+        footwork: "B",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "Flat F (RF) I/E of B (LF)",
+      },
+      follower: {
+        direction: "side",
+        footwork: "Flat F (LF) I/E of B (RF)",
+      },
+    },
+  ],
+  "tango:oversway-alternative-endings-method-6-natural-spin-to-pp": [
+    {
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "HB",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "B",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "B",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "B",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "Flat F (RF) I/E of B (LF)",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "Flat F (LF) I/E of B (RF)",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "foxtrot:hover-feather": [
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "diagonal",
+        footwork: "B",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+      },
+    },
+  ],
+  "foxtrot:outside-spin": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "THT",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BT",
+        turn: "five_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "seven_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:natural-twist-turn-with-impetus-and-feather-finish": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "B (RF) and H (LF)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "Both Feet Flat, T (RF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "diagonal",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of T, B",
+        sway: "to_R",
+        turn: "quarter_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "O/E of T, BH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "foxtrot:natural-twist-turn-with-impetus-to-p-p": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "HB",
+        sway: "to_R",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "behind",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "CBMP",
+      leader: {
+        direction: "in_place",
+        footwork: "B (RF) and H (LF)",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        turn: "eighth_R",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "in_place",
+        footwork: "Both Feet Flat than T",
+        sway: "to_L",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T (LF) and I/E of T (RF)",
+        sway: "to_L",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+      },
+    },
+  ],
+  "quickstep:basic-movement-quarter-turn-and-progressive-chasse": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
       leader: {
         direction: "side",
         footwork: "T",
@@ -7587,1843 +15136,1235 @@ export const GENERATED_FIGURE_STEPS: Record<string, readonly AuthoredStep[]> = {
         direction: "side",
         footwork: "T",
         sway: "to_L",
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "close",
-        footwork: "TH",
-        sway: "to_R",
-      },
-      follower: {
-        direction: "close",
-        footwork: "TH",
-        sway: "to_L",
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "back",
-        footwork: "T/H/T",
-        turn: "half_R",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "half_R",
-      },
-    },
-    {
-      rise: "commence",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_R",
-      },
-      follower: {
-        direction: "back",
-        footwork: "T",
-        turn: "three_eighth_R",
-      },
-    },
-    {
-      rise: "continue",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_R",
-      },
-      follower: {
-        direction: "diagonal",
-        footwork: "T",
-        sway: "to_L",
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "back",
-        footwork: "TH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "TH",
-      },
-    },
-  ],
-  "waltz:telemark": [
-    {
-      rise: "commence",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "three_eighth_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "TH",
-        turn: "three_eighth_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_L",
-        turn: "three_eighth_L",
-      },
-      follower: {
-        direction: "close",
-        footwork: "H",
-        sway: "to_R",
-        turn: "three_eighth_L",
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "side",
-        footwork: "TH",
-      },
-      follower: {
-        direction: "side",
-        footwork: "TH",
-      },
-    },
-  ],
-  "waltz:telemark-to-pp": [
-    {
-      rise: "commence",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "quarter_L",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "TH",
-        turn: "three_eighth_L",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "up",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_L",
-        turn: "half_L",
-      },
-      follower: {
-        direction: "close",
-        footwork: "H",
-        sway: "to_R",
-      },
-    },
-    {
-      rise: "lowering",
-      position: "promenade",
-      leader: {
-        direction: "side",
-        footwork: "TH",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "TH",
-      },
-    },
-  ],
-  "waltz:weave-from-pp": [
-    {
-      rise: "commence",
-      position: "CBMP",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "HT",
-      },
-    },
-    {
-      rise: "continue",
-      leader: {
-        direction: "forward",
-        footwork: "T",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "side",
-        footwork: "T",
-        turn: "three_eighth_L",
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "side",
-        footwork: "TH",
-        turn: "quarter_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "TH",
-        turn: "half_L",
-      },
-    },
-    {
-      rise: "commence",
-      position: "CBMP",
-      leader: {
-        direction: "back",
-        footwork: "TH",
-        turn: "eighth_L",
-      },
-      follower: {
-        direction: "forward",
-        footwork: "HT",
-      },
-    },
-    {
-      rise: "continue",
-      leader: {
-        direction: "back",
-        footwork: "T",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "forward",
-        footwork: "T",
-        bodyActions: ["CBM"],
-      },
-    },
-    {
-      rise: "lowering",
-      leader: {
-        direction: "side",
-        footwork: "TH",
-        turn: "quarter_L",
-      },
-      follower: {
-        direction: "side",
-        footwork: "TH",
-        turn: "quarter_L",
-      },
-    },
-  ],
-  "waltz:whisk": [
-    {
-      rise: "commence",
-      leader: {
-        direction: "forward",
-        footwork: "HT",
-        bodyActions: ["CBM"],
-      },
-      follower: {
-        direction: "back",
-        footwork: "TH",
-      },
-    },
-    {
-      rise: "continue",
-      leader: {
-        direction: "side",
-        footwork: "T",
-        sway: "to_L",
-      },
-      follower: {
-        direction: "diagonal",
-        footwork: "T",
-        sway: "to_R",
         turn: "quarter_R",
       },
     },
     {
-      rise: "lowering",
-      position: "promenade",
+      rise: "continue",
+      position: "closed",
       leader: {
-        direction: "behind",
+        direction: "close",
+        footwork: "T",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
         footwork: "TH",
         sway: "to_L",
       },
       follower: {
-        direction: "behind",
+        direction: "diagonal",
+        footwork: "TH",
+        sway: "to_R",
+      },
+    },
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "T",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+      },
+      follower: {
+        direction: "side",
         footwork: "TH",
         sway: "to_R",
       },
     },
   ],
-  "waltz:wing": [
+  "quickstep:heel-pivot": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "I/E of B",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "WF",
+      },
+      follower: {
+        direction: "close",
+        footwork: "TH",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "quickstep:outside-change": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "quickstep:open-natural-turn": [
     {
       rise: "commence",
       position: "CBMP",
       leader: {
         direction: "forward",
-        footwork: "H",
-        turn: "eighth_L",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
-        footwork: "HT",
-        turn: "eighth_L",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "continue",
+      position: "closed",
       leader: {
-        direction: "close",
+        direction: "side",
         footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+        bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "T",
         sway: "to_L",
-        turn: "eighth_L",
+        bodyActions: ["CBM"],
       },
     },
     {
       rise: "lowering",
-      position: "wing",
+      position: "closed",
       leader: {
-        direction: "close",
-        footwork: "T",
-        turn: "eighth_L",
+        direction: "back",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
       },
       follower: {
         direction: "forward",
         footwork: "TH",
+        sway: "to_L",
+        turn: "eighth_R",
+        bodyActions: ["side_leading"],
+      },
+    },
+  ],
+  "quickstep:hesitation-change": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "H then I/E of F and Whole F",
+        sway: "to_L",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "I/E of B",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "I/E of B",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:tipple-chasse-to-left": [
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "T",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "T",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:outside-spin": [
+    {
+      position: "CBMP",
+      leader: {
+        direction: "back",
+        footwork: "THT",
+        turn: "three_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HB",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "commence",
+      position: "CBMP",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+      },
+      follower: {
+        direction: "close",
+        footwork: "BT",
+        turn: "five_eighth_R",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_L",
+        turn: "seven_eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "five_eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "quickstep:natural-turning-lock": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_R",
+        bodyActions: ["CBM", "side_leading"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "T",
+        sway: "to_L",
+        bodyActions: ["CBM", "side_leading"],
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "in_front",
+        footwork: "T",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+      follower: {
+        direction: "behind",
+        footwork: "T",
+        sway: "to_L",
+        turn: "quarter_R",
+      },
+    },
+    {
+      rise: "continue",
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "T",
+        turn: "eighth_R",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "diagonal",
+        footwork: "TH",
+        sway: "to_L",
+        bodyActions: ["side_leading"],
+      },
+      follower: {
+        direction: "side",
+        footwork: "TH",
+        sway: "to_R",
+        turn: "quarter_R",
+      },
+    },
+  ],
+  "quickstep:drag-hesitation": [
+    {
+      rise: "commence",
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "H flat",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+      follower: {
+        direction: "side",
+        footwork: "BH",
+        sway: "to_R",
+        turn: "three_eighth_L",
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "I/E of T (LF), Flat F (RF)",
+        sway: "to_R",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "close",
+        footwork: "I/E of T (RF), Flat F (LF)",
+        sway: "to_L",
+        bodyActions: ["CBM"],
+      },
+    },
+  ],
+  "waltz:throwaway-oversway": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
         sway: "to_L",
         turn: "quarter_L",
       },
     },
   ],
-  "waltz:wing-from-pp": [
+  "foxtrot:throwaway-oversway": [
     {
-      rise: "commence",
-      position: "promenade",
+      rise: "lowering",
+      position: "closed",
       leader: {
-        direction: "forward",
-        footwork: "H",
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
         turn: "eighth_L",
         bodyActions: ["CBM"],
       },
       follower: {
         direction: "forward",
         footwork: "HT",
-        turn: "eighth_L",
         bodyActions: ["CBM"],
       },
     },
     {
-      rise: "continue",
+      position: "promenade",
       leader: {
-        direction: "close",
-        footwork: "T",
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
       },
       follower: {
         direction: "forward",
-        footwork: "T",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
         sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "quickstep:throwaway-oversway": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "tango:throwaway-oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        turn: "quarter_L",
+      },
+    },
+  ],
+  "waltz:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
         turn: "eighth_L",
       },
     },
     {
       rise: "lowering",
-      position: "wing",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "foxtrot:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "quickstep:oversway": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "promenade",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "in_place",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "eighth_L",
+      },
+    },
+  ],
+  "waltz:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "foxtrot:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "quickstep:hinge": [
+    {
+      rise: "lowering",
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        sway: "to_L",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      rise: "body_rise",
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        sway: "to_L",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      rise: "lowering",
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "tango:hinge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "back",
+        footwork: "o/e TH",
+        turn: "eighth_L",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "promenade",
+      leader: {
+        direction: "side",
+        footwork: "i/e TH",
+        turn: "quarter_L",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "i/e TH",
+        turn: "eighth_L",
+      },
+    },
+    {
+      position: "fallaway",
+      leader: {
+        direction: "in_place",
+        footwork: "WF (LF), i/e T (RF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "B with foot flat (RF), i/e T (LF)",
+        sway: "to_L",
+        turn: "three_eighth_L",
+      },
+    },
+  ],
+  "waltz:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
       leader: {
         direction: "close",
-        footwork: "T",
-        turn: "eighth_L",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
       },
       follower: {
         direction: "forward",
         footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
         sway: "to_L",
-        turn: "quarter_L",
+      },
+    },
+  ],
+  "foxtrot:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "quickstep:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        sway: "to_R",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
+      },
+    },
+  ],
+  "tango:same-foot-lunge": [
+    {
+      position: "closed",
+      leader: {
+        direction: "forward",
+        footwork: "HT",
+        bodyActions: ["CBM"],
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH",
+        bodyActions: ["CBM"],
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "T",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "close",
+        footwork: "HT",
+        turn: "three_eighth_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "close",
+        footwork: "Pressure on i/e of B (RF) & TH (LF)",
+        turn: "three_eighth_R",
+      },
+      follower: {
+        direction: "forward",
+        footwork: "TH",
+        turn: "half_R",
+      },
+    },
+    {
+      position: "closed",
+      leader: {
+        direction: "side",
+        footwork: "i/e of TH (RF) & i/e of T (LF)",
+        sway: "to_R",
+      },
+      follower: {
+        direction: "back",
+        footwork: "TH (RF) & o/e of T (LF)",
+        sway: "to_L",
       },
     },
   ],
 };
-
-/** Figure-level entry/exit alignment (per-figure, leader's perspective), where charted. */
-export const GENERATED_FIGURE_ALIGNMENTS: Record<string, { entry?: Alignment; exit?: Alignment }> =
-  {
-    "foxtrot:back-feather": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:back-whisk": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:basic-weave": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:bounce-fallaway-with-weave-ending": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:change-of-direction": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:curved-feather": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-    },
-    "foxtrot:curved-feather-from-p-p": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-    },
-    "foxtrot:curved-three-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-    },
-    "foxtrot:double-reverse-spin": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:fallaway-reverse-and-slip-pivot": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:feather-ending": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:feather-finish": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:feather-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:heel-pull-finish": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:hover-corte": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "foxtrot:hover-cross": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:hover-telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:hover-telemark-to-p-p": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:impetus": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "foxtrot:impetus-to-p-p": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:natural-hover-telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:natural-telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:natural-twist-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:natural-weave": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:natural-zig-zag-from-p-p": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:open-natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:outside-swivel": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC_against",
-      },
-    },
-    "foxtrot:quick-open-reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:reverse-pivot": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:reverse-wave": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:telemark-to-p-p": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:three-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "foxtrot:top-spin": {
-      entry: {
-        qualifier: "backing",
-        direction: "ALOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "foxtrot:weave-from-p-p": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "foxtrot:whisk": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:back-whisk": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:backward-lock": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "quickstep:cross-chasse": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:cross-swivel": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "quickstep:double-reverse-spin": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:fisht-tail": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:forward-lock": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:four-quick-run": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:hover-corte": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "quickstep:impetus": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "quickstep:impetus-to-pp": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "quickstep:natural-pivot": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:natural-spin-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "quickstep:natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:open-reverse-turn-quick-open-reverse": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:progressive-chasse-to-l": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:progressive-chasse-to-r": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "quickstep:quarter-turn-to-r": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "quickstep:reverse-pivot": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "centre",
-      },
-    },
-    "quickstep:reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:rumba-cross": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:running-cross-chasse": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:running-finish": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:running-natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "quickstep:running-spin-turn": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "quickstep:six-quick-run": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:telemark-to-pp": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:tipple-chasse-to-r-along-lod": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:tipple-chasse-to-r-at-the-corner": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:tipsy-to-l": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:tipsy-to-r": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:v6": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:weave-from-pp": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:whisk": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "quickstep:wing": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "quickstep:wing-from-promenade-position": {
-      entry: {
-        qualifier: "pointing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "quickstep:zig-zag": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "tango:back-corte": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:back-open-promenade": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "tango:basic-reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:brush-tap": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "tango:chase": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "tango:chase-alternative-endings-method-4-progressive": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:closed-promenade": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:fallaway-four-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:fallaway-in-promenade": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "wall",
-      },
-    },
-    "tango:fallaway-reverse-and-slip-pivot": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "tango:five-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:four-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:four-step-change": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW_against",
-      },
-    },
-    "tango:mini-five-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:natural-rock-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:natural-turn-from-pp": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:natural-twist-turn-from-pp": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:open-promenade": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:open-reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "tango:outside-swivel-method-1-after-open-finish-and": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:outside-swivel-method-2-turning-to-l": {
-      entry: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "tango:outside-swivel-method-3-reverse-outside-swivel": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-    },
-    "tango:progressive-link": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-    },
-    "tango:progressive-side-step": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:progressive-side-step-reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "tango:promenade-link-turned-to-left": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "tango:promenade-link-turned-to-right": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-    },
-    "tango:quick-reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "tango:reverse-pivot": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "tango:rock-on-left-foot": {
-      entry: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-    },
-    "tango:rock-on-right-foot": {
-      entry: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "ALOD",
-      },
-    },
-    "tango:tango-walk": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "viennese_waltz:lf-backward-change-step-natural-to-reverse": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "viennese_waltz:lf-forward-change-step-reverse-to-natural": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "viennese_waltz:natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "viennese_waltz:reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "viennese_waltz:rf-backward-change-step-reverse-to-natural": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "viennese_waltz:rf-forward-change-step-natural-to-reverse": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:back-whisk": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:backward-lock": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "waltz:basic-weave": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:chasse-from-pp": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:closed-change-on-lf": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:closed-change-on-rf": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "waltz:cross-hesitation-from-pp": {
-      entry: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "waltz:double-reverse-spin": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:drag-hesitation": {
-      entry: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "waltz:fallaway-reverse-and-slip-pivot": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:hesitation-change": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "waltz:hover-corte": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "waltz:impetus": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC_against",
-      },
-    },
-    "waltz:impetus-to-pp": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "waltz:natural-spin-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "waltz:natural-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "waltz:natural-turning-lock": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "pointing",
-        direction: "DC",
-      },
-    },
-    "waltz:outside-change": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:outside-spin": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:progressive-chasse-to-r": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "waltz:quick-open-reverse": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-    },
-    "waltz:reverse-pivot": {
-      entry: {
-        qualifier: "backing",
-        direction: "LOD",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-    },
-    "waltz:reverse-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:reverse-turning-lock": {
-      entry: {
-        qualifier: "backing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:running-cross-chasse": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:running-finish": {
-      entry: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "LOD",
-      },
-    },
-    "waltz:running-spin-turn": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "backing",
-        direction: "DW",
-      },
-    },
-    "waltz:telemark": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:telemark-to-pp": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "wall",
-      },
-    },
-    "waltz:weave-from-pp": {
-      entry: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:whisk": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-    },
-    "waltz:wing": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-    "waltz:wing-from-pp": {
-      entry: {
-        qualifier: "facing",
-        direction: "DW",
-      },
-      exit: {
-        qualifier: "facing",
-        direction: "DC",
-      },
-    },
-  };

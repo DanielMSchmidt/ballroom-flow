@@ -1,42 +1,46 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import * as A from "@automerge/automerge";
-import { SYNC_FRAME_SNAPSHOT } from "@weavesteps/contract";
+import { SYNC_FRAME_SNAPSHOT, SYNC_PING, SYNC_PONG } from "@weavesteps/contract";
 import {
   CURRENT_SCHEMA_VERSION,
+  type DanceId,
+  importAccountDoc,
+  isPlainRecord,
   type RoutineDoc,
   readRoutine,
   undoLastChange,
 } from "@weavesteps/domain";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { listRoutines } from "./db/routines";
+import { readFigureSnapshot } from "./figure-snapshot";
 import { authedContext } from "./test-support/authed-context";
 import { uniqueDocName } from "./test-support/do-id";
-import type { DocNamespace, DocStub } from "./test-support/doc-do-api";
 import { expectIndexedQuery } from "./test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "./test-support/jwt";
 import { applyMigrations, seedDb } from "./test-support/seed";
+import { asTestPeek } from "./test-support/test-peek";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-014 — Per-document SQLite-backed DO hosts an Automerge doc [M2, system]
 // US-015 — Live WebSocket sync (two clients converge) [M2, system]
 // US-016 — DO alarm: compaction + D1 index projection + invite expiry [M2]
 //
-// PLAN §6, D23, §10.2: "two clients converge through a real per-document DO;
+// docs/system/architecture.md § Persistence & the DO lifecycle; docs/system/testing.md:
+// "two clients converge through a real per-document DO;
 // DO SQLite persistence (doc survives eviction/reload); alarm compaction + D1
 // index projection". Run in real workerd via vitest-pool-workers.
 //
 // MANDATORY: isolatedStorage:false → every test uses a UNIQUE DO id
-// (uniqueDocName). The DO class + its RPC/WS API are built in M2 (doc-do.ts), so
-// the bodies stay skipped; they address `env.DOC_DO` (the M2 binding) only
-// inside the skipped bodies. The DO methods (applyChange/getSnapshot/
-// runAlarmForTest…) are the M2 contract (doc-do-api.ts) — implement + unskip.
+// (uniqueDocName). The DO methods (applyChange/getSnapshot/runAlarmForTest…)
+// come fully typed off the `env.DOC_DO` RPC stub (DurableObjectNamespace<DocDO>,
+// test-support/db-env.d.ts).
 // ─────────────────────────────────────────────────────────────────────────
 
-/** The M2 DO binding, typed against the structural M2 contract (no `any`). */
-const docs = env.DOC_DO as unknown as DocNamespace;
+/** The M2 DO binding — the real, fully-typed RPC namespace. */
+const docs = env.DOC_DO;
 
 /** A unique DO stub for one test (isolatedStorage:false → unique id required). */
-function freshDoc(prefix: string): { name: string; stub: DocStub } {
+function freshDoc(prefix: string) {
   const name = uniqueDocName(prefix);
   return { name, stub: docs.get(docs.idFromName(name)) };
 }
@@ -72,8 +76,55 @@ describe("US-014 Per-document SQLite-backed DO hosts an Automerge doc", () => {
     expect(seeded.dance).toBe("foxtrot");
 
     // No-clobber: a second seed (e.g. a retried create) must NOT overwrite content.
-    await stub.seedDoc({ id: "rt_seed", title: "DIFFERENT", dance: "waltz", sections: [] });
+    // Deliberately PARTIAL doc content (asTestPeek): the no-clobber branch must
+    // bail before ever reading the payload, so the test keeps the historical
+    // partial shape rather than legitimizing it into a full RoutineDoc.
+    await stub.seedDoc(
+      asTestPeek<RoutineDoc>({ id: "rt_seed", title: "DIFFERENT", dance: "waltz", sections: [] }),
+    );
     expect((await stub.getSnapshot()).title).toBe("Server Seeded");
+  });
+
+  it("resetForTest wipes DO storage so a re-seed is no longer no-clobber-blocked (E2E reset)", async () => {
+    // Intent: the E2E `/api/test/reset` route relies on this to give each journey
+    // a clean fixed-docRef DO on the shared worker. Without it, a journey that
+    // mutated a doc leaks that state into the next project's run (seedDoc is
+    // no-clobber, so the re-seed is silently ignored) — the deterministic
+    // cross-project flake. Assert: after resetForTest the change log is empty AND
+    // a re-seed with DIFFERENT content now takes (survives a forced cold-load).
+    const { stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: "rt_reset",
+      title: "First",
+      dance: "waltz",
+      ownerId: "u_reset",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    expect((await stub.getSnapshot()).title).toBe("First");
+    expect(await stub.debugChangeRowCount()).toBeGreaterThan(0);
+
+    await stub.resetForTest();
+    expect(await stub.debugChangeRowCount()).toBe(0); // storage wiped
+
+    // The re-seed now takes (no-clobber no longer blocks) — the property the E2E
+    // reset depends on. Different content proves it's a fresh seed, not the old one.
+    await stub.seedDoc({
+      id: "rt_reset",
+      title: "Second",
+      dance: "foxtrot",
+      ownerId: "u_reset",
+      sections: [],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    await stub.reloadForTest(); // force the SQLite cold-load path
+    const after = await stub.getSnapshot();
+    expect(after.title).toBe("Second");
+    expect(after.dance).toBe("foxtrot");
   });
 
   it("a connect to a not-yet-seeded doc does not poison/block a later seedDoc", async () => {
@@ -265,9 +316,7 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     expect(frame[0]).toBe(SYNC_FRAME_SNAPSHOT); // the 1-byte type tag
 
     // A.load of the payload (frame minus the tag byte) equals the doc.
-    const loaded = A.toJS(A.load<{ sections?: { name: string }[] }>(frame.slice(1))) as {
-      sections?: { name: string }[];
-    };
+    const loaded = A.toJS(A.load<{ sections?: { name: string }[] }>(frame.slice(1)));
     const snap = await stub.getSnapshot();
     expect((loaded.sections ?? []).map((s) => s.name)).toEqual(
       (snap.sections ?? []).map((s) => s.name),
@@ -293,24 +342,23 @@ describe("US-015 Live WebSocket sync (two clients converge)", () => {
     //   webSocketMessage directly. Assert: it doesn't throw AND the doc is intact.
     const realDocs = env.DOC_DO;
     const id = realDocs.idFromName(uniqueDocName("routine"));
-    const stub = realDocs.get(id) as unknown as DocStub;
+    const stub = realDocs.get(id);
     await stub.applyChange({ op: "addSection", name: "Keep" });
     const before = await stub.getSnapshot();
     const rowsBefore = await stub.debugChangeRowCount();
 
     // Call the DO's webSocketMessage with garbage bytes (no real socket needed —
     // broadcast no-ops with no connected sockets). Must resolve, not reject.
-    const editorWs = {
+    // asTestPeek: a structural WebSocket double carrying only the attachment
+    // the role gate reads.
+    const editorWs = asTestPeek<WebSocket>({
       deserializeAttachment: () => ({ actor: "e", role: "editor" }),
-    } as unknown as WebSocket;
-    await runInDurableObject(
-      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (instance) => {
-        await expect(
-          instance.webSocketMessage(editorWs, new Uint8Array([9, 9, 9, 9]).buffer),
-        ).resolves.toBeUndefined();
-      },
-    );
+    });
+    await runInDurableObject(realDocs.get(id), async (instance) => {
+      await expect(
+        instance.webSocketMessage(editorWs, new Uint8Array([9, 9, 9, 9]).buffer),
+      ).resolves.toBeUndefined();
+    });
 
     // The garbage frame changed nothing.
     expect(await stub.getSnapshot()).toEqual(before);
@@ -507,7 +555,7 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
     const realDocs = env.DOC_DO;
     const name = uniqueDocName("routine");
     const id = realDocs.idFromName(name);
-    const stub = realDocs.get(id) as unknown as DocStub;
+    const stub = realDocs.get(id);
     await stub.setMetadata({ doName: name, ownerId: "user_x" });
     const inviteId = `inv-${crypto.randomUUID()}`;
     await env.DB.prepare(
@@ -516,18 +564,16 @@ describe("US-016 DO alarm: compaction + D1 index projection + invite expiry", ()
       .bind(inviteId, name, "editor", Date.now() - 1000)
       .run();
 
-    await runInDurableObject(
-      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (instance) => {
-        // projectToD1 is a private step; force it to fail to simulate a transient
-        // D1 error during the alarm tick.
-        vi.spyOn(
-          instance as unknown as { projectToD1: () => Promise<void> },
-          "projectToD1",
-        ).mockRejectedValue(new Error("D1 projection boom"));
-        await expect(instance.alarm()).resolves.toBeUndefined();
-      },
-    );
+    await runInDurableObject(realDocs.get(id), async (instance) => {
+      // projectToD1 is a PRIVATE step (asTestPeek — do not widen the DO's API
+      // for tests); force it to fail to simulate a transient D1 error during
+      // the alarm tick.
+      vi.spyOn(
+        asTestPeek<{ projectToD1: () => Promise<void> }>(instance),
+        "projectToD1",
+      ).mockRejectedValue(new Error("D1 projection boom"));
+      await expect(instance.alarm()).resolves.toBeUndefined();
+    });
 
     const row = await env.DB.prepare("SELECT redeemedAt FROM invite WHERE id = ?")
       .bind(inviteId)
@@ -635,7 +681,7 @@ describe("US-025 DO alarm: routine-card projection (bars / figureCount / forkedF
   }
 
   /** Seed a figure DO with the given attribute counts + project it via its alarm. */
-  async function seedFigure(counts: number[], dance: string): Promise<string> {
+  async function seedFigure(counts: number[], dance: DanceId): Promise<string> {
     const { name, stub } = freshDoc("figure");
     await stub.seedDoc({
       id: name,
@@ -783,7 +829,7 @@ describe("US-025 DO alarm: routine-card projection (bars / figureCount / forkedF
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 milestone step 1 (PLAN §7, 2026-07-02 review): "the ladder runs on the DO
+// v5 milestone step 1 (docs/system/sync-and-offline.md § Version skew, 2026-07-02 review): "the ladder runs on the DO
 // load path, and fresh docs are stamped CURRENT_SCHEMA_VERSION". Before this,
 // `migrate()`/`CURRENT_SCHEMA_VERSION` had zero production callers — every seed
 // site stamped a hardcoded `schemaVersion: 1` and the system survived on
@@ -824,15 +870,18 @@ describe("v5 milestone step 1 — migration ladder wired into the DO load path",
     await stub.reloadForTest();
     const migrated = await stub.getSnapshot();
 
-    const migratedTyped = migrated as unknown as {
-      schemaVersion: number;
-      sections: Array<{ sortKey?: string; placements: Array<{ sortKey?: string }> }>;
-      attributes: Array<{ kind: string }>;
-    };
-    expect(migratedTyped.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(migratedTyped.sections[0]?.sortKey).toEqual(expect.any(String));
-    expect(migratedTyped.sections[0]?.placements[0]?.sortKey).toEqual(expect.any(String));
-    expect(migratedTyped.attributes[0]?.kind).toBe("footwork"); // step → footwork retag (v1→v2)
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.sections[0]?.sortKey).toEqual(expect.any(String));
+    expect(migrated.sections[0]?.placements[0]?.sortKey).toEqual(expect.any(String));
+    // The stray legacy `attributes` array is not part of RoutineDoc, so read it
+    // through the doc's record view (type aliases satisfy Record<string, unknown>).
+    const migratedValue: unknown = migrated;
+    if (!isPlainRecord(migratedValue)) throw new Error("expected the snapshot to be a record");
+    const legacyAttrs = migratedValue.attributes;
+    if (!Array.isArray(legacyAttrs) || !isPlainRecord(legacyAttrs[0])) {
+      throw new Error("expected the migrated doc to keep its legacy attributes array");
+    }
+    expect(legacyAttrs[0].kind).toBe("footwork"); // step → footwork retag (v1→v2)
 
     // STAYS migrated: the upgrade was PERSISTED as a real change, not just
     // recomputed on this one read — a further eviction/reload must read back
@@ -873,7 +922,7 @@ describe("v5 milestone step 1 — migration ladder wired into the DO load path",
     const realDocs = env.DOC_DO;
     const name = uniqueDocName("routine");
     const id = realDocs.idFromName(name);
-    const stub = realDocs.get(id) as unknown as DocStub;
+    const stub = realDocs.get(id);
 
     // A legacy v1 doc, migrated on load (as above).
     await stub.seedDoc({
@@ -891,29 +940,29 @@ describe("v5 milestone step 1 — migration ladder wired into the DO load path",
     // A real user's op-based edit AFTER the migration.
     await stub.applyChange({ op: "addSection", name: "UserEdit" });
 
-    await runInDurableObject(
-      realDocs.get(id) as unknown as DurableObjectStub<import("./doc-do").DocDO>,
-      async (instance) => {
-        const doc = (instance as unknown as { getDoc: () => A.Doc<RoutineDoc> }).getDoc();
-        const changes = A.getAllChanges(doc).map((c) => A.decodeChange(c));
-        const migration = changes.find((c) => c.message === "ballroom:migrate");
-        expect(migration).toBeDefined();
-        const userEdit = changes[changes.length - 1];
-        expect(userEdit?.message).not.toBe("ballroom:migrate");
-        // The migration and the user's op-based edit are attributed to DIFFERENT
-        // actors — the structural guarantee that keeps per-user undo
-        // (`undoLastChange`, which filters strictly by actor id) from ever
-        // selecting the migration change.
-        expect(userEdit?.actor).not.toBe(migration?.actor);
+    await runInDurableObject(realDocs.get(id), async (instance) => {
+      // getDoc is PRIVATE (asTestPeek): the test needs the raw in-memory doc to
+      // inspect change attribution, not a snapshot.
+      const doc = asTestPeek<{ getDoc: () => A.Doc<RoutineDoc> }>(instance).getDoc();
+      const changes = A.getAllChanges(doc).map((c) => A.decodeChange(c));
+      const migration = changes.find((c) => c.message === "ballroom:migrate");
+      expect(migration).toBeDefined();
+      const userEdit = changes[changes.length - 1];
+      expect(userEdit?.message).not.toBe("ballroom:migrate");
+      // The migration and the user's op-based edit are attributed to DIFFERENT
+      // actors — the structural guarantee that keeps per-user undo
+      // (`undoLastChange`, which filters strictly by actor id) from ever
+      // selecting the migration change.
+      expect(userEdit?.actor).not.toBe(migration?.actor);
+      if (!userEdit) throw new Error("expected the user's edit in the change log");
 
-        // Undo, scoped to the user's own actor: reverts ONLY their edit.
-        const undone = undoLastChange(doc, userEdit?.actor as string);
-        const routine = readRoutine(undone);
-        expect(routine.sections.some((s) => s.name === "UserEdit")).toBe(false);
-        // The migration's effects (schemaVersion bump) are untouched by the undo.
-        expect(routine.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-      },
-    );
+      // Undo, scoped to the user's own actor: reverts ONLY their edit.
+      const undone = undoLastChange(doc, userEdit.actor);
+      const routine = readRoutine(undone);
+      expect(routine.sections.some((s) => s.name === "UserEdit")).toBe(false);
+      // The migration's effects (schemaVersion bump) are untouched by the undo.
+      expect(routine.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    });
   });
 });
 
@@ -934,5 +983,177 @@ describe("storage-format version marker", () => {
     await stub.applyChange({ op: "addSection", name: "A" });
     await stub.reloadForTest(); // simulated eviction → constructor re-runs
     expect(await stub.debugStorageVersion()).toBe(1);
+  });
+});
+
+describe("legacy break → Break-figure migration (Builder v3 ④, alarm-driven)", () => {
+  it("rewrites {source:'break'} placements into minted Break figure docs on the alarm", async () => {
+    // Intent (owner decision 2026-07-07): a Break is a real choreo-local figure.
+    //   Legacy break placements are MIGRATED — the alarm mints a Break figure doc
+    //   per break (registry row + placement edge + DO seed, owned by the routine's
+    //   owner) FIRST, then rewrites the routine's placements under the migration
+    //   actor. Idempotent: a second alarm finds no breaks.
+    const { name, stub } = freshDoc("routine");
+    await stub.seedDoc({
+      id: name,
+      title: "Break Legacy",
+      dance: "waltz",
+      ownerId: "user_bl",
+      sections: [
+        {
+          id: "s1",
+          name: "Side",
+          placements: [
+            { id: "p1", figureRef: "fig_keep", sortKey: "a0", deletedAt: null },
+            { id: "p2", source: "break", beats: 4, sortKey: "a1", deletedAt: null },
+          ],
+          deletedAt: null,
+        },
+      ],
+      annotations: [],
+      schemaVersion: 5,
+      deletedAt: null,
+    });
+    await stub.setMetadata({ doName: name, ownerId: "user_bl" });
+
+    await stub.runAlarmForTest();
+
+    const doc = await stub.getSnapshot();
+    const p2 = doc.sections[0]?.placements.find((p) => p.id === "p2");
+    expect(p2?.source).toBeUndefined(); // no longer a special break entry
+    expect(p2?.beats).toBeUndefined();
+    expect(p2?.figureRef).toBeTruthy(); // re-pointed at the minted Break figure
+    const breakRef = p2?.figureRef;
+    if (!breakRef) throw new Error("expected p2 to reference the minted Break figure");
+    expect(breakRef).not.toBe("fig_keep");
+
+    // The minted figure: registry row owned by the routine owner + placement edge.
+    const row = await env.DB.prepare(
+      "SELECT ownerId, type, title FROM document_registry WHERE docRef = ?",
+    )
+      .bind(breakRef)
+      .first<{ ownerId: string; type: string; title: string | null }>();
+    expect(row?.ownerId).toBe("user_bl");
+    expect(row?.type).toBe("account-figure");
+    const edge = await env.DB.prepare(
+      "SELECT 1 AS x FROM placement_edge WHERE routineRef = ? AND figureRef = ?",
+    )
+      .bind(name, breakRef)
+      .first();
+    expect(edge).toBeTruthy();
+
+    // The Break figure doc itself: a bar-spanning empty timeline (counts = beats).
+    const fig = await readFigureSnapshot(docs.get(docs.idFromName(breakRef)));
+    expect(fig?.name).toBe("Break");
+    expect(fig?.counts).toBe(4);
+
+    // Idempotent: a second alarm changes nothing further.
+    await stub.runAlarmForTest();
+    const again = await stub.getSnapshot();
+    expect(again.sections[0]?.placements.find((p) => p.id === "p2")?.figureRef).toBe(breakRef);
+  });
+});
+
+describe("WEP-0006 heartbeat auto-response (zombie-socket detection)", () => {
+  it("registers the ping→pong pair so the runtime answers heartbeats without waking a hibernating DO", async () => {
+    // Intent: the client's idle SYNC_PING must be answered even while the DO
+    //   hibernates — setWebSocketAutoResponse is the platform primitive that
+    //   replies runtime-level, never invoking webSocketMessage and never waking
+    //   the DO (the D23 hibernation economics stay intact).
+    // Assert via the DO's own state: the pair is registered at construction.
+    //   (vitest-pool-workers can't drive a full WS delivery cycle — SPIKE sharp
+    //   edge #3 — so real wire delivery is owned by the E2E layer, where the
+    //   shortened heartbeat exercises ping→pong continuously in every journey.)
+    const realDocs = env.DOC_DO;
+    const id = realDocs.idFromName(uniqueDocName("routine"));
+    const pair = await runInDurableObject(realDocs.get(id), (_instance, state) => {
+      const p = state.getWebSocketAutoResponse();
+      return p ? { request: p.request, response: p.response } : null;
+    });
+    expect(pair).toEqual({ request: SYNC_PING, response: SYNC_PONG });
+  });
+});
+
+describe("WEP-0002 account doc — the DO hosts + edits the per-user account doc", () => {
+  const freshAccount = () => {
+    const uid = uniqueDocName("acctuser");
+    const docRef = `account:${uid}`;
+    return { uid, docRef, stub: env.DOC_DO.get(env.DOC_DO.idFromName(docRef)) };
+  };
+
+  it("seeds from D1 import rows and round-trips library + family-note edits (survives cold reload)", async () => {
+    const { uid, stub } = freshAccount();
+    await stub.seedDoc(
+      importAccountDoc({
+        userId: uid,
+        libraryFigureRefs: ["global:waltz:natural_turn"],
+        familyNotes: [],
+      }),
+    );
+
+    // Library bookmark add/remove via the account-edit RPC.
+    await stub.applyAccountEdit({ op: "addLibraryRef", figureRef: "fig_a" });
+    expect((await stub.getAccountSnapshot())?.libraryFigureRefs).toEqual([
+      "global:waltz:natural_turn",
+      "fig_a",
+    ]);
+    await stub.applyAccountEdit({ op: "removeLibraryRef", figureRef: "global:waltz:natural_turn" });
+    expect((await stub.getAccountSnapshot())?.libraryFigureRefs).toEqual(["fig_a"]);
+
+    // Family-note create returns the server-minted id; the snapshot carries it.
+    const { id } = await stub.applyAccountEdit({
+      op: "addFamilyNote",
+      authorId: uid,
+      kind: "practice",
+      text: "head left on every Feather",
+      figureType: "feather",
+      danceScope: "all",
+    });
+    if (!id) throw new Error("addFamilyNote must return the created note id");
+    const withNote = await stub.getAccountSnapshot();
+    expect(withNote?.annotations.map((a) => a.id)).toEqual([id]);
+    expect(withNote?.annotations[0]?.anchors).toEqual([
+      { type: "figureType", figureType: "feather", danceScope: "all" },
+    ]);
+
+    // Soft-delete drops it from the read; the library survives a forced cold-load.
+    await stub.applyAccountEdit({ op: "deleteFamilyNote", annotationId: id });
+    await stub.reloadForTest();
+    const after = await stub.getAccountSnapshot();
+    expect(after?.annotations).toEqual([]);
+    expect(after?.libraryFigureRefs).toEqual(["fig_a"]);
+  });
+
+  it("boundary: the owner connects (101); a different authenticated user is rejected 403 pre-upgrade", async () => {
+    const { uid, docRef, stub } = freshAccount();
+    await seedDb({
+      users: [
+        { id: uid, displayName: "Owner", identityColor: "#111", plan: "free" },
+        { id: "u_intruder", displayName: "Intruder", identityColor: "#222", plan: "free" },
+      ],
+      // Owner-only: no membership rows exist for account docs; the owner is
+      // resolved from registry.ownerId (the simplest boundary in the system).
+      docs: [{ docRef, type: "account", ownerId: uid, doName: docRef }],
+      memberships: [],
+    });
+
+    const owner = await authedContext({ keypair: kp, userId: uid, docRef, role: null });
+    const ownerRes = await stub.fetch(
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": docRef, ...owner.authHeaders() },
+      }),
+    );
+    expect(ownerRes.status).toBe(101);
+    ownerRes.webSocket?.accept();
+
+    // Valid JWT, but no membership, not the owner, and the figure→routine cascade
+    // is inert for an account ref → null role → 403 BEFORE the WS upgrade.
+    const intruder = await authedContext({ keypair: kp, userId: "u_intruder", docRef, role: null });
+    const intruderRes = await stub.fetch(
+      new Request("https://do/connect", {
+        headers: { Upgrade: "websocket", "x-doc-name": docRef, ...intruder.authHeaders() },
+      }),
+    );
+    expect(intruderRes.status).toBe(403);
   });
 });

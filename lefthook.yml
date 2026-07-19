@@ -1,4 +1,4 @@
-# Git hooks (PLAN.md §10.3). Chosen: lefthook — one binary + one YAML replaces
+# Git hooks (docs/system/testing.md § Tooling & CI). Chosen: lefthook — one binary + one YAML replaces
 # husky's shell shims AND lint-staged's globbing, runs hooks in parallel, and
 # `wrangler`/`pnpm` stay the source of truth. Install with `pnpm install`
 # (root `prepare` runs `lefthook install`).

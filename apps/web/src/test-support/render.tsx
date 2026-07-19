@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Component-layer render helper (PLAN §10.3: component layer = jsdom + Testing
+// Component-layer render helper (docs/system/testing.md § Layer ownership: component layer = jsdom + Testing
 // Library + vitest-axe). Wraps a UI under test in the providers a screen needs
 // (TanStack Query for the REST list surface; room for a store/ provider) and
 // re-exports Testing Library + an axe convenience.
@@ -50,7 +50,7 @@ export function renderUi(ui: ReactElement, opts: RenderUiOptions = {}): RenderRe
 
 /** Run axe over a container and return the results (assert with toHaveNoViolations). */
 export async function axeCheck(container: HTMLElement): Promise<AxeResults> {
-  return axe(container) as Promise<AxeResults>;
+  return axe(container);
 }
 
 export * from "@testing-library/react";

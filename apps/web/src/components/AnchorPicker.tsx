@@ -1,7 +1,8 @@
 // US-040 — the anchor picker: choose what an annotation attaches to. A point
 // ("this step"), the figure here ("this figure here"), or the whole figure
 // FAMILY ("this figure family") with a this-dance | all-dances scope toggle.
-// PLAN §4.6, §5.1, D29.
+// docs/concepts/annotations.md § The Journal; docs/concepts/collaboration.md § Roles;
+// docs/concepts/annotations.md § Ownership & visibility (D29).
 //
 // Presentational: it reports the chosen anchor via `onPick`; the screen (Task 8)
 // routes a point/figure anchor to the routine store and a family anchor to the

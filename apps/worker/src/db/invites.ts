@@ -1,4 +1,4 @@
-// US-023 — invite issue + redeem against the D1 index (PLAN §5.5, §4.7).
+// US-023 — invite issue + redeem against the D1 index (docs/concepts/collaboration.md § Invites).
 //
 // SECURITY MODEL: the invite is an unguessable random token whose CONTENTS
 // (docRef, role, expiry) live in D1, not in the token. The redeemer presents
@@ -115,7 +115,7 @@ export async function redeemInvite(
         ok: true,
         docRef: row.docRef,
         role: existing,
-        requestedRole: row.role as MembershipRole,
+        requestedRole: row.role,
         downgraded: false,
         alreadyMember: true,
       };
@@ -134,7 +134,7 @@ export async function redeemInvite(
     .run();
   if ((claim.meta?.changes ?? 0) !== 1) return { ok: false, reason: "already_redeemed" };
 
-  const requestedRole = row.role as MembershipRole;
+  const requestedRole = row.role;
   const grantedRole = await applyEditableCap(db, row.docRef, userId, requestedRole, quota);
   await grantMembership(db, row.docRef, userId, grantedRole, now);
   return {

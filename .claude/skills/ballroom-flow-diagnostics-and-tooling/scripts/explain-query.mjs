@@ -66,7 +66,7 @@ for (const row of plan) {
 }
 if (scan) {
   console.log(
-    "\nFAIL: full-table SCAN — every D1 list/registry/membership/quota query must use an index (PLAN.md §7).",
+    "\nFAIL: full-table SCAN — every D1 list/registry/membership/quota query must use an index (docs/system/architecture.md § Global constraints).",
   );
   process.exit(1);
 }

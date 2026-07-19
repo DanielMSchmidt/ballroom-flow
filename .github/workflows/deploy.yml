@@ -36,11 +36,23 @@ jobs:
       # compares it against /api/health's buildId (injected into the worker at
       # deploy below — the SAME sha, since worker + assets ship as one deploy)
       # and reloads a tab left running an older bundle.
+      # VITE_SENTRY_DSN (optional GitHub environment variable) bakes client-side
+      # error reporting into the SPA (US-049 web half, apps/web/src/lib/ops.ts).
+      # NOTE: VITE_CLERK_PUBLISHABLE_KEY and the worker's CLERK_* wrangler
+      # secrets MUST belong to the SAME Clerk instance per environment — a
+      # mismatch 401s every API call in that environment (2026-07-05 incident;
+      # see PROVISIONING.md).
       - run: pnpm -r build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
           VITE_BUILD_ID: ${{ github.sha }}
-      - run: pnpm -r test
+      # `pnpm test` (root) runs the four workspace suites with
+      # `--workspace-concurrency=1` so they don't all spawn CPU-sized vitest
+      # worker pools at once and starve each other into timeout flakes. Use the
+      # root script rather than a raw `pnpm -r test` so that serialization is
+      # centralized (package.json) and can't drift out of this workflow.
+      - run: pnpm test
 
       # E2E smoke — the same @smoke Playwright gate CI runs on PRs, mirrored here
       # so a push to development/main can't deploy on a red journey. (deploy.yml

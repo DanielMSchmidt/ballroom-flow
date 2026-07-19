@@ -85,7 +85,7 @@
 <!-- ===================== TITLE ===================== -->
 <div style="position:absolute;left:80px;top:26px;width:1320px">
   <div style="font:700 46px Caveat,cursive;color:#2b2b2b;line-height:1">Ballroom Choreography Builder — Wireframes <span style="font-size:31px;color:#2f5d8f">v5</span></div>
-  <div class="anno" style="font:500 14px Inconsolata;color:#6b665e;margin-top:7px;max-width:1180px">Re-grounded on the v1 plan: <b>fork &amp; inheritance</b>. Four tabs (Choreo · Library · Journal · Profile), routine-level forking, account-level figure variants with copy-on-write, dance-aware figures, reading ⇄ editing on the choreo, and note-linking by place / figure / attribute with scope. Every frame lists its tap targets → effects; key screens are shown empty, with a few items, and overflowing. <b>v5 = the review pass</b> — AA-tinted chips &amp; labels, 44px targets, visible ✎ Add note + a sticky note button, sub-beats nested (not dimmed), attribute info as a full page, "My figures" naming with a Save → View toast, undo/redo + ↟ save chip in the figure editor (1.11, new 1.22), one noun: <b>choreos</b>.</div>
+  <div class="anno" style="font:500 14px Inconsolata;color:#6b665e;margin-top:7px;max-width:1180px">Re-grounded on the v1 plan: <b>fork &amp; inheritance</b>. Four tabs (Choreo · Library · Journal · Profile), routine-level forking, account-level figure variants with copy-on-write, dance-aware figures, reading ⇄ editing on the choreo, and note-linking by place / figure / attribute with scope. Every frame lists its tap targets → effects; key screens are shown empty, with a few items, and overflowing. <b>v5 = the review pass</b> — AA-tinted chips &amp; labels, 44px targets, visible ✎ Add note + a sticky note button, sub-beats nested (not dimmed), attribute info as a full page, "My figures" naming with a Save → View toast, undo/redo + ↟ save chip in the figure editor (1.11, new 1.22), one noun: <b>choreos</b>. <b>v5.1 (shipped-parity):</b> bilingual UI EN · DE on three surfaces + a German-rendered screen (§5), and the shipped custom attribute-type builder / editor — description, curated AA colour palette, chip-list values, per-value definitions, edit mode (1.16b) + ✎ in the types manager (1.17).</div>
 </div>
 
 <!-- legend -->
@@ -137,7 +137,9 @@
 
 <div class="anno note blue" style="position:absolute;left:2470px;top:26px;width:300px"><b>Scale mapping — px are roles, not specs.</b> These frames are 320px lo-fi: 8px → text-2xs (12px) · 9–10px → xs · 11–12px → sm · 13px Caveat → note. Every tap target ≥ 44px (--bf-touch-target) — the whole cell / row is the hit area, never just the glyph. Chips = kind tint bg + kind border + dark ink (AA); solid colour + white text is banned.</div>
 <div class="anno note" style="position:absolute;left:2470px;top:340px;width:300px;transform:rotate(1deg)"><b>Grid rules.</b> Sub-beats (&amp; · e · a) are nested — smaller count label, tinted row — never dimmed: <b>grey means empty / disabled only</b>. More than 5 columns? The grid pans horizontally; the count column stays sticky, the right edge fades. Type never shrinks below 2xs.</div>
-<div class="anno note tan" style="position:absolute;left:2470px;top:580px;width:300px;transform:rotate(-1deg)"><b>v5 changelog (review pass).</b> AA chips &amp; labels · 44px targets · ✎ Add note rows + sticky note button (1.6) · sub-beats nested, not dimmed · 1.13 is a full page · undo/redo + ↟ save chip in 1.11 · new 1.22 ripple banner · "Saved to My figures · View" toast (2.1) · one noun: choreos · Caveat fix in 1.17.</div>
+<div class="anno note tan" style="position:absolute;left:2470px;top:580px;width:300px;transform:rotate(-1deg)"><b>v5 changelog (review pass).</b> AA chips &amp; labels · 44px targets · ✎ Add note rows + sticky note button (1.6) · sub-beats nested, not dimmed · 1.13 is a full page · undo/redo + ↟ save chip in 1.11 · new 1.22 ripple banner · "Saved to My figures · View" toast (2.1) · one noun: choreos · Caveat fix in 1.17 · new 1.24 offline-editing states (pending chip + unsyncable alert, PLAN §11.2).</div>
+
+<div class="anno note blue" style="position:absolute;left:2470px;top:770px;width:300px;transform:rotate(.6deg)"><b>v5.1 changelog (shipped-parity pass).</b> ① <b>Bilingual UI (EN · DE)</b> — compact EN | DE toggle in the signed-out landing header + the desktop side rail, a labelled row in Profile (4.1), one screen shown in German (§5). Client-only, persists, applied live; independent of the ballroom-vocabulary DE overlay. ② <b>Custom attribute-type builder rebuilt</b> (1.16) — name · description · curated colour palette · single/multi · list/free-text · explicit chip-list values · per-value definitions · role/required; + Edit mode (1.16b, slug held stable) and ✎ edit on custom rows (1.17).</div>
 
 <!-- ===================== SECTION 0 · NAVIGATION MAP ===================== -->
 <div class="sect" style="position:absolute;left:80px;top:430px">0 · Navigation — four tabs &amp; where every screen connects</div>
@@ -524,6 +526,7 @@
     <div class="cr"><span class="pin">2</span><span><b>filter</b> field narrows the list by name</span></div>
     <div class="cr"><span class="pin">3</span><span>tap a figure → adds it to the section, closes sheet, toast</span></div>
     <div class="cr"><span class="pin">4</span><span><b>create your own</b> → compose a custom figure (amber)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span><b>create-navigates (2026-07-08):</b> confirming a NEW custom figure opens its Figure detail (1.11) immediately — no extra tap; a catalogue pick stays on Assemble.</span></div>
   </div>
 </div>
 
@@ -578,6 +581,7 @@
     <div class="cr"><span class="pin">7</span><span><b>↶ / ↷</b> — your own last change; ↷ dims when empty; a new edit clears redo. Toast "Undone · …" carries <b>Redo</b></span></div>
     <div class="cr"><span class="pin">8</span><span><b>↟ Save to My figures</b> → toast <i>"Saved to My figures · View"</i>; saved = "✓ In My figures", idempotent — remove only in My figures (2.3)</span></div>
     <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>full-screen edit · every change is <b>auto-saved</b> (undo available); <b>‹</b> returns to the last view</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span><b>lens-aware (2026-07-08):</b> opened from Assemble·EDITING → notation-only, as drawn (no thread/family-notes panels; the per-count text recap shows under the grid). Opened from Assemble·READING → the notes surfaces (thread 1.14 inline + family notes) render below the grid and the text recap is hidden.</span></div>
   </div>
 </div>
 
@@ -1003,6 +1007,7 @@
           <div style="font:700 15px Inconsolata;color:#1c1c1e">Daniel</div>
         </div>
 <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:6px">PROFILE COLOUR <span class="pin">1</span></div><div style="font:500 13px Caveat,cursive;color:#9a958c;margin-bottom:8px">every note &amp; reply of yours is tinted with this, across shared routines</div><div style="display:flex;gap:9px"><span style="width:30px;height:30px;border-radius:50%;background:#3b7dd8;border:2.5px solid #1c1c1e"></span><span style="width:30px;height:30px;border-radius:50%;background:#c0563f"></span><span style="width:30px;height:30px;border-radius:50%;background:#1f8a5b"></span><span style="width:30px;height:30px;border-radius:50%;background:#8a5cab"></span><span style="width:30px;height:30px;border-radius:50%;background:#a9742c"></span></div></div>
+        <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:6px">LANGUAGE / SPRACHE <span class="pin">2</span></div><div style="font:500 13px Caveat,cursive;color:#9a958c;margin-bottom:8px">a personal preference, applied instantly — no reload</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 10px Inconsolata;background:#2f5d8f;color:#fff;padding:8px 18px">EN</span><span style="font:700 10px Inconsolata;color:#2f5d8f;padding:8px 18px">DE</span></span></div>
       </div>
       <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi tbon"><span class="tbg">◓</span>Profile</div></div>
     </div>
@@ -1010,6 +1015,8 @@
   <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
     <div class="capt">INTERACTIONS</div>
     <div class="cr"><span class="pin">1</span><span>pick your <b>profile colour</b> → re-tints all your notes &amp; thread replies everywhere</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Language / Sprache</b> — EN | DE segmented; a personal preference, applied live &amp; persisted (client-only, no server round-trip)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>the explained version; the compact EN | DE in the signed-out landing header &amp; the desktop rail (§5) are the always-visible shortcut.</span></div>
   </div>
 </div>
 
@@ -1089,42 +1096,160 @@
   </div>
 </div>
 
-<!-- 1.16 New custom type -->
-<div style="position:absolute;left:480px;top:7740px;width:320px">
-  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.16 · New custom type <span class="sub" style="display:inline">— end-user builder</span></div>
-  <div class="frame" style="height:660px">
+<!-- 1.16 New custom type — full builder (create) -->
+<div style="position:absolute;left:480px;top:7740px;width:320px" data-screen-label="1.16 custom type builder — create">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.16 · New custom type <span class="sub" style="display:inline">— full builder · create</span></div>
+  <div class="frame" style="height:980px">
     <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
     <div class="bd" style="background:#f4f1ea">
+      <div class="hd" style="opacity:.5"><span class="bk">‹</span><div style="flex:1"><div class="ht">Natural Turn</div><div style="font:500 9px Inconsolata;color:#9a958c">editing</div></div><span style="font:700 13px Inconsolata;background:#2f5d8f;color:#fff;border-radius:6px;padding:2px 6px">✎</span></div>
       <div style="flex:1"></div>
       <div class="scrim"></div>
-      <div class="sheet">
+      <div class="sheet" style="max-height:94%;display:flex;flex-direction:column;overflow:hidden">
         <div class="grab"></div>
-        <div style="font:700 13px Inconsolata;color:#1c1c1e;margin-bottom:11px">New attribute type · this choreo</div>
-        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">NAME <span class="pin">1</span></div>
-        <div style="border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px Inconsolata;color:#3a352d;background:#fff;margin-bottom:12px">Head</div>
-        <div style="display:flex;gap:14px;margin-bottom:11px">
-          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">VALUES</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">from list</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">free text</span></span></div>
-          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">CHOICES</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">single</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">multi</span></span></div>
-          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">REQUIRED</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">optional</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">req</span></span></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font:700 13px Inconsolata;color:#1c1c1e;flex:1">New attribute type</span><span style="font:600 8px Inconsolata;color:#0f8a8a;background:#e0f2f2;border-radius:5px;padding:2px 6px">this choreo</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:4px">NAME <span class="pin">1</span> <span style="color:#c0563f">•</span></div>
+        <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;background:#fff;margin-bottom:11px"><span style="flex:1;font:600 12px Inconsolata;color:#3a352d">Head</span><span style="font:600 8px Inconsolata;color:#bcb6aa">4 / 80</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:4px">DESCRIPTION <span class="pin">2</span> <span style="font-weight:500;color:#bdb8ad">optional</span></div>
+        <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;background:#fff;margin-bottom:3px"><span style="flex:1;font:600 11px Inconsolata;color:#3a352d">Where the head is placed &amp; turned</span><span style="font:600 8px Inconsolata;color:#bcb6aa">33 / 140</span></div>
+        <div style="font:500 12px Caveat,cursive;color:#9a958c;margin-bottom:11px">shown when someone taps the type to learn what it means → feeds the info-sheet (1.13)</div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">COLOUR <span class="pin">3</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+          <span style="width:26px;height:26px;border-radius:8px;background:#3a4a63"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#4a4d9c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#6b4a9c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#9c3d7a"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#b03a5b"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#b0472f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#8a6a1f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#6b4a2c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#5e6b1f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#1f7a4d"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#0f6b66;display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px Inconsolata;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c1c1e">✓</span>
         </div>
-        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:6px">CHOICES <span style="color:#bdb8ad;font-weight:500">add each value with ＋</span> <span class="pin">2</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
-          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">left <span style="color:#0f8a8a;font-weight:700">×</span></span>
-          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">right <span style="color:#0f8a8a;font-weight:700">×</span></span>
-          <span style="display:inline-flex;align-items:center;gap:5px;font:700 10px Inconsolata;background:#e0f2f2;color:#0f6b6b;border-radius:8px;padding:4px 9px">closed <span style="color:#0f8a8a;font-weight:700">×</span></span>
+        <div style="font:500 12px Caveat,cursive;color:#9a958c;margin-bottom:5px">picked from a readable set so values stay legible on the timeline's sunken well</div>
+        <div style="display:flex;align-items:center;gap:6px;background:#f4f1ea;border:1px solid #e6e0d4;border-radius:7px;padding:6px 8px;margin-bottom:11px"><span style="font:600 8px Inconsolata;color:#9a958c">on timeline →</span><span style="font:700 9px Inconsolata;border-radius:5px;padding:2px 6px;color:#0f6b66;background:#fff;border:1px solid #0f6b66">left</span><span style="font:700 9px Inconsolata;border-radius:5px;padding:2px 6px;color:#0f6b66;background:#fff;border:1px solid #0f6b66">closed</span></div>
+
+        <div style="display:flex;gap:16px;margin-bottom:11px">
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">CARDINALITY</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">single</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">multi</span></span></div>
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">VALUE TYPE <span class="pin">4</span></div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">from a list</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">free text</span></span></div>
         </div>
-        <div style="display:flex;gap:7px;margin-bottom:14px"><div style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:9px 12px;font:600 12px Inconsolata;color:#bcb6aa;background:#fff">to partner</div><span style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 17px Inconsolata">＋</span></div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font:700 9px Inconsolata;color:#6f6a61">ROLE-AWARE</span><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;border-radius:8px;padding:5px 11px">yes — own L / F values</span><span class="pin">3</span></div>
-        <div style="display:flex;gap:8px"><span style="flex:1;text-align:center;font:600 11px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px">cancel</span><span style="flex:2;text-align:center;font:700 11px Inconsolata;background:#0f8a8a;color:#fff;border-radius:10px;padding:11px"><span class="pin" style="background:#fff;color:#0f8a8a">4</span> create &amp; add</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">VALUES <span class="pin">5</span> <span style="font-weight:500;color:#bdb8ad">add each value; ✕ to remove</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px">
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">left <span style="color:#0f8a8a">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">right <span style="color:#0f8a8a">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">closed <span style="color:#0f8a8a">✕</span></span>
+        </div>
+        <div style="display:flex;gap:7px;margin-bottom:3px"><div style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;font:600 12px Inconsolata;color:#bcb6aa;background:#fff">to partner…</div><span style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 16px Inconsolata">＋</span></div>
+        <div style="font:500 12px Caveat,cursive;color:#9a958c;margin-bottom:11px">Enter / comma / ＋ adds · backspace on an empty field removes the last chip</div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">PER-VALUE DEFINITIONS <span class="pin">6</span> <span style="font-weight:500;color:#bdb8ad">optional</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">left</span><span style="flex:1;font:600 10px Inconsolata;color:#3a352d">head stays left, resist turning</span></div>
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">right</span><span style="flex:1;font:600 10px Inconsolata;color:#bcb6aa">Define “right”…</span></div>
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">closed</span><span style="flex:1;font:600 10px Inconsolata;color:#bcb6aa">Define “closed”…</span></div>
+        </div>
+        <div style="font:500 12px Caveat,cursive;color:#9a958c;margin-bottom:11px">one line each — also feeds the info-sheet (1.13)</div>
+
+        <div style="display:flex;gap:16px;margin-bottom:13px">
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">DIFFERS BY ROLE <span class="pin">7</span></div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">yes · L / F</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">no</span></span></div>
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">REQUIRED</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">optional</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">req</span></span></div>
+        </div>
+
+        <div style="display:flex;gap:8px"><span style="flex:1;text-align:center;font:600 11px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px">Cancel</span><span style="flex:2;text-align:center;font:700 11px Inconsolata;background:#0f8a8a;color:#fff;border-radius:10px;padding:11px"><span class="pin" style="background:#fff;color:#0f8a8a">8</span> Create</span></div>
       </div>
     </div>
   </div>
-  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+  <div class="cap" style="position:absolute;top:996px;left:2px;width:316px">
     <div class="capt">INTERACTIONS</div>
-    <div class="cr"><span class="pin">1</span><span>name it; pick <b>list vs free text</b>, <b>single vs multi</b>, <b>optional vs required</b></span></div>
-    <div class="cr"><span class="pin">2</span><span>add choices one at a time with <b>＋</b> (no comma lists) · × removes</span></div>
-    <div class="cr"><span class="pin">3</span><span><b>role-aware</b> → separate leader / follower values</span></div>
-    <div class="cr"><span class="pin">4</span><span><b>create &amp; add</b> → type is scoped to <b>this choreo</b> (partners see it); becomes a column</span></div>
+    <div class="cr"><span class="pin">1</span><span><b>Name</b> — required, ≤ 80 chars; its slug is derived once, then held stable</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>Description</b> — optional ≤ 140; the one-liner shown on the info-sheet (1.13)</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>Colour</b> — a curated, AA-legible palette (not a free picker); selected = dark ring + ✓; chips render sunken-bg + this colour's border &amp; text</span></div>
+    <div class="cr"><span class="pin">4</span><span><b>Value type</b> — <b>from a list</b> shows the values below · <b>free text</b> hides them</span></div>
+    <div class="cr"><span class="pin">5</span><span><b>Values</b> — add one at a time (Enter / comma / ＋); ✕ removes; backspace on empty removes the last chip</span></div>
+    <div class="cr"><span class="pin">6</span><span><b>Per-value definitions</b> — one optional line per value; feeds the info-sheet</span></div>
+    <div class="cr"><span class="pin">7</span><span><b>Differs by role</b> + <b>Required</b> toggles · <b>single / multi</b> cardinality</span></div>
+    <div class="cr"><span class="pin">8</span><span><b>Create</b> → type is scoped to <b>this choreo</b> (partners see it); becomes a column</span></div>
+  </div>
+</div>
+
+<!-- 1.16b Edit type — same sheet, pre-filled -->
+<div style="position:absolute;left:1280px;top:7740px;width:320px" data-screen-label="1.16b custom type editor — edit">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.16b · Edit type <span class="sub" style="display:inline">— same sheet · pre-filled</span></div>
+  <div class="frame" style="height:980px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="background:#f4f1ea">
+      <div class="hd" style="opacity:.5"><span class="bk">‹</span><div style="flex:1"><div class="ht">Profile · Attribute types</div><div style="font:500 9px Inconsolata;color:#9a958c">manage</div></div></div>
+      <div style="flex:1"></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="max-height:94%;display:flex;flex-direction:column;overflow:hidden">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font:700 13px Inconsolata;color:#1c1c1e;flex:1">Edit type</span><span class="pin">1</span><span style="font:600 8px Inconsolata;color:#0f8a8a;background:#e0f2f2;border-radius:5px;padding:2px 6px">this choreo</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:4px">NAME <span style="color:#c0563f">•</span></div>
+        <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;background:#fff;margin-bottom:3px"><span style="flex:1;font:600 12px Inconsolata;color:#3a352d">Head</span><span style="display:inline-flex;align-items:center;gap:3px;font:600 8px Inconsolata;color:#8a857b;background:#efece5;border-radius:5px;padding:2px 6px">🔒 slug: head</span></div>
+        <div style="font:500 12px Caveat,cursive;color:#9a958c;margin-bottom:11px">rename freely — the derived slug is held stable, so existing attributes stay linked <span class="pin">2</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:4px">DESCRIPTION <span style="font-weight:500;color:#bdb8ad">optional</span></div>
+        <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;background:#fff;margin-bottom:11px"><span style="flex:1;font:600 11px Inconsolata;color:#3a352d">Where the head is placed &amp; turned</span><span style="font:600 8px Inconsolata;color:#bcb6aa">33 / 140</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">COLOUR</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+          <span style="width:26px;height:26px;border-radius:8px;background:#3a4a63"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#4a4d9c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#6b4a9c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#9c3d7a"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#b03a5b"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#b0472f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#8a6a1f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#6b4a2c"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#5e6b1f"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#1f7a4d"></span>
+          <span style="width:26px;height:26px;border-radius:8px;background:#0f6b66;display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px Inconsolata;box-shadow:0 0 0 2px #fff,0 0 0 4px #1c1c1e">✓</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;background:#f4f1ea;border:1px solid #e6e0d4;border-radius:7px;padding:6px 8px;margin-bottom:11px"><span style="font:600 8px Inconsolata;color:#9a958c">on timeline →</span><span style="font:700 9px Inconsolata;border-radius:5px;padding:2px 6px;color:#0f6b66;background:#fff;border:1px solid #0f6b66">left</span><span style="font:700 9px Inconsolata;border-radius:5px;padding:2px 6px;color:#0f6b66;background:#fff;border:1px solid #0f6b66">closed</span></div>
+
+        <div style="display:flex;gap:16px;margin-bottom:11px">
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">CARDINALITY</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">single</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">multi</span></span></div>
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">VALUE TYPE</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 9px">from a list</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 9px">free text</span></span></div>
+        </div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">VALUES <span style="font-weight:500;color:#bdb8ad">add each value; ✕ to remove</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px">
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">left <span style="color:#0f8a8a">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">right <span style="color:#0f8a8a">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:700 10px Inconsolata;color:#0f6b66;background:#eefaf9;border:1.5px solid #0f6b66;border-radius:8px;padding:4px 9px">closed <span style="color:#0f8a8a">✕</span></span>
+        </div>
+        <div style="display:flex;gap:7px;margin-bottom:11px"><div style="flex:1;border:1.5px solid #ddd6ca;border-radius:9px;padding:8px 11px;font:600 12px Inconsolata;color:#bcb6aa;background:#fff">to partner…</div><span style="display:flex;align-items:center;justify-content:center;width:42px;border-radius:9px;background:#0f8a8a;color:#fff;font:700 16px Inconsolata">＋</span></div>
+
+        <div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">PER-VALUE DEFINITIONS <span style="font-weight:500;color:#bdb8ad">optional</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:11px">
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">left</span><span style="flex:1;font:600 10px Inconsolata;color:#3a352d">head stays left, resist turning</span></div>
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">right</span><span style="flex:1;font:600 10px Inconsolata;color:#3a352d">head turned to the right</span></div>
+          <div style="display:flex;align-items:center;gap:7px;border:1.5px solid #e6e0d4;border-radius:8px;padding:6px 9px;background:#fff"><span style="font:700 9px Inconsolata;color:#0f6b66;flex:0 0 auto;width:40px">closed</span><span style="flex:1;font:600 10px Inconsolata;color:#bcb6aa">Define “closed”…</span></div>
+        </div>
+
+        <div style="display:flex;gap:16px;margin-bottom:13px">
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">DIFFERS BY ROLE</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">yes · L / F</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">no</span></span></div>
+          <div><div style="font:700 9px Inconsolata;color:#6f6a61;margin-bottom:5px">REQUIRED</div><span style="display:inline-flex;border:1.5px solid #cdddee;border-radius:8px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#2f5d8f;color:#fff;padding:5px 10px">optional</span><span style="font:700 9px Inconsolata;color:#2f5d8f;padding:5px 10px">req</span></span></div>
+        </div>
+
+        <div style="display:flex;gap:8px"><span style="flex:1;text-align:center;font:600 11px Inconsolata;border:1.5px solid #d6d0c6;color:#6b665e;border-radius:10px;padding:11px">Cancel</span><span style="flex:2;text-align:center;font:700 11px Inconsolata;background:#0f8a8a;color:#fff;border-radius:10px;padding:11px"><span class="pin" style="background:#fff;color:#0f8a8a">3</span> Save changes</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:996px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>opened from a custom row's <b>✎</b> in 1.17, <b>pre-filled</b> — same sheet as 1.16, title now <b>Edit type</b></span></div>
+    <div class="cr"><span class="pin">2</span><span>the derived <b>slug is held stable</b> — renaming the label never re-keys the type</span></div>
+    <div class="cr"><span class="pin">3</span><span><b>Save changes</b> → updates the type in place; every attribute already using it stays linked</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>because the slug is stable, <b>existing data is never orphaned</b> by an edit — worth guarding in code.</span></div>
   </div>
 </div>
 
@@ -1143,7 +1268,7 @@
         <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#2c8a85;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Foot Position</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#9a958c">single</span><span style="font:600 8px Inconsolata;color:#8a857b">· standard</span></div>
         <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#b07cc6;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Body Actions</span><span style="font:600 8px Inconsolata;color:#9a958c">multi</span><span style="font:600 8px Inconsolata;color:#8a857b">· standard</span></div>
         <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #ece8e0;border-radius:9px;padding:8px 11px"><span style="width:10px;height:10px;border-radius:3px;background:#5b6b8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#3a352d">Sway · Turn</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#8a857b">· standard</span></div>
-        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #d6ecec;border-radius:9px;padding:8px 11px;background:#f3fbfb"><span style="width:10px;height:10px;border-radius:3px;background:#0f8a8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#0f6b6b">Head</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#0f8a8a">this choreo</span></div>
+        <div style="display:flex;align-items:center;gap:9px;border:1.5px solid #d6ecec;border-radius:9px;padding:8px 11px;background:#f3fbfb"><span style="width:10px;height:10px;border-radius:3px;background:#0f8a8a;flex:0 0 auto"></span><span style="flex:1;font:700 11px Inconsolata;color:#0f6b6b">Head</span><span style="font:600 8px Inconsolata;color:#2f5d8f;background:#eef4fb;border-radius:5px;padding:1px 5px">L/F</span><span style="font:600 8px Inconsolata;color:#0f8a8a">this choreo</span><span class="pin">2</span><span style="font:700 13px Inconsolata;color:#0f8a8a;padding:0 3px;flex:0 0 auto">✎</span></div>
         <div style="font:500 13px Caveat,cursive;color:#8a857b;margin-top:2px">standard types are shared by everyone · custom types are scoped to a choreo so partners see them</div>
       </div>
       <div class="tb"><div class="tbi"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi tbon"><span class="tbg">◓</span>Profile</div></div>
@@ -1152,11 +1277,12 @@
   <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
     <div class="capt">INTERACTIONS</div>
     <div class="cr"><span class="pin">1</span><span><b>＋ new type</b> → custom-type builder (1.16)</span></div>
+    <div class="cr"><span class="pin">2</span><span>a custom row's <b>✎</b> → the editor (1.16b) pre-filled; <b>standard types are locked</b> (no ✎)</span></div>
     <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Standard types are locked; custom types you add are choreo-scoped (not personal) so collaborators can use them too.</span></div>
   </div>
 </div>
 <!-- ===================== SYSTEM RULES · PART 2 (semantics with no screen) ===================== -->
-<div class="anno" style="position:absolute;left:80px;top:8660px;width:1352px">
+<div class="anno" style="position:absolute;left:80px;top:9040px;width:1352px">
   <div style="font:700 22px Caveat,cursive;color:#2b2b2b;margin-bottom:9px">System rules · part 2 — semantics that don't live on a screen</div>
   <div style="display:flex;flex-wrap:wrap;gap:11px">
     <div class="panel" style="width:320px;padding:11px 13px;border-left:4px solid #c0563f">
@@ -1307,6 +1433,36 @@
     <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>Three contexts: choreo-owned → quiet · global → subtitle "edits copy in" + toast (1.12) · <b>My figures → this banner</b>. Warn only where ripples are real.</span></div>
   </div>
 </div>
+<!-- 1.24 Offline editing — pending + unsyncable states (PLAN §11.2) -->
+<div style="position:absolute;left:2080px;top:9620px;width:320px">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">1.24 · Offline editing <span class="sub" style="display:inline">— pending &amp; unsyncable states (§11.2)</span></div>
+  <div class="frame" style="height:660px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div style="display:flex;align-items:center;gap:7px;margin:8px 12px 0;background:#eceef1;border:1.5px solid #c6ccd4;border-radius:9px;padding:8px 11px;min-height:34px"><span style="font:700 11px Inconsolata;color:#5a6472">⚠︎</span><span style="flex:1;font:600 9px Inconsolata;color:#454e5b">You're offline — showing your last synced data.</span></div>
+    <div class="hd"><span class="bk">‹</span><div style="flex:1"><div class="ht">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c">reading</div></div><span style="font:700 14px Inconsolata;color:#2f5d8f">✎</span><span style="font:700 13px Inconsolata;color:#2f5d8f">↗</span></div>
+    <div style="display:flex;align-items:center;gap:7px;margin:8px 12px 0;background:#eceef1;border:1.5px solid #c6ccd4;border-radius:9px;padding:8px 11px;min-height:34px"><span style="font:700 11px Inconsolata;color:#5a6472">⌁</span><span style="flex:1;font:600 9px Inconsolata;color:#454e5b"><b>2 changes</b> saved on this device — they'll sync when you're back online</span><span class="pin">1</span></div>
+    <div class="bd" style="padding:0">
+      <div style="flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:7px"><span style="font:700 9px Inconsolata;color:#6f6a61;letter-spacing:.5px">1ST LONG SIDE</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Natural Turn</span><span class="cnt">1 2 3</span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span class="bdot"></span><span style="font:700 12px Inconsolata;color:#1c1c1e">Whisk</span><span class="cnt">1 2 3</span></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:2px"><span style="font:700 9px Inconsolata;color:#6f6a61;letter-spacing:.5px">CODA · added offline</span><span style="flex:1;height:1px;background:#e8e3da"></span></div>
+        <div style="font:500 12px Caveat,cursive;color:#8a857b;text-align:center;margin-top:4px">editing keeps working — same screens as 1.6–1.11</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:14px;background:#fbe3dc;border:1.5px solid #c0563f;border-radius:10px;padding:10px 12px;min-height:44px"><span style="font:700 13px Inconsolata;color:#8f3825">!</span><span style="flex:1;font:600 10px/1.45 Inconsolata;color:#8f3825"><b>2 offline changes couldn't be saved</b> — your access to this choreo was removed. They stay readable here but won't sync.</span><span class="pin">2</span></div>
+        <div style="font:500 13px Caveat,cursive;color:#6b665e;margin-top:2px">the alert replaces the slate chip only when the server has <i>terminally</i> rejected the reconnect (access revoked / doc gone) — never for a mere network gap</div>
+      </div>
+      <div class="tb"><div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Library</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profile</div></div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:676px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>pending chip</b> (slate = offline family, never danger) — appears only with ≥1 undelivered change; count updates live; disappears once synced</span></div>
+    <div class="cr"><span class="pin">2</span><span><b>unsyncable alert</b> (danger, role=alert) — the Q-NEW-2 truth-telling: shown when reconnect is terminally rejected with pending changes; content stays readable, read-only</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>creation stays online-only: ＋ New choreo, Create-choreo sheet submit, Start from template, Fork/Make-a-copy and ＋ Add kind are <b>disabled</b> while offline (server actions — quota/registry/DO seeding; a silent failure is banned); only edits inside an already-opened choreo work offline</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span><b>offline app OPEN:</b> launching the installed app in airplane mode lands on the normal choreo list (1.1/1.2, served from the on-device cache + the last-known sign-in) with this banner on top — never a boot spinner</span></div>
+  </div>
+</div>
+
 <!-- ===================== SECTION 1d · COLUMN FILTER EXPLORATION ===================== -->
 <div class="sect" id="sect-1d" style="position:absolute;left:80px;top:10460px">1d · Reading view — "too crowded": column-filter directions A · B · C + tour — <span style="color:#1f8a5b">✓ decided: A (type chips) · role → header</span></div>
 
@@ -1465,6 +1621,123 @@
 <div class="anno note" style="position:absolute;left:1660px;top:10560px;width:300px;transform:rotate(-.8deg)"><b>What we're weighing.</b> <b>A</b> — per-type control always on screen; fastest toggling, but permanent chrome for a sometimes task. <b>B</b> — cleanest header &amp; one home for all view options, but the everyday role flip becomes 2 taps. <b>C</b> — one tap, zero management, calm; no per-type choice and customs wait for Full.</div>
 <div class="anno note blue" style="position:absolute;left:1660px;top:10800px;width:300px;transform:rotate(.7deg)"><b>✓ Decision (3 Jul): A — type chips.</b> Direct per-type control won; folded into <b>1.6</b> and the prototype. Role becomes a compact <b>L · F</b> in the header, so the chips row replaces STEPS FOR — no net extra chrome. Filter is per device and carries <b>across choreos</b>. <b>B</b>'s sheet stays a future option if types multiply; <b>C</b> dropped.</div>
 <div class="anno note tan" style="position:absolute;left:1660px;top:11080px;width:300px;transform:rotate(-.5deg)"><b>Shared rules (all three).</b> Remembered <b>per device, across choreos</b> — exactly like Leader/Follower · <b>Step*</b> is required, never hideable · hiding never touches data (grey still = empty/off only) · custom types are first-class in the filter · tap a value / column header → explainer (1.13), unchanged · notes, breaks &amp; whole-figure comments are never filtered.</div>
+<!-- ===================== SECTION 5 · BILINGUAL UI (EN · DE) ===================== -->
+<div class="sect" style="position:absolute;left:80px;top:11460px">5 · Bilingual UI — English · Deutsch (client-only, live, persisted)</div>
+
+<!-- 5.1 Landing (signed-out) -->
+<div style="position:absolute;left:80px;top:11540px;width:320px" data-screen-label="5.1 landing signed-out">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">5.1 · Landing — signed-out <span class="sub" style="display:inline">— EN | DE in the top bar</span></div>
+  <div class="frame" style="height:600px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd" style="padding:0">
+      <div style="display:flex;align-items:center;padding:8px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:7px;flex:1"><span style="width:22px;height:22px;border-radius:7px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata">◆</span><span style="font:700 13px Inconsolata;color:#1c1c1e">Ballroom <span style="color:#9a958c">Flow</span></span></div>
+        <span class="pin">1</span>
+        <span style="display:inline-flex;border:1.5px solid #dcd5ca;border-radius:7px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#eef4fb;color:#2f5d8f;padding:5px 9px">EN</span><span style="font:700 9px Inconsolata;color:#a79f90;padding:5px 9px">DE</span></span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 26px;text-align:center">
+        <span style="width:56px;height:56px;border-radius:15px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;font:700 26px Inconsolata">◆</span>
+        <div style="font:700 16px Inconsolata;color:#1c1c1e;line-height:1.25">Build &amp; annotate ballroom choreography</div>
+        <div style="font:500 15px Caveat,cursive;color:#9a958c;line-height:1.35">Routines, figures &amp; notes — on your phone.</div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:6px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid #d6d0c6;border-radius:11px;padding:12px;font:700 11px Inconsolata;color:#3a352d"><span style="width:14px;height:14px;border-radius:50%;border:2px solid #bcb6aa"></span>Continue with Google</span>
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid #d6d0c6;border-radius:11px;padding:12px;font:700 11px Inconsolata;color:#3a352d">⚿ Use a passkey</span>
+        </div>
+        <div style="font:500 13px Caveat,cursive;color:#a7a29a;margin-top:2px">New here? Continuing creates your account.</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:616px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span><b>EN | DE</b> — compact segmented toggle in the signed-out header, beside the brand mark (same control as the L · F role toggle)</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>set the language <b>before</b> sign-in; the choice persists into the app. Sign-in is Clerk (Google · passkeys).</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">·</span><span>brand lockup is a placeholder — swap for the real wordmark.</span></div>
+  </div>
+</div>
+
+<!-- 5.2 Desktop side rail -->
+<div style="position:absolute;left:480px;top:11540px;width:760px" data-screen-label="5.2 desktop side rail">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">5.2 · Desktop side rail <span class="sub" style="display:inline">— wide-viewport chrome (≥1024) · EN | DE always visible</span></div>
+  <div class="frame" style="height:472px;border-radius:16px;flex-direction:row">
+    <!-- rail -->
+    <div style="width:158px;flex:0 0 auto;background:#f7f5f0;border-right:2px solid #2b2b2b;display:flex;flex-direction:column;padding:14px 12px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:16px"><span style="width:24px;height:24px;border-radius:7px;background:#1c1c1e;color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px Inconsolata">◆</span><span style="font:700 12px Inconsolata;color:#1c1c1e">Ballroom <span style="color:#9a958c">Flow</span></span></div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;background:#eef4fb;color:#2f5d8f;font:700 11px Inconsolata"><span style="font-size:15px">▦</span>Choreo</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;color:#8a857b;font:600 11px Inconsolata"><span style="font-size:15px">▤</span>Library</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;color:#8a857b;font:600 11px Inconsolata"><span style="font-size:15px">▥</span>Journal</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;color:#8a857b;font:600 11px Inconsolata"><span style="font-size:15px">◓</span>Profile</div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:7px"><span class="pin">1</span><span style="display:inline-flex;border:1.5px solid #dcd5ca;border-radius:7px;overflow:hidden"><span style="font:700 9px Inconsolata;background:#eef4fb;color:#2f5d8f;padding:5px 10px">EN</span><span style="font:700 9px Inconsolata;color:#a79f90;padding:5px 10px">DE</span></span></div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:9px;border-top:1px solid #e6e0d4"><span style="width:24px;height:24px;border-radius:50%;background:#3b7dd8;color:#fff;display:flex;align-items:center;justify-content:center;font:700 9px Inconsolata">D</span><span style="font:700 10px Inconsolata;color:#1c1c1e;flex:1">Daniel</span></div>
+      </div>
+    </div>
+    <!-- content column -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff">
+      <div style="display:flex;align-items:center;padding:14px 20px 12px;border-bottom:1px solid #ece8e0"><span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">My Choreos</span><span style="font:600 9px Inconsolata;color:#9a958c;margin-right:10px">Free · 2 of 3</span><span style="width:28px;height:28px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span></div>
+      <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:9px">
+        <div style="width:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:11px;border:1.5px solid #e1dcd2;border-radius:11px;padding:10px 13px"><span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · 7 bars · Jun 2025</div></div><span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span></div>
+          <div style="display:flex;align-items:center;gap:11px;border:1.5px solid #e1dcd2;border-radius:11px;padding:10px 13px"><span style="width:34px;height:34px;border-radius:9px;background:#1f8a5b;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Silver Quickstep</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Quickstep · no figures yet · Aug 2025</div></div><span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span></div>
+          <div style="display:flex;align-items:center;gap:11px;border:1.5px solid #e1dcd2;border-radius:11px;padding:10px 13px"><span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span><div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Practice Waltz #2</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · no figures yet · today</div></div><span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:488px;left:2px;width:520px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr"><span class="pin">1</span><span>the <b>same</b> compact EN | DE toggle lives in the desktop navigation rail — <b>always visible</b>, so language is switchable without opening Profile</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>desktop = left rail + a centred content column (the ≥1024 adapted layout); the phone puts the toggle in the landing header + Profile instead.</span></div>
+  </div>
+</div>
+
+<!-- 5.3 Choreo list — Deutsch -->
+<div style="position:absolute;left:1280px;top:11540px;width:320px" data-screen-label="5.3 choreo list Deutsch">
+  <div data-drags-parent="1" class="lbl" style="position:absolute;top:-26px;left:2px">5.3 · Choreo list — Deutsch <span class="sub" style="display:inline">— the DE state (mirrors 1.1)</span></div>
+  <div class="frame" style="height:600px">
+    <div class="sb"><span>9:41</span><span>▮▮▮ ▢</span></div>
+    <div class="bd">
+      <div style="display:flex;align-items:center;padding:6px 14px 10px;border-bottom:1px solid #ece8e0;flex:0 0 auto">
+        <span style="flex:1;font:700 16px Inconsolata;color:#1c1c1e">Meine Choreos</span>
+        <span style="font:600 9px Inconsolata;color:#9a958c;margin-right:8px">Frei · 2 von 3</span>
+        <span style="width:26px;height:26px;border-radius:8px;background:#2f5d8f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px Inconsolata">＋</span>
+      </div>
+      <div style="padding:9px 12px 0;display:flex;flex-direction:column;gap:9px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:flex-start;gap:6px;background:#faf6ef;border:1px solid #ecdcc2;border-radius:8px;padding:7px 9px"><span style="font:700 9px Inconsolata;color:#a9742c;flex:0 0 auto">i</span><span style="font:500 12px Caveat,cursive;color:#6b4a16;line-height:1.3">Oberfläche auf Deutsch · Tanz- &amp; Figurnamen kommen aus der separaten Vokabel-Ebene (hier noch EN)</span></div>
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Gold Waltz</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · 7 Takte · Juni 2025</div></div>
+          <span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#1f8a5b;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Silver Quickstep</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Quickstep · noch keine Figuren · Aug. 2025</div></div>
+          <span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+        <div class="fig" style="border-color:#e1dcd2;gap:10px">
+          <span style="width:34px;height:34px;border-radius:9px;background:#2f5d8f;display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px Inconsolata;flex:0 0 auto">▦</span>
+          <div style="flex:1;min-width:0"><div style="font:700 12px Inconsolata;color:#1c1c1e">Practice Waltz #2</div><div style="font:500 9px Inconsolata;color:#9a958c;margin-top:2px">Waltz · noch keine Figuren · heute</div></div>
+          <span style="font:700 15px Inconsolata;color:#bcb6aa">⋯</span>
+        </div>
+      </div>
+      <div class="tb">
+        <div class="tbi tbon"><span class="tbg">▦</span>Choreo</div><div class="tbi"><span class="tbg">▤</span>Bibliothek</div><div class="tbi"><span class="tbg">▥</span>Journal</div><div class="tbi"><span class="tbg">◓</span>Profil</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="position:absolute;top:616px;left:2px;width:316px">
+    <div class="capt">INTERACTIONS</div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">↳</span><span>the same Choreo list (1.1) with language = <b>Deutsch</b>: header, plan chip, unit words (<b>Takte</b>), dates &amp; tabs (<b>Bibliothek · Profil</b>) all localize.</span></div>
+    <div class="cr" style="color:#8a857b"><span style="font:700 11px Inconsolata">·</span><span>routine titles, dance &amp; figure names stay EN — they're <b>content / vocabulary</b>, a separate DE overlay, not UI copy.</span></div>
+  </div>
+</div>
+
+<!-- Section 5 sticky -->
+<div class="anno note blue" style="position:absolute;left:1680px;top:11540px;width:320px;transform:rotate(.5deg)">
+  <b>How the switch works.</b> EN | DE is a <b>client-only preference</b> — stored on the device, applied <b>live</b> (no server round-trip) and <b>persisted</b> across sessions. It swaps the <b>UI copy catalog</b> only. The ballroom <b>vocabulary</b> (dance names, figure names, step codes) has its own separate DE overlay — the two are independent. <b>One preference, three switch surfaces:</b> the signed-out landing header (5.1), the desktop rail (5.2), and the labelled row in Profile (4.1). The compact toggle is the <b>same control</b> as the L · F role toggle.
+</div>
+
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{
   &quot;backdrop&quot;: {&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Studio paper&quot;,&quot;Cool gray&quot;,&quot;Charcoal&quot;],&quot;default&quot;:&quot;Studio paper&quot;,&quot;tsType&quot;:&quot;string&quot;},

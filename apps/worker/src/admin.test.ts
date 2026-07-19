@@ -42,7 +42,7 @@ it("blocks a free user at the plan cap (no override) with a 402 upsell", async (
   await seedOwnedRoutines(userId, 3, "adm_free");
   const res = await createRoutine(userId);
   expect(res.status).toBe(402);
-  const body = (await res.json()) as { upsell: boolean; cap: number };
+  const body = await res.json<{ upsell: boolean; cap: number }>();
   expect(body.upsell).toBe(true);
   expect(body.cap).toBe(3); // FREE_ROUTINE_CAP
 });
@@ -81,6 +81,6 @@ it("still blocks a user with an override once they reach the RAISED cap", async 
   await seedOwnedRoutines(userId, 4, "adm_grant2"); // at the raised cap of 4
   const res = await createRoutine(userId);
   expect(res.status).toBe(402);
-  const body = (await res.json()) as { cap: number };
+  const body = await res.json<{ cap: number }>();
   expect(body.cap).toBe(4); // the raised cap, not the plan default
 });

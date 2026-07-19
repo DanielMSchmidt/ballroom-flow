@@ -105,7 +105,7 @@ export function Styleguide() {
 
       <Section
         title="Attribute-kind colors"
-        note="The five kinds (PLAN §3) — color is ALWAYS paired with code + word (#5)"
+        note="The five kinds (docs/concepts/notation.md § Kinds) — color is ALWAYS paired with code + word (#5)"
       >
         <Row>
           {ATTRIBUTE_KINDS.map((k) => (

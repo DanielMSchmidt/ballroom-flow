@@ -1,4 +1,4 @@
-// Read/edit split facade — role-aware hybrid (PLAN §6, extends D10).
+// Read/edit split facade — role-aware hybrid (docs/system/sync-and-offline.md § The read/edit split).
 //
 // The cost we cut is the per-document WebSocket fan-out for the common READ path,
 // WITHOUT giving up live collaboration (US-015):
@@ -16,13 +16,7 @@
 // hydrates, then from the live store (which itself falls back to the snapshot for
 // not-yet-opened figures). In read-only mode mutators + openFigure are no-ops
 // (the UI never calls them for a viewer) and nothing live is ever opened.
-import type {
-  Alignment,
-  Anchor,
-  AnnotationKind,
-  Attribute,
-  RegistryKind,
-} from "@weavesteps/domain";
+import type { Anchor, AnnotationKind, Attribute, RegistryKind } from "@weavesteps/domain";
 import type { SyncState } from "./doc-connection";
 import {
   openRoutine as defaultOpenRoutine,
@@ -95,6 +89,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
       accountKinds: opts.accountKinds,
       saveCustomKind: opts.saveCustomKind,
       onCopyOnWrite: opts.onCopyOnWrite,
+      onCopyOnWriteError: opts.onCopyOnWriteError,
       eagerFigures: false,
       figureContent: (ref) => snapshot.figureFor(ref),
       // Forward the figure-load-robustness knobs (#94) so an OPENED figure still
@@ -123,27 +118,40 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
   if (editable) void ensureLive();
 
   /**
+   * A store is EDITABLE when hydrated: "live" (the DO's catch-up applied) or
+   * "local" (§11.2 — hydrated from local persistence while disconnected; edits
+   * persist and replay on reconnect). "closed"/"connecting" are not editable.
+   */
+  const editableState = (s: RoutineStore): boolean => {
+    const st = s.syncState();
+    return st === "live" || st === "local";
+  };
+
+  /**
    * Reads come from the live store ONCE it has hydrated, and STAY there (E):
    * we latch on the first hydration and never flip back to the snapshot on a
    * later transient reconnect (live briefly "connecting"). Flipping back would
    * swap the whole routine/figure identity out from under an open editor and
    * revert its content to the (staler) REST snapshot — a visible flicker and a
    * reset of an in-flight edit. Until the first hydration, reads use the snapshot.
+   * Hydration counts from EITHER source: the server catch-up ("live") or local
+   * persistence ("local", §11.2 — the snapshot fetch fails offline anyway).
    */
   let liveHydratedOnce = false;
   const readSource = (): RoutineStore | RoutineSnapshotModel => {
-    if (live && live.syncState() === "live") liveHydratedOnce = true;
+    if (live && editableState(live)) liveHydratedOnce = true;
     return liveHydratedOnce && live ? live : snapshot;
   };
 
-  /** Run `fn` once the live store is hydrated — so an edit never lands pre-replay. */
+  /** Run `fn` once the live store is hydrated (live OR local, §11.2) — so an
+   *  edit never lands on a pre-replay empty doc, but offline edits still apply. */
   const whenLive = (s: RoutineStore, fn: () => void): void => {
-    if (s.syncState() === "live") {
+    if (editableState(s)) {
       fn();
       return;
     }
     const unsub = s.subscribe(() => {
-      if (s.syncState() === "live") {
+      if (editableState(s)) {
         unsub();
         fn();
       }
@@ -169,6 +177,9 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     // meanwhile (readSource). Viewers track the snapshot's lifecycle.
     syncState: (): SyncState =>
       editable ? (live ? live.syncState() : "connecting") : snapshot.syncState(),
+    // §11.2: undelivered offline changes (routine + figures) — 0 until the live
+    // store exists (viewers never edit, so they never have pending changes).
+    pendingSyncCount: (): number => (live ? (live.pendingSyncCount?.() ?? 0) : 0),
     subscribe: (fn) => {
       listeners.add(fn);
       return () => listeners.delete(fn);
@@ -203,25 +214,21 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     moveSection: editAction((s) => s.moveSection),
     deleteSection: editAction((s) => s.deleteSection),
     addPlacement: editAction((s) => s.addPlacement),
+    placeFigure: editAction((s) => s.placeFigure),
     movePlacement: editAction((s) => s.movePlacement),
     deletePlacement: editAction((s) => s.deletePlacement),
     addBreak: editAction((s) => s.addBreak),
     setBreakBeats: editAction((s) => s.setBreakBeats),
     setFigureAttributes: editAction((s) => s.setFigureAttributes),
-    setFigureBars: editAction((s) => s.setFigureBars),
-    setFigureAlignment: editAction(
-      (s) => s.setFigureAlignment as (...a: [string, "entry" | "exit", Alignment | null]) => void,
-    ),
-    createAnnotation: editAction(
-      (s) =>
-        s.createAnnotation as (
-          ...a: [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
-        ) => void,
-    ),
+    setFigureCounts: editAction((s) => s.setFigureCounts),
+    renameFigure: editAction((s) => s.renameFigure),
+    createAnnotation: editAction<
+      [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
+    >((s) => s.createAnnotation),
     addReply: editAction((s) => s.addReply),
     deleteAnnotation: editAction((s) => s.deleteAnnotation),
     deleteReply: editAction((s) => s.deleteReply),
-    createCustomKind: editAction((s) => s.createCustomKind as (...a: [RegistryKind]) => void),
+    createCustomKind: editAction<[RegistryKind]>((s) => s.createCustomKind),
     // Undo returns the soft "superseded" hint synchronously (US-038 AC-3). The
     // editor toolbar only enables Undo once the live store is hydrated, so the
     // common path forwards to live.undo() and gets the real signal. If undo is
@@ -230,7 +237,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     undo: (): UndoResult => {
       const neutral: UndoResult = { undone: false, supersededByOthers: false };
       if (!editable) return neutral;
-      if (live && live.syncState() === "live") return live.undo();
+      if (live && editableState(live)) return live.undo();
       void ensureLive().then((s) => whenLive(s, () => s.undo()));
       return neutral;
     },
@@ -243,7 +250,7 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     undoFigure: (figureRef): UndoResult => {
       const neutral: UndoResult = { undone: false, supersededByOthers: false };
       if (!editable) return neutral;
-      if (live && live.syncState() === "live") return live.undoFigure(figureRef);
+      if (live && editableState(live)) return live.undoFigure(figureRef);
       void ensureLive().then((s) => whenLive(s, () => s.undoFigure(figureRef)));
       return neutral;
     },

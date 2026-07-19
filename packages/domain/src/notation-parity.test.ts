@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
 import { ATTRIBUTE_REGISTRY, normalizeValue } from "./vocabulary";
 
@@ -41,6 +42,16 @@ describe("vocabulary — footwork + direction kinds", () => {
       "flat",
       "heel turn",
       "heel pull",
+      "H flat",
+      "HB",
+      "BT",
+      "TB",
+      "THB",
+      "BHB",
+      "HBH",
+      "I/E of B",
+      "I/E of BH",
+      "O/E of T, BH",
       "BH",
       "HTH",
       "THT",
@@ -60,12 +71,15 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(direction.builtin).toBe(true);
     // A closed enum (NOT free-text): direction is a controlled vocabulary.
     expect(direction.freeText ?? false).toBe(false);
-    // One `diagonal` (the split diag_forward/diag_back collapsed) + `behind`.
+    // The ISTD split diagonals are first-class (⟳2026-07-10); the legacy unsplit
+    // `diagonal` stays for not-yet-re-verified charts; `behind` crosses behind.
     expect(direction.values).toEqual(
       expect.arrayContaining([
         "forward",
         "back",
         "side",
+        "diagonal_forward",
+        "diagonal_back",
         "behind",
         "close",
         "diagonal",
@@ -76,10 +90,10 @@ describe("vocabulary — footwork + direction kinds", () => {
     expect(direction.values).not.toContain("diag_back");
   });
 
-  it("normalizes the split diagonal to a single `diagonal` on read", () => {
-    // The split diag_forward/diag_back collapsed into one `diagonal` value.
-    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal");
-    expect(normalizeValue("direction", "diag_back")).toBe("diagonal");
+  it("normalizes the legacy diag_* spellings to the ISTD split diagonals on read", () => {
+    // ⟳2026-07-10: diag_forward/diag_back alias to the split enum members.
+    expect(normalizeValue("direction", "diag_forward")).toBe("diagonal_forward");
+    expect(normalizeValue("direction", "diag_back")).toBe("diagonal_back");
     // A canonical value passes through unchanged; an unknown one too.
     expect(normalizeValue("direction", "forward")).toBe("forward");
     expect(normalizeValue("direction", "behind")).toBe("behind");
@@ -107,11 +121,14 @@ describe("migration v2 — step → footwork retag", () => {
         { id: "a2", kind: "rise", count: 1, value: "commence" },
       ],
     };
-    const migrated = migrate(figure) as typeof figure;
+    const migrated = migrate(figure);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // value preserved verbatim (lossless); other kinds untouched
-    expect(migrated.attributes[0]).toMatchObject({ kind: "footwork", value: "HT" });
-    expect(migrated.attributes[1]).toMatchObject({ kind: "rise" });
+    const attributes = z
+      .array(z.object({ kind: z.string(), value: z.string() }))
+      .parse(migrated.attributes);
+    expect(attributes[0]).toMatchObject({ kind: "footwork", value: "HT" });
+    expect(attributes[1]).toMatchObject({ kind: "rise" });
   });
 
   it("leaves a routine doc's content untouched apart from the version bump + sortKeys", () => {
@@ -125,10 +142,14 @@ describe("migration v2 — step → footwork retag", () => {
         { id: "s2", name: "Body", placements: [] },
       ],
     };
-    const migrated = migrate(routine) as unknown as {
-      schemaVersion: number;
-      sections: Array<{ id: string; name: string; sortKey?: string }>;
-    };
+    const migrated = z
+      .object({
+        schemaVersion: z.number(),
+        sections: z.array(
+          z.object({ id: z.string(), name: z.string(), sortKey: z.string().optional() }),
+        ),
+      })
+      .parse(migrate(routine));
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.sections.map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(migrated.sections.map((s) => s.name)).toEqual(["Intro", "Body"]);

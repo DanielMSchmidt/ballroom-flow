@@ -31,7 +31,8 @@ export const zRoutineListItem = z.object({
   /**
    * Total bar count across the routine's non-deleted placements (US-025 card,
    * frame 1.1 "<dance> · <N bars> · <date>") — Σ of each referenced figure's
-   * projected per-figure `bars` (PLAN §2.5/§2.7). Projected from D1 by the routine
+   * projected per-figure `bars` (docs/concepts/notation.md § Figure length,
+   * docs/system/architecture.md § D1 — the index & projections). Projected from D1 by the routine
    * DO's alarm; OPTIONAL because it is eventually consistent — it may lag a figure
    * edit until the routine re-projects, and is absent until the first projection.
    */
@@ -62,14 +63,6 @@ export const zAttribute = z.object({
   deletedAt: z.number().nullish(),
 });
 
-/** A figure's per-figure alignment (mirrors the domain `Alignment`): which way the
- *  couple faces, from the leader's perspective. Carried on entry/exit so a charted
- *  catalog figure seeds with "where it started / where it ended". */
-export const zAlignment = z.object({
-  qualifier: z.enum(["facing", "backing", "pointing"]),
-  direction: z.enum(["LOD", "ALOD", "wall", "centre", "DW", "DC", "DW_against", "DC_against"]),
-});
-
 /**
  * Create-figure request (#187). The client mints the figureRef (ULID) + the
  * metadata; the SERVER stamps ownerId from the verified JWT sub. Projecting the
@@ -85,15 +78,17 @@ export const zCreateFigure = z.object({
   /** The routine this figure is being added to — records the placement edge so
    *  the routine's co-members get read access to the figure (cascade, 2026-06-27). */
   routineId: z.string().min(1),
-  /** The figure's authored length in musical bars (PLAN §2.5). Chosen on creation
-   *  (stepper) and drives the editor grid. Optional/legacy: the DO falls back to
-   *  ⌈whole-beat steps ÷ beatsPerBar⌉ (`resolveFigureBars`) when absent. */
+  /** The figure's authored length in COUNTS (beats, 1–64 — Builder v3 ①). Chosen
+   *  on creation (stepper) and drives the editor grid; every bar display derives
+   *  ⌈counts / beatsPerBar⌉. Optional: the DO falls back to the whole-beat default. */
+  counts: z.number().int().min(1).max(64).optional(),
+  /** LEGACY pre-v5 length in whole bars — accepted for old clients; new writes
+   *  send `counts`. */
   bars: z.number().int().min(1).optional(),
-  attributes: z.array(zAttribute).default([]),
-  /** Figure-level entry/exit alignment (per-figure, leader's perspective) seeded
-   *  from the catalog chart, where charted. Optional — most figures carry none. */
-  entryAlignment: zAlignment.optional(),
-  exitAlignment: zAlignment.optional(),
+  // A real figure has ≤64 beats × a handful of kinds × 2 roles; the cap is a
+  // defensive storage-growth bound (an authenticated caller can otherwise persist
+  // an arbitrarily large timeline into the figure DO), well above any genuine use.
+  attributes: z.array(zAttribute).max(2000).default([]),
   /** Set when this figure is a v5 VARIANT of a base (⟳v5, §5.2): its `attributes`
    *  are ONLY the OWNED beats and `baseFigureRef` is a LIVE link the CLIENT resolves
    *  the untouched beats against. Omitted for a fresh custom figure. (A pre-v5 frozen
@@ -104,7 +99,7 @@ export type CreateFigure = z.infer<typeof zCreateFigure>;
 
 /**
  * Save-to-library request (T5 / US-034 reuse; ⟳v5 — "add to my library" is a
- * BOOKMARK, never a copy, PLAN §4.2/§5.2/D28). The v5 shape is direct: the client
+ * BOOKMARK, never a copy, docs/concepts/figures.md § The library screen, § Variants, D28). The v5 shape is direct: the client
  * names the figureRef to bookmark (an account-figure docRef, or a catalog
  * `global:<dance>:<figureType>` ref minted client-side via `globalFigureRef`).
  *
@@ -136,6 +131,54 @@ export const zIssueInvite = z.object({
   role: z.enum(["viewer", "commenter", "editor"]),
 });
 export type IssueInvite = z.infer<typeof zIssueInvite>;
+
+/**
+ * Account profile write (US-019 onboarding / US-053 profile edit): displayName
+ * (trimmed, non-empty) + identity colour (a 3–8 digit hex). Shared by POST
+ * /api/onboarding and PATCH /api/profile — both write the same columns, so both
+ * parse this schema instead of hand-narrowing an untrusted `as {…}` body.
+ */
+export const zProfileBody = z.object({
+  displayName: z.string().trim().min(1).max(80, "Keep the name under 80 characters"),
+  identityColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{3,8}$/),
+});
+export type ProfileBody = z.infer<typeof zProfileBody>;
+
+/** A bare `{ figureRef }` request body (e.g. unbookmark, DELETE /api/library). */
+export const zFigureRefBody = z.object({ figureRef: z.string().min(1) });
+export type FigureRefBody = z.infer<typeof zFigureRefBody>;
+
+/**
+ * Account-scoped figure-family note write (T6): a lesson/practice/note attached
+ * to a figureType within a dance scope. Replaces a hand-narrowed untrusted body.
+ */
+export const zFamilyNoteBody = z
+  .object({
+    kind: z.enum(["note", "lesson", "practice"]),
+    text: z.string().trim().min(1).max(4000, "Keep the note under 4000 characters"),
+    figureType: z.string().trim().min(1).max(120),
+    // A figureType note scopes to one dance or the whole family ("all", docs/concepts/annotations.md § Anchors).
+    // Constrained to that set so a garbage scope — which would silently never match
+    // any routine's dance in the journal join — can't be persisted as dead data.
+    danceScope: z.enum([...DANCE_IDS, "all"]),
+    // WEP-0004 (docs/concepts/annotations.md § Anchors): a TIMED family note — pin to one count (the timing grid starts
+    // at 1) and optionally one side. Additive; absent = the v1 whole-figure note.
+    count: z.number().positive().optional(),
+    role: z.enum(["leader", "follower"]).nullish(),
+  })
+  .superRefine((body, ctx) => {
+    // Counts don't align across dances — a timed/roled note needs a concrete dance.
+    if (body.danceScope === "all" && (body.count != null || body.role != null)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a timed figure-family note cannot span all dances",
+      });
+    }
+  });
+export type FamilyNoteBody = z.infer<typeof zFamilyNoteBody>;
 
 /**
  * WS sync marker (#202): a TEXT frame the DO sends to a client once it has
@@ -207,6 +250,22 @@ export const SYNC_SUBPROTOCOL_V1 = "ballroom.sync.v1";
  */
 export const SYNC_RESYNC_CLOSE_CODE = 4001;
 
+/**
+ * WS heartbeat (WEP-0006; docs/system/sync-and-offline.md § Heartbeat): the client sends {@link SYNC_PING} as a TEXT frame
+ * while the connection is idle; the DO answers {@link SYNC_PONG} via a
+ * runtime-level auto-response (`setWebSocketAutoResponse`) that never wakes a
+ * hibernating DO and never reaches `webSocketMessage`. A missed pong deadline
+ * means the socket is a half-open ZOMBIE (TCP thinks it's up, nothing is
+ * delivered — e.g. an access-point reboot that never flips `navigator.onLine`);
+ * the client drops it into the normal warm-reconnect machinery instead of
+ * waiting minutes for the OS to notice. TEXT frames keep the D10 asymmetry
+ * unambiguous (client→server BINARY stays raw Automerge change bytes), and an
+ * old worker simply ignores the ping (its `webSocketMessage` drops TEXT), so
+ * the probe is skew-safe in both directions.
+ */
+export const SYNC_PING = "ballroom:sync:ping";
+export const SYNC_PONG = "ballroom:sync:pong";
+
 /** A merged-registry attribute kind (US-003/US-043), shared shape. */
 export const zRegistryKind = z.object({
   kind: z.string().min(1),
@@ -259,13 +318,16 @@ export const zJournalAnchor = z.object({
   count: z.number().optional(),
   figureType: z.string().optional(),
   danceScope: z.string().optional(),
+  /** WEP-0004 (docs/concepts/annotations.md § Anchors): the side a timed figureType note narrows to (absent = both). */
+  role: z.enum(["leader", "follower"]).nullish(),
   /** Pre-resolved display label for the link chip (server-side, no client refetch). */
   label: z.string().optional(),
 });
 export type JournalAnchor = z.infer<typeof zJournalAnchor>;
 
 /**
- * T6 — One cross-routine Journal entry (PLAN §2.6/§2.7/§4.6). The UNION of a
+ * T6 — One cross-routine Journal entry (docs/concepts/annotations.md § Anchors,
+ * § The Journal, docs/system/architecture.md § D1 — the index & projections). The UNION of a
  * routine-scoped lesson/practice annotation (projected to `journal_entry`) and
  * an account-scoped figureType lesson/practice note (`figure_type_note_index`).
  * `source` distinguishes the two homes; `routineRef` is the owning doc (a routine
@@ -286,3 +348,125 @@ export const zJournalEntry = z.object({
 export const zJournalList = z.object({ entries: z.array(zJournalEntry) });
 export type JournalEntry = z.infer<typeof zJournalEntry>;
 export type JournalList = z.infer<typeof zJournalList>;
+
+/**
+ * E2E fixtures seed body (POST /api/test/seed — mounted ONLY under
+ * E2E_TEST_ROUTES). Runtime-validated at the route so a malformed seed fails
+ * LOUDLY at seed time instead of silently corrupting a journey's fixtures
+ * (the honest replacement for the old `as SeedBody` cast; CLAUDE.md §4).
+ */
+export const zSeedBody = z.object({
+  users: z
+    .array(
+      z.object({
+        id: z.string(),
+        displayName: z.string(),
+        identityColor: z.string(),
+        plan: z.enum(["free", "pro"]).optional(),
+        /** D31 admin seam — lets an E2E journey stand up an admin (global-figure editor). */
+        isAdmin: z.boolean().optional(),
+        routineCapOverride: z.number().nullish(),
+      }),
+    )
+    .optional(),
+  seedGlobalFigures: z.boolean().optional(),
+  docs: z
+    .array(
+      z.object({
+        docRef: z.string(),
+        type: z.string(),
+        ownerId: z.string(),
+        doName: z.string().optional(),
+        title: z.string().nullish(),
+        dance: z.string().nullish(),
+        figureType: z.string().nullish(),
+        sections: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              placements: z.array(z.object({ id: z.string(), figureRef: z.string() })),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  memberships: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        docRef: z.string(),
+        userId: z.string(),
+        role: z.enum(["viewer", "commenter", "editor"]),
+      }),
+    )
+    .optional(),
+  invites: z
+    .array(
+      z.object({
+        id: z.string(),
+        docRef: z.string(),
+        role: z.enum(["viewer", "commenter", "editor"]),
+        expiresAt: z.number(),
+        redeemedAt: z.number().nullish(),
+      }),
+    )
+    .optional(),
+  figures: z
+    .array(
+      z.object({
+        docRef: z.string(),
+        scope: z.enum(["global", "account"]),
+        ownerId: z.string(),
+        name: z.string(),
+        dance: z.string(),
+        figureType: z.string(),
+        attributes: z.array(zAttribute).optional(),
+      }),
+    )
+    .optional(),
+  placementEdges: z.array(z.object({ routineRef: z.string(), figureRef: z.string() })).optional(),
+  journalEntries: z
+    .array(
+      z.object({
+        entryId: z.string(),
+        routineRef: z.string(),
+        authorId: z.string(),
+        kind: z.enum(["lesson", "practice"]),
+        text: z.string(),
+        anchors: z.array(z.unknown()).optional(),
+        createdAt: z.number().optional(),
+        deletedAt: z.number().nullish(),
+      }),
+    )
+    .optional(),
+});
+export type SeedBody = z.infer<typeof zSeedBody>;
+
+/** Title-case a figureType/dance slug for a chip label ("natural_turn" → "Natural Turn"). */
+function humanizeSlug(slug: string): string {
+  return slug
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * The resolved chip label for a figureType journal anchor: "all Whisks · all
+ * Waltz" / "· all dances"; a TIMED note (WEP-0004) appends its pinned count
+ * ("· count 3"). Shared here so the worker's D1 projection read and the web's
+ * live account-doc read (WEP-0002 read-your-writes) compose the IDENTICAL
+ * label — two independent composers would drift.
+ */
+export function figureTypeAnchorLabel(
+  figureType: string,
+  danceScope: string,
+  count?: number | null,
+): string {
+  const family = `all ${humanizeSlug(figureType)}s`;
+  const scope = danceScope === "all" ? "all dances" : `all ${humanizeSlug(danceScope)}`;
+  return count != null ? `${family} · ${scope} · count ${count}` : `${family} · ${scope}`;
+}

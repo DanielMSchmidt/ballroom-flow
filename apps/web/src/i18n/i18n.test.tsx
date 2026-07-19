@@ -69,8 +69,8 @@ describe("vocabulary overlay", () => {
     // A custom kind's stored value still renders verbatim (humanized only).
     expect(labelValue("energy", "very_high")).toBe("very high");
     const cols = usedColumns([
-      { kind: "direction", value: "forward", count: 1 } as never,
-      { kind: "rise", value: "commence", count: 1 } as never,
+      { id: "a1", kind: "direction", value: "forward", count: 1 },
+      { id: "a2", kind: "rise", value: "commence", count: 1 },
     ]);
     expect(cols.map((c) => c.label)).toEqual(["Schritt", "Heben"]);
   });

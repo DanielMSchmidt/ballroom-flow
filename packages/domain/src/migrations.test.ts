@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { importDomain } from "./__fixtures__";
 import { type MigrationStep, runLadder } from "./migrations";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-013 — Migration ladder (schemaVersion) [M1, system/developer]
-// PLAN §2.1, §7, §10.2 invariant: "migration ladder". Every doc carries a
+// docs/system/architecture.md § Global constraints, § Persistence & the DO lifecycle,
+// docs/system/testing.md invariant: "migration ladder". Every doc carries a
 // schemaVersion; an ordered chain upgrades older docs; unknown values survive;
 // migrating a current doc is a no-op. Used by JSON import (US-048).
 //
@@ -36,8 +38,9 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       kind: "figure",
       attributes: [{ id: "a1", kind: "step", count: 1, value: "FUTURE_VALUE" }],
     };
-    const migrated = migrate(old) as unknown as { attributes: Array<{ value: unknown }> };
-    expect(migrated.attributes[0]?.value).toBe("FUTURE_VALUE");
+    const migrated = migrate(old);
+    const attributes = z.array(z.object({ value: z.string() })).parse(migrated.attributes);
+    expect(attributes[0]?.value).toBe("FUTURE_VALUE");
   });
 
   it("is a no-op when the doc is already at the current version", async () => {
@@ -63,7 +66,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       dance: "foxtrot",
       attributes: [],
     };
-    expect((migrate(fig) as { figureType?: string }).figureType).toBe("feather");
+    expect(migrate(fig).figureType).toBe("feather");
   });
 
   it("runs the ladder in order across multiple versions (synthetic ladder)", () => {
@@ -73,7 +76,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       1: (d) => ({ ...d, steppedFrom1: true }),
       2: (d) => ({ ...d, steppedFrom2: true }),
     };
-    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3) as Record<string, unknown>;
+    const result = runLadder({ schemaVersion: 1, x: "keep" }, ladder, 3);
     expect(result.schemaVersion).toBe(3);
     expect(result.steppedFrom1).toBe(true);
     expect(result.steppedFrom2).toBe(true);
@@ -106,12 +109,12 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
   it("treats an untagged doc as v1", () => {
     // Intent: a doc with no schemaVersion is migrated from the earliest version.
     const ladder: Record<number, MigrationStep> = { 1: (d) => ({ ...d, upgraded: true }) };
-    const result = runLadder({ kind: "figure" }, ladder, 2) as Record<string, unknown>;
+    const result = runLadder({ kind: "figure" }, ladder, 2);
     expect(result.schemaVersion).toBe(2);
     expect(result.upgraded).toBe(true);
   });
 
-  // ── v3 → v4: assign sortKeys to sections + placements (#63, PLAN §5.3) ──
+  // ── v3 → v4: assign sortKeys to sections + placements (#63, docs/system/architecture.md § Ordering) ──
   // (migrate() applies the full ladder, so a v2 doc lands at v4 with sortKeys.)
 
   it("assigns ascending sortKeys to sections and placements in array order (#63)", async () => {
@@ -130,15 +133,23 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
         { id: "s2", name: "Body", placements: [] },
       ],
     };
-    const migrated = migrate(routine) as unknown as {
-      schemaVersion: number;
-      sections: Array<{ id: string; sortKey?: string; placements: Array<{ sortKey?: string }> }>;
-    };
+    const migrated = z
+      .object({
+        schemaVersion: z.number(),
+        sections: z.array(
+          z.object({
+            id: z.string(),
+            sortKey: z.string().optional(),
+            placements: z.array(z.object({ sortKey: z.string().optional() })),
+          }),
+        ),
+      })
+      .parse(migrate(routine));
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // Sections keyed in array order (ascending).
     const sk = migrated.sections.map((s) => s.sortKey);
     expect(sk.every((k) => typeof k === "string")).toBe(true);
-    expect((sk[0] as string) < (sk[1] as string)).toBe(true);
+    expect(String(sk[0]) < String(sk[1])).toBe(true);
     // Placements within s1 keyed in array order (ascending).
     const pk = (migrated.sections[0]?.placements ?? []).map((p) => p.sortKey);
     expect(pk.every((k) => typeof k === "string")).toBe(true);
@@ -163,7 +174,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     // v3→v4 step with the version bump alone — no spurious keys.
     const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
     const figure = { schemaVersion: 2, figureType: "feather", dance: "foxtrot", attributes: [] };
-    const migrated = migrate(figure) as Record<string, unknown>;
+    const migrated = migrate(figure);
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect("sections" in migrated).toBe(false);
     expect("sortKey" in migrated).toBe(false);
@@ -175,7 +186,9 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       schemaVersion: 2,
       sections: [{ id: "s1", name: "A", sortKey: "PRESET", placements: [] }],
     };
-    const migrated = migrate(routine) as unknown as { sections: Array<{ sortKey?: string }> };
+    const migrated = z
+      .object({ sections: z.array(z.object({ sortKey: z.string().optional() })) })
+      .parse(migrate(routine));
     expect(migrated.sections[0]?.sortKey).toBe("PRESET");
   });
 
@@ -201,7 +214,7 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
         rename: "My Natural Turn",
       },
     };
-    const migrated = migrate(oldFigure) as Record<string, unknown>;
+    const migrated = migrate(oldFigure);
 
     // Migrated to current version.
     expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -217,13 +230,13 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
     // Identity fields and attributes survive intact.
     expect(migrated.figureType).toBe("natural-turn");
     expect(migrated.dance).toBe("waltz");
-    expect((migrated.attributes as Array<{ id: string }>)[0]?.id).toBe("a1");
+    expect(z.array(z.object({ id: z.string() })).parse(migrated.attributes)[0]?.id).toBe("a1");
   });
 
   it("strips overlay from a v2 doc that was migrated before the overlay-removal step", async () => {
     // Intent: docs already at schemaVersion 2 (migrated before this PR) may still
     // carry a stray `overlay` key. The v2→v3 step must strip it on read.
-    const { migrate } = await importDomain();
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
 
     const v2DocWithOverlay = {
       schemaVersion: 2,
@@ -232,17 +245,18 @@ describe("US-013 Migration ladder (schemaVersion)", () => {
       attributes: [],
       overlay: { overrides: {}, tombstones: [], additions: [] },
     };
-    const migrated = migrate(v2DocWithOverlay) as Record<string, unknown>;
+    const migrated = migrate(v2DocWithOverlay);
 
-    // migrate() runs to CURRENT (4): the overlay strip happens at the v2→v3 step.
-    expect(migrated.schemaVersion).toBe(4);
+    // migrate() runs to CURRENT: the overlay strip happens at the v2→v3 step.
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect("overlay" in migrated).toBe(false);
     expect(migrated.figureType).toBe("feather");
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// v5 milestone step 1 (PLAN §7) — `migrateDraft`: the DO-load-path
+// v5 milestone step 1 (docs/system/architecture.md § Persistence & the DO lifecycle)
+// — `migrateDraft`: the DO-load-path
 // draft-mutating counterpart of `migrate`, called inside an Automerge
 // `A.change`. Exercised here against plain mutable objects (a Draft duck-types
 // as a plain object for get/set/delete/enumerate — see `proxies.js`'s
@@ -259,7 +273,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       dance: "waltz",
       attributes: [{ id: "a1", kind: "step", count: 1, value: "H" }],
     });
-    const draft = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    const draft = shape();
     migrateDraft(draft);
     expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrate(shape())).toEqual(draft);
@@ -269,7 +283,8 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
     const { migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
     const target = { schemaVersion: CURRENT_SCHEMA_VERSION, kind: "routine", sections: [] };
     // A Proxy that throws on any write/delete trap: proves migrateDraft performs
-    // ZERO mutations on an already-current doc (PLAN §7: "no empty change, no
+    // ZERO mutations on an already-current doc (docs/system/architecture.md
+    // § Persistence & the DO lifecycle: "no empty change, no
     // version downgrade" — the enclosing A.change must produce nothing to persist).
     const guarded = new Proxy(target, {
       set() {
@@ -278,7 +293,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       deleteProperty() {
         throw new Error("migrateDraft deleted a key on an already-current draft");
       },
-    }) as unknown as { schemaVersion: number } & Record<string, unknown>;
+    });
     expect(() => migrateDraft(guarded)).not.toThrow();
     expect(target).toEqual({
       schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -288,7 +303,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
   });
 
   it("leaves an untouched sub-tree's object identity alone (only changed keys are written)", async () => {
-    const { migrateDraft } = await importDomain();
+    const { migrateDraft, CURRENT_SCHEMA_VERSION } = await importDomain();
     // schemaVersion 3 → 4 only backfills sortKeys; a figure-shaped draft (no
     // `sections`) has nothing for the v3→v4 step to do, so `attributes` must
     // survive as the SAME array reference (never rebuilt/reassigned).
@@ -298,9 +313,9 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       figureType: "feather",
       dance: "foxtrot",
       attributes,
-    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    };
     migrateDraft(draft);
-    expect(draft.schemaVersion).toBe(4);
+    expect(draft.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(draft.attributes).toBe(attributes); // untouched — same reference
   });
 
@@ -312,7 +327,7 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
       dance: "foxtrot",
       attributes: [],
       overlay: { overrides: {}, tombstones: [], additions: [] },
-    } as unknown as { schemaVersion: number } & Record<string, unknown>;
+    };
     migrateDraft(draft);
     expect("overlay" in draft).toBe(false);
     for (const v of Object.values(draft)) expect(v).not.toBeUndefined();
@@ -327,10 +342,155 @@ describe("migrateDraft (v5 milestone step 1 — DO load path)", () => {
         { id: "s2", name: "B", placements: [] },
       ],
     });
-    const d1 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
-    const d2 = shape() as unknown as { schemaVersion: number } & Record<string, unknown>;
+    const d1 = shape();
+    const d2 = shape();
     migrateDraft(d1);
     migrateDraft(d2);
     expect(d1).toEqual(d2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Builder v3 ① (owner-approved 2026-07-07) — v4→v5: counts-based figure length.
+// A figure doc's authored `bars` becomes `counts = bars × beatsPerBar` (the
+// dance's), and the legacy `bars` key is dropped. Routine/account docs (no
+// `bars`) pass through with the version bump alone.
+// ─────────────────────────────────────────────────────────────────────────
+describe("migration v4→v5 — bars → counts (Builder v3 ①)", () => {
+  it("converts a Waltz figure's bars to counts (× 3) and drops bars", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const v4Figure = {
+      schemaVersion: 4,
+      figureType: "natural-turn",
+      dance: "waltz",
+      attributes: [],
+      bars: 2,
+    };
+    const migrated = migrate(v4Figure);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.counts).toBe(6); // 2 bars × 3 beats
+    expect("bars" in migrated).toBe(false);
+  });
+
+  it("uses the figure's own dance meter (Quickstep 4/4 → × 4)", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "quarter-turn",
+      dance: "quickstep",
+      attributes: [],
+      bars: 3,
+    });
+    expect(migrated.counts).toBe(12);
+  });
+
+  it("leaves a routine doc untouched but for the version bump", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const routine = { schemaVersion: 4, sections: [], annotations: [] };
+    const migrated = migrate(routine);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("counts" in migrated).toBe(false);
+  });
+
+  it("never double-converts: a figure already carrying counts keeps it", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "whisk",
+      dance: "waltz",
+      attributes: [],
+      bars: 2,
+      counts: 5, // authored by a newer client pre-migration
+    });
+    expect(migrated.counts).toBe(5);
+    expect("bars" in migrated).toBe(false);
+  });
+
+  it("clamps a huge legacy bars value to the 64-count ceiling (§2.5.2 invariant)", async () => {
+    const { migrate } = await importDomain();
+    // 30 bars × 4 beats = 120 counts pre-clamp — must not exceed the authored
+    // 1–64 bound the create schema and the LENGTH stepper both enforce.
+    const migrated = migrate({
+      schemaVersion: 4,
+      figureType: "long-figure",
+      dance: "foxtrot",
+      attributes: [],
+      bars: 30,
+    });
+    expect(migrated.counts).toBe(64);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Figure-length invariant (2026-07-14) — v5→v6: a figure's `counts` must cover
+// its step SPAN (highest whole beat a live step occupies). The pre-fix default
+// counted DISTINCT steps, undershooting whenever a Slow leaves a gap (Foxtrot
+// Feather Step "SQQ" → steps on 1, 3, 4, seeded counts:3 → count-4 step orphaned).
+// ─────────────────────────────────────────────────────────────────────────
+describe("migration v5→v6 — counts covers the step span (figure-length invariant)", () => {
+  const attr = (count: number) => ({
+    id: `a${count}`,
+    kind: "footwork",
+    count,
+    role: null,
+    value: "HT",
+    deletedAt: null,
+  });
+
+  it("lifts a too-short counts to the step span (Feather Step: 3 → 4)", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "feather-step",
+      dance: "foxtrot",
+      counts: 3,
+      attributes: [attr(1), attr(3), attr(4)],
+    });
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.counts).toBe(4);
+  });
+
+  it("leaves a counts that already covers its span untouched", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "natural-turn",
+      dance: "waltz",
+      counts: 6,
+      attributes: [attr(1), attr(2), attr(3)],
+    });
+    expect(migrated.counts).toBe(6);
+  });
+
+  it("ignores tombstoned steps and sub-beats when computing the span", async () => {
+    const { migrate } = await importDomain();
+    // Live whole beats {1, 3}; the count-4 step is tombstoned and 3.5 is a
+    // sub-beat of beat 3 → span 3, so counts:3 needs no lift.
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "three-step",
+      dance: "foxtrot",
+      counts: 3,
+      attributes: [attr(1), attr(3), attr(3.5), { ...attr(4), deletedAt: 1 }],
+    });
+    expect(migrated.counts).toBe(3);
+  });
+
+  it("leaves a doc without numeric counts alone (length derives live)", async () => {
+    const { migrate } = await importDomain();
+    const migrated = migrate({
+      schemaVersion: 5,
+      figureType: "variant",
+      dance: "foxtrot",
+      attributes: [attr(4)],
+    });
+    expect("counts" in migrated).toBe(false);
+  });
+
+  it("passes a routine doc through with only the version bump", async () => {
+    const { migrate, CURRENT_SCHEMA_VERSION } = await importDomain();
+    const migrated = migrate({ schemaVersion: 5, sections: [], annotations: [] });
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("counts" in migrated).toBe(false);
   });
 });

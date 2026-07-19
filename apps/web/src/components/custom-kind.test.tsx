@@ -8,7 +8,8 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-043 — Custom attribute-kind creation UI [M7, user]
-// PLAN §4.5, D22, §10.2 component layer: "new user-defined kind appears". Create
+// docs/concepts/notation.md § The figure editor, D22, docs/system/testing.md
+// component layer: "new user-defined kind appears". Create
 // a kind → it merges into the registry and appears in the editor. Built by the
 // frontend agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
@@ -42,6 +43,24 @@ describe("US-043 Custom attribute-kind creation UI", () => {
         builtin: false,
       }),
     );
+  });
+
+  it("shows the locked slug beside the name in edit mode (wireframe 1.16b)", async () => {
+    // The derived slug is held stable across a rename — surfacing it tells the
+    // user why existing attributes stay linked.
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const initial = {
+      kind: "energy",
+      label: "Energy",
+      color: "#0f6b66",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["low", "high"],
+      builtin: false,
+    } as const;
+    renderUi(<AddKindSheet open initial={initial} onCreate={vi.fn()} />);
+    expect(screen.getByText(/slug: energy/i)).toBeInTheDocument();
+    expect(screen.getByText(/held stable/i)).toBeInTheDocument();
   });
 
   it("edits an existing custom kind: keeps the slug stable and saves changes", async () => {
@@ -102,12 +121,13 @@ describe("US-043 Custom attribute-kind creation UI", () => {
 
   it("omits the optional fields when left blank (no empty description/valueDefs)", async () => {
     const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
-    const onCreate = vi.fn();
+    // Typed on the sheet's onCreate contract so mock.calls hands the kind back typed.
+    const onCreate = vi.fn<(kind: Record<string, unknown>) => void>();
     renderUi(<AddKindSheet open onCreate={onCreate} />);
     await userEvent.type(screen.getByLabelText(/^label/i), "Energy");
     await userEvent.type(screen.getByLabelText(/add a value/i), "low, high");
     await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
-    const kind = onCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+    const kind = onCreate.mock.calls[0]?.[0];
     expect(kind).not.toHaveProperty("description");
     expect(kind).not.toHaveProperty("valueDefs");
     expect(kind).not.toHaveProperty("roleAware");

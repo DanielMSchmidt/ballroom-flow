@@ -1,6 +1,6 @@
 // US-014 — Per-document SQLite-backed Durable Object hosting an Automerge doc.
 //
-// PLAN §6 / D23: one DO per document (routine + figure docs). The DO holds the
+// docs/system/architecture.md § Persistence & the DO lifecycle: one DO per document (routine + figure docs). The DO holds the
 // Automerge doc in memory and persists INCREMENTAL changes to its own SQLite —
 // never a full rewrite per edit (SPIKE-FINDINGS sharp-edge #2). After eviction a
 // fresh DO instance rehydrates the same doc by replaying the persisted changes
@@ -17,12 +17,18 @@ import {
   SYNC_CAUGHT_UP,
   SYNC_FRAME_CHANGE,
   SYNC_FRAME_SNAPSHOT,
+  SYNC_PING,
+  SYNC_PONG,
   SYNC_RESYNC_CLOSE_CODE,
 } from "@weavesteps/contract";
 import {
+  type AccountDoc,
   type Anchor,
   type AnnotationKind,
+  addAccountReply,
   addAnnotation,
+  addFamilyNote,
+  addLibraryRef,
   addReply,
   addSection,
   barsForFigure,
@@ -34,16 +40,31 @@ import {
   type DanceId,
   type EffectiveRole,
   type FigureDoc,
+  isDanceId,
+  isPlainRecord,
   libraryFigureByRef,
   migrateDraft,
+  newId,
+  parseAnchors,
+  partBeatSpan,
+  type Role,
   type RoutineDoc,
+  readAccount,
   readFigure,
   readRoutine,
+  reconcileSeededFigure,
+  removeLibraryRef,
+  type SeedFigureContent,
+  softDeleteAccountAnnotation,
   softDeleteAnnotation,
 } from "@weavesteps/domain";
 import { authenticateToken } from "./auth";
+import { type FamilyNoteProjection, projectFamilyNotes } from "./db/family-notes";
+import { createFigureRows } from "./db/figures";
 import { type JournalEntryProjection, projectJournalEntries } from "./db/journal";
+import { projectLibraryEntries } from "./db/library";
 import { resolveEffectiveRole } from "./db/membership";
+import { linkPlacement } from "./db/placement-edge";
 import type { Env } from "./index";
 
 /** Per-connection socket attachment (survives hibernation). */
@@ -65,11 +86,44 @@ export type DocOp =
   | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
 
 /**
+ * High-level edits on the per-user ACCOUNT doc (WEP-0002 —
+ * docs/system/architecture.md § D1 — the index & projections) — family notes +
+ * library bookmarks. Applied server-side via {@link DocDO.applyAccountEdit} on
+ * the REST-shim (online) path; the offline path authors the same domain edit
+ * against the store's local doc and syncs raw changes. Ids are server-minted
+ * here (a user is present on the REST path); the store path uses client ULIDs.
+ */
+export type AccountOp =
+  | {
+      op: "addFamilyNote";
+      authorId: string;
+      kind: AnnotationKind;
+      text: string;
+      figureType: string;
+      danceScope: DanceId | "all";
+      tags?: string[];
+      /** WEP-0004 (docs/concepts/annotations.md § Anchors) timed note: pin to one count (+ optional role lens) of every
+       *  matching figure. Only valid with a concrete danceScope. */
+      count?: number;
+      role?: Role;
+    }
+  | { op: "addAccountReply"; annotationId: string; authorId: string; text: string }
+  | { op: "deleteFamilyNote"; annotationId: string }
+  | { op: "addLibraryRef"; figureRef: string }
+  | { op: "removeLibraryRef"; figureRef: string };
+
+/**
  * Compact once the incremental change log grows past this many rows. Bounds both
  * the log size and the US-015 replay-on-connect cost (which scans the whole log
  * on every WS connect) for a write-heavy doc that never sets metadata.
  */
 const COMPACT_THRESHOLD = 64;
+
+/** Non-empty string, else null — for reading identity fields off docs that may
+ *  predate them at runtime (typed required, but legacy docs can lack them). */
+function stringOrNull(v: unknown): string | null {
+  return typeof v === "string" && v !== "" ? v : null;
+}
 
 /** Order-independent equality of two Automerge head sets (same logical state). */
 function headsEqual(a: string[], b: string[]): boolean {
@@ -123,7 +177,7 @@ function emptyRoutine(): RoutineDoc {
 
 /**
  * The Automerge actor id every migration change is attributed to (v5 milestone
- * step 1, PLAN §7). Fixed and non-random — NEVER a real per-connection actor
+ * step 1, docs/system/sync-and-offline.md § Version skew). Fixed and non-random — NEVER a real per-connection actor
  * (`newActorId()` above) — so per-user undo (`packages/domain/src/undo.ts`
  * `changesByActor`, which filters strictly by exact actor id) can never select
  * it as an undo target: a user's undo after a migrated load reverts their own
@@ -131,8 +185,14 @@ function emptyRoutine(): RoutineDoc {
  * Automerge requires for an actor id.
  */
 const MIGRATION_ACTOR = `${"0".repeat(31)}1`;
+/** A distinct fixed actor for the alarm-driven break migration (Builder v3 ④):
+ *  like MIGRATION_ACTOR it brands a server change per-user undo can never
+ *  select — distinct so its seq counter can never collide with the ladder
+ *  migration's on a doc that has already been schema-migrated once. */
+const BREAK_MIGRATION_ACTOR = `${"0".repeat(31)}2`;
 
-/** The Automerge change message stamped on every migration change (PLAN §7). */
+/** The Automerge change message stamped on every migration change
+ *  (docs/system/sync-and-offline.md § Version skew). */
 const MIGRATION_MESSAGE = "ballroom:migrate";
 
 /**
@@ -145,8 +205,12 @@ const MIGRATION_MESSAGE = "ballroom:migrate";
 const STORAGE_VERSION = 1;
 
 export class DocDO extends DurableObject<Env> {
-  /** In-memory Automerge doc; `null` until first load/cold-load from SQLite. */
-  private doc: A.Doc<RoutineDoc> | null = null;
+  /** In-memory Automerge doc; `null` until first load/cold-load from SQLite.
+   *  One DocDO class hosts BOTH a routine doc and a figure doc (which one is fixed
+   *  at seed time), so the field is honestly typed as either. Routine-shaped access
+   *  goes through {@link getDoc} (the routine accessor); figure reads use
+   *  `loadPersisted<FigureDoc>()`. */
+  private doc: A.Doc<RoutineDoc | FigureDoc | AccountDoc> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -180,6 +244,12 @@ export class DocDO extends DurableObject<Env> {
       "INSERT OR IGNORE INTO storage_meta (id, storageVersion) VALUES (0, ?)",
       STORAGE_VERSION,
     );
+    // Heartbeat (WEP-0006 — docs/system/sync-and-offline.md § Heartbeat): answer the client's idle SYNC_PING with SYNC_PONG at
+    // the RUNTIME level — the reply is sent without invoking webSocketMessage and
+    // WITHOUT waking a hibernating DO, so zombie-socket detection costs zero DO
+    // compute and the D23 hibernation economics are untouched. Applies to every
+    // socket this DO accepts (routine and figure docs alike).
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(SYNC_PING, SYNC_PONG));
   }
 
   /**
@@ -187,8 +257,12 @@ export class DocDO extends DurableObject<Env> {
    * no doc yet (fresh DO or post-eviction). If SQLite is empty this is a
    * never-before-used document, so we seed the empty routine and persist its
    * creation changes — making the cold-load path self-contained.
+   *
+   * Shape-agnostic: returns the dual-host union. Routine-only paths narrow via
+   * {@link getRoutineDoc}; shape-independent paths (sync ingest, compaction,
+   * the D1 projection's loose field reads) use this directly.
    */
-  private getDoc(): A.Doc<RoutineDoc> {
+  private getDoc(): A.Doc<RoutineDoc | FigureDoc | AccountDoc> {
     if (this.doc) return this.doc;
 
     const persisted = this.loadPersisted();
@@ -209,13 +283,26 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
+   * The ROUTINE accessor: {@link getDoc} narrowed to the routine shape by a
+   * RUNTIME check — every routine doc (including the empty placeholder) carries
+   * a `sections` list; figure docs never do. Reached only by routine-hosting
+   * paths (applyChange/getSnapshot/buildChangeForTest); a figure doc arriving
+   * here is a routing bug, surfaced loudly instead of silently misread.
+   */
+  private getRoutineDoc(): A.Doc<RoutineDoc> {
+    const doc = this.getDoc();
+    if ("sections" in doc) return doc;
+    throw new Error("expected a routine doc in this DO (figure doc reached a routine-only path)");
+  }
+
+  /**
    * Load the doc from SQLite, or `null` if this DO has never been seeded (no
    * snapshot and no changes). Unlike {@link getDoc} this NEVER auto-materializes
    * a placeholder — so the connect catch-up can read a not-yet-seeded doc without
    * persisting an empty routine that would (a) trip seedDoc's no-clobber and
    * (b) push a bogus empty routine to the client.
    */
-  private loadPersisted(): A.Doc<RoutineDoc> | null {
+  private loadPersisted(): A.Doc<RoutineDoc | FigureDoc | AccountDoc> | null {
     const sql = this.ctx.storage.sql;
     const snapRows = sql
       .exec<{ data: ArrayBuffer }>("SELECT data FROM snapshot WHERE id = 0")
@@ -227,20 +314,49 @@ export class DocDO extends DurableObject<Env> {
 
     // Start from the compacted snapshot (if the alarm has run), then replay any
     // incremental changes recorded after it. Without a snapshot, replay all
-    // changes from an empty doc (the US-014 path).
+    // changes from an empty doc (the US-014 path). Typed as the dual-host union
+    // — which one this DO actually hosts was fixed at seed time; figure-shaped
+    // callers narrow via {@link loadPersistedFigure}'s runtime check.
     let doc =
       snapRows[0] !== undefined
-        ? A.load<RoutineDoc>(new Uint8Array(snapRows[0].data))
-        : A.init<RoutineDoc>();
+        ? A.load<RoutineDoc | FigureDoc | AccountDoc>(new Uint8Array(snapRows[0].data))
+        : A.init<RoutineDoc | FigureDoc | AccountDoc>();
     if (changeRows.length > 0) {
-      const changes = changeRows.map((r) => new Uint8Array(r.data) as A.Change);
+      const changes = changeRows.map((r) => new Uint8Array(r.data));
       [doc] = A.applyChanges(doc, changes);
     }
     return this.migrateOnLoad(doc);
   }
 
   /**
-   * v5 milestone step 1 (PLAN §7): "the ladder runs on the DO load path, and
+   * {@link loadPersisted} narrowed to the FIGURE shape by a RUNTIME check
+   * (figure docs carry `figureType`; routine docs never do). Null when nothing
+   * is persisted — or when this DO turns out to host a routine doc, which for
+   * every figure-shaped caller (figure snapshot, seed reconcile) means "not the
+   * figure you were looking for" and fails safe as missing.
+   */
+  private loadPersistedFigure(): A.Doc<FigureDoc> | null {
+    const doc = this.loadPersisted();
+    if (doc && "figureType" in doc) return doc;
+    return null;
+  }
+
+  /**
+   * {@link loadPersisted} narrowed to the ACCOUNT shape by a RUNTIME check
+   * (WEP-0002 — docs/system/architecture.md § D1 — the index & projections):
+   * an account doc carries neither `sections` (routine) nor
+   * `figureType` (figure). Null when nothing is persisted or this DO hosts a
+   * different shape — a `loadPersisted` that never auto-materializes, so an
+   * account read/edit never fabricates the empty-routine placeholder.
+   */
+  private loadPersistedAccount(): A.Doc<AccountDoc> | null {
+    const doc = this.loadPersisted();
+    if (doc && !("sections" in doc) && !("figureType" in doc)) return doc;
+    return null;
+  }
+
+  /**
+   * v5 milestone step 1 (docs/system/sync-and-offline.md § Version skew): "the ladder runs on the DO load path, and
    * fresh docs are stamped `CURRENT_SCHEMA_VERSION`". Every persisted doc
    * passes through `loadPersisted` (directly, or via `getDoc`), so this is the
    * single choke-point that brings an older doc current and PERSISTS the
@@ -255,22 +371,24 @@ export class DocDO extends DurableObject<Env> {
    * migration actor must brand only this one change, not every future
    * server-driven mutation (`applyOp`) this DO instance happens to make.
    *
-   * Determinism (PLAN §5.3): `migrateDraft` delegates to the pure `migrate`
+   * Determinism (docs/system/architecture.md § Ordering): `migrateDraft` delegates to the pure `migrate`
    * ladder — the same bytes in always produce the same migrated shape out — so
    * two DO instances that independently migrate the same persisted state
    * compute the identical upgrade; the sortKey backfill's convergence guarantee
    * carries over unchanged.
    */
-  private migrateOnLoad(doc: A.Doc<RoutineDoc>): A.Doc<RoutineDoc> {
+  private migrateOnLoad(
+    doc: A.Doc<RoutineDoc | FigureDoc | AccountDoc>,
+  ): A.Doc<RoutineDoc | FigureDoc | AccountDoc> {
     // `doc.schemaVersion` is untyped-optional at RUNTIME (a pre-envelope doc, or
-    // any doc a bug seeded without one) even though `RoutineDoc` declares it
+    // any doc a bug seeded without one) even though the doc shapes declare it
     // required — mirrors `runLadder`'s "an untagged doc is treated as v1".
     const version: unknown = doc.schemaVersion;
     if (typeof version === "number" && version >= CURRENT_SCHEMA_VERSION) return doc;
 
     const migrating = A.clone(doc, { actor: MIGRATION_ACTOR });
     const migrated = A.change(migrating, { message: MIGRATION_MESSAGE }, (draft) => {
-      migrateDraft(draft as unknown as { schemaVersion: number } & Record<string, unknown>);
+      migrateDraft(draft);
     });
     const changes = A.getChanges(doc, migrated);
     if (changes.length === 0) return doc; // migrateDraft found nothing to do.
@@ -291,15 +409,12 @@ export class DocDO extends DurableObject<Env> {
 
   /**
    * Append one or more raw change blobs to the SQLite change log. An Automerge
-   * `Change` is an opaque branded `Uint8Array`, hence the casts below.
+   * `Change` is a plain `Uint8Array` alias, so its buffer is directly readable.
    */
   private persist(changes: A.Change[]): void {
     for (const change of changes) {
       // Store the raw bytes; Cloudflare's SQLite accepts an ArrayBuffer BLOB.
-      const buf = (change as Uint8Array).buffer.slice(
-        (change as Uint8Array).byteOffset,
-        (change as Uint8Array).byteOffset + (change as Uint8Array).byteLength,
-      );
+      const buf = change.buffer.slice(change.byteOffset, change.byteOffset + change.byteLength);
       this.ctx.storage.sql.exec("INSERT INTO changes (data) VALUES (?)", buf);
     }
   }
@@ -314,13 +429,13 @@ export class DocDO extends DurableObject<Env> {
    * doc). Seeding here also means a later connect finds real content and never
    * auto-materializes the empty-routine placeholder (#109).
    */
-  async seedDoc(content: Record<string, unknown>): Promise<void> {
+  async seedDoc(content: RoutineDoc | FigureDoc | AccountDoc): Promise<void> {
     if (this.doc) return;
     const sql = this.ctx.storage.sql;
     const hasSnap = sql.exec("SELECT 1 FROM snapshot WHERE id = 0 LIMIT 1").toArray().length > 0;
     const hasChanges = sql.exec("SELECT 1 FROM changes LIMIT 1").toArray().length > 0;
     if (hasSnap || hasChanges) return; // already a real doc — don't clobber
-    const seeded = buildDoc(content) as A.Doc<RoutineDoc>;
+    const seeded = buildDoc(content);
     this.persist(A.getAllChanges(seeded));
     this.doc = seeded;
     // Push the seed to any client already connected (e.g. a collaborator who
@@ -329,6 +444,57 @@ export class DocDO extends DurableObject<Env> {
     // reconnects (a reload). Mirrors the applyChange broadcast; a no-op when no
     // sockets are connected.
     this.broadcast(A.getAllChanges(seeded), null);
+  }
+
+  /**
+   * E2E-ONLY: wipe this DO's persisted content so the next {@link seedDoc}
+   * re-seeds from scratch. The Playwright harness shares ONE worker + D1 across
+   * all three device projects serially; `/api/test/reset` clears D1, but a DO's
+   * SQLite persists independently and `seedDoc` is no-clobber — so without this a
+   * doc mutated in one project's run leaks into the next. The sharp case: this
+   * test's copy-on-write edit re-points a routine placement at a fresh figure
+   * copy, and on the next run `resetDb` orphans that copy (its D1 row is gone)
+   * while the no-clobber `seedDoc` leaves the stale placement in place → the
+   * placement card hangs forever on "Loading figure…". Gated on the E2E flag so
+   * it can never run in dev/staging/prod even if reachable.
+   */
+  async resetForTest(): Promise<void> {
+    if (this.env.E2E_TEST_ROUTES !== "1") return;
+    const sql = this.ctx.storage.sql;
+    sql.exec("DELETE FROM changes");
+    sql.exec("DELETE FROM snapshot");
+    sql.exec("DELETE FROM doc_meta");
+    this.doc = null;
+  }
+
+  /**
+   * D30 ⟳ (seed-authoritative): reconcile an ALREADY-IMPORTED global figure doc to
+   * the current bundled catalog. Seeded attributes (deterministic `fig-`/`wdsf-`
+   * ids) are updated/added/tombstoned to match the seed; user-added (ULID)
+   * attributes are untouched, and variants pick refreshed unowned beats up via
+   * per-beat resolution. A doc already matching the seed persists nothing.
+   * Single-writer by construction: only this doc's DO runs its reconcile.
+   */
+  async reconcileSeed(seed: SeedFigureContent): Promise<{ changed: boolean }> {
+    // Read WITHOUT materializing: `getDoc()` would fabricate an empty ROUTINE in an
+    // unseeded (or D1-vs-DO-diverged) figure DO and then persist that corruption.
+    // `loadPersistedFigure` returns null when nothing is stored (or the doc isn't
+    // figure-shaped) → nothing to reconcile; the seeder only reaches this method
+    // once the figure's D1 row exists, and the seedDoc path (not this one) is
+    // responsible for the initial import.
+    const before = this.loadPersistedFigure();
+    if (!before) return { changed: false };
+    const { doc: after, changed } = reconcileSeededFigure(before, seed);
+    if (!changed) return { changed: false };
+    const changes = A.getChanges(before, after);
+    // `this.doc` holds this figure DO's FigureDoc — assignable to the dual-host
+    // field with no cast now that the field is `A.Doc<RoutineDoc | FigureDoc | AccountDoc>`.
+    this.doc = after;
+    this.persist(changes);
+    await this.maybeScheduleCompaction();
+    // Live clients of this doc see the refreshed catalog content immediately.
+    this.broadcast(changes, null);
+    return { changed: true };
   }
 
   /**
@@ -344,7 +510,7 @@ export class DocDO extends DurableObject<Env> {
    * sync wire.)
    */
   async applyChange(op: DocOp): Promise<Uint8Array> {
-    const before = this.getDoc();
+    const before = this.getRoutineDoc();
     const after = this.applyOp(before, op);
     const changes = A.getChanges(before, after);
     this.doc = after;
@@ -364,8 +530,10 @@ export class DocDO extends DurableObject<Env> {
     this.broadcast(changes, null);
     // One op is one change today; return the last change's bytes as the op's
     // representative payload. The FULL set is what's persisted (and, in US-015,
-    // synced) — so a future multi-change op loses nothing.
-    return changes[changes.length - 1] as Uint8Array;
+    // synced) — so a future multi-change op loses nothing. (The `??` is
+    // unreachable — `changes` is non-empty here — but keeps the index honest
+    // under noUncheckedIndexedAccess.)
+    return changes.at(-1) ?? new Uint8Array();
   }
 
   /**
@@ -376,6 +544,72 @@ export class DocDO extends DurableObject<Env> {
    */
   async applyRawChange(change: Uint8Array): Promise<boolean> {
     return this.ingestChange(change, null);
+  }
+
+  /**
+   * Apply a high-level edit to this per-user ACCOUNT doc (WEP-0002 —
+   * docs/system/architecture.md § D1 — the index & projections), the
+   * REST-shim (online) write path for family notes + library bookmarks. The DO
+   * must already be seeded (ensureAccountDoc runs first, mint+seed before touch),
+   * so a null persisted account doc here is a routing bug — surfaced loudly, never
+   * auto-materialized (which would fabricate an empty routine). Persists +
+   * broadcasts like {@link applyChange}; the alarm projects the result back to
+   * `library_entry`/`figure_type_note_index`. Returns the created note id for
+   * `addFamilyNote` (server-minted) so the shim can echo the v1 response shape,
+   * and `changed` — whether the edit advanced the doc — so the save-to-library
+   * shim can derive `{ alreadySaved }` (an idempotent re-add is a no-op).
+   */
+  async applyAccountEdit(op: AccountOp): Promise<{ id: string | null; changed: boolean }> {
+    const before = this.loadPersistedAccount();
+    if (!before) {
+      throw new Error("applyAccountEdit: account doc not seeded (ensureAccountDoc must run first)");
+    }
+    const idsBefore = new Set(
+      readAccount(before, { includeDeleted: true }).annotations.map((a) => a.id),
+    );
+    const after = this.applyAccountOp(before, op);
+    const changes = A.getChanges(before, after);
+    this.doc = after;
+    if (changes.length === 0) return { id: null, changed: false };
+    this.persist(changes);
+    await this.maybeScheduleCompaction();
+    // Family notes + library bookmarks both project to D1 on the alarm.
+    await this.maybeScheduleProjection();
+    this.broadcast(changes, null);
+    const created =
+      op.op === "addFamilyNote"
+        ? (readAccount(after, { includeDeleted: true })
+            .annotations.map((a) => a.id)
+            .find((id) => !idsBefore.has(id)) ?? null)
+        : null;
+    return { id: created, changed: true };
+  }
+
+  /** Map a high-level account op onto a domain mutation. Unknown ops are a no-op. */
+  private applyAccountOp(doc: A.Doc<AccountDoc>, op: AccountOp): A.Doc<AccountDoc> {
+    switch (op.op) {
+      case "addFamilyNote":
+        return addFamilyNote(doc, {
+          authorId: op.authorId,
+          kind: op.kind,
+          text: op.text,
+          figureType: op.figureType,
+          danceScope: op.danceScope,
+          tags: op.tags,
+          ...(op.count != null ? { count: op.count } : {}),
+          ...(op.role != null ? { role: op.role } : {}),
+        });
+      case "addAccountReply":
+        return addAccountReply(doc, op.annotationId, { authorId: op.authorId, text: op.text });
+      case "deleteFamilyNote":
+        return softDeleteAccountAnnotation(doc, op.annotationId);
+      case "addLibraryRef":
+        return addLibraryRef(doc, op.figureRef);
+      case "removeLibraryRef":
+        return removeLibraryRef(doc, op.figureRef);
+      default:
+        return doc;
+    }
   }
 
   /**
@@ -390,13 +624,16 @@ export class DocDO extends DurableObject<Env> {
     // stream — O(patches), NOT a full-doc JSON serialization. This keeps the
     // US-015 hot sync path cheap: a structural-only change pays nothing extra and
     // never arms the journal-projection alarm.
-    let touchedAnnotations = false;
-    const [after] = A.applyChanges(before, [change as A.Change], {
+    let touchedProjectable = false;
+    const [after] = A.applyChanges(before, [change], {
       patchCallback: (patches) => {
-        if (touchedAnnotations) return;
+        if (touchedProjectable) return;
         for (const p of patches) {
-          if (p.path[0] === "annotations") {
-            touchedAnnotations = true;
+          // `annotations` → journal (routine) / family-note (account) projections;
+          // `libraryFigureRefs` → the account library_entry projection
+          // (WEP-0002 — docs/system/architecture.md § D1 — the index & projections).
+          if (p.path[0] === "annotations" || p.path[0] === "libraryFigureRefs") {
+            touchedProjectable = true;
             return;
           }
         }
@@ -405,12 +642,12 @@ export class DocDO extends DurableObject<Env> {
     this.doc = after;
     // Heads unchanged ⇒ the change was already present (duplicate) ⇒ no-op.
     if (headsEqual(beforeHeads, A.getHeads(after))) return false;
-    this.persist([change as A.Change]);
+    this.persist([change]);
     await this.maybeScheduleCompaction();
-    // Project the journal promptly only when this change touched annotations
-    // (the live WS path for lesson/practice authoring). See applyChange's gate.
-    if (touchedAnnotations) await this.maybeScheduleProjection();
-    this.broadcast([change as A.Change], from);
+    // Project promptly only when this change touched projected state (the live WS
+    // path for lesson/practice authoring, account family notes, or bookmarks).
+    if (touchedProjectable) await this.maybeScheduleProjection();
+    this.broadcast([change], from);
     return true;
   }
 
@@ -429,9 +666,9 @@ export class DocDO extends DurableObject<Env> {
           authorId: typeof op.authorId === "string" ? op.authorId : "tester",
           kind,
           text: String(op.text),
-          anchors: Array.isArray(op.anchors)
-            ? (op.anchors as Anchor[])
-            : [{ type: "figure", figureRef: "f1" }],
+          // Runtime-validated (strict-write posture, D7): a malformed anchor
+          // list falls back to the default instead of entering the doc.
+          anchors: parseAnchors(op.anchors) ?? [{ type: "figure", figureRef: "f1" }],
         });
       }
       case "addReply":
@@ -448,7 +685,19 @@ export class DocDO extends DurableObject<Env> {
 
   /** Resolve and return the current doc as a plain POJO (tombstones dropped). */
   async getSnapshot(): Promise<RoutineDoc> {
-    return readRoutine(this.getDoc());
+    return readRoutine(this.getRoutineDoc());
+  }
+
+  /**
+   * Read this doc as an ACCOUNT snapshot (WEP-0002 —
+   * docs/system/architecture.md § D1 — the index & projections; tombstoned notes dropped),
+   * or null when this DO hosts a different shape or nothing is persisted. Uses
+   * `loadPersistedAccount` (never `getDoc`), so a read never auto-materializes the
+   * empty-routine placeholder.
+   */
+  async getAccountSnapshot(): Promise<AccountDoc | null> {
+    const doc = this.loadPersistedAccount();
+    return doc ? readAccount(doc) : null;
   }
 
   /**
@@ -462,9 +711,9 @@ export class DocDO extends DurableObject<Env> {
    * caller renders it as missing.
    */
   async getFigureSnapshot(): Promise<FigureDoc | null> {
-    const doc = this.loadPersisted();
+    const doc = this.loadPersistedFigure();
     if (!doc) return null;
-    return readFigure(doc as unknown as A.Doc<FigureDoc>);
+    return readFigure(doc);
   }
 
   // ── US-015: live WebSocket sync (custom Automerge change-sync, D13) ─────────
@@ -493,7 +742,8 @@ export class DocDO extends DurableObject<Env> {
     const doName = request.headers.get("x-doc-name");
     if (doName) this.rememberDoName(doName);
 
-    // US-021 — FAIL-CLOSED per-document permission boundary (PLAN §5.1/§6).
+    // US-021 — FAIL-CLOSED per-document permission boundary
+    // (docs/system/architecture.md § Permission enforcement; docs/concepts/collaboration.md § Roles).
     // A token is REQUIRED and verified BEFORE any role lookup (AC-1 fail-closed):
     //   • missing/invalid/expired token → 401 (never reaches the role check)
     //   • valid token, non-member       → 403 (per-doc, routine AND figure; AC-3)
@@ -601,12 +851,16 @@ export class DocDO extends DurableObject<Env> {
    */
   private commenterChangeAllowed(change: Uint8Array, sub: string | undefined): boolean {
     if (!sub) return false; // pre-upgrade attachment (no identity) → fail closed
-    const before = this.getDoc();
+    const current = this.getDoc();
+    // Annotations only exist on routine docs, so a commenter change against a
+    // figure doc can never be legal — fail closed without attempting the read.
+    if (!("sections" in current)) return false;
+    const before: A.Doc<RoutineDoc> = current;
     let after: A.Doc<RoutineDoc>;
     try {
       // Clone first: A.applyChanges may free its input handle; the live doc must
       // stay valid for the subsequent real ingest.
-      [after] = A.applyChanges(A.clone(before), [change as A.Change]);
+      [after] = A.applyChanges(A.clone(before), [change]);
     } catch {
       return false;
     }
@@ -664,12 +918,7 @@ export class DocDO extends DurableObject<Env> {
       .toArray()[0]?.doName;
     if (!doName) return; // never connected → nothing attached
     for (const ws of this.ctx.getWebSockets()) {
-      let att: SocketAttachment | null = null;
-      try {
-        att = ws.deserializeAttachment() as SocketAttachment | null;
-      } catch {
-        // fall through to fail-closed close below
-      }
+      const att = this.socketAttachment(ws);
       if (!att?.sub) {
         try {
           ws.close(1008, "access revoked");
@@ -691,13 +940,27 @@ export class DocDO extends DurableObject<Env> {
     }
   }
 
-  /** The connection's attachment (role + verified identity), or null. */
+  /**
+   * The connection's attachment (role + verified identity), or null. The
+   * attachment crosses the hibernation-storage boundary untyped, so it is
+   * runtime-VALIDATED on the way back in (never cast): a missing, garbled, or
+   * wrong-shaped attachment — including an unknown role value — yields null,
+   * which every caller treats as fail-closed (read-only / close).
+   */
   private socketAttachment(ws: WebSocket): SocketAttachment | null {
+    let raw: unknown;
     try {
-      return (ws.deserializeAttachment() as SocketAttachment | null) ?? null;
+      raw = ws.deserializeAttachment();
     } catch {
       return null; // no/garbled attachment (e.g. a never-accepted socket) → read-only
     }
+    if (!isPlainRecord(raw)) return null;
+    const { actor, role, sub } = raw;
+    if (typeof actor !== "string") return null;
+    if (role !== "viewer" && role !== "commenter" && role !== "editor" && role !== "owner") {
+      return null;
+    }
+    return { actor, role, ...(typeof sub === "string" ? { sub } : {}) };
   }
 
   /**
@@ -746,7 +1009,7 @@ export class DocDO extends DurableObject<Env> {
     if (sockets.length === 0) return;
     const failed = new Set<WebSocket>();
     for (const change of changes) {
-      const bytes = frame(SYNC_FRAME_CHANGE, change as Uint8Array);
+      const bytes = frame(SYNC_FRAME_CHANGE, change);
       for (const ws of sockets) {
         if (ws === from || failed.has(ws)) continue;
         try {
@@ -823,9 +1086,9 @@ export class DocDO extends DurableObject<Env> {
     // handle — applying it to the live `this.doc` would free the DO's doc
     // (Automerge outdated-doc edge). The clone shares history, so the resulting
     // change still applies cleanly onto this.doc and advances it.
-    const base = A.clone(this.getDoc());
+    const base = A.clone(this.getRoutineDoc());
     const after = this.applyOp(base, op);
-    return (A.getChanges(base, after)[0] ?? new Uint8Array()) as Uint8Array;
+    return A.getChanges(base, after)[0] ?? new Uint8Array();
   }
 
   // ── US-016: DO alarm — compaction + D1 index projection + invite expiry ─────
@@ -880,6 +1143,14 @@ export class DocDO extends DurableObject<Env> {
       console.error("doc-do alarm: compaction failed", err);
     }
     try {
+      // Builder v3 ④ (owner decision 2026-07-07): legacy {source:'break'}
+      // placements become real Break FIGURE docs. Runs BEFORE the projection so
+      // the rewritten placements project their figure-based bar counts.
+      await this.migrateLegacyBreaks();
+    } catch (err) {
+      console.error("doc-do alarm: legacy break migration failed", err);
+    }
+    try {
       await this.projectToD1();
     } catch (err) {
       console.error("doc-do alarm: D1 index projection failed", err);
@@ -890,15 +1161,177 @@ export class DocDO extends DurableObject<Env> {
       console.error("doc-do alarm: journal projection failed", err);
     }
     try {
+      await this.projectAccountToD1();
+    } catch (err) {
+      console.error("doc-do alarm: account projection failed", err);
+    }
+    try {
       await this.expireInvites();
     } catch (err) {
       console.error("doc-do alarm: invite expiry failed", err);
     }
   }
 
+  /**
+   * Legacy break → Break-figure migration (Builder v3 ④, 2026-07-07). A Break
+   * is a real choreo-local figure now (a bar's worth of empty counts, sized/
+   * edited like any figure); the pre-v3 special `{source:'break', beats}`
+   * placement is converted here, on the ALARM (async, off the request path):
+   *
+   *   1. MINT each break's Break figure doc FIRST — registry row + placement
+   *      edge + DO seed, owned by the routine's owner (`counts` = the break's
+   *      beats) — the fork.ts discipline: never post-hoc CRDT surgery on a
+   *      routine that references un-seeded docs.
+   *   2. Then rewrite the routine's placements in ONE change under the fixed
+   *      MIGRATION_ACTOR (per-user undo can never select it): set `figureRef`,
+   *      drop `source`/`beats`.
+   *
+   * Idempotent: after the rewrite no `{source:'break'}` placements remain, so a
+   * later alarm is a no-op. Clients keep rendering a legacy break via the
+   * BreakCard/BreakReadout fallbacks until this lands and syncs to them.
+   */
+  /** Re-entrancy guard: the scheduled alarm and an explicit run can interleave
+   *  across this method's awaits — two concurrent runs would each mint figures
+   *  and persist a same-actor same-seq change (a storage-corrupting duplicate).
+   *  DOs are single-threaded per event, so a plain flag serializes them. */
+  private breakMigrationInFlight = false;
+
+  private async migrateLegacyBreaks(): Promise<void> {
+    if (this.breakMigrationInFlight) return;
+    this.breakMigrationInFlight = true;
+    try {
+      await this.migrateLegacyBreaksInner();
+    } finally {
+      this.breakMigrationInFlight = false;
+    }
+  }
+
+  private async migrateLegacyBreaksInner(): Promise<void> {
+    const persisted = this.loadPersisted();
+    // Figure/account docs (no `sections`) — nothing to do. The isArray check
+    // stays as runtime defence for a malformed doc that carries the key.
+    if (!persisted || !("sections" in persisted) || !Array.isArray(persisted.sections)) return;
+    const doc: A.Doc<RoutineDoc> = persisted;
+    const breaks: Array<{ id: string; beats: number }> = [];
+    for (const section of doc.sections) {
+      if (section?.deletedAt != null) continue;
+      for (const p of section?.placements ?? []) {
+        if (p?.source === "break" && p.deletedAt == null) {
+          breaks.push({ id: p.id, beats: Math.max(1, Math.round(p.beats ?? 1)) });
+        }
+      }
+    }
+    if (breaks.length === 0) return;
+
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; docRef: string | null }>(
+        "SELECT doName, docRef FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    // `doc.id`/`ownerId` are typed required, but a legacy doc can lack them at
+    // runtime — the fallbacks stay live defence, not dead code.
+    const routineRef = meta?.docRef ?? stringOrNull(doc.id) ?? meta?.doName;
+    const ownerId = stringOrNull(doc.ownerId);
+    if (!routineRef || !ownerId) return; // can't attribute the minted docs yet
+    const dance = isDanceId(doc.dance) ? doc.dance : "waltz";
+
+    // 1. Mint + project + seed every Break figure BEFORE touching the routine.
+    const refByPlacement = new Map<string, string>();
+    for (const brk of breaks) {
+      const figureRef = newId();
+      const created = await createFigureRows(this.env.DB, {
+        figureRef,
+        ownerId,
+        name: "Break",
+        dance,
+        figureType: "break",
+      });
+      if (created === "owner_conflict") continue; // fresh ULID — unreachable; never clobber
+      await linkPlacement(this.env.DB, routineRef, figureRef);
+      await this.env.DOC_DO.get(this.env.DOC_DO.idFromName(figureRef)).seedDoc({
+        id: figureRef,
+        scope: "account",
+        ownerId,
+        figureType: "break",
+        dance,
+        name: "Break",
+        source: "custom",
+        attributes: [],
+        counts: brk.beats,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        deletedAt: null,
+      });
+      refByPlacement.set(brk.id, figureRef);
+    }
+    if (refByPlacement.size === 0) return;
+
+    // 2. Rewrite the placements in one migration-actor change.
+    const migrating = A.clone(doc, { actor: BREAK_MIGRATION_ACTOR });
+    const migrated = A.change(
+      migrating,
+      { message: "migrate legacy breaks (Builder v3 ④)" },
+      (draft) => {
+        for (const section of draft.sections ?? []) {
+          for (const p of section?.placements ?? []) {
+            const ref = p && refByPlacement.get(p.id);
+            if (!ref) continue;
+            p.figureRef = ref;
+            delete p.source;
+            delete p.beats;
+          }
+        }
+      },
+    );
+    const changes = A.getChanges(doc, migrated);
+    if (changes.length === 0) return;
+    this.persist(changes);
+    this.doc = A.clone(migrated); // adopt (see migrateOnLoad's divergence note)
+  }
+
   /** Test hook: run the alarm body synchronously (no real timer). */
   async runAlarmForTest(): Promise<void> {
     await this.alarm();
+  }
+
+  /**
+   * OPS / disaster-recovery — phase 1 of a Point-in-Time Recovery (PITR).
+   *
+   * Cloudflare retains ~30 days of SQLite history for a SQLite-backed Durable
+   * Object AUTOMATICALLY — there is no backup job of ours to run; recovery is a
+   * pure RESTORE. This resolves the storage bookmark closest to `timestamp` and
+   * arms it to be restored on this DO's NEXT session (restart). It does NOT
+   * rewind anything yet — call {@link commitRestore} to trigger the restart that
+   * applies it. Returning the bookmark first (before any abort) lets the ops
+   * route report exactly which point it recovered to.
+   *
+   * Our entire persistence layer — the `changes` log, the `snapshot` blob, the
+   * D1-projection `doc_meta` — lives in this same SQLite database, so PITR
+   * rewinds all of it together; the next cold-load rebuilds the doc from the
+   * recovered history with no CRDT-level surgery. Works identically for a
+   * routine doc or a figure doc (one DocDO class hosts both).
+   *
+   * PRODUCTION-ONLY: the bookmark API is a real-Cloudflare capability; miniflare
+   * does not implement PITR, so this path is exercised against a deployed DO,
+   * not in unit tests (only the admin auth gate at the route is unit-tested).
+   */
+  async prepareRestore(timestamp: number): Promise<{ bookmark: string }> {
+    const bookmark = await this.ctx.storage.getBookmarkForTime(timestamp);
+    await this.ctx.storage.onNextSessionRestoreBookmark(bookmark);
+    return { bookmark };
+  }
+
+  /**
+   * OPS / disaster-recovery — phase 2: restart THIS DO so the bookmark armed by
+   * {@link prepareRestore} is applied. `abort()` tears down the session (and any
+   * live sockets), which is the point: clients must reconnect against the rewound
+   * history. The abort rejects the in-flight RPC by design, so the ops route
+   * treats a post-prepare rejection here as "restart underway", not a failure.
+   *
+   * DESTRUCTIVE: changes recorded after the recovery point are discarded — that
+   * is what a recovery is. Reachable ONLY through the admin-gated ops route.
+   */
+  async commitRestore(): Promise<void> {
+    this.ctx.abort("pitr-restore");
   }
 
   /**
@@ -980,16 +1413,12 @@ export class DocDO extends DurableObject<Env> {
     // id/ownerId/title|name/dance (+ figureType for figures), and reading the
     // doc also means a CRDT title rename actually projects. doc_meta remains an
     // explicit override (tests, special cases).
-    const d = this.getDoc() as unknown as {
-      id?: unknown;
-      scope?: unknown;
-      ownerId?: unknown;
-      title?: unknown;
-      name?: unknown;
-      dance?: unknown;
-      figureType?: unknown;
-    };
-    const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+    // The dual-host doc read as a LOOSE record: both shapes are string-keyed
+    // type aliases, so this is a plain checked widening (no cast) — and every
+    // field below is still runtime-guarded (`stringOrNull`), because a legacy
+    // or never-seeded doc can lack any of them regardless of the static shape.
+    const d: Record<string, unknown> = this.getDoc();
+    const str = stringOrNull;
     const docRef = meta.docRef ?? str(d.id) ?? meta.doName;
     const docFigureType = meta.figureType ?? str(d.figureType);
     // `type` is CONFIDENT when meta declares it, or the doc's shape shows it
@@ -1037,7 +1466,8 @@ export class DocDO extends DurableObject<Env> {
   }
 
   /**
-   * Compute the US-025 card-projection counts for THIS document (PLAN §2.5/§2.7):
+   * Compute the US-025 card-projection counts for THIS document
+   * (docs/concepts/notation.md § Timing; docs/system/architecture.md § D1 — the index & projections):
    *  • routine → figureCount = its NON-deleted placement count; bars = Σ over those
    *    placements of each referenced figure's projected per-figure `bars`.
    *  • figure  → bars = this figure's authored `bars` field when set, else the
@@ -1056,54 +1486,86 @@ export class DocDO extends DurableObject<Env> {
     type: string,
     dance: string | null,
   ): Promise<{ bars: number | null; figureCount: number | null }> {
-    const doc = this.loadPersisted();
-    if (!doc) return { bars: null, figureCount: null };
+    const none = { bars: null, figureCount: null };
 
     if (type === "routine") {
+      const doc = this.loadPersisted();
+      if (!doc) return none;
+      if (!("sections" in doc)) {
+        // `type` says 'routine' but the persisted doc is figure-shaped — a
+        // stale doc_meta default (setMetadata's bare-key upsert binds
+        // type='routine'). ABORT the whole projection: returning "no counts"
+        // would let the mislabeled upsert run and re-type the figure's registry
+        // row to 'routine' (exactly the 2026-07-02 C2 regression). The
+        // pre-typed code aborted the same way, just accidentally — readRoutine
+        // threw on the figure shape before the upsert could fire.
+        throw new Error(
+          "projection mismatch: doc_meta.type is 'routine' but the persisted doc is figure-shaped",
+        );
+      }
       const routine = readRoutine(doc); // tombstones dropped → live placements only
-      const beatsPerBar = DANCES[(routine.dance ?? "waltz") as DanceId].beatsPerBar;
+      // `routine.dance` is already a `DanceId`; `?? "waltz"` covers a legacy doc.
+      const beatsPerBar = DANCES[routine.dance ?? "waltz"].beatsPerBar;
       const placementRefs: string[] = [];
       let breakBars = 0; // a break contributes bars but isn't a figure (US-004a)
+      let partBars = 0; // portioned placements span their WINDOW (Builder v3 ③)
       let figureCount = 0;
       for (const section of routine.sections) {
         for (const placement of section.placements) {
           if (placement.source === "break") {
             breakBars += Math.max(1, Math.round((placement.beats ?? beatsPerBar) / beatsPerBar));
           } else if (placement.figureRef) {
-            placementRefs.push(placement.figureRef);
+            if (placement.part) {
+              // A portion dances only its count window — its bar contribution is
+              // the window's whole-beat span, not the figure's full length.
+              partBars += Math.max(1, Math.ceil(partBeatSpan(placement.part) / beatsPerBar));
+            } else {
+              placementRefs.push(placement.figureRef);
+            }
             figureCount += 1;
           }
         }
       }
       const barsByRef = await this.resolveFigureBars([...new Set(placementRefs)]);
       // Sum PER PLACEMENT (a figure placed twice counts its bars twice), then add
-      // break beats — the section/routine bar-count includes break bars (US-004a).
+      // portion windows + break beats — the routine bar-count includes both.
       const bars =
-        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) + breakBars;
+        placementRefs.reduce((sum, ref) => sum + (barsByRef.get(ref) ?? 0), 0) +
+        partBars +
+        breakBars;
       return { bars, figureCount };
     }
 
     if (type === "global-figure" || type === "account-figure") {
-      // Defensive: a figure-typed DO whose content was never seeded as a FigureDoc
-      // (e.g. an auto-materialized empty-routine placeholder from a stray getDoc)
-      // has no `attributes` — treat it as an empty (1-bar) figure rather than
-      // letting readFigure throw and abort the whole projection.
-      const figure = A.toJS(doc) as Partial<FigureDoc>;
-      const figureDance = (figure.dance ?? dance ?? "waltz") as DanceId;
+      const doc = this.loadPersistedFigure();
+      if (!doc) return none;
+      const figure = A.toJS(doc);
+      // `dance` (the D1-projected column) is a plain string; fall back through it
+      // and finally "waltz" when the figure carries no valid dance.
+      const figureDance = isDanceId(figure.dance)
+        ? figure.dance
+        : isDanceId(dance)
+          ? dance
+          : "waltz";
+      // Defensive: a never-seeded figure doc has no `attributes` — treat it as an
+      // empty timeline rather than letting the read throw and abort the projection.
       const counts = (figure.attributes ?? [])
         .filter((a) => a.deletedAt == null)
         .map((a) => a.count);
-      // The figure's card bar count (PLAN §2.5): the explicit authored `bars` when
-      // set, else the phrase span its steps occupy (`barsForFigure`) — a legacy
-      // figure with no authored length still gets an honest span-based estimate.
+      // The figure's card bar count: the authored `counts` when set (Builder v3 ①
+      // — bars derive as ⌈counts / beatsPerBar⌉), else a legacy authored `bars`,
+      // else the phrase span its steps occupy (`barsForFigure`) — a figure with
+      // no authored length still gets an honest span-based estimate.
       const bars =
-        typeof figure.bars === "number" && figure.bars >= 1
-          ? Math.floor(figure.bars)
-          : barsForFigure(counts, figureDance);
+        typeof figure.counts === "number" && figure.counts >= 1
+          ? Math.max(1, Math.ceil(Math.floor(figure.counts) / DANCES[figureDance].beatsPerBar))
+          : typeof figure.bars === "number" && figure.bars >= 1
+            ? Math.floor(figure.bars)
+            : barsForFigure(counts, figureDance);
       return { bars, figureCount: null };
     }
 
-    return { bars: null, figureCount: null }; // account / unknown — no card counts
+    return none; // account / unknown — no card counts
   }
 
   /**
@@ -1126,7 +1588,8 @@ export class DocDO extends DurableObject<Env> {
 
   /**
    * T6 — project THIS routine's lesson/practice annotations to the cross-routine
-   * `journal_entry` index (PLAN §2.6/§2.7/§6). Mirrors `projectToD1`: D1 stays a
+   * `journal_entry` index (docs/concepts/annotations.md § Anchors;
+   * docs/system/architecture.md § D1 — the index & projections). Mirrors `projectToD1`: D1 stays a
    * pure index; the routine doc (DO SQLite) is the source of truth.
    *
    * Scope (memory: per-document DO layering): touches only THIS routine's own
@@ -1148,7 +1611,7 @@ export class DocDO extends DurableObject<Env> {
     const docRef = meta.docRef ?? meta.doName;
 
     const doc = this.loadPersisted();
-    if (!doc) return;
+    if (!doc || !("sections" in doc)) return; // not routine-shaped → no journal rows
     const routine = readRoutine(doc, { includeDeleted: true });
     const journalAnnotations = routine.annotations.filter(
       (a) => a.kind === "lesson" || a.kind === "practice",
@@ -1174,6 +1637,52 @@ export class DocDO extends DurableObject<Env> {
       deletedAt: a.deletedAt ?? null,
     }));
     await projectJournalEntries(this.env.DB, docRef, rows);
+  }
+
+  /**
+   * Project a per-user ACCOUNT doc to its D1 indexes
+   * (docs/system/architecture.md § D1 — the index & projections; WEP-0002 — the write
+   * direction inverted: D1 becomes a pure alarm-written projection of the doc,
+   * like journal_entry). Non-destructive, idempotent, tombstone-aware:
+   * `library_entry` mirrors the live `libraryFigureRefs` set (refs that left it
+   * are tombstoned), and `figure_type_note_index` upserts one row per figureType
+   * annotation keyed on the reused ULID noteId (a tombstoned note carries its
+   * `deletedAt` through). Only fires for account docs; other types early-return.
+   */
+  private async projectAccountToD1(): Promise<void> {
+    const meta = this.ctx.storage.sql
+      .exec<{ doName: string | null; type: string | null }>(
+        "SELECT doName, type FROM doc_meta WHERE id = 0",
+      )
+      .toArray()[0];
+    if (!meta?.doName || meta.type !== "account") return;
+
+    const doc = this.loadPersistedAccount();
+    if (!doc) return;
+    const account = readAccount(doc, { includeDeleted: true });
+    const userId = account.ownerId;
+
+    // Library bookmarks — the live set; refs that left it are tombstoned.
+    await projectLibraryEntries(this.env.DB, userId, account.libraryFigureRefs ?? []);
+
+    // Family notes — one row per figureType annotation, tombstones carried.
+    const notes: FamilyNoteProjection[] = [];
+    for (const a of account.annotations) {
+      const anchor = a.anchors.find((an) => an.type === "figureType");
+      if (anchor?.type !== "figureType") continue;
+      notes.push({
+        noteId: a.id,
+        authorId: userId,
+        figureType: anchor.figureType,
+        danceScope: anchor.danceScope,
+        kind: a.kind,
+        text: a.text,
+        count: anchor.count ?? null,
+        role: anchor.role ?? null,
+        deletedAt: a.deletedAt ?? null,
+      });
+    }
+    await projectFamilyNotes(this.env.DB, notes);
   }
 
   /** Look up figure display names (document_registry.title) for the given refs. */

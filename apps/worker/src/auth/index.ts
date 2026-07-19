@@ -1,6 +1,8 @@
 import { verifyToken } from "@clerk/backend";
+import { isPlainRecord } from "@weavesteps/domain";
 import type { Context } from "hono";
 import type { Env } from "../index";
+import { reportError } from "../ops";
 
 export type AuthedUser = {
   sub: string;
@@ -16,8 +18,9 @@ export type AuthedUser = {
   email?: string;
 };
 
-/** The Clerk verification keys an auth check needs (a subset of the worker Env). */
-type ClerkKeys = Pick<Env, "CLERK_SECRET_KEY" | "CLERK_JWT_KEY">;
+/** The Clerk verification keys an auth check needs (a subset of the worker Env).
+ *  SENTRY_DSN rides along so verification failures can be reported (US-049). */
+type ClerkKeys = Pick<Env, "CLERK_SECRET_KEY" | "CLERK_JWT_KEY" | "SENTRY_DSN">;
 
 const trimmed = (v: unknown): string | undefined =>
   typeof v === "string" && v.trim() ? v.trim() : undefined;
@@ -59,9 +62,43 @@ export function emailFromClaims(claims: Record<string, unknown>): string | undef
 }
 
 /**
+ * Verification-failure reasons that are BENIGN user states — they happen all
+ * day on a healthy deployment (a tab left open past the 60s session-token TTL,
+ * a device with a skewed clock, an internet stranger POSTing garbage) and must
+ * never reach Sentry. Everything else is treated as a CONFIG-CLASS failure:
+ * `token-invalid-signature` (the SPA's Clerk instance ≠ the worker's keys —
+ * the 2026-07-05 production incident, which 401'd every API call with zero
+ * observability), missing/invalid secret keys, and JWKS resolution trouble.
+ * Reason strings are @clerk/backend's `TokenVerificationErrorReason` values,
+ * read by duck-type so a Clerk version bump can't break the auth path itself.
+ */
+const BENIGN_VERIFY_REASONS = new Set([
+  "token-expired",
+  "token-not-active-yet",
+  "token-iat-in-the-future",
+  "token-invalid", // malformed/garbage — any unauthenticated caller can send one
+  "token-invalid-authorized-parties",
+]);
+
+/** Failure classes already reported by THIS isolate — one Sentry event per
+ *  class per isolate: a misconfigured deploy fails on every request, and one
+ *  event carries the same signal as ten thousand. */
+const reportedVerifyFailures = new Set<string>();
+
+/** Test-only: clear the per-isolate report dedup (worker tests share isolates). */
+export function resetAuthFailureReportingForTest(): void {
+  reportedVerifyFailures.clear();
+}
+
+/** `waitUntil` shape — lets the fire-and-forget Sentry POST outlive the 401. */
+export type WaitUntil = (promise: Promise<unknown>) => void;
+
+/**
  * Verify a Clerk session JWT from a raw `Authorization` header, networklessly,
  * against the configured Clerk keys. Returns the user's `sub`, or `null` when
- * the header is absent or the token is invalid/unverifiable.
+ * the header is absent or the token is invalid/unverifiable. A verification
+ * failure of CONFIG class additionally reports to Sentry (US-049) — see
+ * BENIGN_VERIFY_REASONS above.
  *
  * Context-free so BOTH the Hono REST surface (`authenticate`) and the DO sync
  * boundary (US-021) verify identically — one place owns the Clerk lock-in (Q-A1).
@@ -69,6 +106,7 @@ export function emailFromClaims(claims: Record<string, unknown>): string | undef
 export async function authenticateToken(
   header: string | null | undefined,
   env: ClerkKeys,
+  waitUntil?: WaitUntil,
 ): Promise<AuthedUser | null> {
   if (!header?.startsWith("Bearer ")) return null;
   const token = header.slice("Bearer ".length);
@@ -77,18 +115,42 @@ export async function authenticateToken(
       secretKey: env.CLERK_SECRET_KEY,
       jwtKey: env.CLERK_JWT_KEY,
     });
-    const claims = payload as unknown as Record<string, unknown>;
+    // Clerk's JwtPayload carries custom claims untyped; read it as a plain
+    // record via a RUNTIME guard (a verified JWT payload is always an object).
+    const claims: Record<string, unknown> = isPlainRecord(payload) ? payload : {};
     return {
       sub: payload.sub,
       name: displayNameFromClaims(claims),
       email: emailFromClaims(claims),
     };
-  } catch {
+  } catch (e) {
+    // US-049 (2026-07-05 incident): a swallowed verification error made a
+    // production-wide auth outage invisible. Config-class failures report to
+    // Sentry (fail-open — reportError never throws); the 401 stays unchanged.
+    const reason = isPlainRecord(e) ? e.reason : undefined;
+    const failureClass = typeof reason === "string" ? reason : "unknown";
+    if (!BENIGN_VERIFY_REASONS.has(failureClass) && !reportedVerifyFailures.has(failureClass)) {
+      reportedVerifyFailures.add(failureClass);
+      const err = new Error(
+        `Clerk token verification failed: ${failureClass}. If this fires in a deployed env, check that the worker's CLERK_* secrets and the SPA's baked VITE_CLERK_PUBLISHABLE_KEY point at the SAME Clerk instance (PROVISIONING.md).`,
+      );
+      err.name = "AuthVerificationError";
+      const report = reportError(env, err);
+      if (waitUntil) waitUntil(report);
+      else void report; // best-effort where no execution context exists
+    }
     return null;
   }
 }
 
 /** Verify the request's Clerk JWT on a Hono context (the REST surface). */
 export function authenticate(c: Context<{ Bindings: Env }>): Promise<AuthedUser | null> {
-  return authenticateToken(c.req.header("Authorization"), c.env);
+  let waitUntil: WaitUntil | undefined;
+  try {
+    const ctx = c.executionCtx; // Hono throws when the adapter has no ExecutionContext
+    waitUntil = (p) => ctx.waitUntil(p);
+  } catch {
+    waitUntil = undefined;
+  }
+  return authenticateToken(c.req.header("Authorization"), c.env, waitUntil);
 }

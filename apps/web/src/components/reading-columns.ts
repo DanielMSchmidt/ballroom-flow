@@ -15,8 +15,28 @@ import {
   type RegistryKind,
 } from "@weavesteps/domain";
 import { getLocale, type Locale, localizedRegistry } from "../i18n";
+import type { AttributeKind } from "../ui";
 import { abbrevValue } from "./attribute-display";
 import type { RoleView } from "./role-view";
+
+/** The kind ids that have a `--bf-kind-*` token color family for column headers /
+ *  chips — since the ⟳2026-07-10 prose-kind removals this is every standard kind,
+ *  kept as its own list so a future non-column kind stays expressible. */
+export const STANDARD_COLUMN_KINDS: readonly AttributeKind[] = [
+  "direction",
+  "footwork",
+  "rise",
+  "position",
+  "bodyActions",
+  "sway",
+  "turn",
+];
+
+/** Runtime narrowing to a token-colored column kind — lets `kindVar(col.kind)` be
+ *  called without asserting `col.kind` (which may be a custom kind) is standard. */
+export function isColumnKind(kind: string): kind is AttributeKind {
+  return STANDARD_COLUMN_KINDS.some((k) => k === kind);
+}
 
 export type { RoleView };
 
@@ -26,24 +46,30 @@ const DIRECTION_ABBREV_EN = {
   forward: "fwd",
   back: "back",
   side: "side",
+  diagonal_forward: "diag fwd",
+  diagonal_back: "diag bk",
   behind: "beh",
   close: "close",
+  in_front: "front",
   diagonal: "diag",
   in_place: "in pl",
-  // Legacy split-diagonal values (normalize to `diagonal` on read).
-  diag_forward: "diag",
-  diag_back: "diag",
+  // Legacy split-diagonal spellings (normalize to diagonal_forward/_back on read).
+  diag_forward: "diag fwd",
+  diag_back: "diag bk",
 };
 const DIRECTION_ABBREV_DE: typeof DIRECTION_ABBREV_EN = {
   forward: "vw",
   back: "rw",
   side: "seit",
+  diagonal_forward: "diag vw",
+  diagonal_back: "diag rw",
   behind: "hint",
   close: "schl",
+  in_front: "vorkr",
   diagonal: "diag",
   in_place: "Platz",
-  diag_forward: "diag",
-  diag_back: "diag",
+  diag_forward: "diag vw",
+  diag_back: "diag rw",
 };
 const DIRECTION_ABBREV: Record<Locale, Record<string, string>> = {
   en: DIRECTION_ABBREV_EN,
@@ -87,7 +113,6 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
   en: {
     rise: "Rise",
     position: "Pos",
-    footPosition: "Feet",
     sway: "Sway",
     turn: "Turn",
     bodyActions: "Body",
@@ -95,7 +120,6 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
   de: {
     rise: "Heben",
     position: "Pos",
-    footPosition: "Füße",
     sway: "Neig",
     turn: "Dreh",
     bodyActions: "Körper",
@@ -106,8 +130,8 @@ const COLUMN_LABEL: Record<Locale, Record<string, string>> = {
 const STEP_LABEL: Record<Locale, string> = { en: "Step", de: "Schritt" };
 
 /** Technique kinds that get a column, in the design's left-to-right order
- *  (Rise · Pos · Feet · Body · Sway · Turn). */
-const ORDERED_KINDS = ["rise", "position", "footPosition", "bodyActions", "sway", "turn"];
+ *  (Rise · Pos · Body · Sway · Turn). */
+const ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn"];
 
 /** Kinds that never get their own column (they feed the merged Step chip). */
 const STEP_KINDS = new Set(["direction", "footwork"]);
@@ -153,7 +177,7 @@ export function usedColumns(attrs: Attribute[], dance?: DanceId): ReadingColumn[
  *  EVERY applicable kind so empty cells are addable; `bodyActions` rides the
  *  "Body" column alongside `position` is NOT done here — each kind is its own
  *  column so a cell maps 1:1 to a (count, kind) editor target. */
-const EDIT_ORDERED_KINDS = ["rise", "position", "footPosition", "bodyActions", "sway", "turn"];
+const EDIT_ORDERED_KINDS = ["rise", "position", "bodyActions", "sway", "turn"];
 
 /**
  * Every column the EDIT grid should show for a figure's dance (frame 1.11:
@@ -195,7 +219,27 @@ export function cellValue(here: Attribute[], column: ReadingColumn): string | nu
     return stepChipLabel(direction, footwork);
   }
   const a = here.find((x) => x.kind === column.kind);
-  return a ? abbrevValue(column.kind, a.value) : null;
+  // A PRESENCE attribute (value: null/empty — Builder v3 ②) has no chip label:
+  // the edit grid renders its dashed ring, the reading view its empty dot.
+  return a && hasAttrValue(a.value) ? abbrevValue(column.kind, a.value) : null;
+}
+
+/** Whether `column` carries a PRESENCE-only attribute at this count's attributes
+ *  — the step is notated but has no value yet (Builder v3 ②: `value: null`). The
+ *  Step column looks at direction + footwork; every other column at its own kind.
+ *  Drives the reading view's kind-colored present dot (distinct from an empty
+ *  slot), so a step added without attributes still reads as "a step is here". */
+export function cellPresent(here: Attribute[], column: ReadingColumn): boolean {
+  const kinds = column.isStep ? ["direction", "footwork"] : [column.kind];
+  return here.some((a) => kinds.includes(a.kind) && !hasAttrValue(a.value));
+}
+
+/** Whether an attribute actually carries a value (vs a presence-only `null`/
+ *  empty write — Builder v3 ②). */
+export function hasAttrValue(value: unknown): boolean {
+  if (value == null || value === "") return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
 }
 
 /** True when a count sits off the beat (a fractional sub-beat — &, a, e, …);

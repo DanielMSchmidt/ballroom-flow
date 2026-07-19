@@ -1,4 +1,5 @@
 import { SELF } from "cloudflare:test";
+import { zRoutineList } from "@weavesteps/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { authedContext } from "../test-support/authed-context";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -6,7 +7,8 @@ import { applyMigrations, seedDb } from "../test-support/seed";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-025 — Delete a routine from the Choreo overview [M3, user]
-// PLAN §4.0/§4.2. The REST surface behind the Choreo-card ⋯ → Delete: an OWNER
+// docs/concepts/collaboration.md; docs/concepts/figures.md § The library screen.
+// The REST surface behind the Choreo-card ⋯ → Delete: an OWNER
 // soft-deletes (tombstones) their routine; an editor/commenter/viewer cannot.
 // Soft-delete only (deletedAt) — the row is never hard-removed, and the deleted
 // routine drops out of GET /api/routines.
@@ -22,7 +24,7 @@ beforeAll(async () => {
 async function listDocRefs(headers: Record<string, string>): Promise<string[]> {
   const res = await SELF.fetch("https://x/api/routines", { headers });
   expect(res.status).toBe(200);
-  const body = (await res.json()) as { routines: Array<{ docRef: string }> };
+  const body = zRoutineList.parse(await res.json());
   return body.routines.map((r) => r.docRef);
 }
 

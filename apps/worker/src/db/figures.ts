@@ -97,6 +97,18 @@ export async function createGlobalFigureRow(
   return (res.meta?.changes ?? 0) > 0;
 }
 
+/** D30 ⟳: keep the registry's display title in step with an authoritative re-seed. */
+export async function updateGlobalFigureRowTitle(
+  db: D1Database,
+  docRef: string,
+  title: string,
+): Promise<void> {
+  await db
+    .prepare("UPDATE document_registry SET title = ?, updatedAt = ? WHERE docRef = ?")
+    .bind(title, Date.now(), docRef)
+    .run();
+}
+
 export interface GlobalFigureRow {
   docRef: string;
   figureType: string | null;
@@ -217,32 +229,6 @@ export async function getRegistryTypes(
     for (const r of rows) out.set(r.docRef, r.type);
   }
   return out;
-}
-
-/**
- * The caller's existing account-figure derived FROM a given base figure,
- * identified by its `baseFigureRef` lineage (stored in the reused
- * `forkedFromRef` column). Returns the derivative's docRef, or null. ⟳v5: the
- * bookmark model no longer creates copies on save-to-library, but the FORK
- * path still mints per-forker figure copies and uses this to resolve the
- * `account_figure_base_idx` unique-index collision (at most one derivative per
- * `(owner, base)`) by REUSING the forker's existing derivative — see
- * apps/worker/src/fork.ts (v5 milestone step 5). Scoped to the owner so it
- * never reads another user's figure.
- */
-export async function findSavedLibraryFigure(
-  db: D1Database,
-  userId: string,
-  baseFigureRef: string,
-): Promise<string | null> {
-  const row = await db
-    .prepare(
-      "SELECT docRef FROM document_registry WHERE ownerId = ?1 AND type = 'account-figure' " +
-        "AND forkedFromRef = ?2 AND deletedAt IS NULL LIMIT 1",
-    )
-    .bind(userId, baseFigureRef)
-    .first<{ docRef: string }>();
-  return row?.docRef ?? null;
 }
 
 /** Count a user's OWNED figures (for tests/quota separation — figures are uncapped). */

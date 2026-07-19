@@ -3,7 +3,8 @@ import { gotoRoutine, seedAuth } from "./support/auth";
 import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Core authoring journey (PLAN §10.2 E2E: "full authoring"). Runs against the
+// Core authoring journey (docs/system/testing.md § Layer ownership: "full
+// authoring"). Runs against the
 // REAL worker (D1 + per-document Durable Objects + the fail-closed auth/sync
 // boundary) via the #191 E2E harness — no live Clerk, but a real test JWT and
 // the real permission boundary.
@@ -45,36 +46,34 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").press("Enter");
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
 
-    // 4. Add a figure "My Step" to the section (US-027): mints a custom
-    //    figure doc + a placement; the card shows the figure name. NOTE: use a
-    //    NON-catalog name — a typed catalog name (e.g. "Feather Step") now resolves
-    //    to the library figure and arrives pre-filled, which would break the
-    //    empty-figure manual-notation flow this test exercises.
+    // 4. Add a figure "My Step" to the section (US-027) via the picker's
+    //    always-present "Create my own figure" row → compose view: a typed name
+    //    always mints a custom figure doc + a placement (§4.3 — even a
+    //    catalog-colliding name stays a custom); the card shows the figure name.
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // 4b. Notate the figure (US-028 hero flow, 2026-07-01 bars grid): open its
-    //     full-screen editor, tap the Step cell at count 1 → the single-attribute
-    //     overlay → set DIRECTION "Forward" (the headline) + FOOTWORK "Heel-Toe"
-    //     (a slot) → Save (closes the overlay). The headline + chip show on count 1.
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
-    await page.getByRole("button", { name: /Step at count 1$/i }).click();
+    // 4b. Creating a NEW custom figure opens its full-screen step editor
+    //     IMMEDIATELY (create-navigates, §4.3) — no separate "edit steps" tap.
+    //     Notate it (US-028 hero flow, Builder v3 ② quick-add): the FIRST tap on
+    //     the empty Step cell places a blank step (presence attr + toast); the
+    //     SECOND tap opens the single-attribute overlay → set DIRECTION "Forward"
+    //     (the headline) + FOOTWORK "Heel-Toe" (a slot) → Done (closes the
+    //     overlay). The headline + chip show on count 1.
+    await expect(page.getByRole("dialog", { name: /steps · my step/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: /^Add Step at count 1$/i }).click();
+    await page.getByRole("button", { name: /^Edit Step at count 1$/i }).click();
     await page.getByRole("button", { name: /^Forward$/ }).click();
     await page.getByRole("button", { name: /^Heel-Toe$/ }).click();
-    await page.getByRole("button", { name: /^Save$/ }).click();
+    await page.getByRole("button", { name: /^Done$/ }).click();
     await expect(page.getByTestId("step-headline-1")).toHaveText(/forward/i);
     await expect(page.getByLabel(/count 1 attributes/i).getByText("HT")).toBeVisible();
-    // 4c. Set the figure's entry alignment (US-031): D6 — tap the "diag wall" (DW)
-    //     direction chip in the Entry group (qualifier defaults to "facing"), then
-    //     close the sheet; the placement shows an "entry facing diag wall" chip.
-    await page
-      .getByRole("group", { name: /entry alignment/i })
-      .getByRole("button", { name: /^diag wall$/i })
-      .click();
+    // 4c. Close the sheet — the placement card shows the notated summary.
     await page.keyboard.press("Escape");
-    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5. Reload → the routine document (the section) AND the figure (its name,
     //    server-seeded durably at create, #205) were DO-persisted and replay on
@@ -86,8 +85,6 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /list view/i }).click();
     await expect(page.getByRole("heading", { name: "Intro" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
-    // The entry-alignment chip persisted too (figure doc).
-    await expect(page.getByText(/entry facing diag wall/i)).toBeVisible({ timeout: 15_000 });
 
     // 5b. The NOTATION persisted too (figure doc, its own DO): reopen the step
     //     timeline → count 1 still carries the "forward" headline + "ball" footwork.
@@ -104,7 +101,20 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByRole("button", { name: /reading view/i }).click();
     const reading = page.getByTestId("reading-view");
     await expect(reading.getByText("fwd·HT")).toBeVisible();
+
+    // 5d. Sections are collapsible in BOTH lenses, sharing ONE fold state:
+    //     fold "Intro" on the reading programme → its figure hides behind the
+    //     divider (which now reads a "1 fig" meta)…
+    await reading.getByRole("button", { name: "Collapse Intro" }).click();
+    await expect(reading.getByText("fwd·HT")).toBeHidden();
+    await expect(reading.getByText("1 fig")).toBeVisible();
+    //     …switch to the builder: the SAME section arrives folded; expanding it
+    //     there brings the placement card back (and the fold is display-only —
+    //     nothing was deleted).
     await page.getByRole("button", { name: /list view/i }).click();
+    await expect(page.getByText("My Step")).toBeHidden();
+    await page.getByRole("button", { name: "Expand Intro" }).click();
+    await expect(page.getByText("My Step")).toBeVisible();
 
     // The created title is also indexed in D1: it shows in the Choreo list.
     await page.getByRole("button", { name: /all choreos/i }).click();
@@ -135,12 +145,15 @@ test.describe("@smoke core authoring journey", () => {
     await page.getByLabel("Section name").fill("Intro");
     await page.getByLabel("Section name").press("Enter");
     await page.getByRole("button", { name: "Add figure" }).click();
+    await page.getByRole("button", { name: /create my own figure/i }).click();
     await page.getByLabel("Figure name").fill("My Step");
     await page.getByLabel("Figure name").press("Enter");
-    await expect(page.getByText("My Step")).toBeVisible({ timeout: 15_000 });
 
-    // open the figure's full-screen step editor
-    await page.getByRole("button", { name: /edit steps: My Step/i }).click();
+    // creating the custom figure lands directly in its full-screen step editor
+    // (create-navigates, §4.3)
+    await expect(page.getByRole("dialog", { name: /steps · my step/i })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // create a custom kind "Energy". "add kind" opens the type PICKER (frame
     // 1.15); the "＋ new attribute type" footer opens the builder (frame 1.16).

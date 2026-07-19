@@ -3,8 +3,9 @@
 // with kind/by-figure filter pills, author-coloured cards with link chips, a
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
-import type { AnnotationKind } from "@weavesteps/domain";
-import { useCallback, useEffect, useState } from "react";
+import type { Anchor, AnnotationKind } from "@weavesteps/domain";
+import { isDanceId } from "@weavesteps/domain";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import {
@@ -12,8 +13,11 @@ import {
   chipLabel,
   type JournalEntry,
   type JournalFilter,
+  mergeLiveFamilyNotes,
+  mergePendingEntries,
   relativeDate,
 } from "../store/journal";
+import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
@@ -27,11 +31,15 @@ export interface JournalProps {
     danceScope: string;
     kind: AnnotationKind;
     text: string;
+    count?: number;
+    role?: "leader" | "follower";
   }) => Promise<void>;
+  /** Saves a routine-anchored entry; resolves to the created entry (or null)
+   *  so the list can show it before the D1 projection catches up (WEP-0002). */
   createRoutineEntry: (
     routineRef: string,
-    input: { kind: AnnotationKind; text: string; anchors: unknown[] },
-  ) => Promise<void>;
+    input: { kind: AnnotationKind; text: string; anchors: Anchor[] },
+  ) => Promise<JournalEntry | null>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
   /** The signed-in user's id, so their own entries read "you". */
@@ -57,6 +65,42 @@ export function Journal(props: JournalProps): React.JSX.Element {
   // First-visit tour — held while the entry editor covers the tab.
   useFirstVisitTour("journal", !composing);
 
+  // docs/system/architecture.md (account docs, WEP-0002): the Journal is an
+  // account-doc AUTHORING surface, so it opens the
+  // account doc LAZILY here (D10) and authors figureType family notes through the
+  // seam — a CRDT edit that persists offline + replays on reconnect + is undoable,
+  // and that the alarm projects into the D1 index the journal list reads back. The
+  // REST `createFamilyEntry` prop stays as the transitional fallback (the worker
+  // keeps the route as a shim) for a signed-out/idle account store.
+  const account = useAccount();
+  const createFamilyEntry = useCallback(
+    async (input: {
+      figureType: string;
+      danceScope: string;
+      kind: AnnotationKind;
+      text: string;
+      count?: number;
+      role?: "leader" | "follower";
+    }) => {
+      // The account store is open only for a signed-in user with a resolved id;
+      // fall back to the REST prop otherwise (tests / signed-out compose).
+      if (!account.isOpen) {
+        await props.createFamilyEntry(input);
+        return;
+      }
+      account.store.createFamilyNote({
+        figureType: input.figureType,
+        danceScope:
+          input.danceScope === "all" || !isDanceId(input.danceScope) ? "all" : input.danceScope,
+        kind: input.kind,
+        text: input.text,
+        ...(input.count != null ? { count: input.count } : {}),
+        ...(input.role != null ? { role: input.role } : {}),
+      });
+    },
+    [account, props],
+  );
+
   const refresh = useCallback(() => {
     setError(false);
     setEntries(null);
@@ -67,6 +111,25 @@ export function Journal(props: JournalProps): React.JSX.Element {
     refresh();
   }, [refresh]);
 
+  // WEP-0002 read-your-writes: the REST list reads D1 projections that trail a
+  // just-saved entry (WS sync + DO alarm on both arms) — so the post-save
+  // refresh would miss it. Merge (a) the live account-doc self-read for family
+  // notes (reactive: a local edit re-renders instantly) and (b) the optimistic
+  // echo of just-saved routine entries; both dedupe by id once the projection
+  // catches up.
+  const liveFamilyNotes = useOwnFamilyNotes(account.store);
+  const [pendingRoutineEntries, setPendingRoutineEntries] = useState<JournalEntry[]>([]);
+  const mergedEntries = useMemo(
+    () =>
+      entries === null
+        ? null
+        : mergePendingEntries(
+            mergeLiveFamilyNotes(entries, liveFamilyNotes, currentUserId),
+            pendingRoutineEntries,
+          ),
+    [entries, liveFamilyNotes, currentUserId, pendingRoutineEntries],
+  );
+
   if (composing) {
     return (
       <JournalEntryEditor
@@ -75,17 +138,21 @@ export function Journal(props: JournalProps): React.JSX.Element {
           setComposing(false);
           refresh();
         }}
-        createFamilyEntry={props.createFamilyEntry}
-        createRoutineEntry={(routineRef, input) =>
-          props.createRoutineEntry(routineRef, { ...input, anchors: input.anchors })
-        }
+        createFamilyEntry={createFamilyEntry}
+        createRoutineEntry={async (routineRef, input) => {
+          const saved = await props.createRoutineEntry(routineRef, {
+            ...input,
+            anchors: input.anchors,
+          });
+          if (saved) setPendingRoutineEntries((p) => [saved, ...p]);
+        }}
         loadRoutineOptions={props.loadRoutineOptions}
         loadRoutineFigures={props.loadRoutineFigures}
       />
     );
   }
 
-  const visible = entries ? applyJournalFilter(entries, filter) : [];
+  const visible = mergedEntries ? applyJournalFilter(mergedEntries, filter) : [];
 
   return (
     <section aria-label={t.journalTitle} className="flex flex-col gap-3">
@@ -101,7 +168,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </IconButton>
       </header>
 
-      {entries !== null && entries.length > 0 && (
+      {mergedEntries !== null && mergedEntries.length > 0 && (
         <fieldset data-tour="journal-filters" className="flex flex-wrap items-center gap-1">
           <legend className="bf-sr-only">{t.filterJournal}</legend>
           {FILTERS.map((f) => (
@@ -112,7 +179,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </fieldset>
       )}
 
-      {entries === null && !error && <Spinner size={24} label={t.loadingJournal} />}
+      {mergedEntries === null && !error && <Spinner size={24} label={t.loadingJournal} />}
 
       {error && (
         <Card>
@@ -123,7 +190,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         </Card>
       )}
 
-      {entries !== null && entries.length === 0 && (
+      {mergedEntries !== null && mergedEntries.length === 0 && (
         <EmptyState
           icon={<JournalIcon size={28} />}
           title={t.emptyTitle}
@@ -136,7 +203,7 @@ export function Journal(props: JournalProps): React.JSX.Element {
         />
       )}
 
-      {entries !== null && entries.length > 0 && (
+      {mergedEntries !== null && mergedEntries.length > 0 && (
         <ul aria-label={t.journalEntries} className="flex flex-col gap-3">
           {visible.map((e) => (
             <li key={e.id}>
@@ -180,16 +247,19 @@ function JournalCard({
       >
         {entry.text}
       </p>
-      {entry.anchors.length > 0 && (
+      {entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
+        0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {entry.anchors.map((a) => (
-            <span
-              key={`${entry.id}-${a.type}-${chipLabel(a)}`}
-              className="rounded-md bg-surface-sunken px-2 py-1 text-2xs text-studio-blue"
-            >
-              ↳ {chipLabel(a)}
-            </span>
-          ))}
+          {entry.anchors
+            .filter((a) => a.type !== "figureType" || a.figureType !== "general")
+            .map((a) => (
+              <span
+                key={`${entry.id}-${a.type}-${chipLabel(a)}`}
+                className="rounded-md bg-surface-sunken px-2 py-1 text-2xs text-studio-blue"
+              >
+                ↳ {chipLabel(a)}
+              </span>
+            ))}
         </div>
       )}
     </article>

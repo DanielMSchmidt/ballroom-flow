@@ -1,5 +1,6 @@
-// i18n locale seam — the single source for the UI language (PLAN §4: the UI is
-// bilingual EN/DE; user-authored content is never machine-translated).
+// i18n locale seam — the single source for the UI language (docs/system/architecture.md
+// § Non-functional requirements: the UI is bilingual EN/DE; user-authored content is
+// never machine-translated).
 //
 // The locale is a CLIENT-SIDE preference (like the leader/follower toggle), not
 // server data: it lives in localStorage, defaults from the browser language, and
@@ -15,11 +16,16 @@ import { useSyncExternalStore } from "react";
 export const LOCALES = ["en", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
 
+/** Runtime narrowing to a supported UI locale (CLAUDE.md §4 — guard, don't assert). */
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === "string" && LOCALES.some((l) => l === value);
+}
+
 const STORAGE_KEY = "bf.locale";
 
 /** Narrow an arbitrary string to a supported locale, or undefined. */
 function asLocale(value: string | null | undefined): Locale | undefined {
-  return LOCALES.includes(value as Locale) ? (value as Locale) : undefined;
+  return isLocale(value) ? value : undefined;
 }
 
 /** Browser-language default: any `de*` tag → German, everything else English. */

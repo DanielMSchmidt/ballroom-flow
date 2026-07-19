@@ -1,12 +1,15 @@
 // @weavesteps/domain — pure domain logic, no I/O.
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
-export { DANCE_IDS, DANCES, type DanceId, type DanceMeta } from "./dances";
+export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
+  type AccountFamilyNoteRow,
+  type AccountImportRows,
   addAccountReply,
   addFamilyNote,
   addLibraryRef,
   buildAccountDoc,
+  importAccountDoc,
   readAccount,
   removeLibraryRef,
   resolveFamilyNotesFor,
@@ -26,7 +29,6 @@ export {
 } from "./doc-routine";
 export type {
   AccountDoc,
-  Alignment,
   Anchor,
   Annotation,
   AnnotationKind,
@@ -45,12 +47,19 @@ export type {
 } from "./doc-types";
 export {
   defaultFigureBars,
+  defaultFigureCounts,
+  figureCountSlots,
   figureGridSlots,
   type GridSlot,
+  type PlacementPart,
+  partBeatSpan,
   resolveFigureBars,
+  resolveFigureCounts,
   SUB_BEATS,
+  stepSpan,
+  windowAttributes,
 } from "./figure-grid";
-export { matchesFigureType } from "./figuretype";
+export { figureTypeNoteCount, matchesFigureType } from "./figuretype";
 export {
   cloneRoutine,
   copyFigureForFork,
@@ -60,9 +69,12 @@ export {
   spawnVariant,
   variantAttributesForEdit,
 } from "./fork";
+export { isPlainRecord, isRecord, stringIdOf } from "./guards";
 export { newId } from "./ids";
 export {
+  figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
+  figureTypeHasCatalogFamily,
   globalFigureRef,
   LIBRARY_FIGURES,
   type LibraryFigure,
@@ -90,7 +102,19 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
-export { parseAttributeRead, parseAttributeWrite } from "./schemas";
+export {
+  type BothWriteTargets,
+  bothWriteTargets,
+  deriveFollowerValue,
+  isBothConsistent,
+  splitSharedForRole,
+} from "./role-write";
+export { parseAnchors, parseAttributeRead, parseAttributeWrite, zAnchor } from "./schemas";
+export {
+  isSeededAttributeId,
+  reconcileSeededFigure,
+  type SeedFigureContent,
+} from "./seed-reconcile";
 export { buildGoldenWaltzBasic } from "./starter-routine";
 export {
   barsForFigure,
@@ -100,6 +124,7 @@ export {
   type NumberedBeatEntry,
   numberRoutineBeats,
   offBeatSymbol,
+  phraseCountLabel,
   type RoutineBeatEntry,
   slowQuickTokens,
 } from "./timing";

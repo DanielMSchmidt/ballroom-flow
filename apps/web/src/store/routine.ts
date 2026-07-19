@@ -1,4 +1,4 @@
-// US-017 — the `store/` seam (PLAN §6.1/§6.2, D6).
+// US-017 — the `store/` seam (docs/system/architecture.md § Module boundaries / § The shape).
 //
 // The ONLY thing components touch to read/edit a routine. It wraps Automerge +
 // the WS sync (DocConnection) behind a typed, reactive interface: open a
@@ -8,7 +8,6 @@
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
 import {
-  type Alignment,
   type Anchor,
   type Annotation,
   type AnnotationKind,
@@ -18,7 +17,7 @@ import {
   addSection,
   CURRENT_SCHEMA_VERSION,
   DANCES,
-  defaultFigureBars,
+  defaultFigureCounts,
   ensureSortKeys,
   type FigureDoc,
   globalFigureRef,
@@ -40,19 +39,25 @@ import {
   softDeleteSection,
   sortByOrder,
   spawnVariant,
+  stepSpan,
   undoLastChange,
   variantAttributesForEdit,
   wasSupersededByOthers,
 } from "@weavesteps/domain";
+import { reportError } from "../lib/ops";
 import { ApiError, apiGet, apiPost } from "../lib/rpc";
+import { ensureWasm } from "./automerge-init";
 import {
   connectUrl,
   DocConnection,
+  type HeartbeatPolicy,
   type ReconnectPolicy,
   type SocketFactory,
   type SyncState,
   type TokenProvider,
 } from "./doc-connection";
+import { type DocStorage, defaultDocStorage } from "./doc-storage";
+import { e2eHeartbeat, e2eZombifiableSocketFactory } from "./e2e-socket";
 import { reconcile } from "./reconcile";
 
 /**
@@ -126,6 +131,14 @@ export interface RoutineReadModel {
   subscribe(fn: () => void): () => void;
   /** Lifecycle, for a "syncing…"/"loading…" indicator (US-018). */
   syncState(): SyncState;
+  /**
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): how many of this client's changes (routine +
+   * figure docs) have not been handed to a live socket yet — drives the
+   * truth-telling "N changes waiting to sync" indicator and the unsyncable-edits
+   * notice. Optional: absent on models with no local persistence (the read-only
+   * snapshot, injected test stores) — read as 0.
+   */
+  pendingSyncCount?(): number;
   /** Tear down (poll timer + listeners, or document connections). */
   close(): void;
 }
@@ -157,19 +170,35 @@ export interface RoutineStore extends RoutineReadModel {
    * (the user then edits its timeline, US-028) and appends a placement
    * referencing it. A library pick (US-032) passes the catalog's canonical
    * `figureType`; a custom figure omits it and the store slugs one from the name.
-   * `bars` is the figure's authored length chosen in the create flow (PLAN §2.5);
+   * `bars` is the figure's authored length chosen in the create flow (docs/concepts/notation.md § Figure length);
    * omitted → the store derives ⌈whole-beat steps ÷ beatsPerBar⌉ from the seeded
    * attributes (a catalog figure's charted steps, or 1 for a fresh custom).
    * `beforePlacementId` inserts the new figure immediately BEFORE that placement
    * (US-027 insert-between); omitted/null appends to the end of the section.
+   * `onCreated` fires (synchronously, once the placement lands) ONLY when the add
+   * mints a NEW custom figure doc — the caller uses it to open the fresh figure's
+   * step editor immediately (§4.3 create-navigates). A catalog pick places an
+   * already-charted live reference (assembly, not creation) and never fires it.
    */
   addPlacement(
     sectionId: string,
     figureName: string,
     figureType?: string,
-    bars?: number,
+    counts?: number,
     beforePlacementId?: string | null,
+    part?: { fromCount: number; toCount: number } | null,
+    onCreated?: (created: { figureRef: string; placementId: string }) => void,
   ): void;
+  /**
+   * Place an EXISTING figure by ref (⟳v5 §4.2 — a library bookmark "can be
+   * placed into your other routines"): appends a placement referencing that
+   * live doc. Assembly, not creation — no POST /api/figures, no seeding (the
+   * doc already exists; contrast {@link addPlacement}'s custom mint). Content
+   * resolves through the normal lazy figure path; co-members gain access via
+   * the routine→figure cascade once the placement edge projects (§5.1).
+   * `beforePlacementId` inserts before that anchor (insert-between).
+   */
+  placeFigure(sectionId: string, figureRef: string, beforePlacementId?: string | null): void;
   /** Move a placement up/down WITHIN its section (US-027; reorder convergence #63). */
   movePlacement(sectionId: string, placementId: string, direction: "up" | "down"): void;
   /** Soft-delete a placement — tombstone, never a hard removal (US-027). */
@@ -193,14 +222,19 @@ export interface RoutineStore extends RoutineReadModel {
    */
   setFigureAttributes(figureRef: string, attributes: Attribute[]): void;
   /**
-   * Set a figure's authored length in musical bars (PLAN §2.5). Drives the editor
-   * grid (every bar → beat → e/&/a slot). Like {@link setFigureAttributes}, editing
-   * a global (app-owned library) figure forks a frozen owned copy first (COW,
-   * US-035); an owned/account figure changes in place. Clamped to ≥1.
+   * Set a figure's authored length in COUNTS (beats — Builder v3 ①). Drives the
+   * editor grid (every count → e/&/a slot); bar displays derive ⌈counts ÷
+   * beatsPerBar⌉. Like {@link setFigureAttributes}, editing a global (app-owned
+   * library) figure forks an owned variant first (US-035); an owned/account
+   * figure changes in place. Clamped to 1–64.
    */
-  setFigureBars(figureRef: string, bars: number): void;
-  /** Set (or clear, with null) a figure's entry/exit alignment (US-031). */
-  setFigureAlignment(figureRef: string, edge: "entry" | "exit", alignment: Alignment | null): void;
+  setFigureCounts(figureRef: string, counts: number): void;
+  /**
+   * Rename a figure doc (Builder v3 ⑤ — the add-to-library naming flow). The
+   * figure is LIVE and shared: the new name shows in every routine referencing
+   * it (owner decision 2026-07-07). Blank names are ignored.
+   */
+  renameFigure(figureRef: string, name: string): void;
   /** Routine-scoped annotations (US-039), tombstones dropped. */
   readAnnotations(): Annotation[];
   /**
@@ -237,6 +271,14 @@ export interface RoutineStore extends RoutineReadModel {
    * without a full page reload.
    */
   retryFigure(figureRef: string): void;
+  /**
+   * Whether editing `figureRef` is currently spawning a live variant (⟳v5, §5.2):
+   * the implicit fork is async (POST → onceLive → re-point), so the editor shows
+   * an inline "making this figure yours…" pending state until it lands — otherwise
+   * the first edit of a global figure looks like it "did nothing". Reactive:
+   * `subscribe` fires when this flips. Optional (absent on injected test stores).
+   */
+  isForking?(figureRef: string): boolean;
   /**
    * Per-actor history undo (US-010/US-038). Always proceeds (CRDT merges);
    * returns whether a change was reverted and the advisory "superseded by
@@ -278,14 +320,38 @@ export type CreateFigureFn = (figure: {
   /** The routine it's added to — records the cascade edge (co-members can read it). */
   routineId: string;
   attributes: Attribute[];
-  /** The figure's authored length in musical bars (PLAN §2.5) — chosen on create. */
-  bars?: number;
-  /** Figure-level entry/exit alignment seeded from the catalog chart, where charted. */
-  entryAlignment?: Alignment;
-  exitAlignment?: Alignment;
+  /** The figure's authored length in counts (Builder v3 ①) — chosen on create. */
+  counts?: number;
   /** When set, the new figure is a COW variant of this base (US-035). */
   baseFigureRef?: string;
 }) => Promise<void>;
+
+/**
+ * Why a copy-on-write variant spawn failed (drives the screen's toast wording and
+ * whether the store reports the failure to Sentry):
+ *  • `quota`      — the account hit its figure limit (402); a product refusal.
+ *  • `denied`     — signed-out / not permitted on this routine (401/403); a refusal.
+ *  • `offline`    — the create POST couldn't reach the worker while offline; retry.
+ *  • `unexpected` — anything else (409 conflict, 400 invalid, 5xx, an online network
+ *                   throw): NOT something the user did, so it's a bug — reported.
+ */
+export type CopyOnWriteErrorReason = "quota" | "denied" | "offline" | "unexpected";
+
+/**
+ * Classify a variant-spawn failure. A CoW spawn should essentially always succeed
+ * for a signed-in editor with quota headroom, so most failures are `unexpected`
+ * (bug-shaped); only a few statuses map to product refusals the user can act on.
+ */
+function classifyCowError(err: unknown): CopyOnWriteErrorReason {
+  if (err instanceof ApiError) {
+    if (err.status === 402) return "quota";
+    if (err.status === 401 || err.status === 403) return "denied";
+    return "unexpected"; // 409 conflict, 400 invalid, 429, 5xx, …
+  }
+  // A non-ApiError is a thrown fetch: benign only when the browser is offline.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "offline";
+  return "unexpected";
+}
 
 /** Injectable wiring so the seam is testable without a live worker. */
 export interface OpenOptions {
@@ -335,12 +401,28 @@ export interface OpenOptions {
    *  toast "copied as your variant". Receives the new variant's id. */
   onCopyOnWrite?: (variantRef: string) => void;
   /**
+   * Called when a copy-on-write variant spawn FAILED, so the edit could not be
+   * saved. The screen surfaces a retry/refusal toast instead of leaving a
+   * silent no-op behind the optimistic "Step placed" toast. `reason` lets the
+   * screen word it (a quota/permission refusal reads differently from a bug).
+   * An `"unexpected"` failure is ALSO reported to Sentry from the store — it is,
+   * by definition, something that shouldn't happen (the 409 conflict that used
+   * to silently drop edits was exactly this class).
+   */
+  onCopyOnWriteError?: (info: { figureRef: string; reason: CopyOnWriteErrorReason }) => void;
+  /**
    * Auto-reconnect policy for every doc connection (routine + figures). A dropped
    * socket re-opens after this backoff so a blank figure self-heals without a
    * page reload. Defaults to the DocConnection capped-backoff policy; pass
    * `{ delays: [] }` to disable (tests that don't exercise reconnect).
    */
   reconnect?: ReconnectPolicy;
+  /**
+   * Zombie-socket heartbeat for every doc connection (docs/system/sync-and-offline.md § Heartbeat). Defaults to
+   * the DocConnection policy (25 s idle ping / 5 s pong deadline) — shortened
+   * automatically in E2E builds; `false` disables the probe.
+   */
+  heartbeat?: HeartbeatPolicy | false;
   /**
    * How long (ms) to wait for a figure connection to hydrate before surfacing it
    * as `error` (retryable), so a figure never hangs on a skeleton forever. 0
@@ -359,10 +441,21 @@ export interface OpenOptions {
   schedule?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   /** Cancel a scheduled callback (default: global clearTimeout) — injected for tests. */
   cancel?: (handle: ReturnType<typeof setTimeout>) => void;
+  /**
+   * Offline editing (docs/system/sync-and-offline.md § Offline editing): local persistence for the routine + figure
+   * docs, keyed by docRef. Defaults to the app-wide IndexedDB store; `null`
+   * disables persistence (and with it the editable-offline "local" state) —
+   * jsdom tests get that automatically since IndexedDB is absent there.
+   */
+  storage?: DocStorage | null;
 }
 
-const defaultSocketFactory: SocketFactory = (url, protocols) =>
-  new WebSocket(url, protocols) as unknown as ReturnType<SocketFactory>;
+// In an E2E build the factory is wrapped by the zombie seam
+// (docs/system/sync-and-offline.md § Heartbeat ship gate); in every real
+// build `e2eZombifiableSocketFactory` is a pass-through.
+const defaultSocketFactory: SocketFactory = e2eZombifiableSocketFactory(
+  (url, protocols) => new WebSocket(url, protocols),
+);
 
 /** A valid Automerge actor id (even-length hex string), unique per tab (#70). */
 function randomActorId(): string {
@@ -417,6 +510,11 @@ export async function openRoutine(
   routineId: string,
   opts: OpenOptions = {},
 ): Promise<RoutineStore> {
+  // Initialize the Automerge WASM before the first A.* call (slim build does not
+  // auto-init — see automerge-init.ts). This is the single live/Automerge entry
+  // point, so gating it here keeps the 2.75 MB WASM off the initial load and lets
+  // it load lazily on routine-open. No-op under vitest (full Automerge auto-inits).
+  await ensureWasm();
   const baseUrl =
     opts.baseUrl ?? (typeof location !== "undefined" ? location.origin : "http://localhost");
   const openSocket = opts.openSocket ?? defaultSocketFactory;
@@ -428,6 +526,7 @@ export async function openRoutine(
   const currentUserId = opts.currentUserId ?? "";
   const getToken: TokenProvider | undefined = opts.getToken;
   const onCopyOnWrite = opts.onCopyOnWrite;
+  const onCopyOnWriteError = opts.onCopyOnWriteError;
   // Read/edit hybrid (#95): in lazy figure mode the timeline renders figures from
   // the snapshot (figureContent) with no per-figure socket; a figure connects only
   // on edit / openFigure. Eager (default) keeps the original connect-every-figure path.
@@ -437,6 +536,10 @@ export async function openRoutine(
   // access preflight, so a figure whose own connection IS open resolves to an
   // honest loading / missing / error status rather than a blank "unknown figure".
   const reconnect = opts.reconnect;
+  // Heartbeat (docs/system/sync-and-offline.md § Heartbeat): explicit option wins; E2E builds shorten the probe so
+  // journeys exercise ping→pong continuously; otherwise the DocConnection
+  // default applies (undefined here).
+  const heartbeat = opts.heartbeat ?? e2eHeartbeat();
   const hydrationTimeoutMs = opts.hydrationTimeoutMs ?? 0;
   const schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, ms));
   const cancel = opts.cancel ?? ((h) => clearTimeout(h));
@@ -480,11 +583,15 @@ export async function openRoutine(
   // and MERGES into this empty doc, so the client ends up with the identical doc.
   // Seeding content here would create a divergent root; A.init keeps the merge a
   // clean superset of the server's state.
+  // Offline editing (§11.2): the shared local persistence, keyed per docRef.
+  // Explicit null disables; undefined picks the app-wide IndexedDB store.
+  const storage = opts.storage === undefined ? defaultDocStorage() : opts.storage;
+
   const routineConn = new DocConnection<RoutineDoc>(
     actor ? A.init<RoutineDoc>(actor) : A.init<RoutineDoc>(),
     connectUrl(baseUrl, routineId),
     openSocket,
-    { getToken, reconnect, schedule, cancel },
+    { getToken, reconnect, heartbeat, schedule, cancel, storage, storageKey: routineId },
   );
 
   // Figures the client just minted (addPlacement) but whose server-side create
@@ -569,7 +676,8 @@ export async function openRoutine(
         A.init<FigureDoc>(actor),
         connectUrl(baseUrl, figureRef),
         openSocket,
-        { getToken, reconnect, schedule, cancel }, // a FRESH token at each (re)open (#189)
+        // A FRESH token at each (re)open (#189); persisted per figureRef (§11.2).
+        { getToken, reconnect, heartbeat, schedule, cancel, storage, storageKey: figureRef },
       );
       const c = conn;
       conn.onAdvance(() => {
@@ -638,14 +746,16 @@ export async function openRoutine(
     const doc = routineConn.current();
     const key = A.getHeads(doc).join("/");
     if (routineJsCache && routineJsCache.key === key) return routineJsCache.value;
-    const js = A.toJS(doc) as Partial<RoutineDoc>;
+    // Widened: an as-yet-unsynced doc is still the empty A.init, so every field
+    // may be absent — the checks below are what earn the full RoutineDoc back.
+    const js: Partial<RoutineDoc> = A.toJS(doc);
     let value: RoutineDoc;
     if (!Array.isArray(js.sections)) {
       // Not yet synced from the DO — return the empty sentinel, but preserve any
       // customKinds that have been locally embedded (e.g. via createCustomKind
       // called before the DO's catch-up replay arrives).
       const fallback = emptyRoutine(routineId);
-      if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds as RegistryKind[];
+      if (Array.isArray(js.customKinds)) fallback.customKinds = js.customKinds;
       value = fallback;
     } else {
       // Structural sharing (reconcile): when the doc DID change, every subtree
@@ -674,8 +784,9 @@ export async function openRoutine(
   const sameResolvedPlacements = (a: ResolvedPlacement[], b: ResolvedPlacement[]): boolean => {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      const x = a[i] as ResolvedPlacement;
-      const y = b[i] as ResolvedPlacement;
+      const x = a[i];
+      const y = b[i];
+      if (x === undefined || y === undefined) return false; // unreachable: i < length
       if (
         x.placement !== y.placement ||
         x.figure !== y.figure ||
@@ -714,6 +825,38 @@ export async function openRoutine(
     accountKinds: RegistryKind[];
     value: RegistryKind[];
   } | null = null;
+
+  /** Append/insert a placement referencing `figureRef` — shared by addPlacement
+   *  (both its paths) and placeFigure. Returns the new placement's id, or null
+   *  when the section wasn't found (the not-yet-synced empty-doc edge — nothing
+   *  was placed). `sections?` guards that same edge. */
+  const pushPlacementRef = (
+    sectionId: string,
+    figureRef: string,
+    beforePlacementId?: string | null,
+    part?: { fromCount: number; toCount: number } | null,
+  ): string | null => {
+    let placementId: string | null = null;
+    routineConn.change((draft) => {
+      const section = draft.sections?.find((s) => s.id === sectionId);
+      if (section) {
+        // Insert before the anchor (insert-between) or append (#63). Backfill any
+        // legacy keyless placements first so the new key sorts correctly.
+        ensureSortKeys(section.placements);
+        const id = newId();
+        section.placements.push({
+          id,
+          figureRef,
+          // Portion window (Builder v3 ③) — only a catalog pick carries one.
+          ...(part ? { part: { fromCount: part.fromCount, toCount: part.toCount } } : {}),
+          sortKey: insertSortKey(section.placements, beforePlacementId),
+          deletedAt: null,
+        });
+        placementId = id;
+      }
+    });
+    return placementId;
+  };
 
   const store: RoutineStore = {
     readRoutine: readRoutineSafe,
@@ -789,40 +932,34 @@ export async function openRoutine(
       routineConn.commit(softDeleteSection(routineConn.current(), sectionId));
     },
 
-    addPlacement: (sectionId, figureName, figureTypeArg, barsArg, beforePlacementId) => {
+    addPlacement: (
+      sectionId,
+      figureName,
+      figureTypeArg,
+      countsArg,
+      beforePlacementId,
+      part,
+      onCreated,
+    ) => {
       const name = figureName.trim() || "New figure";
       const dance = readRoutineSafe().dance;
-      // Resolve the catalog preset this placement seeds from. An explicit pick supplies the
-      // canonical figureType → match on (figureType, name). A *typed* name (no figureType) is
-      // matched by name alone: the catalog figureType is hyphenated and a name-slug can't
-      // reproduce it for multi-word figures, so a typed "Reverse Turn" would otherwise miss
-      // its catalog entry and land as a blank custom. Only a name with no catalog match is
-      // truly custom.
+      // Resolve the catalog preset this placement seeds from — ONLY for an explicit
+      // pick, which supplies the canonical figureType → match on (figureType, name).
+      // A *typed* name (no figureType) ALWAYS mints the user's own custom figure,
+      // even one that collides with a catalog name: the custom form says "create
+      // your own", so typing "Natural Turn" must not silently place the global
+      // catalog doc (owner decision 2026-07-11 — reverses the earlier name-alone
+      // match; §4.3). The catalog is reached by tapping its preset in the picker.
       const preset =
         figureTypeArg != null
           ? LIBRARY_FIGURES.find(
               (f) => f.dance === dance && f.figureType === figureTypeArg && f.name === name,
             )
-          : LIBRARY_FIGURES.find((f) => f.dance === dance && f.name === name);
+          : undefined;
 
       /** Append/insert a placement referencing `figureRef` (shared by both paths). */
-      const placeRef = (figureRef: string): void => {
-        // `sections?` guards the not-yet-synced (empty A.init) doc edge.
-        routineConn.change((draft) => {
-          const section = draft.sections?.find((s) => s.id === sectionId);
-          if (section) {
-            // Insert before the anchor (insert-between) or append (#63). Backfill any
-            // legacy keyless placements first so the new key sorts correctly.
-            ensureSortKeys(section.placements);
-            section.placements.push({
-              id: newId(),
-              figureRef,
-              sortKey: insertSortKey(section.placements, beforePlacementId),
-              deletedAt: null,
-            });
-          }
-        });
-      };
+      const placeRef = (figureRef: string): string | null =>
+        pushPlacementRef(sectionId, figureRef, beforePlacementId, part);
 
       // ⟳v5 (§4.3): a CATALOG pick places a LIVE REFERENCE to the global figure doc
       // — no POST /api/figures, no account copy, no seeding. The placement points at
@@ -844,11 +981,14 @@ export async function openRoutine(
       // change triggers shows the placement as loading without eagerly opening (and
       // racing the seed of) its not-yet-created DO.
       pendingFigures.add(figureRef);
-      placeRef(figureRef);
+      const placementId = placeRef(figureRef);
+      // Create-navigates (§4.3): hand the fresh refs to the caller NOW — the step
+      // editor opens on its loading state and hydrates when the seed replays.
+      if (placementId) onCreated?.({ figureRef, placementId });
 
       // A fresh custom carries no charted timeline; its authored length defaults to
-      // the create flow's chosen `bars`, else 1 bar (defaultFigureBars of []).
-      const bars = barsArg ?? defaultFigureBars([], dance);
+      // the create flow's chosen `counts`, else a bar's worth of beats.
+      const counts = countsArg ?? DANCES[dance].beatsPerBar;
 
       // Project the figure to D1 + an owner membership AND server-seed its CRDT
       // content durably (#187/#205): POST /api/figures both projects the registry/
@@ -856,7 +996,7 @@ export async function openRoutine(
       // figure name is DO-persisted the instant it exists — no racy client seed
       // write that could be lost on an immediate reload. We then just OPEN the
       // figure connection so its (server-seeded) content replays on catch-up.
-      createFigure({ figureRef, name, dance, figureType, routineId, attributes: [], bars })
+      createFigure({ figureRef, name, dance, figureType, routineId, attributes: [], counts })
         .then(() => {
           // Created server-side (DO seeded) → safe to open: the catch-up replay
           // now carries the seed, so the figure hydrates deterministically.
@@ -873,6 +1013,14 @@ export async function openRoutine(
           console.warn("figure create failed; placement will retry connecting lazily", err);
           notify();
         });
+    },
+
+    placeFigure: (sectionId, figureRef, beforePlacementId) => {
+      // Assembly of an EXISTING doc (⟳v5 §4.2): the figure already lives in its
+      // own DO (an account custom/variant) or is a global catalog ref — no POST,
+      // no seeding. It resolves through the normal lazy figure path on render.
+      pushPlacementRef(sectionId, figureRef, beforePlacementId);
+      notify(); // re-render so the reference resolves + renders
     },
 
     movePlacement: (sectionId, placementId, direction) => {
@@ -932,7 +1080,7 @@ export async function openRoutine(
     },
 
     setFigureAttributes: (figureRef, rawAttributes) => {
-      const figure = readFigureDoc(figureConn(figureRef));
+      const figure = figureOwnDoc(figureRef);
       // Dance gate (write path): drop any attribute whose kind does not apply to
       // this figure's dance — e.g. a `rise` value can never land on a Tango figure
       // (§3/§10.2). This mirrors the domain `parseAttributeWrite` rejection at the
@@ -944,18 +1092,21 @@ export async function openRoutine(
       editFigure(figureRef, { attributes });
     },
 
-    setFigureBars: (figureRef, rawBars) => {
-      editFigure(figureRef, { bars: Math.max(1, Math.round(rawBars)) });
+    setFigureCounts: (figureRef, rawCounts) => {
+      // The LENGTH stepper cannot shrink a figure below its last live step
+      // (figure-length invariant, §2.5.2): a step must never land off the grid.
+      // Floor the requested length at the figure's step SPAN — self-healing, so
+      // dragging LENGTH down stops at the last notated beat instead of orphaning
+      // it. (Reads self-heal too via `resolveFigureCounts`; this keeps the STORED
+      // value honest.) Clamped into the authored 1–64 range.
+      const span = stepSpan(figureOwnDoc(figureRef)?.attributes ?? []);
+      const requested = Math.min(64, Math.max(1, Math.round(rawCounts)));
+      editFigure(figureRef, { counts: Math.max(requested, span) });
     },
-
-    setFigureAlignment: (figureRef, edge, alignment) => {
-      // Entry/exit alignment lives on the figure doc (US-031). Clearing deletes
-      // the key (Automerge can't store undefined).
-      const key = edge === "entry" ? "entryAlignment" : "exitAlignment";
-      figureConn(figureRef).change((draft) => {
-        if (alignment) draft[key] = alignment;
-        else delete draft[key];
-      });
+    renameFigure: (figureRef, name) => {
+      const next = name.trim();
+      if (!next) return;
+      editFigure(figureRef, { name: next });
     },
 
     readAnnotations: () => readRoutineSafe().annotations,
@@ -1034,12 +1185,14 @@ export async function openRoutine(
       notify();
     },
 
+    isForking: (figureRef) => cowInFlight.has(figureRef),
+
     undo: () => {
       const actorId = actor ?? "local";
       const before = routineConn.current();
       // Peek the soft hint on the PRE-undo doc (the undo itself adds a change
       // that would otherwise perturb the dependency graph). Undo still always
-      // proceeds — this is advisory only (US-038 AC-3, PLAN §5.4).
+      // proceeds — this is advisory only (US-038 AC-3, docs/concepts/collaboration.md § Undo).
       const superseded = wasSupersededByOthers(before, actorId);
       const after = undoLastChange(before, actorId);
       // undoLastChange returns the SAME doc reference on a no-op (nothing to undo).
@@ -1087,12 +1240,38 @@ export async function openRoutine(
     // secondary. "live" once the routine DO's catch-up replay has arrived.
     syncState: () => routineConn.state(),
 
+    // §11.2: undelivered local changes across the routine + every figure doc.
+    pendingSyncCount: () => {
+      let n = routineConn.pendingSyncCount();
+      for (const conn of figureConns.values()) n += conn.pendingSyncCount();
+      return n;
+    },
+
     close: () => {
       for (const t of hydrationTimers.values()) cancel(t);
       hydrationTimers.clear();
       routineConn.close();
       for (const conn of figureConns.values()) conn.close();
     },
+  };
+
+  /**
+   * The figure's OWN doc (its base content, pre-overlay) resolved via the same
+   * fallback chain as {@link resolveFigure} — but WITHOUT opening a connection for
+   * a catalog reference. A placed catalog figure (⟳v5, §4.3) has no seeded DO of
+   * its own — its content lives in the bundled catalog — so this resolves the
+   * catalog FIRST (mirroring `openFigure`'s early return: opening a doomed 403-ing
+   * connection to an unseeded global DO would churn reconnect/backoff for nothing).
+   * A real account figure / variant reads from its own live DO (opening is correct),
+   * falling back to the routine snapshot. Used by the write paths (`editFigure`,
+   * `setFigureAttributes`) so a catalog-reference edit is recognized as `global`
+   * scope and spawns a variant instead of a silently-rejected in-place write.
+   */
+  const figureOwnDoc = (figureRef: string): FigureDoc | null => {
+    const catalog = catalogFigureFor(figureRef);
+    if (catalog) return catalog;
+    const live = readFigureDoc(figureConn(figureRef));
+    return live ?? figureContent?.(figureRef) ?? null;
   };
 
   /**
@@ -1111,11 +1290,21 @@ export async function openRoutine(
    *
    * Shared by `setFigureAttributes` and `setFigureBars`.
    */
-  function editFigure(figureRef: string, patch: { attributes?: Attribute[]; bars?: number }): void {
-    const figure = readFigureDoc(figureConn(figureRef));
+  function editFigure(
+    figureRef: string,
+    patch: { attributes?: Attribute[]; counts?: number; name?: string },
+  ): void {
+    const figure = figureOwnDoc(figureRef);
 
     // ⟳v5 variant-on-edit of a GLOBAL figure (non-admin). The DO boundary rejects a
     // non-admin's direct write regardless; the client realizes the edit as a variant.
+    // `figureOwnDoc` (not a bare live read) is essential here: a PLACED CATALOG
+    // reference has no seeded DO of its own, so reading only its (unhydrated,
+    // 403-ing) live connection returns null → the global scope is missed → the edit
+    // wrongly falls through to the in-place write below, which the DO silently
+    // rejects (the "Step placed" toast fires, but nothing persists — the bug this
+    // guards against). Resolving via the bundled catalog detects `scope: "global"`
+    // so a catalog-reference edit spawns a variant like any other global edit.
     if (figure?.scope === "global") {
       spawnVariantForEdit(figureRef, figure, patch);
       return;
@@ -1134,20 +1323,21 @@ export async function openRoutine(
           ? variantAttributesForEdit(base, patch.attributes)
           : patch.attributes;
       }
-      if (patch.bars !== undefined) draft.bars = patch.bars;
+      if (patch.counts !== undefined) draft.counts = patch.counts;
+      if (patch.name !== undefined) draft.name = patch.name;
     });
   }
 
   /**
    * Spawn a live overlay variant for a non-admin editing a GLOBAL figure (§5.2).
    * The variant owns ONLY the edited beats (`spawnVariant` → `variantAttributesForEdit`);
-   * `bars`/alignment resolve live from the base until the variant authors its own
-   * (§2.5.2), so they are forwarded only when the user actually patched `bars`.
+   * `bars` resolves live from the base until the variant authors its own
+   * (§2.5.2), so it is forwarded only when the user actually patched it.
    */
   function spawnVariantForEdit(
     figureRef: string,
     base: FigureDoc,
-    patch: { attributes?: Attribute[]; bars?: number },
+    patch: { attributes?: Attribute[]; counts?: number; name?: string },
   ): void {
     const loc = findPlacement(figureRef);
     if (!loc) return;
@@ -1155,6 +1345,7 @@ export async function openRoutine(
     // before the first re-point lands would orphan a variant). Cleared on both paths.
     if (cowInFlight.has(figureRef)) return;
     cowInFlight.add(figureRef);
+    notify(); // reactive: the editor flips into its "making this figure yours…" pending state
 
     // The editor operates on the RESOLVED timeline (a global figure is standalone,
     // so that's its own attributes); spawnVariant diffs it against the base to keep
@@ -1177,9 +1368,9 @@ export async function openRoutine(
       figureType: variant.figureType,
       routineId,
       attributes: variant.attributes, // ⟳v5: ONLY the owned beats, not a full copy
-      // bars/alignment are NOT copied — they resolve live from the base (§2.5.2)
-      // until the variant authors its own; forward `bars` only if the user set it.
-      ...(patch.bars != null ? { bars: patch.bars } : {}),
+      // length is NOT copied — it resolves live from the base (§2.5.2) until the
+      // variant authors its own; forward `counts` only if the user set it.
+      ...(patch.counts != null ? { counts: patch.counts } : {}),
       baseFigureRef: variant.baseFigureRef ?? base.id,
     })
       .then(() => {
@@ -1198,7 +1389,7 @@ export async function openRoutine(
             draft.name = variant.name;
             draft.baseFigureRef = variant.baseFigureRef ?? base.id; // LIVE link
             draft.attributes = variant.attributes; // owned beats only
-            if (patch.bars != null) draft.bars = patch.bars;
+            if (patch.counts != null) draft.counts = patch.counts;
             draft.schemaVersion = base.schemaVersion;
             draft.deletedAt = null;
           });
@@ -1213,13 +1404,25 @@ export async function openRoutine(
         // 4) Tell the screen to toast "made this figure yours".
         onCopyOnWrite?.(variant.id);
         cowInFlight.delete(figureRef);
+        notify(); // clear the "making this figure yours…" pending state
       })
       .catch((err) => {
-        // The variant POST failed (auth/network/quota): leave the placement on the
-        // base figure (no re-point, no toast) — the edit drops rather than corrupting
-        // state with a dangling variant reference.
-        console.warn("variant spawn failed; placement left on the base figure", err);
+        // The variant POST failed: leave the placement on the base figure (no
+        // re-point) — the edit drops rather than corrupting state with a dangling
+        // variant reference. But it must NOT drop SILENTLY: the optimistic "Step
+        // placed" toast already fired, so without this the user sees success then
+        // a vanished step (the reported bug). Tell the screen so it can surface a
+        // retry/refusal toast, and report the bug-shaped classes to Sentry — a CoW
+        // spawn should essentially never fail for a signed-in editor, so an
+        // `unexpected` failure (e.g. the 409 conflict this PR's migration fixes) is
+        // signal worth an event, not a swallowed console.warn.
         cowInFlight.delete(figureRef);
+        notify(); // clear the pending state — the edit didn't land (error toast follows)
+        const reason = classifyCowError(err);
+        if (reason === "unexpected") {
+          reportError(err, { key: `cow-spawn:${figureRef}` });
+        }
+        onCopyOnWriteError?.({ figureRef, reason });
       });
   }
 
@@ -1241,9 +1444,7 @@ export async function openRoutine(
    * base connection → the routine snapshot (`figureContent`) → the bundled catalog
    * (always available for a `global:` base). Returns null when no source has it.
    */
-  const resolveBaseContent = (
-    baseRef: string,
-  ): Pick<FigureDoc, "attributes" | "bars" | "entryAlignment" | "exitAlignment"> | null => {
+  const resolveBaseContent = (baseRef: string): Pick<FigureDoc, "attributes" | "bars"> | null => {
     const conn = figureConns.get(baseRef);
     const live = conn ? readFigureDoc(conn) : null;
     if (live) return live;
@@ -1253,8 +1454,6 @@ export async function openRoutine(
     if (cat) {
       return {
         attributes: cat.attributes ?? [],
-        ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-        ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
       };
     }
     return null;
@@ -1278,10 +1477,8 @@ export async function openRoutine(
       dance: cat.dance,
       name: cat.name,
       source: "library",
-      bars: defaultFigureBars(attributes, cat.dance),
+      counts: defaultFigureCounts(attributes),
       attributes,
-      ...(cat.entryAlignment ? { entryAlignment: cat.entryAlignment } : {}),
-      ...(cat.exitAlignment ? { exitAlignment: cat.exitAlignment } : {}),
       schemaVersion: 1,
       deletedAt: null,
     };

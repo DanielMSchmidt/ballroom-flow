@@ -26,7 +26,7 @@ const sampleKind = {
   cardinality: "single" as const,
   valueType: "enum",
   values: ["low", "high"],
-  appliesToDances: ["waltz", "foxtrot"] as string[],
+  appliesToDances: ["waltz", "foxtrot"],
   builtin: false,
 };
 
