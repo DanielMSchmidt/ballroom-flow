@@ -232,4 +232,128 @@ test.describe("@smoke attribute-predicate anchors", () => {
     await closeUsers(coach, student);
     await stranger.close();
   });
+
+  test("@smoke edit-after-authoring: retagging a matching step's sway drops the predicate note (issue #284)", async ({
+    page,
+  }) => {
+    // Regression (issue #284): the feature's headline dynamic promise — "retag or
+    // remove it and the note drops — all on read". The original ship gate never
+    // edited notation after authoring, so this re-evaluation path shipped broken.
+    // Here: author a `to_L` note (surfaces on count 2), then edit that step's sway
+    // left → right in the figure editor (a copy-on-write variant), and assert the
+    // note DROPS from count 2 in the reading view — matched over the RESOLVED
+    // variant timeline, exactly as a dancer would see it.
+    test.setTimeout(120_000);
+    const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    const FIG = `fig_pred_edit_${run}`;
+    const RT = `rt_pred_edit_${run}`;
+    await resetDb(page);
+    await seedDb(page, {
+      users: [{ id: COACH, displayName: "Coach", identityColor: "#c0563f" }],
+      figures: [
+        {
+          docRef: FIG,
+          scope: "global",
+          ownerId: "app",
+          figureType: "whisk",
+          dance: "waltz",
+          name: "Whisk",
+          attributes: swayAttributes(),
+        },
+      ],
+      docs: [
+        {
+          docRef: RT,
+          type: "routine",
+          ownerId: COACH,
+          title: "Edit Waltz",
+          dance: "waltz",
+          sections: [{ id: "se", name: "Intro", placements: [{ id: "pe1", figureRef: FIG }] }],
+        },
+      ],
+      memberships: [{ docRef: RT, userId: COACH, role: "editor" }],
+      placementEdges: [{ routineRef: RT, figureRef: FIG }],
+    });
+    await seedAuth(page, COACH);
+    await page.goto("/");
+
+    // Author the dance-scoped `to_L` note through the Journal link picker.
+    const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
+    await nav.getByRole("button", { name: "Journal" }).click();
+    await page.getByRole("button", { name: "New entry", exact: true }).click();
+    await page.getByLabel("entry text").fill("soften every left sway");
+    await page.getByText(/link to a step, figure or attribute/i).click();
+    await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Edit Waltz/ }).click();
+    await page.getByText("An attribute").click();
+    await page.getByText("Sway", { exact: true }).click();
+    await page.getByText("to_L", { exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Which side?" })
+      .getByRole("button", { name: /^done$/i })
+      .click();
+    await page.getByText(/All my Waltz choreos|All my waltz choreos/).click();
+    await page.getByRole("button", { name: "done", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Journal", level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Before the edit: the note surfaces on count 2 (the left sway) only.
+    await page.goto(`/routines/${RT}`);
+    const readingRow2 = () =>
+      page.getByTestId("reading-view").getByRole("button", { name: /notes — count 2/i });
+    await expect(readingRow2()).toContainText("soften every left sway", { timeout: 15_000 });
+
+    // Edit the Whisk's sway at count 2 from LEFT → RIGHT. Opening an existing
+    // routine lands in READ; switch to EDIT to reach the step timeline editor.
+    await page.getByRole("button", { name: /list view/i }).click();
+    await page.getByRole("button", { name: /edit steps: Whisk/i }).click();
+    await page.getByRole("button", { name: /^Edit Sway at count 2$/i }).click();
+    // The sway value chips read as full labels ("Sway right" / "Sway left").
+    // Selecting the value auto-saves (onChange) — which for a global figure spawns
+    // a copy-on-write variant, re-rendering the editor into its "making this figure
+    // yours" pending state (so we don't race a now-detaching "Done" button).
+    await page.getByRole("button", { name: /^Sway right$/ }).click();
+    await expect(page.getByText(/made this figure yours/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    // Wait until the async copy-on-write COMPLETES (POST /api/figures + the
+    // placement re-point synced to the routine DO) before reloading — the
+    // divergence-derived "Custom" badge is the observable that the re-point landed,
+    // so a reload sees the variant, not the still-base placement (a sync race).
+    await expect(page.getByText(/^Custom$/)).toBeVisible({ timeout: 15_000 });
+
+    // Back in the reading view. The edit was a sway write, which stores leader
+    // `to_R` + follower `to_L` (the same physical lean — sway MIRRORS, WEP-0008).
+    // Predicate matching now respects the ACTIVE ROLE LENS, so the note tracks the
+    // side that actually shows a left sway. Pin the lens deterministically via its
+    // persisted key (`bb_role`) so the assertions don't depend on a stored default.
+    const setLens = (lens: "leader" | "follower") =>
+      page.addInitScript((v) => window.localStorage.setItem("bb_role", v), lens);
+
+    // LEADER lens (the QA repro's view): count 2 renders the leader's RIGHT sway.
+    // A full reload (via about:blank) makes the init-script's `bb_role` take on a
+    // fresh mount — an SPA route change wouldn't re-read the persisted lens.
+    await setLens("leader");
+    await page.goto("about:blank");
+    await page.goto(`/routines/${RT}`);
+    const reading = page.getByTestId("reading-view");
+    await expect(reading.getByRole("button", { name: /^About Sway — R$/ })).toHaveCount(2, {
+      timeout: 20_000,
+    });
+    // The regression assertion (issue #284): under the leader lens NO left sway is
+    // shown, so the `to_L` note drops from count 2 and surfaces nowhere.
+    await expect(readingRow2()).not.toContainText("soften every left sway");
+    await expect(page.getByText("soften every left sway")).toBeHidden();
+
+    // FOLLOWER lens: the follower still sways LEFT on count 2 (the mirror), so the
+    // note correctly surfaces there — matching what that dancer actually sees.
+    await setLens("follower");
+    await page.goto("about:blank");
+    await page.goto(`/routines/${RT}`);
+    await expect(reading.getByRole("button", { name: /^About Sway — L$/ })).toHaveCount(1, {
+      timeout: 20_000,
+    });
+    await expect(readingRow2()).toContainText("soften every left sway");
+  });
 });
