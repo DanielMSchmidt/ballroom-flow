@@ -1,6 +1,13 @@
 // @weavesteps/domain — pure domain logic, no I/O.
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
+export {
+  ACTIVE_WINDOW_MS,
+  type ActivitySource,
+  lastActivity,
+  partitionByActivity,
+  SESSION_GAP_WINDOW_MS,
+} from "./annotation-activity";
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
   type BuildDemoSeedOptions,
