@@ -32,6 +32,7 @@ import {
   type AnnotationKind,
   addFamilyNote,
   addLibraryRef,
+  addPredicateNote,
   CURRENT_SCHEMA_VERSION,
   type DanceId,
   type Role,
@@ -78,6 +79,24 @@ export interface OwnFamilyNote {
   role?: Role;
 }
 
+/**
+ * The user's OWN predicate note as the store reads it from the account doc — the self-read
+ * counterpart to `store/predicate-notes.ts`'s `PredicateNote` (the about-others REST shape).
+ * Flattens the doc annotation's single `attributePredicate` anchor.
+ */
+export interface OwnPredicateNote {
+  id: string;
+  authorId: string;
+  kind: AnnotationKind;
+  text: string;
+  attrKind: string;
+  attrValue: string;
+  role?: "leader" | "follower";
+  scope: DanceId | "all" | "routine";
+  routineRef?: string;
+  createdAt: number;
+}
+
 /** The reactive account seam a component consumes: read + mutate, nothing else. */
 export interface AccountStore {
   /** The library bookmark set (figureRefs) — the source of truth for WHICH refs
@@ -98,7 +117,21 @@ export interface AccountStore {
     count?: number;
     role?: Role;
   }): void;
-  /** Soft-delete one of the user's family notes (tombstone, never a hard removal). */
+  /** The user's OWN attribute-predicate notes (tombstones dropped). */
+  readOwnPredicateNotes(): OwnPredicateNote[];
+  /** Author an attribute-predicate note (works offline once hydrated). */
+  createPredicateNote(input: {
+    attrKind: string;
+    attrValue: string;
+    role?: Role;
+    scope: DanceId | "all" | "routine";
+    routineRef?: string;
+    kind: AnnotationKind;
+    text: string;
+  }): void;
+  /** Soft-delete one of the user's family notes (tombstone, never a hard removal).
+   *  Reused for predicate notes too — softDeleteAccountAnnotation tombstones ANY
+   *  account annotation. */
   deleteFamilyNote(noteId: string): void;
   /** Subscribe to any advance (local or synced edit); returns an unsubscribe fn. */
   subscribe(fn: () => void): () => void;
@@ -180,6 +213,26 @@ function toOwnFamilyNote(a: Annotation): OwnFamilyNote | null {
   };
 }
 
+/** Flatten a doc annotation's single `attributePredicate` anchor into an OwnPredicateNote.
+ *  Returns null for any other annotation (so a family note doesn't leak into the predicate
+ *  list, and vice-versa), keeping the read total. */
+function toOwnPredicateNote(a: Annotation): OwnPredicateNote | null {
+  const anchor = a.anchors[0];
+  if (anchor?.type !== "attributePredicate") return null;
+  return {
+    id: a.id,
+    authorId: a.authorId,
+    kind: a.kind,
+    text: a.text,
+    attrKind: anchor.kind,
+    attrValue: anchor.value,
+    scope: anchor.scope,
+    createdAt: a.createdAt,
+    ...(anchor.role != null ? { role: anchor.role } : {}),
+    ...(anchor.routineRef != null ? { routineRef: anchor.routineRef } : {}),
+  };
+}
+
 /**
  * Open the current user's account doc: connect to its DO (`account:<userId>`,
  * owner-only) and return the reactive store. The first connect seeds the doc
@@ -249,6 +302,7 @@ export async function openAccount(
   // Derived own-notes memo: reuse the SAME array when the (reconcile-stable)
   // annotations subtree didn't change, so an unrelated re-render doesn't churn.
   let ownNotesCache: { annotations: Annotation[]; value: OwnFamilyNote[] } | null = null;
+  let ownPredicateCache: { annotations: Annotation[]; value: OwnPredicateNote[] } | null = null;
 
   const store: AccountStore = {
     readLibraryRefs: () => readAccountSafe().libraryFigureRefs ?? [],
@@ -278,8 +332,37 @@ export async function openAccount(
       conn.commit(removeLibraryRef(conn.current(), figureRef));
     },
 
+    readOwnPredicateNotes: () => {
+      const annotations = readAccountSafe().annotations;
+      if (ownPredicateCache && ownPredicateCache.annotations === annotations)
+        return ownPredicateCache.value;
+      const value: OwnPredicateNote[] = [];
+      for (const a of annotations) {
+        const note = toOwnPredicateNote(a);
+        if (note) value.push(note);
+      }
+      ownPredicateCache = { annotations, value };
+      return value;
+    },
+
     createFamilyNote: (input) => {
       conn.commit(addFamilyNote(conn.current(), { authorId: currentUserId, ...input }));
+    },
+
+    createPredicateNote: (input) => {
+      // The store surface uses `role`; the domain mutator uses `attrRole`.
+      conn.commit(
+        addPredicateNote(conn.current(), {
+          authorId: currentUserId,
+          kind: input.kind,
+          text: input.text,
+          attrKind: input.attrKind,
+          attrValue: input.attrValue,
+          scope: input.scope,
+          ...(input.role != null ? { attrRole: input.role } : {}),
+          ...(input.routineRef != null ? { routineRef: input.routineRef } : {}),
+        }),
+      );
     },
 
     deleteFamilyNote: (noteId) => {

@@ -7,8 +7,8 @@
 // and that the rendered surface is axe-clean.
 import { describe, expect, it } from "vitest";
 import { axeCheck, renderUi, screen, userEvent } from "../test-support/render";
-import type { AccountStore, OwnFamilyNote } from "./account";
-import { useLibraryRefs, useOwnFamilyNotes } from "./use-account";
+import type { AccountStore, OwnFamilyNote, OwnPredicateNote } from "./account";
+import { useLibraryRefs, useOwnFamilyNotes, useOwnPredicateNotes } from "./use-account";
 
 /**
  * A minimal in-memory AccountStore stand-in that drives the hooks reactively —
@@ -20,12 +20,14 @@ function fakeStore(): AccountStore {
   const listeners = new Set<() => void>();
   let refs: string[] = [];
   let notes: OwnFamilyNote[] = [];
+  let preds: OwnPredicateNote[] = [];
   const notify = (): void => {
     for (const fn of listeners) fn();
   };
   return {
     readLibraryRefs: () => refs,
     readOwnFamilyNotes: () => notes,
+    readOwnPredicateNotes: () => preds,
     addBookmark: (r) => {
       if (!refs.includes(r)) {
         refs = [...refs, r];
@@ -50,8 +52,27 @@ function fakeStore(): AccountStore {
       ];
       notify();
     },
+    createPredicateNote: (input) => {
+      preds = [
+        ...preds,
+        {
+          id: `pred-${preds.length}`,
+          authorId: "u1",
+          kind: input.kind,
+          text: input.text,
+          attrKind: input.attrKind,
+          attrValue: input.attrValue,
+          scope: input.scope,
+          createdAt: preds.length,
+          ...(input.role ? { role: input.role } : {}),
+          ...(input.routineRef ? { routineRef: input.routineRef } : {}),
+        },
+      ];
+      notify();
+    },
     deleteFamilyNote: (id) => {
       notes = notes.filter((n) => n.id !== id);
+      preds = preds.filter((n) => n.id !== id);
       notify();
     },
     subscribe: (fn) => {
@@ -68,6 +89,7 @@ function fakeStore(): AccountStore {
 function LibrarySurface({ store }: { store: AccountStore }): React.JSX.Element {
   const refs = useLibraryRefs(store);
   const notes = useOwnFamilyNotes(store);
+  const preds = useOwnPredicateNotes(store);
   return (
     <main>
       <h1>My library</h1>
@@ -97,6 +119,25 @@ function LibrarySurface({ store }: { store: AccountStore }): React.JSX.Element {
       >
         Author note
       </button>
+      <ul aria-label="my predicate notes">
+        {preds.map((n) => (
+          <li key={n.id}>{n.text}</li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() =>
+          store.createPredicateNote({
+            attrKind: "sway",
+            attrValue: "left",
+            scope: "waltz",
+            kind: "note",
+            text: "soften left sways",
+          })
+        }
+      >
+        Author predicate note
+      </button>
     </main>
   );
 }
@@ -118,6 +159,14 @@ describe("useLibraryRefs / useOwnFamilyNotes (WEP-0002 seam hooks)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /author note/i }));
     expect(screen.getByText("head left")).toBeInTheDocument();
+  });
+
+  it("shows an authored predicate note reactively (offline-capable compose path)", async () => {
+    const store = fakeStore();
+    renderUi(<LibrarySurface store={store} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /author predicate note/i }));
+    expect(screen.getByText("soften left sways")).toBeInTheDocument();
   });
 
   it("is axe-clean", async () => {
