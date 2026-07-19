@@ -435,7 +435,7 @@ function useStablePredicateNotesByFigure(
       const matches: PredicateMatch[] = [];
       for (const note of predicateNotes) {
         const anchor = note.anchors[0];
-        if (!anchor || anchor.type !== "attributePredicate") continue;
+        if (anchor?.type !== "attributePredicate") continue;
         // Confine a routine-scoped anchor to its own routine (the caller's gate).
         if (anchor.scope === "routine" && anchor.routineRef !== routineId) continue;
         const counts = matchPredicate(anchor, figure);
