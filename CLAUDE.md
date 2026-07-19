@@ -137,9 +137,11 @@ directly to `main` — it deploys to production** (merging a PR is a release).
   worst bugs all lived in "small-looking" diffs of exactly that class.
 - **`development` is the integration branch for `docs/ideas/` implementation work**
   (resurrected 2026-07-19; it deploys to **staging**). Idea/WEP implementation PRs target
-  `development`; everything else targets `main`. `sync-development.yml` merges every
-  `main` push into `development` automatically, so it never falls behind; promoting
-  `development` to `main` is an ordinary PR (that merge is the release).
+  `development`; everything else targets `main`. `sync-development.yml` **rebases
+  `development` onto every `main` push and force-pushes** (history = "main + what's
+  still staging"), so after a sync, re-fetch before pushing to `development` and rebase
+  any still-open stacked branches. Promoting `development` to `main` is an ordinary PR
+  (that merge is the release).
 - Historical note: the original `development` → staging branch was merged and deleted
   2026-07-05 (PR #161); between then and 2026-07-19 everything flowed through `main`.
 
