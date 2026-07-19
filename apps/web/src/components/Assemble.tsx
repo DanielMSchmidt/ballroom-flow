@@ -474,7 +474,9 @@ export function Assemble({
   const reloadFamilyNotes = useCallback(async () => {
     if (!getToken) return;
     try {
-      setCoMemberNotes(await loadFamilyNotes(routineId, await getToken()));
+      setCoMemberNotes(
+        await loadFamilyNotes(routineId, await getToken(), "", () => getToken({ skipCache: true })),
+      );
     } catch {
       // Surfacing family notes is best-effort; a failure must not block authoring.
     }
