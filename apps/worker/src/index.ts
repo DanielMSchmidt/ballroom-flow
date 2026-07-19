@@ -4,12 +4,14 @@ import {
   zCreateRoutine,
   zFamilyNoteBody,
   zFigureRefBody,
+  zInterpretVoiceNote,
   zIssueInvite,
   zProfileBody,
   zRegistryKind,
   zSaveToLibrary,
 } from "@weavesteps/contract";
 import {
+  type ChoreoContext,
   CURRENT_SCHEMA_VERSION,
   can,
   type FigureDoc,
@@ -19,6 +21,8 @@ import {
   LIBRARY_FIGURES,
   newId,
   parseAttributeWrite,
+  type RoutineDoc,
+  serializeChoreoContext,
 } from "@weavesteps/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -54,6 +58,7 @@ import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
 import { ensureGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
+import { groundProposal, voiceAiFor } from "./voice-ai";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
 // state (not a stale module boolean). A cheap indexed existence check (ownerId
@@ -1068,6 +1073,143 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   );
 
   return c.json({ routine, figures, bases });
+});
+
+// ── AI voice notes (docs/concepts/annotations.md § The Journal, docs/system/
+// architecture.md) — the READ-ONLY interpret/transcribe routes. A dancer speaks a
+// note; a Workers AI text model resolves it against the figures ACTUALLY in the
+// caller's choreos into a PROPOSED anchor; the client confirms and it commits
+// through the EXISTING annotation seams. These routes NEVER write D1, a DO, or the
+// CRDT — the AI stays entirely outside the permission/CRDT boundary.
+//
+// The Workers AI binding (`AI`) exists only in deployed wrangler envs; dev, unit
+// tests, and E2E run the deterministic fixture seam (`voiceAiFor`), so the
+// zero-secret test matrix holds. Every model output is re-validated with Zod AND
+// grounded against the assembled context (`groundProposal`) — never trusted.
+
+/**
+ * Assemble the caller's in-scope choreography for grounding — the SAME per-figure
+ * authorization the snapshot route uses (a routine's placements are
+ * caller-controlled CRDT content, so the routine's role does NOT imply the right
+ * to read every figure ref it lists; gate each ref individually). Scope: one
+ * routine when `routineRef` is given (gated by `resolveEffectiveRole`), else the
+ * caller's annotate-capable routines (role !== "viewer"). READ-ONLY.
+ */
+async function assembleVoiceContext(
+  env: Env,
+  userId: string,
+  routineRef: string | undefined,
+): Promise<ChoreoContext> {
+  const doc = (id: string) => env.DOC_DO.get(env.DOC_DO.idFromName(id));
+
+  // The routine refs in scope, each already confirmed annotate-capable.
+  let routineRefs: string[];
+  if (routineRef != null) {
+    const role = await resolveEffectiveRole(env.DB, routineRef, userId);
+    routineRefs = role && role !== "viewer" ? [routineRef] : [];
+  } else {
+    const listed = await listRoutines(env.DB, userId);
+    // Owned routines have role "owner"; shared ones carry their membership role.
+    // Mirror store/journal.ts: only annotate-capable (non-viewer) routines.
+    routineRefs = listed.filter((r) => r.role !== "viewer").map((r) => r.docRef);
+  }
+
+  const entries: {
+    routine: RoutineDoc;
+    figures: Record<string, FigureDoc>;
+    bases: Record<string, FigureDoc>;
+  }[] = [];
+  for (const ref of routineRefs) {
+    const routine = await doc(ref).getSnapshot();
+    // Every LIVE placement's figure (tombstoned placements + breaks dropped).
+    const figureRefs = new Set<string>();
+    for (const section of routine.sections ?? []) {
+      for (const p of section.placements ?? []) {
+        if (p.deletedAt == null && p.figureRef) figureRefs.add(p.figureRef);
+      }
+    }
+    // PER-FIGURE AUTHORIZATION (security) — identical to the snapshot route: gate
+    // every ref on the caller's ACTUAL effective role and drop the ones they
+    // can't read (a placement can name any docRef the caller has learned).
+    const figures: Record<string, FigureDoc> = {};
+    await Promise.all(
+      [...figureRefs].map(async (fref) => {
+        if (!(await resolveEffectiveRole(env.DB, fref, userId))) return;
+        const fig = await readFigureSnapshot(doc(fref));
+        if (!fig?.figureType) return;
+        figures[fref] = fig;
+      }),
+    );
+    // Fan out to each distinct BASE a variant resolves against (⟳v5), gated the
+    // same way — so the serializer folds the live timeline (resolveFigure).
+    const baseRefs = new Set<string>();
+    for (const fig of Object.values(figures)) {
+      if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
+    }
+    const bases: Record<string, FigureDoc> = {};
+    await Promise.all(
+      [...baseRefs].map(async (bref) => {
+        if (!(await resolveEffectiveRole(env.DB, bref, userId))) return;
+        const base = await readFigureSnapshot(doc(bref));
+        if (!base?.figureType) return;
+        bases[bref] = base;
+      }),
+    );
+    entries.push({ routine, figures, bases });
+  }
+  return serializeChoreoContext(entries);
+}
+
+// POST /api/voice-notes/interpret — resolve a spoken transcript against the
+// caller's choreography into a PROPOSED anchor. READ-ONLY (no D1/DO/CRDT write).
+//   • unauthenticated → 401  • malformed body → 400
+//   • otherwise → 200 { resolved, noteText, confidence, proposed, alternatives }
+// A model/seam failure degrades to the resolved:false fallback, never a 500 with
+// a half-trusted body.
+app.post("/api/voice-notes/interpret", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const parsed = zInterpretVoiceNote.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_voice_note" }, 400);
+  const { transcript, routineRef } = parsed.data;
+
+  const context = await assembleVoiceContext(c.env, user.sub, routineRef);
+  try {
+    const raw = await voiceAiFor(c.env).interpret(transcript, context);
+    return c.json(groundProposal(raw, context, transcript));
+  } catch (err) {
+    // A seam failure is never a wrong anchor — degrade to transcribe-only.
+    void reportError(c.env, err, { url: safeReportUrl(c.req.url), method: c.req.method });
+    return c.json({
+      resolved: false,
+      noteText: transcript,
+      confidence: "low",
+      proposed: null,
+      alternatives: [],
+    });
+  }
+});
+
+// POST /api/voice-notes/transcribe — Whisper-fallback STT for the in-scope clip.
+// The audio is NEVER stored (transcribe and discard). READ-ONLY.
+//   • unauthenticated → 401  • body > 4 MiB → 413  • otherwise → 200 { transcript }
+app.post("/api/voice-notes/transcribe", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  // A ~15 s clip is far below this; a defensive storage/latency bound (a caller
+  // can't stream an arbitrarily large body into the STT model).
+  if (bytes.byteLength > 4 * 1024 * 1024) return c.json({ error: "audio_too_large" }, 413);
+  // Seed the STT with the in-scope figure names (names only) so ballroom jargon
+  // transcribes; the context is assembled read-only exactly like /interpret.
+  const context = await assembleVoiceContext(
+    c.env,
+    user.sub,
+    c.req.query("routineRef") ?? undefined,
+  );
+  const initialPrompt = context.choreos.flatMap((ch) => ch.figures.map((f) => f.name)).join(", ");
+  const transcript = await voiceAiFor(c.env).transcribe(bytes, { initialPrompt });
+  return c.json({ transcript });
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in
