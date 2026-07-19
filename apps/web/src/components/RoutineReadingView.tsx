@@ -41,7 +41,7 @@ import { timelineMessages } from "../i18n/messages/timeline";
 import type { FamilyNote } from "../store/family-notes";
 import type { PredicateNote } from "../store/predicate-notes";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
-import { AttrChip, cx, IDENTITY_COLORS, kindVar, SectionDivider, Skeleton } from "../ui";
+import { AttrChip, cx, IDENTITY_COLORS, kindVar, MediaChip, SectionDivider, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
 import {
@@ -80,11 +80,34 @@ interface MarginNote {
    *  scope cue read before the snippet (#285: a predicate note is NOT a family
    *  note, so it must not be announced as one). `"routine"` carries no cue. */
   scope: "routine" | "family" | "predicate";
+  /** Live image/video counts for the compact MediaChip (YouTube counts as video).
+   *  docs/concepts/annotations.md § Media: the margin shows a chip, NEVER the media. */
+  images: number;
+  videos: number;
+}
+
+/** Count an annotation's LIVE media items by chip bucket (YouTube counts as video). */
+function mediaCounts(media: Annotation["media"]): { images: number; videos: number } {
+  let images = 0;
+  let videos = 0;
+  for (const m of media ?? []) {
+    if (m.deletedAt != null) continue;
+    if (m.type === "image") images += 1;
+    else videos += 1;
+  }
+  return { images, videos };
 }
 
 /** Adapt a routine annotation into the unified margin shape (never a family note). */
 function annotationMarginNote(a: Annotation): MarginNote {
-  return { id: a.id, authorId: a.authorId, text: a.text, createdAt: a.createdAt, scope: "routine" };
+  return {
+    id: a.id,
+    authorId: a.authorId,
+    text: a.text,
+    createdAt: a.createdAt,
+    scope: "routine",
+    ...mediaCounts(a.media),
+  };
 }
 
 /** Adapt a figure-family note into the unified margin shape. */
@@ -97,6 +120,9 @@ function familyMarginNote(n: FamilyNote): MarginNote {
     // rather than fabricate a "now" that would jump it to the top on every load.
     createdAt: n.createdAt ?? 0,
     scope: "family",
+    // Family/predicate notes carry no media (media rides routine annotations only).
+    images: 0,
+    videos: 0,
   };
 }
 
@@ -110,6 +136,8 @@ function predicateMarginNote(n: PredicateNote): MarginNote {
     text: n.text,
     createdAt: n.createdAt ?? 0,
     scope: "predicate",
+    images: 0,
+    videos: 0,
   };
 }
 
@@ -1158,6 +1186,11 @@ function NotesMarginCell({
     if (authors.length >= 3) break;
     if (!authors.includes(n.authorId)) authors.push(n.authorId);
   }
+  // Aggregate media across this cell's notes for the compact chip (never the media).
+  const mediaTotals = notes.reduce(
+    (acc, n) => ({ images: acc.images + n.images, videos: acc.videos + n.videos }),
+    { images: 0, videos: 0 },
+  );
   return (
     <button
       type="button"
@@ -1199,6 +1232,9 @@ function NotesMarginCell({
           {latest.text}
         </span>
       )}
+      {/* Compact media chip — NEVER an img/video/iframe in the margin
+          (docs/ideas/annotation-media-embeds.md). */}
+      <MediaChip images={mediaTotals.images} videos={mediaTotals.videos} />
     </button>
   );
 }

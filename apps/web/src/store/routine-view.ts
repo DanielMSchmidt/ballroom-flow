@@ -16,7 +16,13 @@
 // hydrates, then from the live store (which itself falls back to the snapshot for
 // not-yet-opened figures). In read-only mode mutators + openFigure are no-ops
 // (the UI never calls them for a viewer) and nothing live is ever opened.
-import type { Anchor, AnnotationKind, Attribute, RegistryKind } from "@weavesteps/domain";
+import type {
+  Anchor,
+  AnnotationKind,
+  Attribute,
+  MediaItem,
+  RegistryKind,
+} from "@weavesteps/domain";
 import type { SyncState } from "./doc-connection";
 import {
   openRoutine as defaultOpenRoutine,
@@ -223,11 +229,33 @@ export function openRoutineView(routineId: string, opts: OpenViewOptions = {}): 
     setFigureCounts: editAction((s) => s.setFigureCounts),
     renameFigure: editAction((s) => s.renameFigure),
     createAnnotation: editAction<
-      [{ kind: AnnotationKind; text: string; anchors: Anchor[]; tags?: string[] }]
+      [
+        {
+          kind: AnnotationKind;
+          text: string;
+          anchors: Anchor[];
+          tags?: string[];
+          media?: MediaItem[];
+        },
+      ]
     >((s) => s.createAnnotation),
     addReply: editAction((s) => s.addReply),
     deleteAnnotation: editAction((s) => s.deleteAnnotation),
     deleteReply: editAction((s) => s.deleteReply),
+    // Media (docs/ideas/annotation-media-embeds.md): attach/remove are CRDT edits
+    // (editActions like the rest); mint/upload are async server round-trips that
+    // require the LIVE store (uploads are server-minting — the component gates
+    // these behind syncState()==="live" too).
+    attachMedia: editAction<[string, MediaItem]>((s) => s.attachMedia),
+    removeMedia: editAction<[string, string]>((s) => s.removeMedia),
+    mintMediaUpload: async (req) => {
+      const s = await ensureLive();
+      return s.mintMediaUpload(req);
+    },
+    uploadMedia: async (uploadUrl, blob, mimeType) => {
+      const s = await ensureLive();
+      return s.uploadMedia(uploadUrl, blob, mimeType);
+    },
     createCustomKind: editAction<[RegistryKind]>((s) => s.createCustomKind),
     // Undo returns the soft "superseded" hint synchronously (US-038 AC-3). The
     // editor toolbar only enables Undo once the live store is hydrated, so the

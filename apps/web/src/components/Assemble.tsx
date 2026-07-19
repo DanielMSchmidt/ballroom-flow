@@ -22,6 +22,7 @@ import {
   figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
+  newId,
   type Placement,
   type PlacementPart,
   parseGlobalFigureRef,
@@ -1043,6 +1044,7 @@ export function Assemble({
             placements={store.readPlacements()}
             role={role}
             currentUserId={currentUserId}
+            docRef={routineId}
             onCreate={({ kind, text }) =>
               store.createAnnotation({
                 kind,
@@ -1275,6 +1277,13 @@ export function Assemble({
                 <AnnotationPanel
                   role={role}
                   currentUserId={currentUserId}
+                  docRef={routineId}
+                  mediaSyncLive={store.syncState() === "live"}
+                  newMediaId={newId}
+                  onMintMediaUpload={(req) => store.mintMediaUpload(req)}
+                  onUploadMedia={(uploadUrl, blob, mimeType) =>
+                    store.uploadMedia(uploadUrl, blob, mimeType)
+                  }
                   annotations={store.readAnnotations().filter(
                     (a) =>
                       // Drop tombstoned notes so a soft-delete leaves the read
@@ -1288,11 +1297,12 @@ export function Assemble({
                   )}
                   composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
                   figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
-                  onCreate={({ kind, text }) =>
+                  onCreate={({ kind, text, media }) =>
                     store.createAnnotation({
                       kind,
                       text,
                       anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                      ...(media ? { media } : {}),
                     })
                   }
                   onReply={(annotationId, text) => store.addReply(annotationId, text)}
@@ -2467,6 +2477,7 @@ function ThreadSheetContents({
   placements,
   role,
   currentUserId,
+  docRef,
   onCreate,
   onReply,
   onDeleteReply,
@@ -2478,6 +2489,9 @@ function ThreadSheetContents({
   placements: ResolvedPlacement[];
   role: MembershipRole;
   currentUserId?: string;
+  /** The routine docRef — inline media in existing comments renders same-origin
+   *  /api/media/... URLs and the worker-proxied YouTube thumb (annotation-media). */
+  docRef: string;
   onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
@@ -2536,6 +2550,7 @@ function ThreadSheetContents({
     <AnnotationPanel
       role={role}
       currentUserId={currentUserId}
+      docRef={docRef}
       annotations={threadAnnotations}
       composeAnchor={
         stepCount == null

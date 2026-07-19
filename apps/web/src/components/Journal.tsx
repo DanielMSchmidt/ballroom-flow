@@ -21,7 +21,7 @@ import {
 } from "../store/journal";
 import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
-import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
+import { Button, Card, Chip, EmptyState, IconButton, MediaChip, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
 import { JournalEntryEditor } from "./JournalEntryEditor";
 import type { RoutineFigureOption, RoutineOption } from "./JournalLinkPicker";
@@ -312,9 +312,11 @@ function JournalCard({
       >
         {entry.text}
       </p>
-      {entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
-        0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+      {(entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
+        0 ||
+        (entry.imageCount ?? 0) > 0 ||
+        (entry.videoCount ?? 0) > 0) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {entry.anchors
             .filter((a) => a.type !== "figureType" || a.figureType !== "general")
             .map((a) => (
@@ -325,6 +327,9 @@ function JournalCard({
                 ↳ {chipLabel(a)}
               </span>
             ))}
+          {/* Compact media chip — never an img/video/iframe on a Journal card
+              (docs/ideas/annotation-media-embeds.md). Projected live counts. */}
+          <MediaChip images={entry.imageCount ?? 0} videos={entry.videoCount ?? 0} />
         </div>
       )}
     </article>
