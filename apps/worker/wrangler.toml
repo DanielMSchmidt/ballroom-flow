@@ -38,6 +38,15 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+# docs/ideas/annotation-media-embeds.md — the first binary storage: one R2 bucket
+# per env for annotation media. Keys are media/<docRef>/<annotationId>/<mediaId>,
+# so serving/upload authz derives from the key alone (the docRef in the prefix).
+# Bindings are NOT inherited by named environments — redeclared per env below.
+# Miniflare simulates this default binding for vitest + `wrangler dev`.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-dev"
+
 # DO class migration — `new_sqlite_classes` because DocDO uses ctx.storage.sql
 # (SQLite-backed). Top-level migrations apply to all environments.
 [[migrations]]
@@ -87,6 +96,11 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+# Media R2 bucket — Miniflare-simulated in the E2E harness (no real bucket).
+[[env.e2e.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-e2e"
+
 # --- Staging (deployed from the `development` branch).
 [env.staging]
 name = "weave-steps-staging"
@@ -116,6 +130,12 @@ migrations_dir = "migrations"
 [[env.staging.durable_objects.bindings]]
 name = "DOC_DO"
 class_name = "DocDO"
+
+# Media R2 bucket (created 2026-07-19 — see PROVISIONING.md). Bindings are NOT
+# inherited by named environments, so it is redeclared here.
+[[env.staging.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-staging"
 
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"
@@ -176,6 +196,12 @@ migrations_dir = "migrations"
 [[env.production.durable_objects.bindings]]
 name = "DOC_DO"
 class_name = "DocDO"
+
+# Media R2 bucket (created 2026-07-19 — see PROVISIONING.md). Bindings are NOT
+# inherited by named environments, so it is redeclared here.
+[[env.production.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-production"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ANALYTICS"

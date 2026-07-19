@@ -50,6 +50,11 @@ testSeed.post("/api/test/reset", async (c) => {
   await c.env.DB.prepare("DELETE FROM journal_entry").run();
   // placement_edge has no FK cascade — clear explicitly so COW test seeds start clean.
   await c.env.DB.prepare("DELETE FROM placement_edge").run();
+  // Media grants/counter (annotation-media-embeds). Keyed by objectKey, not by
+  // documentRegistry, so a reused seed user's byte budget would otherwise leak
+  // across serial journeys/projects. Raw SQL to stay independent of the drizzle
+  // schema's merge timeline (mirrors figure_type_note_index / journal_entry).
+  await c.env.DB.prepare("DELETE FROM media_object").run();
   // Save-to-library bookmarks (T5). `alreadySaved` is decided purely by a
   // `library_entry` row keyed on (userId, figureRef) — NOT by documentRegistry —
   // so without this a figure saved by one journey/project leaks into the next:
