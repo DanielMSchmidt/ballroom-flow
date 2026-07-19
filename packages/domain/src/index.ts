@@ -25,6 +25,7 @@ export {
   addAccountReply,
   addFamilyNote,
   addLibraryRef,
+  addPredicateNote,
   buildAccountDoc,
   importAccountDoc,
   readAccount,

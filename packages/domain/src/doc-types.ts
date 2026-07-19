@@ -135,6 +135,23 @@ export type Anchor =
       count?: number;
       /** WEP-0004 (docs/concepts/annotations.md § Anchors): narrow a timed note to one side (absent/null = both). */
       role?: Role;
+    }
+  | {
+      // attribute-predicate anchor (docs/concepts/annotations.md § Anchors): the
+      // first DYNAMIC anchor — it matches every step whose notation satisfies an
+      // attribute condition, re-evaluated on read (not a fixed address/identity).
+      type: "attributePredicate";
+      /** A kind from the MERGED registry (builtin or custom). */
+      kind: string;
+      /** A value of that kind, matched BY MEANING via normalizeValue read-aliases,
+       *  or the absence sentinel PREDICATE_NONE ("no value of `kind` logged"). */
+      value: string;
+      /** Narrow to one side; absent = either/both. */
+      role?: Role;
+      /** "all" = every dance · a DanceId = that dance's choreos · "routine" = one choreo. */
+      scope: DanceId | "all" | "routine";
+      /** The confined choreo — REQUIRED iff scope === "routine" (zAnchor enforces). */
+      routineRef?: string;
     };
 
 export type Reply = {

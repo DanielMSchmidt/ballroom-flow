@@ -1719,7 +1719,8 @@ export class DocDO extends DurableObject<Env> {
     if (anchor.type === "figure") {
       return { ...anchor, label: names.get(anchor.figureRef) ?? "this figure" };
     }
-    // figureType: humanize without a registry lookup (data is self-contained).
+    // figureType / attributePredicate: humanize without a registry lookup (data
+    // is self-contained).
     const titleCase = (s: string): string =>
       s
         .replace(/[_-]+/g, " ")
@@ -1727,6 +1728,18 @@ export class DocDO extends DurableObject<Env> {
         .filter(Boolean)
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
+    if (anchor.type === "attributePredicate") {
+      // A predicate note is account-doc data and never reaches this routine
+      // DocOp path (delta #1), but the union is total — label it self-consistently.
+      const scope =
+        anchor.scope === "all"
+          ? "every dance"
+          : anchor.scope === "routine"
+            ? "this choreo"
+            : `all ${titleCase(anchor.scope)}`;
+      const value = anchor.value === "none" ? `no ${anchor.kind} logged` : titleCase(anchor.value);
+      return { ...anchor, label: `${value} · ${scope}` };
+    }
     const family = titleCase(anchor.figureType);
     const scope =
       anchor.danceScope === "all" ? "all dances" : `all ${titleCase(anchor.danceScope)}`;
