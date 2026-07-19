@@ -102,6 +102,14 @@ export type Env = {
   // mechanism that closes the open-tab version-skew window after a rollout.
   // Unset in dev/test → health reports null and clients never force a reload.
   BUILD_ID?: string;
+  // AI voice notes (docs/ideas/ai-voice-notes.md; docs/TOOLING.md § AI voice
+  // notes) — the Workers AI binding (STT fallback + extraction) and the AI
+  // Gateway id. Both DEPLOYED-ENVS-ONLY (wrangler.toml [env.staging|production]),
+  // both optional so dev + vitest-pool-workers + [env.e2e] run with NEITHER —
+  // `voiceAiFor` then selects the deterministic fixture, keeping the zero-secret
+  // test matrix. Same optional-binding pattern as ANALYTICS.
+  AI?: Ai;
+  AI_GATEWAY_ID?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();

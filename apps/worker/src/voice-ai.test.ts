@@ -10,9 +10,34 @@
 // Invariant pinned: zero wrong-anchor proposals escape grounding — a model
 // output naming a figureRef/figureType/count NOT in the context is rejected, not
 // decorated.
+import { env } from "cloudflare:test";
 import type { ChoreoContext } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
-import { fixtureVoiceAi, groundProposal } from "./voice-ai";
+import {
+  fixtureVoiceAi,
+  groundProposal,
+  shouldUseWorkersAi,
+  VOICE_EXTRACT_MODEL,
+  VOICE_STT_MODEL,
+  type VoiceAiRunner,
+  voiceAiFor,
+  workersVoiceAi,
+} from "./voice-ai";
+
+/** A recording runner satisfying the narrow VoiceAiRunner (no cast needed). */
+function recordingRunner(reply: unknown): {
+  runner: VoiceAiRunner;
+  calls: { model: string; options?: { gateway?: { id: string } } }[];
+} {
+  const calls: { model: string; options?: { gateway?: { id: string } } }[] = [];
+  const runner: VoiceAiRunner = {
+    async run(model, _inputs, options) {
+      calls.push({ model, options });
+      return reply;
+    },
+  };
+  return { runner, calls };
+}
 
 /** A two-foxtrot-routine context mirroring the E2E scenario-A/B seeds. */
 function twoFoxtrotContext(): ChoreoContext {
@@ -176,5 +201,49 @@ describe("fixtureVoiceAi — deterministic, derived from inputs", () => {
     const a = await fixtureVoiceAi().interpret(t, ctx);
     const b = await fixtureVoiceAi().interpret(t, ctx);
     expect(a).toEqual(b);
+  });
+});
+
+describe("voiceAiFor / shouldUseWorkersAi — implementation selection", () => {
+  it("selects the fixture when no AI binding is bound (the unit/dev/e2e path)", async () => {
+    // The cloudflare:test env has no `AI` binding (declared only on deployed envs).
+    const selected = voiceAiFor(env);
+    const bytes = new TextEncoder().encode("echo me");
+    // The fixture echoes bytes; the workers impl would call a model. Zero secrets.
+    expect(await selected.transcribe(bytes, { initialPrompt: "" })).toBe("echo me");
+  });
+
+  it("uses Workers AI only when a binding is present AND not under E2E", () => {
+    const stubAi = { run: async () => null };
+    expect(shouldUseWorkersAi({ ai: undefined, e2e: undefined })).toBe(false);
+    expect(shouldUseWorkersAi({ ai: stubAi, e2e: undefined })).toBe(true);
+    // The E2E harness flag forces the fixture even with a binding present.
+    expect(shouldUseWorkersAi({ ai: stubAi, e2e: "1" })).toBe(false);
+  });
+});
+
+describe("workersVoiceAi — the deployed-env seam", () => {
+  it("calls the STT model for transcribe and passes the gateway id when set", async () => {
+    const { runner, calls } = recordingRunner({ text: "transcribed" });
+    const ai = workersVoiceAi(runner, "weave-steps");
+    const out = await ai.transcribe(new TextEncoder().encode("bytes"), {
+      initialPrompt: "Feather",
+    });
+    expect(out).toBe("transcribed");
+    expect(calls[0]?.model).toBe(VOICE_STT_MODEL);
+    expect(calls[0]?.options?.gateway?.id).toBe("weave-steps");
+  });
+
+  it("calls the extract model for interpret and OMITS the gateway when unset", async () => {
+    const { runner, calls } = recordingRunner({
+      response: '{"resolved":false,"noteText":"x","confidence":"low","anchor":null}',
+    });
+    const ai = workersVoiceAi(runner);
+    const raw = await ai.interpret("hello", twoFoxtrotContext());
+    expect(calls[0]?.model).toBe(VOICE_EXTRACT_MODEL);
+    expect(calls[0]?.options?.gateway).toBeUndefined();
+    // interpret returns the PARSED raw output for groundProposal to validate.
+    const p = groundProposal(raw, twoFoxtrotContext(), "hello");
+    expect(p.resolved).toBe(false);
   });
 });
