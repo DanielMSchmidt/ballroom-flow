@@ -1063,6 +1063,7 @@ export function Assemble({
             onReply={(annotationId, text) => store.addReply(annotationId, text)}
             onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
             onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
+            onRemoveMedia={(annotationId, mediaId) => store.removeMedia(annotationId, mediaId)}
           />
         )}
       </Sheet>
@@ -1310,6 +1311,9 @@ export function Assemble({
                     store.deleteReply(annotationId, replyId)
                   }
                   onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
+                  onRemoveMedia={(annotationId, mediaId) =>
+                    store.removeMedia(annotationId, mediaId)
+                  }
                 />
                 {/* Figure-family notes (US-040/041): "every Feather" notes from this
                     routine's members, surfaced on the matching figure; commenter+ may
@@ -2482,6 +2486,7 @@ function ThreadSheetContents({
   onReply,
   onDeleteReply,
   onDeleteAnnotation,
+  onRemoveMedia,
 }: {
   routineId: string;
   anchor: { figureRef: string; count?: number };
@@ -2497,6 +2502,8 @@ function ThreadSheetContents({
   onDeleteReply: (annotationId: string, replyId: string) => void;
   /** Soft-delete a whole annotation (author-only; #294). */
   onDeleteAnnotation: (annotationId: string) => void;
+  /** Soft-delete a posted media item (author-only ✕; annotation-media). */
+  onRemoveMedia: (annotationId: string, mediaId: string) => void;
 }) {
   // Only called when the Sheet is open (component is mounted) — see note above.
   const t = useMessages(assembleMessages);
@@ -2567,6 +2574,7 @@ function ThreadSheetContents({
       onReply={onReply}
       onDeleteReply={onDeleteReply}
       onDeleteAnnotation={onDeleteAnnotation}
+      onRemoveMedia={onRemoveMedia}
     />
   );
 }

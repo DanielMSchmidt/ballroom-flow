@@ -434,6 +434,9 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
   ): Promise<void> {
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // The picker's target step (choreo → target → figure|attribute) landed with
+    // the attribute-predicate anchors; a whole-figure link goes via "A figure".
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: figureName }));
     await userEvent.click(await screen.findByText("The entire figure"));
     await userEvent.click(await screen.findByText(scope));

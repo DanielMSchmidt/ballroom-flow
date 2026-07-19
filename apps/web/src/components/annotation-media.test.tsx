@@ -232,6 +232,103 @@ describe("annotation media — compact surfaces show a chip, never media (Test 5
   });
 });
 
+describe("annotation media — remove a posted item (Test 7)", () => {
+  // A posted annotation carrying two inline photos. The author may remove an
+  // individual item (soft-delete tombstone; docs/concepts/annotations.md § Media);
+  // a non-author co-member may not (annotation content is edited by its author only).
+  const postedAnnotation = (media: MediaItem[], authorId = "me") => ({
+    id: "a1",
+    authorId,
+    kind: "lesson" as const,
+    // One token per media item so the inline order matches the item set exactly.
+    text: media.map((m) => `${m.id} ${mediaToken(m.id)}`).join(" "),
+    tags: [],
+    anchors: [{ type: "figure" as const, figureRef: "f1" }],
+    replies: [],
+    media,
+    createdAt: 1,
+    deletedAt: null,
+  });
+
+  it("shows a per-item remove control to the annotation's author and calls onRemoveMedia with (annotationId, mediaId)", async () => {
+    const { AnnotationPanel } = await importComponent<AnnotationPanelModule>(
+      "../components/AnnotationPanel",
+    );
+    const onRemoveMedia = vi.fn();
+    renderUi(
+      <AnnotationPanel
+        role="commenter"
+        currentUserId="me"
+        docRef="r1"
+        threadTitle="Feather Step · step 2"
+        annotations={[postedAnnotation([imageItem("m1"), imageItem("m2")])]}
+        onRemoveMedia={onRemoveMedia}
+      />,
+    );
+    const removeButtons = screen.getAllByRole("button", { name: /remove media/i });
+    expect(removeButtons).toHaveLength(2);
+    const [firstRemove] = removeButtons;
+    expect(firstRemove).toBeDefined();
+    if (!firstRemove) throw new Error("expected a remove button");
+    await userEvent.click(firstRemove);
+    expect(onRemoveMedia).toHaveBeenCalledTimes(1);
+    expect(onRemoveMedia).toHaveBeenCalledWith("a1", "m1");
+  });
+
+  it("offers NO remove control to a co-member who is not the annotation's author", async () => {
+    const { AnnotationPanel } = await importComponent<AnnotationPanelModule>(
+      "../components/AnnotationPanel",
+    );
+    renderUi(
+      <AnnotationPanel
+        role="commenter"
+        currentUserId="someone_else"
+        docRef="r1"
+        threadTitle="Feather Step · step 2"
+        annotations={[postedAnnotation([imageItem("m1")], "the_author")]}
+        onRemoveMedia={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /remove media/i })).toBeNull();
+    // The embed still renders for reading.
+    expect(screen.getByRole("img", { name: /attachment on this note/i })).toBeInTheDocument();
+  });
+
+  it("offers no remove control when onRemoveMedia is not wired (standalone / read-only host)", async () => {
+    const { AnnotationPanel } = await importComponent<AnnotationPanelModule>(
+      "../components/AnnotationPanel",
+    );
+    renderUi(
+      <AnnotationPanel
+        role="commenter"
+        currentUserId="me"
+        docRef="r1"
+        threadTitle="Feather Step · step 2"
+        annotations={[postedAnnotation([imageItem("m1")])]}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /remove media/i })).toBeNull();
+  });
+
+  it("renders the removed stub (no remove control) for an already-tombstoned item", async () => {
+    const { AnnotationPanel } = await importComponent<AnnotationPanelModule>(
+      "../components/AnnotationPanel",
+    );
+    renderUi(
+      <AnnotationPanel
+        role="commenter"
+        currentUserId="me"
+        docRef="r1"
+        threadTitle="Feather Step · step 2"
+        annotations={[postedAnnotation([tombstonedItem("m1")])]}
+        onRemoveMedia={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/media removed/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove media/i })).toBeNull();
+  });
+});
+
 describe("annotation media — axe (Test 6)", () => {
   it("has no violations on the opened thread with all four part kinds", async () => {
     const { MediaParts } = await importComponent<MediaPartsModule>("../components/MediaParts");

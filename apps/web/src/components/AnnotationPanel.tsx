@@ -84,6 +84,13 @@ export interface AnnotationPanelProps {
    * routine-doc undo restores it). Omitted ⇒ no delete control renders.
    */
   onDeleteAnnotation?: (annotationId: string) => void;
+  /**
+   * Soft-delete one posted media item (docs/concepts/annotations.md § Media). The
+   * per-item ✕ is offered ONLY on the viewer's OWN annotations (media edits an
+   * annotation's content — same author-only gate as reply-delete; the worker/DO
+   * still enforces it). Omitted ⇒ no remove control renders at all.
+   */
+  onRemoveMedia?: (annotationId: string, mediaId: string) => void;
   // ── T8 Thread parity (frame 1.14) ────────────────────────────────────────
   /** Thread header title — e.g. "Spin Turn · step 2". When set, the panel
    *  renders in THREAD MODE: a titled header + flat comment list + single reply
@@ -151,6 +158,7 @@ export function AnnotationPanel({
   onReply,
   onDeleteReply,
   onDeleteAnnotation,
+  onRemoveMedia,
   threadTitle,
   threadSubtitle,
   authorNameMap,
@@ -391,6 +399,11 @@ export function AnnotationPanel({
                     ? () => onDeleteAnnotation(a.id)
                     : undefined
                 }
+                onRemoveMedia={
+                  onRemoveMedia && a.authorId === currentUserId
+                    ? (mediaId) => onRemoveMedia(a.id, mediaId)
+                    : undefined
+                }
               />
             </li>
           ))}
@@ -464,6 +477,11 @@ export function AnnotationPanel({
               onDelete={
                 onDeleteAnnotation && a.authorId === currentUserId
                   ? () => onDeleteAnnotation(a.id)
+                  : undefined
+              }
+              onRemoveMedia={
+                onRemoveMedia && a.authorId === currentUserId
+                  ? (mediaId) => onRemoveMedia(a.id, mediaId)
                   : undefined
               }
             />
@@ -721,6 +739,7 @@ function ThreadComment({
   onReply,
   onDeleteReply,
   onDelete,
+  onRemoveMedia,
 }: {
   annotation: Annotation;
   docRef: string;
@@ -732,6 +751,7 @@ function ThreadComment({
   onDeleteReply?: (replyId: string) => void;
   /** Whole-note soft-delete (author-only; already gated by the caller). */
   onDelete?: () => void;
+  onRemoveMedia?: (mediaId: string) => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
   // Resolved display name only; the label may still show the raw id as text, but
@@ -766,9 +786,10 @@ function ThreadComment({
           )}
         </p>
         {/* Comment body — ordered text/media parts; media renders INLINE at its
-            token position in the prose (docs/ideas/annotation-media-embeds.md). */}
+            token position in the prose (docs/ideas/annotation-media-embeds.md).
+            The author gets a per-item ✕ to soft-delete a mis-attached media. */}
         <div className="text-[15px] text-ink" style={{ fontFamily: "var(--bf-font-note)" }}>
-          <MediaParts text={a.text} media={a.media} docRef={docRef} />
+          <MediaParts text={a.text} media={a.media} docRef={docRef} onRemove={onRemoveMedia} />
         </div>
         {/* Threaded replies (indented) */}
         {a.replies.length > 0 && (
@@ -807,6 +828,7 @@ function AnnotationRow({
   onReply,
   onDeleteReply,
   onDelete,
+  onRemoveMedia,
 }: {
   annotation: Annotation;
   currentUserId?: string;
@@ -816,18 +838,20 @@ function AnnotationRow({
   onDeleteReply?: (replyId: string) => void;
   /** Whole-note soft-delete (author-only; already gated by the caller). */
   onDelete?: () => void;
+  onRemoveMedia?: (mediaId: string) => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-line p-2">
       {/* kind chip + the note body as ordered text/media parts (media renders
-          inline at its token position — docs/ideas/annotation-media-embeds.md). */}
+          inline at its token position — docs/ideas/annotation-media-embeds.md).
+          The author gets a per-item ✕ to soft-delete a mis-attached media. */}
       <div className="flex flex-col gap-1.5 text-sm">
         <Chip tone="neutral" asStatic data-kind={a.kind}>
           {t.kindLabel(a.kind)}
         </Chip>
         <div className="text-ink">
-          <MediaParts text={a.text} media={a.media} docRef={docRef} />
+          <MediaParts text={a.text} media={a.media} docRef={docRef} onRemove={onRemoveMedia} />
         </div>
         {onDelete && (
           <Button
