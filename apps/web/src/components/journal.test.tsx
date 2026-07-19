@@ -193,6 +193,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     // Type-ahead: "whis" narrows the list down to the Whisk.
     await userEvent.type(await screen.findByLabelText("Search figures"), "whis");
     expect(screen.queryByText("Chassé")).toBeNull();
@@ -219,6 +221,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.type(screen.getByLabelText("entry text"), "settle before the chassé");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
     // Narrow to the leader's side, then pick count 3 from the grid.
     await userEvent.click(await screen.findByRole("radio", { name: "Leader" }));
@@ -258,6 +262,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.type(screen.getByLabelText("entry text"), "whisk more cross");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
     await userEvent.click(await screen.findByText("The entire figure"));
     // Whole-figure → the cross-dance scope IS offered.
@@ -299,6 +305,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.type(screen.getByLabelText("entry text"), "keep the frame quiet here");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
     await userEvent.click(await screen.findByText("The entire figure"));
     // No family scopes — the choreo-wide (a real DanceId) and cross-dance rows are gone.
@@ -337,6 +345,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.type(screen.getByLabelText("entry text"), "settle on the second beat");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: /^My Signature Move/ }));
     await userEvent.click(await screen.findByRole("button", { name: /^count 2/i }));
     expect(await screen.findByText("This choreo only")).toBeInTheDocument();
@@ -393,6 +403,8 @@ describe("Journal editor + link picker (WEP-0004 choreo-first flow)", () => {
     await userEvent.type(screen.getByLabelText("entry text"), "commit to the side step");
     await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
     await userEvent.click(await screen.findByText("Gold Waltz"));
+    // choreo → target step: take the figure path (attribute path covered separately).
+    await userEvent.click(await screen.findByText("A figure from this choreo"));
     await userEvent.click(await screen.findByRole("button", { name: /^Whisk/ }));
     await userEvent.click(await screen.findByRole("button", { name: /^count 2/i }));
     await userEvent.click(await screen.findByText("This choreo only"));

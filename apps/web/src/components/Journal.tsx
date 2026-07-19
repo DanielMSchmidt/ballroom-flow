@@ -3,7 +3,7 @@
 // with kind/by-figure filter pills, author-coloured cards with link chips, a
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
-import type { Anchor, AnnotationKind } from "@weavesteps/domain";
+import type { Anchor, AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { isDanceId } from "@weavesteps/domain";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
@@ -42,6 +42,8 @@ export interface JournalProps {
   ) => Promise<JournalEntry | null>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** The user's custom attribute kinds, for the link picker's attribute-family list. */
+  loadCustomKinds?: () => Promise<RegistryKind[]>;
   /** The signed-in user's id, so their own entries read "you". */
   currentUserId?: string;
 }
@@ -62,8 +64,26 @@ export function Journal(props: JournalProps): React.JSX.Element {
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<JournalFilter>("all");
   const [composing, setComposing] = useState(false);
+  const [customKinds, setCustomKinds] = useState<RegistryKind[]>([]);
   // First-visit tour — held while the entry editor covers the tab.
   useFirstVisitTour("journal", !composing);
+
+  // Load the user's custom attribute kinds once the compose surface opens (for the
+  // link picker's attribute-family list); builtin kinds always show regardless.
+  const loadCustomKinds = props.loadCustomKinds;
+  useEffect(() => {
+    if (!composing || !loadCustomKinds) return;
+    let live = true;
+    loadCustomKinds().then(
+      (k) => {
+        if (live) setCustomKinds(k);
+      },
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [composing, loadCustomKinds]);
 
   // docs/system/architecture.md (account docs, WEP-0002): the Journal is an
   // account-doc AUTHORING surface, so it opens the
@@ -99,6 +119,36 @@ export function Journal(props: JournalProps): React.JSX.Element {
       });
     },
     [account, props],
+  );
+
+  // Attribute-predicate notes author through the account store only (offline-capable;
+  // no REST write route exists or is needed — the seam replays on reconnect).
+  const createPredicateEntry = useCallback(
+    async (input: {
+      attrKind: string;
+      attrValue: string;
+      role?: "leader" | "follower";
+      scope: string;
+      routineRef?: string;
+      kind: AnnotationKind;
+      text: string;
+    }) => {
+      if (!account.isOpen) return;
+      const scope =
+        input.scope === "all" || input.scope === "routine" || isDanceId(input.scope)
+          ? input.scope
+          : "all";
+      account.store.createPredicateNote({
+        attrKind: input.attrKind,
+        attrValue: input.attrValue,
+        scope,
+        kind: input.kind,
+        text: input.text,
+        ...(input.role != null ? { role: input.role } : {}),
+        ...(scope === "routine" && input.routineRef ? { routineRef: input.routineRef } : {}),
+      });
+    },
+    [account],
   );
 
   const refresh = useCallback(() => {
@@ -146,8 +196,10 @@ export function Journal(props: JournalProps): React.JSX.Element {
           });
           if (saved) setPendingRoutineEntries((p) => [saved, ...p]);
         }}
+        createPredicateEntry={createPredicateEntry}
         loadRoutineOptions={props.loadRoutineOptions}
         loadRoutineFigures={props.loadRoutineFigures}
+        customKinds={customKinds}
       />
     );
   }

@@ -5,10 +5,11 @@
 // Per the LOCKED full-parity decision the SAVE path is determined by the entry's
 // links, and each link kind writes independently (#293): routine-scoped links
 // (point/figure) collapse into one createRoutineEntry (createAnnotation) on that
-// routine's editable store, AND each account figureType link saves its own
-// createFamilyEntry (createFamilyNote) — an entry carrying both kinds lands both.
-// Both seams are injected (store seam).
-import type { AnnotationKind } from "@weavesteps/domain";
+// routine's editable store, each account figureType link saves its own
+// createFamilyEntry (createFamilyNote), and each attribute-predicate link its own
+// createPredicateEntry — an entry carrying several kinds lands them all. The
+// seams are injected (store seam).
+import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -43,8 +44,20 @@ export interface JournalEntryEditorProps {
     routineRef: string,
     input: { kind: AnnotationKind; text: string; anchors: JournalLink["anchor"][] },
   ) => Promise<void>;
+  /** Author an attribute-predicate note (account store's createPredicateNote). */
+  createPredicateEntry: (input: {
+    attrKind: string;
+    attrValue: string;
+    role?: "leader" | "follower";
+    scope: string;
+    routineRef?: string;
+    kind: AnnotationKind;
+    text: string;
+  }) => Promise<void>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** Custom attribute kinds for the picker's attribute-family list. */
+  customKinds?: RegistryKind[];
 }
 
 export function JournalEntryEditor({
@@ -53,8 +66,10 @@ export function JournalEntryEditor({
   onSaved,
   createFamilyEntry,
   createRoutineEntry,
+  createPredicateEntry,
   loadRoutineOptions,
   loadRoutineFigures,
+  customKinds,
 }: JournalEntryEditorProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
@@ -75,10 +90,13 @@ export function JournalEntryEditor({
       const accountLinks = links.filter(
         (l): l is Extract<JournalLink, { home: "account" }> => l.home === "account",
       );
+      const predicateLinks = links.filter(
+        (l): l is Extract<JournalLink, { home: "accountPredicate" }> =>
+          l.home === "accountPredicate",
+      );
       // Each link kind writes to its own home INDEPENDENTLY (#293): an entry
-      // carrying both a routine link and an account figureType link must land
-      // both — the routine annotation AND one family note per figureType link —
-      // matching exactly what each link kind produces on its own.
+      // carrying a routine link, account figureType links, and predicate links
+      // lands all of them — matching what each kind produces on its own.
       const [firstRoutine] = routineLinks;
       if (firstRoutine) {
         // All same-routine anchors collapse into one annotation.
@@ -100,6 +118,18 @@ export function JournalEntryEditor({
           text: text.trim(),
           ...(acct.count != null ? { count: acct.count } : {}),
           ...(acct.role ? { role: acct.role } : {}),
+        });
+      }
+      // Each attribute-predicate link saves its own predicate note.
+      for (const pred of predicateLinks) {
+        await createPredicateEntry({
+          attrKind: pred.attrKind,
+          attrValue: pred.attrValue,
+          scope: pred.scope,
+          kind,
+          text: text.trim(),
+          ...(pred.role ? { role: pred.role } : {}),
+          ...(pred.routineRef ? { routineRef: pred.routineRef } : {}),
         });
       }
       if (links.length === 0) {
@@ -207,6 +237,7 @@ export function JournalEntryEditor({
         onPick={(link) => setLinks((prev) => [...prev, link])}
         loadRoutineOptions={loadRoutineOptions}
         loadRoutineFigures={loadRoutineFigures}
+        customKinds={customKinds}
       />
     </section>
   );
