@@ -3,11 +3,13 @@
 // with kind/by-figure filter pills, author-coloured cards with link chips, a
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
+import type { VoiceNoteProposal } from "@weavesteps/contract";
 import type { Anchor, AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { isDanceId } from "@weavesteps/domain";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import type { SpeechCapture } from "../lib/speech";
 import {
   applyJournalFilter,
   chipLabel,
@@ -46,6 +48,14 @@ export interface JournalProps {
   loadCustomKinds?: () => Promise<RegistryKind[]>;
   /** The signed-in user's id, so their own entries read "you". */
   currentUserId?: string;
+  /** AI voice notes (docs/concepts/annotations.md § The Journal) — injected seams
+   *  passed straight through to the entry editor's mic affordance. */
+  createSpeechCapture?: () => SpeechCapture;
+  interpretVoice?: (input: {
+    transcript: string;
+    routineRef?: string;
+  }) => Promise<VoiceNoteProposal>;
+  transcribeVoice?: (clip: Blob) => Promise<string>;
 }
 
 /** Filter pill VALUES (stable ids); display labels come from the journal catalog. */
@@ -200,6 +210,9 @@ export function Journal(props: JournalProps): React.JSX.Element {
         loadRoutineOptions={props.loadRoutineOptions}
         loadRoutineFigures={props.loadRoutineFigures}
         customKinds={customKinds}
+        createSpeechCapture={props.createSpeechCapture}
+        interpretVoice={props.interpretVoice}
+        transcribeVoice={props.transcribeVoice}
       />
     );
   }

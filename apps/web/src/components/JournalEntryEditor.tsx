@@ -6,10 +6,12 @@
 // links: a routine-scoped link (point/figure) saves via createRoutineEntry on
 // that routine's editable store (createAnnotation); an account figureType link
 // saves via createFamilyEntry (createFamilyNote). Both are injected (store seam).
+import type { VoiceNoteProposal } from "@weavesteps/contract";
 import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import type { SpeechCapture } from "../lib/speech";
 import { Button, Card, IconButton, SegmentedToggle } from "../ui";
 import { CloseIcon } from "../ui/icons";
 import {
@@ -18,6 +20,7 @@ import {
   type RoutineFigureOption,
   type RoutineOption,
 } from "./JournalLinkPicker";
+import { VoiceNoteSheet } from "./VoiceNoteSheet";
 
 export interface JournalEntryEditorProps {
   /** The author label shown in the header ("you" for self). */
@@ -55,6 +58,16 @@ export interface JournalEntryEditorProps {
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
   /** Custom attribute kinds for the picker's attribute-family list. */
   customKinds?: RegistryKind[];
+  /** AI voice notes (docs/concepts/annotations.md § The Journal). Injected seams
+   *  for the mic affordance; when all three are absent the control is hidden. The
+   *  proposal it confirms flows through the ORDINARY link+save path — the AI never
+   *  writes. */
+  createSpeechCapture?: () => SpeechCapture;
+  interpretVoice?: (input: {
+    transcript: string;
+    routineRef?: string;
+  }) => Promise<VoiceNoteProposal>;
+  transcribeVoice?: (clip: Blob) => Promise<string>;
 }
 
 export function JournalEntryEditor({
@@ -67,14 +80,24 @@ export function JournalEntryEditor({
   loadRoutineOptions,
   loadRoutineFigures,
   customKinds,
+  createSpeechCapture,
+  interpretVoice,
+  transcribeVoice,
 }: JournalEntryEditorProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
   const [text, setText] = useState("");
   const [links, setLinks] = useState<JournalLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The active capture instance (created once per open so the sheet's effect
+  // doesn't restart it on every render); null while the sheet is closed.
+  const [capture, setCapture] = useState<SpeechCapture | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The mic affordance appears only when all three voice seams are injected.
+  const voiceEnabled =
+    createSpeechCapture != null && interpretVoice != null && transcribeVoice != null;
 
   const canSave = text.trim().length > 0 && !saving;
 
@@ -210,15 +233,43 @@ export function JournalEntryEditor({
         </button>
       </div>
 
-      {/* Media is a v1.1 affordance — visibly disabled, not hidden. */}
-      <button
-        type="button"
-        disabled
-        aria-label={t.addMedia}
-        className="rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-2xs text-ink-faint opacity-60"
-      >
-        {t.addMediaHint}
-      </button>
+      <div className="flex items-center gap-3">
+        {/* AI voice capture (docs/concepts/annotations.md § The Journal): speak the
+            note, the anchor is proposed, you confirm — then the ordinary save path. */}
+        {voiceEnabled && (
+          <button
+            type="button"
+            onClick={() => setCapture(createSpeechCapture())}
+            className="flex items-center gap-1.5 text-2xs font-bold text-accent"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.9}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <title>{t.voice}</title>
+              <rect x="9" y="2" width="6" height="12" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+            </svg>
+            {t.voice}
+          </button>
+        )}
+        {/* Media is a v1.1 affordance — visibly disabled, not hidden. */}
+        <button
+          type="button"
+          disabled
+          aria-label={t.addMedia}
+          className="flex-1 rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-2xs text-ink-faint opacity-60"
+        >
+          {t.addMediaHint}
+        </button>
+      </div>
 
       {error && (
         <Card>
@@ -234,6 +285,35 @@ export function JournalEntryEditor({
         loadRoutineFigures={loadRoutineFigures}
         customKinds={customKinds}
       />
+
+      {voiceEnabled && capture != null && (
+        <VoiceNoteSheet
+          open={capture != null}
+          onClose={() => setCapture(null)}
+          capture={capture}
+          interpret={interpretVoice}
+          transcribe={transcribeVoice}
+          onConfirm={(link, noteText) => {
+            // The confirmed proposal becomes an ORDINARY link + text — the save
+            // button then drives the unchanged path. The AI never writes.
+            setLinks((prev) => [...prev, link]);
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+          }}
+          onEditTarget={(noteText) => {
+            // Hand off to the manual picker (it resets to its first step); the
+            // transcript stays in the editor.
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+            setPickerOpen(true);
+          }}
+          onUseAsText={(noteText) => {
+            // Unresolved: keep the transcript as the note text, no link.
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+          }}
+        />
+      )}
     </section>
   );
 }
