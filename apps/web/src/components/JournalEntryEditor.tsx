@@ -6,7 +6,7 @@
 // links: a routine-scoped link (point/figure) saves via createRoutineEntry on
 // that routine's editable store (createAnnotation); an account figureType link
 // saves via createFamilyEntry (createFamilyNote). Both are injected (store seam).
-import type { AnnotationKind } from "@weavesteps/domain";
+import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -41,8 +41,20 @@ export interface JournalEntryEditorProps {
     routineRef: string,
     input: { kind: AnnotationKind; text: string; anchors: JournalLink["anchor"][] },
   ) => Promise<void>;
+  /** Author an attribute-predicate note (account store's createPredicateNote). */
+  createPredicateEntry: (input: {
+    attrKind: string;
+    attrValue: string;
+    role?: "leader" | "follower";
+    scope: string;
+    routineRef?: string;
+    kind: AnnotationKind;
+    text: string;
+  }) => Promise<void>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** Custom attribute kinds for the picker's attribute-family list. */
+  customKinds?: RegistryKind[];
 }
 
 export function JournalEntryEditor({
@@ -51,8 +63,10 @@ export function JournalEntryEditor({
   onSaved,
   createFamilyEntry,
   createRoutineEntry,
+  createPredicateEntry,
   loadRoutineOptions,
   loadRoutineFigures,
+  customKinds,
 }: JournalEntryEditorProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
@@ -73,6 +87,10 @@ export function JournalEntryEditor({
       const accountLinks = links.filter(
         (l): l is Extract<JournalLink, { home: "account" }> => l.home === "account",
       );
+      const predicateLinks = links.filter(
+        (l): l is Extract<JournalLink, { home: "accountPredicate" }> =>
+          l.home === "accountPredicate",
+      );
       const [firstRoutine] = routineLinks;
       if (firstRoutine) {
         // A routine-scoped link wins the entry's home: all same-routine anchors
@@ -84,9 +102,10 @@ export function JournalEntryEditor({
           text: text.trim(),
           anchors: sameRoutine.map((l) => l.anchor),
         });
-      } else if (accountLinks.length > 0) {
-        // docs/concepts/annotations.md § Anchors (WEP-0004): one family note per
-        // linked figureType (each carries its own scope + optional timed anchor).
+      } else if (accountLinks.length > 0 || predicateLinks.length > 0) {
+        // docs/concepts/annotations.md § Anchors: one account note per linked target —
+        // a figureType family note (WEP-0004, with its scope + optional timed anchor) or
+        // an attribute-predicate note (each carries its own kind/value/scope).
         for (const acct of accountLinks) {
           await createFamilyEntry({
             figureType: acct.figureType,
@@ -95,6 +114,17 @@ export function JournalEntryEditor({
             text: text.trim(),
             ...(acct.count != null ? { count: acct.count } : {}),
             ...(acct.role ? { role: acct.role } : {}),
+          });
+        }
+        for (const pred of predicateLinks) {
+          await createPredicateEntry({
+            attrKind: pred.attrKind,
+            attrValue: pred.attrValue,
+            scope: pred.scope,
+            kind,
+            text: text.trim(),
+            ...(pred.role ? { role: pred.role } : {}),
+            ...(pred.routineRef ? { routineRef: pred.routineRef } : {}),
           });
         }
       } else {
@@ -202,6 +232,7 @@ export function JournalEntryEditor({
         onPick={(link) => setLinks((prev) => [...prev, link])}
         loadRoutineOptions={loadRoutineOptions}
         loadRoutineFigures={loadRoutineFigures}
+        customKinds={customKinds}
       />
     </section>
   );

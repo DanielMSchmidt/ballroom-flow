@@ -13,6 +13,7 @@ import { SignInPrompt } from "./components/SignInPrompt";
 import { useMessages } from "./i18n";
 import { appMessages } from "./i18n/messages/app";
 import { navigate, useRoute } from "./lib/router";
+import { listAccountKinds } from "./store/custom-kinds";
 import { createFamilyNote } from "./store/family-notes";
 import { loadMineFigures, saveFigureToLibrary } from "./store/figures";
 import {
@@ -86,6 +87,10 @@ function AppHome(): React.JSX.Element {
   // `createFamilyEntry` authors an account figureType note (createFamilyNote).
   const currentUserId = me.data?.sub;
   const loadJournalEntries = useCallback(async () => loadJournal(await getToken()), [getToken]);
+  const loadJournalCustomKinds = useCallback(
+    async () => listAccountKinds(await getToken()),
+    [getToken],
+  );
   const createFamilyEntry = useCallback(
     async (input: {
       figureType: string;
@@ -182,6 +187,7 @@ function AppHome(): React.JSX.Element {
             createRoutineEntry={createRoutineEntry}
             loadRoutineOptions={loadJournalRoutineOptions}
             loadRoutineFigures={loadJournalRoutineFigures}
+            loadCustomKinds={loadJournalCustomKinds}
             currentUserId={currentUserId}
           />
         ) : tab === "profile" ? (
