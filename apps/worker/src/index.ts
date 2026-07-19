@@ -30,7 +30,8 @@ import {
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { type Context, Hono } from "hono";
-import { authenticate, authenticateToken } from "./auth";
+import { getCookie } from "hono/cookie";
+import { type AuthedUser, authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers } from "./db/family-notes";
@@ -65,6 +66,7 @@ import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
 import { type MediaKey, parseMediaKey } from "./media-key";
 import { isValidPartSize, parsePartNumber } from "./media-mpu";
+import { parseRange, resolveRange } from "./media-range";
 import { reportError, writeMetric } from "./ops";
 import { materializeDemoSeed, softDeleteDemoSeed } from "./routes/seed-demo";
 import { testSeed } from "./routes/test-seed";
@@ -72,6 +74,7 @@ import { seedSampleRoutine } from "./sample";
 import { ensureGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
 import { groundProposal, voiceAiFor } from "./voice-ai";
+import { fetchYoutubeThumb, YT_VIDEO_ID_RE } from "./youtube-thumb";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
 // state (not a stale module boolean). A cheap indexed existence check (ownerId
@@ -972,6 +975,68 @@ app.delete("/api/media/*", async (c) => {
   }
   await softDeleteMediaObject(c.env.DB, objectKey);
   return c.json({ ok: true });
+});
+
+/** Authenticate a media READ. Element-src fetches (`<img>`/`<video>` Range
+ *  requests) can't send an Authorization header, so accept the header when
+ *  present, else the same-origin Clerk `__session` cookie — the SAME JWT, the
+ *  SAME verifier (authenticateToken) in both arms, nothing weaker. Part of the
+ *  hard-gated authz surface (plan discrepancy 2). */
+async function authenticateMediaRead(c: Context<{ Bindings: Env }>): Promise<AuthedUser | null> {
+  const viaHeader = await authenticate(c);
+  if (viaHeader) return viaHeader;
+  const session = getCookie(c, "__session");
+  return session ? authenticateToken(`Bearer ${session}`, c.env) : null;
+}
+
+// GET /api/media/youtube-thumb/:videoId — worker-proxied facade thumbnail
+// (annotation-media-embeds). Viewer+ of ?docRef (same membership gate as the
+// media). Registered BEFORE the /api/media/* wildcard so it isn't shadowed.
+app.get("/api/media/youtube-thumb/:videoId", async (c) => {
+  const user = await authenticateMediaRead(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const videoId = c.req.param("videoId");
+  const docRef = c.req.query("docRef");
+  if (!docRef || !YT_VIDEO_ID_RE.test(videoId)) return c.json({ error: "invalid" }, 400);
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return fetchYoutubeThumb(videoId);
+});
+
+// GET /api/media/<objectKey> — membership-gated serving, streamed through the R2
+// binding with Range support (FINAL — rejected alternative: 302-to-signed-URL).
+// Membership (viewer+) derives from the docRef IN THE KEY PREFIX alone. A
+// tombstoned item still serves (undo must restore it — no CRDT check here).
+app.get("/api/media/*", async (c) => {
+  const user = await authenticateMediaRead(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const objectKey = decodeURIComponent(new URL(c.req.url).pathname.slice("/api/media/".length));
+  const key = parseMediaKey(objectKey);
+  if (!key) return c.json({ error: "not found" }, 404);
+  const role = await resolveEffectiveRole(c.env.DB, key.docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  const head = await c.env.MEDIA.head(objectKey);
+  if (head === null) return c.json({ error: "not found" }, 404);
+  const range = parseRange(c.req.header("Range"), head.size);
+  if (range === "unsatisfiable")
+    return new Response(null, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${head.size}` },
+    });
+  const obj = await c.env.MEDIA.get(objectKey, range ? { range } : undefined);
+  if (obj === null) return c.json({ error: "not found" }, 404);
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set("etag", obj.httpEtag);
+  headers.set("Accept-Ranges", "bytes");
+  if (range) {
+    const { offset, length } = resolveRange(range, head.size);
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${head.size}`);
+    headers.set("Content-Length", String(length));
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers.set("Content-Length", String(head.size));
+  return new Response(obj.body, { status: 200, headers });
 });
 
 // POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
