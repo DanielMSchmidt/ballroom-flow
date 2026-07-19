@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { MEDIA_CAPS } from "@weavesteps/contract";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { type AuthedContext, authedContext } from "../test-support/authed-context";
 import { expectIndexedQuery } from "../test-support/explain";
 import { generateTestKeypair, type TestKeypair } from "../test-support/jwt";
@@ -320,5 +320,112 @@ describe("indexed counter reads", () => {
       "SELECT COALESCE(SUM(bytes), 0) AS used FROM media_object WHERE userId = ? AND deletedAt IS NULL",
       ["u_comm"],
     );
+  });
+});
+
+const get = (ctx: AuthedContext | null, objectKey: string, range?: string) =>
+  SELF.fetch(`https://x/api/media/${objectKey}`, {
+    headers: {
+      ...(ctx ? ctx.authHeaders() : {}),
+      ...(range ? { Range: range } : {}),
+    },
+  });
+
+// A 10-byte body ("0123456789") for the Range assertions.
+const TEN_BYTES = new Uint8Array([48, 49, 50, 51, 52, 53, 54, 55, 56, 57]).buffer.slice(0);
+
+async function arrangeServed(annotationId: string, mediaId: string): Promise<string> {
+  const res = await mint(commenter, imageBody(annotationId, mediaId, 10));
+  const { objectKey } = await res.json<{ objectKey: string }>();
+  const put = await SELF.fetch(`https://x/api/media/${objectKey}`, {
+    method: "PUT",
+    headers: {
+      ...commenter.authHeaders(),
+      "content-type": "image/jpeg",
+      "content-length": "10",
+    },
+    body: TEN_BYTES,
+  });
+  expect(put.status).toBe(200);
+  return objectKey;
+}
+
+describe("stream-through serving (+ Range)", () => {
+  it("streams the object to any member (viewer 200, owner 200) and 403s a non-member", async () => {
+    const objectKey = await arrangeServed("a_srv", "m_srv");
+    expect((await get(viewer, objectKey)).status).toBe(200);
+    expect((await get(owner, objectKey)).status).toBe(200);
+    expect((await get(commenter, objectKey)).status).toBe(200);
+    expect((await get(outsider, objectKey)).status).toBe(403);
+    expect((await get(null, objectKey)).status).toBe(401);
+  });
+
+  it("honors Range: bytes=0-3 → 206, Content-Range bytes 0-3/10, body '0123'", async () => {
+    const objectKey = await arrangeServed("a_srv2", "m_srv2");
+    const res = await get(viewer, objectKey, "bytes=0-3");
+    expect(res.status).toBe(206);
+    expect(res.headers.get("Content-Range")).toBe("bytes 0-3/10");
+    expect(res.headers.get("Accept-Ranges")).toBe("bytes");
+    expect(await res.text()).toBe("0123");
+  });
+
+  it("Range: bytes=4- → 206 with the tail; an unsatisfiable range → 416", async () => {
+    const objectKey = await arrangeServed("a_srv3", "m_srv3");
+    const tail = await get(viewer, objectKey, "bytes=4-");
+    expect(tail.status).toBe(206);
+    expect(await tail.text()).toBe("456789");
+    const bad = await get(viewer, objectKey, "bytes=200-");
+    expect(bad.status).toBe(416);
+    expect(bad.headers.get("Content-Range")).toBe("bytes */10");
+  });
+
+  it("serves a TOMBSTONED item's object to members unchanged (no CRDT check on the read path — undo must restore it)", async () => {
+    const objectKey = await arrangeServed("a_srv4", "m_srv4");
+    // Tombstone the grant row (undo-restorable); the object must still stream.
+    await env.DB.prepare("UPDATE media_object SET deletedAt = ? WHERE objectKey = ?")
+      .bind(Date.now(), objectKey)
+      .run();
+    expect((await get(viewer, objectKey)).status).toBe(200);
+  });
+
+  it("404s a key outside the media/ namespace and a malformed key", async () => {
+    expect((await get(viewer, "notmedia/r/a/m")).status).toBe(404);
+    expect((await get(viewer, "media/only/two")).status).toBe(404);
+  });
+
+  it("404s a well-formed key with no stored object (member, but nothing in R2)", async () => {
+    expect((await get(viewer, `media/${DOC}/a_ghost/m_ghost`)).status).toBe(404);
+  });
+});
+
+describe("youtube-thumb proxy", () => {
+  const thumb = (ctx: AuthedContext | null, videoId: string, docRef: string | null) =>
+    SELF.fetch(
+      `https://x/api/media/youtube-thumb/${videoId}${docRef !== null ? `?docRef=${docRef}` : ""}`,
+      { headers: ctx ? ctx.authHeaders() : {} },
+    );
+
+  it("401 unauthenticated; 403 non-member of ?docRef; 400 bad videoId", async () => {
+    expect((await thumb(null, "dQw4w9WgXcQ", DOC)).status).toBe(401);
+    expect((await thumb(outsider, "dQw4w9WgXcQ", DOC)).status).toBe(403);
+    expect((await thumb(viewer, "not a video id!", DOC)).status).toBe(400);
+    expect((await thumb(viewer, "dQw4w9WgXcQ", null)).status).toBe(400);
+  });
+
+  it("streams the upstream jpg with a long-lived Cache-Control (seam, vi.spyOn fetch)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0xff, 0xd8]).buffer, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      }),
+    );
+    try {
+      const { fetchYoutubeThumb } = await import("../youtube-thumb");
+      const res = await fetchYoutubeThumb("dQw4w9WgXcQ");
+      expect(fetchSpy).toHaveBeenCalledWith("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+      expect(res.headers.get("cache-control")).toBe("public, max-age=604800, immutable");
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
