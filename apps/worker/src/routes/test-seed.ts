@@ -123,7 +123,27 @@ testSeed.post("/api/test/seed", async (c) => {
             deletedAt: null,
           })),
         })),
-        annotations: [],
+        // E2E-only: backdated routine annotations (comment activity fade-out
+        // journeys). The UI stamps Date.now() on create, so an explicit
+        // createdAt can only arrive through this seed seam. Values are already
+        // Zod-parsed by zSeedBody — no casts.
+        annotations: (doc.annotations ?? []).map((a) => ({
+          id: a.id,
+          authorId: a.authorId,
+          kind: a.kind,
+          text: a.text,
+          tags: [],
+          anchors: a.anchors,
+          replies: (a.replies ?? []).map((r) => ({
+            id: r.id,
+            authorId: r.authorId,
+            text: r.text,
+            createdAt: r.createdAt,
+            deletedAt: null,
+          })),
+          createdAt: a.createdAt,
+          deletedAt: null,
+        })),
         schemaVersion: CURRENT_SCHEMA_VERSION,
         deletedAt: null,
       });

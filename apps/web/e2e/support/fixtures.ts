@@ -19,6 +19,18 @@ export interface SeedSpec {
       name: string;
       placements: { id: string; figureRef: string }[];
     }[];
+    /** Routine annotations server-seeded with explicit (backdatable) createdAt —
+     *  the UI stamps Date.now(), so comment activity fade-out journeys backdate
+     *  through this seam. */
+    annotations?: {
+      id: string;
+      authorId: string;
+      kind: "note" | "lesson" | "practice";
+      text: string;
+      anchors: unknown[];
+      createdAt: number;
+      replies?: { id: string; authorId: string; text: string; createdAt: number }[];
+    }[];
   }[];
   memberships?: {
     id?: string;
