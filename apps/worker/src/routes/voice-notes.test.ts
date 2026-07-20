@@ -182,6 +182,10 @@ describe("POST /api/voice-notes/interpret", () => {
       expect(proposal.proposed.anchor.figureType).toBe("feather");
       expect(proposal.proposed.anchor.danceScope).toBe("foxtrot");
     }
+    // noteText is the coaching content with the "In Slowfox, in Feather Steps,"
+    // addressing STRIPPED (that became the anchor) — not the whole transcript.
+    expect(proposal.noteText).toBe("I need to settle the sway before the Three Step.");
+    expect(proposal.noteText.toLowerCase()).not.toContain("feather");
     // READ-ONLY: no D1 row minted.
     expect(await countRows()).toEqual(before);
   });
@@ -218,6 +222,9 @@ describe("POST /api/voice-notes/interpret", () => {
       expect(proposal.proposed.anchor.figureRef).toBe(bounce1);
     }
     expect(proposal.proposed?.routineRef).toBe(rt);
+    // Addressing stripped from the note; the coaching content remains.
+    expect(proposal.noteText).toBe("I need to change the direction to go more diagonal.");
+    expect(proposal.noteText.toLowerCase()).not.toContain("bounce fallaway");
   });
 
   it("scenario C: an unresolvable transcript → resolved:false, noteText = transcript", async () => {

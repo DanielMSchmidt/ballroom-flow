@@ -166,11 +166,15 @@ function transcriptMentionsFigure(lower: string, figure: ChoreoContextFigure): b
   });
 }
 
-/** Strip the leading "in <dance>, in <figure>, …" clauses so noteText is the note. */
-function extractNoteText(transcript: string): string {
-  // Drop everything up to and including the last comma in the first sentence —
-  // the "In Slowfox, in Feather Steps," lead-in — falling back to the whole
-  // transcript when there is no such lead-in.
+/**
+ * Strip the leading "in <dance>, in <figure>, …" addressing so noteText is the
+ * coaching CONTENT only (the addressing became the anchor — see the real prompt's
+ * INTERPRET_SYSTEM_INSTRUCTIONS). Used ONLY on a RESOLVED extraction; the
+ * unresolved branch keeps the whole transcript (nothing to strip). Drops
+ * everything up to and including the last comma of the first sentence, falling
+ * back to the whole transcript when there is no such lead-in.
+ */
+function stripAddressing(transcript: string): string {
   const firstSentence = transcript.split(/(?<=[.!?])\s/)[0] ?? transcript;
   const lastComma = firstSentence.lastIndexOf(",");
   if (lastComma === -1) return transcript.trim();
@@ -200,7 +204,9 @@ function fixtureInterpret(transcript: string, context: ChoreoContext): unknown {
       )?.id ?? null)
     : null;
 
-  const noteText = extractNoteText(transcript);
+  // On a RESOLVED anchor the note is the coaching content with the addressing
+  // stripped; the unresolved branch keeps the whole transcript (nothing to strip).
+  const strippedNote = stripAddressing(transcript);
   const flat = flatFigures(context);
 
   // Match a choreo by name substring, and an ordinal ("first"/"second").
@@ -216,7 +222,7 @@ function fixtureInterpret(transcript: string, context: ChoreoContext): unknown {
     if (pick) {
       return {
         resolved: true,
-        noteText,
+        noteText: strippedNote,
         confidence: dance ? "high" : "medium",
         anchor: { type: "figure", figureRef: pick.figure.figureRef },
         alternatives: [],
@@ -230,7 +236,7 @@ function fixtureInterpret(transcript: string, context: ChoreoContext): unknown {
   if (figureMatch) {
     return {
       resolved: true,
-      noteText,
+      noteText: strippedNote,
       confidence: dance ? "high" : "medium",
       anchor: {
         type: "figureType",
@@ -241,8 +247,15 @@ function fixtureInterpret(transcript: string, context: ChoreoContext): unknown {
     };
   }
 
-  // No figure match → unresolved (the model saw no groundable anchor).
-  return { resolved: false, noteText, confidence: "low", anchor: null, alternatives: [] };
+  // No figure match → unresolved (the model saw no groundable anchor): keep the
+  // whole transcript as the note text (nothing to strip).
+  return {
+    resolved: false,
+    noteText: transcript.trim(),
+    confidence: "low",
+    anchor: null,
+    alternatives: [],
+  };
 }
 
 /** Deterministic fixture (unit tests, E2E, local dev — zero secrets, zero flake). */
@@ -266,8 +279,10 @@ export const VOICE_EXTRACT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast" as
 
 /** The JSON-schema hint sent to the extraction model. It is a HINT — Workers AI
  *  gives no hard schema guarantee, so groundProposal's Zod re-validation stays
- *  mandatory. Hand-written to mirror zVoiceExtraction (kept in sync deliberately). */
-const EXTRACTION_JSON_SCHEMA = {
+ *  mandatory. Hand-written to mirror zVoiceExtraction (kept in sync deliberately).
+ *  EXPORTED so the payload unit test and the on-demand eval harness pin the exact
+ *  schema the model receives (no drift between prod and the tests). */
+export const EXTRACTION_JSON_SCHEMA = {
   type: "object",
   properties: {
     resolved: { type: "boolean" },
@@ -285,6 +300,62 @@ const EXTRACTION_JSON_SCHEMA = {
 /** Serialize the grounding context into the system prompt (closed multiple-choice). */
 function contextPrompt(context: ChoreoContext): string {
   return JSON.stringify(context);
+}
+
+/** One chat message sent to the extraction model. */
+export interface InterpretMessage {
+  role: "system" | "user";
+  content: string;
+}
+
+/** The exact payload sent to the extraction model — the messages + the JSON-schema
+ *  response_format. Returned by {@link buildInterpretMessages}. */
+export interface InterpretPayload {
+  messages: InterpretMessage[];
+  response_format: { type: "json_schema"; json_schema: typeof EXTRACTION_JSON_SCHEMA };
+}
+
+/**
+ * The system-prompt instructions — the CONTRACT with the extraction model. Split
+ * out (and joined below) so the payload test and the eval harness pin the exact
+ * wording the model receives.
+ *
+ * The `noteText` rule is the product ask: when an anchor resolves, noteText is the
+ * coaching CONTENT only, with the figure/dance/location ADDRESSING removed (that
+ * part became the anchor); when nothing resolves, noteText is the whole transcript
+ * (there is nothing to strip). The anchor-only-from-context rule keeps the model
+ * from inventing a target — a wrong anchor is worse than none.
+ */
+const INTERPRET_SYSTEM_INSTRUCTIONS = [
+  "You resolve a spoken ballroom practice note against the dancer's actual choreography.",
+  "Reply ONLY with JSON matching the schema.",
+  "Choose an anchor ONLY from the figures/dances in this context; if nothing matches, return resolved:false with anchor:null.",
+  'noteText is the COACHING CONTENT of the note, NOT the whole transcript: when you resolve an anchor, STRIP the figure/dance/location addressing that the anchor already captures (e.g. "In Slowfox, in Feather Steps, settle the sway" with a Feather in context → anchor the Feather and set noteText to "settle the sway", NOT the whole sentence).',
+  "When nothing resolves (resolved:false), set noteText to the whole transcript unchanged — there is nothing to strip.",
+] as const;
+
+/**
+ * Build the EXACT interpret payload — the system+user messages and the
+ * response_format — the extraction model receives. PURE and EXPORTED so ONE
+ * builder feeds production (`workersVoiceAi.interpret`), the payload unit test,
+ * and the on-demand real-model eval harness — the prod prompt and the tested
+ * prompt can never drift. The system message carries the instructions above plus
+ * the serialized grounding context; the user message is the raw transcript.
+ */
+export function buildInterpretMessages(
+  transcript: string,
+  context: ChoreoContext,
+): InterpretPayload {
+  return {
+    messages: [
+      {
+        role: "system",
+        content: `${INTERPRET_SYSTEM_INSTRUCTIONS.join(" ")} Context: ${contextPrompt(context)}`,
+      },
+      { role: "user", content: transcript },
+    ],
+    response_format: { type: "json_schema", json_schema: EXTRACTION_JSON_SCHEMA },
+  };
 }
 
 /** Base64-encode audio bytes for the Whisper `audio` input (string form). */
@@ -344,22 +415,10 @@ export function workersVoiceAi(runner: VoiceAiRunner, gatewayId?: string): Voice
       return readTranscript(out);
     },
     async interpret(transcript, context) {
+      const payload = buildInterpretMessages(transcript, context);
       const out = await runner.run(
         VOICE_EXTRACT_MODEL,
-        {
-          messages: [
-            {
-              role: "system",
-              content:
-                "You resolve a spoken ballroom practice note against the dancer's actual choreography. " +
-                "Reply ONLY with JSON matching the schema. Choose an anchor ONLY from the figures/dances in this context; " +
-                "if nothing matches, return resolved:false with anchor:null. Context: " +
-                contextPrompt(context),
-            },
-            { role: "user", content: transcript },
-          ],
-          response_format: { type: "json_schema", json_schema: EXTRACTION_JSON_SCHEMA },
-        },
+        { messages: payload.messages, response_format: payload.response_format },
         gateway,
       );
       // The model may return the JSON as a string (chat) — parse it; groundProposal

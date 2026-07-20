@@ -198,6 +198,12 @@ shapes are proposable (a family `figureType` note, a `figure` instance note, a t
 note); the AI only *proposes* and the human confirms, so **no wrong anchor can be committed
 past the confirm step**.
 
+When the app resolves an anchor, the **note text is the coaching content only — the
+figure/dance/location addressing is stripped out**, because that part *became* the anchor. So
+*"In Slowfox, in Feather Steps, settle the sway"* lands as a Feather family note reading
+*"settle the sway"* (not the whole sentence repeated on the chip). When nothing resolves, the
+note keeps the **whole transcript** (there is nothing to strip).
+
 An utterance that matches no figure **degrades to a plain transcribed note** (kept as note
 text, never a guessed anchor). A **silent or empty capture** — mic held but nothing heard —
 lands in an honest *"didn't catch anything"* state with a **try-again** affordance (which

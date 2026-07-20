@@ -14,6 +14,8 @@ import { env } from "cloudflare:test";
 import type { ChoreoContext } from "@weavesteps/domain";
 import { describe, expect, it } from "vitest";
 import {
+  buildInterpretMessages,
+  EXTRACTION_JSON_SCHEMA,
   fixtureVoiceAi,
   groundProposal,
   shouldUseWorkersAi,
@@ -79,6 +81,75 @@ function twoFoxtrotContext(): ChoreoContext {
     ],
   };
 }
+
+describe("buildInterpretMessages — the exact payload sent to the model", () => {
+  // The ONE shared prompt builder feeds prod, this test, and the eval harness, so
+  // the tested prompt cannot drift from the deployed one. We pin: the serialized
+  // context, the noteText-stripping instruction, the anchor-only-from-context
+  // rule, the user message = the raw transcript, and the response_format schema.
+  const ctx = twoFoxtrotContext();
+  const transcript = "In Slowfox, in Feather Steps, settle the sway.";
+
+  it("carries a system + user message and the json_schema response_format", () => {
+    const payload = buildInterpretMessages(transcript, ctx);
+    expect(payload.messages.map((m) => m.role)).toEqual(["system", "user"]);
+    expect(payload.response_format.type).toBe("json_schema");
+    expect(payload.response_format.json_schema).toBe(EXTRACTION_JSON_SCHEMA);
+  });
+
+  it("the user message is the raw transcript, verbatim", () => {
+    const payload = buildInterpretMessages(transcript, ctx);
+    const userMsg = payload.messages.find((m) => m.role === "user");
+    expect(userMsg?.content).toBe(transcript);
+  });
+
+  it("the system message embeds the serialized grounding context", () => {
+    const payload = buildInterpretMessages(transcript, ctx);
+    const system = payload.messages.find((m) => m.role === "system")?.content ?? "";
+    // The whole JSON.stringify(context) must appear so the model grounds against
+    // the caller's ACTUAL figures/dances (closed multiple-choice).
+    expect(system).toContain(JSON.stringify(ctx));
+    // And the load-bearing pieces of it individually.
+    expect(system).toContain("Feather Step");
+    expect(system).toContain("bounce_fallaway");
+    expect(system).toContain("slowfox");
+  });
+
+  it("the system message states the noteText-stripping rule", () => {
+    const system =
+      buildInterpretMessages(transcript, ctx).messages.find((m) => m.role === "system")?.content ??
+      "";
+    expect(system).toContain("noteText");
+    expect(system.toLowerCase()).toContain("strip");
+    // The unresolved case keeps the whole transcript.
+    expect(system.toLowerCase()).toContain("nothing to strip");
+  });
+
+  it("the system message states the anchor-only-from-context rule", () => {
+    const system =
+      buildInterpretMessages(transcript, ctx).messages.find((m) => m.role === "system")?.content ??
+      "";
+    expect(system).toContain("ONLY from the figures/dances in this context");
+    expect(system).toContain("resolved:false");
+  });
+
+  it("workersVoiceAi.interpret sends EXACTLY buildInterpretMessages' payload to VOICE_EXTRACT_MODEL", async () => {
+    // Drive the production seam with a capturing runner and assert the wire
+    // payload IS the shared builder's output (no drift between builder and seam).
+    const captured: { model: string; inputs: Record<string, unknown> }[] = [];
+    const runner: VoiceAiRunner = {
+      async run(model, inputs) {
+        captured.push({ model, inputs });
+        return { response: '{"resolved":false,"noteText":"x","confidence":"low","anchor":null}' };
+      },
+    };
+    await workersVoiceAi(runner).interpret(transcript, ctx);
+    const expected = buildInterpretMessages(transcript, ctx);
+    expect(captured[0]?.model).toBe(VOICE_EXTRACT_MODEL);
+    expect(captured[0]?.inputs.messages).toEqual(expected.messages);
+    expect(captured[0]?.inputs.response_format).toEqual(expected.response_format);
+  });
+});
 
 describe("groundProposal — the mandatory re-validation + grounding", () => {
   it("degrades non-parsing model output to resolved:false with noteText = transcript", () => {
@@ -160,7 +231,7 @@ describe("fixtureVoiceAi — deterministic, derived from inputs", () => {
     expect(await ai.transcribe(bytes, { initialPrompt: "" })).toBe("in slowfox settle the sway");
   });
 
-  it("scenario A: a slowfox + feather transcript → a groundable figureType/foxtrot extraction", async () => {
+  it("scenario A: a slowfox + feather transcript → a groundable figureType/foxtrot extraction with the addressing STRIPPED from noteText", async () => {
     const ctx = twoFoxtrotContext();
     const raw = await fixtureVoiceAi().interpret(
       "In Slowfox, in Feather Steps, I need to settle the sway before the Three Step.",
@@ -173,9 +244,13 @@ describe("fixtureVoiceAi — deterministic, derived from inputs", () => {
       expect(p.proposed.anchor.figureType).toBe("feather");
       expect(p.proposed.anchor.danceScope).toBe("foxtrot");
     }
+    // The "In Slowfox, in Feather Steps," addressing became the anchor and is gone
+    // from the note; the coaching content remains and no longer names the figure.
+    expect(p.noteText).toBe("I need to settle the sway before the Three Step.");
+    expect(p.noteText.toLowerCase()).not.toContain("feather");
   });
 
-  it("scenario B: an ordinal bounce-fallaway transcript → the EARLIEST matching figure anchor", async () => {
+  it("scenario B: an ordinal bounce-fallaway transcript → the EARLIEST matching figure anchor with stripped noteText", async () => {
     const ctx = twoFoxtrotContext();
     const raw = await fixtureVoiceAi().interpret(
       "In my competition slowfox, on the first bounce fallaway, I need to change the direction to go more diagonal.",
@@ -187,12 +262,26 @@ describe("fixtureVoiceAi — deterministic, derived from inputs", () => {
     if (p.proposed?.anchor.type === "figure") {
       expect(p.proposed.anchor.figureRef).toBe("fig_bounce_1");
     }
+    expect(p.noteText).toBe("I need to change the direction to go more diagonal.");
+    expect(p.noteText.toLowerCase()).not.toContain("bounce fallaway");
   });
 
-  it("scenario C: an unresolvable transcript → resolved:false", async () => {
+  it("scenario C: an unresolvable transcript → resolved:false, noteText = the WHOLE transcript (nothing to strip)", async () => {
     const ctx = twoFoxtrotContext();
     const raw = await fixtureVoiceAi().interpret("Remember to breathe and stay grounded.", ctx);
-    expect(groundProposal(raw, ctx, "Remember to breathe and stay grounded.").resolved).toBe(false);
+    const p = groundProposal(raw, ctx, "Remember to breathe and stay grounded.");
+    expect(p.resolved).toBe(false);
+    expect(p.noteText).toBe("Remember to breathe and stay grounded.");
+  });
+
+  it("keeps the WHOLE transcript when the addressing resolves no figure (unresolved, don't strip)", async () => {
+    const ctx = twoFoxtrotContext();
+    // Names a dance clause but no figure in context → unresolved: nothing stripped.
+    const t = "In Slowfox, keep your frame wide and steady.";
+    const raw = await fixtureVoiceAi().interpret(t, ctx);
+    const p = groundProposal(raw, ctx, t);
+    expect(p.resolved).toBe(false);
+    expect(p.noteText).toBe(t);
   });
 
   it("is stable across repeated calls", async () => {
