@@ -158,6 +158,16 @@ call a model (zero secrets).
   are present in the pinned `@cloudflare/workers-types` v5 `AiModels` catalog.
 - **STT (Whisper fallback):** `@cf/openai/whisper-large-v3-turbo`, `initial_prompt` seeded
   with the in-scope figure names, `language: "en"`. On-device Web Speech is tried first.
+- **Capture design — push-to-talk, dual (2026-07-20):** the client seam
+  (`apps/web/src/lib/speech.ts`, `dualCapture`) is **push-to-talk**: hold the mic to record,
+  release to send. On press it starts BOTH on-device `SpeechRecognition` AND a `MediaRecorder`
+  clip; on release it decides ONCE — a non-empty on-device transcript wins (free, instant),
+  else the recorded clip is handed to `onAudioFallback` for the Whisper STT above. A
+  recognition `onerror`/`onend` is **ignored** (the clip is the fallback), because mobile
+  Chrome advertises the on-device API but streams no results — the previous auto-start design
+  hung on "listening" there. Keyboard a11y: the mic button also toggles start/stop on
+  Enter/Space (`aria-pressed`). Under the E2E build the compile-time `e2eCapture` emits the
+  injected transcript on press (`window.__weaveVoiceTranscript`), so no model is called.
 - **A/B floor + escalation (candidates, not yet wired):** a smaller extraction model as a
   cost/latency floor to A/B, and an in-Cloudflare escalation for the low-confidence slice, are
   recorded *design* candidates. The idea doc named `@cf/meta/llama-3.1-8b-instruct-fast` and
