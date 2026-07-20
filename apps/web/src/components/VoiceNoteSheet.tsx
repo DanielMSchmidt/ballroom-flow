@@ -27,7 +27,11 @@ export interface VoiceNoteSheetProps {
   routineRef?: string;
 }
 
-type Phase = "rec" | "interpreting" | "confirm" | "unresolved" | "empty";
+// "idle" — sheet open, awaiting a hold; "rec" — actively capturing (held, or the
+// keyboard toggle is on). The mic never auto-starts (push-to-talk, #291): mobile
+// Chrome advertises SpeechRecognition but streams nothing, so an auto-start "rec"
+// state sat forever on "…". See docs/concepts/annotations.md § Voice capture.
+type Phase = "idle" | "rec" | "interpreting" | "confirm" | "unresolved" | "empty";
 
 /**
  * Map a grounded proposal to the verbatim `JournalLink` the manual picker
@@ -59,7 +63,7 @@ export function proposalToLink(p: VoiceNoteProposal): JournalLink | null {
 export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | null {
   const t = useMessages(journalMessages);
   const { open, capture, interpret, transcribe, routineRef } = props;
-  const [phase, setPhase] = useState<Phase>("rec");
+  const [phase, setPhase] = useState<Phase>("idle");
   const [transcript, setTranscript] = useState("");
   const [proposal, setProposal] = useState<VoiceNoteProposal | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +71,10 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   // capture's own onend both try to finalize — whichever lands first wins, the
   // other is a no-op. Reset when a new capture starts.
   const resolvingRef = useRef(false);
+  // True while a hold (or keyboard-toggle) capture is live — the press-and-hold and
+  // keyboard-toggle handlers share it so a stray pointerleave after release, or a
+  // second Enter, can't double-start/stop the capture.
+  const recordingRef = useRef(false);
 
   const resolveTranscript = useCallback(
     async (finalText: string) => {
@@ -95,6 +103,8 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   );
 
   const startCapture = useCallback((): void => {
+    if (recordingRef.current) return; // already holding — ignore a repeat press
+    recordingRef.current = true;
     setPhase("rec");
     setTranscript("");
     setProposal(null);
@@ -103,8 +113,9 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
     capture.start({
       onTranscript: (text, final) => {
         setTranscript(text);
-        // `final` arrives once, from the capture's onend (after stop, or a browser
-        // silence timeout) — resolve on it. Interim results just update the display.
+        // Interim results update the live display. The FINAL decision is made when the
+        // user releases (capture.stop) — the dual capture ships the final transcript
+        // there, or hands back a recorded clip for the Whisper fallback.
         if (final) void resolveTranscript(text);
       },
       onAudioFallback: (clip) => {
@@ -116,21 +127,40 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
     });
   }, [capture, resolveTranscript, transcribe, t.saveFailed]);
 
-  // Start capture when the sheet opens; stop when it closes.
-  useEffect(() => {
-    if (!open) return;
-    startCapture();
-    return () => capture.stop();
-  }, [open, capture, startCapture]);
-
-  const stop = (): void => {
-    // Always advance on Stop — never leave the sheet stuck "listening". We resolve
-    // immediately with the live transcript; the capture's onend will try too, but
-    // resolvingRef dedupes. An empty transcript routes to the "didn't catch
-    // anything" state, not a doomed interpret.
+  // Release: stop the capture and let it decide (on-device transcript, or a recorded
+  // clip → Whisper). Advances the sheet off "rec" so it's never stuck listening.
+  const stopCapture = useCallback((): void => {
+    if (!recordingRef.current) return; // not holding — a stray pointerleave/keyup
+    recordingRef.current = false;
     capture.stop();
-    void resolveTranscript(transcript);
-  };
+  }, [capture]);
+
+  // Stop capture when the sheet closes (a hold left open, then dismissed).
+  useEffect(() => {
+    if (open) return;
+    if (recordingRef.current) {
+      recordingRef.current = false;
+      capture.stop();
+    }
+  }, [open, capture]);
+
+  // Press-and-hold isn't keyboard-operable, so the talk button ALSO toggles on
+  // Enter/Space (first = start, second = stop). Pointer handlers own the hold path.
+  const toggleCapture = useCallback((): void => {
+    if (recordingRef.current) stopCapture();
+    else startCapture();
+  }, [startCapture, stopCapture]);
+
+  // Retry from the empty state: back to idle so the user holds again (push-to-talk),
+  // rather than auto-recording. Clears the prior empty transcript.
+  const resetToIdle = useCallback((): void => {
+    recordingRef.current = false;
+    resolvingRef.current = false;
+    setTranscript("");
+    setProposal(null);
+    setError(null);
+    setPhase("idle");
+  }, []);
 
   if (!open) return null;
 
@@ -143,33 +173,55 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
 
   return (
     <Sheet open={open} onClose={props.onClose} title={t.voiceSheetTitle}>
-      {phase === "rec" && (
+      {(phase === "idle" || phase === "rec") && (
         <div className="flex flex-col items-center gap-3 py-1">
-          <span
-            aria-hidden
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-accent"
-            style={{ animation: "bf-mic-pulse 1.6s var(--bf-ease-out) infinite" }}
-          >
-            <MicGlyph />
-          </span>
-          <span className="text-2xs font-bold text-ink">{t.voiceListening}</span>
-          <div
-            role="status"
-            aria-live="polite"
-            className="w-full rounded-xl border border-border-default bg-surface-sunken px-3 py-3 text-ink"
-            style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-md)" }}
-          >
-            {transcript ? `“${transcript}”` : "…"}
-          </div>
-          <span className="text-2xs text-ink-muted">{t.voiceOnDeviceHint}</span>
+          {/* Push-to-talk: hold the mic (pointer) or toggle it (keyboard). While held
+              we're in "rec" — the on-device path streams a live transcript; the
+              mobile/Whisper path has none, so it shows a "recording…" indicator. */}
           <button
             type="button"
-            onClick={stop}
-            className="flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-2xs font-bold text-surface"
+            aria-pressed={phase === "rec"}
+            aria-label={phase === "rec" ? t.voiceRecordingButton : t.voiceHoldButton}
+            onPointerDown={(e) => {
+              e.preventDefault(); // keep focus off the button so a subsequent key toggles cleanly
+              startCapture();
+            }}
+            onPointerUp={stopCapture}
+            onPointerLeave={stopCapture}
+            onPointerCancel={stopCapture}
+            onKeyDown={(e) => {
+              // Space/Enter toggle; prevent the browser's synthetic click (which would
+              // fire a second toggle) and Space page-scroll.
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                toggleCapture();
+              }
+            }}
+            className="flex h-16 w-16 touch-none select-none items-center justify-center rounded-full bg-accent"
+            style={
+              phase === "rec"
+                ? { animation: "bf-mic-pulse 1.6s var(--bf-ease-out) infinite" }
+                : undefined
+            }
           >
-            <span className="h-2.5 w-2.5 rounded-sm bg-danger" />
-            {t.voiceStop}
+            <MicGlyph />
           </button>
+          <span className="text-2xs font-bold text-ink">
+            {phase === "rec" ? t.voiceRecording : t.voiceHoldPrompt}
+          </span>
+          {phase === "rec" && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="w-full rounded-xl border border-border-default bg-surface-sunken px-3 py-3 text-ink"
+              style={{ fontFamily: "var(--bf-font-note)", fontSize: "var(--bf-text-md)" }}
+            >
+              {transcript ? `“${transcript}”` : "…"}
+            </div>
+          )}
+          <span className="text-2xs text-ink-muted">
+            {phase === "rec" ? t.voiceOnDeviceHint : t.voiceKeyboardHint}
+          </span>
         </div>
       )}
 
@@ -270,7 +322,7 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
               <>
                 <button
                   type="button"
-                  onClick={startCapture}
+                  onClick={resetToIdle}
                   className="rounded-xl bg-accent px-3 py-3 text-center text-2xs font-bold text-surface"
                 >
                   {t.voiceRetry}

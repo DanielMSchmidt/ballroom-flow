@@ -140,7 +140,10 @@ async function seedCompSlowfox(
   return { BOUNCE_1, BOUNCE_2, RT };
 }
 
-/** Open the journal entry editor and start voice capture with an injected transcript. */
+/** Open the journal entry editor and drive push-to-talk voice capture with an
+ *  injected transcript. The sheet opens IDLE (push-to-talk, #291); pressing the talk
+ *  button starts the E2E capture, which emits the injected transcript as final on
+ *  `start` (Playwright has no mic); releasing completes the hold. */
 async function startVoiceWithTranscript(page: Page, transcript: string): Promise<void> {
   const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
   await nav.getByRole("button", { name: "Journal" }).click();
@@ -150,6 +153,11 @@ async function startVoiceWithTranscript(page: Page, transcript: string): Promise
     window.__weaveVoiceTranscript = t;
   }, transcript);
   await page.getByRole("button", { name: "voice", exact: true }).click();
+  // Press-and-hold the mic (pointerdown starts capture → the injected transcript),
+  // then release.
+  const talk = page.getByRole("button", { name: /hold to talk|recording — release to send/i });
+  await talk.dispatchEvent("pointerdown");
+  await talk.dispatchEvent("pointerup");
 }
 
 test.describe("@smoke AI voice notes (fixture AI)", () => {

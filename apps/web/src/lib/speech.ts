@@ -88,100 +88,164 @@ function e2eCapture(): SpeechCapture {
   };
 }
 
-/** On-device SpeechRecognition capture (continuous, interim results). */
-function recognitionCapture(Ctor: SpeechRecognitionCtor): SpeechCapture {
+/**
+ * Push-to-talk DUAL capture: `start` = press, `stop` = release. On press it runs
+ * BOTH on-device SpeechRecognition (where available) AND a MediaRecorder clip, so
+ * either path can resolve the note. On release it decides ONCE: if the on-device
+ * engine produced text, that wins (free, instant); otherwise the recorded clip is
+ * handed to the server Whisper fallback (`onAudioFallback`).
+ *
+ * This is the design fix for mobile Chrome, which advertises SpeechRecognition but
+ * streams no results — so `onerror`/`onend` from recognition are IGNORED, the
+ * decision is driven entirely by whether any transcript text arrived by release.
+ */
+export function dualCapture(Ctor: SpeechRecognitionCtor | null): SpeechCapture {
   let rec: SpeechRecognitionLike | null = null;
-  // The full transcript so far. In continuous mode `ev.results` ACCUMULATES every
-  // segment, so we rebuild the whole string each event rather than emitting
-  // per-segment — the old code kept only the LAST segment, which is why the manual
-  // Stop usually sent a fragment (or nothing).
-  let latest = "";
-  let done = false;
-  return {
-    onDevice: true,
-    start(cb) {
-      const r = new Ctor();
-      rec = r;
-      latest = "";
-      done = false;
-      r.continuous = true;
-      r.interimResults = true;
-      r.lang = "en-US";
-      r.onresult = (ev) => {
-        let full = "";
-        for (let i = 0; i < ev.results.length; i++) {
-          const result = ev.results[i];
-          if (result) full += result[0].transcript;
-        }
-        latest = full.trim();
-        cb.onTranscript(latest, false); // live — the FINAL ships once, from onend
-      };
-      r.onerror = (ev) => cb.onError(new Error(ev.error ?? "speech recognition error"));
-      // The one reliable completion signal (continuous recognition doesn't deliver
-      // a terminal isFinal result on its own): ship the accumulated transcript as
-      // final, exactly once. Empty (silence) is honest — the sheet routes it to the
-      // "didn't catch anything" state rather than a doomed interpret.
-      r.onend = () => {
-        if (done) return;
-        done = true;
-        cb.onTranscript(latest, true);
-      };
-      r.start();
-    },
-    stop() {
-      // Ask recognition to end; onend delivers the final transcript. Keep `rec` so a
-      // late onresult/onend still resolves against a live reference.
-      rec?.stop();
-    },
-  };
-}
-
-/** Record→upload capture: gather a MediaRecorder clip, hand it to the Whisper fallback on stop. */
-function recorderCapture(): SpeechCapture {
   let recorder: MediaRecorder | null = null;
+  let stream: MediaStream | null = null;
+  // The active callbacks, held so stop() can resolve without threading them through
+  // every branch (set on start).
+  let pendingCb: SpeechCaptureCallbacks | null = null;
   const chunks: Blob[] = [];
+  // The full on-device transcript so far. In continuous mode `ev.results`
+  // ACCUMULATES every segment, so we rebuild the whole string each event.
+  let latest = "";
+  // Decide-once guard: the on-device path and the recorder's onstop both race to
+  // finish; whichever the decision picks resolves exactly once.
+  let resolved = false;
+  // True once stop() has been called: a getUserMedia promise that settles AFTER
+  // release must clean up rather than start recording.
+  let releasedBeforeRecorder = false;
+
+  function stopRecognition(): void {
+    rec?.stop();
+    rec = null;
+  }
+  function stopStream(): void {
+    if (stream) {
+      for (const track of stream.getTracks()) track.stop();
+      stream = null;
+    }
+  }
+
   return {
-    onDevice: false,
+    onDevice: Ctor != null,
     start(cb) {
+      latest = "";
+      resolved = false;
+      releasedBeforeRecorder = false;
+      chunks.length = 0;
+      pendingCb = cb;
+
+      if (Ctor) {
+        const r = new Ctor();
+        rec = r;
+        r.continuous = true;
+        r.interimResults = true;
+        r.lang = "en-US";
+        r.onresult = (ev) => {
+          let full = "";
+          for (let i = 0; i < ev.results.length; i++) {
+            const result = ev.results[i];
+            if (result) full += result[0].transcript;
+          }
+          latest = full.trim();
+          cb.onTranscript(latest, false); // live — the FINAL decision happens on stop
+        };
+        // A recognition error means only that the on-device path failed; the recorded
+        // clip is the fallback, so we swallow it and let stop() decide on the clip.
+        r.onerror = () => {};
+        // The decision is made on stop(), not here (continuous recognition never
+        // finalizes on its own, and Chrome's silence-timeout onend must not pre-empt
+        // the recorder path). onend is intentionally a no-op.
+        r.onend = () => {};
+        r.start();
+      }
+
+      // ALWAYS record too — the fallback clip for the no-on-device-result case.
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((s) => {
+          if (releasedBeforeRecorder) {
+            // Released before the mic opened — discard the late stream, don't record.
+            for (const track of s.getTracks()) track.stop();
+            return;
+          }
+          stream = s;
           const mr = new MediaRecorder(s);
           recorder = mr;
           mr.ondataavailable = (e) => {
             if (e.data.size > 0) chunks.push(e.data);
           };
           mr.onstop = () => {
-            cb.onAudioFallback(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
-            for (const track of s.getTracks()) track.stop();
+            if (!resolved) {
+              resolved = true;
+              cb.onAudioFallback(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
+            }
+            stopStream();
           };
           mr.start();
         })
-        .catch((err) => cb.onError(err instanceof Error ? err : new Error("microphone denied")));
+        .catch((err) => {
+          // A denied mic is only fatal when there's no on-device recognizer to carry
+          // the capture; with recognition present, the on-device path still works.
+          if (Ctor == null && !resolved) {
+            resolved = true;
+            cb.onError(err instanceof Error ? err : new Error("microphone denied"));
+          }
+        });
     },
     stop() {
-      recorder?.stop();
-      recorder = null;
+      if (resolved) {
+        // Already decided (a prior stop, or the recorder's async onstop) — just clean up.
+        stopRecognition();
+        stopStream();
+        return;
+      }
+      const text = latest.trim();
+      if (text.length > 0) {
+        // On-device path won: ship the transcript, discard the recorder (no upload).
+        resolved = true;
+        pendingCb?.onTranscript(text, true);
+        recorder?.stop(); // fires onstop, but `resolved` already true → no fallback
+        recorder = null;
+        stopRecognition();
+        stopStream();
+        return;
+      }
+      // No on-device text → the recorded clip is the note. Stop recognition, then let
+      // the recorder's onstop deliver the fallback blob.
+      stopRecognition();
+      if (recorder) {
+        recorder.stop(); // onstop fires onAudioFallback (guarded by `resolved`)
+        recorder = null;
+      } else {
+        // Fast release: the recorder hasn't started yet. Resolve to an empty audio
+        // fallback now (the sheet's #289 empty-state handles an empty transcript),
+        // and mark so a late getUserMedia cleans up instead of recording.
+        releasedBeforeRecorder = true;
+        resolved = true;
+        pendingCb?.onAudioFallback(new Blob(chunks, { type: "audio/webm" }));
+        stopStream();
+      }
     },
   };
 }
 
 /**
- * Create a speech capture: on-device SpeechRecognition where supported, else a
- * MediaRecorder clip for the server Whisper fallback. In an E2E build the
+ * Create a speech capture: a push-to-talk DUAL capture running on-device
+ * SpeechRecognition (where supported) AND a MediaRecorder clip together, deciding
+ * on release which resolves the note (`dualCapture`). In an E2E build the
  * injected-transcript hook stands in for the microphone.
  */
 export function createSpeechCapture(): SpeechCapture {
   if (isE2E()) return e2eCapture();
   const Ctor = speechRecognitionCtor();
-  if (Ctor) return recognitionCapture(Ctor);
-  if (
+  const canRecord =
     typeof MediaRecorder !== "undefined" &&
     typeof navigator !== "undefined" &&
-    navigator.mediaDevices
-  ) {
-    return recorderCapture();
-  }
+    navigator.mediaDevices != null;
+  if (Ctor || canRecord) return dualCapture(Ctor);
   // Nothing available — a capture that reports an error on start.
   return {
     onDevice: false,

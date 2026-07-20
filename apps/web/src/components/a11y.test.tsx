@@ -5,7 +5,7 @@ import type { VoiceNoteProposal } from "@weavesteps/contract";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
-import { axeCheck, renderUi, screen, waitFor } from "../test-support/render";
+import { axeCheck, fireEvent, renderUi, screen, waitFor } from "../test-support/render";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { AttributeEditor } from "./AttributeEditor";
 import { ChoreoList } from "./ChoreoList";
@@ -113,6 +113,8 @@ describe("US-051 Accessibility WCAG AA — axe clean on each screen", () => {
         onEditTarget={() => {}}
       />,
     );
+    // Push-to-talk: press the mic to wire the capture (the sheet opens idle, #291).
+    fireEvent.pointerDown(screen.getByRole("button", { name: /hold to talk/i }));
     emit("In Slowfox, in Feather Steps, settle the sway.");
     await waitFor(() => expect(screen.getByText("Confirm & save")).toBeTruthy());
     expect(await axeCheck(container)).toHaveNoViolations();
