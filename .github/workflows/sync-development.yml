@@ -1,0 +1,64 @@
+# Keeps the `development` integration branch REBASED on `main`: every push to
+# main rebases development's own commits (pending WEP/idea merges) onto the new
+# main tip and force-pushes. History on development therefore always reads as
+# "main + what's still staging".
+#
+# Authorization: development's branch protection requires PRs but is NOT
+# enforced for admins and allows force pushes; the push below authenticates
+# with the SYNC_PUSH_TOKEN secret — a fine-grained admin PAT (Contents:
+# read/write) — which is what bypasses the PR rule. GITHUB_TOKEN cannot bypass
+# classic protection, and the PAT has the bonus that its push fires the normal
+# `push` deploy workflow (staging redeploys without a dispatch hack).
+#
+# A rebase conflict fails this job loudly — resolve by rebasing development
+# onto main locally and force-pushing (admins bypass the PR rule).
+name: Sync development with main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Serialize syncs; a newer main push should wait, not race the rebase.
+concurrency:
+  group: sync-development
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the sync token
+        env:
+          SYNC_PUSH_TOKEN: ${{ secrets.SYNC_PUSH_TOKEN }}
+        if: ${{ env.SYNC_PUSH_TOKEN == '' }}
+        run: |
+          echo "::error::SYNC_PUSH_TOKEN repo secret is missing — create a fine-grained PAT (this repo, Contents read/write) and save it as SYNC_PUSH_TOKEN. See docs/DEVELOPMENT.md § Branch & deploy."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_PUSH_TOKEN }}
+
+      - name: Rebase development onto main (force-push)
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin development
+          if git merge-base --is-ancestor origin/main origin/development; then
+            echo "development already contains main — nothing to sync"
+            exit 0
+          fi
+          git checkout -B development origin/development
+          # --rebase-merges keeps merged WEP PRs as merge commits instead of
+          # flattening them into their individual commits.
+          if ! git rebase --rebase-merges origin/main; then
+            git rebase --abort
+            echo "::error::Rebase conflict between main and development — rebase manually and force-push (see workflow header)."
+            exit 1
+          fi
+          git push --force-with-lease origin development

@@ -3,6 +3,9 @@ name: Deploy
 on:
   push:
     branches: [development, main]
+  # Manual redeploys (pick the branch in the dispatch UI). The sync-development
+  # rebase pushes with a PAT, so those fire the `push` trigger natively.
+  workflow_dispatch:
 
 # One deploy at a time per branch; let a newer push cancel an in-flight one.
 concurrency:

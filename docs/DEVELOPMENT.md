@@ -210,6 +210,15 @@ PR CI gate (`.github/workflows/ci.yml`) is the source of truth.
 
 ## Branch & deploy
 
-`development` → **staging**, `main` → **production**; feature branches PR into
-`development`. PRs run the CI fast gate; pushes to the two long-lived branches
-re-run checks then deploy (see `deploy.yml` + PROVISIONING.md).
+`development` → **staging**, `main` → **production**. Fixes/chores/docs PR into
+`main`; `docs/ideas/` implementation work PRs into `development` (promoted to
+`main` in a release PR when ready). `sync-development.yml` **rebases
+`development` onto every `main` push and force-pushes** — history on
+`development` always reads as "main + what's still staging". After a sync,
+re-fetch and rebase any still-open branches that were stacked on the old tip.
+The push authenticates with the **`SYNC_PUSH_TOKEN`** repo secret (fine-grained
+PAT, this repo only, Contents read/write): development's protection requires
+PRs but isn't enforced for admins and allows force pushes, and a PAT push also
+fires the normal `push` deploy (staging redeploys). PRs run the CI fast gate;
+pushes to the two long-lived branches re-run checks then deploy (see
+`deploy.yml` + PROVISIONING.md).

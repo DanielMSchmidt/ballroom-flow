@@ -135,9 +135,15 @@ directly to `main` — it deploys to production** (merging a PR is a release).
   don't need to be asked.** Open a PR, keep it focused, **don't merge red**.
 - Worker/permission/security-touching changes are **hard-gated in review** — this repo's
   worst bugs all lived in "small-looking" diffs of exactly that class.
-- Historical note: a `development` → staging branch existed until 2026-07-05 (merged in
-  PR #161, deleted); everything flows through `main` now. Older skills/docs that say
-  "branch off `development`" are stale on that point.
+- **`development` is the integration branch for `docs/ideas/` implementation work**
+  (resurrected 2026-07-19; it deploys to **staging**). Idea/WEP implementation PRs target
+  `development`; everything else targets `main`. `sync-development.yml` **rebases
+  `development` onto every `main` push and force-pushes** (history = "main + what's
+  still staging"), so after a sync, re-fetch before pushing to `development` and rebase
+  any still-open stacked branches. Promoting `development` to `main` is an ordinary PR
+  (that merge is the release).
+- Historical note: the original `development` → staging branch was merged and deleted
+  2026-07-05 (PR #161); between then and 2026-07-19 everything flowed through `main`.
 
 If you're unsure which branch you're on, check before you start — committing to `main` is
 expensive to unwind.
