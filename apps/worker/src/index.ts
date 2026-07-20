@@ -47,6 +47,7 @@ import { accountDocRef, ensureAccountDoc } from "./ensure-account-doc";
 import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
 import { reportError, writeMetric } from "./ops";
+import { materializeDemoSeed, softDeleteDemoSeed } from "./routes/seed-demo";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
 import { ensureGlobalFigures } from "./seed-global-figures";
@@ -1065,6 +1066,34 @@ app.get("/api/search", async (c) => {
     dance: r.dance,
   }));
   return c.json({ results });
+});
+
+// POST /api/admin/seed-demo — OPS/tooling: populate the ADMIN caller's OWN account
+// with a rich SYNTHETIC demo dataset (buildDemoSeed) so staging can be exercised
+// without hand-entering data (docs/DEVELOPMENT.md § Seeding a staging demo account).
+// ADMIN-ONLY (users.isAdmin) — the same flag global-figure editing uses — checked
+// BEFORE any write. Safe in every env: the gate + own-account-only writes (routines
+// /figures owned by the caller; co-members NAMESPACED under the caller, never real
+// logins) make it inert for anyone else. Idempotent: deterministic namespaced ids +
+// no-clobber writes → a re-run adds no duplicates. Returns a count summary.
+app.post("/api/admin/seed-demo", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
+  const summary = await materializeDemoSeed(c.env, user.sub);
+  return c.json({ ok: true, summary }, 200);
+});
+
+// DELETE /api/admin/seed-demo — SOFT-DELETE the caller's demo set (deletedAt
+// tombstones on the namespaced demo docs/memberships/notes/custom-kind) so the
+// owner can re-seed cleanly. Never a hard removal; never touches a real doc (only
+// `demo_<caller>_*` / `account:demo_<caller>_*` refs). Same isAdmin gate.
+app.delete("/api/admin/seed-demo", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  if (!(await isAdmin(c.env.DB, user.sub))) return c.json({ error: "forbidden" }, 403);
+  const summary = await softDeleteDemoSeed(c.env, user.sub);
+  return c.json({ ok: true, summary }, 200);
 });
 
 // POST /api/admin/docs/:id/restore — OPS disaster-recovery: rewind ONE document

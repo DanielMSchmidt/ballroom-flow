@@ -22,6 +22,9 @@
 // header for why those are test-owned rather than imported from product code.
 // ─────────────────────────────────────────────────────────────────────────
 import type { Doc as AmDoc } from "@automerge/automerge";
+// The demo-seed contract references the REAL product return type — the builder is
+// long since built, so this keeps the shim honest without re-declaring its shape.
+import type { BuildDemoSeedOptions, DemoSeed } from "../demo-seed";
 import type {
   Anchor,
   Attribute,
@@ -197,6 +200,9 @@ export interface DomainApi {
 
   // US-020 (re-exported permission helpers, used by the worker layer too)
   capabilitiesFor?(role: MembershipRole): { canEdit: boolean; canAnnotate: boolean };
+
+  // US-056 demo-seed.ts — the pure staging demo dataset builder.
+  buildDemoSeed(opts: BuildDemoSeedOptions): DemoSeed;
 }
 
 /**

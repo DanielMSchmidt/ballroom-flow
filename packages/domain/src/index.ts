@@ -3,6 +3,16 @@
 // schemas) are added in Milestone 1 and re-exported here.
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
+  type BuildDemoSeedOptions,
+  buildDemoSeed,
+  type DemoAccount,
+  type DemoMembership,
+  type DemoRoutine,
+  type DemoSeed,
+  demoCoMemberId,
+  demoPrefix,
+} from "./demo-seed";
+export {
   type AccountFamilyNoteRow,
   type AccountImportRows,
   addAccountReply,
