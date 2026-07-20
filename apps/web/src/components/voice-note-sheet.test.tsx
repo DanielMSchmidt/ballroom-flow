@@ -6,12 +6,17 @@ import type { VoiceNoteProposal } from "@weavesteps/contract";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
-import { renderUi, screen, waitFor } from "../test-support/render";
+import { renderUi, screen, userEvent, waitFor } from "../test-support/render";
 import type { JournalLink } from "./JournalLinkPicker";
 import { proposalToLink, VoiceNoteSheet } from "./VoiceNoteSheet";
 
-/** A scripted capture: hand the test a way to emit a final transcript on demand. */
-function scriptedCapture(): { capture: SpeechCapture; emit: (text: string) => void } {
+/** A scripted capture: emit a final transcript, or a live (interim) one that only
+ *  the manual Stop finalizes — the real on-device case that has no auto-final. */
+function scriptedCapture(): {
+  capture: SpeechCapture;
+  emit: (text: string) => void;
+  emitInterim: (text: string) => void;
+} {
   let cb: SpeechCaptureCallbacks | null = null;
   const capture: SpeechCapture = {
     onDevice: true,
@@ -20,7 +25,11 @@ function scriptedCapture(): { capture: SpeechCapture; emit: (text: string) => vo
     },
     stop() {},
   };
-  return { capture, emit: (text) => cb?.onTranscript(text, true) };
+  return {
+    capture,
+    emit: (text) => cb?.onTranscript(text, true),
+    emitInterim: (text) => cb?.onTranscript(text, false),
+  };
 }
 
 const familyProposal: VoiceNoteProposal = {
@@ -63,7 +72,7 @@ function renderSheet(
   proposal: VoiceNoteProposal,
   overrides: Partial<React.ComponentProps<typeof VoiceNoteSheet>> = {},
 ) {
-  const { capture, emit } = scriptedCapture();
+  const { capture, emit, emitInterim } = scriptedCapture();
   const onConfirm = vi.fn();
   const onUseAsText = vi.fn();
   const onEditTarget = vi.fn();
@@ -82,7 +91,7 @@ function renderSheet(
       {...overrides}
     />,
   );
-  return { ...result, emit, interpret, onConfirm, onUseAsText, onEditTarget, onClose };
+  return { ...result, emit, emitInterim, interpret, onConfirm, onUseAsText, onEditTarget, onClose };
 }
 
 describe("proposalToLink", () => {
@@ -199,6 +208,25 @@ describe("VoiceNoteSheet", () => {
       expect(screen.queryByText("Couldn't save this entry. Try again.")).toBeNull();
     },
   );
+
+  it("Stop sends the live transcript with no auto-final — never stuck 'listening'", async () => {
+    // The on-device path (continuous recognition) delivers only interim results
+    // until the user stops; there is no auto-final. Stop must finalize with the
+    // live transcript and advance to interpret — the real-Chrome hang we shipped.
+    const { emitInterim, interpret } = renderSheet(pointProposal);
+    emitInterim("head stays left through the natural turn");
+    await waitFor(() =>
+      expect(screen.getByText(/head stays left through the natural turn/)).toBeTruthy(),
+    );
+    // No final has fired; interpret must not have run yet.
+    expect(interpret).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "stop" }));
+    await waitFor(() =>
+      expect(interpret).toHaveBeenCalledWith(
+        expect.objectContaining({ transcript: "head stays left through the natural turn" }),
+      ),
+    );
+  });
 
   it("uses an AA-contrast success token pairing for the high-confidence badge", async () => {
     // Bug #290: the confidence badge must pair bg-success-tint with

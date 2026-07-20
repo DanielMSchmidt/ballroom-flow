@@ -49,6 +49,10 @@ interface SpeechRecognitionLike {
   stop(): void;
   onresult: ((ev: SpeechRecognitionEventLike) => void) | null;
   onerror: ((ev: { error?: string }) => void) | null;
+  /** Fires when recognition ends — after `stop()`, or Chrome's own silence
+   *  timeout. The single reliable "capture is done" signal (continuous mode never
+   *  finalizes on its own), so it's where the accumulated final transcript ships. */
+  onend: (() => void) | null;
 }
 interface SpeechRecognitionCtor {
   new (): SpeechRecognitionLike;
@@ -87,26 +91,47 @@ function e2eCapture(): SpeechCapture {
 /** On-device SpeechRecognition capture (continuous, interim results). */
 function recognitionCapture(Ctor: SpeechRecognitionCtor): SpeechCapture {
   let rec: SpeechRecognitionLike | null = null;
+  // The full transcript so far. In continuous mode `ev.results` ACCUMULATES every
+  // segment, so we rebuild the whole string each event rather than emitting
+  // per-segment — the old code kept only the LAST segment, which is why the manual
+  // Stop usually sent a fragment (or nothing).
+  let latest = "";
+  let done = false;
   return {
     onDevice: true,
     start(cb) {
       const r = new Ctor();
       rec = r;
+      latest = "";
+      done = false;
       r.continuous = true;
       r.interimResults = true;
       r.lang = "en-US";
       r.onresult = (ev) => {
-        const results = Array.from({ length: ev.results.length }, (_, i) => ev.results[i]);
-        for (const result of results) {
-          if (result) cb.onTranscript(result[0].transcript, result.isFinal);
+        let full = "";
+        for (let i = 0; i < ev.results.length; i++) {
+          const result = ev.results[i];
+          if (result) full += result[0].transcript;
         }
+        latest = full.trim();
+        cb.onTranscript(latest, false); // live — the FINAL ships once, from onend
       };
       r.onerror = (ev) => cb.onError(new Error(ev.error ?? "speech recognition error"));
+      // The one reliable completion signal (continuous recognition doesn't deliver
+      // a terminal isFinal result on its own): ship the accumulated transcript as
+      // final, exactly once. Empty (silence) is honest — the sheet routes it to the
+      // "didn't catch anything" state rather than a doomed interpret.
+      r.onend = () => {
+        if (done) return;
+        done = true;
+        cb.onTranscript(latest, true);
+      };
       r.start();
     },
     stop() {
+      // Ask recognition to end; onend delivers the final transcript. Keep `rec` so a
+      // late onresult/onend still resolves against a live reference.
       rec?.stop();
-      rec = null;
     },
   };
 }

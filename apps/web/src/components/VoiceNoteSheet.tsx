@@ -5,7 +5,7 @@
 // injected seams (the JournalLinkPicker pattern). Confirm emits the ORDINARY
 // JournalLink the manual picker would; the AI never writes.
 import type { VoiceNoteProposal } from "@weavesteps/contract";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import type { SpeechCapture } from "../lib/speech";
@@ -63,9 +63,15 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   const [transcript, setTranscript] = useState("");
   const [proposal, setProposal] = useState<VoiceNoteProposal | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Guards resolveTranscript to run once per capture: the manual Stop and the
+  // capture's own onend both try to finalize — whichever lands first wins, the
+  // other is a no-op. Reset when a new capture starts.
+  const resolvingRef = useRef(false);
 
   const resolveTranscript = useCallback(
     async (finalText: string) => {
+      if (resolvingRef.current) return;
+      resolvingRef.current = true;
       setTranscript(finalText);
       // An empty/silent capture has nothing to interpret — the contract's
       // transcript.trim().min(1) guard would 400 the request. Short-circuit to an
@@ -93,13 +99,13 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
     setTranscript("");
     setProposal(null);
     setError(null);
+    resolvingRef.current = false;
     capture.start({
       onTranscript: (text, final) => {
         setTranscript(text);
-        if (final) {
-          capture.stop();
-          void resolveTranscript(text);
-        }
+        // `final` arrives once, from the capture's onend (after stop, or a browser
+        // silence timeout) — resolve on it. Interim results just update the display.
+        if (final) void resolveTranscript(text);
       },
       onAudioFallback: (clip) => {
         void transcribe(clip)
@@ -118,8 +124,12 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   }, [open, capture, startCapture]);
 
   const stop = (): void => {
+    // Always advance on Stop — never leave the sheet stuck "listening". We resolve
+    // immediately with the live transcript; the capture's onend will try too, but
+    // resolvingRef dedupes. An empty transcript routes to the "didn't catch
+    // anything" state, not a doomed interpret.
     capture.stop();
-    if (transcript.trim().length > 0) void resolveTranscript(transcript);
+    void resolveTranscript(transcript);
   };
 
   if (!open) return null;
