@@ -340,6 +340,22 @@ describe("AI voice notes — interpret request/extraction/proposal schemas", () 
         true,
       );
     });
+
+    it("accepts an optional dance scope and rejects an unknown dance (context-first capture)", () => {
+      const parsed = zInterpretVoiceNote.parse({ transcript: "settle the sway", dance: "foxtrot" });
+      expect(parsed.dance).toBe("foxtrot");
+      // Absent → today's broad grounding (no dance narrowing).
+      expect(zInterpretVoiceNote.parse({ transcript: "ok" }).dance).toBeUndefined();
+      // Every real DanceId is accepted.
+      for (const d of ["waltz", "viennese_waltz", "quickstep", "foxtrot", "tango"]) {
+        expect(zInterpretVoiceNote.safeParse({ transcript: "ok", dance: d }).success).toBe(true);
+      }
+      // An unknown/garbage dance is rejected (never grounds against a bogus scope).
+      expect(zInterpretVoiceNote.safeParse({ transcript: "ok", dance: "salsa" }).success).toBe(
+        false,
+      );
+      expect(zInterpretVoiceNote.safeParse({ transcript: "ok", dance: "" }).success).toBe(false);
+    });
   });
 
   describe("zVoiceExtraction (untrusted model output)", () => {
