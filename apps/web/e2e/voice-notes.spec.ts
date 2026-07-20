@@ -196,10 +196,13 @@ test.describe("@smoke AI voice notes (fixture AI)", () => {
       .getByTestId("reading-view")
       .getByRole("button", { name: "Feather Step", exact: true })
       .click();
+    // noteText is the coaching content with the "In Slowfox, in Feather Steps,"
+    // addressing STRIPPED (that became the figureType anchor) — see
+    // buildInterpretMessages' noteText rule + the fixture's stripAddressing.
     const familyNotes = page.getByRole("region", { name: /family notes/i });
-    await expect(familyNotes.getByText("Settle the sway before the Three Step.")).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(
+      familyNotes.getByText("I need to settle the sway before the Three Step.", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("scenario B — an ordinal bounce fallaway note lands on the first instance only", async ({
@@ -228,8 +231,11 @@ test.describe("@smoke AI voice notes (fixture AI)", () => {
       .getByTestId("reading-view")
       .getByRole("button", { name: "Bounce Fallaway", exact: true });
     await bounces.first().click();
+    // Addressing stripped: the note is the coaching content, not the whole sentence.
     const panel = page.getByRole("region", { name: /^annotations$/i });
-    await expect(panel.getByText("Change the direction to go more diagonal.")).toBeVisible({
+    await expect(
+      panel.getByText("I need to change the direction to go more diagonal.", { exact: true }),
+    ).toBeVisible({
       timeout: 15_000,
     });
     await page.keyboard.press("Escape");
@@ -238,7 +244,7 @@ test.describe("@smoke AI voice notes (fixture AI)", () => {
     await expect(
       page
         .getByRole("region", { name: /^annotations$/i })
-        .getByText("Change the direction to go more diagonal."),
+        .getByText("I need to change the direction to go more diagonal.", { exact: true }),
     ).toBeHidden();
   });
 
