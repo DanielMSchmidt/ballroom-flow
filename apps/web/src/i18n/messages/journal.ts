@@ -123,6 +123,8 @@ const en = {
   noteField: "note",
   notePlaceholder: "Add a note…",
   addNote: "add note",
+  /** Whole-annotation soft-delete (#294) — author-only, on the viewer's own note. */
+  deleteNote: "delete note",
   deleteReply: "delete reply",
   replyForm: "Reply",
   replyField: "reply",
@@ -256,6 +258,7 @@ const de: typeof en = {
   noteField: "Notiz",
   notePlaceholder: "Notiz hinzufügen …",
   addNote: "Notiz hinzufügen",
+  deleteNote: "Notiz löschen",
   deleteReply: "Antwort löschen",
   replyForm: "Antworten",
   replyField: "Antwort",

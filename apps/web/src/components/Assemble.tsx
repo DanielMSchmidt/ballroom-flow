@@ -1027,6 +1027,7 @@ export function Assemble({
             }
             onReply={(annotationId, text) => store.addReply(annotationId, text)}
             onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
+            onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
           />
         )}
       </Sheet>
@@ -1241,15 +1242,17 @@ export function Assemble({
                 <AnnotationPanel
                   role={role}
                   currentUserId={currentUserId}
-                  annotations={store
-                    .readAnnotations()
-                    .filter((a) =>
+                  annotations={store.readAnnotations().filter(
+                    (a) =>
+                      // Drop tombstoned notes so a soft-delete leaves the read
+                      // lens (matches the reading-view margin; #294).
+                      a.deletedAt == null &&
                       a.anchors.some(
                         (an) =>
                           (an.type === "figure" || an.type === "point") &&
                           an.figureRef === notatingFigure.id,
                       ),
-                    )}
+                  )}
                   composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
                   figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
                   onCreate={({ kind, text }) =>
@@ -1263,6 +1266,7 @@ export function Assemble({
                   onDeleteReply={(annotationId, replyId) =>
                     store.deleteReply(annotationId, replyId)
                   }
+                  onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
                 />
                 {/* Figure-family notes (US-040/041): "every Feather" notes from this
                     routine's members, surfaced on the matching figure; commenter+ may
@@ -2433,6 +2437,7 @@ function ThreadSheetContents({
   onCreate,
   onReply,
   onDeleteReply,
+  onDeleteAnnotation,
 }: {
   routineId: string;
   anchor: { figureRef: string; count?: number };
@@ -2443,6 +2448,8 @@ function ThreadSheetContents({
   onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
+  /** Soft-delete a whole annotation (author-only; #294). */
+  onDeleteAnnotation: (annotationId: string) => void;
 }) {
   // Only called when the Sheet is open (component is mounted) — see note above.
   const t = useMessages(assembleMessages);
@@ -2511,6 +2518,7 @@ function ThreadSheetContents({
       onCreate={onCreate}
       onReply={onReply}
       onDeleteReply={onDeleteReply}
+      onDeleteAnnotation={onDeleteAnnotation}
     />
   );
 }
