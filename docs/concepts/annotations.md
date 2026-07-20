@@ -181,10 +181,16 @@ catalog-side escape hatch.
 ### Voice capture (speak a note, land it on the right anchor)
 
 The entry editor also has a **voice** affordance: speak a practice note — *"In Slowfox, in
-Feather Steps, I need to settle the sway"* — and the app proposes the right anchor. The mic
-records; a transcript is produced (on-device speech recognition first, a server Whisper
-fallback where that's unsupported); the transcript is resolved **against the figures actually
-in your choreos** into a **proposed** anchor rendered as a chip; you **Confirm** (or **Edit
+Feather Steps, I need to settle the sway"* — and the app proposes the right anchor. Capture is
+**push-to-talk**: the sheet opens idle with a *"Hold to talk"* prompt; you **hold** the mic to
+record and **release** to send (it is also keyboard-operable — the mic toggles start/stop on
+Enter/Space). On press the app runs a **dual capture** — on-device speech recognition *and* an
+audio recording, together — and decides on release: if the on-device engine heard something,
+that transcript wins (free, instant); otherwise the recorded clip is sent to the **server
+Whisper fallback**. This dual model is the fix for mobile Chrome, which advertises on-device
+recognition but streams no results, so a recognition error is simply ignored — the recorded
+clip carries the note. The resulting transcript is resolved **against the figures actually in
+your choreos** into a **proposed** anchor rendered as a chip; you **Confirm** (or **Edit
 target** to hand off to the ordinary picker, or **Discard**). Nothing is a new note class —
 this is an **on-ramp onto the existing anchor model**: Confirm produces the very same link the
 manual picker would, committed through the ordinary annotation write. The three static anchor
@@ -193,9 +199,10 @@ note); the AI only *proposes* and the human confirms, so **no wrong anchor can b
 past the confirm step**.
 
 An utterance that matches no figure **degrades to a plain transcribed note** (kept as note
-text, never a guessed anchor). A **silent or empty capture** — mic tapped but nothing heard —
-lands in an honest *"didn't catch anything"* state with a **try-again** affordance; it never
-attempts to interpret an empty transcript. **Predicate-shaped** utterances ("soften every left sway")
+text, never a guessed anchor). A **silent or empty capture** — mic held but nothing heard —
+lands in an honest *"didn't catch anything"* state with a **try-again** affordance (which
+returns to the idle *"Hold to talk"* prompt); it never attempts to interpret an empty
+transcript. **Predicate-shaped** utterances ("soften every left sway")
 also fall back to a plain note today — a voice-proposed `attributePredicate` anchor is a
 recorded **future refinement** (the predicate anchor itself ships, but the voice pipeline does
 not yet propose it). No audio is retained (transcribe and discard).
@@ -206,3 +213,6 @@ not yet propose it). No audio is retained (transcribe and discard).
 co-membership read gate, and the Journal's merged read are in
 [`docs/system/architecture.md`](../system/architecture.md) § Annotations & projections.
 **Design source:** `docs/design/project/Ballroom Builder v3.dc.html` (link-picker section).
+**Design debt (2026-07-20):** the push-to-talk voice sheet (idle *"Hold to talk"* → held
+recording state) is **not yet in the `docs/design/` prototype** — it was implemented following
+the existing sheet/`apps/web/src/ui` conventions and is owed a backfill in Claude Design.

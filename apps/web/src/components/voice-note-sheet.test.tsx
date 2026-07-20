@@ -1,26 +1,89 @@
-// AI voice notes — the capture sheet (docs/concepts/annotations.md § The Journal).
-// Proves the rec → interpret → confirm/unresolved flow and that Confirm emits the
-// VERBATIM JournalLink the manual picker would (proposalToLink), for each of the
-// three static anchor shapes. axe on the rec + confirm states.
+// AI voice notes — the push-to-talk capture sheet (docs/concepts/annotations.md
+// § The Journal, § Voice capture). Proves the hold → rec → interpret →
+// confirm/unresolved flow and that Confirm emits the VERBATIM JournalLink the manual
+// picker would (proposalToLink), for each of the three static anchor shapes. Covers
+// the on-device path (live transcript on release), the Whisper fallback
+// (onAudioFallback → transcribe), the keyboard toggle, and axe on idle/rec/confirm.
 import type { VoiceNoteProposal } from "@weavesteps/contract";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
-import { renderUi, screen, waitFor } from "../test-support/render";
+import { fireEvent, renderUi, screen, waitFor } from "../test-support/render";
 import type { JournalLink } from "./JournalLinkPicker";
 import { proposalToLink, VoiceNoteSheet } from "./VoiceNoteSheet";
 
-/** A scripted capture: hand the test a way to emit a final transcript on demand. */
-function scriptedCapture(): { capture: SpeechCapture; emit: (text: string) => void } {
+/** A scripted push-to-talk capture. `start` captures the callbacks (on press);
+ *  `emit`/`emitInterim` feed the on-device transcript; `stop` records the release,
+ *  and `finalOnStop` models the dual capture shipping the final transcript there. */
+function scriptedCapture(): {
+  capture: SpeechCapture;
+  emit: (text: string) => void;
+  emitInterim: (text: string) => void;
+  fallbackOnStop: (clip: Blob) => void;
+  started: () => boolean;
+  stopped: () => boolean;
+} {
   let cb: SpeechCaptureCallbacks | null = null;
+  let didStart = false;
+  let didStop = false;
+  let latestInterim = "";
+  let resolved = false;
   const capture: SpeechCapture = {
     onDevice: true,
     start(callbacks) {
       cb = callbacks;
+      didStart = true;
+      didStop = false;
+      latestInterim = "";
+      resolved = false;
     },
-    stop() {},
+    stop() {
+      didStop = true;
+      // Model the real dual capture's decide-once-on-release: if the on-device path
+      // produced any interim text, ship it as final; otherwise the test drives the
+      // audio-fallback branch explicitly via fallbackOnStop.
+      if (!resolved && latestInterim.trim().length > 0) {
+        resolved = true;
+        cb?.onTranscript(latestInterim, true);
+      }
+    },
   };
-  return { capture, emit: (text) => cb?.onTranscript(text, true) };
+  return {
+    capture,
+    // A direct final (models the on-device path shipping on release).
+    emit: (text) => {
+      resolved = true;
+      cb?.onTranscript(text, true);
+    },
+    emitInterim: (text) => {
+      latestInterim = text;
+      cb?.onTranscript(text, false);
+    },
+    fallbackOnStop: (clip) => {
+      resolved = true;
+      cb?.onAudioFallback(clip);
+    },
+    started: () => didStart,
+    stopped: () => didStop,
+  };
+}
+
+/** Press-and-hold the talk button (pointerDown starts capture). */
+function press(): void {
+  fireEvent.pointerDown(talkButton());
+}
+/** Release the talk button (pointerUp stops capture → the capture resolves). */
+function release(): void {
+  fireEvent.pointerUp(talkButton());
+}
+function talkButton(): HTMLElement {
+  return screen.getByRole("button", { name: /hold to talk|recording — release to send/i });
+}
+/** The common on-device path: hold, ship a final transcript, release. */
+function holdAndSay(emit: (text: string) => void, text: string): void {
+  press();
+  emit(text);
+  release();
 }
 
 const familyProposal: VoiceNoteProposal = {
@@ -63,26 +126,39 @@ function renderSheet(
   proposal: VoiceNoteProposal,
   overrides: Partial<React.ComponentProps<typeof VoiceNoteSheet>> = {},
 ) {
-  const { capture, emit } = scriptedCapture();
+  const { capture, emit, emitInterim, fallbackOnStop, started, stopped } = scriptedCapture();
   const onConfirm = vi.fn();
   const onUseAsText = vi.fn();
   const onEditTarget = vi.fn();
   const onClose = vi.fn();
   const interpret = vi.fn(async () => proposal);
+  const transcribe = overrides.transcribe ?? (async () => "");
   const result = renderUi(
     <VoiceNoteSheet
       open
       onClose={onClose}
       capture={capture}
       interpret={interpret}
-      transcribe={async () => ""}
+      transcribe={transcribe}
       onConfirm={onConfirm}
       onUseAsText={onUseAsText}
       onEditTarget={onEditTarget}
       {...overrides}
     />,
   );
-  return { ...result, emit, interpret, onConfirm, onUseAsText, onEditTarget, onClose };
+  return {
+    ...result,
+    emit,
+    emitInterim,
+    fallbackOnStop,
+    started,
+    stopped,
+    interpret,
+    onConfirm,
+    onUseAsText,
+    onEditTarget,
+    onClose,
+  };
 }
 
 describe("proposalToLink", () => {
@@ -122,10 +198,24 @@ describe("proposalToLink", () => {
 });
 
 describe("VoiceNoteSheet", () => {
-  it("renders the rec state, then interprets the final transcript", async () => {
-    const { emit, interpret } = renderSheet(familyProposal);
-    expect(screen.getByText("listening…")).toBeTruthy();
+  it("opens idle (Hold to talk), not auto-recording", () => {
+    const { started } = renderSheet(familyProposal);
+    // Push-to-talk: the sheet must NOT auto-start capture on open (#291 — mobile
+    // Chrome advertises SpeechRecognition but streams nothing, hanging on "listening").
+    expect(started()).toBe(false);
+    expect(screen.getByText("Hold to talk")).toBeTruthy();
+  });
+
+  it("holds → live transcript → release → interprets the final transcript", async () => {
+    const { emit, emitInterim, interpret } = renderSheet(familyProposal);
+    press();
+    // While held, interim results show live.
+    emitInterim("In Slowfox, in Feather Steps");
+    await waitFor(() => expect(screen.getByText(/In Slowfox, in Feather Steps/)).toBeTruthy());
+    expect(interpret).not.toHaveBeenCalled();
+    // The dual capture ships the final transcript on release.
     emit("In Slowfox, in Feather Steps, settle the sway.");
+    release();
     await waitFor(() =>
       expect(interpret).toHaveBeenCalledWith({
         transcript: "In Slowfox, in Feather Steps, settle the sway.",
@@ -136,13 +226,46 @@ describe("VoiceNoteSheet", () => {
     expect(screen.getByText("↳ all Feathers · all Foxtrot")).toBeTruthy();
   });
 
+  it("Whisper fallback: on-device empty → recorded clip → transcribe → interpret", async () => {
+    // The mobile path: no on-device transcript. On release the dual capture hands
+    // back a recorded clip; the sheet transcribes it, then interprets the text.
+    const transcribe = vi.fn(async () => "In Slowfox, in Feather Steps, settle the sway.");
+    const { fallbackOnStop, interpret } = renderSheet(familyProposal, { transcribe });
+    press();
+    release();
+    // The capture emits the recorded clip for the server Whisper path.
+    fallbackOnStop(new Blob(["clip"], { type: "audio/webm" }));
+    await waitFor(() => expect(transcribe).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(interpret).toHaveBeenCalledWith({
+        transcript: "In Slowfox, in Feather Steps, settle the sway.",
+      }),
+    );
+    await waitFor(() => expect(screen.getByText("Here's what I heard")).toBeTruthy());
+  });
+
+  it("keyboard: Enter toggles recording start then stop", async () => {
+    const { emit, started, stopped } = renderSheet(familyProposal);
+    const btn = talkButton();
+    // First Enter starts.
+    fireEvent.keyDown(btn, { key: "Enter" });
+    expect(started()).toBe(true);
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    emit("head left");
+    // Second Enter stops → resolves.
+    fireEvent.keyDown(screen.getByRole("button", { name: /recording — release to send/i }), {
+      key: "Enter",
+    });
+    expect(stopped()).toBe(true);
+  });
+
   it.each([
     ["figureType", familyProposal],
     ["figure", figureProposal],
     ["point", pointProposal],
   ] as const)("Confirm emits the exact JournalLink for a %s anchor", async (_kind, proposal) => {
     const { emit, onConfirm } = renderSheet(proposal);
-    emit("say something");
+    holdAndSay(emit, "say something");
     await waitFor(() => expect(screen.getByText("Confirm & save")).toBeTruthy());
     screen.getByText("Confirm & save").click();
     expect(onConfirm).toHaveBeenCalledWith(proposalToLink(proposal), proposal.noteText);
@@ -150,7 +273,7 @@ describe("VoiceNoteSheet", () => {
 
   it("Discard closes without saving", async () => {
     const { emit, onClose, onConfirm } = renderSheet(familyProposal);
-    emit("x");
+    holdAndSay(emit, "x");
     await waitFor(() => expect(screen.getByText("Discard")).toBeTruthy());
     screen.getByText("Discard").click();
     expect(onClose).toHaveBeenCalled();
@@ -159,7 +282,7 @@ describe("VoiceNoteSheet", () => {
 
   it("Edit target hands the note text to the picker hand-off", async () => {
     const { emit, onEditTarget } = renderSheet(familyProposal);
-    emit("x");
+    holdAndSay(emit, "x");
     await waitFor(() => expect(screen.getByText("Edit target")).toBeTruthy());
     screen.getByText("Edit target").click();
     expect(onEditTarget).toHaveBeenCalledWith("settle the sway");
@@ -174,7 +297,7 @@ describe("VoiceNoteSheet", () => {
       alternatives: [],
     };
     const { emit, onUseAsText } = renderSheet(unresolved);
-    emit("Remember to breathe and stay grounded.");
+    holdAndSay(emit, "Remember to breathe and stay grounded.");
     await waitFor(() => expect(screen.getByText("Keep as note text")).toBeTruthy());
     screen.getByText("Keep as note text").click();
     expect(onUseAsText).toHaveBeenCalledWith("Remember to breathe and stay grounded.");
@@ -188,7 +311,7 @@ describe("VoiceNoteSheet", () => {
       // client-side to an honest empty state (voiceEmptyBody), matching the
       // transcript.trim().min(1) guard the contract already enforces server-side.
       const { emit, interpret } = renderSheet(familyProposal);
-      emit(text);
+      holdAndSay(emit, text);
       await waitFor(() => expect(screen.getByText("Didn't catch anything")).toBeTruthy());
       expect(interpret).not.toHaveBeenCalled();
       expect(screen.getByText("I didn't hear anything. Tap the mic and try again.")).toBeTruthy();
@@ -200,13 +323,33 @@ describe("VoiceNoteSheet", () => {
     },
   );
 
+  it("release sends the live transcript with no auto-final — never stuck 'recording'", async () => {
+    // The on-device path (continuous recognition) delivers only interim results
+    // until release; there is no auto-final. Releasing the hold must finalize with the
+    // live transcript and advance to interpret — the real-Chrome hang we shipped.
+    const { emitInterim, interpret } = renderSheet(pointProposal);
+    press();
+    emitInterim("head stays left through the natural turn");
+    await waitFor(() =>
+      expect(screen.getByText(/head stays left through the natural turn/)).toBeTruthy(),
+    );
+    // No final has fired; interpret must not have run yet.
+    expect(interpret).not.toHaveBeenCalled();
+    release();
+    await waitFor(() =>
+      expect(interpret).toHaveBeenCalledWith(
+        expect.objectContaining({ transcript: "head stays left through the natural turn" }),
+      ),
+    );
+  });
+
   it("uses an AA-contrast success token pairing for the high-confidence badge", async () => {
     // Bug #290: the confidence badge must pair bg-success-tint with
     // text-success-ink (the shipped Badge component's success pairing, 6.6:1),
     // NOT bg-success-subtle + text-success (4.33:1, fails WCAG AA). axe under
     // jsdom can't compute contrast, so we assert the token classes directly.
     const { emit } = renderSheet(familyProposal);
-    emit("say something");
+    holdAndSay(emit, "say something");
     await waitFor(() => expect(screen.getByText("high confidence")).toBeTruthy());
     const badge = screen.getByText("high confidence");
     expect(badge.className).toContain("bg-success-tint");
@@ -216,14 +359,22 @@ describe("VoiceNoteSheet", () => {
     expect(badge.className.split(/\s+/)).not.toContain("text-success");
   });
 
-  it("has no axe violations in the rec state", async () => {
+  it("has no axe violations in the idle state", async () => {
     const { container } = renderSheet(familyProposal);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("has no axe violations in the recording state", async () => {
+    const { container, emitInterim } = renderSheet(familyProposal);
+    press();
+    emitInterim("head left");
+    await waitFor(() => expect(screen.getByText("recording…")).toBeTruthy());
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it("has no axe violations in the confirm state", async () => {
     const { container, emit } = renderSheet(familyProposal);
-    emit("x");
+    holdAndSay(emit, "x");
     await waitFor(() => expect(screen.getByText("Confirm & save")).toBeTruthy());
     expect(await axe(container)).toHaveNoViolations();
   });
