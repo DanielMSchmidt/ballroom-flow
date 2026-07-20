@@ -4,7 +4,7 @@
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { importComponent } from "../test-support/import-component";
-import { renderUi, screen, userEvent } from "../test-support/render";
+import { renderUi, screen, userEvent, within } from "../test-support/render";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-043 — Custom attribute-kind creation UI [M7, user]
@@ -13,6 +13,13 @@ import { renderUi, screen, userEvent } from "../test-support/render";
 // a kind → it merges into the registry and appears in the editor. Built by the
 // frontend agent → dynamic import behind it.skip.
 // ─────────────────────────────────────────────────────────────────────────
+
+/** The subset of a domain Attribute this test reads off an onChange payload. */
+interface AttributeLike {
+  kind: string;
+  role: "leader" | "follower" | null;
+  value: unknown;
+}
 
 interface AddKindModule {
   AddKindSheet: ComponentType<Record<string, unknown>>;
@@ -132,6 +139,84 @@ describe("US-043 Custom attribute-kind creation UI", () => {
     expect(kind).not.toHaveProperty("valueDefs");
     expect(kind).not.toHaveProperty("roleAware");
     expect(kind).not.toHaveProperty("required");
+  });
+
+  it("shows the coupling grid only for a role-aware enum kind; captures a pairing + bothWrite", async () => {
+    // Intent: a role-aware enum custom kind may declare a coupling map (leader
+    // value → follower value); the grid is hidden until roleAware is on, and a
+    // pairing lands in the descriptor as `coupling` + bothWrite:"mirror".
+    const { AddKindSheet } = await importComponent<AddKindModule>("../components/AddKindSheet");
+    const onCreate = vi.fn();
+    renderUi(<AddKindSheet open onCreate={onCreate} />);
+    await userEvent.type(screen.getByLabelText(/^label/i), "Poise");
+    // Commit all three as chips (trailing comma flushes "back") so they are
+    // available in the coupling grid's value selects.
+    await userEvent.type(screen.getByLabelText(/add a value/i), "forward, upright, back,");
+
+    // Hidden before roleAware is enabled.
+    expect(screen.queryByRole("button", { name: /add pairing/i })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("switch", { name: /leader/i }));
+    // Now visible: add a pairing leader "forward" → follower "back".
+    await userEvent.click(screen.getByRole("button", { name: /add pairing/i }));
+    await userEvent.selectOptions(screen.getByLabelText(/pairing 1 leader value/i), "forward");
+    await userEvent.selectOptions(screen.getByLabelText(/pairing 1 follower value/i), "back");
+    await userEvent.click(screen.getByRole("button", { name: /create|save/i }));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "poise",
+        roleAware: true,
+        bothWrite: "mirror",
+        coupling: { forward: "back" },
+      }),
+    );
+  });
+
+  it("both-editing a step with a coupled leader value fills the derived follower value", async () => {
+    // Intent: under Both, setting a step's leader to a coupled value writes the
+    // leader verbatim AND the derived follower — the shipped bothWriteTargets
+    // path, now driven by an author-supplied coupling on a custom kind.
+    const { AttributeEditor } = await importComponent<AttributeEditorModule>(
+      "../components/AttributeEditor",
+    );
+    const poise = {
+      kind: "poise",
+      label: "Poise",
+      color: "#c0563f",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["forward", "upright", "back"],
+      roleAware: true,
+      bothWrite: "mirror" as const,
+      coupling: { forward: "back" },
+      builtin: false,
+    };
+    const onChange = vi.fn<(next: AttributeLike[]) => void>();
+    renderUi(
+      <AttributeEditor
+        count={1}
+        dance="foxtrot"
+        role="editor"
+        view="both"
+        customKinds={[poise]}
+        value={[]}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /more attributes/i }));
+    // Scope to the Poise group so "forward" doesn't collide with direction's own value.
+    const poiseGroup = screen.getByRole("group", { name: /poise/i });
+    await userEvent.click(within(poiseGroup).getByRole("button", { name: /^forward$/i }));
+
+    const written = onChange.mock.calls.at(-1)?.[0];
+    const poiseAttrs = written?.filter((a) => a.kind === "poise") ?? [];
+    expect(poiseAttrs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: "leader", value: "forward" }),
+        expect.objectContaining({ role: "follower", value: "back" }),
+      ]),
+    );
   });
 
   it("blocks submit when the label slugifies to an empty string (e.g. only punctuation)", async () => {

@@ -81,6 +81,16 @@ const en = {
   valueDefsLegend: "Value definitions (optional)",
   definitionFor: (v: string) => `Definition for "${v}"`,
   definitionPlaceholder: (v: string) => `What "${v}" means`,
+  // Coupling grid (role-aware enum kinds only) — leader value → follower value.
+  couplingLegend: "Role coupling (optional)",
+  couplingHint:
+    "When you set the leader under Both, the follower fills in per this map. Unlisted values copy to the follower.",
+  addPairing: "Add pairing",
+  pairingLeaderValue: (n: number) => `Pairing ${n} leader value`,
+  pairingFollowerValue: (n: number) => `Pairing ${n} follower value`,
+  removePairing: (n: number) => `Remove pairing ${n}`,
+  couplingArrow: "→",
+  couplingValuePlaceholder: "value…",
   differsByRole: "Differs by leader / follower",
   requiredToggle: "Required (a core slot for every step)",
   create: "Create",
@@ -183,6 +193,16 @@ const de: typeof en = {
   valueDefsLegend: "Wertdefinitionen (optional)",
   definitionFor: (v) => `Definition für "${v}"`,
   definitionPlaceholder: (v) => `Was "${v}" bedeutet`,
+  // Coupling grid (nur rollenbewusste Auswahl-Typen) — Leader-Wert → Follower-Wert.
+  couplingLegend: "Rollen-Kopplung (optional)",
+  couplingHint:
+    "Wenn du den Leader unter Beide setzt, füllt sich der Follower nach dieser Zuordnung. Nicht gelistete Werte werden auf den Follower kopiert.",
+  addPairing: "Zuordnung hinzufügen",
+  pairingLeaderValue: (n) => `Zuordnung ${n} Leader-Wert`,
+  pairingFollowerValue: (n) => `Zuordnung ${n} Follower-Wert`,
+  removePairing: (n) => `Zuordnung ${n} entfernen`,
+  couplingArrow: "→",
+  couplingValuePlaceholder: "Wert…",
   differsByRole: "Unterscheidet sich nach Leader / Follower",
   requiredToggle: "Erforderlich (ein Kernfeld für jeden Schritt)",
   create: "Erstellen",
