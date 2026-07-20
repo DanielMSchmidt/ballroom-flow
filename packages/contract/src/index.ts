@@ -1,6 +1,6 @@
 // @weavesteps/contract — Zod request/response schemas shared by web + worker.
 // (Dependency direction: contract → domain; web/worker → contract.)
-import { DANCE_IDS } from "@weavesteps/domain";
+import { DANCE_IDS, zAnchor } from "@weavesteps/domain";
 import { z } from "zod";
 
 /**
@@ -383,10 +383,59 @@ export const zJournalEntry = z.object({
   displayName: z.string().nullable(),
   identityColor: z.string().nullable(),
   source: z.enum(["routine", "account"]),
+  /** docs/ideas/annotation-media-embeds.md (plan discrepancy 3) — the Journal
+   *  card's media chip renders from these projected live counts, never CRDT.
+   *  YouTube counts as video. Optional ⇒ old workers keep validating. */
+  imageCount: z.number().int().nonnegative().optional(),
+  videoCount: z.number().int().nonnegative().optional(),
 });
 export const zJournalList = z.object({ entries: z.array(zJournalEntry) });
 export type JournalEntry = z.infer<typeof zJournalEntry>;
 export type JournalList = z.infer<typeof zJournalList>;
+
+/** Media caps — owner-confirmed 2026-07-15 (docs/ideas/annotation-media-embeds.md
+ *  § Caps): image ≤ 10 MB pre-compression, video ≤ 3 min & ≤ 300 MB, ≤ 4 items
+ *  per annotation, 1 GB total per free user. Enforced at upload-URL mint.
+ *  `singlePutMaxBytes` is the Workers request-body ceiling below which a single
+ *  PUT is used; larger videos go through the R2 multipart flow (plan
+ *  discrepancy 1) — set safely under the ~100 MB body limit. */
+export const MEDIA_CAPS = {
+  imageMaxBytes: 10 * 1024 * 1024,
+  videoMaxBytes: 300 * 1024 * 1024,
+  videoMaxSeconds: 180,
+  itemsPerAnnotation: 4,
+  freeUserTotalBytes: 1024 * 1024 * 1024,
+  singlePutMaxBytes: 90 * 1024 * 1024,
+} as const;
+
+/** POST /api/docs/:id/media/upload-url body. Ids are client ULIDs; `poster`
+ *  marks a video's poster-frame object (excluded from the 4-item count, bytes
+ *  still counted). Duration is client-declared (no server probing — see plan). */
+export const zMintMediaUpload = z.object({
+  annotationId: z.string().min(1),
+  mediaId: z.string().min(1),
+  type: z.enum(["image", "video"]),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+  durationSeconds: z.number().positive().optional(),
+  poster: z.boolean().optional(),
+});
+export type MintMediaUpload = z.infer<typeof zMintMediaUpload>;
+
+export const zMintMediaUploadResponse = z.object({
+  objectKey: z.string().min(1),
+  uploadUrl: z.string().min(1),
+  maxBytes: z.number().int().positive(),
+});
+export type MintMediaUploadResponse = z.infer<typeof zMintMediaUploadResponse>;
+
+/** The R2 multipart `complete` parts list (docs/ideas/annotation-media-embeds.md,
+ *  plan discrepancy 1) — validated at the worker boundary so `upload.complete`
+ *  receives a checked R2UploadedPart[] shape (no cast). */
+export const zR2Parts = z.object({
+  parts: z.array(z.object({ partNumber: z.number().int().positive(), etag: z.string().min(1) })),
+});
+export type R2Parts = z.infer<typeof zR2Parts>;
 
 /**
  * E2E fixtures seed body (POST /api/test/seed — mounted ONLY under
@@ -425,6 +474,31 @@ export const zSeedBody = z.object({
               id: z.string(),
               name: z.string(),
               placements: z.array(z.object({ id: z.string(), figureRef: z.string() })),
+            }),
+          )
+          .optional(),
+        /** E2E-only: server-seed routine annotations with EXPLICIT createdAt —
+         *  the UI stamps Date.now(), so backdated comments (comment activity
+         *  fade-out journeys) must arrive through this seam. */
+        annotations: z
+          .array(
+            z.object({
+              id: z.string(),
+              authorId: z.string(),
+              kind: z.enum(["note", "lesson", "practice"]),
+              text: z.string(),
+              anchors: z.array(zAnchor),
+              createdAt: z.number(),
+              replies: z
+                .array(
+                  z.object({
+                    id: z.string(),
+                    authorId: z.string(),
+                    text: z.string(),
+                    createdAt: z.number(),
+                  }),
+                )
+                .optional(),
             }),
           )
           .optional(),
@@ -509,3 +583,120 @@ export function figureTypeAnchorLabel(
   const scope = danceScope === "all" ? "all dances" : `all ${humanizeSlug(danceScope)}`;
   return count != null ? `${family} · ${scope} · count ${count}` : `${family} · ${scope}`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// AI voice notes (docs/concepts/annotations.md § The Journal, docs/system/
+// architecture.md). A dancer speaks a note; a Workers AI text model resolves it
+// against the figures actually in their choreos into a PROPOSED anchor; the user
+// confirms and it commits through the EXISTING annotation write seams. The AI
+// never writes — the /interpret route is read-only and every model output is
+// re-validated with these schemas (Workers AI JSON mode gives NO hard shape
+// guarantee), then grounded against the assembled context in the worker.
+//
+// Only the three STATIC anchor shapes (point / figure / figureType) are ever
+// proposed — a predicate-shaped utterance falls back to a plain transcribed note
+// (predicate proposals are a recorded future refinement, gated on the
+// attribute-predicate-anchors feature).
+// ─────────────────────────────────────────────────────────────────────────
+
+/** POST /api/voice-notes/interpret request. */
+export const zInterpretVoiceNote = z.object({
+  transcript: z.string().trim().min(1).max(4000),
+  /** Captured in-context: narrow the grounding context to this one choreo. */
+  routineRef: z.string().min(1).optional(),
+});
+export type InterpretVoiceNote = z.infer<typeof zInterpretVoiceNote>;
+
+/**
+ * The anchor union mirrored for the wire — the three STATIC anchor shapes the
+ * voice pipeline can propose (the dynamic `attributePredicate` anchor is NOT
+ * proposable; predicate utterances degrade to a plain note). `danceScope` is
+ * constrained like `zFamilyNoteBody`; the superRefine carries the same invariant
+ * as domain `zAnchor`: a timed/roled figureType anchor cannot span "all".
+ */
+export const zVoiceAnchor = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("point"),
+      figureRef: z.string().min(1),
+      count: z.number(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+    z.object({ type: z.literal("figure"), figureRef: z.string().min(1) }),
+    z.object({
+      type: z.literal("figureType"),
+      figureType: z.string().min(1),
+      danceScope: z.enum([...DANCE_IDS, "all"]),
+      count: z.number().optional(),
+      role: z.enum(["leader", "follower"]).nullish(),
+    }),
+  ])
+  .superRefine((anchor, ctx) => {
+    if (
+      anchor.type === "figureType" &&
+      anchor.danceScope === "all" &&
+      (anchor.count != null || anchor.role != null)
+    ) {
+      ctx.addIssue({ code: "custom", message: "a timed figureType anchor cannot span all dances" });
+    }
+  });
+export type VoiceAnchor = z.infer<typeof zVoiceAnchor>;
+
+/**
+ * RAW model output — UNTRUSTED until parsed with THIS schema (the mandatory
+ * re-validation). `resolved: true` requires a non-null anchor.
+ */
+export const zVoiceExtraction = z
+  .object({
+    resolved: z.boolean(),
+    noteText: z.string().trim().min(1).max(4000),
+    confidence: z.enum(["high", "medium", "low"]),
+    anchor: zVoiceAnchor.nullable(),
+    alternatives: z.array(zVoiceAnchor).max(5).default([]),
+  })
+  .superRefine((out, ctx) => {
+    if (out.resolved && out.anchor == null) {
+      ctx.addIssue({ code: "custom", message: "a resolved extraction must carry an anchor" });
+    }
+  });
+export type VoiceExtraction = z.infer<typeof zVoiceExtraction>;
+
+/** One grounded, display-ready proposal option. */
+export const zVoiceProposalOption = z.object({
+  anchor: zVoiceAnchor,
+  /** The routine a figure/point anchor saves into (null for a figureType family anchor). */
+  routineRef: z.string().nullable(),
+  label: z.string().min(1),
+});
+export type VoiceProposalOption = z.infer<typeof zVoiceProposalOption>;
+
+/**
+ * POST /api/voice-notes/interpret response. `resolved: false` ⇒ `proposed: null`
+ * and `noteText` falls back to the transcript (never a wrong anchor). A
+ * figure/point anchor must name its owning routine.
+ */
+export const zVoiceNoteProposal = z
+  .object({
+    resolved: z.boolean(),
+    noteText: z.string(),
+    confidence: z.enum(["high", "medium", "low"]),
+    proposed: zVoiceProposalOption.nullable(),
+    alternatives: z.array(zVoiceProposalOption).max(5),
+  })
+  .superRefine((p, ctx) => {
+    if (p.resolved !== (p.proposed != null)) {
+      ctx.addIssue({ code: "custom", message: "resolved ⇔ a non-null proposed option" });
+    }
+    if (
+      p.proposed != null &&
+      p.proposed.anchor.type !== "figureType" &&
+      p.proposed.routineRef == null
+    ) {
+      ctx.addIssue({ code: "custom", message: "a figure/point proposal must name its routineRef" });
+    }
+  });
+export type VoiceNoteProposal = z.infer<typeof zVoiceNoteProposal>;
+
+/** POST /api/voice-notes/transcribe response (request body is raw audio bytes). */
+export const zTranscribeResponse = z.object({ transcript: z.string() });
+export type TranscribeResponse = z.infer<typeof zTranscribeResponse>;

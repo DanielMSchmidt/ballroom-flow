@@ -12,7 +12,19 @@
 // routine → createAnnotation on `routineRef` (figure/point anchor); account →
 // createFamilyNote (figureType anchor, optionally timed). Data arrives via
 // injected loaders (the store seam); the component holds no I/O of its own.
-import { type Anchor, type Attribute, countLabel, isDanceId, type Role } from "@weavesteps/domain";
+import {
+  type Anchor,
+  ATTRIBUTE_REGISTRY,
+  type Attribute,
+  countLabel,
+  type DanceId,
+  isDanceId,
+  kindAppliesToDance,
+  mergeRegistry,
+  PREDICATE_NONE,
+  type RegistryKind,
+  type Role,
+} from "@weavesteps/domain";
 import { useEffect, useState } from "react";
 import { danceName, type Locale, useLocale, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
@@ -57,6 +69,18 @@ export type JournalLink =
       role?: "leader" | "follower";
       anchor: Anchor;
       label: string;
+    }
+  | {
+      // attribute-predicate link (docs/concepts/annotations.md § Anchors): a dynamic
+      // predicate over notation, saved through the account store's createPredicateNote.
+      home: "accountPredicate";
+      attrKind: string;
+      attrValue: string;
+      role?: "leader" | "follower";
+      scope: string;
+      routineRef?: string;
+      anchor: Anchor;
+      label: string;
     };
 
 export interface JournalLinkPickerProps {
@@ -67,9 +91,21 @@ export interface JournalLinkPickerProps {
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   /** A routine's figures (for the figure-in-choreo chooser + placement grid). */
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** The user's custom attribute kinds, merged into the registry for the attribute
+   *  family list (Tango still omits `rise` via the dance gate). Defaults to none. */
+  customKinds?: RegistryKind[];
 }
 
-type Step = "choreo" | "figure" | "place" | "scope";
+type Step =
+  | "choreo"
+  | "target"
+  | "figure"
+  | "place"
+  | "scope"
+  | "attrFamily"
+  | "attrValue"
+  | "attrRole"
+  | "attrScope";
 /** WHERE on the figure the note lands (the place step's outcome). */
 type Placement = { kind: "whole" } | { kind: "count"; count: number };
 /** The place step's role lens; "both" = no role stored (the null convention). */
@@ -96,6 +132,7 @@ export function JournalLinkPicker({
   onPick,
   loadRoutineOptions,
   loadRoutineFigures,
+  customKinds,
 }: JournalLinkPickerProps): React.JSX.Element | null {
   const t = useMessages(journalMessages);
   const locale = useLocale();
@@ -104,6 +141,9 @@ export function JournalLinkPicker({
   const [figure, setFigure] = useState<RoutineFigureOption | null>(null);
   const [placement, setPlacement] = useState<Placement>({ kind: "whole" });
   const [roleLens, setRoleLens] = useState<RoleLens>("both");
+  // Attribute-predicate path state.
+  const [attrKind, setAttrKind] = useState<RegistryKind | null>(null);
+  const [attrValue, setAttrValue] = useState<string | null>(null);
 
   // Reset to the first step whenever the sheet (re)opens.
   useEffect(() => {
@@ -113,22 +153,35 @@ export function JournalLinkPicker({
       setFigure(null);
       setPlacement({ kind: "whole" });
       setRoleLens("both");
+      setAttrKind(null);
+      setAttrValue(null);
     }
   }, [open]);
 
   if (!open) return null;
 
+  const familyLabel = attrKind?.label ?? "";
   const titles: Record<Step, string> = {
     choreo: t.titleChoreo,
+    target: t.titleTarget,
     figure: routine ? t.titleFigureIn(routine.title || t.untitled) : t.titleChoreo,
     place: figure ? t.titleGrain(figure.name) : t.titleGrainFallback,
     scope: t.titleScope,
+    attrFamily: t.titleAttrFamily,
+    attrValue: t.titleAttrValue(familyLabel),
+    attrRole: t.titleAttrRole,
+    attrScope: t.titleScope,
   };
 
   const back = (): void => {
-    if (step === "figure") setStep("choreo");
+    if (step === "target") setStep("choreo");
+    else if (step === "figure") setStep("target");
     else if (step === "place") setStep("figure");
     else if (step === "scope") setStep("place");
+    else if (step === "attrFamily") setStep("target");
+    else if (step === "attrValue") setStep("attrFamily");
+    else if (step === "attrRole") setStep("attrValue");
+    else if (step === "attrScope") setStep("attrRole");
   };
 
   /** The stored role for the current lens (Both → absent, the null convention). */
@@ -196,10 +249,61 @@ export function JournalLinkPicker({
     onClose();
   };
 
+  /** Finalize an attribute-predicate link once the attribute scope is chosen. */
+  const finalizePredicate = (scope: "dance" | "all" | "routine"): void => {
+    if (!routine || !attrKind || attrValue == null) return;
+    const role = lensRole();
+    // The anchor scope is a DanceId | "all" | "routine". A dance scope narrows
+    // routine.dance through isDanceId (a legacy/garbage dance falls back to "all").
+    const anchorScope: DanceId | "all" | "routine" =
+      scope === "all"
+        ? "all"
+        : scope === "routine"
+          ? "routine"
+          : isDanceId(routine.dance)
+            ? routine.dance
+            : "all";
+    const value = displayValue(attrValue);
+    const scopeText =
+      scope === "all"
+        ? t.attrScopeEveryDance
+        : scope === "routine"
+          ? routine.title || t.untitled
+          : danceLabel(routine.dance, locale);
+    const label =
+      attrValue === PREDICATE_NONE
+        ? t.predicateNoneChip(attrKind.label, scopeText)
+        : t.predicateChip(value, scopeText);
+    onPick({
+      home: "accountPredicate",
+      attrKind: attrKind.kind,
+      attrValue,
+      scope: anchorScope,
+      ...(role ? { role } : {}),
+      ...(scope === "routine" ? { routineRef: routine.docRef } : {}),
+      anchor: {
+        type: "attributePredicate",
+        kind: attrKind.kind,
+        value: attrValue,
+        scope: anchorScope,
+        ...(role ? { role } : {}),
+        ...(scope === "routine" ? { routineRef: routine.docRef } : {}),
+      },
+      label,
+    });
+    onClose();
+  };
+
   const timed = placement.kind === "count";
   // The dance-wide scope is only offered when the routine's dance is a real
   // DanceId (a legacy/garbage dance could never match the worker's enum).
   const danceScopeAvailable = routine ? isDanceId(routine.dance) : false;
+  // The merged registry, gated to the routine's dance (Tango omits `rise`).
+  const attrFamilies: RegistryKind[] = routine
+    ? Object.values(mergeRegistry(ATTRIBUTE_REGISTRY, customKinds ?? [])).filter((k) =>
+        kindAppliesToDance(k.kind, isDanceId(routine.dance) ? routine.dance : undefined),
+      )
+    : [];
 
   return (
     <Sheet open={open} onClose={onClose} title={titles[step]}>
@@ -208,9 +312,110 @@ export function JournalLinkPicker({
           loadRoutineOptions={loadRoutineOptions}
           onPick={(r) => {
             setRoutine(r);
-            setStep("figure");
+            setStep("target");
           }}
         />
+      )}
+
+      {step === "target" && routine && (
+        <div className="flex flex-col gap-2">
+          <Button variant="ghost" size="sm" onClick={back}>
+            {t.backShort}
+          </Button>
+          <List aria-label={t.linkTargets}>
+            <ListRow
+              title={t.targetFigure}
+              subtitle={t.targetFigureHint}
+              onClick={() => setStep("figure")}
+            />
+            <ListRow
+              title={t.targetAttribute}
+              subtitle={t.targetAttributeHint}
+              onClick={() => setStep("attrFamily")}
+            />
+          </List>
+        </div>
+      )}
+
+      {step === "attrFamily" && routine && (
+        <div className="flex flex-col gap-2">
+          <Button variant="ghost" size="sm" onClick={back}>
+            {t.backShort}
+          </Button>
+          <List aria-label={t.attrFamilies} className="max-h-[60dvh] overflow-y-auto">
+            {attrFamilies.map((k) => (
+              <ListRow
+                key={k.kind}
+                title={k.label}
+                onClick={() => {
+                  setAttrKind(k);
+                  setAttrValue(null);
+                  setRoleLens("both");
+                  setStep("attrValue");
+                }}
+              />
+            ))}
+          </List>
+        </div>
+      )}
+
+      {step === "attrValue" && attrKind && (
+        <AttrValueChooser
+          kind={attrKind}
+          onBack={back}
+          onPick={(v) => {
+            setAttrValue(v);
+            setStep("attrRole");
+          }}
+        />
+      )}
+
+      {step === "attrRole" && attrKind && (
+        <div className="flex flex-col gap-2">
+          <Button variant="ghost" size="sm" onClick={back}>
+            {t.backShort}
+          </Button>
+          <SegmentedToggle
+            ariaLabel={t.stepsFor}
+            options={[
+              { value: "both", label: t.roleBoth },
+              { value: "leader", label: t.roleLeader },
+              { value: "follower", label: t.roleFollower },
+            ]}
+            value={roleLens}
+            onChange={setRoleLens}
+          />
+          <Button variant="primary" size="sm" onClick={() => setStep("attrScope")}>
+            {t.done}
+          </Button>
+        </div>
+      )}
+
+      {step === "attrScope" && routine && (
+        <div className="flex flex-col gap-2">
+          <Button variant="ghost" size="sm" onClick={back}>
+            {t.backShort}
+          </Button>
+          <List aria-label={t.linkScope}>
+            {danceScopeAvailable && (
+              <ListRow
+                title={t.attrScopeAllDance(danceLabel(routine.dance, locale))}
+                subtitle={t.attrScopeAllDanceHint}
+                onClick={() => finalizePredicate("dance")}
+              />
+            )}
+            <ListRow
+              title={t.attrScopeEveryDance}
+              subtitle={t.attrScopeEveryDanceHint}
+              onClick={() => finalizePredicate("all")}
+            />
+            <ListRow
+              title={t.attrScopeThisChoreo}
+              subtitle={t.attrScopeThisChoreoHint(routine.title || t.untitled)}
+              onClick={() => finalizePredicate("routine")}
+            />
+          </List>
+        </div>
       )}
 
       {step === "figure" && routine && (
@@ -381,6 +586,64 @@ function FigureInRoutineChooser({
             />
           ))}
         </List>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The attribute-value step (docs/concepts/annotations.md § Anchors, v4 § 3.6): the kind's
+ * enumerated values as tappable rows, an explicit "No value logged" row (the PREDICATE_NONE
+ * absence sentinel), plus a free-text input for a `freeText` kind. Picking a value advances
+ * to the role step.
+ */
+function AttrValueChooser({
+  kind,
+  onBack,
+  onPick,
+}: {
+  kind: RegistryKind;
+  onBack: () => void;
+  onPick: (value: string) => void;
+}): React.JSX.Element {
+  const t = useMessages(journalMessages);
+  const [custom, setCustom] = useState("");
+  const values = kind.values ?? [];
+  return (
+    <div className="flex flex-col gap-2">
+      <Button variant="ghost" size="sm" onClick={onBack}>
+        {t.backShort}
+      </Button>
+      <List aria-label={t.attrValues} className="max-h-[55dvh] overflow-y-auto">
+        {values.map((v) => (
+          <ListRow key={v} title={displayValue(v)} onClick={() => onPick(v)} />
+        ))}
+        <ListRow
+          title={t.attrValueNone}
+          subtitle={t.attrValueNoneHint(kind.label)}
+          onClick={() => onPick(PREDICATE_NONE)}
+        />
+      </List>
+      {kind.freeText && (
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const v = custom.trim();
+            if (v) onPick(v);
+          }}
+        >
+          <Input
+            label={t.attrValues}
+            hideLabel
+            placeholder={displayValue(kind.label)}
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+          />
+          <Button variant="primary" size="sm" type="submit" disabled={!custom.trim()}>
+            {t.done}
+          </Button>
+        </form>
       )}
     </div>
   );

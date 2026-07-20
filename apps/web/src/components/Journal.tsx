@@ -3,11 +3,13 @@
 // with kind/by-figure filter pills, author-coloured cards with link chips, a
 // designed empty state, and the entry editor (+). Data flows through the store
 // seam (loadJournal / createFamilyNote / createAnnotation) — never lib/rpc here.
-import type { Anchor, AnnotationKind } from "@weavesteps/domain";
+import type { VoiceNoteProposal } from "@weavesteps/contract";
+import type { Anchor, AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { isDanceId } from "@weavesteps/domain";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import type { SpeechCapture } from "../lib/speech";
 import {
   applyJournalFilter,
   chipLabel,
@@ -19,7 +21,7 @@ import {
 } from "../store/journal";
 import { useAccount, useOwnFamilyNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
-import { Button, Card, Chip, EmptyState, IconButton, Spinner } from "../ui";
+import { Button, Card, Chip, EmptyState, IconButton, MediaChip, Spinner } from "../ui";
 import { JournalIcon, PlusIcon } from "../ui/icons";
 import { JournalEntryEditor } from "./JournalEntryEditor";
 import type { RoutineFigureOption, RoutineOption } from "./JournalLinkPicker";
@@ -42,8 +44,18 @@ export interface JournalProps {
   ) => Promise<JournalEntry | null>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** The user's custom attribute kinds, for the link picker's attribute-family list. */
+  loadCustomKinds?: () => Promise<RegistryKind[]>;
   /** The signed-in user's id, so their own entries read "you". */
   currentUserId?: string;
+  /** AI voice notes (docs/concepts/annotations.md § The Journal) — injected seams
+   *  passed straight through to the entry editor's mic affordance. */
+  createSpeechCapture?: () => SpeechCapture;
+  interpretVoice?: (input: {
+    transcript: string;
+    routineRef?: string;
+  }) => Promise<VoiceNoteProposal>;
+  transcribeVoice?: (clip: Blob) => Promise<string>;
 }
 
 /** Filter pill VALUES (stable ids); display labels come from the journal catalog. */
@@ -62,8 +74,26 @@ export function Journal(props: JournalProps): React.JSX.Element {
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<JournalFilter>("all");
   const [composing, setComposing] = useState(false);
+  const [customKinds, setCustomKinds] = useState<RegistryKind[]>([]);
   // First-visit tour — held while the entry editor covers the tab.
   useFirstVisitTour("journal", !composing);
+
+  // Load the user's custom attribute kinds once the compose surface opens (for the
+  // link picker's attribute-family list); builtin kinds always show regardless.
+  const loadCustomKinds = props.loadCustomKinds;
+  useEffect(() => {
+    if (!composing || !loadCustomKinds) return;
+    let live = true;
+    loadCustomKinds().then(
+      (k) => {
+        if (live) setCustomKinds(k);
+      },
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [composing, loadCustomKinds]);
 
   // docs/system/architecture.md (account docs, WEP-0002): the Journal is an
   // account-doc AUTHORING surface, so it opens the
@@ -99,6 +129,36 @@ export function Journal(props: JournalProps): React.JSX.Element {
       });
     },
     [account, props],
+  );
+
+  // Attribute-predicate notes author through the account store only (offline-capable;
+  // no REST write route exists or is needed — the seam replays on reconnect).
+  const createPredicateEntry = useCallback(
+    async (input: {
+      attrKind: string;
+      attrValue: string;
+      role?: "leader" | "follower";
+      scope: string;
+      routineRef?: string;
+      kind: AnnotationKind;
+      text: string;
+    }) => {
+      if (!account.isOpen) return;
+      const scope =
+        input.scope === "all" || input.scope === "routine" || isDanceId(input.scope)
+          ? input.scope
+          : "all";
+      account.store.createPredicateNote({
+        attrKind: input.attrKind,
+        attrValue: input.attrValue,
+        scope,
+        kind: input.kind,
+        text: input.text,
+        ...(input.role != null ? { role: input.role } : {}),
+        ...(scope === "routine" && input.routineRef ? { routineRef: input.routineRef } : {}),
+      });
+    },
+    [account],
   );
 
   const refresh = useCallback(() => {
@@ -146,8 +206,13 @@ export function Journal(props: JournalProps): React.JSX.Element {
           });
           if (saved) setPendingRoutineEntries((p) => [saved, ...p]);
         }}
+        createPredicateEntry={createPredicateEntry}
         loadRoutineOptions={props.loadRoutineOptions}
         loadRoutineFigures={props.loadRoutineFigures}
+        customKinds={customKinds}
+        createSpeechCapture={props.createSpeechCapture}
+        interpretVoice={props.interpretVoice}
+        transcribeVoice={props.transcribeVoice}
       />
     );
   }
@@ -247,9 +312,11 @@ function JournalCard({
       >
         {entry.text}
       </p>
-      {entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
-        0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+      {(entry.anchors.filter((a) => a.type !== "figureType" || a.figureType !== "general").length >
+        0 ||
+        (entry.imageCount ?? 0) > 0 ||
+        (entry.videoCount ?? 0) > 0) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {entry.anchors
             .filter((a) => a.type !== "figureType" || a.figureType !== "general")
             .map((a) => (
@@ -260,6 +327,9 @@ function JournalCard({
                 ↳ {chipLabel(a)}
               </span>
             ))}
+          {/* Compact media chip — never an img/video/iframe on a Journal card
+              (docs/ideas/annotation-media-embeds.md). Projected live counts. */}
+          <MediaChip images={entry.imageCount ?? 0} videos={entry.videoCount ?? 0} />
         </div>
       )}
     </article>

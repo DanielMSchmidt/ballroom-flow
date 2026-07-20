@@ -22,6 +22,7 @@ import {
   figureHasLibraryOrigin,
   figureMatchesLibraryOrigin,
   libraryFiguresForDance,
+  newId,
   type Placement,
   type PlacementPart,
   parseGlobalFigureRef,
@@ -50,6 +51,11 @@ import type { TokenProvider } from "../store/doc-connection";
 import { type FamilyNote, loadFamilyNotes } from "../store/family-notes";
 import { type MineFigure, mergeLiveBookmarkedFigures } from "../store/figures";
 import { useMe } from "../store/me";
+import {
+  loadPredicateNotes,
+  mergePredicateNotes,
+  type PredicateNote,
+} from "../store/predicate-notes";
 import type {
   CopyOnWriteErrorReason,
   FigureLoadStatus,
@@ -58,7 +64,7 @@ import type {
 } from "../store/routine";
 import { openRoutineView } from "../store/routine-view";
 import { useMembers } from "../store/share";
-import { useAccount, useOwnFamilyNotes } from "../store/use-account";
+import { useAccount, useOwnFamilyNotes, useOwnPredicateNotes } from "../store/use-account";
 import { useFirstVisitTour } from "../tour/useFirstVisitTour";
 import {
   AttrChip,
@@ -519,6 +525,24 @@ export function Assemble({
     return [...coMemberNotes, ...ownAsFamily];
   }, [coMemberNotes, ownNotes, currentUserId]);
 
+  // Attribute-predicate notes (docs/concepts/annotations.md § Anchors): co-member
+  // dance-/all-scoped notes come from the worker (same co-membership gate); the
+  // user's OWN notes read live from the account doc (instant + offline). Merge is
+  // dance-aware, so it runs below once `routine` is read; here we just load + hold.
+  const [coMemberPredicateNotes, setCoMemberPredicateNotes] = useState<PredicateNote[]>([]);
+  const reloadPredicateNotes = useCallback(async () => {
+    if (!getToken) return;
+    try {
+      setCoMemberPredicateNotes(await loadPredicateNotes(routineId, await getToken()));
+    } catch {
+      // Best-effort — a failure must not block authoring or reading.
+    }
+  }, [routineId, getToken]);
+  useEffect(() => {
+    void reloadPredicateNotes();
+  }, [reloadPredicateNotes]);
+  const ownPredicateNotes = useOwnPredicateNotes(account.store);
+
   // Read/edit split: opening a figure's step editor connects THAT figure's own
   // live WS (lazy figures) so its notation converges while open; until then it
   // rendered from the routine snapshot. No-op for viewers / already-open figures.
@@ -544,6 +568,15 @@ export function Assemble({
   }
 
   const routine = store.readRoutine();
+  // Own ∪ co-member predicate notes, dance-filtered (pure merge; runs here since it
+  // needs the routine's dance, read above). Deduped by id, REST row wins.
+  const predicateNotes = mergePredicateNotes(
+    coMemberPredicateNotes,
+    ownPredicateNotes,
+    currentUserId,
+    routineId,
+    routine.dance,
+  );
   // The S/Q lens is only meaningful (and only shown) for Tango/Foxtrot/Quickstep;
   // every other dance always reads in numeric counts even if `bb_timing` is stale.
   const slowQuickEligible = supportsSlowQuick(routine.dance);
@@ -806,6 +839,7 @@ export function Assemble({
               placements={store.readPlacements()}
               annotations={store.readAnnotations()}
               familyNotes={familyNotes}
+              predicateNotes={predicateNotes}
               canComment={can(role, "canAnnotate")}
               memberColors={memberColorMap}
               memberNames={memberNameMap}
@@ -1010,6 +1044,7 @@ export function Assemble({
             placements={store.readPlacements()}
             role={role}
             currentUserId={currentUserId}
+            docRef={routineId}
             onCreate={({ kind, text }) =>
               store.createAnnotation({
                 kind,
@@ -1028,6 +1063,7 @@ export function Assemble({
             onReply={(annotationId, text) => store.addReply(annotationId, text)}
             onDeleteReply={(annotationId, replyId) => store.deleteReply(annotationId, replyId)}
             onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
+            onRemoveMedia={(annotationId, mediaId) => store.removeMedia(annotationId, mediaId)}
           />
         )}
       </Sheet>
@@ -1242,6 +1278,13 @@ export function Assemble({
                 <AnnotationPanel
                   role={role}
                   currentUserId={currentUserId}
+                  docRef={routineId}
+                  mediaSyncLive={store.syncState() === "live"}
+                  newMediaId={newId}
+                  onMintMediaUpload={(req) => store.mintMediaUpload(req)}
+                  onUploadMedia={(uploadUrl, blob, mimeType) =>
+                    store.uploadMedia(uploadUrl, blob, mimeType)
+                  }
                   annotations={store.readAnnotations().filter(
                     (a) =>
                       // Drop tombstoned notes so a soft-delete leaves the read
@@ -1255,11 +1298,12 @@ export function Assemble({
                   )}
                   composeAnchor={{ type: "figure", figureRef: notatingFigure.id }}
                   figureLabels={{ [notatingFigure.id]: notatingFigure.name }}
-                  onCreate={({ kind, text }) =>
+                  onCreate={({ kind, text, media }) =>
                     store.createAnnotation({
                       kind,
                       text,
                       anchors: [{ type: "figure", figureRef: notatingFigure.id }],
+                      ...(media ? { media } : {}),
                     })
                   }
                   onReply={(annotationId, text) => store.addReply(annotationId, text)}
@@ -1267,6 +1311,9 @@ export function Assemble({
                     store.deleteReply(annotationId, replyId)
                   }
                   onDeleteAnnotation={(annotationId) => store.deleteAnnotation(annotationId)}
+                  onRemoveMedia={(annotationId, mediaId) =>
+                    store.removeMedia(annotationId, mediaId)
+                  }
                 />
                 {/* Figure-family notes (US-040/041): "every Feather" notes from this
                     routine's members, surfaced on the matching figure; commenter+ may
@@ -2434,10 +2481,12 @@ function ThreadSheetContents({
   placements,
   role,
   currentUserId,
+  docRef,
   onCreate,
   onReply,
   onDeleteReply,
   onDeleteAnnotation,
+  onRemoveMedia,
 }: {
   routineId: string;
   anchor: { figureRef: string; count?: number };
@@ -2445,11 +2494,16 @@ function ThreadSheetContents({
   placements: ResolvedPlacement[];
   role: MembershipRole;
   currentUserId?: string;
+  /** The routine docRef — inline media in existing comments renders same-origin
+   *  /api/media/... URLs and the worker-proxied YouTube thumb (annotation-media). */
+  docRef: string;
   onCreate: (input: { kind: import("@weavesteps/domain").AnnotationKind; text: string }) => void;
   onReply: (annotationId: string, text: string) => void;
   onDeleteReply: (annotationId: string, replyId: string) => void;
   /** Soft-delete a whole annotation (author-only; #294). */
   onDeleteAnnotation: (annotationId: string) => void;
+  /** Soft-delete a posted media item (author-only ✕; annotation-media). */
+  onRemoveMedia: (annotationId: string, mediaId: string) => void;
 }) {
   // Only called when the Sheet is open (component is mounted) — see note above.
   const t = useMessages(assembleMessages);
@@ -2503,6 +2557,7 @@ function ThreadSheetContents({
     <AnnotationPanel
       role={role}
       currentUserId={currentUserId}
+      docRef={docRef}
       annotations={threadAnnotations}
       composeAnchor={
         stepCount == null
@@ -2519,6 +2574,7 @@ function ThreadSheetContents({
       onReply={onReply}
       onDeleteReply={onDeleteReply}
       onDeleteAnnotation={onDeleteAnnotation}
+      onRemoveMedia={onRemoveMedia}
     />
   );
 }

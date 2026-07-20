@@ -98,10 +98,12 @@ connection returns — exactly once, merged with whatever happened meanwhile. Th
 choreo structure, notation, annotations/replies, library bookmarks, and family notes.
 
 **Creation stays online-only** ("live-gated"): new choreo, fork, invites, a new custom kind,
-and the *first* edit of a catalog figure (variant-spawn mints a new document). These have
-server-side quota/permission effects the user isn't present to resolve on replay — a product
-choice, not a technical limit. Offline, they show an honest disabled state, never a queued
-half-action.
+the *first* edit of a catalog figure (variant-spawn mints a new document), and **attaching
+media to an annotation** (the upload is server-minting — a grant is issued and caps are
+checked before the bytes stream to R2). These have server-side quota/permission effects the
+user isn't present to resolve on replay — a product choice, not a technical limit. Offline,
+they show an honest disabled state, never a queued half-action. Note that the note **text**
+stays fully offline-capable: only *attaching media* to it needs a live connection.
 
 Truth-telling is the bar: a pending chip shows undelivered changes; if replay is terminally
 rejected (access revoked while away), the content stays readable under an unmissable alert —
