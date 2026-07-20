@@ -224,11 +224,18 @@ routes and one mockable AI seam; it adds **no new data shape and no new write pa
   resolves a transcript into a *proposed* anchor. Context assembly reuses the snapshot route's
   **per-figure authorization** verbatim — a routine's placements are caller-controlled CRDT
   content, so every referenced figure ref is gated individually by `resolveEffectiveRole`,
-  and only annotate-capable (non-viewer) routines are in scope. A pure serializer in
-  `packages/domain` (`serializeChoreoContext`, `resolveDanceAlias`) turns the assembled docs
-  into grounding data (figures in placement order, one entry per placement so ordinals ground;
-  variants resolved live against their base). **`POST /api/voice-notes/transcribe`** echoes a
-  Whisper-fallback transcript; the audio is never stored.
+  and only annotate-capable (non-viewer) routines are in scope. The request carries an optional
+  **`routineRef`** (narrow to one choreo) and an optional **`dance`** (a `DanceId`; context-first
+  capture — `docs/concepts/annotations.md` § Voice capture): when `dance` is given and no
+  `routineRef`, `assembleVoiceContext` filters the annotate-capable routines to that dance
+  **before** serializing, so the model grounds against a handful of relevant figures. Absent →
+  the broad behavior (all annotate-capable routines). The dance filter is a *narrowing* of an
+  already-authorized set — it never widens scope, and per-figure authorization is unchanged. A
+  pure serializer in `packages/domain` (`serializeChoreoContext`, `resolveDanceAlias`) turns the
+  assembled docs into grounding data (figures in placement order, one entry per placement so
+  ordinals ground; variants resolved live against their base). **`POST /api/voice-notes/transcribe`**
+  echoes a Whisper-fallback transcript (reading the same optional `?dance=` scope for its STT
+  prompt); the audio is never stored.
 - **Both routes are read-only** — they never write D1, never touch a DO's CRDT content, never
   mint registry rows. The only commit path is the existing client → store seam
   (`createAnnotation` / `createFamilyNote`) behind the user's explicit **Confirm**. The AI

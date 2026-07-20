@@ -2,7 +2,7 @@
 // author-coloured list with kind pills + link chips, filter pills, the editor's
 // Lesson/Practice toggle, and the link picker's disabled "An attribute" / media.
 import type { VoiceNoteProposal } from "@weavesteps/contract";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
 import type { JournalEntry } from "../store/journal";
 import { fireEvent, renderUi, screen, userEvent, waitFor } from "../test-support/render";
@@ -704,5 +704,205 @@ describe("Journal editor — AI voice path (the AI never writes; Confirm uses th
       ),
     );
     expect(screen.queryByText(/↳/)).toBeNull();
+  });
+});
+
+describe("Journal editor — context-first scope step (docs/concepts/annotations.md § scope-first note flow)", () => {
+  // The remembered scope dance persists in localStorage — clear it between tests.
+  afterEach(() => {
+    try {
+      window.localStorage.clear();
+    } catch {}
+  });
+
+  // Choreos across two dances: one Foxtrot, one Waltz.
+  const twoDanceChoreos = [
+    { docRef: "rt_fox", title: "Comp Slowfox", dance: "foxtrot" },
+    { docRef: "rt_waltz", title: "Gold Waltz", dance: "waltz" },
+  ];
+
+  function scriptedCapture(): { capture: SpeechCapture; emit: (text: string) => void } {
+    let cb: SpeechCaptureCallbacks | null = null;
+    return {
+      capture: { onDevice: true, start: (c) => (cb = c), stop() {} },
+      emit: (text) => cb?.onTranscript(text, true),
+    };
+  }
+
+  /** Typed interpret mock so `mock.calls[0]?.[0]` keeps its input tuple type
+   *  (the scope-threading assertions read `.dance` off it). Always unresolved. */
+  const interpretMock = () =>
+    vi.fn(
+      async (_input: {
+        transcript: string;
+        routineRef?: string;
+        dance?: string;
+      }): Promise<VoiceNoteProposal> => ({
+        resolved: false,
+        noteText: "x",
+        confidence: "low",
+        proposed: null,
+        alternatives: [],
+      }),
+    );
+
+  it("shows the scope step with dance chips; 'All my dancing' selected by default (skippable)", async () => {
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    // The scope fieldset with dance chips + the skippable default.
+    expect(screen.getByText("What's this about?")).toBeInTheDocument();
+    const allDancing = screen.getByRole("button", { name: "All my dancing" });
+    expect(allDancing).toHaveAttribute("aria-pressed", "true");
+    // The five dances render as chips.
+    expect(screen.getByRole("button", { name: "Foxtrot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Waltz" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tango" })).toBeInTheDocument();
+  });
+
+  it("picking a dance pre-filters the link picker's choreo list to that dance", async () => {
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Foxtrot" }));
+    // Open the picker: only the Foxtrot choreo appears (Waltz filtered out). The
+    // Foxtrot choreo shows both in the editor's optional chooser and the picker.
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    expect(await screen.findByText("Which choreo?")).toBeInTheDocument();
+    expect(screen.getAllByText("Comp Slowfox").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Gold Waltz")).toBeNull();
+  });
+
+  it("picking a dance AND a choreo opens the picker on the target step (no re-picking)", async () => {
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Foxtrot" }));
+    // Pick the specific choreo from the optional chooser.
+    await userEvent.click(await screen.findByRole("button", { name: /Comp Slowfox/ }));
+    // Open the picker — it opens straight on the target step (no "Which choreo?").
+    await userEvent.click(screen.getByText(/link to a step, figure or attribute/i));
+    expect(await screen.findByText("Link to…")).toBeInTheDocument();
+    expect(screen.queryByText("Which choreo?")).toBeNull();
+  });
+
+  it("the voice sheet grounds within the selected dance (the store call carries `dance`)", async () => {
+    const interpretVoice = interpretMock();
+    const { capture, emit } = scriptedCapture();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+        createSpeechCapture={() => capture}
+        interpretVoice={interpretVoice}
+        transcribeVoice={async () => ""}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Foxtrot" }));
+    await userEvent.click(screen.getByRole("button", { name: /^voice$/i }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: /hold to talk/i }));
+    emit("In Feather Steps, settle the sway.");
+    await waitFor(() => expect(interpretVoice).toHaveBeenCalled());
+    expect(interpretVoice.mock.calls[0]?.[0]).toMatchObject({
+      transcript: "In Feather Steps, settle the sway.",
+      dance: "foxtrot",
+    });
+  });
+
+  it("an empty scope (dance with no choreo) blocks voice with the actionable state", async () => {
+    const interpretVoice = interpretMock();
+    const { capture } = scriptedCapture();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        // Only a Foxtrot choreo exists — Tango is empty.
+        loadRoutineOptions={vi.fn(async () => [
+          { docRef: "rt_fox", title: "Comp Slowfox", dance: "foxtrot" },
+        ])}
+        createSpeechCapture={() => capture}
+        interpretVoice={interpretVoice}
+        transcribeVoice={async () => ""}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Tango" }));
+    // The editor already surfaces the actionable hint (no Tango choreo).
+    expect(await screen.findByText("Add a figure to a Tango choreo first")).toBeInTheDocument();
+    // Opening voice shows the actionable state and NO mic (capture is blocked).
+    await userEvent.click(screen.getByRole("button", { name: /^voice$/i }));
+    expect(screen.queryByRole("button", { name: /hold to talk/i })).toBeNull();
+    expect(interpretVoice).not.toHaveBeenCalled();
+    // Text notes still work: the textarea is present and typeable.
+    await userEvent.click(screen.getByRole("button", { name: /discard/i }));
+    await userEvent.type(screen.getByLabelText("entry text"), "practice alone");
+    expect(screen.getByLabelText("entry text")).toHaveValue("practice alone");
+  });
+
+  it("skipping the scope preserves broad behavior: interpret is called with no dance", async () => {
+    const interpretVoice = interpretMock();
+    const { capture, emit } = scriptedCapture();
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+        createSpeechCapture={() => capture}
+        interpretVoice={interpretVoice}
+        transcribeVoice={async () => ""}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    // Leave "All my dancing" selected (skip the scope), then speak.
+    await userEvent.click(screen.getByRole("button", { name: /^voice$/i }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: /hold to talk/i }));
+    emit("Remember to breathe.");
+    await waitFor(() => expect(interpretVoice).toHaveBeenCalled());
+    expect(interpretVoice.mock.calls[0]?.[0].dance).toBeUndefined();
+  });
+
+  it("remembers the last-chosen dance across editor opens (per-device)", async () => {
+    const { unmount } = renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Foxtrot" }));
+    expect(screen.getByRole("button", { name: "Foxtrot" })).toHaveAttribute("aria-pressed", "true");
+    unmount();
+    // A fresh mount reopens the editor with Slowfox still selected.
+    renderUi(
+      <Journal
+        loadEntries={async () => []}
+        {...baseProps}
+        loadRoutineOptions={vi.fn(async () => twoDanceChoreos)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
+    expect(screen.getByRole("button", { name: "Foxtrot" })).toHaveAttribute("aria-pressed", "true");
+    // The default is no longer selected (Chip omits aria-pressed when unselected).
+    expect(screen.getByRole("button", { name: "All my dancing" })).not.toHaveAttribute(
+      "aria-pressed",
+    );
   });
 });

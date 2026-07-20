@@ -604,6 +604,12 @@ export const zInterpretVoiceNote = z.object({
   transcript: z.string().trim().min(1).max(4000),
   /** Captured in-context: narrow the grounding context to this one choreo. */
   routineRef: z.string().min(1).optional(),
+  /** Context-first capture (docs/concepts/annotations.md § Voice capture): the
+   *  dance the dancer scoped the note to. Narrows the grounding context to the
+   *  caller's annotate-capable choreos of that dance before serializing. Absent →
+   *  today's broad grounding (all annotate-capable choreos). An unknown value is
+   *  rejected — the scope must be a real DanceId or nothing. */
+  dance: z.enum(DANCE_IDS).optional(),
 });
 export type InterpretVoiceNote = z.infer<typeof zInterpretVoiceNote>;
 

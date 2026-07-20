@@ -16,7 +16,11 @@ export interface VoiceNoteSheetProps {
   open: boolean;
   onClose: () => void;
   capture: SpeechCapture;
-  interpret: (input: { transcript: string; routineRef?: string }) => Promise<VoiceNoteProposal>;
+  interpret: (input: {
+    transcript: string;
+    routineRef?: string;
+    dance?: string;
+  }) => Promise<VoiceNoteProposal>;
   transcribe: (clip: Blob) => Promise<string>;
   /** Confirm & save: the ordinary picker payload + the note text. */
   onConfirm: (link: JournalLink, noteText: string) => void;
@@ -25,6 +29,14 @@ export interface VoiceNoteSheetProps {
   /** Edit target: hand off to the ordinary link picker (the transcript stays). */
   onEditTarget: (noteText: string) => void;
   routineRef?: string;
+  /** Context-first capture (docs/concepts/annotations.md § Voice capture grounds
+   *  within the selected dance): the scoped dance passed to the interpret route. */
+  dance?: string;
+  /** The scope is EMPTY — a dance is chosen but the dancer has no annotate-capable
+   *  choreo in it. The sheet shows an honest actionable state and does NOT attempt
+   *  capture→interpret (decided client-side; never a silent server unresolved).
+   *  Carries the dance's display name for the message. */
+  emptyScopeDanceName?: string;
 }
 
 // "idle" — sheet open, awaiting a hold; "rec" — actively capturing (held, or the
@@ -62,7 +74,7 @@ export function proposalToLink(p: VoiceNoteProposal): JournalLink | null {
 
 export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | null {
   const t = useMessages(journalMessages);
-  const { open, capture, interpret, transcribe, routineRef } = props;
+  const { open, capture, interpret, transcribe, routineRef, dance, emptyScopeDanceName } = props;
   const [phase, setPhase] = useState<Phase>("idle");
   const [transcript, setTranscript] = useState("");
   const [proposal, setProposal] = useState<VoiceNoteProposal | null>(null);
@@ -91,7 +103,11 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
       }
       setPhase("interpreting");
       try {
-        const p = await interpret({ transcript: finalText, ...(routineRef ? { routineRef } : {}) });
+        const p = await interpret({
+          transcript: finalText,
+          ...(routineRef ? { routineRef } : {}),
+          ...(dance ? { dance } : {}),
+        });
         setProposal(p);
         setPhase(p.resolved ? "confirm" : "unresolved");
       } catch {
@@ -99,7 +115,7 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
         setPhase("unresolved");
       }
     },
-    [interpret, routineRef, t.saveFailed],
+    [interpret, routineRef, dance, t.saveFailed],
   );
 
   const startCapture = useCallback((): void => {
@@ -163,6 +179,30 @@ export function VoiceNoteSheet(props: VoiceNoteSheetProps): React.JSX.Element | 
   }, []);
 
   if (!open) return null;
+
+  // Empty scope (docs/concepts/annotations.md § the empty-scope actionable state):
+  // a dance is chosen but the dancer has no annotate-capable choreo in it, so
+  // there is nothing to ground a spoken note against. Show an honest, actionable
+  // state and NEVER attempt capture→interpret — the mic is not rendered at all.
+  if (emptyScopeDanceName != null) {
+    return (
+      <Sheet open={open} onClose={props.onClose} title={t.voiceSheetTitle}>
+        <div className="flex flex-col gap-3 py-2">
+          <div className="text-2xs font-bold text-ink">
+            {t.scopeEmptyVoice(emptyScopeDanceName)}
+          </div>
+          <p className="text-2xs text-ink-muted">{t.scopeEmptyVoiceHint}</p>
+          <button
+            type="button"
+            onClick={props.onClose}
+            className="rounded-xl border border-border-strong px-3 py-2.5 text-center text-3xs font-bold text-ink-secondary"
+          >
+            {t.voiceDiscard}
+          </button>
+        </div>
+      </Sheet>
+    );
+  }
 
   const confidenceLabel =
     proposal?.confidence === "high"
