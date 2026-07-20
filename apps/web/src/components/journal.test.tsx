@@ -5,7 +5,7 @@ import type { VoiceNoteProposal } from "@weavesteps/contract";
 import { describe, expect, it, vi } from "vitest";
 import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
 import type { JournalEntry } from "../store/journal";
-import { renderUi, screen, userEvent, waitFor } from "../test-support/render";
+import { fireEvent, renderUi, screen, userEvent, waitFor } from "../test-support/render";
 import { Journal } from "./Journal";
 
 const entry = (over: Partial<JournalEntry>): JournalEntry => ({
@@ -626,6 +626,9 @@ describe("Journal editor — AI voice path (the AI never writes; Confirm uses th
     );
     await userEvent.click(await screen.findByRole("button", { name: /\+ New entry/i }));
     await userEvent.click(screen.getByRole("button", { name: /^voice$/i }));
+    // Push-to-talk: press the mic to start capture (the sheet opens idle, #291), so
+    // the scripted capture's callbacks are wired before we emit a transcript.
+    fireEvent.pointerDown(screen.getByRole("button", { name: /hold to talk/i }));
     return { emit, interpretVoice };
   }
 

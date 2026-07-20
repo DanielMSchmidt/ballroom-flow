@@ -140,7 +140,10 @@ async function seedCompSlowfox(
   return { BOUNCE_1, BOUNCE_2, RT };
 }
 
-/** Open the journal entry editor and start voice capture with an injected transcript. */
+/** Open the journal entry editor and drive push-to-talk voice capture with an
+ *  injected transcript. The sheet opens IDLE (push-to-talk, #291); pressing the talk
+ *  button starts the E2E capture, which emits the injected transcript as final on
+ *  `start` (Playwright has no mic); releasing completes the hold. */
 async function startVoiceWithTranscript(page: Page, transcript: string): Promise<void> {
   const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
   await nav.getByRole("button", { name: "Journal" }).click();
@@ -150,6 +153,17 @@ async function startVoiceWithTranscript(page: Page, transcript: string): Promise
     window.__weaveVoiceTranscript = t;
   }, transcript);
   await page.getByRole("button", { name: "voice", exact: true }).click();
+  // Press-and-hold the mic. In the E2E build `e2eCapture` emits the injected
+  // transcript as final ON START (pointerdown), so the sheet advances off "idle"
+  // immediately — the talk button is gone before a pointerup could re-locate it.
+  // Resolve the element ONCE, press, then fire pointerup on the same handle
+  // best-effort (it may already be detached — that's fine, the note already resolved).
+  const handle = await page.getByRole("button", { name: /hold to talk/i }).elementHandle();
+  if (handle) {
+    await handle.dispatchEvent("pointerdown");
+    // Release best-effort: the button may already be detached (note resolved on press).
+    await handle.dispatchEvent("pointerup").catch(() => {});
+  }
 }
 
 test.describe("@smoke AI voice notes (fixture AI)", () => {

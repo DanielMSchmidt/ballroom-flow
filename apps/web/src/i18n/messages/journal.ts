@@ -182,10 +182,16 @@ const en = {
   // ── AI voice note capture (VoiceNoteSheet.tsx — docs/concepts/annotations.md § The Journal) ──
   voice: "voice",
   voiceSheetTitle: "Voice note",
-  voiceListening: "listening…",
+  // Push-to-talk (docs/concepts/annotations.md § Voice capture): idle prompt, the
+  // held-recording state, and the keyboard hint (hold isn't keyboard-operable, so
+  // the talk button also toggles on Enter/Space).
+  voiceHoldPrompt: "Hold to talk",
+  voiceHoldButton: "Hold to talk",
+  voiceRecordingButton: "Recording — release to send",
+  voiceRecording: "recording…",
+  voiceKeyboardHint: "Or press Enter to start and stop",
   voiceOnDeviceHint:
     "transcribes on this device — falls back to the app's speech service if it can't",
-  voiceStop: "stop",
   voiceInterpreting: "resolving against your choreos…",
   voiceHeard: "Here's what I heard",
   voiceProposedTarget: "PROPOSED TARGET",
@@ -373,9 +379,12 @@ const de: typeof en = {
   // ── AI-Sprachnotiz-Aufnahme (VoiceNoteSheet.tsx) ──────────────────────────
   voice: "Sprache",
   voiceSheetTitle: "Sprachnotiz",
-  voiceListening: "höre zu…",
+  voiceHoldPrompt: "Zum Sprechen halten",
+  voiceHoldButton: "Zum Sprechen halten",
+  voiceRecordingButton: "Nimmt auf — loslassen zum Senden",
+  voiceRecording: "nimmt auf…",
+  voiceKeyboardHint: "Oder mit der Eingabetaste starten und stoppen",
   voiceOnDeviceHint: "wird auf diesem Gerät transkribiert — sonst über den Sprachdienst der App",
-  voiceStop: "stopp",
   voiceInterpreting: "wird mit deinen Choreografien abgeglichen…",
   voiceHeard: "Das habe ich gehört",
   voiceProposedTarget: "VORGESCHLAGENES ZIEL",
