@@ -11,12 +11,17 @@
 // seams are injected (store seam). The voice sheet's proposal confirms through
 // this same link+save path — the AI never writes.
 import type { VoiceNoteProposal } from "@weavesteps/contract";
-import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
-import { useState } from "react";
-import { useMessages } from "../i18n";
+import {
+  type AnnotationKind,
+  DANCE_IDS,
+  type DanceId,
+  type RegistryKind,
+} from "@weavesteps/domain";
+import { useEffect, useMemo, useState } from "react";
+import { danceName, useLocale, useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
 import type { SpeechCapture } from "../lib/speech";
-import { Button, Card, IconButton, SegmentedToggle } from "../ui";
+import { Button, Card, Chip, IconButton, List, ListRow, SegmentedToggle, Spinner } from "../ui";
 import { CloseIcon } from "../ui/icons";
 import {
   type JournalLink,
@@ -24,6 +29,7 @@ import {
   type RoutineFigureOption,
   type RoutineOption,
 } from "./JournalLinkPicker";
+import { useStoredJournalDance } from "./journal-scope";
 import { VoiceNoteSheet } from "./VoiceNoteSheet";
 
 export interface JournalEntryEditorProps {
@@ -89,10 +95,52 @@ export function JournalEntryEditor({
   transcribeVoice,
 }: JournalEntryEditorProps): React.JSX.Element {
   const t = useMessages(journalMessages);
+  const locale = useLocale();
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
   const [text, setText] = useState("");
   const [links, setLinks] = useState<JournalLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Context-first capture (docs/concepts/annotations.md § scope-first note flow):
+  // the leading scope selector's state. The dance is remembered per-device; the
+  // optional choreo lives only for this note. A null dance = "all my dancing"
+  // (the old broad behavior — the scope step is skippable).
+  const [scopeDance, setScopeDance] = useStoredJournalDance();
+  const [scopeRoutine, setScopeRoutine] = useState<RoutineOption | null>(null);
+  // All the user's annotate-capable choreos (loaded once), so the editor can (a)
+  // list a dance's choreos for the optional chooser and (b) decide the empty-scope
+  // state client-side — never rely on a silent server unresolved.
+  const [routineOptions, setRoutineOptions] = useState<RoutineOption[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadRoutineOptions().then(
+      (r) => {
+        if (live) setRoutineOptions(r);
+      },
+      () => {
+        if (live) setRoutineOptions([]);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [loadRoutineOptions]);
+  // Choosing (or clearing) a dance drops a choreo left over from another dance.
+  const pickDance = (next: DanceId | null): void => {
+    setScopeDance(next);
+    setScopeRoutine(null);
+  };
+  // The chosen dance's annotate-capable choreos (null while options load).
+  const danceChoreos = useMemo(
+    () =>
+      routineOptions == null || scopeDance == null
+        ? null
+        : routineOptions.filter((r) => r.dance === scopeDance),
+    [routineOptions, scopeDance],
+  );
+  // Empty scope: a dance is chosen, options have loaded, and none are in it. Voice
+  // can't ground here → block capture with the actionable state. Text still works.
+  const emptyScope = scopeDance != null && danceChoreos != null && danceChoreos.length === 0;
+  const scopeDanceName = scopeDance != null ? danceName(scopeDance, locale) : null;
   // The active capture instance (created once per open so the sheet's effect
   // doesn't restart it on every render); null while the sheet is closed.
   const [capture, setCapture] = useState<SpeechCapture | null>(null);
@@ -201,6 +249,56 @@ export function JournalEntryEditor({
         onChange={setKind}
       />
 
+      {/* Scope step (docs/concepts/annotations.md § scope-first note flow): pick a
+          dance (skippable → "all my dancing"), then optionally one of its choreos.
+          The choice pre-filters the link picker and grounds the voice interpret. */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+          {t.scopeHeading}
+        </legend>
+        <div className="flex flex-wrap items-center gap-1">
+          <Chip selected={scopeDance == null} onClick={() => pickDance(null)}>
+            {t.scopeAllDancing}
+          </Chip>
+          {DANCE_IDS.map((d) => (
+            <Chip key={d} selected={scopeDance === d} onClick={() => pickDance(d)}>
+              {danceName(d, locale)}
+            </Chip>
+          ))}
+        </div>
+        {scopeDance != null && scopeDanceName != null && (
+          <div className="flex flex-col gap-1">
+            {routineOptions == null ? (
+              <Spinner size={16} label={t.scopeLoadingChoreos} />
+            ) : (danceChoreos?.length ?? 0) > 0 ? (
+              <List aria-label={t.scopeChoreoOptional(scopeDanceName)}>
+                <ListRow
+                  title={t.scopeAnyChoreo(scopeDanceName)}
+                  aria-pressed={scopeRoutine == null}
+                  showChevron={false}
+                  className={scopeRoutine == null ? "border-accent" : undefined}
+                  onClick={() => setScopeRoutine(null)}
+                />
+                {danceChoreos?.map((r) => (
+                  <ListRow
+                    key={r.docRef}
+                    title={r.title || t.untitled}
+                    aria-pressed={scopeRoutine?.docRef === r.docRef}
+                    showChevron={false}
+                    className={scopeRoutine?.docRef === r.docRef ? "border-accent" : undefined}
+                    onClick={() => setScopeRoutine(r)}
+                  />
+                ))}
+              </List>
+            ) : (
+              // Empty scope — no annotate-capable choreo in this dance. Honest,
+              // actionable; text notes still work, voice is blocked (below).
+              <p className="text-2xs text-ink-muted">{t.scopeEmptyVoice(scopeDanceName)}</p>
+            )}
+          </div>
+        )}
+      </fieldset>
+
       <textarea
         aria-label={t.entryText}
         placeholder={t.entryPlaceholder}
@@ -290,6 +388,8 @@ export function JournalEntryEditor({
         loadRoutineOptions={loadRoutineOptions}
         loadRoutineFigures={loadRoutineFigures}
         customKinds={customKinds}
+        {...(scopeDance ? { scopeDance } : {})}
+        {...(scopeRoutine ? { scopeRoutine } : {})}
       />
 
       {voiceEnabled && capture != null && (
@@ -299,6 +399,9 @@ export function JournalEntryEditor({
           capture={capture}
           interpret={interpretVoice}
           transcribe={transcribeVoice}
+          {...(scopeDance ? { dance: scopeDance } : {})}
+          {...(scopeRoutine ? { routineRef: scopeRoutine.docRef } : {})}
+          {...(emptyScope && scopeDanceName ? { emptyScopeDanceName: scopeDanceName } : {})}
           onConfirm={(link, noteText) => {
             // The confirmed proposal becomes an ORDINARY link + text — the save
             // button then drives the unchanged path. The AI never writes.

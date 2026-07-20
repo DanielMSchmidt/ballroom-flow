@@ -17,6 +17,7 @@ import {
   type ChoreoContext,
   CURRENT_SCHEMA_VERSION,
   can,
+  type DanceId,
   type FigureDoc,
   globalFigureRef,
   isDanceId,
@@ -1358,11 +1359,18 @@ app.get("/api/routines/:id/snapshot", async (c) => {
  * to read every figure ref it lists; gate each ref individually). Scope: one
  * routine when `routineRef` is given (gated by `resolveEffectiveRole`), else the
  * caller's annotate-capable routines (role !== "viewer"). READ-ONLY.
+ *
+ * Context-first capture (docs/concepts/annotations.md § Voice capture): when a
+ * `dance` scope is given (and no single `routineRef`), the annotate-capable
+ * routines are further narrowed to THAT dance before serializing — so the model
+ * grounds against a handful of relevant figures, not everything. A `routineRef`
+ * already narrows to one choreo, so `dance` is redundant there and ignored.
  */
 async function assembleVoiceContext(
   env: Env,
   userId: string,
   routineRef: string | undefined,
+  dance?: DanceId,
 ): Promise<ChoreoContext> {
   const doc = (id: string) => env.DOC_DO.get(env.DOC_DO.idFromName(id));
 
@@ -1374,8 +1382,12 @@ async function assembleVoiceContext(
   } else {
     const listed = await listRoutines(env.DB, userId);
     // Owned routines have role "owner"; shared ones carry their membership role.
-    // Mirror store/journal.ts: only annotate-capable (non-viewer) routines.
-    routineRefs = listed.filter((r) => r.role !== "viewer").map((r) => r.docRef);
+    // Mirror store/journal.ts: only annotate-capable (non-viewer) routines. A
+    // `dance` scope narrows the list to that dance (the D1 index dance is the
+    // same value serializeChoreoContext later reads off each snapshot).
+    routineRefs = listed
+      .filter((r) => r.role !== "viewer" && (dance == null || r.dance === dance))
+      .map((r) => r.docRef);
   }
 
   const entries: {
@@ -1435,9 +1447,9 @@ app.post("/api/voice-notes/interpret", async (c) => {
   if (!user) return c.json({ error: "unauthenticated" }, 401);
   const parsed = zInterpretVoiceNote.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "invalid_voice_note" }, 400);
-  const { transcript, routineRef } = parsed.data;
+  const { transcript, routineRef, dance } = parsed.data;
 
-  const context = await assembleVoiceContext(c.env, user.sub, routineRef);
+  const context = await assembleVoiceContext(c.env, user.sub, routineRef, dance);
   try {
     const raw = await voiceAiFor(c.env).interpret(transcript, context);
     return c.json(groundProposal(raw, context, transcript));
@@ -1465,11 +1477,15 @@ app.post("/api/voice-notes/transcribe", async (c) => {
   // can't stream an arbitrarily large body into the STT model).
   if (bytes.byteLength > 4 * 1024 * 1024) return c.json({ error: "audio_too_large" }, 413);
   // Seed the STT with the in-scope figure names (names only) so ballroom jargon
-  // transcribes; the context is assembled read-only exactly like /interpret.
+  // transcribes; the context is assembled read-only exactly like /interpret. The
+  // optional `?dance=` scope narrows it the same way (an unknown value is ignored
+  // → broad behavior, never a bogus filter).
+  const danceQuery = c.req.query("dance");
   const context = await assembleVoiceContext(
     c.env,
     user.sub,
     c.req.query("routineRef") ?? undefined,
+    danceQuery != null && isDanceId(danceQuery) ? danceQuery : undefined,
   );
   const initialPrompt = context.choreos.flatMap((ch) => ch.figures.map((f) => f.name)).join(", ");
   const transcript = await voiceAiFor(c.env).transcribe(bytes, { initialPrompt });
