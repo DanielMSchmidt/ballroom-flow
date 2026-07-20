@@ -112,6 +112,45 @@ describe("US-043 account custom-kind persistence", () => {
     expect(energy?.required).toBe(false);
   });
 
+  it("round-trips a role-aware coupling map (bothWrite + coupling)", async () => {
+    // A custom role-aware enum kind may declare a coupling (leader→follower)
+    // map; the account_custom_kind table must persist + return it and its
+    // bothWrite mode, else the follower derivation is lost on reload.
+    const ctx = await authedContext({ keypair: kp, userId: "u_ckcp", docRef: "n/a", role: null });
+    await seedDb({
+      users: [{ id: "u_ckcp", displayName: "CP", identityColor: "#111", plan: "free" }],
+    });
+
+    const poise = {
+      kind: "poise",
+      label: "Poise",
+      color: "#ff6600",
+      cardinality: "single" as const,
+      valueType: "enum",
+      values: ["forward", "upright", "back"],
+      roleAware: true,
+      bothWrite: "mirror" as const,
+      coupling: { forward: "back" },
+      builtin: false,
+    };
+    const post = await SELF.fetch("https://x/api/account/custom-kinds", {
+      method: "POST",
+      headers: { ...ctx.authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify(poise),
+    });
+    expect(post.status).toBe(201);
+
+    const get = await SELF.fetch("https://x/api/account/custom-kinds", {
+      headers: ctx.authHeaders(),
+    });
+    const body = await get.json<{
+      kinds: { kind: string; bothWrite?: string; coupling?: Record<string, string> }[];
+    }>();
+    const back = body.kinds.find((k) => k.kind === "poise");
+    expect(back?.bothWrite).toBe("mirror");
+    expect(back?.coupling).toEqual({ forward: "back" });
+  });
+
   it("omits the data-driven fields when not supplied (null → undefined branch)", async () => {
     const ctx = await authedContext({ keypair: kp, userId: "u_cknull", docRef: "n/a", role: null });
     await seedDb({

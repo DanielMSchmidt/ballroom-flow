@@ -90,7 +90,8 @@ imports through small shims that defer module resolution to runtime:
 | US-040 | figureType annotations (this/all dances) | component + E2E | `apps/web/src/components/annotations.test.tsx`, `apps/web/e2e/fork-and-figures.spec.ts` |
 | US-041 | Co-member visibility of family notes (option 2) | worker + E2E | `apps/worker/src/figuretype-visibility.test.ts`, `apps/web/e2e/fork-and-figures.spec.ts` |
 | US-042 | Annotation filters | component | `apps/web/src/components/annotations.test.tsx` |
-| US-043 | Custom attribute-kind creation UI | component | `apps/web/src/components/custom-kind.test.tsx` |
+| US-043 | Custom attribute-kind creation UI (incl. the role-coupling grid for role-aware enum kinds) | component | `apps/web/src/components/custom-kind.test.tsx` |
+| Role couplings | Author-defined coupling on a custom role-aware enum kind (`leader value → follower value`; renamed from `mirror`): domain derivation + built-in byte-equivalence, contract accept/reject, D1 round-trip, add-kind coupling grid, Both-lens follower fill + divergence lock | domain + contract + worker + component + E2E | `packages/domain/src/role-write.test.ts`, `packages/contract/src/index.test.ts`, `apps/worker/src/routes/custom-kinds.test.ts`, `apps/web/src/components/custom-kind.test.tsx`, `apps/web/e2e/attribute-role-couplings.spec.ts` (@smoke ship gate) |
 | US-044 | Lanes (one kind across all counts) | component | `apps/web/src/components/attribute-editor.test.tsx` |
 | US-045 | Sample routine + start-from-template | component | `apps/web/src/components/choreo-list.test.tsx` |
 | US-046 | Routine + figure search (EXPLAIN) | worker | `apps/worker/src/routes/search.test.ts` |

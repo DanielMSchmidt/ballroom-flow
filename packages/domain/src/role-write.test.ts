@@ -78,6 +78,64 @@ describe("role-write — deriveFollowerValue", () => {
     expect(deriveFollowerValue(custom, "sharp")).toBe("sharp");
   });
 
+  it("derives the follower through an AUTHOR-supplied coupling on a custom kind", () => {
+    // The coach's "poise" kind: leader forward pairs with follower back, upright
+    // copies through (no row), and an unmapped value falls back to identity.
+    const poise: RegistryKind = {
+      kind: "poise",
+      label: "Poise",
+      color: "#888888",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["forward", "upright", "back"],
+      roleAware: true,
+      bothWrite: "mirror",
+      coupling: { forward: "back" },
+      builtin: false,
+    };
+    expect(deriveFollowerValue(poise, "forward")).toBe("back");
+    // Unmapped leader values copy through (the existing `?? value` fallback).
+    expect(deriveFollowerValue(poise, "upright")).toBe("upright");
+    expect(deriveFollowerValue(poise, "back")).toBe("back");
+  });
+
+  it("built-in derivations are byte-identical after the mirror→coupling rename", () => {
+    // Pins EVERY built-in Both-write output so the field rename can never silently
+    // change behaviour — the exhaustive value × mode snapshot for direction, sway,
+    // footwork (leaderOnly), and a copy kind (rise).
+    const derivations = (kind: RegistryKind) =>
+      (kind.values ?? []).map((v) => [v, deriveFollowerValue(kind, v), bothWriteTargets(kind, v)]);
+    expect(derivations(direction)).toEqual([
+      ["forward", "back", { leader: "forward", follower: "back" }],
+      ["back", "forward", { leader: "back", follower: "forward" }],
+      ["side", "side", { shared: "side" }],
+      [
+        "diagonal_forward",
+        "diagonal_back",
+        { leader: "diagonal_forward", follower: "diagonal_back" },
+      ],
+      [
+        "diagonal_back",
+        "diagonal_forward",
+        { leader: "diagonal_back", follower: "diagonal_forward" },
+      ],
+      ["close", "close", { shared: "close" }],
+      ["behind", "in_front", { leader: "behind", follower: "in_front" }],
+      ["in_front", "behind", { leader: "in_front", follower: "behind" }],
+      ["diagonal", "diagonal", { shared: "diagonal" }],
+      ["in_place", "in_place", { shared: "in_place" }],
+    ]);
+    expect(derivations(sway)).toEqual([
+      ["to_L", "to_R", { leader: "to_L", follower: "to_R" }],
+      ["to_R", "to_L", { leader: "to_R", follower: "to_L" }],
+      ["none", "none", { shared: "none" }],
+    ]);
+    // footwork is leaderOnly (follower never derived); rise is a copy kind.
+    expect(deriveFollowerValue(footwork, "HT")).toBeUndefined();
+    expect(bothWriteTargets(footwork, "HT")).toEqual({ leader: "HT" });
+    expect(bothWriteTargets(rise, "up")).toEqual({ shared: "up" });
+  });
+
   it("mirror maps are total involutions over the kind's enum", () => {
     for (const kind of [direction, sway]) {
       fc.assert(
@@ -115,6 +173,25 @@ describe("role-write — bothWriteTargets", () => {
 
   it("keeps a presence write (value null) shared, even for mirror kinds", () => {
     expect(bothWriteTargets(direction, null)).toEqual({ shared: null });
+  });
+
+  it("splits/collapses through an author-supplied coupling map", () => {
+    const poise: RegistryKind = {
+      kind: "poise",
+      label: "Poise",
+      color: "#888888",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["forward", "upright", "back"],
+      roleAware: true,
+      bothWrite: "mirror",
+      coupling: { forward: "back" },
+      builtin: false,
+    };
+    // A mapped leader value writes a role-tagged pair.
+    expect(bothWriteTargets(poise, "forward")).toEqual({ leader: "forward", follower: "back" });
+    // An unmapped value copies through → one shared attribute.
+    expect(bothWriteTargets(poise, "upright")).toEqual({ shared: "upright" });
   });
 });
 
@@ -161,6 +238,36 @@ describe("role-write — isBothConsistent", () => {
       ]),
     ).toBe(false);
     expect(isBothConsistent(footwork, [attr("footwork", "follower", "heel turn")])).toBe(false);
+  });
+
+  it("locks a hand-diverged pair on a custom coupling kind, allows the derived pair", () => {
+    const poise: RegistryKind = {
+      kind: "poise",
+      label: "Poise",
+      color: "#888888",
+      cardinality: "single",
+      valueType: "enum",
+      values: ["forward", "upright", "back"],
+      roleAware: true,
+      bothWrite: "mirror",
+      coupling: { forward: "back" },
+      builtin: false,
+    };
+    // The coupling's own output (leader forward / follower back) stays editable.
+    expect(
+      isBothConsistent(poise, [
+        attr("poise", "leader", "forward"),
+        attr("poise", "follower", "back"),
+      ]),
+    ).toBe(true);
+    // The coach's deliberate exception (follower upright against a forward leader)
+    // is hand-authored divergence and locks under Both.
+    expect(
+      isBothConsistent(poise, [
+        attr("poise", "leader", "forward"),
+        attr("poise", "follower", "upright"),
+      ]),
+    ).toBe(false);
   });
 
   it("copy kinds compare per-role views as sets (multi cardinality)", () => {

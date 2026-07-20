@@ -12,10 +12,10 @@ export async function upsertAccountKind(
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO account_custom_kind (userId, kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required, updatedAt, deletedAt)
-       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,NULL)
+      `INSERT INTO account_custom_kind (userId, kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required, bothWrite, couplingJson, updatedAt, deletedAt)
+       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,NULL)
        ON CONFLICT(userId, kind) DO UPDATE SET
-         label=?3, color=?4, cardinality=?5, valueType=?6, valuesJson=?7, freeText=?8, appliesToDancesJson=?9, description=?10, valueDefsJson=?11, roleAware=?12, required=?13, updatedAt=?14, deletedAt=NULL`,
+         label=?3, color=?4, cardinality=?5, valueType=?6, valuesJson=?7, freeText=?8, appliesToDancesJson=?9, description=?10, valueDefsJson=?11, roleAware=?12, required=?13, bothWrite=?14, couplingJson=?15, updatedAt=?16, deletedAt=NULL`,
     )
     .bind(
       userId,
@@ -31,6 +31,8 @@ export async function upsertAccountKind(
       k.valueDefs ? JSON.stringify(k.valueDefs) : null,
       k.roleAware == null ? null : k.roleAware ? 1 : 0,
       k.required == null ? null : k.required ? 1 : 0,
+      k.bothWrite ?? null,
+      k.coupling ? JSON.stringify(k.coupling) : null,
       now,
     )
     .run();
@@ -40,7 +42,7 @@ export async function upsertAccountKind(
 export async function listAccountKinds(db: D1Database, userId: string): Promise<RegistryKindDto[]> {
   const rows = await db
     .prepare(
-      `SELECT kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required
+      `SELECT kind, label, color, cardinality, valueType, valuesJson, freeText, appliesToDancesJson, description, valueDefsJson, roleAware, required, bothWrite, couplingJson
        FROM account_custom_kind WHERE userId = ?1 AND deletedAt IS NULL ORDER BY updatedAt DESC`,
     )
     .bind(userId)
@@ -57,6 +59,8 @@ export async function listAccountKinds(db: D1Database, userId: string): Promise<
       valueDefsJson: string | null;
       roleAware: number | null;
       required: number | null;
+      bothWrite: string | null;
+      couplingJson: string | null;
     }>();
   // Re-validate through the contract schema on the way OUT of D1: the write
   // path (`upsertAccountKind`) only stores zRegistryKind-parsed DTOs, so this
@@ -77,6 +81,8 @@ export async function listAccountKinds(db: D1Database, userId: string): Promise<
       valueDefs: r.valueDefsJson ? JSON.parse(r.valueDefsJson) : undefined,
       roleAware: r.roleAware == null ? undefined : r.roleAware === 1,
       required: r.required == null ? undefined : r.required === 1,
+      bothWrite: r.bothWrite ?? undefined,
+      coupling: r.couplingJson ? JSON.parse(r.couplingJson) : undefined,
       builtin: false,
     }),
   );

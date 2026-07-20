@@ -46,6 +46,32 @@ function appendValues(list: string[], tokens: string[]): string[] {
   return next;
 }
 
+/** One editable coupling row: leader value → follower value (blank = unset). */
+type CouplingRow = { leader: string; follower: string };
+
+/** Seed the grid's rows from a stored coupling map (edit mode), preserving order. */
+function rowsFromCoupling(coupling: Record<string, string> | undefined): CouplingRow[] {
+  return Object.entries(coupling ?? {}).map(([leader, follower]) => ({ leader, follower }));
+}
+
+/**
+ * Reduce the editable rows to a coupling map: keep only rows whose BOTH ends are
+ * declared values (a half-filled row is dropped, never persisted), last write per
+ * leader wins. Returns undefined when no complete row survives — an unset coupling
+ * (the kind falls back to "copy") rather than an empty object.
+ */
+function couplingFromRows(
+  rows: CouplingRow[],
+  values: string[],
+): Record<string, string> | undefined {
+  const declared = new Set(values);
+  const map: Record<string, string> = {};
+  for (const { leader, follower } of rows) {
+    if (declared.has(leader) && declared.has(follower)) map[leader] = follower;
+  }
+  return Object.keys(map).length > 0 ? map : undefined;
+}
+
 /**
  * AddKindSheet — bottom-sheet form for creating OR editing a user-defined
  * attribute kind (US-043 AC-1). On submit, builds a RegistryKind descriptor and
@@ -105,6 +131,11 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
   );
   const [roleAware, setRoleAware] = useState(() => initial?.roleAware ?? false);
   const [required, setRequired] = useState(() => initial?.required ?? false);
+  // Coupling rows (leader value → follower value), only meaningful for a
+  // role-aware enum kind. Seeded from a stored coupling map in edit mode.
+  const [couplingRows, setCouplingRows] = useState<CouplingRow[]>(() =>
+    rowsFromCoupling(initial?.coupling),
+  );
   // Error is field-scoped so it renders on the input it refers to (the label vs
   // the values field) and clears when that input changes.
   const [error, setError] = useState<{ field: "label" | "values"; msg: string } | null>(null);
@@ -158,6 +189,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
     setValueDefs(initial?.valueDefs ?? {});
     setRoleAware(initial?.roleAware ?? false);
     setRequired(initial?.required ?? false);
+    setCouplingRows(rowsFromCoupling(initial?.coupling));
     setError(null);
     onClose?.();
   }, [onClose, initial, defaultColor]);
@@ -209,6 +241,13 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
     }
     const trimmedDescription = description.trim();
 
+    // A coupling map is only meaningful on a role-aware ENUM kind; only complete
+    // rows over declared values are kept (`couplingFromRows`). When present it
+    // rides with bothWrite:"mirror" (the mode deriveFollowerValue reads); absent
+    // → the kind falls back to "copy" (one shared value for both roles).
+    const coupling =
+      roleAware && valueType === "enum" ? couplingFromRows(couplingRows, finalValues) : undefined;
+
     const kind: RegistryKind = {
       kind: slug,
       label: trimmedLabel,
@@ -221,6 +260,7 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
       ...(Object.keys(defs).length > 0 ? { valueDefs: defs } : {}),
       ...(roleAware ? { roleAware: true } : {}),
       ...(required ? { required: true } : {}),
+      ...(coupling ? { bothWrite: "mirror", coupling } : {}),
     };
 
     onCreate?.(kind);
@@ -388,6 +428,76 @@ export function AddKindSheet({ open = false, onClose, onCreate, initial }: AddKi
         )}
 
         <Toggle label={t.differsByRole} checked={roleAware} onChange={setRoleAware} />
+
+        {/* Coupling grid — leader value → follower value. Only meaningful (and
+            only shown) for a role-aware ENUM kind: a Both-lens write derives the
+            follower from the leader through this map (unlisted values copy
+            through). Modelled on the value-chip editor's add-a-row pattern. */}
+        {roleAware && valueType === "enum" && (
+          <fieldset className="flex flex-col gap-2 border-0 p-0">
+            <legend className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+              {t.couplingLegend}
+            </legend>
+            {couplingRows.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {couplingRows.map((row, i) => (
+                  // Rows are positional (a leader value may be picked once, then
+                  // changed) — index-keyed to keep the two selects paired.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: positional grid row
+                  <li key={i} className="flex items-center gap-2">
+                    <Select
+                      label={t.pairingLeaderValue(i + 1)}
+                      hideLabel
+                      className="flex-1"
+                      placeholder={t.couplingValuePlaceholder}
+                      options={values.map((v) => ({ value: v, label: v }))}
+                      value={row.leader}
+                      onChange={(e) =>
+                        setCouplingRows((prev) =>
+                          prev.map((r, j) => (j === i ? { ...r, leader: e.target.value } : r)),
+                        )
+                      }
+                    />
+                    <span aria-hidden className="text-sm text-ink-muted">
+                      {t.couplingArrow}
+                    </span>
+                    <Select
+                      label={t.pairingFollowerValue(i + 1)}
+                      hideLabel
+                      className="flex-1"
+                      placeholder={t.couplingValuePlaceholder}
+                      options={values.map((v) => ({ value: v, label: v }))}
+                      value={row.follower}
+                      onChange={(e) =>
+                        setCouplingRows((prev) =>
+                          prev.map((r, j) => (j === i ? { ...r, follower: e.target.value } : r)),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      aria-label={t.removePairing(i + 1)}
+                      onClick={() => setCouplingRows((prev) => prev.filter((_, j) => j !== i))}
+                      className="flex items-center justify-center rounded-full p-1 text-ink-muted opacity-70 transition-opacity hover:opacity-100"
+                    >
+                      <CloseIcon size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCouplingRows((prev) => [...prev, { leader: "", follower: "" }])}
+              disabled={values.length === 0}
+            >
+              {t.addPairing}
+            </Button>
+            <p className="text-2xs italic text-ink-faint">{t.couplingHint}</p>
+          </fieldset>
+        )}
+
         <Toggle label={t.requiredToggle} checked={required} onChange={setRequired} />
         <Button type="submit" variant="primary">
           {editing ? t.saveChanges : t.create}

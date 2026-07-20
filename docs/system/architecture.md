@@ -141,7 +141,9 @@ co-members of a not-yet-onboarded user see something real), **Membership** (per 
 **Invite**, and the projections: **JournalEntry**, **FigureTypeNoteIndex**, **LibraryEntry**,
 **PlacementEdge** (routine→figure edges: the role cascade + "used in N choreos"),
 **account_custom_kind** (the one deliberate D1-as-truth exception: user-defined kinds,
-declared a non-goal of the account-doc migration).
+declared a non-goal of the account-doc migration) — one column per RegistryKind field,
+including a role-aware enum kind's Both-write mode and its `coupling` map
+(`couplingJson`, migration 0019).
 
 **Projections are alarm-written, non-destructive, idempotent, tombstone-aware** — the DO is
 the single writer of its rows:

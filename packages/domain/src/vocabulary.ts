@@ -73,18 +73,23 @@ export interface RegistryKind {
   required?: boolean;
   /**
    * How a BOTH-lens write derives the follower's value from the leader's
-   * (WEP-0008; docs/concepts/notation.md § Role lenses): "mirror" looks the value up in `mirror` (identity when absent —
-   * side steps are their own image); "leaderOnly" never derives (footwork —
-   * heel/toe work is authored per role, a guessed value would be fabrication);
-   * "copy" (the default, incl. custom kinds) stores one shared value for both.
+   * (WEP-0008; docs/concepts/notation.md § Role lenses): "mirror" looks the
+   * value up in `coupling` (identity when absent — side steps are their own
+   * image); "leaderOnly" never derives (footwork — heel/toe work is authored
+   * per role, a guessed value would be fabrication); "copy" (the default, incl.
+   * a custom kind that declares no coupling) stores one shared value for both.
    */
   bothWrite?: "copy" | "mirror" | "leaderOnly";
   /**
-   * The role mirror for `bothWrite: "mirror"` kinds: only the asymmetric pairs
-   * (forward↔back); values not listed mirror to themselves. Must be an
-   * involution — role-write.test.ts property-checks map(map(v)) === v.
+   * The role coupling map for `bothWrite: "mirror"` kinds: `leader value →
+   * follower value`, only the pairs that differ (forward→back); values not
+   * listed copy through to the follower (the `?? value` fallback). A symmetric
+   * built-in (`sway`, `direction`) is the special case where the map is its own
+   * inverse — role-write.test.ts property-checks map(map(v)) === v for those.
+   * Author-declarable on role-aware ENUM custom kinds (docs/concepts/notation.md
+   * § Kinds); every key/value must be a declared `value`.
    */
-  mirror?: Record<string, string>;
+  coupling?: Record<string, string>;
   /** true for standard kinds shipped here; false for user-defined kinds. */
   builtin: boolean;
 }
@@ -154,11 +159,11 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     roleAware: true,
     required: true,
     // WEP-0008 (docs/concepts/notation.md § Role lenses): a Both-lens write mirrors the follower's direction. Only the
-    // asymmetric pairs are listed; side/close/in_place mirror to themselves, and
-    // legacy `diagonal` deliberately so — its forward/back sense is unverified
-    // (alignment-derivation-report §D), so it must never be split mechanically.
+    // asymmetric pairs are listed in `coupling`; side/close/in_place couple to
+    // themselves, and legacy `diagonal` deliberately so — its forward/back sense
+    // is unverified (alignment-derivation-report §D), never split mechanically.
     bothWrite: "mirror",
-    mirror: {
+    coupling: {
       forward: "back",
       back: "forward",
       diagonal_forward: "diagonal_back",
@@ -374,7 +379,7 @@ export const ATTRIBUTE_REGISTRY: StandardRegistry = {
     // opposite named side per dancer (leader to_R ↔ follower to_L in the WDSF
     // charts). "none" mirrors to itself via the identity fallback.
     bothWrite: "mirror",
-    mirror: { to_L: "to_R", to_R: "to_L" },
+    coupling: { to_L: "to_R", to_R: "to_L" },
     builtin: true,
   },
   // THE canonical rotation field: a step's relative rotation. Tokens are eighths

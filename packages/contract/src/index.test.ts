@@ -215,6 +215,52 @@ it("T5 accepts the registry-derived info fields (description/valueDefs/roleAware
   ).toBe(true);
 });
 
+describe("role couplings — a custom role-aware enum kind may declare a coupling map", () => {
+  const base = {
+    kind: "poise",
+    label: "Poise",
+    color: "#c0563f",
+    cardinality: "single" as const,
+    valueType: "enum",
+    values: ["forward", "upright", "back"],
+    roleAware: true,
+    bothWrite: "mirror" as const,
+    builtin: false,
+  };
+
+  it("accepts a valid coupling (keys+values are declared values, role-aware enum)", () => {
+    const ok = zRegistryKind.safeParse({ ...base, coupling: { forward: "back" } });
+    expect(ok.success).toBe(true);
+  });
+
+  it("rejects a coupling key or value not in the kind's declared values", () => {
+    expect(zRegistryKind.safeParse({ ...base, coupling: { sideways: "back" } }).success).toBe(
+      false,
+    );
+    expect(zRegistryKind.safeParse({ ...base, coupling: { forward: "sideways" } }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a coupling on a non-role-aware kind", () => {
+    const notRoleAware = { ...base, roleAware: false };
+    expect(
+      zRegistryKind.safeParse({ ...notRoleAware, coupling: { forward: "back" } }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a coupling on a free-text (non-enum) kind", () => {
+    const freeText = { ...base, valueType: "text", freeText: true, values: undefined };
+    expect(zRegistryKind.safeParse({ ...freeText, coupling: { forward: "back" } }).success).toBe(
+      false,
+    );
+  });
+
+  it("keeps coupling optional — a role-aware enum kind with none still validates", () => {
+    expect(zRegistryKind.safeParse(base).success).toBe(true);
+  });
+});
+
 it("US-046 shapes search results", () => {
   const ok = zSearchResults.safeParse({
     results: [{ docRef: "r1", type: "routine", title: "My Foxtrot", dance: "foxtrot" }],

@@ -49,8 +49,10 @@ An **attribute** is one piece of technique pinned to one moment of a figure:
 
 Attribute kinds are **data, not code**: every editor, lane, chip, and info sheet renders from
 the merged registry. Each kind declares its label, color, cardinality (single/multi), value
-type (enum/free-text), value list with per-value definitions, dance gate, role-awareness, and
-its Both-lens write mode (§ Role lenses).
+type (enum/free-text), value list with per-value definitions, dance gate, role-awareness, its
+Both-lens write mode, and — for a role-aware enum kind — an optional **coupling map**
+(`leader value → follower value`) that the Both lens reads to derive the follower (§ Role
+lenses).
 
 **Standard kinds** (vocabulary charted from the WDSF Technique Books, 2nd ed. 2013, with
 dancecentral.info as secondary source):
@@ -78,6 +80,10 @@ Tango count 4 per bar and phrase over 8. All five are travelling dances.
 the add-kind sheet in the editor), with their own label, description, per-value definitions,
 role-awareness flag, enum values (entered as chips, not a comma blob), and a color from a
 curated contrast-safe palette (every swatch readability-checked against the timeline surface).
+A **role-aware enum** custom kind may also declare a **coupling map** — a short grid of
+`leader value → follower value` rows — so a Both-lens edit derives the follower exactly as
+`sway`/`direction` do; unlisted values copy through to the follower, and the grid is hidden
+for non-role-aware or free-text kinds (an infinite domain has no finite pairing table).
 Editing a custom kind keeps its identity stable so existing attributes never orphan. Custom
 kinds get the same UI coverage as standard ones (info sheet, lanes, chips, filters).
 
@@ -163,13 +169,18 @@ side you see is a per-device preference.
   - Under a **single role**, every write is stored role-tagged and is invisible under the
     other role's lens. Editing a shared (both-roles) value under a single-role lens first
     **splits** it — the other role keeps exactly what it saw.
-  - Under **Both**, one edit notates both dancers by each kind's declared derivation:
-    `direction` and `sway` store the leader's value verbatim plus the **mirrored** follower's
-    (forward ↔ back, diagonal_forward ↔ diagonal_back, behind ↔ in_front, to_L ↔ to_R;
-    symmetric values collapse to one shared attribute); `footwork` is **leader-only** — a
-    follower's footwork is never derivable (real charts disagree; a plausible-looking wrong
-    value is data corruption), so it stays empty until authored under the Follower lens;
-    every other kind (custom included) **copies** as one shared attribute.
+  - Under **Both**, one edit notates both dancers by each kind's declared derivation. A
+    role-aware kind stores the leader's value verbatim plus the follower's, derived through
+    the kind's **coupling map** (`leader value → follower value`): `direction` and `sway` ship
+    one (forward ↔ back, diagonal_forward ↔ diagonal_back, behind ↔ in_front, to_L ↔ to_R) —
+    "mirror" is just a coupling map that happens to be **symmetric** (its own inverse) — and
+    an author can declare one on their own role-aware enum custom kind (the coach's `poise`:
+    leader `forward` → follower `back`). An unmapped leader value **copies through** to the
+    follower, and a value coupled to itself collapses to one shared attribute. `footwork` is
+    **leader-only** — a follower's footwork is never derivable (real charts disagree; a
+    plausible-looking wrong value is data corruption), so it stays empty until authored under
+    the Follower lens; every non-role-aware kind (most custom kinds) **copies** as one shared
+    attribute.
   - Both mode **never clobbers hand-authored divergence**: a (kind, count) whose stored
     values aren't consistent with the derivation rule renders locked under Both (🔒 +
     explanatory toast) — switch to a single role to edit it. A pair Both itself wrote counts

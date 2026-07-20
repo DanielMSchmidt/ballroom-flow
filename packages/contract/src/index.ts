@@ -267,23 +267,62 @@ export const SYNC_PING = "ballroom:sync:ping";
 export const SYNC_PONG = "ballroom:sync:pong";
 
 /** A merged-registry attribute kind (US-003/US-043), shared shape. */
-export const zRegistryKind = z.object({
-  kind: z.string().min(1),
-  label: z.string().min(1),
-  color: z.string().min(1),
-  cardinality: z.enum(["single", "multi"]),
-  valueType: z.string().min(1),
-  values: z.array(z.string()).optional(),
-  freeText: z.boolean().optional(),
-  appliesToDances: z.array(z.enum(DANCE_IDS)).optional(),
-  // Registry-derived info-sheet + Profile affordances (T5): one-line prose,
-  // per-value definitions, role-awareness (L/F), and the required-slot marker.
-  description: z.string().optional(),
-  valueDefs: z.record(z.string(), z.string()).optional(),
-  roleAware: z.boolean().optional(),
-  required: z.boolean().optional(),
-  builtin: z.boolean(),
-});
+export const zRegistryKind = z
+  .object({
+    kind: z.string().min(1),
+    label: z.string().min(1),
+    color: z.string().min(1),
+    cardinality: z.enum(["single", "multi"]),
+    valueType: z.string().min(1),
+    values: z.array(z.string()).optional(),
+    freeText: z.boolean().optional(),
+    appliesToDances: z.array(z.enum(DANCE_IDS)).optional(),
+    // Registry-derived info-sheet + Profile affordances (T5): one-line prose,
+    // per-value definitions, role-awareness (L/F), and the required-slot marker.
+    description: z.string().optional(),
+    valueDefs: z.record(z.string(), z.string()).optional(),
+    roleAware: z.boolean().optional(),
+    required: z.boolean().optional(),
+    // How a Both-lens write derives the follower (docs/concepts/notation.md
+    // § Role lenses). Built-ins carry this; custom kinds may declare "mirror"
+    // alongside a `coupling` map (below). "leaderOnly" is builtin-only (footwork).
+    bothWrite: z.enum(["copy", "mirror", "leaderOnly"]).optional(),
+    // The role coupling map (`leader value → follower value`) for a "mirror"
+    // kind. Author-declarable on role-aware ENUM custom kinds; validated below.
+    coupling: z.record(z.string(), z.string()).optional(),
+    builtin: z.boolean(),
+  })
+  // A coupling is only meaningful — and only accepted — on a role-aware ENUM
+  // kind, and every mapped key/value must be one of the kind's declared values.
+  // This is a write-time default, never an invariant: an unmapped leader value
+  // copies through at derivation time (`?? value`), so a partial map is valid.
+  .superRefine((k, ctx) => {
+    if (k.coupling === undefined) return;
+    if (!k.roleAware) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["coupling"],
+        message: "a coupling map requires a role-aware kind",
+      });
+    }
+    if (k.freeText || k.valueType !== "enum") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["coupling"],
+        message: "a coupling map requires an enum (non-free-text) kind",
+      });
+    }
+    const declared = new Set(k.values ?? []);
+    for (const [leader, follower] of Object.entries(k.coupling)) {
+      if (!declared.has(leader) || !declared.has(follower)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["coupling", leader],
+          message: `coupling must map declared values (${leader} → ${follower})`,
+        });
+      }
+    }
+  });
 export type RegistryKindDto = z.infer<typeof zRegistryKind>;
 
 /** One search hit (US-046) — projected from D1, no CRDT content. */
