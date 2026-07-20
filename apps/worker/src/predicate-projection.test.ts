@@ -1,5 +1,5 @@
 // attribute-predicate-anchors — the account-DO alarm projection of predicate notes to
-// attribute_predicate_note_index (migration 0019). Modeled on figuretype-visibility.test.ts's
+// attribute_predicate_note_index (migration 0021). Modeled on figuretype-visibility.test.ts's
 // account-alarm section + ensure-account-doc.test.ts's stub helper.
 //
 // INVARIANT: the alarm is the single writer; the projection is non-destructive, idempotent,

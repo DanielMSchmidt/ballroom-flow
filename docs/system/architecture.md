@@ -152,7 +152,7 @@ the single writer of its rows:
   design) + `journal_entry` (lesson/practice annotations, for the Journal's routine arm);
 - account DO → `library_entry` (bookmarks) + `figure_type_note_index` (family notes; rows
   currently carry the note content — co-member visibility reads this index gated by
-  co-membership, never another user's doc) + `attribute_predicate_note_index` (migration 0019
+  co-membership, never another user's doc) + `attribute_predicate_note_index` (migration 0021
   — attribute-predicate notes, mirroring the family-note index exactly: content-carrying,
   keyed by `{ attrKind, attrValue, scope }`, same co-membership read gate. `routine`-scoped
   rows project for upsert-consistency but the cross-account read filters them out structurally
