@@ -42,6 +42,10 @@ TDD is not optional: write or unskip the covering test first, watch it fail, mak
   every D1 query** (`expectIndexedQuery` — index, no SCAN).
 - **Component (browser + Testing Library + axe):** editor surfaces driven from the registry;
   role-lens behavior; library badges; gating by role; toasts; axe passes on every surface.
+  **Wall-clock-dependent rendering injects `now` at every layer** — a domain argument, a
+  component prop — so `Date.now()` never appears in a covering test's assertion path; E2E
+  backdates `createdAt` through the `/api/test/seed` annotations seam (the UI stamps now).
+  Comment activity fade-out is the first such feature.
 - **E2E (Playwright):** the journeys — authoring, two-context live convergence, fork
   independence (origin edits never reach the fork; catalog refs stay live), figure-edit
   propagation across routines, variant-spawn + base-edit flow-in on unowned beats only,

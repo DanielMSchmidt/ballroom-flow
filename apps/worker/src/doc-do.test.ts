@@ -623,6 +623,29 @@ describe("T6 DO alarm: projects routine lesson/practice annotations to journal_e
     expect(await journalCount(name)).toBe(2); // lesson + practice; the note is skipped
   });
 
+  it("projects live media counts onto the journal row; a tombstone flips the count down (annotation-media-embeds)", async () => {
+    const { name, stub } = freshDoc("routine");
+    await stub.setMetadata({ doName: name, docRef: name, type: "routine", ownerId: "u_j" });
+    await stub.applyChange({
+      op: "addAnnotation",
+      kind: "lesson",
+      authorId: "u_j",
+      text: "coach video",
+      anchors: [],
+    });
+    const entryId = (await stub.getSnapshot()).annotations[0]?.id ?? "";
+    await stub.applyChange({ op: "attachMedia", annotationId: entryId, mediaId: "mA" });
+    await stub.applyChange({ op: "attachMedia", annotationId: entryId, mediaId: "mB" });
+    await stub.runAlarmForTest();
+    const counts = async () =>
+      env.DB.prepare("SELECT imageCount, videoCount FROM journal_entry WHERE entryId = ?")
+        .bind(entryId)
+        .first<{ imageCount: number; videoCount: number }>();
+    const after = await counts();
+    expect(after?.imageCount).toBe(2); // both attachMedia ops create image items
+    expect(after?.videoCount).toBe(0);
+  });
+
   it("a non-routine (figure) DO projects NO journal rows (scoping, #per-doc-layering)", async () => {
     const { name, stub } = freshDoc("figure");
     // type 'global-figure' → projectJournalToD1 short-circuits even with annotations.

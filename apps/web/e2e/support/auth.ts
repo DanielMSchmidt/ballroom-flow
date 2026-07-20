@@ -22,6 +22,12 @@ export const E2E_PENDING_SESSION_KEY = "ballroom-e2e-pending-session";
 /**
  * Sign a page in as `userId`: mint a test JWT and inject the session before any
  * app code runs (addInitScript), so the app boots signed-in as that user.
+ *
+ * Also sets the same JWT as the Clerk `__session` cookie so ELEMENT-SRC media
+ * fetches authenticate (annotation-media-embeds, plan discrepancy 2): an
+ * `<img>`/`<video>` request to `/api/media/...` can't send a Bearer header, so
+ * the worker's media-read path accepts the same-origin `__session` cookie — the
+ * SAME JWT, the SAME verifier. Matches production, where Clerk sets `__session`.
  */
 export async function seedAuth(page: Page, userId: string): Promise<void> {
   const token = await mintTestJWT(userId);
@@ -32,6 +38,15 @@ export async function seedAuth(page: Page, userId: string): Promise<void> {
     },
     [E2E_SESSION_KEY, session] as const,
   );
+  // The media-read auth cookie, scoped to the E2E origin (same host+port as
+  // baseURL). seedAuth runs before navigation, so derive the origin from the
+  // harness port rather than page.url() (which is still about:blank here).
+  await page.context().addCookies([{ name: "__session", value: token, url: e2eOrigin() }]);
+}
+
+/** The E2E server origin (mirrors playwright.config.ts's baseURL). */
+function e2eOrigin(): string {
+  return `http://localhost:${Number(process.env.E2E_PORT ?? 4173)}`;
 }
 
 /**

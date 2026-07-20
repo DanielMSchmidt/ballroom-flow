@@ -1,6 +1,13 @@
 // @weavesteps/domain — pure domain logic, no I/O.
 // Submodules (ids, vocabulary, dances, timing, sortkey, oplog, seeding, copy,
 // schemas) are added in Milestone 1 and re-exported here.
+export {
+  ACTIVE_WINDOW_MS,
+  type ActivitySource,
+  lastActivity,
+  partitionByActivity,
+  SESSION_GAP_WINDOW_MS,
+} from "./annotation-activity";
 export { DANCE_IDS, DANCES, type DanceId, type DanceMeta, isDanceId } from "./dances";
 export {
   type BuildDemoSeedOptions,
@@ -18,6 +25,7 @@ export {
   addAccountReply,
   addFamilyNote,
   addLibraryRef,
+  addPredicateNote,
   buildAccountDoc,
   importAccountDoc,
   readAccount,
@@ -31,9 +39,11 @@ export {
   addAnnotation,
   addReply,
   addSection,
+  attachMedia,
   buildRoutineDoc,
   readRoutine,
   softDeleteAnnotation,
+  softDeleteMedia,
   softDeleteReply,
   softDeleteSection,
 } from "./doc-routine";
@@ -48,12 +58,15 @@ export type {
   FigureDoc,
   FigureSource,
   FigureType,
+  MediaItem,
   Placement,
   ReadOptions,
   Reply,
   Role,
   RoutineDoc,
   Section,
+  UploadedMediaItem,
+  YouTubeMediaItem,
 } from "./doc-types";
 export {
   defaultFigureBars,
@@ -95,6 +108,7 @@ export {
   libraryGroupsForFilter,
   parseGlobalFigureRef,
 } from "./library";
+export { type MediaPart, mediaToken, splitMediaParts } from "./media";
 export { CURRENT_SCHEMA_VERSION, migrate, migrateDraft } from "./migrations";
 export {
   ensureSortKeys,
@@ -112,6 +126,7 @@ export {
   type EffectiveRole,
   type MembershipRole,
 } from "./permissions";
+export { matchPredicate, PREDICATE_NONE } from "./predicate";
 export {
   type BothWriteTargets,
   bothWriteTargets,
@@ -149,4 +164,13 @@ export {
   type StandardRegistry,
   slugifyKind,
 } from "./vocabulary";
+export {
+  type ChoreoContext,
+  type ChoreoContextChoreo,
+  type ChoreoContextCount,
+  type ChoreoContextFigure,
+  DANCE_ALIASES,
+  resolveDanceAlias,
+  serializeChoreoContext,
+} from "./voice-context";
 export { buildWdsfAttributes, parseWdsfTiming } from "./wdsf-timing";

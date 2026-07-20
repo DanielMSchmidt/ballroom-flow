@@ -233,3 +233,97 @@ describe("openAccount — family-note authoring works OFFLINE in the local edit-
     goOnline();
   });
 });
+
+describe("openAccount — attribute-predicate notes (self-read + author, offline-capable)", () => {
+  it("flattens an attributePredicate annotation; family + predicate notes don't leak into each other", async () => {
+    const { opts, socket } = fakeWiring();
+    const store = await openAccount("user-1", opts);
+    socket().fireOpen();
+    const seed = buildAccountDoc({
+      id: "account:user-1",
+      ownerId: "user-1",
+      annotations: [
+        {
+          id: "fam-1",
+          authorId: "user-1",
+          kind: "lesson",
+          text: "family note",
+          tags: [],
+          anchors: [{ type: "figureType", figureType: "feather", danceScope: "all" }],
+          replies: [],
+          createdAt: 1,
+          deletedAt: null,
+        },
+        {
+          id: "pred-1",
+          authorId: "user-1",
+          kind: "note",
+          text: "soften every left sway",
+          tags: [],
+          anchors: [{ type: "attributePredicate", kind: "sway", value: "left", scope: "waltz" }],
+          replies: [],
+          createdAt: 2,
+          deletedAt: null,
+        },
+      ],
+      libraryFigureRefs: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    socket().load(seed);
+    socket().fireCaughtUp();
+
+    const preds = store.readOwnPredicateNotes();
+    expect(preds).toHaveLength(1);
+    expect(preds[0]).toMatchObject({
+      id: "pred-1",
+      attrKind: "sway",
+      attrValue: "left",
+      scope: "waltz",
+    });
+    // the family note does NOT appear in the predicate list, and vice-versa
+    expect(store.readOwnFamilyNotes().map((n) => n.id)).toEqual(["fam-1"]);
+    // referential stability across reads when nothing changed
+    expect(store.readOwnPredicateNotes()).toBe(store.readOwnPredicateNotes());
+    store.close();
+  });
+
+  it("authors a predicate note offline (visible before any socket), then soft-deletes it", async () => {
+    const storage = memStorage();
+    const seed = buildAccountDoc({
+      id: "account:user-1",
+      ownerId: "user-1",
+      annotations: [],
+      libraryFigureRefs: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    storage.map.set("account:user-1", { bytes: A.save(seed), pendingCount: 0 });
+
+    goOffline();
+    const { opts } = fakeWiring();
+    const store = await openAccount("user-1", { ...opts, storage });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(store.syncState()).toBe("local");
+
+    store.createPredicateNote({
+      attrKind: "sway",
+      attrValue: "left",
+      role: "leader",
+      scope: "waltz",
+      kind: "note",
+      text: "offline predicate note",
+    });
+    const notes = store.readOwnPredicateNotes();
+    expect(notes).toHaveLength(1);
+    const created = notes[0];
+    expect(created?.text).toBe("offline predicate note");
+    expect(created?.role).toBe("leader");
+
+    if (created) store.deleteFamilyNote(created.id);
+    expect(store.readOwnPredicateNotes()).toHaveLength(0);
+    store.close();
+    goOnline();
+  });
+});

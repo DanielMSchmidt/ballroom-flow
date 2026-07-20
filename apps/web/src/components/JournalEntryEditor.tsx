@@ -5,13 +5,17 @@
 // Per the LOCKED full-parity decision the SAVE path is determined by the entry's
 // links, and each link kind writes independently (#293): routine-scoped links
 // (point/figure) collapse into one createRoutineEntry (createAnnotation) on that
-// routine's editable store, AND each account figureType link saves its own
-// createFamilyEntry (createFamilyNote) — an entry carrying both kinds lands both.
-// Both seams are injected (store seam).
-import type { AnnotationKind } from "@weavesteps/domain";
+// routine's editable store, each account figureType link saves its own
+// createFamilyEntry (createFamilyNote), and each attribute-predicate link its own
+// createPredicateEntry — an entry carrying several kinds lands them all. The
+// seams are injected (store seam). The voice sheet's proposal confirms through
+// this same link+save path — the AI never writes.
+import type { VoiceNoteProposal } from "@weavesteps/contract";
+import type { AnnotationKind, RegistryKind } from "@weavesteps/domain";
 import { useState } from "react";
 import { useMessages } from "../i18n";
 import { journalMessages } from "../i18n/messages/journal";
+import type { SpeechCapture } from "../lib/speech";
 import { Button, Card, IconButton, SegmentedToggle } from "../ui";
 import { CloseIcon } from "../ui/icons";
 import {
@@ -20,6 +24,7 @@ import {
   type RoutineFigureOption,
   type RoutineOption,
 } from "./JournalLinkPicker";
+import { VoiceNoteSheet } from "./VoiceNoteSheet";
 
 export interface JournalEntryEditorProps {
   /** The author label shown in the header ("you" for self). */
@@ -43,8 +48,30 @@ export interface JournalEntryEditorProps {
     routineRef: string,
     input: { kind: AnnotationKind; text: string; anchors: JournalLink["anchor"][] },
   ) => Promise<void>;
+  /** Author an attribute-predicate note (account store's createPredicateNote). */
+  createPredicateEntry: (input: {
+    attrKind: string;
+    attrValue: string;
+    role?: "leader" | "follower";
+    scope: string;
+    routineRef?: string;
+    kind: AnnotationKind;
+    text: string;
+  }) => Promise<void>;
   loadRoutineOptions: () => Promise<RoutineOption[]>;
   loadRoutineFigures: (routineRef: string) => Promise<RoutineFigureOption[]>;
+  /** Custom attribute kinds for the picker's attribute-family list. */
+  customKinds?: RegistryKind[];
+  /** AI voice notes (docs/concepts/annotations.md § The Journal). Injected seams
+   *  for the mic affordance; when all three are absent the control is hidden. The
+   *  proposal it confirms flows through the ORDINARY link+save path — the AI never
+   *  writes. */
+  createSpeechCapture?: () => SpeechCapture;
+  interpretVoice?: (input: {
+    transcript: string;
+    routineRef?: string;
+  }) => Promise<VoiceNoteProposal>;
+  transcribeVoice?: (clip: Blob) => Promise<string>;
 }
 
 export function JournalEntryEditor({
@@ -53,16 +80,28 @@ export function JournalEntryEditor({
   onSaved,
   createFamilyEntry,
   createRoutineEntry,
+  createPredicateEntry,
   loadRoutineOptions,
   loadRoutineFigures,
+  customKinds,
+  createSpeechCapture,
+  interpretVoice,
+  transcribeVoice,
 }: JournalEntryEditorProps): React.JSX.Element {
   const t = useMessages(journalMessages);
   const [kind, setKind] = useState<Exclude<AnnotationKind, "note">>("lesson");
   const [text, setText] = useState("");
   const [links, setLinks] = useState<JournalLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The active capture instance (created once per open so the sheet's effect
+  // doesn't restart it on every render); null while the sheet is closed.
+  const [capture, setCapture] = useState<SpeechCapture | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The mic affordance appears only when all three voice seams are injected.
+  const voiceEnabled =
+    createSpeechCapture != null && interpretVoice != null && transcribeVoice != null;
 
   const canSave = text.trim().length > 0 && !saving;
 
@@ -75,10 +114,13 @@ export function JournalEntryEditor({
       const accountLinks = links.filter(
         (l): l is Extract<JournalLink, { home: "account" }> => l.home === "account",
       );
+      const predicateLinks = links.filter(
+        (l): l is Extract<JournalLink, { home: "accountPredicate" }> =>
+          l.home === "accountPredicate",
+      );
       // Each link kind writes to its own home INDEPENDENTLY (#293): an entry
-      // carrying both a routine link and an account figureType link must land
-      // both — the routine annotation AND one family note per figureType link —
-      // matching exactly what each link kind produces on its own.
+      // carrying a routine link, account figureType links, and predicate links
+      // lands all of them — matching what each kind produces on its own.
       const [firstRoutine] = routineLinks;
       if (firstRoutine) {
         // All same-routine anchors collapse into one annotation.
@@ -100,6 +142,18 @@ export function JournalEntryEditor({
           text: text.trim(),
           ...(acct.count != null ? { count: acct.count } : {}),
           ...(acct.role ? { role: acct.role } : {}),
+        });
+      }
+      // Each attribute-predicate link saves its own predicate note.
+      for (const pred of predicateLinks) {
+        await createPredicateEntry({
+          attrKind: pred.attrKind,
+          attrValue: pred.attrValue,
+          scope: pred.scope,
+          kind,
+          text: text.trim(),
+          ...(pred.role ? { role: pred.role } : {}),
+          ...(pred.routineRef ? { routineRef: pred.routineRef } : {}),
         });
       }
       if (links.length === 0) {
@@ -185,15 +239,43 @@ export function JournalEntryEditor({
         </button>
       </div>
 
-      {/* Media is a v1.1 affordance — visibly disabled, not hidden. */}
-      <button
-        type="button"
-        disabled
-        aria-label={t.addMedia}
-        className="rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-2xs text-ink-faint opacity-60"
-      >
-        {t.addMediaHint}
-      </button>
+      <div className="flex items-center gap-3">
+        {/* AI voice capture (docs/concepts/annotations.md § The Journal): speak the
+            note, the anchor is proposed, you confirm — then the ordinary save path. */}
+        {voiceEnabled && (
+          <button
+            type="button"
+            onClick={() => setCapture(createSpeechCapture())}
+            className="flex items-center gap-1.5 text-2xs font-bold text-accent"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.9}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <title>{t.voice}</title>
+              <rect x="9" y="2" width="6" height="12" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+            </svg>
+            {t.voice}
+          </button>
+        )}
+        {/* Media is a v1.1 affordance — visibly disabled, not hidden. */}
+        <button
+          type="button"
+          disabled
+          aria-label={t.addMedia}
+          className="flex-1 rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-2xs text-ink-faint opacity-60"
+        >
+          {t.addMediaHint}
+        </button>
+      </div>
 
       {error && (
         <Card>
@@ -207,7 +289,37 @@ export function JournalEntryEditor({
         onPick={(link) => setLinks((prev) => [...prev, link])}
         loadRoutineOptions={loadRoutineOptions}
         loadRoutineFigures={loadRoutineFigures}
+        customKinds={customKinds}
       />
+
+      {voiceEnabled && capture != null && (
+        <VoiceNoteSheet
+          open={capture != null}
+          onClose={() => setCapture(null)}
+          capture={capture}
+          interpret={interpretVoice}
+          transcribe={transcribeVoice}
+          onConfirm={(link, noteText) => {
+            // The confirmed proposal becomes an ORDINARY link + text — the save
+            // button then drives the unchanged path. The AI never writes.
+            setLinks((prev) => [...prev, link]);
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+          }}
+          onEditTarget={(noteText) => {
+            // Hand off to the manual picker (it resets to its first step); the
+            // transcript stays in the editor.
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+            setPickerOpen(true);
+          }}
+          onUseAsText={(noteText) => {
+            // Unresolved: keep the transcript as the note text, no link.
+            setText((prev) => (prev.trim().length > 0 ? prev : noteText));
+            setCapture(null);
+          }}
+        />
+      )}
     </section>
   );
 }

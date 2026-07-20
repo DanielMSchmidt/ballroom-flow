@@ -27,6 +27,10 @@ export interface JournalEntryProjection {
   createdAt: number;
   /** Soft-delete tombstone mirrored from the annotation (null = live). */
   deletedAt: number | null;
+  /** docs/ideas/annotation-media-embeds.md — live media counts so the Journal
+   *  card renders its chip without reading CRDT. YouTube counts as video. */
+  imageCount: number;
+  videoCount: number;
 }
 
 /** A journal entry as the read returns it (anchors parsed, author joined). */
@@ -41,6 +45,10 @@ export interface JournalEntryOut {
   displayName: string | null;
   identityColor: string | null;
   source: "routine" | "account";
+  /** docs/ideas/annotation-media-embeds.md — live media counts for the card
+   *  chip (routine arm only; the account arm carries no media — a non-goal). */
+  imageCount: number;
+  videoCount: number;
 }
 
 /**
@@ -58,12 +66,13 @@ export async function projectJournalEntries(
   const stmts = rows.map((r) =>
     db
       .prepare(
-        `INSERT INTO journal_entry (entryId, routineRef, authorId, kind, text, anchors, createdAt, updatedAt, deletedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO journal_entry (entryId, routineRef, authorId, kind, text, anchors, createdAt, updatedAt, deletedAt, imageCount, videoCount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(entryId) DO UPDATE SET
            routineRef = excluded.routineRef, authorId = excluded.authorId, kind = excluded.kind,
            text = excluded.text, anchors = excluded.anchors, createdAt = excluded.createdAt,
-           updatedAt = excluded.updatedAt, deletedAt = excluded.deletedAt`,
+           updatedAt = excluded.updatedAt, deletedAt = excluded.deletedAt,
+           imageCount = excluded.imageCount, videoCount = excluded.videoCount`,
       )
       .bind(
         r.entryId,
@@ -75,6 +84,8 @@ export async function projectJournalEntries(
         r.createdAt,
         now,
         r.deletedAt,
+        r.imageCount,
+        r.videoCount,
       ),
   );
   await db.batch(stmts);
@@ -149,13 +160,15 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
     createdAt: number;
     displayName: string | null;
     identityColor: string | null;
+    imageCount: number;
+    videoCount: number;
   }> = [];
   if (routineRefs.length > 0) {
     const ph = routineRefs.map(() => "?").join(",");
     routineRows = await bindAll(
       db,
       `SELECT j.entryId AS id, j.routineRef, j.authorId, j.kind, j.text, j.anchors, j.createdAt,
-              u.displayName, u.identityColor
+              j.imageCount, j.videoCount, u.displayName, u.identityColor
        FROM journal_entry j
        LEFT JOIN users u ON u.id = j.authorId
        WHERE j.deletedAt IS NULL AND j.routineRef IN (${ph})`,
@@ -213,6 +226,8 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
       displayName: r.displayName,
       identityColor: r.identityColor,
       source: "routine" as const,
+      imageCount: r.imageCount,
+      videoCount: r.videoCount,
     })),
     ...accountRows.map((r) => ({
       id: r.id,
@@ -236,6 +251,10 @@ export async function journalForUser(db: D1Database, userId: string): Promise<Jo
       displayName: r.displayName,
       identityColor: r.identityColor,
       source: "account" as const,
+      // The Journal's account arm carries no media (a non-goal — its content
+      // rides the cross-account index read path).
+      imageCount: 0,
+      videoCount: 0,
     })),
   ];
   entries.sort((a, b) => b.createdAt - a.createdAt);

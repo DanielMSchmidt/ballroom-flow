@@ -1,36 +1,54 @@
 import {
+  MEDIA_CAPS,
   SYNC_SUBPROTOCOL_V1,
   zCreateFigure,
   zCreateRoutine,
   zFamilyNoteBody,
   zFigureRefBody,
+  zInterpretVoiceNote,
   zIssueInvite,
+  zMintMediaUpload,
   zProfileBody,
+  zR2Parts,
   zRegistryKind,
   zSaveToLibrary,
 } from "@weavesteps/contract";
 import {
+  type ChoreoContext,
   CURRENT_SCHEMA_VERSION,
   can,
   type FigureDoc,
   globalFigureRef,
+  isDanceId,
   isReservedKind,
   LIBRARY_FIGURES,
   newId,
   parseAttributeWrite,
+  type RoutineDoc,
+  serializeChoreoContext,
 } from "@weavesteps/domain";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { Hono } from "hono";
-import { authenticate, authenticateToken } from "./auth";
+import { type Context, Hono } from "hono";
+import { getCookie } from "hono/cookie";
+import { type AuthedUser, authenticate, authenticateToken } from "./auth";
 import { isAdmin, routineCapFor } from "./db/admin";
 import { listAccountKinds, upsertAccountKind } from "./db/custom-kinds";
 import { familyNotesForMembers } from "./db/family-notes";
 import { createFigureRows, listGlobalFigures, listMineFigures } from "./db/figures";
 import { issueInvite, redeemInvite } from "./db/invites";
 import { journalForUser } from "./db/journal";
+import {
+  addUploadedBytes,
+  annotationMediaCount,
+  insertMediaObject,
+  mediaObjectFor,
+  softDeleteMediaObject,
+  userMediaBytes,
+} from "./db/media";
 import { listMembers, ownerInfoFor, removeMember, resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
+import { predicateNotesForMembers } from "./db/predicate-notes";
 import {
   countOwnedRoutines,
   createOwnedRoutine,
@@ -46,12 +64,17 @@ import type { DocDO } from "./doc-do";
 import { accountDocRef, ensureAccountDoc } from "./ensure-account-doc";
 import { readFigureSnapshot } from "./figure-snapshot";
 import { forkRoutineFor } from "./fork";
+import { type MediaKey, parseMediaKey } from "./media-key";
+import { isValidPartSize, parsePartNumber } from "./media-mpu";
+import { parseRange, resolveRange } from "./media-range";
 import { reportError, writeMetric } from "./ops";
 import { materializeDemoSeed, softDeleteDemoSeed } from "./routes/seed-demo";
 import { testSeed } from "./routes/test-seed";
 import { seedSampleRoutine } from "./sample";
 import { ensureGlobalFigures } from "./seed-global-figures";
 import { seedStarterRoutine } from "./starter";
+import { groundProposal, voiceAiFor } from "./voice-ai";
+import { fetchYoutubeThumb, YT_VIDEO_ID_RE } from "./youtube-thumb";
 
 // Lazily ensure the app-owned sample template exists, self-healing on ACTUAL D1
 // state (not a stale module boolean). A cheap indexed existence check (ownerId
@@ -96,6 +119,20 @@ export type Env = {
   // mechanism that closes the open-tab version-skew window after a rollout.
   // Unset in dev/test → health reports null and clients never force a reload.
   BUILD_ID?: string;
+  // AI voice notes (docs/ideas/ai-voice-notes.md; docs/TOOLING.md § AI voice
+  // notes) — the Workers AI binding (STT fallback + extraction) and the AI
+  // Gateway id. Both DEPLOYED-ENVS-ONLY (wrangler.toml [env.staging|production]),
+  // both optional so dev + vitest-pool-workers + [env.e2e] run with NEITHER —
+  // `voiceAiFor` then selects the deterministic fixture, keeping the zero-secret
+  // test matrix. Same optional-binding pattern as ANALYTICS.
+  AI?: Ai;
+  AI_GATEWAY_ID?: string;
+  // docs/ideas/annotation-media-embeds.md — the FIRST binary storage: annotation
+  // media (photos/videos) in R2, keyed media/<docRef>/<annotationId>/<mediaId>
+  // (the authz scope). Serving is stream-through with Range support (never a
+  // signed URL). Declared per env in wrangler.toml (bindings are NOT inherited);
+  // Miniflare simulates it for vitest + [env.e2e].
+  MEDIA: R2Bucket;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -703,6 +740,305 @@ app.get("/api/routines/:id/family-notes", async (c) => {
   return c.json({ notes });
 });
 
+// GET /api/routines/:id/predicate-notes — the co-member ATTRIBUTE-PREDICATE note read
+// (attribute-predicate-anchors). Mirrors the family-note read exactly: surfaces the
+// dance-/all-scoped predicate notes authored by THIS routine's members (+ owner), so the
+// client can run matchPredicate over the routine's resolved timelines and surface each note
+// on its matching steps. The content lives on the attribute_predicate_note_index row, so
+// this returns it directly — the client never reads another user's account doc. The
+// co-membership gate is the security boundary: a NON-member is refused (403) BEFORE any
+// note is read. A 'routine'-scoped note is self-read only — it is never served here (the
+// query's scope filter excludes it structurally).
+app.get("/api/routines/:id/predicate-notes", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const routineRef = c.req.param("id");
+
+  // Gate on co-membership of the routine: a non-member resolves to null → 403.
+  const role = await resolveEffectiveRole(c.env.DB, routineRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+
+  const reg = await c.env.DB.prepare(
+    "SELECT dance, ownerId FROM document_registry WHERE docRef = ?",
+  )
+    .bind(routineRef)
+    .first<{ dance: string | null; ownerId: string | null }>();
+  const dance = reg?.dance ?? "waltz";
+
+  // Author set = the routine's members PLUS its owner — the owner is elevated by
+  // resolveEffectiveRole WITHOUT a membership row (#168), so without this arm the owner's
+  // own predicate notes would never surface on their own routine. Deduped.
+  const members = await listMembers(c.env.DB, routineRef);
+  const authorIds = [
+    ...new Set([...members.map((m) => m.userId), ...(reg?.ownerId ? [reg.ownerId] : [])]),
+  ];
+  const rows = await predicateNotesForMembers(c.env.DB, authorIds, dance);
+  // Shape each row as an Annotation-like note carrying an attributePredicate anchor so the
+  // client's matchPredicate consumes an Anchor. The row's `scope` is a D1 string — narrow
+  // it to a valid anchor scope (a DanceId or 'all'; 'routine' is excluded by the query) and
+  // skip a malformed row rather than casting.
+  const notes = rows.flatMap((r) => {
+    if (!(r.scope === "all" || isDanceId(r.scope))) return [];
+    return [
+      {
+        id: r.noteId,
+        authorId: r.authorId,
+        kind: r.kind,
+        text: r.text,
+        attrKind: r.attrKind,
+        attrValue: r.attrValue,
+        scope: r.scope,
+        createdAt: r.updatedAt,
+        ...(r.attrRole ? { role: r.attrRole } : {}),
+        anchors: [
+          {
+            type: "attributePredicate",
+            kind: r.attrKind,
+            value: r.attrValue,
+            scope: r.scope,
+            ...(r.attrRole ? { role: r.attrRole } : {}),
+          },
+        ],
+      },
+    ];
+  });
+  return c.json({ notes });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Annotation media (docs/ideas/annotation-media-embeds.md). The FIRST binary
+// storage + a NEW AUTHZ SURFACE — hard review gate. The object key IS the
+// authorization scope: media/<docRef>/<annotationId>/<mediaId>. Every route here
+// derives the docRef from the key prefix and gates on resolveEffectiveRole; a
+// 403 is returned BEFORE any R2 read/write. No public URLs, ever.
+//
+// Upload is worker-hosted (plan discrepancy 1 — presigned browser→R2 PUTs would
+// need the S3 secret class the serving decision already rejected). Caps are
+// enforced at MINT (idea § Caps, FINAL) and re-checked at the byte boundary.
+// ─────────────────────────────────────────────────────────────────────────
+
+// POST /api/docs/:id/media/upload-url — mint an upload grant. Commenter+ AND the
+// caps are enforced HERE. Writes a media_object row reserving the annotation's
+// item slot + the user's byte budget (a concurrent mint sees it).
+app.post("/api/docs/:id/media/upload-url", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const docRef = c.req.param("id");
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role || !can(role, "canAnnotate")) return c.json({ error: "forbidden" }, 403);
+  const parsed = zMintMediaUpload.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid body" }, 400);
+  const { annotationId, mediaId, type, sizeBytes, durationSeconds, poster } = parsed.data;
+  if (type === "image" && sizeBytes > MEDIA_CAPS.imageMaxBytes)
+    return c.json({ error: "image exceeds 10 MB" }, 413);
+  if (
+    type === "video" &&
+    (sizeBytes > MEDIA_CAPS.videoMaxBytes || (durationSeconds ?? 0) > MEDIA_CAPS.videoMaxSeconds)
+  )
+    return c.json({ error: "video exceeds 3 min / 300 MB" }, 413);
+  // The 4-items-per-annotation cap (posters excluded from the count).
+  if (
+    poster !== true &&
+    (await annotationMediaCount(c.env.DB, docRef, annotationId)) >= MEDIA_CAPS.itemsPerAnnotation
+  )
+    return c.json({ error: "media cap reached (4 per note)" }, 409);
+  // The 1 GB total (owner-confirmed for free; applied to every plan until a pro
+  // cap exists — plan discrepancy 4).
+  if ((await userMediaBytes(c.env.DB, user.sub)) + sizeBytes > MEDIA_CAPS.freeUserTotalBytes)
+    return c.json({ error: "storage quota exceeded" }, 402);
+  const objectKey = `media/${docRef}/${annotationId}/${mediaId}`;
+  await insertMediaObject(c.env.DB, {
+    objectKey,
+    docRef,
+    annotationId,
+    userId: user.sub,
+    bytes: sizeBytes,
+    poster: poster === true,
+  });
+  return c.json({ objectKey, uploadUrl: `/api/media/${objectKey}`, maxBytes: sizeBytes });
+});
+
+/** Parse the media object key out of a `/api/media/<objectKey>` request and load
+ *  its grant. The grant's owner IS the only user allowed to write to the key, and
+ *  they must still be a commenter+ of the docRef in the key prefix. Returns the
+ *  parsed key + grant, or a Response to short-circuit (404/403). Part of the
+ *  hard-gated authz surface — every write subroute funnels through this. */
+async function authorizeMediaWrite(
+  c: Context<{ Bindings: Env }>,
+  userSub: string,
+): Promise<{ objectKey: string; key: MediaKey; bytes: number; uploadedBytes: number } | Response> {
+  const objectKey = decodeURIComponent(new URL(c.req.url).pathname.slice("/api/media/".length));
+  const key = parseMediaKey(objectKey);
+  if (!key) return c.json({ error: "not found" }, 404);
+  const grant = await mediaObjectFor(c.env.DB, objectKey);
+  // No grant (or the caller isn't its owner) → not authorized to write this key.
+  if (!grant || grant.userId !== userSub) return c.json({ error: "forbidden" }, 403);
+  const role = await resolveEffectiveRole(c.env.DB, key.docRef, userSub);
+  if (!role || !can(role, "canAnnotate")) return c.json({ error: "forbidden" }, 403);
+  return { objectKey, key, bytes: grant.bytes, uploadedBytes: grant.uploadedBytes };
+}
+
+// PUT /api/media/<objectKey> — worker-hosted upload streaming the body into R2.
+// `?action=mpu-uploadpart` uploads one multipart part (videos above the Workers
+// body limit — plan discrepancy 1). Both funnel through authorizeMediaWrite, so
+// authorization derives from the key alone (grant owner + commenter+ of docRef).
+app.put("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey, bytes: grantBytes, uploadedBytes } = authorized;
+  const action = c.req.query("action");
+
+  if (action === "mpu-uploadpart") {
+    const uploadId = c.req.query("uploadId");
+    const partNumber = parsePartNumber(c.req.query("partNumber"));
+    if (!uploadId || partNumber === null) return c.json({ error: "invalid part" }, 400);
+    const declared = Number(c.req.header("content-length"));
+    const isLast = c.req.query("last") === "1";
+    if (!isValidPartSize(declared, isLast))
+      return c.json({ error: "part must be ≥ 5 MiB (except the last)" }, 400);
+    // Cumulative bytes across parts may never exceed the granted total.
+    if (uploadedBytes + declared > grantBytes)
+      return c.json({ error: "body exceeds granted size" }, 413);
+    const body = c.req.raw.body;
+    if (body === null) return c.json({ error: "empty body" }, 400);
+    const upload = c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId);
+    const part = await upload.uploadPart(partNumber, body);
+    await addUploadedBytes(c.env.DB, objectKey, declared);
+    return c.json({ partNumber: part.partNumber, etag: part.etag });
+  }
+
+  // Single PUT (blobs ≤ singlePutMaxBytes).
+  const declared = Number(c.req.header("content-length"));
+  if (!Number.isFinite(declared) || declared <= 0 || declared > grantBytes)
+    return c.json({ error: "body exceeds granted size" }, 413);
+  const body = c.req.raw.body;
+  if (body === null) return c.json({ error: "empty body" }, 400);
+  await c.env.MEDIA.put(objectKey, body, {
+    httpMetadata: { contentType: c.req.header("content-type") ?? "application/octet-stream" },
+  });
+  return c.json({ objectKey });
+});
+
+// POST /api/media/<objectKey>?action=mpu-create|mpu-complete — multipart create
+// + complete. Same authz as the PUT (grant owner + commenter+ of the key's
+// docRef). create returns the R2 uploadId; complete assembles the parts.
+app.post("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey } = authorized;
+  const action = c.req.query("action");
+
+  if (action === "mpu-create") {
+    const upload = await c.env.MEDIA.createMultipartUpload(objectKey, {
+      httpMetadata: { contentType: c.req.header("content-type") ?? "application/octet-stream" },
+    });
+    return c.json({ uploadId: upload.uploadId });
+  }
+  if (action === "mpu-complete") {
+    const uploadId = c.req.query("uploadId");
+    if (!uploadId) return c.json({ error: "missing uploadId" }, 400);
+    const parsedBody = await c.req.json().catch(() => null);
+    const parts = zR2Parts.safeParse(parsedBody);
+    if (!parts.success) return c.json({ error: "invalid parts" }, 400);
+    const upload = c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId);
+    try {
+      await upload.complete(parts.data.parts);
+    } catch {
+      // An aborted or already-completed upload → 400 (never a 500).
+      return c.json({ error: "cannot complete upload" }, 400);
+    }
+    return c.json({ objectKey });
+  }
+  return c.json({ error: "unknown action" }, 400);
+});
+
+// DELETE /api/media/<objectKey>?action=mpu-abort — cancel a multipart upload and
+// tombstone its reserved grant row (freeing the byte budget). Same authz.
+app.delete("/api/media/*", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const authorized = await authorizeMediaWrite(c, user.sub);
+  if (authorized instanceof Response) return authorized;
+  const { objectKey } = authorized;
+  if (c.req.query("action") !== "mpu-abort") return c.json({ error: "unknown action" }, 400);
+  const uploadId = c.req.query("uploadId");
+  if (uploadId) {
+    try {
+      await c.env.MEDIA.resumeMultipartUpload(objectKey, uploadId).abort();
+    } catch {
+      // Already aborted/completed — the tombstone below is still the intent.
+    }
+  }
+  await softDeleteMediaObject(c.env.DB, objectKey);
+  return c.json({ ok: true });
+});
+
+/** Authenticate a media READ. Element-src fetches (`<img>`/`<video>` Range
+ *  requests) can't send an Authorization header, so accept the header when
+ *  present, else the same-origin Clerk `__session` cookie — the SAME JWT, the
+ *  SAME verifier (authenticateToken) in both arms, nothing weaker. Part of the
+ *  hard-gated authz surface (plan discrepancy 2). */
+async function authenticateMediaRead(c: Context<{ Bindings: Env }>): Promise<AuthedUser | null> {
+  const viaHeader = await authenticate(c);
+  if (viaHeader) return viaHeader;
+  const session = getCookie(c, "__session");
+  return session ? authenticateToken(`Bearer ${session}`, c.env) : null;
+}
+
+// GET /api/media/youtube-thumb/:videoId — worker-proxied facade thumbnail
+// (annotation-media-embeds). Viewer+ of ?docRef (same membership gate as the
+// media). Registered BEFORE the /api/media/* wildcard so it isn't shadowed.
+app.get("/api/media/youtube-thumb/:videoId", async (c) => {
+  const user = await authenticateMediaRead(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const videoId = c.req.param("videoId");
+  const docRef = c.req.query("docRef");
+  if (!docRef || !YT_VIDEO_ID_RE.test(videoId)) return c.json({ error: "invalid" }, 400);
+  const role = await resolveEffectiveRole(c.env.DB, docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  return fetchYoutubeThumb(videoId);
+});
+
+// GET /api/media/<objectKey> — membership-gated serving, streamed through the R2
+// binding with Range support (FINAL — rejected alternative: 302-to-signed-URL).
+// Membership (viewer+) derives from the docRef IN THE KEY PREFIX alone. A
+// tombstoned item still serves (undo must restore it — no CRDT check here).
+app.get("/api/media/*", async (c) => {
+  const user = await authenticateMediaRead(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const objectKey = decodeURIComponent(new URL(c.req.url).pathname.slice("/api/media/".length));
+  const key = parseMediaKey(objectKey);
+  if (!key) return c.json({ error: "not found" }, 404);
+  const role = await resolveEffectiveRole(c.env.DB, key.docRef, user.sub);
+  if (!role) return c.json({ error: "forbidden" }, 403);
+  const head = await c.env.MEDIA.head(objectKey);
+  if (head === null) return c.json({ error: "not found" }, 404);
+  const range = parseRange(c.req.header("Range"), head.size);
+  if (range === "unsatisfiable")
+    return new Response(null, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${head.size}` },
+    });
+  const obj = await c.env.MEDIA.get(objectKey, range ? { range } : undefined);
+  if (obj === null) return c.json({ error: "not found" }, 404);
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set("etag", obj.httpEtag);
+  headers.set("Accept-Ranges", "bytes");
+  if (range) {
+    const { offset, length } = resolveRange(range, head.size);
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${head.size}`);
+    headers.set("Content-Length", String(length));
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers.set("Content-Length", String(head.size));
+  return new Response(obj.body, { status: 200, headers });
+});
+
 // POST /api/account/family-notes — author a figure-FAMILY note (US-040). The note
 // is owned by the caller (authorId from the verified JWT) and scoped to a figure
 // family + dance scope (this dance, or "all"). Server-mediated: the client never
@@ -1001,6 +1337,143 @@ app.get("/api/routines/:id/snapshot", async (c) => {
   );
 
   return c.json({ routine, figures, bases });
+});
+
+// ── AI voice notes (docs/concepts/annotations.md § The Journal, docs/system/
+// architecture.md) — the READ-ONLY interpret/transcribe routes. A dancer speaks a
+// note; a Workers AI text model resolves it against the figures ACTUALLY in the
+// caller's choreos into a PROPOSED anchor; the client confirms and it commits
+// through the EXISTING annotation seams. These routes NEVER write D1, a DO, or the
+// CRDT — the AI stays entirely outside the permission/CRDT boundary.
+//
+// The Workers AI binding (`AI`) exists only in deployed wrangler envs; dev, unit
+// tests, and E2E run the deterministic fixture seam (`voiceAiFor`), so the
+// zero-secret test matrix holds. Every model output is re-validated with Zod AND
+// grounded against the assembled context (`groundProposal`) — never trusted.
+
+/**
+ * Assemble the caller's in-scope choreography for grounding — the SAME per-figure
+ * authorization the snapshot route uses (a routine's placements are
+ * caller-controlled CRDT content, so the routine's role does NOT imply the right
+ * to read every figure ref it lists; gate each ref individually). Scope: one
+ * routine when `routineRef` is given (gated by `resolveEffectiveRole`), else the
+ * caller's annotate-capable routines (role !== "viewer"). READ-ONLY.
+ */
+async function assembleVoiceContext(
+  env: Env,
+  userId: string,
+  routineRef: string | undefined,
+): Promise<ChoreoContext> {
+  const doc = (id: string) => env.DOC_DO.get(env.DOC_DO.idFromName(id));
+
+  // The routine refs in scope, each already confirmed annotate-capable.
+  let routineRefs: string[];
+  if (routineRef != null) {
+    const role = await resolveEffectiveRole(env.DB, routineRef, userId);
+    routineRefs = role && role !== "viewer" ? [routineRef] : [];
+  } else {
+    const listed = await listRoutines(env.DB, userId);
+    // Owned routines have role "owner"; shared ones carry their membership role.
+    // Mirror store/journal.ts: only annotate-capable (non-viewer) routines.
+    routineRefs = listed.filter((r) => r.role !== "viewer").map((r) => r.docRef);
+  }
+
+  const entries: {
+    routine: RoutineDoc;
+    figures: Record<string, FigureDoc>;
+    bases: Record<string, FigureDoc>;
+  }[] = [];
+  for (const ref of routineRefs) {
+    const routine = await doc(ref).getSnapshot();
+    // Every LIVE placement's figure (tombstoned placements + breaks dropped).
+    const figureRefs = new Set<string>();
+    for (const section of routine.sections ?? []) {
+      for (const p of section.placements ?? []) {
+        if (p.deletedAt == null && p.figureRef) figureRefs.add(p.figureRef);
+      }
+    }
+    // PER-FIGURE AUTHORIZATION (security) — identical to the snapshot route: gate
+    // every ref on the caller's ACTUAL effective role and drop the ones they
+    // can't read (a placement can name any docRef the caller has learned).
+    const figures: Record<string, FigureDoc> = {};
+    await Promise.all(
+      [...figureRefs].map(async (fref) => {
+        if (!(await resolveEffectiveRole(env.DB, fref, userId))) return;
+        const fig = await readFigureSnapshot(doc(fref));
+        if (!fig?.figureType) return;
+        figures[fref] = fig;
+      }),
+    );
+    // Fan out to each distinct BASE a variant resolves against (⟳v5), gated the
+    // same way — so the serializer folds the live timeline (resolveFigure).
+    const baseRefs = new Set<string>();
+    for (const fig of Object.values(figures)) {
+      if (fig.baseFigureRef && !figures[fig.baseFigureRef]) baseRefs.add(fig.baseFigureRef);
+    }
+    const bases: Record<string, FigureDoc> = {};
+    await Promise.all(
+      [...baseRefs].map(async (bref) => {
+        if (!(await resolveEffectiveRole(env.DB, bref, userId))) return;
+        const base = await readFigureSnapshot(doc(bref));
+        if (!base?.figureType) return;
+        bases[bref] = base;
+      }),
+    );
+    entries.push({ routine, figures, bases });
+  }
+  return serializeChoreoContext(entries);
+}
+
+// POST /api/voice-notes/interpret — resolve a spoken transcript against the
+// caller's choreography into a PROPOSED anchor. READ-ONLY (no D1/DO/CRDT write).
+//   • unauthenticated → 401  • malformed body → 400
+//   • otherwise → 200 { resolved, noteText, confidence, proposed, alternatives }
+// A model/seam failure degrades to the resolved:false fallback, never a 500 with
+// a half-trusted body.
+app.post("/api/voice-notes/interpret", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const parsed = zInterpretVoiceNote.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_voice_note" }, 400);
+  const { transcript, routineRef } = parsed.data;
+
+  const context = await assembleVoiceContext(c.env, user.sub, routineRef);
+  try {
+    const raw = await voiceAiFor(c.env).interpret(transcript, context);
+    return c.json(groundProposal(raw, context, transcript));
+  } catch (err) {
+    // A seam failure is never a wrong anchor — degrade to transcribe-only.
+    void reportError(c.env, err, { url: safeReportUrl(c.req.url), method: c.req.method });
+    return c.json({
+      resolved: false,
+      noteText: transcript,
+      confidence: "low",
+      proposed: null,
+      alternatives: [],
+    });
+  }
+});
+
+// POST /api/voice-notes/transcribe — Whisper-fallback STT for the in-scope clip.
+// The audio is NEVER stored (transcribe and discard). READ-ONLY.
+//   • unauthenticated → 401  • body > 4 MiB → 413  • otherwise → 200 { transcript }
+app.post("/api/voice-notes/transcribe", async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: "unauthenticated" }, 401);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  // A ~15 s clip is far below this; a defensive storage/latency bound (a caller
+  // can't stream an arbitrarily large body into the STT model).
+  if (bytes.byteLength > 4 * 1024 * 1024) return c.json({ error: "audio_too_large" }, 413);
+  // Seed the STT with the in-scope figure names (names only) so ballroom jargon
+  // transcribes; the context is assembled read-only exactly like /interpret.
+  const context = await assembleVoiceContext(
+    c.env,
+    user.sub,
+    c.req.query("routineRef") ?? undefined,
+  );
+  const initialPrompt = context.choreos.flatMap((ch) => ch.figures.map((f) => f.name)).join(", ");
+  const transcript = await voiceAiFor(c.env).transcribe(bytes, { initialPrompt });
+  return c.json({ transcript });
 });
 
 // GET /api/routines — the Choreo list (US-025): the viewer's owned + shared-in

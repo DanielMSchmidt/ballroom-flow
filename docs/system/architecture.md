@@ -28,7 +28,8 @@ Everything canonical is a **CRDT document** ([Automerge](https://automerge.org/)
         │
         ▼
 [ D1 (Drizzle) ]  index only: users, memberships, DocumentRegistry, invites, projections
-        (R2 for media → future; Queues → future)
+        (Queues → future)
+[ R2 (MEDIA bucket, per env) ]  annotation media bytes — keyed by docRef (the authz scope)
 ```
 
 **Document types** (each in its own DO):
@@ -138,12 +139,13 @@ Tables (Drizzle, `apps/worker/src/db/`): **User** (Clerk sub, displayName, ident
 plan, `isAdmin`, `routineCapOverride`), **UserNameCache** (claims-derived name/email so
 co-members of a not-yet-onboarded user see something real), **Membership** (per docRef),
 **DocumentRegistry** (docRef → type/owner/DO routing + card projection columns),
-**Invite**, and the projections: **JournalEntry**, **FigureTypeNoteIndex**, **LibraryEntry**,
-**PlacementEdge** (routine→figure edges: the role cascade + "used in N choreos"),
-**account_custom_kind** (the one deliberate D1-as-truth exception: user-defined kinds,
-declared a non-goal of the account-doc migration) — one column per RegistryKind field,
-including a role-aware enum kind's Both-write mode and its `coupling` map
-(`couplingJson`, migration 0019).
+**Invite**, and the projections: **JournalEntry**, **FigureTypeNoteIndex**,
+**AttributePredicateNoteIndex**, **LibraryEntry**, **PlacementEdge** (routine→figure edges:
+the role cascade + "used in N choreos"), **account_custom_kind** (the one deliberate
+D1-as-truth exception: user-defined kinds, declared a non-goal of the account-doc migration) —
+one column per RegistryKind field, including a role-aware enum kind's Both-write mode and its
+`coupling` map (`couplingJson`, migration 0019), and **MediaObject** (the media upload-grant +
+caps counter — see § Annotation media; a pure index over R2 objects, never the bytes).
 
 **Projections are alarm-written, non-destructive, idempotent, tombstone-aware** — the DO is
 the single writer of its rows:
@@ -152,7 +154,22 @@ the single writer of its rows:
   design) + `journal_entry` (lesson/practice annotations, for the Journal's routine arm);
 - account DO → `library_entry` (bookmarks) + `figure_type_note_index` (family notes; rows
   currently carry the note content — co-member visibility reads this index gated by
-  co-membership, never another user's doc).
+  co-membership, never another user's doc) + `attribute_predicate_note_index` (migration 0021
+  — attribute-predicate notes, mirroring the family-note index exactly: content-carrying,
+  keyed by `{ attrKind, attrValue, scope }`, same co-membership read gate. `routine`-scoped
+  rows project for upsert-consistency but the cross-account read filters them out structurally
+  — they are self-read only).
+
+The **predicate-note read** (`GET /api/routines/:id/predicate-notes`) mirrors the family-note
+read exactly: `resolveEffectiveRole` gates on co-membership (a non-member is refused **before**
+any note is read), the author set is the routine's members ∪ owner (the owner has no membership
+row), and the query is index-served (EXPLAIN no-SCAN in CI). The note *surfaces* only where a
+step matches: the client runs the pure `matchPredicate` (`packages/domain/src/predicate.ts`)
+over the resolved timelines it can already see — a read-time content match by meaning
+(`normalizeValue` read-aliases), the first content-dependent read path (referential stability
+per [`sync-and-offline.md`](sync-and-offline.md) § Flicker). `routine`-scoped predicate notes
+resolve entirely client-side from the author's own account doc, merged live via the same seam
+as family notes.
 
 The **Journal read** (`GET /api/journal`) UNIONs the two arms; the routine arm is gated by
 co-membership of the routine, the account arm by the accessible-authors set — symmetric.
@@ -197,6 +214,80 @@ correctly with concurrent edits. Soundness rules (each pinned by tests, each onc
   the same per-tab actor so its edits are attributable);
 - the "others built on this" hint is exact causal dependency in the change DAG (a transitive
   successor by another actor), peeked pre-undo — advisory only, undo always proceeds.
+
+## AI voice notes — the read-only interpret/transcribe seam
+
+Voice capture (`docs/concepts/annotations.md` § The Journal) rides two **read-only** worker
+routes and one mockable AI seam; it adds **no new data shape and no new write path**.
+
+- **`POST /api/voice-notes/interpret`** assembles the caller's in-scope choreography and
+  resolves a transcript into a *proposed* anchor. Context assembly reuses the snapshot route's
+  **per-figure authorization** verbatim — a routine's placements are caller-controlled CRDT
+  content, so every referenced figure ref is gated individually by `resolveEffectiveRole`,
+  and only annotate-capable (non-viewer) routines are in scope. A pure serializer in
+  `packages/domain` (`serializeChoreoContext`, `resolveDanceAlias`) turns the assembled docs
+  into grounding data (figures in placement order, one entry per placement so ordinals ground;
+  variants resolved live against their base). **`POST /api/voice-notes/transcribe`** echoes a
+  Whisper-fallback transcript; the audio is never stored.
+- **Both routes are read-only** — they never write D1, never touch a DO's CRDT content, never
+  mint registry rows. The only commit path is the existing client → store seam
+  (`createAnnotation` / `createFamilyNote`) behind the user's explicit **Confirm**. The AI
+  stays entirely outside the DO boundary, the permission model, and the CRDT.
+- **The model output is never trusted.** Workers AI JSON mode gives no hard schema guarantee,
+  so the worker **re-validates** every extraction with the contract Zod schema **and grounds**
+  every ref against the assembled context (`groundProposal`); any mismatch degrades to
+  `resolved: false` (a transcript-only note). The one hard safety property is structural:
+  **zero wrong-anchor commits can occur past the confirm step.**
+- **The AI seam is mockable** (`VoiceAi` in `apps/worker/src/voice-ai.ts`): a deterministic
+  fixture backs dev, unit tests, and E2E, so the **zero-secret test matrix holds**. The real
+  Workers AI binding (`AI`, routed via **AI Gateway** for logging/rate-limiting/cost/accept-
+  rate telemetry) exists **only in the deployed wrangler envs** — `voiceAiFor` selects the
+  fixture whenever the binding is absent or the E2E flag is set. Model choice is a data
+  decision recorded in `docs/TOOLING.md`.
+- **Invariant:** the AI is advisory pre-fill only. A voice-proposed `attributePredicate`
+  anchor is a recorded future refinement — predicate utterances fall back to a plain note
+  today (the predicate anchor itself ships; the voice pipeline does not propose it).
+
+## Annotation media — R2 storage + the membership-gated media surface
+
+Annotation media (`docs/concepts/annotations.md` § One concept · Media) is the system's
+**first binary storage** and a **new authorization surface** — the class where this repo's
+worst bugs lived, so it is hard-gated in review.
+
+- **Storage: one R2 bucket per env** (binding `MEDIA`; `weave-steps-media-{dev,e2e,staging,
+  production}`). Bindings are **not inherited by named environments**, so the binding is
+  redeclared in the default section *and* each of `[env.e2e|staging|production]` in
+  `wrangler.toml`; Miniflare simulates it for vitest + `wrangler dev` + the E2E harness. The
+  bytes live only in R2 — **D1 stays a pure index**, and the CRDT doc holds only the
+  `MediaItem` metadata (never bytes; a video in the doc would explode DO persistence).
+- **The object key IS the authorization scope.** A key is `media/<docRef>/<annotationId>/
+  <mediaId>`, so every route parses the docRef out of the key prefix and gates on
+  `resolveEffectiveRole` **before any R2 read/write** — never on anything else the client
+  supplies. There are **no public URLs, ever**.
+- **Upload is worker-hosted** (not a presigned browser→R2 PUT — that needs the S3 API
+  credential class the serving decision rejects, and has no local/E2E equivalent).
+  `POST /api/docs/:id/media/upload-url` mints a grant: commenter+ **and all the caps**
+  enforced here (image ≤ 10 MB, video ≤ 3 min & ≤ 300 MB, ≤ 4 items per annotation, 1 GB per
+  user), usage tracked in the indexed D1 `media_object` counter. `PUT /api/media/<key>`
+  streams the body into R2 under the grant; videos above the Workers request-body limit use
+  the **R2 multipart Workers API** (`create → uploadpart → complete`, abort on cancel) behind
+  the *same* grant + authz on every subroute — R2 auto-aborts an incomplete MPU after 7 days.
+- **Serving is stream-through with Range** (never a 302-to-signed-URL — that adds a per-env
+  S3 secret class and a membership-revocation gap equal to the URL TTL). `GET /api/media/<key>`
+  gates on viewer+ of the key's docRef, then `get(key, { range })` streams the object with
+  206/`Content-Range` support so `<video>` scrubbing works. A **tombstoned** item still serves
+  to members (undo must restore it — no CRDT check on the read path). Because `<img>`/`<video>`
+  element fetches can't send a Bearer header, the read routes accept the Clerk `__session`
+  **cookie** as well as the header — the *same* JWT through the *same* verifier.
+- **YouTube is a worker-proxied facade.** `GET /api/media/youtube-thumb/:videoId?docRef=…`
+  (viewer+) fetches `i.ytimg.com` server-side and streams it with a long-lived
+  `Cache-Control`, so **reading a note contacts no third party**; the `youtube-nocookie.com`
+  iframe loads only after an explicit tap.
+- **Journal chip:** the DO's journal projection additionally writes per-entry `imageCount`/
+  `videoCount` (YouTube counts as video) so Journal cards render the compact media chip
+  without reading CRDT.
+- **Deferred debt (by design):** soft-delete + undo retain a tombstoned item's R2 object;
+  R2 garbage collection waits for a lifecycle/Queues job (see `PROVISIONING.md`).
 
 ## The catalog seed pipeline (summary)
 
