@@ -366,12 +366,16 @@ function ThreadComment({
   onDeleteReply?: (replyId: string) => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
-  const authorName = authorNameMap?.[a.authorId] ?? a.authorId;
+  // Resolved display name only; the label may still show the raw id as text, but
+  // the avatar initial must never come from an id — a ULID starts with "0", which
+  // is exactly the leak in #292. `undefined` here makes AuthorAvatar show "?".
+  const resolvedName = authorNameMap?.[a.authorId];
+  const authorName = resolvedName ?? a.authorId;
   const authorColor = authorColorMap?.[a.authorId];
   const time = relativeTime(a.createdAt);
   return (
     <div className="flex gap-3">
-      <AuthorAvatar name={authorName} color={authorColor} size="md" />
+      <AuthorAvatar name={resolvedName} color={authorColor} size="md" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {/* Author name (in identity colour) · relative time */}
         <p className="flex items-baseline gap-1.5 text-sm">
