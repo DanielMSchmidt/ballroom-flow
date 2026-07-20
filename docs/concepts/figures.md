@@ -114,6 +114,12 @@ value) over the resolved timeline, ignoring internal identity. The same predicat
 placement card's "add to my library" affordance (only a diverged/custom figure offers it —
 bookmarking a pristine catalog figure is the Library screen's job).
 
+*(Precision, 2026-07-19: this badge comparison is a **raw** value equality — it does not run
+the registry read-aliases. The distinct "matched by meaning" of attribute-predicate anchors
+([`annotations.md`](annotations.md) § Anchors) normalizes both sides through `normalizeValue`
+before comparing. Two different comparisons, deliberately: the badge asks "did the bytes
+change from the base?", the predicate asks "does this value mean the anchor's value?".)*
+
 ## The library screen
 
 Two halves:

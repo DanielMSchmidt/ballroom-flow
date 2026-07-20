@@ -38,6 +38,15 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+# docs/ideas/annotation-media-embeds.md — the first binary storage: one R2 bucket
+# per env for annotation media. Keys are media/<docRef>/<annotationId>/<mediaId>,
+# so serving/upload authz derives from the key alone (the docRef in the prefix).
+# Bindings are NOT inherited by named environments — redeclared per env below.
+# Miniflare simulates this default binding for vitest + `wrangler dev`.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-dev"
+
 # DO class migration — `new_sqlite_classes` because DocDO uses ctx.storage.sql
 # (SQLite-backed). Top-level migrations apply to all environments.
 [[migrations]]
@@ -87,6 +96,11 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+# Media R2 bucket — Miniflare-simulated in the E2E harness (no real bucket).
+[[env.e2e.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-e2e"
+
 # --- Staging (deployed from the `development` branch).
 [env.staging]
 name = "weave-steps-staging"
@@ -117,14 +131,34 @@ migrations_dir = "migrations"
 name = "DOC_DO"
 class_name = "DocDO"
 
+# Media R2 bucket (created 2026-07-19 — see PROVISIONING.md). Bindings are NOT
+# inherited by named environments, so it is redeclared here.
+[[env.staging.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-staging"
+
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"
 dataset = "weave_steps_staging"
 
 # D30 ⟳ self-healing catalog: opt-in per deployed env (unit tests + e2e have no
 # var, so nothing implicitly seeds 260+ DOs under a test harness).
+#
+# AI_GATEWAY_ID routes the Workers AI calls through AI Gateway (logging /
+# rate-limiting / cost / accept-rate telemetry). It is a VAR, not a binding, so a
+# missing gateway can't break a deploy — create it in the dashboard (AI Gateway →
+# "weave-steps") before the first deploy exercises the real seam.
 [env.staging.vars]
 SELF_SEED = "1"
+AI_GATEWAY_ID = "weave-steps"
+
+# AI voice notes (docs/ideas/ai-voice-notes.md; docs/TOOLING.md § AI voice notes):
+# Workers AI (STT fallback + extraction). Declared ONLY on the deployed envs —
+# bindings are NOT inherited, so the default (dev + vitest-pool-workers) and
+# [env.e2e] configs stay AI-free + secret-free, and voiceAiFor selects the
+# deterministic fixture there structurally (zero-secret test matrix holds).
+[env.staging.ai]
+binding = "AI"
 
 # --- Production (deployed from the `main` branch).
 [env.production]
@@ -147,6 +181,11 @@ run_worker_first = ["/api/*"]
 # existing production index.
 [env.production.vars]
 SELF_SEED = "1"
+AI_GATEWAY_ID = "weave-steps"
+
+# AI voice notes — Workers AI, deployed envs only (see the staging block above).
+[env.production.ai]
+binding = "AI"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -157,6 +196,12 @@ migrations_dir = "migrations"
 [[env.production.durable_objects.bindings]]
 name = "DOC_DO"
 class_name = "DocDO"
+
+# Media R2 bucket (created 2026-07-19 — see PROVISIONING.md). Bindings are NOT
+# inherited by named environments, so it is redeclared here.
+[[env.production.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "weave-steps-media-production"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ANALYTICS"

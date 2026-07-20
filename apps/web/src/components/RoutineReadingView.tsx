@@ -22,10 +22,12 @@ import {
   figureMatchesLibraryOrigin,
   figureTypeNoteCount,
   matchesFigureType,
+  matchPredicate,
   type NumberedBeatEntry,
   numberRoutineBeats,
   type PlacementPart,
   partBeatSpan,
+  partitionByActivity,
   type RegistryKind,
   type RoutineBeatEntry,
   type RoutineDoc,
@@ -37,8 +39,9 @@ import { memo, useMemo, useRef, useState } from "react";
 import { useMessages } from "../i18n";
 import { timelineMessages } from "../i18n/messages/timeline";
 import type { FamilyNote } from "../store/family-notes";
+import type { PredicateNote } from "../store/predicate-notes";
 import type { FigureLoadStatus, ResolvedPlacement } from "../store/routine";
-import { AttrChip, cx, IDENTITY_COLORS, kindVar, SectionDivider, Skeleton } from "../ui";
+import { AttrChip, cx, IDENTITY_COLORS, kindVar, MediaChip, SectionDivider, Skeleton } from "../ui";
 import type { FigureScope } from "../ui/tokens";
 import { AttributeInfoSheet } from "./AttributeInfoSheet";
 import {
@@ -73,12 +76,38 @@ interface MarginNote {
   authorId: string;
   text: string;
   createdAt: number;
-  family: boolean;
+  /** The note's category within the margin's vocabulary — drives the SR-only
+   *  scope cue read before the snippet (#285: a predicate note is NOT a family
+   *  note, so it must not be announced as one). `"routine"` carries no cue. */
+  scope: "routine" | "family" | "predicate";
+  /** Live image/video counts for the compact MediaChip (YouTube counts as video).
+   *  docs/concepts/annotations.md § Media: the margin shows a chip, NEVER the media. */
+  images: number;
+  videos: number;
+}
+
+/** Count an annotation's LIVE media items by chip bucket (YouTube counts as video). */
+function mediaCounts(media: Annotation["media"]): { images: number; videos: number } {
+  let images = 0;
+  let videos = 0;
+  for (const m of media ?? []) {
+    if (m.deletedAt != null) continue;
+    if (m.type === "image") images += 1;
+    else videos += 1;
+  }
+  return { images, videos };
 }
 
 /** Adapt a routine annotation into the unified margin shape (never a family note). */
 function annotationMarginNote(a: Annotation): MarginNote {
-  return { id: a.id, authorId: a.authorId, text: a.text, createdAt: a.createdAt, family: false };
+  return {
+    id: a.id,
+    authorId: a.authorId,
+    text: a.text,
+    createdAt: a.createdAt,
+    scope: "routine",
+    ...mediaCounts(a.media),
+  };
 }
 
 /** Adapt a figure-family note into the unified margin shape. */
@@ -90,7 +119,25 @@ function familyMarginNote(n: FamilyNote): MarginNote {
     // A co-member note's REST projection has no authored time — sort it oldest
     // rather than fabricate a "now" that would jump it to the top on every load.
     createdAt: n.createdAt ?? 0,
-    family: true,
+    scope: "family",
+    // Family/predicate notes carry no media (media rides routine annotations only).
+    images: 0,
+    videos: 0,
+  };
+}
+
+/** Adapt a predicate note into the unified margin shape. It rides the same margin
+ *  envelope as a family note but is a DISTINCT anchor type (a content predicate,
+ *  not a figure-identity note), so it carries its own SR-only cue (#285). */
+function predicateMarginNote(n: PredicateNote): MarginNote {
+  return {
+    id: n.id,
+    authorId: n.authorId,
+    text: n.text,
+    createdAt: n.createdAt ?? 0,
+    scope: "predicate",
+    images: 0,
+    videos: 0,
   };
 }
 
@@ -103,11 +150,19 @@ function mergeMarginNotes(routine: MarginNote[], family: MarginNote[]): MarginNo
   );
 }
 
+/** One predicate note matched to a set of counts on a figure — the reading view's
+ *  per-figure predicate slice (the note surfaces on each matched count row). */
+interface PredicateMatch {
+  note: PredicateNote;
+  counts: number[];
+}
+
 export function RoutineReadingView({
   routine,
   placements,
   annotations = [],
   familyNotes = NO_FAMILY_NOTES,
+  predicateNotes = NO_PREDICATE_NOTES,
   canComment = false,
   memberColors,
   memberNames,
@@ -118,6 +173,7 @@ export function RoutineReadingView({
   onOpenThread,
   collapsedSections,
   onToggleSection,
+  now,
 }: {
   routine: RoutineDoc;
   placements: ResolvedPlacement[];
@@ -130,6 +186,12 @@ export function RoutineReadingView({
    *  variant doesn't cover the count). The caller (Assemble) passes the already
    *  co-membership-gated, deduped set; matching to figures happens here. */
   familyNotes?: FamilyNote[];
+  /** Attribute-predicate notes (own + co-members') visible on this routine. Each
+   *  surfaces on every step whose notation matches its predicate — computed here
+   *  via matchPredicate over the already-resolved figures, folded into the SAME
+   *  margin count cells as timed family notes. This is the first content-dependent
+   *  read path, so the per-figure slices keep referential stability. */
+  predicateNotes?: PredicateNote[];
   /** Whether THIS member may add a comment (commenter/editor — NOT a viewer).
    *  Gates the margin's ＋ add affordance (a viewer reads notes only). */
   canComment?: boolean;
@@ -162,9 +224,22 @@ export function RoutineReadingView({
   /** Tap a section divider → flip its fold. Omitted (e.g. in a context with no
    *  fold state) the dividers stay the plain non-interactive eyebrow rows. */
   onToggleSection?: (sectionId: string) => void;
+  /**
+   * Evaluation instant for comment activity fade-out (docs/concepts/annotations.md
+   * § Where notes appear): each margin cell derives its snippet/avatars from its
+   * ACTIVE routine comments only. Captured once per view mount and passed down as
+   * a stable scalar (docs/system/sync-and-offline.md § Flicker) — never a fresh
+   * `now` per render. Injected in tests; defaults to the mount instant.
+   */
+  now?: number;
 }) {
   const t = useMessages(timelineMessages);
   const dance = routine.dance;
+  // Fade-out evaluation instant, mount-stable: the partition is derived per
+  // render from identity-stable inputs plus this scalar, so React.memo bail-outs
+  // hold. A view left open across a window boundary re-evaluates on remount.
+  const [mountNow] = useState(() => Date.now());
+  const evalNow = now ?? mountNow;
   const resolvedByPlacement = useMemo(
     () => new Map(placements.map((p) => [p.placement.id, p])),
     [placements],
@@ -202,6 +277,12 @@ export function RoutineReadingView({
     [placements],
   );
   const familyNotesByFigure = useStableFamilyNotesByFigure(familyNotes, figures);
+  const predicateMatchesByFigure = useStablePredicateNotesByFigure(
+    predicateNotes,
+    figures,
+    routine.id,
+    roleView,
+  );
   // The column picker (Builder v3): the reader's picked column ids, per device
   // + across choreos. The chips row covers every type USED anywhere in this
   // routine (under the active role lens — same "only what's set" rule as the
@@ -334,11 +415,15 @@ export function RoutineReadingView({
                       familyNotes={
                         (figureId && familyNotesByFigure.get(figureId)) || NO_FAMILY_NOTES
                       }
+                      predicateMatches={
+                        (figureId && predicateMatchesByFigure.get(figureId)) || NO_PREDICATE_MATCHES
+                      }
                       canComment={canComment}
                       memberColors={memberColors}
                       memberNames={memberNames}
                       customKinds={customKinds}
                       scopeLabel={routine.title}
+                      now={evalNow}
                       onOpenFigure={onOpenFigure}
                       onOpenThread={onOpenThread}
                     />
@@ -357,7 +442,80 @@ export function RoutineReadingView({
 // array identity every render, or React.memo could never bail for it.
 const NO_ANNOTATIONS: Annotation[] = [];
 const NO_FAMILY_NOTES: FamilyNote[] = [];
+const NO_PREDICATE_NOTES: PredicateNote[] = [];
+const NO_PREDICATE_MATCHES: PredicateMatch[] = [];
 const NO_TOKENS: string[] = [];
+
+/**
+ * Group predicate notes by the figure they match, computing each note's matched
+ * COUNTS via matchPredicate over the already-resolved figure — the first
+ * content-dependent read path. Referential stability mirrors
+ * {@link useStableFamilyNotesByFigure}: a figure whose matched (note-id × counts)
+ * set is unchanged keeps its previous array identity, so an unrelated doc change
+ * re-renders nothing. A routine-scoped anchor is confined to `routineId` here (a
+ * bare figure doesn't know its routine); a figure placed twice slices once.
+ *
+ * Matching runs over the figure's attributes AS FILTERED BY THE ACTIVE ROLE LENS —
+ * the exact set the reading table renders (`filterByRoleView`). This matters for
+ * MIRRORED kinds (sway/turn/direction): a Both-lens sway edit splits into
+ * leader `to_R` + follower `to_L` (the same physical lean, WEP-0008), so an
+ * unfiltered match would surface a "left sway" note on the hidden follower value
+ * while the leader lens shows only "right" (issue #284 — the note clinging to a
+ * step whose visible value was retagged). Filtering to the lens keeps the note
+ * tied to what the dancer actually sees on this side.
+ */
+function useStablePredicateNotesByFigure(
+  predicateNotes: PredicateNote[],
+  figures: FigureDoc[],
+  routineId: string,
+  roleView: RoleView,
+): Map<string, PredicateMatch[]> {
+  const prevRef = useRef<Map<string, PredicateMatch[]>>(new Map());
+  return useMemo(() => {
+    const next = new Map<string, PredicateMatch[]>();
+    for (const figure of figures) {
+      if (next.has(figure.id)) continue;
+      // Match over the lens's projection — the same view the reading table shows.
+      const lensFigure = {
+        ...figure,
+        attributes: filterByRoleView(figure.attributes, roleView),
+      };
+      const matches: PredicateMatch[] = [];
+      for (const note of predicateNotes) {
+        const anchor = note.anchors[0];
+        if (anchor?.type !== "attributePredicate") continue;
+        // Confine a routine-scoped anchor to its own routine (the caller's gate).
+        if (anchor.scope === "routine" && anchor.routineRef !== routineId) continue;
+        const counts = matchPredicate(anchor, lensFigure);
+        if (counts.length > 0) matches.push({ note, counts });
+      }
+      if (matches.length > 0) next.set(figure.id, matches);
+    }
+    // Referential stability: reuse the previous per-figure array when the matched
+    // (note-id × counts) shape is byte-for-byte unchanged.
+    for (const [figureId, arr] of next) {
+      const prev = prevRef.current.get(figureId);
+      if (prev && sameMatches(prev, arr)) next.set(figureId, prev);
+    }
+    prevRef.current = next;
+    return next;
+  }, [predicateNotes, figures, routineId, roleView]);
+}
+
+/** Structural equality of two predicate-match slices (note id + matched counts). */
+function sameMatches(a: PredicateMatch[], b: PredicateMatch[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (!x || !y || x.note.id !== y.note.id) return false;
+    if (x.counts.length !== y.counts.length) return false;
+    for (let j = 0; j < x.counts.length; j++) {
+      if (x.counts[j] !== y.counts[j]) return false;
+    }
+  }
+  return true;
+}
 
 /**
  * Group family notes by the figure they apply to, keeping each group's ARRAY
@@ -555,11 +713,13 @@ const FigureReadout = memo(function FigureReadout({
   beatTokens,
   annotations,
   familyNotes,
+  predicateMatches,
   canComment,
   memberColors,
   memberNames,
   customKinds = [],
   scopeLabel,
+  now,
   onOpenFigure,
   onOpenThread,
 }: {
@@ -579,11 +739,18 @@ const FigureReadout = memo(function FigureReadout({
    *  into the same margin cells as the routine annotations (whole-figure onto the
    *  header, timed onto their count row). */
   familyNotes: FamilyNote[];
+  /** Predicate notes matched to THIS figure with their matched counts — each folds
+   *  onto every matched count row (parity with a timed family note's count cell). */
+  predicateMatches: PredicateMatch[];
   canComment: boolean;
   memberColors?: Record<string, string>;
   memberNames?: Record<string, string>;
   customKinds?: RegistryKind[];
   scopeLabel?: string;
+  /** Fade-out evaluation instant (mount-stable scalar) — the margin cell shows
+   *  ACTIVE routine comments' snippet/avatars only (docs/concepts/annotations.md
+   *  § Where notes appear). Family notes are exempt (they merge in unpartitioned). */
+  now: number;
   onOpenFigure?: (figureId: string) => void;
   onOpenThread?: (anchor: { figureRef: string; count?: number }) => void;
 }) {
@@ -654,10 +821,36 @@ const FigureReadout = memo(function FigureReadout({
       familyWholeFigure.push(familyMarginNote(n));
     }
   }
-  // The header cell: routine whole-figure notes ∪ untimed/soft-fallback family
-  // notes, newest-first across both.
+  // Predicate notes surface on each of their matched count rows (the count cell
+  // machinery timed family notes use). A matched count the figure doesn't render
+  // (e.g. an off-window count) is simply dropped — the note stays on the counts
+  // that ARE shown, or falls to the header when none are.
+  const shownCounts = new Set(counts);
+  for (const { note, counts: matched } of predicateMatches) {
+    const cell = predicateMarginNote(note);
+    const here = matched.filter((c) => shownCounts.has(c));
+    if (here.length === 0) {
+      familyWholeFigure.push(cell);
+      continue;
+    }
+    for (const c of here) {
+      const arr = familyByCount.get(c);
+      if (arr) arr.push(cell);
+      else familyByCount.set(c, [cell]);
+    }
+  }
+  // Comment activity fade-out (docs/concepts/annotations.md § Where notes appear):
+  // each margin cell derives its snippet/avatars from its ACTIVE routine comments
+  // only — partition the per-cell routine list (the rule's granularity), keep the
+  // active side, then map to margin notes (partition needs `replies`, which the
+  // flattened MarginNote drops). Family notes are EXEMPT: co-members' family notes
+  // can lack an authored time and have no expander behind the cell, so they always
+  // render (merged in unpartitioned, exactly as before).
+  //
+  // The header cell: ACTIVE routine whole-figure notes ∪ untimed/soft-fallback
+  // family notes, newest-first across both.
   const headerNotes = mergeMarginNotes(
-    wholeFigureComments.map(annotationMarginNote),
+    partitionByActivity(wholeFigureComments, now).active.map(annotationMarginNote),
     familyWholeFigure,
   );
   return (
@@ -735,11 +928,12 @@ const FigureReadout = memo(function FigureReadout({
                 columns={columns}
                 here={live.filter((a) => a.count === count)}
                 notes={mergeMarginNotes(
-                  figureComments
-                    .filter((a) =>
+                  partitionByActivity(
+                    figureComments.filter((a) =>
                       a.anchors.some((an) => an.type === "point" && an.count === count),
-                    )
-                    .map(annotationMarginNote),
+                    ),
+                    now,
+                  ).active.map(annotationMarginNote),
                   familyByCount.get(count) ?? [],
                 )}
                 figureId={figure.id}
@@ -962,11 +1156,13 @@ function StepRow({
  *  Caveat snippet. The whole cell is one tap target opening the anchor's
  *  thread (a viewer may read it; only a commenter may add).
  *
- *  `notes` is the ALREADY-MERGED set (routine annotations ∪ family notes),
- *  ordered newest-first — so `notes[0]` is the snippet and avatars read forward.
- *  A family-scope note (`family: true`) carries a sr-only "family note" cue so
- *  it never reads as a here-and-now comment — an affordance already in the
- *  margin's vocabulary (colour/initial + text), no new visual. */
+ *  `notes` is the ALREADY-MERGED set (routine annotations ∪ family notes ∪
+ *  predicate notes), ordered newest-first — so `notes[0]` is the snippet and
+ *  avatars read forward. A non-routine note carries a sr-only scope cue keyed to
+ *  its `scope` ("family note" / "attribute note", #285) so it never reads as a
+ *  here-and-now comment and a predicate note is not miscategorized as a family
+ *  one — an affordance already in the margin's vocabulary (colour/initial +
+ *  text), no new visual. */
 function NotesMarginCell({
   label,
   notes,
@@ -990,6 +1186,11 @@ function NotesMarginCell({
     if (authors.length >= 3) break;
     if (!authors.includes(n.authorId)) authors.push(n.authorId);
   }
+  // Aggregate media across this cell's notes for the compact chip (never the media).
+  const mediaTotals = notes.reduce(
+    (acc, n) => ({ images: acc.images + n.images, videos: acc.videos + n.videos }),
+    { images: 0, videos: 0 },
+  );
   return (
     <button
       type="button"
@@ -1024,10 +1225,16 @@ function NotesMarginCell({
           className="line-clamp-2 text-[12px] leading-[1.3] text-ink-secondary"
           style={{ fontFamily: "var(--bf-font-note)" }}
         >
-          {latest.family && <span className="bf-sr-only">{t.familyNoteScope} </span>}
+          {latest.scope === "family" && <span className="bf-sr-only">{t.familyNoteScope} </span>}
+          {latest.scope === "predicate" && (
+            <span className="bf-sr-only">{t.predicateNoteScope} </span>
+          )}
           {latest.text}
         </span>
       )}
+      {/* Compact media chip — NEVER an img/video/iframe in the margin
+          (docs/ideas/annotation-media-embeds.md). */}
+      <MediaChip images={mediaTotals.images} videos={mediaTotals.videos} />
     </button>
   );
 }

@@ -146,9 +146,11 @@ async function openPickerOnWhisk(
   await page.getByRole("button", { name: "New entry", exact: true }).click();
   await page.getByLabel("entry text").fill(entryText);
   await page.getByText(/link to a step, figure or attribute/i).click();
-  // CHOREO-FIRST: the picker opens on the user's choreos, no link-type fork.
+  // CHOREO-FIRST: the picker opens on the user's choreos.
   await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Waltz A/ }).click();
+  // Target step (attribute-predicate anchors): take the figure path.
+  await page.getByText("A figure from this choreo").click();
   // Type-ahead narrows the CHOREO's figures.
   await page.getByLabel("Search figures").fill("wh");
   await page.getByRole("button", { name: /^Whisk/ }).click();
@@ -256,6 +258,7 @@ test.describe("@smoke WEP-0004 choreo-first journal links", () => {
     await page.getByText(/link to a step, figure or attribute/i).click();
     await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /Waltz C/ }).click();
+    await page.getByText("A figure from this choreo").click();
     await page.getByRole("button", { name: /^My Signature Move/ }).click();
     await page.getByText("The entire figure").click();
 

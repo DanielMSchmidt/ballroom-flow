@@ -420,6 +420,63 @@ describe("US-021 Permission boundary at the DO connection", () => {
     });
   });
 
+  it("refuses a commenter attaching MEDIA to ANOTHER author's annotation (annotation-media-embeds)", async () => {
+    // Intent: media edits are annotation modifications — the same author-only gate
+    //   covers them. Attaching media (a non-reply field on `annotations`) to a
+    //   DIFFERENT author's annotation must be dropped; attaching to the
+    //   commenter's OWN annotation is applied. No separate media authz path.
+    const docRef = uniqueDocName("rt");
+    const id = docs.idFromName(docRef);
+    await seedDb({
+      users: [{ id: "u_com", displayName: "Co", identityColor: "#333", plan: "free" }],
+      docs: [{ docRef, type: "routine", ownerId: "u_owner", doName: docRef }],
+    });
+    await runInDurableObject(docs.get(id), async (inst) => {
+      const wsAs = (role: string, sub: string) =>
+        asTestPeek<WebSocket>({ deserializeAttachment: () => ({ actor: "x", role, sub }) });
+
+      // The OWNER authors an annotation.
+      const ownerAnno = await inst.buildChangeForTest({
+        op: "addAnnotation",
+        text: "owner note",
+        authorId: "u_owner",
+      });
+      await inst.webSocketMessage(wsAs("editor", "u_owner"), asFrame(ownerAnno));
+      const ownerId = (await inst.getSnapshot()).annotations.find(
+        (a) => a.text === "owner note",
+      )?.id;
+      if (!ownerId) throw new Error("expected the owner's annotation");
+
+      // A commenter attaching media to the OWNER's annotation → dropped.
+      const attackFrame = await inst.buildChangeForTest({
+        op: "attachMedia",
+        annotationId: ownerId,
+        mediaId: "m_attack",
+      });
+      const rows0 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(attackFrame));
+      expect(await inst.debugChangeRowCount()).toBe(rows0);
+
+      // The commenter authors their OWN annotation, then attaches media to it → applied.
+      const ownAnno = await inst.buildChangeForTest({
+        op: "addAnnotation",
+        text: "my note",
+        authorId: "u_com",
+      });
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(ownAnno));
+      const myId = (await inst.getSnapshot()).annotations.find((a) => a.text === "my note")?.id;
+      if (!myId) throw new Error("expected the commenter's annotation");
+      const attachOwn = await inst.buildChangeForTest({
+        op: "attachMedia",
+        annotationId: myId,
+        mediaId: "m_own",
+      });
+      const rows1 = await inst.debugChangeRowCount();
+      await inst.webSocketMessage(wsAs("commenter", "u_com"), asFrame(attachOwn));
+      expect(await inst.debugChangeRowCount()).toBe(rows1 + 1);
+    });
+  });
+
   it("revocation reaches OPEN sockets: refreshConnectedRoles closes a removed member (§5.1, 2026-07-02 S1)", async () => {
     // Intent: removing a member used to leave their live WebSocket writable
     //   indefinitely (role frozen in the hibernation attachment). The member

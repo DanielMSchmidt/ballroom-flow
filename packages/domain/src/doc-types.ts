@@ -135,6 +135,23 @@ export type Anchor =
       count?: number;
       /** WEP-0004 (docs/concepts/annotations.md § Anchors): narrow a timed note to one side (absent/null = both). */
       role?: Role;
+    }
+  | {
+      // attribute-predicate anchor (docs/concepts/annotations.md § Anchors): the
+      // first DYNAMIC anchor — it matches every step whose notation satisfies an
+      // attribute condition, re-evaluated on read (not a fixed address/identity).
+      type: "attributePredicate";
+      /** A kind from the MERGED registry (builtin or custom). */
+      kind: string;
+      /** A value of that kind, matched BY MEANING via normalizeValue read-aliases,
+       *  or the absence sentinel PREDICATE_NONE ("no value of `kind` logged"). */
+      value: string;
+      /** Narrow to one side; absent = either/both. */
+      role?: Role;
+      /** "all" = every dance · a DanceId = that dance's choreos · "routine" = one choreo. */
+      scope: DanceId | "all" | "routine";
+      /** The confined choreo — REQUIRED iff scope === "routine" (zAnchor enforces). */
+      routineRef?: string;
     };
 
 export type Reply = {
@@ -145,6 +162,35 @@ export type Reply = {
   deletedAt?: number | null;
 };
 
+/** docs/ideas/annotation-media-embeds.md — media embedded inline in an
+ *  annotation's text by `![media:<id>]` tokens. Client-ULID ids, soft-delete
+ *  only; `objectKey` is `media/<docRef>/<annotationId>/<mediaId>` so the
+ *  worker's serving authz derives from the key alone. */
+export type UploadedMediaItem = {
+  id: string;
+  type: "image" | "video";
+  objectKey: string;
+  mimeType: string;
+  sizeBytes: number;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  /** objectKey of the client-captured poster frame (videos). */
+  posterKey?: string;
+  createdAt: number;
+  deletedAt?: number | null;
+};
+export type YouTubeMediaItem = {
+  id: string;
+  type: "youtube";
+  videoId: string;
+  /** The pasted URL, kept as provenance. */
+  url: string;
+  createdAt: number;
+  deletedAt?: number | null;
+};
+export type MediaItem = UploadedMediaItem | YouTubeMediaItem;
+
 export type Annotation = {
   id: string;
   authorId: string;
@@ -153,6 +199,9 @@ export type Annotation = {
   tags: string[];
   anchors: Anchor[];
   replies: Reply[];
+  /** docs/ideas/annotation-media-embeds.md — inline media, placed by tokens in
+   *  `text`. Optional ⇒ lenient reads; old readers ignore it, no migration. */
+  media?: MediaItem[];
   createdAt: number;
   deletedAt?: number | null;
 };

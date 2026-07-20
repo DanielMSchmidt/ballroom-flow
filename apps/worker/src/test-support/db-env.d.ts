@@ -24,6 +24,9 @@ declare global {
       DB: D1Database;
       /** Per-document SQLite-backed DO (M2, wrangler.toml). */
       DOC_DO: DurableObjectNamespace<DocDO>;
+      /** Annotation media bucket (annotation-media-embeds, wrangler.toml) —
+       *  Miniflare-simulated in vitest so the media routes run in-suite. */
+      MEDIA: R2Bucket;
       /** Clerk JWT public PEM — tests inject the test keypair for networkless
        *  verify (US-019 positive auth path). Optional; a secret in prod. */
       CLERK_JWT_KEY?: string;

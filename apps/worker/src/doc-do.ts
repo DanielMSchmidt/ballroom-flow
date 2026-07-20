@@ -29,8 +29,10 @@ import {
   addAnnotation,
   addFamilyNote,
   addLibraryRef,
+  addPredicateNote,
   addReply,
   addSection,
+  attachMedia,
   barsForFigure,
   buildDoc,
   buildRoutineDoc,
@@ -65,6 +67,7 @@ import { type JournalEntryProjection, projectJournalEntries } from "./db/journal
 import { projectLibraryEntries } from "./db/library";
 import { resolveEffectiveRole } from "./db/membership";
 import { linkPlacement } from "./db/placement-edge";
+import { type PredicateNoteProjection, projectPredicateNotes } from "./db/predicate-notes";
 import type { Env } from "./index";
 
 /** Per-connection socket attachment (survives hibernation). */
@@ -83,7 +86,8 @@ export type DocOp =
   | ({ op: "addSection"; name: string } & Record<string, unknown>)
   | ({ op: "addAnnotation"; text: string } & Record<string, unknown>)
   | ({ op: "addReply"; annotationId: string; text: string } & Record<string, unknown>)
-  | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>);
+  | ({ op: "deleteAnnotation"; id: string } & Record<string, unknown>)
+  | ({ op: "attachMedia"; annotationId: string } & Record<string, unknown>);
 
 /**
  * High-level edits on the per-user ACCOUNT doc (WEP-0002 —
@@ -106,6 +110,18 @@ export type AccountOp =
        *  matching figure. Only valid with a concrete danceScope. */
       count?: number;
       role?: Role;
+    }
+  | {
+      op: "addPredicateNote";
+      authorId: string;
+      kind: AnnotationKind;
+      text: string;
+      attrKind: string;
+      attrValue: string;
+      attrRole?: Role;
+      scope: DanceId | "all" | "routine";
+      routineRef?: string;
+      tags?: string[];
     }
   | { op: "addAccountReply"; annotationId: string; authorId: string; text: string }
   | { op: "deleteFamilyNote"; annotationId: string }
@@ -523,7 +539,7 @@ export class DocDO extends DurableObject<Env> {
     // Arm the journal projection only when the op touched annotations, so an
     // annotation edit projects promptly WITHOUT a structural-edit burst spuriously
     // arming the alarm (and compacting the log out from under the structural tests).
-    if (op.op === "addAnnotation" || op.op === "deleteAnnotation") {
+    if (op.op === "addAnnotation" || op.op === "deleteAnnotation" || op.op === "attachMedia") {
       await this.maybeScheduleProjection();
     }
     // An RPC edit also propagates to any live WebSocket clients of this doc.
@@ -577,7 +593,7 @@ export class DocDO extends DurableObject<Env> {
     await this.maybeScheduleProjection();
     this.broadcast(changes, null);
     const created =
-      op.op === "addFamilyNote"
+      op.op === "addFamilyNote" || op.op === "addPredicateNote"
         ? (readAccount(after, { includeDeleted: true })
             .annotations.map((a) => a.id)
             .find((id) => !idsBefore.has(id)) ?? null)
@@ -598,6 +614,18 @@ export class DocDO extends DurableObject<Env> {
           tags: op.tags,
           ...(op.count != null ? { count: op.count } : {}),
           ...(op.role != null ? { role: op.role } : {}),
+        });
+      case "addPredicateNote":
+        return addPredicateNote(doc, {
+          authorId: op.authorId,
+          kind: op.kind,
+          text: op.text,
+          attrKind: op.attrKind,
+          attrValue: op.attrValue,
+          scope: op.scope,
+          tags: op.tags,
+          ...(op.attrRole != null ? { attrRole: op.attrRole } : {}),
+          ...(op.routineRef != null ? { routineRef: op.routineRef } : {}),
         });
       case "addAccountReply":
         return addAccountReply(doc, op.annotationId, { authorId: op.authorId, text: op.text });
@@ -678,6 +706,22 @@ export class DocDO extends DurableObject<Env> {
         });
       case "deleteAnnotation":
         return softDeleteAnnotation(doc, String(op.id));
+      case "attachMedia": {
+        // A media attach is an ordinary annotation-field edit (the commenter gate
+        // treats it exactly like any other change to `annotations`, so only the
+        // annotation's own author lands it post-connect). Client ULIDs; a minimal
+        // image item is enough for the write path (the full item is built client-
+        // side and carried in the CRDT change from the compose flow).
+        const mediaId = typeof op.mediaId === "string" ? op.mediaId : newId();
+        return attachMedia(doc, String(op.annotationId), {
+          id: mediaId,
+          type: "image",
+          objectKey: `media/x/${String(op.annotationId)}/${mediaId}`,
+          mimeType: "image/jpeg",
+          sizeBytes: typeof op.sizeBytes === "number" ? op.sizeBytes : 1,
+          createdAt: Date.now(),
+        });
+      }
       default:
         return doc;
     }
@@ -1627,15 +1671,22 @@ export class DocDO extends DurableObject<Env> {
     }
     const names = await this.resolveFigureNames([...figureRefs]);
 
-    const rows: JournalEntryProjection[] = journalAnnotations.map((a) => ({
-      entryId: a.id,
-      authorId: a.authorId,
-      kind: a.kind,
-      text: a.text,
-      anchors: JSON.stringify(a.anchors.map((an) => this.labelAnchor(an, names))),
-      createdAt: a.createdAt,
-      deletedAt: a.deletedAt ?? null,
-    }));
+    const rows: JournalEntryProjection[] = journalAnnotations.map((a) => {
+      // docs/ideas/annotation-media-embeds.md — project live media counts for the
+      // Journal card chip (YouTube counts as video; tombstoned media excluded).
+      const liveMedia = (a.media ?? []).filter((m) => m.deletedAt == null);
+      return {
+        entryId: a.id,
+        authorId: a.authorId,
+        kind: a.kind,
+        text: a.text,
+        anchors: JSON.stringify(a.anchors.map((an) => this.labelAnchor(an, names))),
+        createdAt: a.createdAt,
+        deletedAt: a.deletedAt ?? null,
+        imageCount: liveMedia.filter((m) => m.type === "image").length,
+        videoCount: liveMedia.filter((m) => m.type === "video" || m.type === "youtube").length,
+      };
+    });
     await projectJournalEntries(this.env.DB, docRef, rows);
   }
 
@@ -1683,6 +1734,28 @@ export class DocDO extends DurableObject<Env> {
       });
     }
     await projectFamilyNotes(this.env.DB, notes);
+
+    // Predicate notes — one row per attributePredicate annotation, tombstones
+    // carried. ALL predicate annotations project (including scope 'routine',
+    // stored as the literal 'routine' — keeps the upsert authoritative if a
+    // note's scope ever changes; the cross-account read excludes them by scope).
+    const predicateNotes: PredicateNoteProjection[] = [];
+    for (const a of account.annotations) {
+      const anchor = a.anchors.find((an) => an.type === "attributePredicate");
+      if (anchor?.type !== "attributePredicate") continue;
+      predicateNotes.push({
+        noteId: a.id,
+        authorId: userId,
+        attrKind: anchor.kind,
+        attrValue: anchor.value,
+        attrRole: anchor.role ?? null,
+        scope: anchor.scope,
+        kind: a.kind,
+        text: a.text,
+        deletedAt: a.deletedAt ?? null,
+      });
+    }
+    await projectPredicateNotes(this.env.DB, predicateNotes);
   }
 
   /** Look up figure display names (document_registry.title) for the given refs. */
@@ -1719,7 +1792,8 @@ export class DocDO extends DurableObject<Env> {
     if (anchor.type === "figure") {
       return { ...anchor, label: names.get(anchor.figureRef) ?? "this figure" };
     }
-    // figureType: humanize without a registry lookup (data is self-contained).
+    // figureType / attributePredicate: humanize without a registry lookup (data
+    // is self-contained).
     const titleCase = (s: string): string =>
       s
         .replace(/[_-]+/g, " ")
@@ -1727,6 +1801,18 @@ export class DocDO extends DurableObject<Env> {
         .filter(Boolean)
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
+    if (anchor.type === "attributePredicate") {
+      // A predicate note is account-doc data and never reaches this routine
+      // DocOp path (delta #1), but the union is total — label it self-consistently.
+      const scope =
+        anchor.scope === "all"
+          ? "every dance"
+          : anchor.scope === "routine"
+            ? "this choreo"
+            : `all ${titleCase(anchor.scope)}`;
+      const value = anchor.value === "none" ? `no ${anchor.kind} logged` : titleCase(anchor.value);
+      return { ...anchor, label: `${value} · ${scope}` };
+    }
     const family = titleCase(anchor.figureType);
     const scope =
       anchor.danceScope === "all" ? "all dances" : `all ${titleCase(anchor.danceScope)}`;
