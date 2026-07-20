@@ -22,9 +22,16 @@ import { completeE2ESignIn, E2E_SESSION_KEY, isE2E, readE2ESession } from "../li
 import { useOnline } from "../lib/use-online";
 import { Button } from "../ui";
 
+/** Options for {@link AppAuth.getToken}. `skipCache` forces Clerk to mint a fresh
+ *  token (bypassing its short-lived cache) — the authed-401 refresh-retry (#275). */
+export interface GetTokenOptions {
+  skipCache?: boolean;
+}
+
 export interface AppAuth {
-  /** A fresh bearer token for the API/WS, or null when signed out. */
-  getToken: () => Promise<string | null>;
+  /** A fresh bearer token for the API/WS, or null when signed out. `skipCache`
+   *  bypasses Clerk's token cache (the #275 refresh-retry). */
+  getToken: (opts?: GetTokenOptions) => Promise<string | null>;
   /**
    * Whether auth has resolved. Until this is true, `isSignedIn` is not yet
    * known (Clerk is still loading), so the shell must hold off deciding between
@@ -107,6 +114,9 @@ function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Eleme
   const offlineFallback = !isLoaded && !online;
   const value: AppAuth = offlineFallback
     ? {
+        // Offline fail-open: no network to reach Clerk, so no token (skipCache is
+        // moot). Every server boundary still enforces auth; offline they're
+        // unreachable anyway.
         getToken: async () => null,
         isLoaded: true,
         isSignedIn: readCachedIdentity() != null,
@@ -122,7 +132,9 @@ function ClerkAuthBridge({ children }: { children: ReactNode }): React.JSX.Eleme
         },
       }
     : {
-        getToken: () => getToken(),
+        // Forward skipCache into Clerk so the #275 refresh-retry can mint a token
+        // past the cached one's `exp`; a plain call still returns the cached token.
+        getToken: (opts) => getToken(opts?.skipCache ? { skipCache: true } : undefined),
         isLoaded,
         isSignedIn: Boolean(isSignedIn),
         signOut: () => signOut(),

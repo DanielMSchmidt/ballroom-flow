@@ -28,15 +28,19 @@ export interface FamilyNote {
   createdAt?: number;
 }
 
-/** Load the family notes visible on `routineId` (members' notes for its dance). */
+/** Load the family notes visible on `routineId` (members' notes for its dance).
+ *  `refreshToken` (#275): on an authed 401 — a token lapsed past `exp` — mint a
+ *  fresh one (skipCache) and retry once before the reporter cries config mismatch. */
 export async function loadFamilyNotes(
   routineId: string,
   token: string | null,
   baseUrl = "",
+  refreshToken?: () => Promise<string | null>,
 ): Promise<FamilyNote[]> {
   const { notes } = await apiGet<{ notes: FamilyNote[] }>(
     `${baseUrl}/api/routines/${routineId}/family-notes`,
     token,
+    refreshToken ? { refreshToken } : undefined,
   );
   return notes;
 }

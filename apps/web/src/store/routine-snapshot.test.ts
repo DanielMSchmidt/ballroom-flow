@@ -1,5 +1,5 @@
 import type { FigureDoc, RoutineDoc } from "@weavesteps/domain";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { asTestDouble } from "../test-support/test-double";
 import { openRoutineSnapshot, type RoutineSnapshot } from "./routine-snapshot";
 
@@ -124,5 +124,40 @@ describe("openRoutineSnapshot", () => {
     firePoll();
     await Promise.resolve();
     expect(fetchSnapshot).toHaveBeenCalledTimes(1);
+  });
+});
+
+// #275 — the DEFAULT snapshot fetch (no injected fetchSnapshot) wires the
+// authed-401 fresh-token retry: this 20s poll can outlive a token's `exp`, so an
+// authed 401 should mint a fresh token (skipCache) and retry ONCE before failing
+// or reporting. Drives the real fetch path (stubbed global fetch) to prove it.
+describe("openRoutineSnapshot authed-401 token refresh (#275)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("on an authed 401, force-refreshes the token and re-fetches, then hydrates", async () => {
+    const data = { routine: routine("fig1"), figures: { fig1: figure("fig1", "Natural Turn") } };
+    const skipCacheFlags: (boolean | undefined)[] = [];
+    const getToken = vi.fn(async (o?: { skipCache?: boolean }) => {
+      skipCacheFlags.push(o?.skipCache);
+      return o?.skipCache ? "fresh-token" : "stale-token";
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
+      .mockResolvedValue(new Response(JSON.stringify(data), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const model = openRoutineSnapshot("rt_snap", {
+      getToken,
+      pollMs: 0, // no background poll — assert the single hydrate's behaviour
+      onFocusRefetch: () => () => {},
+    });
+
+    await vi.waitFor(() => expect(model.syncState()).toBe("live"));
+    // First the cached token; then a skipCache refresh after the 401.
+    expect(skipCacheFlags).toEqual([undefined, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(model.readPlacements()[0]?.figure?.name).toBe("Natural Turn");
+    model.close();
   });
 });

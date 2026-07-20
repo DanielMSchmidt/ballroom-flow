@@ -65,6 +65,23 @@ re-sent POST that did reach the server is a double-write); retries are skipped w
 browser reports offline. Query-level retry is status-aware: 4xx product refusals fail fast.
 Sentry hears only the final failure.
 
+**Authed-401 fresh-token retry (GETs only, #275).** A signed-in GET that 401s is usually a
+token used just past its `exp` — the 20 s snapshot poll (and the family-/predicate-notes
+reads) can outlive a token between ticks — not the Clerk instance mismatch the reporter warns
+about. So on an authed 401, a GET mints a fresh token via `getToken({ skipCache: true })` and
+retries **once** before anything is reported: a fresh token that verifies heals the transient
+failure *and* silences the false alarm; a fresh token that still 401s is the real signal,
+reported once. A null refresh (session gone) leaves the original 401 to stand — the identical
+stale request is never re-fired. Mutations don't get this retry (a re-sent POST isn't
+idempotent); a plain authed-401 with no refresh provider reports as before.
+
+**Teardown vs. genuine transport failure (#276).** A `fetch` the browser aborts as the page
+navigates/unloads surfaces as `TypeError: Failed to fetch` while `navigator.onLine` is still
+true — reporting it is a false alarm. The network-throw report is therefore suppressed when
+the throw is a deliberate abort (`AbortError` — our own request-timeout is already a distinct
+`ApiTimeoutError` by then) **or** the page is mid-teardown (`document.visibilityState ===
+"hidden"`). A genuine transport throw with a live, visible, online page still reports.
+
 ## Offline editing (as built)
 
 CRDT edits to documents this browser has **already opened** work offline and replay on
