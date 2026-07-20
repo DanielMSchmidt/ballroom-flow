@@ -103,7 +103,8 @@ history has the originals. Old citations decode as follows:
 | PLAN §8 (locked decisions D1–D33), §12 (Q-entries) | rationale woven into the concept/system docs where each rule lives; full ledger only in git history |
 | PLAN §9 (roadmap/milestones) | closed — history only |
 | PLAN §10 (testing) | `system/testing.md` |
-| PLAN §11.1 / §13 (deferred specs) | `ideas/attribute-predicate-anchors.md`, `ideas/annotation-media-embeds.md` |
+| PLAN §11.1 / §13 (deferred specs) | shipped — §11.1 attribute-predicate anchors + §13 annotation media both landed 2026-07-19 (folded into `concepts/annotations.md` + `system/architecture.md`) |
 | WEP-0001 (the process) | `ideas/README.md` |
-| WEP-0002 (account doc DO), 0004 (journal links), 0006 (heartbeat), 0008 (role-scoped editing) | implemented — folded into the concept/system docs |
-| WEP-0003, 0005, 0007, 0009 | `ideas/` (same slugs) |
+| WEP-0002 (account doc DO), 0003 (attribute-predicate anchors), 0004 (journal links), 0006 (heartbeat), 0008 (role-scoped editing), 0009 (AI voice notes) | implemented — folded into the concept/system docs (0009 → `concepts/annotations.md` § The Journal · Voice capture + `system/architecture.md` § AI voice notes + `TOOLING.md`, shipped 2026-07-19) |
+| WEP-0005 (annotation media) | implemented — folded into `concepts/annotations.md` § One concept · Media + § Where notes appear + `system/architecture.md` § Annotation media (shipped 2026-07-19) |
+| WEP-0007 | `ideas/` (same slug) |

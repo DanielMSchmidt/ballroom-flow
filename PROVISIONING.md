@@ -36,6 +36,7 @@ of the pure domain core (Milestone 1).
 | `SENTRY_DSN` (Wrangler secret, staging + production) | ⬜ **optional — you** — US-049 error reporting is wired (`apps/worker/src/ops.ts`, no SDK); without the secret it's a silent no-op. `wrangler secret put SENTRY_DSN --env staging\|production` with the project DSN from sentry.io. Verify with `GET /api/health` → `sentryConfigured: true` |
 | `VITE_SENTRY_DSN` (GH Actions **variable**, per env) | ⬜ **optional — you** — the WEB half of US-049 (`apps/web/src/lib/ops.ts`, added 2026-07-05): client-side errors (uncaught exceptions, 5xx, authed-401s, network failures) report to Sentry. Without the variable the reporter is a silent no-op — which is why the 2026-07-05 auth outage produced zero Sentry events |
 | Analytics Engine dataset | ✅ nothing to provision — the `ANALYTICS` binding in `wrangler.toml` auto-creates the dataset on first write (Workers Paid) |
+| R2 `weave-steps-media-staging` + `weave-steps-media-production` (annotation media) | ✅ created 2026-07-19 (ENAM, Standard); `MEDIA` binding wired into `wrangler.toml` (default + e2e + staging + production). **No new secret** — serving/upload are worker-hosted, so there is no S3 credential class. Dev/E2E use Miniflare-simulated buckets (`weave-steps-media-dev`/`-e2e`). |
 | `production` required-reviewer rule | ⬜ optional |
 
 CI now deploys on push: `development` → **staging**, `main` → **production** (see §3).
@@ -90,6 +91,25 @@ wrangler d1 create weave-steps
 Copy the returned `database_id` into `apps/worker/wrangler.toml` (replacing the
 all-zeros placeholder). Repeat / bind per environment as needed. Migrations are
 applied from `apps/worker/migrations/` (created in Milestone 2).
+
+### R2 — annotation media (the first binary storage)
+
+Annotation media (photos/videos) lives in an R2 bucket per env, keyed by
+`media/<docRef>/<annotationId>/<mediaId>` (the docRef prefix IS the authz scope —
+see `docs/system/architecture.md` § Annotation media). The staging + production
+buckets were created 2026-07-19:
+
+```
+wrangler r2 bucket create weave-steps-media-staging      # ENAM, Standard
+wrangler r2 bucket create weave-steps-media-production    # ENAM, Standard
+```
+
+The `MEDIA` binding is declared in the default section **and** each named env of
+`wrangler.toml` (bindings are not inherited). Dev + E2E use Miniflare-simulated
+buckets, so **nothing needs provisioning for local/CI**, and there is **no new
+secret** (serving/upload are worker-hosted — no S3 credential class). **Deferred
+ops debt:** a tombstoned media item's R2 object is retained (soft-delete + undo);
+an R2 lifecycle rule / Queues GC job to reclaim orphaned objects is not yet built.
 
 ## 3. Deployment pipeline & branch workflow
 

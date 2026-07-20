@@ -53,6 +53,10 @@ const en = {
   /** sr-only prefix marking a family-scope note in the margin (US-040/041) so it
    *  doesn't read as a here-and-now routine comment. */
   familyNoteScope: "Family note:",
+  /** sr-only prefix marking an attribute-predicate note in the margin (#285): a
+   *  distinct anchor type (a content predicate over notation), NOT a family
+   *  identity note — so a screen reader announces the right category. */
+  predicateNoteScope: "Attribute note:",
 
   // Figure timeline (FigureTimeline)
   countsStepperLabel: "Length",
@@ -130,6 +134,7 @@ const de: typeof en = {
   notesForCount: (count) => `Notizen — Zählzeit ${count}`,
   notesForFigure: (name) => `Notizen — ${name}`,
   familyNoteScope: "Familiennotiz:",
+  predicateNoteScope: "Attributnotiz:",
 
   countsStepperLabel: "Länge",
   countsStepperUnit: "Zählzeiten",

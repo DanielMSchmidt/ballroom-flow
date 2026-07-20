@@ -22,6 +22,7 @@ export { Input, type InputProps } from "./Input";
 export * from "./icons";
 export { LanguageToggle } from "./LanguageToggle";
 export { List, ListRow, type ListRowProps } from "./List";
+export { MediaChip, type MediaChipProps, mediaChipLabel } from "./MediaChip";
 export { Modal, type ModalAction, type ModalProps } from "./Modal";
 export { OfflineBanner } from "./OfflineBanner";
 export { OfflineState, type OfflineStateProps } from "./OfflineState";

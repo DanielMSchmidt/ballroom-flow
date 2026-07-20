@@ -56,6 +56,18 @@ export const zAnchor: z.ZodType<Anchor> = z
       count: z.number().optional(),
       role: z.enum(["leader", "follower"]).nullish(),
     }),
+    z.object({
+      // attribute-predicate anchor (docs/concepts/annotations.md § Anchors): a
+      // dynamic predicate over notation. `scope: "routine"` confines it to one
+      // choreo, which the anchor is otherwise routine-less about — so it carries a
+      // `routineRef` (the superRefine below pins "exactly when routine-scoped").
+      type: z.literal("attributePredicate"),
+      kind: z.string(),
+      value: z.string(),
+      role: z.enum(["leader", "follower"]).nullish(),
+      scope: z.union([z.custom<DanceId>(isDanceId), z.literal("all"), z.literal("routine")]),
+      routineRef: z.string().optional(),
+    }),
   ])
   .superRefine((anchor, ctx) => {
     // Counts don't align across dances (a Waltz Whisk's 1-2-3 vs its Quickstep
@@ -69,6 +81,17 @@ export const zAnchor: z.ZodType<Anchor> = z
         code: "custom",
         message: "a timed figureType anchor cannot span all dances",
       });
+    }
+    // A routineRef is meaningful ONLY for a routine-scoped predicate (it names the
+    // one choreo the anchor lives in); a dance/all scope carries none. Require the
+    // biconditional so anchors stay canonical (delta #3).
+    if (anchor.type === "attributePredicate") {
+      if ((anchor.scope === "routine") !== (anchor.routineRef != null)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "a routine-scoped predicate anchor requires exactly its routineRef",
+        });
+      }
     }
   });
 

@@ -1,15 +1,18 @@
 // biome-ignore-all lint/a11y/useValidAriaRole: `role` here is the per-document
 // MEMBERSHIP role prop (editor/commenter/viewer), not an ARIA role — Biome's a11y
 // rule mis-flags it on these component props.
+import type { VoiceNoteProposal } from "@weavesteps/contract";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
-import { axeCheck, renderUi } from "../test-support/render";
+import type { SpeechCapture, SpeechCaptureCallbacks } from "../lib/speech";
+import { axeCheck, renderUi, screen, waitFor } from "../test-support/render";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { AttributeEditor } from "./AttributeEditor";
 import { ChoreoList } from "./ChoreoList";
 import { FigureLibrary } from "./FigureLibrary";
 import { FigureTimeline } from "./FigureTimeline";
 import { Profile } from "./Profile";
+import { VoiceNoteSheet } from "./VoiceNoteSheet";
 
 // ─────────────────────────────────────────────────────────────────────────
 // US-051 — Accessibility WCAG AA [M9, user]
@@ -70,6 +73,50 @@ describe("US-051 Accessibility WCAG AA — axe clean on each screen", () => {
       AXE_TIMEOUT_MS,
     );
   }
+
+  // Bug #290: the confirm sheet (the AI voice-note proposal review) was never in
+  // any axe sweep — pwa-a11y.spec.ts only scans the nav shell — which is how the
+  // "high confidence" badge's failing contrast escaped. Drive the sheet to its
+  // confirm phase and sweep it. (axe under jsdom cannot compute color-contrast, so
+  // the exact 4.5:1 token pairing is asserted in voice-note-sheet.test.tsx; this
+  // sweep guards the sheet's markup-level a11y — dialog name, roles, labels.)
+  it("VoiceNoteSheet confirm state has no axe violations", async () => {
+    let cb: SpeechCaptureCallbacks | null = null;
+    const capture: SpeechCapture = {
+      onDevice: true,
+      start(callbacks) {
+        cb = callbacks;
+      },
+      stop() {},
+    };
+    const emit = (text: string): void => cb?.onTranscript(text, true);
+    const proposal: VoiceNoteProposal = {
+      resolved: true,
+      noteText: "settle the sway",
+      confidence: "high",
+      proposed: {
+        anchor: { type: "figureType", figureType: "feather", danceScope: "foxtrot" },
+        routineRef: null,
+        label: "all Feathers · all Foxtrot",
+      },
+      alternatives: [],
+    };
+    const { container } = renderUi(
+      <VoiceNoteSheet
+        open
+        onClose={() => {}}
+        capture={capture}
+        interpret={async () => proposal}
+        transcribe={async () => ""}
+        onConfirm={() => {}}
+        onUseAsText={() => {}}
+        onEditTarget={() => {}}
+      />,
+    );
+    emit("In Slowfox, in Feather Steps, settle the sway.");
+    await waitFor(() => expect(screen.getByText("Confirm & save")).toBeTruthy());
+    expect(await axeCheck(container)).toHaveNoViolations();
+  });
 
   it("never uses color as the only signal (kinds/roles carry text or shape)", async () => {
     // Intent: kind/role distinctions carry a non-color cue (label/icon/shape).

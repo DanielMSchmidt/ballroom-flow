@@ -129,4 +129,18 @@ describe("US-049 Observability wiring (Sentry + Analytics Engine) + Smart Placem
     expect(toml).toContain("[env.production]");
     expect(toml).toContain('binding = "ANALYTICS"');
   });
+
+  it("declares the media R2 bucket in EVERY env (bindings are not inherited)", () => {
+    // annotation-media-embeds — the MEDIA R2 binding must be present in the
+    // default section AND each named env, or a deploy silently loses media
+    // serving/upload for that env. Bindings are NOT inherited (wrangler.toml
+    // header). Asserted against the REAL wrangler.toml.
+    const toml = env.WRANGLER_TOML ?? "";
+    expect(toml).toContain('bucket_name = "weave-steps-media-dev"');
+    expect(toml).toContain('bucket_name = "weave-steps-media-e2e"');
+    expect(toml).toContain('bucket_name = "weave-steps-media-staging"');
+    expect(toml).toContain('bucket_name = "weave-steps-media-production"');
+    // Four MEDIA bindings: default + e2e + staging + production.
+    expect(toml.match(/binding = "MEDIA"/g)?.length).toBe(4);
+  });
 });

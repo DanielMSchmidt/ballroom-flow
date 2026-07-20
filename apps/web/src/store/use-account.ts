@@ -24,9 +24,11 @@ import { useMe } from "./me";
 const IDLE_STORE: AccountStore = {
   readLibraryRefs: () => EMPTY_REFS,
   readOwnFamilyNotes: () => EMPTY_NOTES,
+  readOwnPredicateNotes: () => EMPTY_PREDICATE_NOTES,
   addBookmark: () => {},
   removeBookmark: () => {},
   createFamilyNote: () => {},
+  createPredicateNote: () => {},
   deleteFamilyNote: () => {},
   subscribe: () => () => {},
   syncState: () => "connecting",
@@ -36,6 +38,7 @@ const IDLE_STORE: AccountStore = {
 // Stable empty results so an idle render never churns consumer deps.
 const EMPTY_REFS: string[] = [];
 const EMPTY_NOTES: ReturnType<AccountStore["readOwnFamilyNotes"]> = [];
+const EMPTY_PREDICATE_NOTES: ReturnType<AccountStore["readOwnPredicateNotes"]> = [];
 
 /**
  * Open (lazily) + subscribe to the current user's account store. Returns the
@@ -113,5 +116,17 @@ export function useOwnFamilyNotes(
     subscribe,
     () => store.readOwnFamilyNotes(),
     () => EMPTY_NOTES,
+  );
+}
+
+/** The current user's OWN predicate notes as a reactive, referentially-stable list. */
+export function useOwnPredicateNotes(
+  store: AccountStore,
+): ReturnType<AccountStore["readOwnPredicateNotes"]> {
+  const subscribe = useCallback((fn: () => void) => store.subscribe(fn), [store]);
+  return useSyncExternalStore(
+    subscribe,
+    () => store.readOwnPredicateNotes(),
+    () => EMPTY_PREDICATE_NOTES,
   );
 }

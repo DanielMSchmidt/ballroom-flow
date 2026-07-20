@@ -146,6 +146,31 @@ of scope for issue filing.
 - **`vite preview` (not `vite dev`) as the E2E webServer.** Serves the built
   PWA assets + service worker, matching production for install/offline tests.
 
+## AI voice notes — model choice (a data decision)
+
+Voice notes (`docs/system/architecture.md` § AI voice notes) use **Cloudflare Workers AI**,
+routed through **AI Gateway** for logging, rate-limiting, cost, and accept-rate telemetry. The
+model ids are a data decision kept current here; the mockable seam means dev/tests/E2E never
+call a model (zero secrets).
+
+- **Extraction (default):** `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (24k context, function
+  calling). This and the STT model below are the only two the code actually calls, and both
+  are present in the pinned `@cloudflare/workers-types` v5 `AiModels` catalog.
+- **STT (Whisper fallback):** `@cf/openai/whisper-large-v3-turbo`, `initial_prompt` seeded
+  with the in-scope figure names, `language: "en"`. On-device Web Speech is tried first.
+- **A/B floor + escalation (candidates, not yet wired):** a smaller extraction model as a
+  cost/latency floor to A/B, and an in-Cloudflare escalation for the low-confidence slice, are
+  recorded *design* candidates. The idea doc named `@cf/meta/llama-3.1-8b-instruct-fast` and
+  `@cf/moonshotai/kimi-k2.7`; **neither is in the pinned catalog** (it has
+  `llama-3.1-8b-instruct-fp8`/`-awq` and `kimi-k2.5`/`k2.6`) — so they are not wired as code
+  constants. Pick the concrete catalog key when the A/B is actually run.
+- **Sufficiency is field-validated,** not a pre-set numeric bar: the confirm step emits an
+  accept/edit signal per note through AI Gateway. The one hard property is structural — zero
+  wrong-anchor commits past the confirm step.
+- **Ops:** deployed envs need the AI Gateway created (dashboard → AI Gateway → `weave-steps`)
+  and the `AI_GATEWAY_ID` var present before the first deploy exercises the real seam; Workers
+  AI usage is account-billed.
+
 ## Explainer video
 
 An **auto-generated product tour** (`apps/web/src/marketing/video/explainer.mp4` +

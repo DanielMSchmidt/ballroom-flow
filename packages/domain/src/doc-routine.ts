@@ -6,7 +6,7 @@
 // section via a mergeable `deletedAt` flip.
 import type * as A from "@automerge/automerge";
 import { buildDoc, filterDeleted, materialize, mutate } from "./doc-internal";
-import type { Anchor, AnnotationKind, ReadOptions, RoutineDoc } from "./doc-types";
+import type { Anchor, AnnotationKind, MediaItem, ReadOptions, RoutineDoc } from "./doc-types";
 import { newId } from "./ids";
 import { ensureSortKeys, keyBetween, sortByOrder } from "./order";
 
@@ -86,6 +86,9 @@ export function addAnnotation(
     text: string;
     anchors: Anchor[];
     tags?: string[];
+    /** docs/ideas/annotation-media-embeds.md — inline media; omitted when absent
+     *  (never assign `undefined` into an Automerge doc). */
+    media?: MediaItem[];
   },
 ): A.Doc<RoutineDoc> {
   return mutate(doc, (draft) => {
@@ -97,9 +100,42 @@ export function addAnnotation(
       tags: input.tags ?? [],
       anchors: input.anchors,
       replies: [],
+      // Conditional spread: an OMITTED key when there is no media (Automerge
+      // rejects an assigned `undefined`).
+      ...(input.media && input.media.length > 0 ? { media: input.media } : {}),
       createdAt: Date.now(),
       deletedAt: null,
     });
+  });
+}
+
+/** Attach a media item to an annotation (docs/ideas/annotation-media-embeds.md).
+ *  Plain list append — the commenter DO gate treats it as an annotation field,
+ *  so only the annotation's own author can attach post-connect. */
+export function attachMedia(
+  doc: A.Doc<RoutineDoc>,
+  annotationId: string,
+  item: MediaItem,
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    const annotation = draft.annotations.find((a) => a.id === annotationId);
+    if (!annotation) return;
+    if (!annotation.media) annotation.media = [];
+    annotation.media.push(item);
+  });
+}
+
+/** Soft-delete a media item: tombstone flip only (undo restores it; the R2
+ *  object is kept — GC is deferred debt). Never a hard removal. */
+export function softDeleteMedia(
+  doc: A.Doc<RoutineDoc>,
+  annotationId: string,
+  mediaId: string,
+): A.Doc<RoutineDoc> {
+  return mutate(doc, (draft) => {
+    const media = draft.annotations.find((a) => a.id === annotationId)?.media;
+    const item = media?.find((m) => m.id === mediaId);
+    if (item) item.deletedAt = Date.now();
   });
 }
 

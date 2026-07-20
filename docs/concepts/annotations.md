@@ -9,7 +9,7 @@ surface. For storage and the cross-account read path, see
 Timeline comments and journal entries are **one thing**: an **annotation** —
 
 ```
-{ author, kind (note | lesson | practice), text, tags, anchors[], replies[] }
+{ author, kind (note | lesson | practice), text, tags, anchors[], replies[], media[] }
 ```
 
 - **Kinds** carry intent: a plain `note`, a `lesson` (what the coach said), a `practice`
@@ -21,12 +21,21 @@ Timeline comments and journal entries are **one thing**: an **annotation** —
   Deleting a note tombstones **only that note record**: its replies are not hard-removed (they
   ride along, unsurfaced while the parent is gone), so undo brings the note back with its
   thread intact — a reply is never destroyed by deleting the note it hangs under.
-- Media attachments are a planned increment —
-  [`docs/ideas/annotation-media-embeds.md`](../ideas/annotation-media-embeds.md).
+- **Media** — an annotation carries `media[]`: uploaded **photos**, uploaded **videos**, and
+  **YouTube** references, placed **inline in the text** by an `![media:<id>]` token so each
+  renders at its position in the prose ("watch how she delays the rise: ⏵"), not as a gallery
+  bolted underneath. Media is **routine-anchored notes only** — never on replies, family
+  notes, or the Journal's account arm. Each item is a client-ULID, soft-delete-only record;
+  a tombstoned item renders a quiet "removed" stub (undo restores it). Media reads are gated
+  by the same membership that gates the annotation — a coach's video is never on the public
+  internet. See § Where notes appear (below) for the compact-vs-full rule, and
+  [`../system/architecture.md`](../system/architecture.md) § Annotation media for storage.
 
 ## Anchors — what a note points at
 
-An annotation targets the choreography through one of three anchor types:
+An annotation targets the choreography through one of four anchor types. The first three are
+**static** — a fixed address or a fixed identity; the fourth is **dynamic** — its match set is
+re-evaluated on read, so it follows the technique as choreography changes.
 
 1. **`point`** — one count of one figure placement in one choreo ("count 3 of *this* Whisk,
    here"). Optionally role-scoped.
@@ -39,9 +48,27 @@ An annotation targets the choreography through one of three anchor types:
    S-Q-Q. On read, a timed family note pins to its count on every matching figure that
    covers it; a shorter variant degrades gracefully to whole-figure surfacing — a note is
    never hidden.
+4. **`attributePredicate`** — a **predicate over notation**: `{ kind, value, role?, scope }`,
+   targeting **every step whose notation matches an attribute condition** — "soften every
+   left-side sway", "every step with *no* sway logged". This is the natural generalization of
+   `figureType` from an *identity* match to a *content* match, and the first **dynamic** anchor:
+   add a matching step and the note surfaces there automatically; retag or remove it and the
+   note drops — all on read, with no precomputed step set. Matching runs over the notation **as
+   the active role lens presents it** — the same leader/follower projection the reading table
+   renders — so a note tracks what the dancer on that side actually sees. This matters for
+   *mirrored* kinds (sway/turn/direction): a Both-lens sway edit stores leader `to_R` +
+   follower `to_L` (the same physical lean), so a "left sway" note surfaces under the follower
+   lens but not the leader lens, never on a value the current lens hides. The `value` is matched **by meaning**
+   through the registry's read aliases (the same normalization the read path applies to
+   persisted values), and includes the explicit absence sentinel **`none`** ("no value of that
+   kind logged" — a selectable match value). `scope` is `routine` (this choreo only — carries a
+   `routineRef`, required for this scope) · a `DanceId` (all of the author's choreos in that
+   dance) · `all` (every dance).
 
-A fourth anchor type — a *predicate* over notation ("all left sways") — is a designed future
-idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate-anchors.md).
+The link picker's targets unify into one **target → scope** flow: the "place / figure" path and
+the "attribute" path share the same shape, with `figureType` remaining a special case (a
+figure-identity predicate) and `attributePredicate` the content predicate. It is *not* a data-
+model merge — `figureType` keeps its own identity semantics.
 
 ## Ownership & visibility
 
@@ -54,6 +81,11 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
   wholesale; co-membership of a shared choreo is what authorizes seeing exactly the relevant
   ones. *(This visibility rule was an explicit choice — the alternative, strictly-private
   family notes, would have broken the coach→student scenario the feature exists for.)*
+- **Predicate notes** (`attributePredicate`) copy the family-note model **unchanged**:
+  author-owned in their account, visible to co-members of any shared choreo where a *matching
+  step* appears (dance-/all-scoped notes), and surfacing only where a step actually matches. A
+  `routine`-scoped predicate note is the author's own, read entirely from their account — never
+  served cross-account.
 - Creating notes/replies requires **commenter** or better; anyone may only edit or delete
   **their own** ([`collaboration.md`](collaboration.md) § Roles).
 
@@ -65,15 +97,50 @@ idea: [`docs/ideas/attribute-predicate-anchors.md`](../ideas/attribute-predicate
   that anchor's thread. **Family notes surface here too** (2026-07-15): a `figureType` note
   matching the figure folds into the same margin cells as the routine-anchored notes — one
   merged, newest-first set, with family-scope notes tagged as such (a timed family note lands
-  on its count's row, an untimed one on the figure header).
+  on its count's row, an untimed one on the figure header). **Predicate notes surface here too**
+  (2026-07-19): each folds onto every step row whose notation matches — a value note on the
+  carrying counts, a `none` note on the counts with no matching value — via the same margin
+  cells (a matched count the figure doesn't render falls to the header). A predicate note rides
+  the family envelope visually but is announced to assistive tech with its own scope cue
+  ("attribute note", *not* "family note") — the two are distinct anchor types.
 - **The figure detail (read lens):** the per-figure annotation thread plus the family-notes
   surface. The editing lens deliberately shows neither — the authoring surface stays clean.
 - **The library:** from a figure family you can open the cross-dance note surface (annotate
   this dance or all dances) — the catalog-side home for family notes.
 - **Filters:** all / lessons / practice / by figure.
+- **Media — compact vs. full (2026-07-19):** full embeds (a playable video, a full-size
+  photo, a YouTube player) render **only in the opened thread**, inline at the token's
+  position. The **compact surfaces never render a player, iframe, or image**: the reading
+  programme's notes-margin cell and the Journal cards show a small **media chip** (e.g.
+  `⏵2 ▣1` — videos and images), and tapping opens the thread exactly as today. A full-size
+  player in the 29% margin that renders every note would be a performance and layout
+  non-starter. The YouTube embed is a **click-to-load facade**: reading a note contacts no
+  third party — its thumbnail is proxied through the app, and the `youtube-nocookie.com`
+  player loads only after an explicit tap.
 
-*(A planned refinement — fading long-settled comments behind a counted expander — is
-specified in [`docs/ideas/comment-activity-fadeout.md`](../ideas/comment-activity-fadeout.md).)*
+### Comment activity fade-out
+
+In the reading view, comments **fade in importance over time without ever being lost**. Only
+**active** comments render by default; the rest collapse behind an honest, counted expander
+that restores them on demand. The one-sentence rule: *comments from the last 4 weeks, plus
+the last conversation.* A comment is active when its thread saw activity within the **last 28
+days**, **or** within **7 days of the newest activity in its rendered list** — the second
+clause is a session-gap window that guarantees a quiet routine never goes dark: its last
+conversation stays readable no matter how long ago it happened. Activity is per thread — a
+reply reactivates a settled comment — and a non-empty list never renders empty (the newest
+comment is active by construction).
+
+Concretely: the **thread panel** collapses stale comments behind ONE counted divider ("9 more
+comments") that expands in place and collapses again, order preserved; the **margin cell**
+derives its snippet and avatars from that cell's active comments only. Staleness is a pure
+function of the existing `createdAt`/reply timestamps and the current time, computed at render
+— nothing is deleted, resolved, marked read, or reordered, and there is no new stored state.
+
+This governs the **routine-anchored comment lists only**. **Family notes are exempt** — a
+co-member's family note can lack an authored time and has no expander behind the cell, so it
+always renders. The Journal, the library family-note surface, and the editing lens are
+untouched. This is the app's first wall-clock-dependent rendering (see
+[`../system/sync-and-offline.md`](../system/sync-and-offline.md) § Flicker).
 
 ## The Journal
 
@@ -81,21 +148,29 @@ The Journal tab is a **cross-choreo view over lesson/practice annotations** — 
 store. It merges (a) the routine-anchored lessons/practice notes from every choreo you can
 see, author-colored, with resolved link chips, and (b) family-note lessons/practice entries.
 Filter pills: all / lessons / practice / by figure. The entry editor has a Lesson/Practice
-toggle, handwritten-style text, link chips, and a (disabled, planned) media affordance.
+toggle, handwritten-style text, and link chips; its media affordance stays "coming soon" —
+media rides routine-scoped annotation threads only, so a lesson/practice note attaches media
+from the reading-view thread, not from the Journal's account arm. Journal cards show the same
+compact media chip (from a projected count), never the media itself.
 
-**The link picker is choreo-first** — one linear flow:
+**The link picker is choreo-first**, then forks by **target**:
 
 ```
-choreo → figure from that choreo (type-ahead) → placement on the figure's
-attribute grid (entire figure, or one count, with a role lens) → scope last
+choreo → target → · a figure from that choreo (type-ahead) → placement on the
+                     figure's attribute grid (entire figure, or one count, role lens) → scope
+                   · an attribute → family (dance-gated registry) → value (incl. the
+                     explicit "no value logged" row) → role → scope
 ```
 
-The scope step offers exactly what the anchor model can honor:
+The **figure** path's scope step offers exactly what the identity-anchor model can honor:
 
 - **whole figure** → *every dance this family exists in* (`figureType`/all) · *all my
   choreos of this dance* (`figureType`/dance) · *only this choreo* (`figure`);
 - **one count** → *this dance* (timed `figureType`) · *only this choreo* (`point`) — never
   across dances.
+
+The **attribute** path builds an `attributePredicate` note, with scope *this choreo* · *all my
+〈dance〉 choreos* · *every dance*.
 
 The family scopes require a real catalog family: a from-scratch custom figure names no
 family, so both family rows drop and the note falls through to a plain choreo annotation.
@@ -103,8 +178,27 @@ There is deliberately **no catalog path** — a figure links only from a choreo 
 (the journal is about *your* dancing); the library's family-note surface remains the
 catalog-side escape hatch.
 
-*(A speech-driven capture path — speak a note, have the right anchor proposed — is a
-dispatch-ready idea: [`docs/ideas/ai-voice-notes.md`](../ideas/ai-voice-notes.md).)*
+### Voice capture (speak a note, land it on the right anchor)
+
+The entry editor also has a **voice** affordance: speak a practice note — *"In Slowfox, in
+Feather Steps, I need to settle the sway"* — and the app proposes the right anchor. The mic
+records; a transcript is produced (on-device speech recognition first, a server Whisper
+fallback where that's unsupported); the transcript is resolved **against the figures actually
+in your choreos** into a **proposed** anchor rendered as a chip; you **Confirm** (or **Edit
+target** to hand off to the ordinary picker, or **Discard**). Nothing is a new note class —
+this is an **on-ramp onto the existing anchor model**: Confirm produces the very same link the
+manual picker would, committed through the ordinary annotation write. The three static anchor
+shapes are proposable (a family `figureType` note, a `figure` instance note, a timed `point`
+note); the AI only *proposes* and the human confirms, so **no wrong anchor can be committed
+past the confirm step**.
+
+An utterance that matches no figure **degrades to a plain transcribed note** (kept as note
+text, never a guessed anchor). A **silent or empty capture** — mic tapped but nothing heard —
+lands in an honest *"didn't catch anything"* state with a **try-again** affordance; it never
+attempts to interpret an empty transcript. **Predicate-shaped** utterances ("soften every left sway")
+also fall back to a plain note today — a voice-proposed `attributePredicate` anchor is a
+recorded **future refinement** (the predicate anchor itself ships, but the voice pipeline does
+not yet propose it). No audio is retained (transcribe and discard).
 
 ---
 

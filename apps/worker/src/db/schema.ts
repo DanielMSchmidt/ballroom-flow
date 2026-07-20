@@ -122,9 +122,34 @@ export const journalEntry = sqliteTable("journal_entry", {
   createdAt: integer("createdAt").notNull(),
   updatedAt: integer("updatedAt").notNull(),
   deletedAt: integer("deletedAt"),
+  // docs/ideas/annotation-media-embeds.md (plan discrepancy 3) — projected live
+  // media counts so a Journal card renders its media chip without reading CRDT.
+  imageCount: integer("imageCount").notNull().default(0),
+  videoCount: integer("videoCount").notNull().default(0),
 });
 
 export type JournalEntryRow = typeof journalEntry.$inferSelect;
+
+/**
+ * docs/ideas/annotation-media-embeds.md — media_object (migration 0020) is the
+ * upload-grant + caps counter for annotation media. D1 stays a pure index: the
+ * row holds the granted byte size + accounting; the bytes live in R2, keyed by
+ * media/<docRef>/<annotationId>/<mediaId> (the authz scope). Raw SQL (db/media.ts)
+ * does the reads/writes, matching db/journal.ts; typed here for the reset path.
+ */
+export const mediaObject = sqliteTable("media_object", {
+  objectKey: text("objectKey").primaryKey(),
+  docRef: text("docRef").notNull(),
+  annotationId: text("annotationId").notNull(),
+  userId: text("userId").notNull(),
+  bytes: integer("bytes").notNull(),
+  uploadedBytes: integer("uploadedBytes").notNull().default(0),
+  poster: integer("poster").notNull().default(0),
+  createdAt: integer("createdAt").notNull(),
+  deletedAt: integer("deletedAt"),
+});
+
+export type MediaObjectRow = typeof mediaObject.$inferSelect;
 
 /**
  * §2.7 LibraryEntry (migration 0015, ⟳v5) — the per-user library BOOKMARK

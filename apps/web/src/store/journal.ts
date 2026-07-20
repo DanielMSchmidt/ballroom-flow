@@ -128,13 +128,19 @@ function toJournalAnchor(a: Anchor): JournalAnchor {
     };
   }
   if (a.type === "figure") return { type: "figure", figureRef: a.figureRef };
-  return {
-    type: "figureType",
-    figureType: a.figureType,
-    danceScope: a.danceScope,
-    ...(a.count != null ? { count: a.count } : {}),
-    ...(a.role != null ? { role: a.role } : {}),
-  };
+  if (a.type === "figureType") {
+    return {
+      type: "figureType",
+      figureType: a.figureType,
+      danceScope: a.danceScope,
+      ...(a.count != null ? { count: a.count } : {}),
+      ...(a.role != null ? { role: a.role } : {}),
+    };
+  }
+  // attributePredicate anchors are account-doc predicate notes with their own
+  // read path (GET /api/routines/:id/predicate-notes) — they are never journal
+  // (lesson/practice) entries, so this wire mapping never sees one.
+  throw new Error(`toJournalAnchor: unexpected anchor type "${a.type}"`);
 }
 
 /**

@@ -7,6 +7,7 @@
 // Components never import @automerge/automerge or the RPC client directly — an
 // architecture-boundary test enforces that (see routine-store.test.ts).
 import * as A from "@automerge/automerge";
+import type { MintMediaUpload, MintMediaUploadResponse } from "@weavesteps/contract";
 import {
   type Anchor,
   type Annotation,
@@ -15,6 +16,7 @@ import {
   addAnnotation,
   addReply,
   addSection,
+  attachMedia as attachMediaToDoc,
   CURRENT_SCHEMA_VERSION,
   DANCES,
   defaultFigureCounts,
@@ -27,6 +29,7 @@ import {
   kindAppliesToDance,
   LIBRARY_FIGURES,
   libraryFigureByRef,
+  type MediaItem,
   newId,
   type Placement,
   type RegistryKind,
@@ -35,6 +38,7 @@ import {
   redoLastChange,
   resolveFigure as resolveVariantOverlay,
   softDeleteAnnotation,
+  softDeleteMedia,
   softDeleteReply,
   softDeleteSection,
   sortByOrder,
@@ -58,6 +62,7 @@ import {
 } from "./doc-connection";
 import { type DocStorage, defaultDocStorage } from "./doc-storage";
 import { e2eHeartbeat, e2eZombifiableSocketFactory } from "./e2e-socket";
+import { mintMediaUpload as mintMediaUploadRpc, uploadMedia as uploadMediaRpc } from "./media";
 import { reconcile } from "./reconcile";
 
 /**
@@ -246,9 +251,29 @@ export interface RoutineStore extends RoutineReadModel {
     text: string;
     anchors: Anchor[];
     tags?: string[];
+    /** docs/ideas/annotation-media-embeds.md — inline media items, placed by
+     *  `![media:<id>]` tokens in `text`. Omitted when the note has no media. */
+    media?: MediaItem[];
   }): void;
   /** Append a reply to an annotation's thread (US-039). */
   addReply(annotationId: string, text: string): void;
+  /**
+   * docs/ideas/annotation-media-embeds.md — attach an already-uploaded media item
+   * to an existing annotation (a CRDT edit; the composer writes it as part of
+   * create, this is for a later attach on an existing note). Author-only enforced
+   * in the component; uploads are live-gated there (syncState()==="live").
+   */
+  attachMedia(annotationId: string, item: MediaItem): void;
+  /** Soft-delete (tombstone) a media item; undo restores it (author-only in UI). */
+  removeMedia(annotationId: string, mediaId: string): void;
+  /**
+   * Mint an upload grant for a media item (commenter+ + caps checked server-side).
+   * Wraps the store/media REST helper with this store's docRef/token/baseUrl so
+   * components stay store-only.
+   */
+  mintMediaUpload(req: MintMediaUpload): Promise<MintMediaUploadResponse>;
+  /** Upload a media blob to its minted upload URL (single PUT or multipart). */
+  uploadMedia(uploadUrl: string, blob: Blob, mimeType: string): Promise<void>;
   /** Soft-delete an annotation (US-039). */
   deleteAnnotation(annotationId: string): void;
   /** Soft-delete a reply — author-only is enforced in the UI (US-039). */
@@ -1132,6 +1157,27 @@ export async function openRoutine(
 
     deleteReply: (annotationId, replyId) => {
       routineConn.commit(softDeleteReply(routineConn.current(), annotationId, replyId));
+    },
+
+    attachMedia: (annotationId, item) => {
+      // Domain op (aliased to avoid the store-method name collision). A CRDT edit —
+      // syncs to all members like any other annotation change.
+      routineConn.commit(attachMediaToDoc(routineConn.current(), annotationId, item));
+    },
+
+    removeMedia: (annotationId, mediaId) => {
+      // Soft-delete only (tombstone) — undo restores the item; the R2 object stays.
+      routineConn.commit(softDeleteMedia(routineConn.current(), annotationId, mediaId));
+    },
+
+    mintMediaUpload: async (req) => {
+      const token = getToken ? await getToken() : null;
+      return mintMediaUploadRpc(token, routineId, req, baseUrl);
+    },
+
+    uploadMedia: async (uploadUrl, blob, mimeType) => {
+      const token = getToken ? await getToken() : null;
+      return uploadMediaRpc(token, uploadUrl, blob, mimeType, baseUrl);
     },
 
     createCustomKind: (kind) => {

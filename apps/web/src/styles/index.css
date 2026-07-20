@@ -341,3 +341,16 @@
     opacity: 0.55;
   }
 }
+/* Voice-capture mic pulse (VoiceNoteSheet) — an expanding accent ring while
+   listening. Motion-gated by the global reduced-motion + .bf-e2e rules above. */
+@keyframes bf-mic-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(from var(--bf-accent) r g b / 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgb(from var(--bf-accent) r g b / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(from var(--bf-accent) r g b / 0);
+  }
+}

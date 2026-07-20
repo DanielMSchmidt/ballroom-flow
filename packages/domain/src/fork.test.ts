@@ -438,4 +438,91 @@ describe("⟳v5 overlay variants (per-beat ownership)", () => {
     const authored: FigureDoc = { ...bare, bars: 3 };
     expect(resolveFigure(base, authored).bars).toBe(3); // variant override wins
   });
+
+  // Regression — issue #284: a predicate note must DROP after a single-cell
+  // variant edit changes the matching notation. This exercises the whole edit
+  // path a global-figure edit takes (spawnVariant → variantAttributesForEdit →
+  // resolveFigure), then runs matchPredicate over the resolved timeline exactly
+  // as the reading view does — the resolved figure must carry ONLY the variant's
+  // re-tagged value on the owned beat, never the shadowed base value.
+  it("#284: retagging a beat's value via a variant edit drops a predicate note on the OLD value", async () => {
+    const { resolveFigure, spawnVariant } = await importDomain();
+    const { matchPredicate } = await import("./predicate");
+    // Waltz Whisk: right sway on count 1, LEFT sway on count 2 (the QA seed).
+    const base: FigureDoc = {
+      id: "gfig_waltz_whisk",
+      scope: "global",
+      ownerId: "app",
+      figureType: "whisk",
+      dance: "waltz",
+      name: "Whisk",
+      source: "library",
+      counts: 3,
+      baseFigureRef: null,
+      schemaVersion: 6,
+      deletedAt: null,
+      attributes: [attr("b1", "sway", 1, "to_R"), attr("b2", "sway", 2, "to_L")],
+    };
+    // A `to_L` predicate note surfaces only on count 2 before the edit.
+    const toL = {
+      type: "attributePredicate" as const,
+      kind: "sway",
+      value: "to_L",
+      scope: "waltz" as const,
+    };
+    expect(matchPredicate(toL, base)).toEqual([2]);
+
+    // The user edits "Sway at count 2" from left → right. The editor hands back
+    // the RESOLVED timeline with count 2 flipped (a global figure is standalone,
+    // so the base IS the resolved timeline); spawnVariant keeps only the diff.
+    const edited = [attr("b1", "sway", 1, "to_R"), attr("e2", "sway", 2, "to_R")];
+    const placement = { id: "p1", figureRef: base.id, deletedAt: null };
+    const { variant } = spawnVariant(placement, base, "u_me", edited);
+
+    // The reading view resolves the variant against its live base, then matches.
+    const resolved = resolveFigure(base, variant);
+    // Both counts now read right — no live left sway remains anywhere.
+    expect(matchPredicate(toL, resolved)).toEqual([]);
+    // And the right-sway predicate now catches BOTH counts.
+    const toR = { ...toL, value: "to_R" };
+    expect(matchPredicate(toR, resolved)).toEqual([1, 2]);
+  });
+
+  // Regression — issue #284, the `none`/absence sentinel lens: a variant that
+  // CLEARS a value must make a `none` note APPEAR on that beat (the mirror of the
+  // value-drop case — the resolved beat must carry no live attribute of the kind).
+  it("#284: a variant that clears a beat's value makes a `none` predicate note appear", async () => {
+    const { resolveFigure, spawnVariant } = await importDomain();
+    const { matchPredicate, PREDICATE_NONE } = await import("./predicate");
+    const base: FigureDoc = {
+      id: "gfig_waltz_whisk",
+      scope: "global",
+      ownerId: "app",
+      figureType: "whisk",
+      dance: "waltz",
+      name: "Whisk",
+      source: "library",
+      counts: 3,
+      baseFigureRef: null,
+      schemaVersion: 6,
+      deletedAt: null,
+      attributes: [attr("b1", "sway", 1, "to_R"), attr("b2", "sway", 2, "to_L")],
+    };
+    const none = {
+      type: "attributePredicate" as const,
+      kind: "sway",
+      value: PREDICATE_NONE,
+      scope: "waltz" as const,
+    };
+    // Before: counts 1 and 2 both carry a sway; only count 3 has none.
+    expect(matchPredicate(none, base)).toEqual([3]);
+
+    // The user clears the sway on count 2 (edited timeline drops it entirely).
+    const edited = [attr("b1", "sway", 1, "to_R")];
+    const placement = { id: "p1", figureRef: base.id, deletedAt: null };
+    const { variant } = spawnVariant(placement, base, "u_me", edited);
+    const resolved = resolveFigure(base, variant);
+    // A cleared beat carries only a TOMBSTONED copy-down → no live sway → matches none.
+    expect(matchPredicate(none, resolved)).toEqual([2, 3]);
+  });
 });

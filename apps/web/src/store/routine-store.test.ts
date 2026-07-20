@@ -8,6 +8,7 @@ import {
   buildRoutineDoc,
   globalFigureRef,
   libraryFiguresForDance,
+  matchPredicate,
 } from "@weavesteps/domain";
 import { describe, expect, it, vi } from "vitest";
 import { reportError } from "../lib/ops";
@@ -1066,6 +1067,111 @@ describe("US-017 store/ seam (multi-doc)", () => {
     expect(rp?.placement.figureRef).toBe(variantRef);
     // …and the shared base figure doc was NEVER written to (COW must not mutate it).
     expect(sockets.get("fg")?.sent.length ?? 0).toBe(0);
+  });
+
+  it("#284: a variant edit that retags a beat's value drops a predicate note on the OLD value (through the READ seam)", async () => {
+    // Regression (issue #284): the reading view matches predicate notes over the
+    // figure `readPlacements()` resolves — so after a single-cell variant edit
+    // flips a beat's value, that resolved figure must carry ONLY the new value on
+    // the owned beat, never the shadowed base value. QA saw the display flip to the
+    // new value while `matchPredicate` still matched the old one — proving the base
+    // attribute leaked into the resolved timeline the matcher consumes. This drives
+    // the whole store seam (setFigureAttributes → spawnVariantForEdit → onceLive
+    // write → resolveFigure) and asserts against matchPredicate, exactly as the
+    // reading view does.
+    const { opts, sockets } = fakeWiring();
+    const created: Array<{ figureRef: string }> = [];
+    const createFigure = vi.fn(async (m: { figureRef: string }) => {
+      created.push({ figureRef: m.figureRef });
+    });
+    const onCopyOnWrite = vi.fn();
+    const store = await openRoutine("rt_sample", {
+      ...opts,
+      currentUserId: "me",
+      createFigure,
+      onCopyOnWrite,
+    });
+
+    const routine = buildRoutineDoc({
+      id: "rt_sample",
+      title: "R",
+      dance: "waltz",
+      ownerId: "me",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          deletedAt: null,
+          placements: [{ id: "p1", figureRef: "fg", deletedAt: null }],
+        },
+      ],
+      annotations: [],
+      schemaVersion: 1,
+      deletedAt: null,
+    });
+    sockets.get("rt_sample")?.fireOpen();
+    sockets.get("rt_sample")?.load(routine);
+    sockets.get("rt_sample")?.fireCaughtUp();
+    store.readPlacements();
+
+    // A GLOBAL Whisk: right sway on count 1, LEFT sway on count 2 (the QA seed).
+    const fg = buildFigureDoc(
+      aFigure({
+        id: "fg",
+        scope: "global",
+        ownerId: "app",
+        figureType: "whisk",
+        dance: "waltz",
+        name: "Whisk",
+        source: "library",
+        counts: 3,
+        attributes: [
+          { id: "b1", kind: "sway", count: 1, role: null, value: "to_R", deletedAt: null },
+          { id: "b2", kind: "sway", count: 2, role: null, value: "to_L", deletedAt: null },
+        ],
+      }),
+    );
+    sockets.get("fg")?.fireOpen();
+    sockets.get("fg")?.load(fg);
+    sockets.get("fg")?.fireCaughtUp();
+
+    const toL = {
+      type: "attributePredicate" as const,
+      kind: "sway",
+      value: "to_L",
+      scope: "waltz" as const,
+    };
+    const toR = { ...toL, value: "to_R" };
+    // Before the edit: the `to_L` note matches count 2 only.
+    const before = store.readPlacements().find((p) => p.placement.figureRef === "fg")?.figure;
+    expect(before).toBeTruthy();
+    if (before) expect(matchPredicate(toL, before)).toEqual([2]);
+
+    // Edit "Sway at count 2" left → right. The editor hands the RESOLVED timeline
+    // back with count 2 flipped; the store spawns a variant owning ONLY beat 2.
+    store.setFigureAttributes("fg", [
+      { id: "b1", kind: "sway", count: 1, role: null, value: "to_R", deletedAt: null },
+      { id: "b2", kind: "sway", count: 2, role: null, value: "to_R", deletedAt: null },
+    ]);
+
+    await vi.waitFor(() => expect(onCopyOnWrite).toHaveBeenCalled());
+    const variantRef = created[0]?.figureRef ?? "";
+    // The variant's own DO comes live so its owned-beat write lands (onceLive).
+    sockets.get(variantRef)?.fireOpen();
+    sockets.get(variantRef)?.fireCaughtUp();
+
+    // Read the resolved figure the reading view would match over.
+    const after = store.readPlacements().find((p) => p.placement.figureRef === variantRef)?.figure;
+    expect(after).toBeTruthy();
+    if (after) {
+      // Display parity: both counts now read right (no live left sway anywhere).
+      const liveSway = after.attributes.filter((a) => a.kind === "sway" && a.deletedAt == null);
+      expect(liveSway.map((a) => a.value)).toEqual(["to_R", "to_R"]);
+      // The predicate note on the OLD value drops; the new value catches both counts.
+      expect(matchPredicate(toL, after)).toEqual([]);
+      expect(matchPredicate(toR, after)).toEqual([1, 2]);
+    }
+    store.close();
   });
 
   it("exposes isForking while a variant spawn is in flight, cleared on completion (fork feedback)", async () => {

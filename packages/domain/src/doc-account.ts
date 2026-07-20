@@ -207,6 +207,55 @@ export function addFamilyNote(
   });
 }
 
+/**
+ * Add an attribute-predicate note (docs/concepts/annotations.md § Anchors): a
+ * kinded note anchored to an `attributePredicate` — it surfaces on every step
+ * whose notation matches `{ attrKind, attrValue, attrRole? }`, dynamically
+ * re-evaluated on read. `scope` confines the match: `"all"` (every dance), a
+ * `DanceId` (that dance's choreos), or `"routine"` (one choreo, named by
+ * `routineRef`). Mirrors {@link addFamilyNote}: account-owned, one anchor, a fresh
+ * ULID id, no tombstone.
+ */
+export function addPredicateNote(
+  doc: A.Doc<AccountDoc>,
+  input: {
+    authorId: string;
+    kind: AnnotationKind;
+    text: string;
+    attrKind: string;
+    attrValue: string;
+    attrRole?: Role;
+    scope: DanceId | "all" | "routine";
+    routineRef?: string;
+    tags?: string[];
+  },
+): A.Doc<AccountDoc> {
+  return mutate(doc, (draft) => {
+    draft.annotations.push({
+      id: newId(),
+      authorId: input.authorId,
+      kind: input.kind,
+      text: input.text,
+      tags: input.tags ?? [],
+      anchors: [
+        {
+          type: "attributePredicate",
+          kind: input.attrKind,
+          value: input.attrValue,
+          scope: input.scope,
+          // Automerge can't store `undefined`; omit an absent role/routineRef so
+          // the anchor stays canonical (its absence carries meaning).
+          ...(input.attrRole != null ? { role: input.attrRole } : {}),
+          ...(input.routineRef != null ? { routineRef: input.routineRef } : {}),
+        },
+      ],
+      replies: [],
+      createdAt: Date.now(),
+      deletedAt: null,
+    });
+  });
+}
+
 /** Append a reply to a family note's ordered thread. */
 export function addAccountReply(
   doc: A.Doc<AccountDoc>,
