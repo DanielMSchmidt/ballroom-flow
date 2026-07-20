@@ -162,7 +162,14 @@ export function dualCapture(Ctor: SpeechRecognitionCtor | null): SpeechCapture {
         r.start();
       }
 
-      // ALWAYS record too — the fallback clip for the no-on-device-result case.
+      // ALWAYS record too — the fallback clip for the no-on-device-result case —
+      // when the recording API is present. (With only on-device recognition and no
+      // MediaRecorder, the on-device path alone carries the capture.)
+      const canRecord =
+        typeof MediaRecorder !== "undefined" &&
+        typeof navigator !== "undefined" &&
+        navigator.mediaDevices != null;
+      if (!canRecord) return;
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((s) => {

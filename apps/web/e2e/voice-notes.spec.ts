@@ -153,11 +153,17 @@ async function startVoiceWithTranscript(page: Page, transcript: string): Promise
     window.__weaveVoiceTranscript = t;
   }, transcript);
   await page.getByRole("button", { name: "voice", exact: true }).click();
-  // Press-and-hold the mic (pointerdown starts capture → the injected transcript),
-  // then release.
-  const talk = page.getByRole("button", { name: /hold to talk|recording — release to send/i });
-  await talk.dispatchEvent("pointerdown");
-  await talk.dispatchEvent("pointerup");
+  // Press-and-hold the mic. In the E2E build `e2eCapture` emits the injected
+  // transcript as final ON START (pointerdown), so the sheet advances off "idle"
+  // immediately — the talk button is gone before a pointerup could re-locate it.
+  // Resolve the element ONCE, press, then fire pointerup on the same handle
+  // best-effort (it may already be detached — that's fine, the note already resolved).
+  const handle = await page.getByRole("button", { name: /hold to talk/i }).elementHandle();
+  if (handle) {
+    await handle.dispatchEvent("pointerdown");
+    // Release best-effort: the button may already be detached (note resolved on press).
+    await handle.dispatchEvent("pointerup").catch(() => {});
+  }
 }
 
 test.describe("@smoke AI voice notes (fixture AI)", () => {
