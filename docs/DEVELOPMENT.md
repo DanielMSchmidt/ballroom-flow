@@ -222,3 +222,37 @@ PRs but isn't enforced for admins and allows force pushes, and a PAT push also
 fires the normal `push` deploy (staging redeploys). PRs run the CI fast gate;
 pushes to the two long-lived branches re-run checks then deploy (see
 `deploy.yml` + PROVISIONING.md).
+
+## Seeding a staging demo account (admin ops)
+
+To populate a staging account with a rich **synthetic** demo dataset (four cross-dance
+routines built from real charted figures, backdated + threaded annotations, synthetic
+co-members, a custom kind) without hand-entering data:
+
+1. **Grant yourself admin** (a direct D1 `UPDATE`, the same seam global-figure editing uses —
+   there is no admin UI in v1):
+   ```bash
+   cd apps/worker
+   pnpm exec wrangler d1 execute DB --env staging --remote \
+     --command "UPDATE users SET isAdmin = 1 WHERE id = '<your clerk sub>'"
+   # local dev: drop --env/--remote and use --local
+   ```
+2. **Materialize the demo set** into your own account (Bearer = your Clerk session token):
+   ```bash
+   curl -X POST https://weave-steps-staging.danielmschmidt.workers.dev/api/admin/seed-demo \
+     -H "Authorization: Bearer <session-jwt>"
+   # → { "ok": true, "summary": { "routines": 4, "figures": …, "annotations": …, … } }
+   ```
+   A non-admin caller gets `403` and nothing is written. Re-running is idempotent (no
+   duplicates).
+3. **Reset** (soft-delete the demo set so you can re-seed cleanly):
+   ```bash
+   curl -X DELETE https://weave-steps-staging.danielmschmidt.workers.dev/api/admin/seed-demo \
+     -H "Authorization: Bearer <session-jwt>"
+   ```
+
+The route (`apps/worker/src/routes/seed-demo.ts`) only ever writes into the **caller's own**
+account; the synthetic co-members are namespaced under the caller and never real logins. It
+is safe to leave mounted in every environment — the admin gate + own-account-only writes make
+it inert for anyone else. Full behaviour: `docs/system/architecture.md` § The staging demo
+seed.

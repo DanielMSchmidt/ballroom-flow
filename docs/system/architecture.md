@@ -208,6 +208,38 @@ updated/added/tombstoned) while user-added attributes (client ULIDs) and variant
 survive. **No fabrication**: every value carries recorded provenance; unverifiable content is
 omitted, never guessed. Full workflow: the `ballroom-flow-figure-data-pipeline` skill.
 
+## The staging demo seed (admin ops)
+
+`POST /api/admin/seed-demo` lets an **admin** populate **their own account** with a rich
+**synthetic** demo dataset in one call, so staging can be exercised without hand-entering
+data. It is **not** production data: the routines are authored from the shipped syllabus
+(real charted `LIBRARY_FIGURES`) by the pure `buildDemoSeed(opts)` in `packages/domain`, and
+annotation text is synthetic demo prose. The dataset is four cross-dance routines
+(waltz/foxtrot/quickstep/tango) with annotations across every anchor type in the schema
+(point / figure / figureType), threaded replies, **backdated** `createdAt` spread recent→old,
+2–3 **synthetic co-members** (namespaced `demo_<caller>_<role>` — never real logins) that are
+routine members and note/family-note authors, and one role-aware account-wide custom kind
+applied on steps.
+
+- **Gate:** the same `users.isAdmin` flag global-figure editing uses (`isAdmin`,
+  `apps/worker/src/db/admin.ts`), checked **before any write**; a non-admin is 403.
+- **Own-account-only:** routines/figures are owned by the caller; the synthetic co-members
+  are namespaced under the caller. The route never writes into a non-caller **real** account
+  (the caller's own `account:<sub>` doc is deliberately left untouched — the demo family notes
+  are authored by the co-members and read via co-membership).
+- **Existing seams only:** registry rows + `seedDoc` (routines/figures), membership rows
+  (sharing), the `figure_type_note_index` projection (family notes), `upsertAccountKind`
+  (the custom kind). Backdated annotations/replies are authored directly into the routine
+  doc content passed to `seedDoc`, so their timestamps are preserved verbatim (no
+  now-stamping seam is involved).
+- **Idempotent + re-seedable:** every D1 write is a revive-on-conflict upsert keyed on the
+  deterministic namespaced id (`seedDoc` is no-clobber for CRDT content), so a re-run adds no
+  duplicates and a re-run after a DELETE clears the tombstones. `DELETE /api/admin/seed-demo`
+  **soft-deletes** the demo set by its exact ids (never a hard removal, never a row this seed
+  didn't create). Implementation: `apps/worker/src/routes/seed-demo.ts`. The WEP-only
+  annotation types (attribute-predicate anchors, media embeds, voice-origin notes, coupling
+  maps) slot in at the documented extension point in `demo-seed.ts` once they merge.
+
 ## Non-functional requirements
 
 - **Performance:** mobile-first; shell interactive < ~2 s; list/search from the D1 index
