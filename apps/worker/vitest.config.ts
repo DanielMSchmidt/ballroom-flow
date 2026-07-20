@@ -63,7 +63,11 @@ export default defineConfig(async () => {
       }),
     ],
     test: {
-      include: ["src/**/*.test.ts"],
+      // Worker src suites + the on-demand voice-eval harness's PURE-logic test
+      // (eval/voice-eval-core.test.ts — the credentialed eval itself is NEVER run
+      // here; only its model-independent case/expectation logic, docs/TOOLING.md
+      // § AI voice notes).
+      include: ["src/**/*.test.ts", "eval/**/*.test.ts"],
       // Every worker test boots real workerd + a SQLite-backed DO + D1; some also
       // trigger DO-heavy work (onboarding seeds the starter routine, forks copy
       // figures). Under CI contention the collect/boot phase alone can take

@@ -181,6 +181,51 @@ call a model (zero secrets).
   and the `AI_GATEWAY_ID` var present before the first deploy exercises the real seam; Workers
   AI usage is account-billed.
 
+### The prompt & `noteText` (the coaching content, addressing stripped)
+
+The interpret prompt is built by **one shared, pure, exported builder** —
+`buildInterpretMessages(transcript, context)` in `apps/worker/src/voice-ai.ts` — that
+`workersVoiceAi.interpret`, the payload unit test, and the eval harness (below) all call, so
+the tested prompt can never drift from the deployed one. It returns the system+user `messages`
+(the system message carries the instructions + the serialized `ChoreoContext` as closed
+multiple-choice; the user message is the raw transcript) and the `response_format` carrying
+`EXTRACTION_JSON_SCHEMA` (a *hint* — `groundProposal`'s Zod re-validation stays mandatory).
+
+The system prompt instructs that **`noteText` is the note's COACHING CONTENT only, not the
+whole transcript**: when an anchor resolves, the model **strips the figure/dance/location
+addressing** that the anchor already captures (e.g. *"In Slowfox, in Feather Steps, settle the
+sway"* with a Feather in context → anchor the Feather + `noteText` = *"settle the sway"*, not
+the whole sentence). When nothing resolves (`resolved:false`), `noteText` is the **whole
+transcript unchanged** — there is nothing to strip. The deterministic `fixtureVoiceAi` mirrors
+this (its `stripAddressing` runs only on a resolved anchor), so dev/E2E reflect the intended
+behavior, and the anchor-only-from-context rule (no invented targets) is unchanged.
+
+### Voice eval harness (on-demand, credentialed — NEVER in CI)
+
+`apps/worker/eval/voice-eval.mjs` runs the **real** Workers AI extraction model against a small
+golden-case set and reports pass/fail. It reuses the production prompt (imports the shared
+`buildInterpretMessages`) and re-validates the model output through the same `groundProposal`
+the `/interpret` route runs, so it evaluates exactly what ships. Golden cases cover a figureType
+match with addressing-strip, an ordinal `figure` match, a timed `point` match, and both
+unresolved shapes; each pins the grounded anchor **and** that `noteText` is stripped (does not
+name the anchored figure).
+
+Run it (from `apps/worker`, or `pnpm --filter worker eval:voice`):
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… AI_GATEWAY_ID=weave-steps \
+  pnpm eval:voice
+```
+
+It reads those three env vars (a token with Workers AI run access; the model is called via the
+Cloudflare Workers AI REST API `POST …/ai/run/{model}`, routed through AI Gateway with the
+`cf-aig-gateway-id` header), **fails fast with a clear message if any is missing** (exit 2),
+prints a per-case PASS/FAIL table, and exits non-zero on any failure. It is **not wired into
+any CI test run** (the zero-secret matrix never calls a model). The script runs under Node's
+type-stripping via a tiny in-repo resolve hook (`eval/ts-loader.mjs`, no new dependency — needs
+Node ≥ 22.15); its model-independent parts (the golden set + the `checkExpectation` judge) are
+unit-tested in `apps/worker/eval/voice-eval-core.test.ts`, which DOES run in normal CI.
+
 ## Explainer video
 
 An **auto-generated product tour** (`apps/web/src/marketing/video/explainer.mp4` +
