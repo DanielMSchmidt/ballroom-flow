@@ -154,15 +154,17 @@ from the reading-view thread, not from the Journal's account arm. Journal cards 
 compact media chip (from a projected count), never the media itself.
 
 **Note creation is scope-first.** The entry editor opens on a **scope step**: pick the
-**dance** the note is about (and optionally one of your choreos in it) *before* adding the
-note by text or voice, *then* connect the figure. The chosen scope does two jobs — it
-**pre-filters the link picker** to that dance's choreos (opening straight on the target step
-when a choreo is chosen, no re-picking), and it becomes the **grounding context the voice AI
-resolves against** (§ Voice capture). The step is **skippable**: choosing no dance means "all
-my dancing" — the old broad, content-first behavior, still valid for a plain unlinked note.
-The chosen dance is **remembered per-device** (like the reading-lens prefs), so the common
-case is one tap. Nothing about the anchor model changes — Confirm still produces the very same
-link the manual picker would.
+**choreo** the note is about *before* adding the note by text or voice, *then* connect the
+figure. The list is the dancer's annotate-capable choreos, each labeled with its dance. The
+chosen choreo does two jobs — it **opens the link picker straight on the target step** (no
+re-picking the choreo), and it becomes the **grounding context the voice AI resolves
+against** (§ Voice capture). The step is **skippable**: choosing no choreo means "all my
+dancing" — the old broad, content-first behavior, still valid for a plain unlinked note.
+The chosen choreo is **remembered per-device** (like the reading-lens prefs; a remembered
+choreo that no longer loads falls back to "all my dancing"), so the common case is one tap.
+Nothing about the anchor model changes — Confirm still produces the very same link the
+manual picker would. *(2026-07-23: the scope step's unit changed from dance to choreo —
+the dancer picks the piece they're working on, not the dance in the abstract.)*
 
 **The link picker is choreo-first**, then forks by **target**:
 
@@ -193,10 +195,10 @@ catalog-side escape hatch.
 
 The entry editor also has a **voice** affordance: speak a practice note — *"In Feather Steps,
 I need to settle the sway"* — and the app proposes the right anchor. The voice affordance lives
-**inside the chosen scope** (§ The Journal): the sheet passes the selected **dance** (and, if
-you picked one, the specific choreo) to the interpret route, which grounds only against **that
-scope's** figures — so the model chooses among a handful of relevant figures rather than every
-choreo at once (or nothing, on a fresh account). Capture is
+**inside the chosen scope** (§ The Journal): the sheet passes the selected **choreo** to the
+interpret route, which grounds only against **that choreo's** figures — so the model chooses
+among a handful of relevant figures rather than every choreo at once. With no choreo chosen
+("all my dancing") the grounding stays broad, across all annotate-capable choreos. Capture is
 **push-to-talk**: the sheet opens idle with a *"Hold to talk"* prompt; you **hold** the mic to
 record and **release** to send (it is also keyboard-operable — the mic toggles start/stop on
 Enter/Space). On press the app runs a **dual capture** — on-device speech recognition *and* an
@@ -205,7 +207,8 @@ that transcript wins (free, instant); otherwise the recorded clip is sent to the
 Whisper fallback**. This dual model is the fix for mobile Chrome, which advertises on-device
 recognition but streams no results, so a recognition error is simply ignored — the recorded
 clip carries the note. The resulting transcript is resolved **against the figures in the scoped
-dance's choreos** into a **proposed** anchor rendered as a chip; you **Confirm** (or **Edit
+choreo** (or all your choreos when the scope is skipped) into a **proposed** anchor rendered as
+a chip; you **Confirm** (or **Edit
 target** to hand off to the ordinary picker, or **Discard**). Nothing is a new note class —
 this is an **on-ramp onto the existing anchor model**: Confirm produces the very same link the
 manual picker would, committed through the ordinary annotation write. The three static anchor
@@ -213,12 +216,11 @@ shapes are proposable (a family `figureType` note, a `figure` instance note, a t
 note); the AI only *proposes* and the human confirms, so **no wrong anchor can be committed
 past the confirm step**.
 
-When a dance is scoped but the dancer has **no annotate-capable choreo in it**, the voice
-affordance shows an **honest, actionable** state — *"add a figure to a 〈dance〉 choreo first"* —
-and does **not** attempt capture→interpret (decided client-side from the store's per-dance
-routine list, never a silent server *"couldn't connect"*). A plain **text** note still saves as
-an unlinked note. This is the fresh-dancer fix: an empty scope surfaces a fixable prompt, not a
-dead end.
+A dancer with **no choreos yet** sees an honest nudge in the scope step — *"No choreos yet —
+create one in the Choreo tab."* — instead of an empty list. Voice is **not** blocked there:
+a plain dictated note (unresolved → *keep as note text*) is still a valid capture, and there
+is no way to select an empty scope — the choreo list only offers choreos that actually exist,
+so the old "scoped a dance with nothing in it" dead end cannot arise.
 
 When the app resolves an anchor, the **note text is the coaching content only — the
 figure/dance/location addressing is stripped out**, because that part *became* the anchor. So
@@ -241,8 +243,8 @@ not yet propose it). No audio is retained (transcribe and discard).
 co-membership read gate, and the Journal's merged read are in
 [`docs/system/architecture.md`](../system/architecture.md) § Annotations & projections.
 **Design source:** `docs/design/project/Ballroom Builder v3.dc.html` (link-picker section).
-**Design debt (2026-07-20):** the push-to-talk voice sheet (idle *"Hold to talk"* → held
-recording state) **and the scope-first step** (dance chips + optional choreo at the head of the
-entry editor, plus the empty-scope actionable voice state) are **not yet in the `docs/design/`
-prototype** — both were implemented following the existing chip-row / sheet / `apps/web/src/ui`
-conventions and are owed a backfill in Claude Design.
+**Design debt (2026-07-20, updated 2026-07-23):** the push-to-talk voice sheet (idle *"Hold
+to talk"* → held recording state) **and the scope-first step** (the choreo list at the head
+of the entry editor) are **not yet in the `docs/design/` prototype** — both were implemented
+following the existing list-row / sheet / `apps/web/src/ui` conventions and are owed a
+backfill in Claude Design.
