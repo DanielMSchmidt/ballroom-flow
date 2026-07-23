@@ -41,13 +41,8 @@ const en = {
   // ── Scope step (docs/concepts/annotations.md § scope-first note flow) ──
   scopeHeading: "What's this about?",
   scopeAllDancing: "All my dancing",
-  scopeChoreoOptional: (dance: string) => `Which ${dance} choreo? (optional)`,
-  scopeAnyChoreo: (dance: string) => `Any ${dance} choreo`,
+  scopeChoreoList: "Which choreo is this about?",
   scopeLoadingChoreos: "Loading your choreos",
-  /** Empty-scope actionable state — a dance is chosen but the dancer has no
-   *  annotate-capable choreo in it (voice can't ground; blocks capture). */
-  scopeEmptyVoice: (dance: string) => `Add a figure to a ${dance} choreo first`,
-  scopeEmptyVoiceHint: "Voice needs a figure in this dance to ground your note.",
   linksHeading: "Links",
   removeLink: (label: string) => `Remove link ${label}`,
   addLink: "+ link to a step, figure or attribute",
@@ -257,12 +252,8 @@ const de: typeof en = {
   // ── Bereichsschritt (docs/concepts/annotations.md § scope-first note flow) ──
   scopeHeading: "Worum geht es?",
   scopeAllDancing: "Mein ganzes Tanzen",
-  scopeChoreoOptional: (dance) => `Welche ${dance}-Choreo? (optional)`,
-  scopeAnyChoreo: (dance) => `Beliebige ${dance}-Choreo`,
+  scopeChoreoList: "Um welche Choreo geht es?",
   scopeLoadingChoreos: "Deine Choreos werden geladen",
-  scopeEmptyVoice: (dance) => `Füge zuerst einer ${dance}-Choreo eine Figur hinzu`,
-  scopeEmptyVoiceHint:
-    "Für Sprache braucht es eine Figur in diesem Tanz, um die Notiz zu verankern.",
   linksHeading: "Verknüpfungen",
   removeLink: (label) => `Verknüpfung ${label} entfernen`,
   addLink: "+ mit einem Schritt, einer Figur oder einem Attribut verknüpfen",
