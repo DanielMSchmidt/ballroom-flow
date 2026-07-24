@@ -95,12 +95,9 @@ export interface JournalLinkPickerProps {
    *  family list (Tango still omits `rise` via the dance gate). Defaults to none. */
   customKinds?: RegistryKind[];
   /** Context-first capture (docs/concepts/annotations.md § scope-first note flow):
-   *  the dance the note was scoped to. Pre-filters the choreo chooser to that
-   *  dance's choreos. Absent → all the user's choreos (the old behavior). */
-  scopeDance?: DanceId;
-  /** A choreo already chosen in the scope step — the picker opens straight on the
-   *  target step for it (no re-picking the dance/choreo). Absent → open on the
-   *  (dance-filtered) choreo list. */
+   *  the choreo already chosen in the scope step — the picker opens straight on
+   *  the target step for it (no re-picking the choreo). Absent → open on the
+   *  choreo list. */
   scopeRoutine?: RoutineOption;
 }
 
@@ -129,8 +126,9 @@ function titleCase(s: string): string {
 }
 
 /** Display a dance value: the localized name for a known DanceId; anything else
- *  (user/legacy data) falls back to title case, untranslated by design. */
-function danceLabel(dance: string, locale: Locale): string {
+ *  (user/legacy data) falls back to title case, untranslated by design. Exported
+ *  for the entry editor's scope-step choreo rows. */
+export function danceLabel(dance: string, locale: Locale): string {
   return isDanceId(dance) ? danceName(dance, locale) : titleCase(dance);
 }
 
@@ -141,7 +139,6 @@ export function JournalLinkPicker({
   loadRoutineOptions,
   loadRoutineFigures,
   customKinds,
-  scopeDance,
   scopeRoutine,
 }: JournalLinkPickerProps): React.JSX.Element | null {
   const t = useMessages(journalMessages);
@@ -157,7 +154,7 @@ export function JournalLinkPicker({
 
   // Reset whenever the sheet (re)opens. Context-first capture: a pre-chosen scope
   // routine opens straight on the target step (no re-picking the choreo);
-  // otherwise open on the (dance-filtered) choreo list.
+  // otherwise open on the choreo list.
   useEffect(() => {
     if (open) {
       setRoutine(scopeRoutine ?? null);
@@ -325,7 +322,6 @@ export function JournalLinkPicker({
       {step === "choreo" && (
         <RoutineChooser
           loadRoutineOptions={loadRoutineOptions}
-          scopeDance={scopeDance}
           onPick={(r) => {
             setRoutine(r);
             setStep("target");
@@ -500,12 +496,9 @@ export function JournalLinkPicker({
 
 function RoutineChooser({
   loadRoutineOptions,
-  scopeDance,
   onPick,
 }: {
   loadRoutineOptions: () => Promise<RoutineOption[]>;
-  /** Context-first capture: pre-filter the list to this dance's choreos. */
-  scopeDance?: DanceId;
   onPick: (r: RoutineOption) => void;
 }): React.JSX.Element {
   const t = useMessages(journalMessages);
@@ -514,12 +507,12 @@ function RoutineChooser({
   useEffect(() => {
     let live = true;
     loadRoutineOptions().then((r) => {
-      if (live) setRoutines(scopeDance ? r.filter((o) => o.dance === scopeDance) : r);
+      if (live) setRoutines(r);
     });
     return () => {
       live = false;
     };
-  }, [loadRoutineOptions, scopeDance]);
+  }, [loadRoutineOptions]);
 
   return (
     <div className="flex flex-col gap-2">
