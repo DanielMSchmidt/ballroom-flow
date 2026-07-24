@@ -43,7 +43,7 @@ importers:
     dependencies:
       '@automerge/automerge':
         specifier: ^3.2.6
-        version: 3.2.6
+        version: 3.3.2
       '@clerk/clerk-react':
         specifier: ^5.61.3
         version: 5.61.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -134,7 +134,7 @@ importers:
     dependencies:
       '@automerge/automerge':
         specifier: ^3.2.6
-        version: 3.2.6
+        version: 3.3.2
       '@clerk/backend':
         specifier: ^3.8.3
         version: 3.11.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -187,7 +187,7 @@ importers:
     dependencies:
       '@automerge/automerge':
         specifier: ^3.2.6
-        version: 3.2.6
+        version: 3.3.2
       ulidx:
         specifier: ^2.4.1
         version: 2.4.1
@@ -231,8 +231,8 @@ packages:
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
 
-  '@automerge/automerge@3.2.6':
-    resolution: {integrity: sha512-9/GXXfYYWNVGpnbRrGQzTNU4fWZ3XaEMeEg0OrpK4pvlQSpkmUBoirEb/4TMK6BwMysZGV5Yeneq3wwc7RNGfg==}
+  '@automerge/automerge@3.3.2':
+    resolution: {integrity: sha512-9vCdCL7pdQwUra66SBxPVHr+/t9epXKni9KDeak2rNBFMzABVh2u6gSpcwxi3jkR5qr047jVqZv9DlrOfVxLFw==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -4806,7 +4806,7 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@automerge/automerge@3.2.6': {}
+  '@automerge/automerge@3.3.2': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
