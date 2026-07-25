@@ -225,11 +225,13 @@ routes and one mockable AI seam; it adds **no new data shape and no new write pa
   **per-figure authorization** verbatim — a routine's placements are caller-controlled CRDT
   content, so every referenced figure ref is gated individually by `resolveEffectiveRole`,
   and only annotate-capable (non-viewer) routines are in scope. The request carries an optional
-  **`routineRef`** (narrow to one choreo) and an optional **`dance`** (a `DanceId`; context-first
-  capture — `docs/concepts/annotations.md` § Voice capture): when `dance` is given and no
-  `routineRef`, `assembleVoiceContext` filters the annotate-capable routines to that dance
-  **before** serializing, so the model grounds against a handful of relevant figures. Absent →
-  the broad behavior (all annotate-capable routines). The dance filter is a *narrowing* of an
+  **`routineRef`** (narrow to one choreo — what the entry editor's choreo scope step sends;
+  context-first capture, `docs/concepts/annotations.md` § Voice capture) and an optional
+  **`dance`** (a `DanceId`): when `dance` is given and no `routineRef`, `assembleVoiceContext`
+  filters the annotate-capable routines to that dance **before** serializing. The `dance`
+  narrowing is a server-side capability with **no web caller since the scope step became
+  choreo-first (2026-07-23)** — it remains supported and tested. Absent both → the broad
+  behavior (all annotate-capable routines). Either filter is a *narrowing* of an
   already-authorized set — it never widens scope, and per-figure authorization is unchanged. A
   pure serializer in `packages/domain` (`serializeChoreoContext`, `resolveDanceAlias`) turns the
   assembled docs into grounding data (figures in placement order, one entry per placement so

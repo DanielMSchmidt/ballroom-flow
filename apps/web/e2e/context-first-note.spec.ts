@@ -4,18 +4,18 @@ import { resetDb, seedDb } from "./support/fixtures";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Context-first note capture ship gate (docs/concepts/annotations.md § The Journal
-// note flow is scope-first; § Voice capture grounds within the selected dance).
+// note flow is scope-first; § Voice capture grounds within the selected choreo).
 // Runs against the REAL worker via the #191 harness with the fixture voice AI
 // (no `AI` binding). Playwright cannot produce mic input, so the transcript is
 // injected via window.__weaveVoiceTranscript before capture (as in
 // voice-notes.spec.ts).
 //
-// Two scenarios (idea doc § Ship gate):
-//   1 — pick a DANCE → hold-to-talk → the proposal lands on a figure FROM THAT
-//       DANCE (the Foxtrot Feather), not the sibling Waltz figure.
-//   2 — a dance with NO annotate-capable choreo shows the actionable empty state
-//       ("add a figure to a 〈dance〉 choreo first"), NOT "couldn't connect", and
-//       blocks capture (no mic to hold).
+// Two scenarios:
+//   1 — pick a CHOREO → hold-to-talk → the proposal grounds WITHIN that choreo
+//       (the Foxtrot Feather), not the sibling Waltz figure — no dance/choreo
+//       named in the spoken words; the grounding comes from the scope.
+//   2 — the same chosen choreo drives the MANUAL path: the link picker opens
+//       straight on the target step (no re-picking the choreo).
 //
 // @smoke — the scope-first fixture path IS the core path in CI.
 // ─────────────────────────────────────────────────────────────────────────
@@ -86,12 +86,12 @@ async function seedFoxtrotAndWaltz(page: Page): Promise<void> {
   await seedAuth(page, USER);
 }
 
-/** Open the Journal entry editor and pick a dance scope chip. */
-async function openEditorAndScope(page: Page, danceLabel: string): Promise<void> {
+/** Open the Journal entry editor and pick a choreo in the scope step. */
+async function openEditorAndScope(page: Page, choreoTitle: RegExp): Promise<void> {
   const nav = page.getByRole("navigation", { name: /primary navigation|tab bar/i });
   await nav.getByRole("button", { name: "Journal" }).click();
   await page.getByRole("button", { name: "New entry", exact: true }).click();
-  await page.getByRole("button", { name: danceLabel, exact: true }).click();
+  await page.getByRole("button", { name: choreoTitle }).click();
 }
 
 /** Drive push-to-talk with an injected transcript (Playwright has no mic). */
@@ -108,18 +108,19 @@ async function holdToTalk(page: Page, transcript: string): Promise<void> {
 }
 
 test.describe("@smoke context-first note capture (fixture AI)", () => {
-  test("pick a dance → voice proposal lands on a figure from THAT dance", async ({ page }) => {
+  test("pick a choreo → voice proposal grounds within THAT choreo", async ({ page }) => {
     test.setTimeout(120_000);
     await seedFoxtrotAndWaltz(page);
     await page.goto("/");
 
-    // Scope to Foxtrot, then speak a Feather note (no dance named in the words —
-    // the grounding comes from the SCOPE, so only the Foxtrot Feather is in
-    // context; the sibling Waltz Whisk is filtered out server-side).
-    await openEditorAndScope(page, "Foxtrot");
+    // Scope to the Slowfox choreo, then speak a Feather note (no dance or choreo
+    // named in the words — the grounding comes from the SCOPE, so only the
+    // Foxtrot Feather is in context; the sibling Waltz Whisk is filtered out
+    // server-side by the routineRef narrowing).
+    await openEditorAndScope(page, /Comp Slowfox/);
     await holdToTalk(page, "In Feather Steps, I need to settle the sway.");
 
-    // Grounded within Foxtrot → a Feather family proposal (from that dance).
+    // Grounded within the chosen choreo → a Feather family proposal.
     await expect(page.getByText("Here's what I heard")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/↳ all Feathers/)).toBeVisible();
     await page.getByText("Confirm & save").click();
@@ -134,25 +135,34 @@ test.describe("@smoke context-first note capture (fixture AI)", () => {
     });
   });
 
-  test("a dance with no choreo shows the actionable empty state, not 'couldn't connect'", async ({
+  test("the chosen choreo opens the link picker on the target step (manual path)", async ({
     page,
   }) => {
     test.setTimeout(120_000);
     await seedFoxtrotAndWaltz(page);
     await page.goto("/");
 
-    // Scope to Tango — the user has no Tango choreo.
-    await openEditorAndScope(page, "Tango");
-    // The editor already surfaces the honest, actionable hint.
-    await expect(page.getByText(/add a figure to a tango choreo first/i)).toBeVisible();
+    await openEditorAndScope(page, /Comp Slowfox/);
+    await page.getByLabel("entry text").fill("settle the sway before the three step");
 
-    // Opening voice shows the actionable state (in the sheet) and NO mic (capture
-    // blocked); it never reaches the unresolved "couldn't find a target" copy.
-    await page.getByRole("button", { name: "voice", exact: true }).click();
+    // The picker opens straight on the target step — no choreo re-pick.
+    await page.getByText(/link to a step, figure or attribute/i).click();
+    await expect(page.getByText("Link to…")).toBeVisible();
+    await expect(page.getByText("Which choreo?")).toBeHidden();
+
+    // Figure path within the scoped choreo: Feather → whole figure → this choreo.
+    await page.getByText("A figure from this choreo").click();
+    await page.getByRole("button", { name: /Feather Step/ }).click();
+    await page.getByText("The entire figure").click();
+    await page.getByText("This choreo only").click();
+    await expect(page.getByText(/↳ Feather Step · whole figure/)).toBeVisible();
+
+    await page.getByRole("button", { name: /^done$/i }).click();
+    await expect(page.getByRole("list", { name: /journal entries/i })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(
-      page.getByRole("dialog").getByText(/add a figure to a tango choreo first/i),
-    ).toBeVisible();
-    await expect(page.getByRole("button", { name: /hold to talk/i })).toBeHidden();
-    await expect(page.getByText("Couldn't find a target")).toBeHidden();
+      page.getByText("settle the sway before the three step", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

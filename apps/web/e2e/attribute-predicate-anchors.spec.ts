@@ -104,7 +104,10 @@ test.describe("@smoke attribute-predicate anchors", () => {
     await page.getByLabel("entry text").fill("soften every left sway");
     await page.getByText(/link to a step, figure or attribute/i).click();
     await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: /Waltz A/ }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /Waltz A/ })
+      .click();
     // Target step → the attribute path.
     await page.getByText("An attribute").click();
     await page.getByText("Sway", { exact: true }).click();
@@ -196,7 +199,10 @@ test.describe("@smoke attribute-predicate anchors", () => {
     await coach.page.getByLabel("entry text").fill("soften every left sway");
     await coach.page.getByText(/link to a step, figure or attribute/i).click();
     await expect(coach.page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
-    await coach.page.getByRole("button", { name: /Shared Waltz/ }).click();
+    await coach.page
+      .getByRole("dialog")
+      .getByRole("button", { name: /Shared Waltz/ })
+      .click();
     await coach.page.getByText("An attribute").click();
     await coach.page.getByText("Sway", { exact: true }).click();
     await coach.page.getByText("to_L", { exact: true }).click();
@@ -284,7 +290,10 @@ test.describe("@smoke attribute-predicate anchors", () => {
     await page.getByLabel("entry text").fill("soften every left sway");
     await page.getByText(/link to a step, figure or attribute/i).click();
     await expect(page.getByText("Which choreo?")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: /Edit Waltz/ }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /Edit Waltz/ })
+      .click();
     await page.getByText("An attribute").click();
     await page.getByText("Sway", { exact: true }).click();
     await page.getByText("to_L", { exact: true }).click();
